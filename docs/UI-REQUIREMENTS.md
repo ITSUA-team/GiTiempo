@@ -75,14 +75,40 @@ import { definePreset } from '@primevue/themes'
 const GiTiempoPreset = definePreset(Aura, {
   semantic: {
     primary: {
-      color:        '{color.brand}',      // maps to --color-brand
-      contrastColor: '#ffffff',
-      hoverColor:   'color-mix(in srgb, var(--color-brand) 85%, black)',
-      activeColor:  'color-mix(in srgb, var(--color-brand) 75%, black)',
+      50:  '#f3eef8',
+      100: '#E8E1F5',
+      200: '#c9b5e0',
+      300: '#ab89cb',
+      400: '#8c5db6',
+      500: '#5D2B85',
+      600: '#4e2470',
+      700: '#3f1d5b',
+      800: '#301646',
+      900: '#210f31',
+      950: '#12081c',
     },
     colorScheme: {
       light: {
-        surface: { 0: '#fff', 50: 'var(--color-app-bg)', 100: 'var(--color-divider)' },
+        primary: {
+          color:         '#5D2B85',
+          contrastColor: '#ffffff',
+          hoverColor:    '#4e2470',
+          activeColor:   '#3f1d5b',
+        },
+        surface: {
+          0:   '#ffffff',
+          50:  '#F4F4F5',
+          100: '#EEEEEE',
+          200: '#e0e0e0',
+          300: '#c7c7c7',
+          400: '#a0a0a0',
+          500: '#666666',
+          600: '#555555',
+          700: '#444444',
+          800: '#333333',
+          900: '#1A1A1A',
+          950: '#0d0d0d',
+        },
       },
     },
   },
@@ -90,6 +116,8 @@ const GiTiempoPreset = definePreset(Aura, {
 
 app.use(PrimeVue, { theme: { preset: GiTiempoPreset, options: { darkModeSelector: false } } })
 ```
+
+> **Note:** PrimeVue's design token system uses its own palette scales (`primary.500`, `surface.900`, etc.) — it does **not** resolve Tailwind `@theme` CSS variables via `{color.brand}` syntax. Keep the hex values in the preset in sync with the `@theme` block manually. Both sources of truth define the same colors; the `@theme` block drives Tailwind utilities, the preset drives PrimeVue internals.
 
 Use the **`pt` (PassThrough) prop** to apply Tailwind classes to individual PrimeVue component slots when a global preset override is too broad.
 
@@ -289,10 +317,19 @@ Status variants — pass via `severity` prop and map in the preset:
 
 Each list, table, and dashboard widget must define an empty state:
 
-- Centered illustration or icon (48–64px, color `#E8E1F5` fill with `#5D2B85` stroke).
-- Primary message: 16px / weight 600 / `#1A1A1A`.
-- Supporting message: 14px / weight 400 / `#666666`.
-- Optional CTA button (Primary variant).
+- Centered illustration or icon (`size-12` to `size-16`, fill `bg-accent-tint` with stroke `text-brand`).
+- Primary message: `text-base font-semibold text-text-dark`.
+- Supporting message: `text-sm font-normal text-text-muted`.
+- Optional CTA button (`<Button>` Primary variant).
+
+```vue
+<div class="flex flex-col items-center justify-center gap-3 py-12">
+  <ClockIcon class="size-12 text-brand" />
+  <p class="text-base font-semibold text-text-dark">No time entries yet</p>
+  <p class="text-sm text-text-muted">Start your first timer to see entries here.</p>
+  <Button label="Start Timer" />
+</div>
+```
 
 ### 2.8 Loading States
 
@@ -336,27 +373,27 @@ Both the User SPA and Admin SPA share the same shell structure:
 └──────────────┴──────────────────────────────┘
 ```
 
-- **Top Bar:** background `#FFFFFF`, border-bottom `1px solid #EEEEEE`, height `64px`.
-  - Left: product logo + workspace name (16px / weight 600 / `#1A1A1A`).
+- **Top Bar:** `bg-surface border-b border-divider h-16`.
+  - Left: product logo + workspace name (`text-base font-semibold text-text-dark`).
   - Right: user avatar + display name, settings icon.
-- **Sidebar:** background `#FFFFFF`, border-right `1px solid #EEEEEE`, width `240px` (collapsible to `64px` icon-only on narrow viewports).
-- **Main Content Area:** background `#F4F4F5`, padding `24px`.
+- **Sidebar:** `bg-surface border-r border-divider w-60` (collapsible to `w-16` icon-only on narrow viewports).
+- **Main Content Area:** `bg-app-bg p-6`.
 
 ### 3.2 Sidebar Navigation
 
-- Nav item height: `44px`, padding `0 16px`.
-- Default state: text `#1A1A1A` / 14px / weight 500, icon `#666666`.
-- Hover: background `#F4F4F5`.
-- Active: background `#E8E1F5`, text `#5D2B85` / weight 600, icon `#5D2B85`, left border `3px solid #5D2B85`.
-- Section dividers between nav groups: `1px solid #EEEEEE` with 8px vertical margin.
+- Nav item: `h-11 px-4`.
+- Default state: `text-sm font-medium text-text-dark`, icon `text-text-muted`.
+- Hover: `hover:bg-app-bg`.
+- Active: `bg-accent-tint text-brand font-semibold border-l-[3px] border-brand`, icon `text-brand`.
+- Section dividers between nav groups: `border-t border-divider my-2`.
 
 ### 3.3 Responsive Breakpoints
 
-| Breakpoint | Width | Layout change |
-|---|---|---|
-| Mobile | < 640px | Sidebar hidden; bottom navigation bar (5 items max) |
-| Tablet | 640px – 1024px | Sidebar collapses to icon-only (64px) |
-| Desktop | > 1024px | Full sidebar (240px), standard layout |
+| Breakpoint | Width | Tailwind prefix | Layout change |
+|---|---|---|---|
+| Mobile | < 640px | (default) | Sidebar hidden; bottom navigation bar (5 items max) |
+| Tablet | 640px – 1024px | `sm:` / `md:` | Sidebar collapses to icon-only (`w-16`) |
+| Desktop | > 1024px | `lg:` | Full sidebar (`w-60`), standard layout |
 
 > MVP target is desktop-first. Mobile layout is required but de-prioritized for styling polish.
 
@@ -371,9 +408,9 @@ Every page has a consistent header block:
 └───────────────────────────────────────────┘
 ```
 
-- Title: 24px / weight 600 / `#1A1A1A`.
-- Subtitle: 14px / weight 400 / `#666666`.
-- CTA button (Primary variant) right-aligned, vertically centered with title.
+- Title: `text-2xl font-semibold text-text-dark`.
+- Subtitle: `text-sm font-normal text-text-muted`.
+- CTA button (`<Button>` Primary variant) right-aligned, vertically centered with title.
 
 ---
 
@@ -381,23 +418,23 @@ Every page has a consistent header block:
 
 ### 4.1 Dashboard
 
-- **Active Timer widget:** prominent card (full-width), shows task name, project, elapsed time (HH:MM:SS in 24px / weight 600 / Brand Purple), Stop button (Destructive variant).
-- **Recent Time Entries:** table showing last 10 entries — columns: Task, Project, Date, Duration, Actions (Edit / Delete icons). No entries → empty state with "Start your first timer" CTA.
-- **Stats row (optional for MVP):** 3 stat cards (Today's total, This week, This month) — value in 24px / weight 600 / `#1A1A1A`, label in 12px / weight 400 / `#666666`.
+- **Active Timer widget:** prominent card (full-width), shows task name, project, elapsed time (HH:MM:SS in `text-2xl font-semibold text-brand`), Stop button (`<Button severity="danger">`). Use PrimeVue `<Card>`.
+- **Recent Time Entries:** `<DataTable>` showing last 10 entries — columns: Task, Project, Date, Duration, Actions (Edit / Delete icons). No entries → empty state (§2.7) with "Start your first timer" CTA.
+- **Stats row (optional for MVP):** 3 stat cards (`<Card>`) — value in `text-2xl font-semibold text-text-dark`, label in `text-xs font-normal text-text-muted`.
 
 ### 4.2 Timer Page
 
-- **Task Selector:** cascading dropdown sequence — Organization → Project/Repo → Issue. Each level renders as a searchable dropdown. Selected path shown as breadcrumb: `Org / Project / Issue #123` in 14px / weight 500.
-- **Manual Task Input:** text input shown as a fallback when no GitHub connection is present or user selects "Manual entry". Input placeholder: "What are you working on?".
-- **Start / Stop Button:** large (48px height), full-width on mobile, 240px fixed width on desktop. Start = Primary variant; Stop = Destructive variant. Disabled until a task is selected or a description is entered.
-- **Timer Display:** centered, 48px / weight 600 / `#5D2B85`, format `HH:MM:SS`.
-- **Manual Interval Entry:** collapsible panel below the timer — Date picker, Start time, End time, Duration (auto-calculated). Inputs follow standard form conventions (§2.2).
+- **Task Selector:** cascading `<Select>` sequence (§7.5) — Organization → Project/Repo → Issue. Selected path shown as breadcrumb: `Org / Project / Issue #123` in `text-sm font-medium`.
+- **Manual Task Input:** `<InputText>` shown as a fallback when no GitHub connection is present or user selects "Manual entry". Placeholder: "What are you working on?".
+- **Start / Stop Button:** `<Button>` large (`h-12`), `w-full` on mobile, `w-60` on desktop. Start = Primary; Stop = `severity="danger"`. `:disabled` until a task is selected or a description is entered.
+- **Timer Display:** centered, `text-5xl font-semibold text-brand`, format `HH:MM:SS`.
+- **Manual Interval Entry:** collapsible `<Panel>` below the timer — `<DatePicker>`, `<DatePicker timeOnly>` for start/end, Duration (auto-calculated). Inputs follow §2.2.
 
 ### 4.3 Time Entries Page
 
-- **Filters bar:** Date range picker + Project filter (multi-select dropdown) + Search input. All in a single horizontal row.
-- **Entries list:** grouped by day. Each group has a day header (`Monday, Apr 14 · 3h 20m`) in 13px / weight 600 / `#666666` with a right-aligned daily total.
-- **Entry row:** Task name (weight 500), Project (weight 400 / `#666666`), Time range, Duration, Edit (Ghost button) / Delete (Ghost button / destructive text). Active (running) entry highlighted with Accent Tint background.
+- **Filters bar:** `<DatePicker selectionMode="range">` + `<MultiSelect>` for Project filter + `<InputText>` for search. All in a single horizontal `flex` row with `gap-3`.
+- **Entries list:** grouped by day. Day header (`Monday, Apr 14 · 3h 20m`) in `text-[13px] font-semibold text-text-muted` with a right-aligned daily total.
+- **Entry row:** Task name (`font-medium`), Project (`font-normal text-text-muted`), Time range, Duration, Edit (`<Button text>`) / Delete (`<Button text severity="danger">`). Active (running) entry highlighted with `bg-accent-tint`.
 - **Inline edit:** clicking Edit opens an inline form within the row (not a modal) for fast edits.
 
 ### 4.4 Project View Page
@@ -420,52 +457,54 @@ Every page has a consistent header block:
 
 ### 5.1 Dashboard
 
-- **Summary stat cards (4):** Total hours this month, Active members, Open projects, Unpaid invoices. Card: Surface background, shadow level 1, stat value 32px / weight 600 / `#1A1A1A`, label 13px / weight 400 / Text Muted.
-- **Recent activity feed:** last 20 time entries across all users — same table structure as User SPA §4.3 but read-only with a Member column added.
+- **Summary stat cards (4):** Total hours this month, Active members, Open projects, Unpaid invoices. `<Card>` with `bg-surface shadow-card` — stat value `text-3xl font-semibold text-text-dark`, label `text-[13px] font-normal text-text-muted`.
+- **Recent activity feed:** last 20 time entries across all users — same `<DataTable>` structure as User SPA §4.3 but read-only with a Member column added.
 
 ### 5.2 Reports Page
 
-- **Filter bar:** Project (multi-select), Member (multi-select), Date range, Group by (Project / Member / Date). All filters apply in real-time (debounced 300ms).
-- **Summary totals row:** pinned above the table — Total hours, Billable hours, Total amount (based on hourly rate). Background `#E8E1F5`, text `#5D2B85` / weight 600.
-- **Results table:** sortable columns — Member, Project, Task, Date, Duration, Billable. Export to CSV button (Ghost variant) in page header CTA position.
+- **Filter bar:** `<MultiSelect>` for Project, `<MultiSelect>` for Member, `<DatePicker selectionMode="range">`, `<Select>` for Group by (Project / Member / Date). All filters apply in real-time (debounced 300ms).
+- **Summary totals row:** pinned above the `<DataTable>` — Total hours, Billable hours, Total amount (based on hourly rate). `bg-accent-tint text-brand font-semibold`.
+- **Results table:** `<DataTable>` with `sortable` on columns — Member, Project, Task, Date, Duration, Billable. Export to CSV button (`<Button text>`) in page header CTA position.
 - PM restriction: Project and Member filters are pre-scoped to assigned projects; the PM cannot widen the scope.
 
 ### 5.3 Invoices Page
 
-- **Invoice list:** table with columns — Invoice #, Project, Date, Hours, Amount, Status (tag), Actions.
-- **Create Invoice flow:** modal dialog (not a full page). Fields: Project (dropdown), Date range, Hourly rate (pre-filled from workspace setting), Discount (%). Total amount auto-calculated and displayed prominently (`24px / weight 600`) before Save.
-- Status tags use the badge variants from §2.4.
+- **Invoice list:** `<DataTable>` with columns — Invoice #, Project, Date, Hours, Amount, Status (`<Tag>` §2.4), Actions.
+- **Create Invoice flow:** `<Dialog>` modal (§7.1). Fields: `<Select>` for Project, `<DatePicker selectionMode="range">`, `<InputNumber>` for Hourly rate (pre-filled from workspace setting), `<InputNumber>` for Discount (%). Total amount auto-calculated and displayed prominently (`text-2xl font-semibold`) before Save.
+- Status tags use the `<Tag>` severity variants from §2.4.
 
 ### 5.4 Members Page
 
-- **Members table:** Avatar + Name, Email, Role (tag), Projects assigned (count), Last active, Actions (Edit role, Remove).
-- **Invite member:** Primary CTA button in page header. Opens a modal — Email input, Role selector (radio: Member / PM). Submit sends invite.
-- **Assign PM to project:** clicking a PM row expands an inline section listing all projects with checkboxes.
+- **Members table:** `<DataTable>` — `<Avatar>` + Name, Email, Role (`<Tag>`), Projects assigned (`<Badge>`), Last active, Actions (Edit role, Remove).
+- **Invite member:** Primary CTA `<Button>` in page header. Opens `<Dialog>` (§7.1) — `<InputText>` for email, `<SelectButton>` for role (Member / PM). Submit sends invite.
+- **Assign PM to project:** clicking a PM row expands an inline section listing all projects with `<Checkbox>` components.
 
 ### 5.5 Projects Page
 
-- **Project list:** table with columns — Project name (with folder icon in `#5D2B85`), Source (GitHub / Manual tag), Assigned PM, Total hours, Visibility, Actions.
-- **Edit project:** inline row expansion — toggle Visibility (Active / Archived), reassign PM.
-- **Create manual project:** modal — Name input, Description textarea, optional GitHub repo link.
+- **Project list:** `<DataTable>` with columns — Project name (with `<FolderIcon class="text-brand" />`), Source (GitHub / Manual `<Tag>`), Assigned PM, Total hours, Visibility, Actions.
+- **Edit project:** inline row expansion — toggle Visibility (`<ToggleSwitch>` Active / Archived), reassign PM via `<Select>`.
+- **Create manual project:** `<Dialog>` (§7.1) — `<InputText>` for name, `<Textarea>` for description, optional GitHub repo link `<InputText>`.
 
 ### 5.6 Settings Page
 
-- Single-column form layout, grouped into labeled sections separated by `1px solid #EEEEEE` dividers.
-- **Workspace section:** Workspace name, Default hourly rate (number input with currency prefix).
-- **Currency selector:** dropdown with ISO 4217 codes.
-- Save button (Primary) pinned to bottom of each section or at page bottom.
+- Single-column form layout, grouped into labeled sections separated by `border-t border-divider` dividers.
+- **Workspace section:** `<InputText>` for Workspace name, `<InputNumber>` for Default hourly rate (with `prefix` prop for currency symbol).
+- **Currency selector:** `<Select>` with ISO 4217 codes.
+- Save `<Button>` (Primary) pinned to bottom of each section or at page bottom.
 
 ---
 
 ## 6. Chrome Extension UI
 
+**Stack note:** The extension popup uses **Tailwind CSS only** — PrimeVue is not loaded. The popup bundle must stay lightweight (< 50 KB CSS+JS gzipped). Buttons and inputs are implemented as plain HTML elements styled with Tailwind utility classes matching the same design tokens from `@theme`.
+
 - **Popup dimensions:** `320 × 480px` fixed.
-- **Background:** Surface (`#FFFFFF`).
-- **Unauthenticated state:** centered login prompt — product logo, "Sign in to GI Tiempo" heading, Primary sign-in button.
-- **Authenticated, no active timer:** shows detected issue context (`org/repo#123 Issue Title` in 14px / weight 500), Start Timer button (Primary, full-width), link to open the full User SPA.
-- **Authenticated, timer running:** elapsed time display (24px / weight 600 / `#5D2B85`), task name, Stop Timer button (Destructive, full-width).
-- **Error / disconnected states:** inline message in Text Muted with a retry action link.
-- All type, color, and spacing rules from §1 apply. No custom extension-only design tokens.
+- **Background:** `bg-surface`.
+- **Unauthenticated state:** centered login prompt — product logo, "Sign in to GI Tiempo" heading (`text-lg font-semibold text-text-dark`), Primary sign-in `<button class="bg-brand text-white ...">`.
+- **Authenticated, no active timer:** shows detected issue context (`org/repo#123 Issue Title` in `text-sm font-medium`), Start Timer button (Primary, `w-full`), link to open the full User SPA.
+- **Authenticated, timer running:** elapsed time display (`text-2xl font-semibold text-brand`), task name, Stop Timer button (`bg-destructive text-white`, `w-full`).
+- **Error / disconnected states:** inline message in `text-text-muted` with a retry action link.
+- All type, color, and spacing tokens from §1 apply. No custom extension-only design tokens.
 
 ---
 
@@ -518,11 +557,25 @@ Override the left border accent and icon in the global preset under `Toast.color
 
 ### 7.3 Confirmation Dialogs
 
+**PrimeVue component:** `<ConfirmDialog>` + `useConfirm()` composable. Register `<ConfirmDialog />` once in root `App.vue`.
+
 Used before all destructive actions (delete, disconnect, remove member):
 
-- Title: "Delete [item]?" — 18px / weight 600.
-- Body: one-sentence consequence description — 14px / weight 400 / Text Muted.
-- Footer: "Cancel" (Secondary) + "[Destructive label]" (Destructive variant). Destructive button is on the right.
+- Title: "Delete [item]?" — `text-lg font-semibold`.
+- Body: one-sentence consequence description — `text-sm font-normal text-text-muted`.
+- Footer: "Cancel" (Secondary) + "[Destructive label]" (`severity="danger"`). Destructive button is on the right.
+
+```typescript
+const confirm = useConfirm()
+confirm.require({
+  message: 'This time entry will be permanently deleted.',
+  header: 'Delete entry?',
+  acceptLabel: 'Delete',
+  rejectLabel: 'Cancel',
+  acceptClass: 'p-button-danger',
+  accept: () => handleDelete(entryId),
+})
+```
 
 ### 7.4 Date & Time Pickers
 
@@ -581,7 +634,29 @@ Used on Timer page and anywhere a task must be chosen:
 </Select>
 ```
 
-### 7.6 Duration Display Format
+### 7.6 Multi-Select Filters
+
+**PrimeVue component:** `<MultiSelect>` with `filter` prop. Used in Reports (§5.2) and Time Entries (§4.3) filter bars for Project and Member selection.
+
+- Enable `filter` for type-ahead search within options.
+- Show selected items as `<Chip>` tokens inside the input (default PrimeVue behavior).
+- Set `display="chip"` for chip rendering; `maxSelectedLabels` to control overflow (e.g., show 2 chips then "+3 more").
+- Full-width: `class="w-full"`.
+
+```vue
+<MultiSelect
+  v-model="selectedProjects"
+  :options="projects"
+  optionLabel="name"
+  placeholder="All projects"
+  filter
+  display="chip"
+  :maxSelectedLabels="2"
+  class="w-full"
+/>
+```
+
+### 7.7 Duration Display Format
 
 All duration values across the application must render as `Xh Ym` (e.g., `2h 15m`). Running timer displays as `HH:MM:SS`. Never show raw seconds except in the running timer.
 
@@ -589,9 +664,25 @@ All duration values across the application must render as `Xh Ym` (e.g., `2h 15m
 
 ## 8. Accessibility
 
-- All interactive elements must have a visible focus indicator: `2px solid #5D2B85` outline, `2px offset`.
+### 8.1 Developer Responsibilities
+
+- All interactive elements must have a visible focus indicator: `outline-2 outline-brand outline-offset-2`.
 - Minimum contrast ratio: 4.5:1 for normal text, 3:1 for large text (WCAG 2.1 AA).
 - All form inputs must have associated `<label>` elements (not just `placeholder`).
-- Icon-only buttons must have `aria-label`.
-- Modals must trap focus and restore focus to the trigger element on close.
-- Tables must use `<th scope="col">` and `aria-sort` for sortable columns.
+- Icon-only `<Button>` components must have `aria-label`.
+- Custom (non-PrimeVue) interactive elements must implement keyboard navigation.
+
+### 8.2 Covered by PrimeVue
+
+The following accessibility features are handled by PrimeVue components out of the box — **do not re-implement manually**:
+
+| Concern | PrimeVue component | Built-in behavior |
+|---|---|---|
+| Focus trapping in modals | `<Dialog modal>` | Traps focus; restores to trigger on close |
+| Sort announcements | `<DataTable>` | Renders `aria-sort` on sortable `<th scope="col">` |
+| Dropdown keyboard nav | `<Select>`, `<MultiSelect>` | Arrow keys, Enter, Escape |
+| Date picker keyboard nav | `<DatePicker>` | Arrow keys for day navigation, Enter to select |
+| Toast live region | `<Toast>` | Renders `role="alert"` / `aria-live="assertive"` |
+| Confirm dialog focus | `<ConfirmDialog>` | Auto-focuses the reject (safe) button |
+
+When using `pt` to restyle PrimeVue components, **never remove or override** `role`, `aria-*`, `tabindex`, or `id` attributes that PrimeVue generates.
