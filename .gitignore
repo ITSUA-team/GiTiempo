@@ -1,0 +1,7 @@
+node_modules/
+.turbo/
+coverage/
+pnpm-debug.log*
+
+packages/shared/dist/
+packages/shared/*.tsbuildinfo

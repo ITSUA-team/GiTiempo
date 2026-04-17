@@ -1,0 +1,51 @@
+@import "tailwindcss";
+@import "primeicons/primeicons.css";
+
+@theme {
+  --radius-*: initial;
+
+  --color-brand: #5d2b85;
+  --color-accent-tint: #e8e1f5;
+  --color-surface: #ffffff;
+  --color-app-bg: #f4f4f5;
+  --color-text-dark: #1a1a1a;
+  --color-text-muted: #666666;
+  --color-divider: #eeeeee;
+  --color-destructive: #d32f2f;
+
+  --color-status-active-bg: #e8f5e9;
+  --color-status-active-text: #2e7d32;
+  --color-status-warn-bg: #fff8e1;
+  --color-status-warn-text: #f57f17;
+  --color-status-error-bg: #ffebee;
+  --color-status-error-text: #c62828;
+
+  --font-sans: "Inter", sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.16);
+}
+
+@theme inline {
+  --color-primary: var(--color-brand);
+}
+
+:root {
+  font-family: "Inter", sans-serif;
+  color: var(--color-text-dark);
+  background: var(--color-app-bg);
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  min-height: 100vh;
+}
