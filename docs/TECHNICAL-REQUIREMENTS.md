@@ -22,6 +22,8 @@ Build-ready engineering constraints derived from [PROPOSAL.md](./PROPOSAL.md).
 
 - `pnpm-workspace.yaml` declares `apps/*` and `packages/*`.
 - Turborepo orchestrates build pipelines across packages.
+- The workspace root owns shared scripts for `dev`, `build`, `typecheck`, `test`, and `lint`.
+- TypeScript base compiler settings live in `tsconfig.base.json` and are extended by each app/package.
 
 ---
 
@@ -29,15 +31,16 @@ Build-ready engineering constraints derived from [PROPOSAL.md](./PROPOSAL.md).
 
 ### 2.1 Stack
 
-| Aspect | Decision |
-|---|---|
-| Runtime | Node.js 22+ with TypeScript |
-| Framework | NestJS (modular monolith) |
-| Query builder | Drizzle ORM (type-safe SQL, schema-as-code) |
-| Database | PostgreSQL 16 |
-| Validation | Zod schemas (shared via `packages/shared`) |
-| Auth | Firebase Auth (identity provider) + JWT (API auth) |
-| GitHub | GitHub App (user-to-server), connected per-user in profile |
+| Aspect            | Decision                                                       |
+| ----------------- | -------------------------------------------------------------- |
+| Runtime           | Node.js 22+ with TypeScript                                    |
+| Framework         | NestJS (modular monolith)                                      |
+| Query builder     | Drizzle ORM (type-safe SQL, schema-as-code)                    |
+| Database          | PostgreSQL 16                                                  |
+| Validation        | Zod schemas (shared via `packages/shared`)                     |
+| API documentation | Swagger / OpenAPI (implemented in `apps/api`, not in web apps) |
+| Auth              | Firebase Auth (identity provider) + JWT (API auth)             |
+| GitHub            | GitHub App (user-to-server), connected per-user in profile     |
 
 ### 2.2 Authentication — JWT Token-Based
 
@@ -67,10 +70,10 @@ User → Firebase Auth (Google SSO or email/password) on frontend
 
 **Token lifecycle:**
 
-| Token | Lifetime | Storage |
-|---|---|---|
-| Access token (JWT) | 15 minutes | Memory (frontend), `chrome.storage` (extension) |
-| Refresh token | 7 days | localStorage (frontend), `chrome.storage` (extension) |
+| Token              | Lifetime   | Storage                                               |
+| ------------------ | ---------- | ----------------------------------------------------- |
+| Access token (JWT) | 15 minutes | Memory (frontend), `chrome.storage` (extension)       |
+| Refresh token      | 7 days     | localStorage (frontend), `chrome.storage` (extension) |
 
 **Refresh flow:** When the access token expires, the frontend calls `POST /api/auth/refresh` with the refresh token. The backend validates the refresh token, rotates it (invalidates old, issues new), and returns a new access/refresh pair.
 
@@ -108,10 +111,10 @@ User → clicks "Connect GitHub" in profile settings
 
 **Token lifecycle (per GitHub docs):**
 
-| Token type | Prefix | Lifetime |
-|---|---|---|
-| User access token | `ghu_` | 8 hours (28800 seconds) |
-| Refresh token | `ghr_` | 6 months (15897600 seconds) |
+| Token type        | Prefix | Lifetime                    |
+| ----------------- | ------ | --------------------------- |
+| User access token | `ghu_` | 8 hours (28800 seconds)     |
+| Refresh token     | `ghr_` | 6 months (15897600 seconds) |
 
 **On-demand sync (lazy):**
 
@@ -123,10 +126,10 @@ User → clicks "Connect GitHub" in profile settings
 
 Three roles: `admin`, `pm`, `member`.
 
-| Guard | Logic |
-|---|---|
-| `AuthGuard` | Verifies JWT access token from `Authorization` header. Attaches `user` to request. |
-| `RoleGuard` | Checks `WorkspaceMember.role` against required roles. |
+| Guard               | Logic                                                                                                      |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `AuthGuard`         | Verifies JWT access token from `Authorization` header. Attaches `user` to request.                         |
+| `RoleGuard`         | Checks `WorkspaceMember.role` against required roles.                                                      |
 | `ProjectScopeGuard` | For PM-specific endpoints: verifies PM is assigned to the requested project via `ProjectAssignment` table. |
 
 **Admin endpoints** require `role = 'admin'`.
@@ -149,22 +152,43 @@ Three roles: `admin`, `pm`, `member`.
 - **Seed data** in `apps/api/src/db/seeds/` — only for development/staging.
 - Production seed: default workspace + initial admin user (preconfigured email/Firebase UID).
 
+### 2.7 Swagger / OpenAPI Plan
+
+- Swagger is an API concern and will be added when `apps/api` is initialized.
+- The web apps do not install Swagger dependencies.
+- During the current frontend bootstrap phase, the source of truth for shared contracts is `packages/shared`.
+- `packages/shared` exports TypeScript types and Zod schemas that can be consumed by both SPAs and the future API.
+- Frontend-only theme/bootstrap code lives in `packages/web-config` so the API is not coupled to PrimeVue or Tailwind setup.
+- When the NestJS API is bootstrapped, it should publish Swagger / OpenAPI docs for external API documentation while continuing to reuse the shared contracts where practical.
+
 ---
 
 ## 3. Frontend — Vue 3 SPAs
 
 Both User SPA and Admin SPA share the same stack:
 
-| Aspect | Decision |
-|---|---|
-| Framework | Vue 3 Composition API + `<script setup>` |
-| State management | Pinia (stores in `src/stores/`) |
-| Composables | VueUse for browser APIs, timers, async state |
-| Component library | PrimeVue (forms, tables, overlays, dialogs) |
-| Styling | Tailwind CSS (utility-first) |
-| Router | Vue Router |
-| HTTP client | Axios (or fetch wrapper from shared package) |
-| Auth | Firebase Auth SDK (client-side) → JWT tokens from API |
+| Aspect            | Decision                                              |
+| ----------------- | ----------------------------------------------------- |
+| Framework         | Vue 3 Composition API + `<script setup>`              |
+| State management  | Pinia (stores in `src/stores/`)                       |
+| Composables       | VueUse for browser APIs, timers, async state          |
+| Component library | PrimeVue (forms, tables, overlays, dialogs)           |
+| Styling           | Tailwind CSS (utility-first)                          |
+| Router            | Vue Router                                            |
+| HTTP client       | Axios (or fetch wrapper from shared package)          |
+| Auth              | Firebase Auth SDK (client-side) → JWT tokens from API |
+
+### 3.0 Frontend Initialization Baseline
+
+The initial web bootstrap includes:
+
+- Vite + Vue 3 + TypeScript for both `apps/user-web` and `apps/admin-web`
+- Tailwind CSS v4 using CSS-first `@theme` setup
+- PrimeVue v4 styled mode with a shared Aura-derived preset
+- Pinia, Vue Router, VueUse, Heroicons, and PrimeIcons installed and connected
+- Shared contract exports from `packages/shared`
+- Shared frontend theme/bootstrap exports from `packages/web-config`
+- No API client, no Firebase wiring, and no product pages yet
 
 ### 3.1 User SPA (`apps/user-web/`)
 
@@ -190,6 +214,7 @@ Both User SPA and Admin SPA share the same stack:
 ### 3.3 Shared UI Patterns
 
 - Both SPAs import `packages/shared` for types and validation schemas.
+- Both SPAs import `packages/web-config` for shared PrimeVue and Tailwind bootstrap configuration.
 - Common UI patterns (avatars, date pickers, task selectors) can be extracted to a shared UI package later if duplication becomes problematic.
 - Both SPAs use the same JWT-based auth flow — Firebase Auth login → exchange for API tokens.
 
@@ -235,19 +260,32 @@ Contains:
 
 Both the API and both SPAs depend on this package.
 
+Current bootstrap contents include:
+
+- `src/contracts/` for shared TypeScript + Zod definitions
+
+## 5.1 Web Config Package (`packages/web-config/`)
+
+Contains frontend-only bootstrap configuration shared by `user-web` and `admin-web`:
+
+- PrimeVue preset and app install options
+- Shared Tailwind token stylesheet
+
+Only frontend applications should depend on this package.
+
 ---
 
 ## 6. Deployment
 
-| Component | Strategy |
-|---|---|
-| API | Docker container, deployed via Docker Compose on VPS |
-| User SPA | Cloudflare Pages |
-| Admin SPA | Cloudflare Pages |
-| Chrome Extension | Chrome Web Store (manual publish) |
-| Database | PostgreSQL on VPS (Docker Compose service) |
-| Firebase | Firebase project (Auth service only, free tier) |
-| GitHub App | Configured in GitHub Developer Settings, callback URL points to API |
+| Component        | Strategy                                                            |
+| ---------------- | ------------------------------------------------------------------- |
+| API              | Docker container, deployed via Docker Compose on VPS                |
+| User SPA         | Cloudflare Pages                                                    |
+| Admin SPA        | Cloudflare Pages                                                    |
+| Chrome Extension | Chrome Web Store (manual publish)                                   |
+| Database         | PostgreSQL on VPS (Docker Compose service)                          |
+| Firebase         | Firebase project (Auth service only, free tier)                     |
+| GitHub App       | Configured in GitHub Developer Settings, callback URL points to API |
 
 ---
 
@@ -290,6 +328,7 @@ Each adapter implements:
 **Log levels:** `error`, `warn`, `info`, `debug`. Production runs at `info` level.
 
 **Metrics:** Expose a `/metrics` endpoint (Prometheus format) via `@willsoto/nestjs-prometheus` or equivalent. Key metrics:
+
 - HTTP request duration (histogram, by method/route/status)
 - Active timers count (gauge)
 - GitHub API call count and latency (counter/histogram)
@@ -317,27 +356,27 @@ Each adapter implements:
 
 The API requires the following environment variables:
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins (e.g. `https://app.tiempo.com,https://admin.tiempo.com`) |
-| `JWT_ACCESS_SECRET` | Secret for signing JWT access tokens |
-| `JWT_REFRESH_SECRET` | Secret for signing JWT refresh tokens |
-| `FIREBASE_PROJECT_ID` | Firebase project ID |
-| `FIREBASE_PRIVATE_KEY` | Firebase Admin SDK private key (PEM) |
-| `FIREBASE_CLIENT_EMAIL` | Firebase Admin SDK client email |
-| `GITHUB_APP_ID` | GitHub App ID (from app settings page) |
-| `GITHUB_APP_CLIENT_ID` | GitHub App client ID |
-| `GITHUB_APP_CLIENT_SECRET` | GitHub App client secret |
-| `ENCRYPTION_KEY` | Key for AES-encrypting stored GitHub tokens |
-| `APP_URL` | Public URL of the API (for OAuth callback) |
-| `USER_WEB_URL` | Public URL of the User SPA |
-| `ADMIN_WEB_URL` | Public URL of the Admin SPA |
-| `SEED_ADMIN_EMAIL` | Email of the initial admin user (used by seed migration) |
-| `SEED_ADMIN_FIREBASE_UID` | Firebase UID of the initial admin user |
-| `SMTP_HOST` | SMTP server host (email notifications) |
-| `SMTP_PORT` | SMTP server port |
-| `SMTP_USER` | SMTP username |
-| `SMTP_PASSWORD` | SMTP password |
-| `EMAIL_FROM` | From address for outgoing emails |
-| `LOG_LEVEL` | Logging level: `error`, `warn`, `info`, `debug` (default: `info`) |
+| Variable                   | Description                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`             | PostgreSQL connection string                                                                          |
+| `ALLOWED_ORIGINS`          | Comma-separated list of allowed CORS origins (e.g. `https://app.tiempo.com,https://admin.tiempo.com`) |
+| `JWT_ACCESS_SECRET`        | Secret for signing JWT access tokens                                                                  |
+| `JWT_REFRESH_SECRET`       | Secret for signing JWT refresh tokens                                                                 |
+| `FIREBASE_PROJECT_ID`      | Firebase project ID                                                                                   |
+| `FIREBASE_PRIVATE_KEY`     | Firebase Admin SDK private key (PEM)                                                                  |
+| `FIREBASE_CLIENT_EMAIL`    | Firebase Admin SDK client email                                                                       |
+| `GITHUB_APP_ID`            | GitHub App ID (from app settings page)                                                                |
+| `GITHUB_APP_CLIENT_ID`     | GitHub App client ID                                                                                  |
+| `GITHUB_APP_CLIENT_SECRET` | GitHub App client secret                                                                              |
+| `ENCRYPTION_KEY`           | Key for AES-encrypting stored GitHub tokens                                                           |
+| `APP_URL`                  | Public URL of the API (for OAuth callback)                                                            |
+| `USER_WEB_URL`             | Public URL of the User SPA                                                                            |
+| `ADMIN_WEB_URL`            | Public URL of the Admin SPA                                                                           |
+| `SEED_ADMIN_EMAIL`         | Email of the initial admin user (used by seed migration)                                              |
+| `SEED_ADMIN_FIREBASE_UID`  | Firebase UID of the initial admin user                                                                |
+| `SMTP_HOST`                | SMTP server host (email notifications)                                                                |
+| `SMTP_PORT`                | SMTP server port                                                                                      |
+| `SMTP_USER`                | SMTP username                                                                                         |
+| `SMTP_PASSWORD`            | SMTP password                                                                                         |
+| `EMAIL_FROM`               | From address for outgoing emails                                                                      |
+| `LOG_LEVEL`                | Logging level: `error`, `warn`, `info`, `debug` (default: `info`)                                     |

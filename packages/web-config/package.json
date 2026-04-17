@@ -1,0 +1,29 @@
+{
+  "name": "@gitiempo/web-config",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./theme": {
+      "types": "./src/theme/index.ts",
+      "default": "./src/theme/index.ts"
+    },
+    "./styles/tokens.css": "./src/styles/tokens.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@primeuix/themes": "^1.2.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
