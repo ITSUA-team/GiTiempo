@@ -1,5 +1,5 @@
 {
-  "name": "@gitiempo/shared",
+  "name": "@gitiempo/web-config",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,12 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./theme": {
+      "types": "./src/theme/index.ts",
+      "default": "./src/theme/index.ts"
+    },
+    "./styles/tokens.css": "./src/styles/tokens.css"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -16,7 +21,7 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
-    "zod": "^4.1.12"
+    "@primeuix/themes": "^1.2.3"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

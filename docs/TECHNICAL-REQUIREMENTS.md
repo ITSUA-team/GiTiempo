@@ -158,6 +158,7 @@ Three roles: `admin`, `pm`, `member`.
 - The web apps do not install Swagger dependencies.
 - During the current frontend bootstrap phase, the source of truth for shared contracts is `packages/shared`.
 - `packages/shared` exports TypeScript types and Zod schemas that can be consumed by both SPAs and the future API.
+- Frontend-only theme/bootstrap code lives in `packages/web-config` so the API is not coupled to PrimeVue or Tailwind setup.
 - When the NestJS API is bootstrapped, it should publish Swagger / OpenAPI docs for external API documentation while continuing to reuse the shared contracts where practical.
 
 ---
@@ -185,7 +186,8 @@ The initial web bootstrap includes:
 - Tailwind CSS v4 using CSS-first `@theme` setup
 - PrimeVue v4 styled mode with a shared Aura-derived preset
 - Pinia, Vue Router, VueUse, Heroicons, and PrimeIcons installed and connected
-- Shared theme and contract exports from `packages/shared`
+- Shared contract exports from `packages/shared`
+- Shared frontend theme/bootstrap exports from `packages/web-config`
 - No API client, no Firebase wiring, and no product pages yet
 
 ### 3.1 User SPA (`apps/user-web/`)
@@ -212,6 +214,7 @@ The initial web bootstrap includes:
 ### 3.3 Shared UI Patterns
 
 - Both SPAs import `packages/shared` for types and validation schemas.
+- Both SPAs import `packages/web-config` for shared PrimeVue and Tailwind bootstrap configuration.
 - Common UI patterns (avatars, date pickers, task selectors) can be extracted to a shared UI package later if duplication becomes problematic.
 - Both SPAs use the same JWT-based auth flow — Firebase Auth login → exchange for API tokens.
 
@@ -254,14 +257,21 @@ Contains:
 - **Zod schemas** — runtime validation matching the TypeScript types.
 - **Constants** — status enums, role definitions, error codes.
 - **Utility functions** — date formatting, duration calculations.
-- **Shared frontend theme exports** — PrimeVue preset and web bootstrap-safe design tokens.
 
 Both the API and both SPAs depend on this package.
 
 Current bootstrap contents include:
 
 - `src/contracts/` for shared TypeScript + Zod definitions
-- `src/theme/` for the shared PrimeVue preset used by both SPAs
+
+## 5.1 Web Config Package (`packages/web-config/`)
+
+Contains frontend-only bootstrap configuration shared by `user-web` and `admin-web`:
+
+- PrimeVue preset and app install options
+- Shared Tailwind token stylesheet
+
+Only frontend applications should depend on this package.
 
 ---
 

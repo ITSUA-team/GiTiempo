@@ -19,7 +19,7 @@ importers:
         version: 8.58.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       '@vitejs/plugin-vue':
         specifier: ^6.0.6
-        version: 6.0.6(vite@7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0))(vue@3.5.32(typescript@5.9.3))
+        version: 6.0.6(vite@8.0.8(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1))(vue@3.5.32(typescript@5.9.3))
       '@vue/eslint-config-typescript':
         specifier: ^14.7.0
         version: 14.7.0(eslint-plugin-vue@10.8.0(@typescript-eslint/parser@8.58.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(vue-eslint-parser@10.4.0(eslint@9.39.4(jiti@2.6.1))))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
@@ -53,6 +53,9 @@ importers:
       '@gitiempo/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@gitiempo/web-config':
+        specifier: workspace:*
+        version: link:../../packages/web-config
       '@heroicons/vue':
         specifier: ^2.2.0
         version: 2.2.0(vue@3.5.32(typescript@5.9.3))
@@ -111,6 +114,9 @@ importers:
       '@gitiempo/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@gitiempo/web-config':
+        specifier: workspace:*
+        version: link:../../packages/web-config
       '@heroicons/vue':
         specifier: ^2.2.0
         version: 2.2.0(vue@3.5.32(typescript@5.9.3))
@@ -166,12 +172,19 @@ importers:
 
   packages/shared:
     dependencies:
-      '@primeuix/themes':
-        specifier: ^1.2.3
-        version: 1.2.5
       zod:
         specifier: ^4.1.12
         version: 4.3.6
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/web-config:
+    dependencies:
+      '@primeuix/themes':
+        specifier: ^1.2.3
+        version: 1.2.5
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -2460,12 +2473,6 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.58.2
       eslint-visitor-keys: 5.0.1
-
-  '@vitejs/plugin-vue@6.0.6(vite@7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0))(vue@3.5.32(typescript@5.9.3))':
-    dependencies:
-      '@rolldown/pluginutils': 1.0.0-rc.13
-      vite: 7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0)
-      vue: 3.5.32(typescript@5.9.3)
 
   '@vitejs/plugin-vue@6.0.6(vite@8.0.8(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1))(vue@3.5.32(typescript@5.9.3))':
     dependencies:

@@ -4,7 +4,7 @@ import ConfirmationService from "primevue/confirmationservice";
 import ToastService from "primevue/toastservice";
 import { createPinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
-import { giTiempoPrimeVueOptions } from "@gitiempo/shared/theme";
+import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import App from "./App.vue";
 import "./assets/main.css";

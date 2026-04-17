@@ -11,6 +11,7 @@ Current workspace setup:
 
 - `apps/user-web/src/assets/main.css`
 - `apps/admin-web/src/assets/main.css`
+- Shared token source: `packages/web-config/src/styles/tokens.css`
 - Vite integration via `@tailwindcss/vite` in each app's `vite.config.ts`
 
 - Use `@theme inline` when a token references another CSS variable via `var(...)`.
@@ -66,7 +67,7 @@ Use PrimeVue styled mode with Aura as the base preset.
 
 Current workspace setup:
 
-- Shared preset source: `packages/shared/src/theme/primevue.ts`
+- Shared preset source: `packages/web-config/src/theme/primevue.ts`
 - Both apps install PrimeVue in `src/main.ts`
 - `ToastService` and `ConfirmationService` are connected during bootstrap so dialogs and toasts can be added later without changing app initialization
 
@@ -138,6 +139,7 @@ app.use(PrimeVue, {
 - Keep the hex values in the Tailwind theme and the PrimeVue preset in sync manually.
 - `cssLayer` is required when using Tailwind classes in PrimeVue `pt` overrides.
 - Shared Zod and TypeScript contracts live in `packages/shared/src/contracts/`.
+- Shared frontend-only theme/bootstrap code lives in `packages/web-config/`.
 - Swagger / OpenAPI is intentionally deferred to `apps/api`; it is not part of the web app bootstrap.
 
 ## PT Usage
