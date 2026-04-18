@@ -1,0 +1,25 @@
+meta {
+  name: App Status
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/commons/status
+  body: none
+  auth: none
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("environment is present", function() {
+    expect(res.body.environment).to.be.a("string");
+  });
+
+  test("uptime is present", function() {
+    expect(res.body.uptime).to.be.a("number");
+  });
+}
