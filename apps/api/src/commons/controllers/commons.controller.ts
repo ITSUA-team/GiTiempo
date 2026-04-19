@@ -5,10 +5,14 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiTags } from '@nestjs/swagger';
 import { Pool } from 'pg';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PG_POOL } from '../../db/db.constants';
 import type { Env } from '../../config/env.validation';
 
+@ApiTags('commons')
+@SkipThrottle()
 @Controller('commons')
 export class CommonsController {
   constructor(
@@ -16,8 +20,21 @@ export class CommonsController {
     private readonly config: ConfigService<Env, true>,
   ) {}
 
-  @Get('health')
-  async health() {
+  /**
+   * Liveness probe — does NOT touch external dependencies.
+   * Used by orchestrators to decide whether to restart the container.
+   */
+  @Get('health/live')
+  live() {
+    return { status: 'ok' };
+  }
+
+  /**
+   * Readiness probe — checks that the API can serve traffic
+   * (here: that DB is reachable).
+   */
+  @Get('health/ready')
+  async ready() {
     try {
       await this.pool.query('SELECT 1');
       return { status: 'ok', db: 'connected' };
@@ -27,6 +44,14 @@ export class CommonsController {
         db: 'disconnected',
       });
     }
+  }
+
+  /**
+   * Backwards-compatible alias for readiness.
+   */
+  @Get('health')
+  async health() {
+    return this.ready();
   }
 
   @Get('status')
