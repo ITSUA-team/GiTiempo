@@ -1,98 +1,173 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# @gitiempo/api
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend REST API for **GI Tiempo**, built with [NestJS 11](https://docs.nestjs.com/), [Drizzle ORM](https://orm.drizzle.team/) and Postgres.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+> Auth is **not** wired yet. While that work is pending, the `/users/me` endpoints
+> resolve "me" to the **first seeded user (by email asc)** so the frontend has a
+> stable identity to talk to. Replace this once Firebase auth lands.
 
-## Description
+## Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Layer            | Choice                                            |
+|------------------|---------------------------------------------------|
+| Framework        | NestJS 11                                         |
+| Database         | Postgres 16+ via Drizzle ORM (`node-postgres`)    |
+| Validation       | Zod via `nestjs-zod` (global `ZodValidationPipe`) |
+| Logging          | `nestjs-pino` + request-id correlation            |
+| Security         | Helmet, CORS allowlist, rate-limit, body limits   |
+| Tests            | Vitest + SWC (unit) + Supertest (e2e)             |
+| API contract     | Swagger / OpenAPI (cleaned with `cleanupOpenApiDoc`) |
+| Shared schemas   | `@gitiempo/shared` (Zod schemas + types)          |
 
-## Project setup
+## Quick start
 
 ```bash
-$ pnpm install
+# 1. Install deps from repo root
+pnpm install
+
+# 2. Configure env
+cp apps/api/.env.example apps/api/.env
+# edit DATABASE_URL etc.
+
+# 3. Build shared package (required before any API command)
+pnpm build
+
+# 4. Apply migrations
+pnpm --filter @gitiempo/api db:migrate
+
+# 5. Seed 3 users
+pnpm --filter @gitiempo/api db:seed
+
+# 6. Run the API
+pnpm --filter @gitiempo/api dev
+# → http://localhost:3000
+# → Swagger UI: http://localhost:3000/docs
 ```
 
-## Compile and run the project
+## Turborepo
+
+This monorepo uses [Turborepo](https://turbo.build/) to orchestrate tasks
+across packages. When you run a command from the repo root via turbo,
+all workspace dependencies are built automatically:
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+# From repo root — shared package is built first
+pnpm typecheck     # turbo run typecheck
+pnpm test          # turbo run test
+pnpm build         # turbo run build
+pnpm lint          # turbo run lint
+pnpm openapi:export
 ```
 
-## Run tests
+When running API scripts directly with `pnpm --filter @gitiempo/api`,
+you must build `@gitiempo/shared` first:
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm build
+# or manually:
+pnpm --filter @gitiempo/shared build
 ```
 
-## Deployment
+## NPM scripts
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Run via turbo from repo root (`pnpm <script>`) or directly (`pnpm --filter @gitiempo/api <script>`).
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+| Script              | Description                                        |
+|---------------------|----------------------------------------------------|
+| `dev`               | Start in watch mode                                |
+| `build`             | Build to `dist/`                                   |
+| `start:prod`        | Run the compiled build                             |
+| `typecheck`         | `tsc --noEmit`                                     |
+| `lint`              | ESLint + Prettier auto-fix                         |
+| `test`              | Vitest unit tests (`src/**/*.spec.ts`)             |
+| `test:watch`        | Vitest in watch mode                               |
+| `test:cov`          | Unit tests with coverage                           |
+| `test:e2e`          | Vitest e2e tests against the local Postgres       |
+| `db:generate`       | Drizzle: generate SQL migration from schema diff   |
+| `db:migrate`        | Drizzle: apply pending migrations                  |
+| `db:check`          | Drizzle: validate migration history                |
+| `db:studio`         | Drizzle Studio                                     |
+| `db:seed`           | Insert / update 3 seed users                       |
+| `openapi:export`    | Write `openapi.json` to `packages/shared/`        |
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+## Project layout
+
+```
+src/
+  app.module.ts          ← global pipes, throttler, modules
+  main.ts                ← bootstrap (helmet, CORS, swagger)
+  config/
+    env.validation.ts    ← Zod-validated env (single source of truth)
+    logger.config.ts     ← nestjs-pino + x-request-id
+  commons/
+    controllers/         ← /commons/health{,/live,/ready,status}
+    filters/             ← AllExceptionsFilter (custom error envelope)
+  db/
+    db.module.ts         ← pg.Pool + Drizzle (global)
+    schema.ts            ← schema barrel
+    seed.ts              ← seed CLI (no Nest bootstrap)
+  openapi/
+    export.ts            ← writes openapi.json to packages/shared/
+  users/
+    users.module.ts      ← + ZodSerializerInterceptor (strips internals)
+    controllers/         ← GET/PATCH /users/me
+    services/
+    schemas/             ← drizzle table
+    dto/                 ← createZodDto wrappers around shared Zod schemas
+  auth/                  ← scaffold only; pending implementation
+test/
+  app.e2e-spec.ts
+  users.e2e-spec.ts
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Production-readiness defaults already enabled
 
-## Resources
+- Global `ZodValidationPipe` for `@Body` / `@Query` / `@Param`.
+- Global `AllExceptionsFilter` returning a stable error envelope:
+  ```json
+  { "statusCode": 400, "error": "BadRequest", "message": "...", "requestId": "...", "details": [ ... ] }
+  ```
+- Global `ZodSerializerInterceptor` so internal fields (e.g. `firebaseUid`) cannot leak into responses.
+- Global `ThrottlerGuard` (config: `THROTTLE_TTL_MS`, `THROTTLE_LIMIT`).
+- `helmet()` security headers.
+- CORS allowlist via `ALLOWED_ORIGINS`.
+- Body limits: 1 MB JSON / urlencoded.
+- `x-request-id` propagated and correlated in pino logs.
+- Compact dev logs by default (`LOG_EXTENDED=true` for full req/res details).
+- Liveness / readiness split at `/commons/health/live` and `/commons/health/ready`.
+- `enableShutdownHooks` + Drizzle pool close on `OnApplicationShutdown`.
 
-Check out a few resources that may come in handy when working with NestJS:
+## Endpoints (current)
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+| Method  | Path                       | Description                       |
+|---------|----------------------------|-----------------------------------|
+| `GET`   | `/commons/health/live`     | Liveness probe                    |
+| `GET`   | `/commons/health/ready`    | Readiness probe (DB ping)         |
+| `GET`   | `/commons/health`          | Alias for readiness               |
+| `GET`   | `/commons/status`          | Env, swagger flag, uptime         |
+| `GET`   | `/users/me`                | Current user (seed user for now)  |
+| `PATCH` | `/users/me`                | Update `displayName` / `avatarUrl` |
+| `GET`   | `/docs`                    | Swagger UI                        |
 
-## Support
+## Tests
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- **Unit**: `pnpm test` or `pnpm --filter @gitiempo/api test` — no DB required.
+- **E2E**: `pnpm test:e2e` or `pnpm --filter @gitiempo/api test:e2e` — requires:
+  - a reachable Postgres (URL from `apps/api/.env`)
+  - migrations applied (`db:migrate`)
+  - seed loaded (`db:seed`)
 
-## Stay in touch
+The e2e script uses Node's native `--env-file=.env` flag.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## API contract for the frontend
 
-## License
+- Generate fresh OpenAPI: `pnpm openapi:export` → `packages/shared/openapi.json`.
+- Import from frontend: `import spec from '@gitiempo/shared/openapi.json'`.
+- Shared Zod schemas live in `packages/shared/src/contracts/` and are the
+  single source of truth for both backend DTOs and frontend validators.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Bruno
+
+A Bruno collection with example requests lives under `bruno/` at the repo root.
+Open the folder in Bruno and select the **local** environment to talk to
+`http://localhost:3000`.

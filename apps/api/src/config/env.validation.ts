@@ -25,6 +25,10 @@ export const envSchema = z.object({
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),
+  LOG_EXTENDED: z
+    .string()
+    .default('false')
+    .transform((val) => val === 'true'),
 
   // --- Swagger ---
   SWAGGER_ENABLED: z
@@ -32,6 +36,10 @@ export const envSchema = z.object({
     .default('true')
     .transform((val) => val === 'true'),
   SWAGGER_PATH: z.string().default('docs'),
+
+  // --- Rate limiting ---
+  THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
+  THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
 });
 
 export type Env = z.infer<typeof envSchema>;

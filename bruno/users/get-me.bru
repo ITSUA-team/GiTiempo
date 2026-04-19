@@ -1,0 +1,28 @@
+meta {
+  name: Get Me
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/users/me
+  body: none
+  auth: none
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("response has id, email, displayName, avatarUrl", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("email");
+    expect(res.body).to.have.property("displayName");
+    expect(res.body).to.have.property("avatarUrl");
+  });
+
+  test("does not leak firebaseUid", function() {
+    expect(res.body).to.not.have.property("firebaseUid");
+  });
+}

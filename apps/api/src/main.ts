@@ -2,7 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import type { Env } from './config/env.validation';
@@ -26,8 +28,18 @@ async function bootstrap() {
     origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
+    exposedHeaders: ['x-request-id'],
   });
+
+  // Security headers. `contentSecurityPolicy` is disabled because the API
+  // does not serve HTML; Swagger UI handles its own CSP.
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
@@ -44,7 +56,11 @@ async function bootstrap() {
       .addBearerAuth()
       .build();
 
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    // `cleanupOpenApiDoc` strips Zod-internal artifacts so the generated
+    // OpenAPI document is consumable by codegen tools.
+    const document = cleanupOpenApiDoc(
+      SwaggerModule.createDocument(app, swaggerConfig),
+    );
     SwaggerModule.setup(swaggerPath, app, document, {
       swaggerOptions: {
         persistAuthorization: true,

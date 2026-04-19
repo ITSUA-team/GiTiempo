@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import type { App } from 'supertest/types';
+import { AppModule } from '../src/app.module';
 
-describe('AppController (e2e)', () => {
+describe('App (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
@@ -20,23 +21,33 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  it('/commons/status (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/commons/status')
-      .expect(200)
-      .expect((res) => {
-        expect(res.body).toHaveProperty('environment');
-        expect(res.body).toHaveProperty('uptime');
-      });
+  it('GET /commons/health/live -> 200', async () => {
+    const res = await request(app.getHttpServer()).get('/commons/health/live');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
   });
 
-  it('/commons/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/commons/health')
-      .expect(200)
-      .expect((res) => {
-        expect(res.body.status).toBe('ok');
-        expect(res.body.db).toBe('connected');
-      });
+  it('GET /commons/health/ready -> 200 + db connected', async () => {
+    const res = await request(app.getHttpServer()).get('/commons/health/ready');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ok');
+    expect(res.body.db).toBe('connected');
   });
+
+  it('GET /commons/status -> environment + uptime', async () => {
+    const res = await request(app.getHttpServer()).get('/commons/status');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('environment');
+    expect(typeof res.body.uptime).toBe('number');
+  });
+
+  it('propagates x-request-id response header', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/commons/status')
+      .set('x-request-id', 'fixed-test-id');
+    expect(res.headers['x-request-id']).toBe('fixed-test-id');
+  });
+
+  // Reference to silence unused import warnings if needed elsewhere.
+  void ValidationPipe;
 });

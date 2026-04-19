@@ -3,11 +3,13 @@
   "private": true,
   "packageManager": "pnpm@10.14.0",
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "lint": "turbo run lint"
+    "test:e2e": "turbo run test:e2e",
+    "lint": "turbo run lint",
+    "openapi:export": "turbo run openapi:export"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
