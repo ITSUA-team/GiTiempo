@@ -7,7 +7,7 @@ import { AppModule } from './../src/app.module';
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -16,14 +16,27 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterAll(async () => {
+    await app.close();
   });
 
-  afterEach(async () => {
-    await app.close();
+  it('/commons/status (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/commons/status')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body).toHaveProperty('environment');
+        expect(res.body).toHaveProperty('uptime');
+      });
+  });
+
+  it('/commons/health (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/commons/health')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.status).toBe('ok');
+        expect(res.body.db).toBe('connected');
+      });
   });
 });

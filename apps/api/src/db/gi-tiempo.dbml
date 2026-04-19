@@ -1,0 +1,293 @@
+// GI Tiempo — Database Schema
+// Generated from docs/DATA-MODEL.md
+// Visualize at https://dbdiagram.io
+
+Project gi_tiempo {
+  database_type: 'PostgreSQL'
+  Note: '''
+    GI Tiempo — time tracking with GitHub integration.
+    MVP: single-tenant, default workspace seeded on deployment.
+  '''
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+Enum workspace_role {
+  admin
+  pm
+  member
+}
+
+Enum project_source_type {
+  github_project
+  github_repo
+  manual
+}
+
+Enum task_status {
+  open
+  closed
+}
+
+Enum time_entry_source {
+  web
+  extension
+  manual
+}
+
+Enum invoice_status {
+  draft
+  sent
+  paid
+}
+
+Enum invite_status {
+  pending
+  accepted
+  expired
+}
+
+// ---------------------------------------------------------------------------
+// Tables
+// ---------------------------------------------------------------------------
+
+Table users {
+  id            uuid          [pk, default: `gen_random_uuid()`, note: 'Internal identifier']
+  firebase_uid  varchar(128)  [unique, not null, note: 'Firebase Auth UID']
+  email         varchar(255)  [not null, note: 'Email from Firebase Auth']
+  display_name  varchar(255)  [note: 'Display name']
+  avatar_url    text          [note: 'Avatar URL (from Google or uploaded)']
+  created_at    timestamptz   [not null, default: `now()`]
+  updated_at    timestamptz   [not null, default: `now()`]
+
+  Note: 'A person authenticated via Firebase Auth (Google SSO or email/password).'
+}
+
+Table github_connections {
+  id                       uuid          [pk, default: `gen_random_uuid()`]
+  user_id                  uuid          [unique, not null, note: 'One connection per user']
+  github_user_id           bigint        [not null, note: 'GitHub user ID']
+  login                    varchar(255)  [not null, note: 'GitHub username']
+  avatar_url               text          [note: 'GitHub avatar URL']
+  access_token_encrypted   text          [note: 'AES-encrypted GitHub user access token (ghu_)']
+  refresh_token_encrypted  text          [note: 'AES-encrypted GitHub refresh token (ghr_)']
+  token_expires_at         timestamptz   [note: 'When the current access token expires']
+  connected                boolean       [not null, default: true, note: 'false if user disconnected or token revoked']
+  connected_at             timestamptz   [not null, default: `now()`, note: 'When GitHub was first connected']
+  updated_at               timestamptz   [not null, default: `now()`]
+
+  indexes {
+    github_user_id [name: 'github_connections_github_user_id_idx']
+  }
+
+  Note: 'Stores the user\'s GitHub App connection. Optional — users can work without GitHub.'
+}
+
+Table workspaces {
+  id          uuid          [pk, default: `gen_random_uuid()`]
+  name        varchar(255)  [not null, note: 'Workspace display name']
+  created_at  timestamptz   [not null, default: `now()`]
+  updated_at  timestamptz   [not null, default: `now()`]
+
+  Note: 'Grouping container. MVP: single default workspace seeded on deployment.'
+}
+
+Table workspace_settings {
+  id                  uuid          [pk, default: `gen_random_uuid()`]
+  workspace_id        uuid          [unique, not null, note: 'One settings record per workspace']
+  currency            varchar(3)    [not null, default: 'USD', note: 'ISO 4217 currency code']
+  default_hourly_rate decimal(10,2) [note: 'Default hourly rate for new invoices']
+  created_at          timestamptz   [not null, default: `now()`]
+  updated_at          timestamptz   [not null, default: `now()`]
+
+  Note: 'Per-workspace configuration. Created automatically with the workspace.'
+}
+
+Table workspace_members {
+  id            uuid          [pk, default: `gen_random_uuid()`]
+  workspace_id  uuid          [not null]
+  user_id       uuid          [not null]
+  role          varchar(20)   [not null, default: 'member', note: 'admin, pm, or member']
+  joined_at     timestamptz   [not null, default: `now()`]
+
+  indexes {
+    (workspace_id, user_id) [unique, name: 'workspace_members_workspace_id_user_id_unique']
+    user_id [name: 'workspace_members_user_id_idx']
+  }
+
+  Note: 'Joins users to workspaces with a role.'
+}
+
+Table projects {
+  id                     uuid          [pk, default: `gen_random_uuid()`]
+  workspace_id           uuid          [not null]
+  name                   varchar(255)  [not null, note: 'Project display name']
+  color                  varchar(7)    [note: 'Hex color code (e.g. #FF5733)']
+  source_type            varchar(20)   [not null, default: 'github_project', note: 'github_project, github_repo, or manual']
+  github_project_id      bigint        [unique, note: 'GitHub Project V2 ID']
+  github_project_number  int           [note: 'GitHub Project number within org']
+  github_org_login       varchar(255)  [note: 'GitHub organization login']
+  github_repo_id         bigint        [unique, note: 'GitHub repository ID']
+  github_repo_full_name  varchar(500)  [unique, note: 'owner/repo slug']
+  is_active              boolean       [not null, default: true, note: 'Soft-disable project']
+  synced_at              timestamptz   [note: 'Last successful sync from GitHub']
+  created_at             timestamptz   [not null, default: `now()`]
+  updated_at             timestamptz   [not null, default: `now()`]
+
+  indexes {
+    workspace_id [name: 'projects_workspace_id_idx']
+    github_repo_full_name [name: 'projects_github_repo_full_name_idx']
+  }
+
+  Note: 'Groups tasks within a workspace. Maps to GitHub Project V2, GitHub repo, or manual.'
+}
+
+Table project_assignments {
+  id            uuid         [pk, default: `gen_random_uuid()`]
+  project_id    uuid         [not null]
+  user_id       uuid         [not null, note: 'Must be a user with role = pm']
+  workspace_id  uuid         [not null, note: 'Denormalized from project for multi-tenant queries']
+  assigned_at   timestamptz  [not null, default: `now()`]
+  assigned_by   uuid         [not null, note: 'Admin who assigned']
+
+  indexes {
+    (project_id, user_id) [unique, name: 'project_assignments_project_id_user_id_unique']
+    user_id [name: 'project_assignments_user_id_idx']
+    workspace_id [name: 'project_assignments_workspace_id_idx']
+  }
+
+  Note: 'Links Project Managers to specific projects.'
+}
+
+Table tasks {
+  id                     uuid          [pk, default: `gen_random_uuid()`]
+  project_id             uuid          [not null]
+  workspace_id           uuid          [not null, note: 'Denormalized from project for multi-tenant queries']
+  title                  text          [not null, note: 'Task title']
+  is_manual              boolean       [not null, default: false, note: 'true = created locally']
+  github_issue_number    int           [note: 'GitHub issue number']
+  github_issue_id        bigint        [note: 'GitHub issue node ID']
+  github_repo_full_name  varchar(500)  [note: 'owner/repo — issue can be from any repo']
+  status                 varchar(20)   [not null, default: 'open', note: 'open or closed']
+  is_active              boolean       [not null, default: true, note: 'Soft-disable task']
+  synced_at              timestamptz   [note: 'Last sync from GitHub']
+  created_at             timestamptz   [not null, default: `now()`]
+  updated_at             timestamptz   [not null, default: `now()`]
+
+  indexes {
+    project_id [name: 'tasks_project_id_idx']
+    workspace_id [name: 'tasks_workspace_id_idx']
+    (github_repo_full_name, github_issue_number) [unique, name: 'tasks_github_issue_unique', note: 'where is_manual = false']
+  }
+
+  Note: 'Trackable unit of work. Synced from GitHub issue or created manually.'
+}
+
+Table time_entries {
+  id                uuid          [pk, default: `gen_random_uuid()`]
+  task_id           uuid          [not null]
+  user_id           uuid          [not null, note: 'Who tracked this time']
+  workspace_id      uuid          [not null, note: 'Denormalized from task→project for multi-tenant queries']
+  started_at        timestamptz   [not null, note: 'Timer start or manual start']
+  ended_at          timestamptz   [note: 'null = timer currently running']
+  duration_seconds  int           [note: 'Computed: ended_at - started_at in seconds. null if running.']
+  description       text          [note: 'Optional note']
+  is_billable       boolean       [not null, default: true]
+  source            varchar(20)   [not null, default: 'web', note: 'web, extension, or manual']
+  invoice_id        uuid          [note: 'Linked invoice (set when invoice is generated)']
+  created_at        timestamptz   [not null, default: `now()`]
+  updated_at        timestamptz   [not null, default: `now()`]
+
+  indexes {
+    task_id [name: 'time_entries_task_id_idx']
+    user_id [name: 'time_entries_user_id_idx']
+    workspace_id [name: 'time_entries_workspace_id_idx']
+    invoice_id [name: 'time_entries_invoice_id_idx']
+    (workspace_id, user_id, started_at, ended_at) [name: 'time_entries_date_range_idx']
+    user_id [unique, name: 'time_entries_running_unique', note: 'partial: where ended_at IS NULL — one running timer per user']
+  }
+
+  Note: 'Core record. Represents a period of tracked time.'
+}
+
+Table invoices {
+  id                uuid           [pk, default: `gen_random_uuid()`]
+  workspace_id      uuid           [not null]
+  project_id        uuid           [note: 'Optional project scope']
+  title             varchar(255)   [not null, note: 'Invoice title/reference']
+  status            varchar(20)    [not null, default: 'draft', note: 'draft, sent, or paid']
+  date_from         date           [not null, note: 'Start of billing period']
+  date_to           date           [not null, note: 'End of billing period']
+  hourly_rate       decimal(10,2)  [not null, note: 'Rate per hour']
+  currency          varchar(3)     [not null, note: 'ISO 4217 (snapshot from workspace_settings)']
+  discount_percent  decimal(5,2)   [not null, default: 0, note: 'Optional discount (0-100)']
+  total_hours       decimal(10,2)  [not null, default: 0, note: 'Aggregated from time entries']
+  total_amount      decimal(12,2)  [not null, default: 0, note: 'Computed: hours x rate - discount']
+  notes             text           [note: 'Free-form notes']
+  created_by        uuid           [not null]
+  created_at        timestamptz    [not null, default: `now()`]
+  updated_at        timestamptz    [not null, default: `now()`]
+
+  indexes {
+    workspace_id [name: 'invoices_workspace_id_idx']
+  }
+
+  Note: 'Billing record generated from time entries. MVP: data only, no document generation.'
+}
+
+Table invites {
+  id            uuid          [pk, default: `gen_random_uuid()`]
+  workspace_id  uuid          [not null]
+  email         varchar(255)  [not null, note: 'Invited email address']
+  token         varchar(255)  [unique, not null, note: 'One-time invitation token']
+  invited_by    uuid          [not null, note: 'Admin who sent invite']
+  role          varchar(20)   [not null, default: 'member', note: 'Role to assign on acceptance (admin, pm, member)']
+  status        varchar(20)   [not null, default: 'pending', note: 'pending, accepted, or expired']
+  expires_at    timestamptz   [not null, note: 'Token expiration (default 7 days)']
+  created_at    timestamptz   [not null, default: `now()`]
+
+  indexes {
+    workspace_id [name: 'invites_workspace_id_idx']
+    (workspace_id, email, status) [name: 'invites_email_status_idx']
+  }
+
+  Note: 'Pending workspace invitation.'
+}
+
+// ---------------------------------------------------------------------------
+// Relationships
+// ---------------------------------------------------------------------------
+
+// users
+Ref: github_connections.user_id       > users.id              [delete: cascade]
+Ref: workspace_members.user_id        > users.id              [delete: cascade]
+Ref: project_assignments.user_id      > users.id              [delete: cascade]
+Ref: project_assignments.assigned_by  > users.id
+Ref: time_entries.user_id             > users.id              [delete: restrict]
+Ref: invoices.created_by              > users.id
+Ref: invites.invited_by               > users.id
+
+// workspaces
+Ref: workspace_settings.workspace_id  > workspaces.id         [delete: cascade]
+Ref: workspace_members.workspace_id   > workspaces.id         [delete: cascade]
+Ref: projects.workspace_id            > workspaces.id         [delete: restrict]
+Ref: invoices.workspace_id            > workspaces.id         [delete: restrict]
+Ref: invites.workspace_id             > workspaces.id         [delete: cascade]
+
+// denormalized workspace_id
+Ref: project_assignments.workspace_id > workspaces.id
+Ref: tasks.workspace_id               > workspaces.id
+Ref: time_entries.workspace_id        > workspaces.id
+
+// projects
+Ref: tasks.project_id                 > projects.id           [delete: restrict]
+Ref: project_assignments.project_id   > projects.id           [delete: cascade]
+Ref: invoices.project_id              > projects.id
+
+// tasks
+Ref: time_entries.task_id             > tasks.id              [delete: restrict]
+
+// invoices
+Ref: time_entries.invoice_id          > invoices.id           [delete: set null]
