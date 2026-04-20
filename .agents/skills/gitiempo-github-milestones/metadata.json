@@ -1,8 +1,8 @@
 {
   "version": "1.0.0",
-  "organization": "GitHub Milestones With gh",
+  "organization": "GitHub Milestones And Issues With gh",
   "date": "April 2026",
-  "abstract": "General workflow for managing GitHub repository milestones with gh CLI. Covers milestone naming, creation commands, issue assignment, verification steps, common project-board pitfalls, and permission caveats when organizing roadmap phases.",
+  "abstract": "General workflow for managing GitHub milestones and issues with gh CLI. Covers milestone naming, issue structure, issue creation and editing, parent issue and sub-issue patterns, milestone assignment, verification steps, common project-board pitfalls, and permission caveats.",
   "references": [
     "https://cli.github.com/manual/gh_issue_edit",
     "https://cli.github.com/manual/gh_api",

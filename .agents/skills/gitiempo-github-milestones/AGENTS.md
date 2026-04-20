@@ -1,20 +1,22 @@
-# GitHub Milestones With gh
+# GitHub Milestones And Issues With gh
 
 **Version 1.0.0**
-GitHub Milestones With gh
+GitHub Milestones And Issues With gh
 April 2026
 
 > **Note:**
-> This document is for agents and contributors managing roadmap structure on
-> GitHub with `gh` CLI. It focuses on creating repository milestones,
-> assigning issues to them, and avoiding common milestone/project-management
-> anti-patterns.
+> This document is for agents and contributors managing roadmap structure and
+> execution tracking on GitHub with `gh` CLI. It focuses on creating
+> repository milestones, writing good issues, structuring parent issues and
+> sub-issues, assigning issues to milestones, and avoiding common planning and
+> project-board anti-patterns.
 
 ---
 
 ## 1. Scope
 
 - Applies when using `gh` CLI to create roadmap milestones.
+- Applies when creating, updating, and verifying GitHub issues.
 - Applies when assigning existing execution issues to milestones.
 - Applies when verifying milestone state and issue membership.
 - Does not cover source-control workflows like branching, rebasing, or release tagging.
@@ -39,7 +41,31 @@ Benefits:
 - Assign actionable issues to milestones; do not use milestones as a substitute for issue breakdown.
 - Prefer milestones for planning and project boards for execution tracking.
 
-## 4. Naming Rules
+## 4. Issue Best Practices
+
+- Create issues for actionable work, not vague themes.
+- Keep one clear outcome per issue.
+- Prefer 1 issue per coherent unit of work, not per file.
+- Use parent issues only when the work naturally breaks into multiple child issues.
+- Use sub-issues for work that should be independently assignable or trackable.
+- Keep issue titles short and outcome-focused.
+- Keep issue bodies concise but operational.
+
+Recommended issue body structure:
+
+- Goal
+- Problem Solved
+- Scope
+- Tasks
+- Acceptance Criteria
+
+Avoid:
+
+- long narrative issue bodies with no acceptance criteria
+- placeholder issues that do not represent real work
+- hiding critical work in checklists when it should be a real child issue
+
+## 5. Naming Rules
 
 Milestone names should be:
 
@@ -61,9 +87,59 @@ Rules:
 - Use concise descriptions that explain the goal.
 - Do not create duplicate milestone names with minor wording changes.
 
-## 5. Creation Workflow
+## 6. Creating Issues
 
-### 5.1 List Existing Milestones First
+### 6.1 Create A Single Issue
+
+```bash
+gh issue create \
+  --repo <owner>/<repo> \
+  --title 'Add session bootstrap flow' \
+  --label frontend \
+  --milestone 'M1 Foundation' \
+  --body $'## Goal\nAdd a predictable session bootstrap flow for app startup.\n\n## Problem Solved\nThe app currently has no consistent startup authentication behavior.\n\n## Scope\n- session fetch on app load\n- loading/error behavior\n\n## Tasks\n- define startup session fetch path\n- define loading state behavior\n- define failure handling behavior\n\n## Acceptance Criteria\n- startup behavior is consistent and documented\n- future auth work can build on a stable bootstrap flow\n'
+```
+
+### 6.2 Edit An Existing Issue
+
+```bash
+gh issue edit <issue-number> --repo <owner>/<repo> --title '<new title>' --body-file <file>
+```
+
+### 6.3 List Issues
+
+```bash
+gh issue list --repo <owner>/<repo> --state open --json number,title,labels,milestone,url
+```
+
+## 7. Parent Issues And Sub-Issues
+
+Use parent issues for larger execution themes only when the child work needs to be tracked independently.
+
+Best practices:
+
+- Parent issue should explain the outcome, not duplicate every child task.
+- Child issues should carry the actual implementation detail.
+- After creating child issues, simplify the parent body and point to the sub-issues.
+
+Create child issues first, then attach them as sub-issues with GraphQL `addSubIssue`.
+
+Pattern:
+
+1. Create the child issues with `gh issue create`
+2. Fetch parent and child issue node IDs with `gh api graphql`
+3. Attach child issues to the parent using `addSubIssue`
+4. Verify sub-issue relationships on the parent
+
+Verification example:
+
+```bash
+gh api graphql -f query='query { repository(owner: "<owner>", name: "<repo>") { issue(number: <parent-number>) { subIssues(first: 20) { nodes { number title } } } } }'
+```
+
+## 8. Creation Workflow For Milestones
+
+### 8.1 List Existing Milestones First
 
 Always check existing milestones before creating new ones.
 
@@ -73,7 +149,7 @@ Command:
 gh api repos/<owner>/<repo>/milestones
 ```
 
-### 5.2 Create A Milestone
+### 8.2 Create A Milestone
 
 Use the repository milestones REST API through `gh api`.
 
@@ -85,13 +161,13 @@ gh api repos/<owner>/<repo>/milestones \
   -f description='Complete the foundation work needed before product feature delivery begins.'
 ```
 
-### 5.3 Create The Full Roadmap Set
+### 8.3 Create The Full Roadmap Set
 
 Create milestones individually and verify each one after creation.
 
 If the roadmap is still changing, create only the next 1-3 milestones first instead of creating a very long milestone list upfront.
 
-## 6. Assigning Issues To Milestones
+## 9. Assigning Issues To Milestones
 
 Once implementation issues exist, assign them to the relevant milestone.
 
@@ -120,27 +196,33 @@ Best practices:
 - Avoid dumping every open issue into a milestone.
 - Revisit milestone assignment when scope changes.
 
-## 7. Verification Workflow
+## 10. Verification Workflow
 
-### 7.1 Verify Milestones Exist
+### 10.1 Verify Milestones Exist
 
 ```bash
 gh api repos/<owner>/<repo>/milestones
 ```
 
-### 7.2 Verify Issues And Their Milestones
+### 10.2 Verify Issues And Their Milestones
 
 ```bash
 gh issue list --repo <owner>/<repo> --state open --json number,title,milestone
 ```
 
-### 7.3 Verify One Issue Directly
+### 10.3 Verify One Issue Directly
 
 ```bash
 gh issue view <issue-number> --repo <owner>/<repo> --json number,title,milestone,url
 ```
 
-## 8. Project Board Caveat
+### 10.4 Verify Sub-Issues On A Parent
+
+```bash
+gh api graphql -f query='query { repository(owner: "<owner>", name: "<repo>") { issue(number: <parent-number>) { subIssues(first: 20) { nodes { number title } } } } }'
+```
+
+## 11. Project Board Caveat
 
 Milestones and GitHub Projects are separate systems.
 
@@ -156,7 +238,7 @@ Best practice:
 - use project boards for execution
 - verify project filters separately from milestone assignment
 
-## 9. Deletion And Permissions Caveat
+## 12. Deletion And Permissions Caveat
 
 Deleting issues is permission-sensitive.
 
@@ -174,7 +256,7 @@ If cleanup is needed:
 - prefer closing obsolete issues when delete permission is unavailable
 - or ask a maintainer with sufficient permissions to remove them
 
-## 10. Safe Operating Rules
+## 13. Safe Operating Rules
 
 - List milestones first before creating new ones.
 - Do not create duplicate phase milestones.
@@ -183,8 +265,10 @@ If cleanup is needed:
 - Verify changes immediately after creation.
 - Keep milestones outcome-oriented, not task-oriented.
 - Keep issue scope small enough that a milestone remains meaningful.
+- Prefer real child issues over long checkbox lists when work needs independent tracking.
+- Keep parent issues concise once sub-issues exist.
 
-## 11. Suggested Milestone Pattern
+## 14. Suggested Milestone Pattern
 
 Common patterns:
 
@@ -197,7 +281,7 @@ Common patterns:
 7. Billing or Admin Operations
 8. Quality and Release Readiness
 
-## 12. Anti-Patterns To Avoid
+## 15. Anti-Patterns To Avoid
 
 - Using roadmap placeholder issues as the primary representation of milestones
 - Creating milestones without checking whether they already exist
@@ -206,8 +290,10 @@ Common patterns:
 - Assuming issue deletion permissions exist on the current GitHub token
 - Using milestones for individual engineering tasks
 - Creating too many milestones too early
+- Keeping all implementation detail inside a parent issue when sub-issues are needed
+- Using project boards as a substitute for good issue structure
 
-## 13. Useful Commands
+## 16. Useful Commands
 
 List milestones:
 
@@ -221,6 +307,18 @@ Create milestone:
 gh api repos/<owner>/<repo>/milestones -f title='M1 Foundation' -f description='Complete the foundation work needed before product feature delivery begins.'
 ```
 
+Create issue:
+
+```bash
+gh issue create --repo <owner>/<repo> --title '<title>' --body '<body>'
+```
+
+Edit issue:
+
+```bash
+gh issue edit <issue-number> --repo <owner>/<repo> --body-file <file>
+```
+
 Assign issue to milestone:
 
 ```bash
@@ -231,6 +329,12 @@ List issues with milestone info:
 
 ```bash
 gh issue list --repo <owner>/<repo> --state open --json number,title,milestone
+```
+
+View issue with project and milestone info:
+
+```bash
+gh issue view <issue-number> --repo <owner>/<repo> --json title,body,labels,milestone,projectItems,url
 ```
 
 ---
