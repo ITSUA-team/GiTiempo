@@ -13,7 +13,13 @@ permissions:
 
 jobs:
   sync-parent-issue:
+    # Projects v2 automation needs a token with project access.
     runs-on: ubuntu-latest
+    env:
+      PARENT_ID: ''
+      EXISTING_ITEM_ID: ''
+      ISSUE_ID: ''
+      ITEM_ID: ''
     steps:
       - name: Resolve issue metadata
         env:
