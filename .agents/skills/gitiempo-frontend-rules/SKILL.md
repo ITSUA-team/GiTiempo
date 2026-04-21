@@ -33,6 +33,9 @@ Use this skill when:
 - If a PrimeVue style override fails, fix tokens or CSS layer order before adding deep selectors.
 - Dark mode is disabled for MVP.
 - Mobile is required, but desktop-first polish is acceptable for MVP.
+- Before implementing frontend UI, inspect the matching `docs/ui/*` guidance first, then inspect the relevant approved design, usually from the `.pen` file.
+- Desktop implementations should be pixel-perfect to the approved design unless the user explicitly asks for a looser interpretation.
+- If the docs and design conflict, follow the docs as the source of truth.
 
 ## Source Of Truth
 
