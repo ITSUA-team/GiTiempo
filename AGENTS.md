@@ -1,6 +1,7 @@
 # GI Tiempo Agent Notes
 
 ## Routing
+
 - Root `AGENTS.md` contains only monorepo-wide rules. For task details, jump to the nearest app file first instead of scanning the whole repo.
 - Backend, DB, NestJS, Drizzle, OpenAPI: `apps/api/AGENTS.md`
 - User SPA: `apps/user-web/AGENTS.md`
@@ -8,6 +9,7 @@
 - If a task also touches shared contracts or shared UI config, inspect `packages/shared/*` or `packages/web-config/*` directly. There are intentionally no package-level `AGENTS.md` files there.
 
 ## Monorepo Rules
+
 - Prefer root Turbo commands when possible: `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:e2e`, `pnpm openapi:export`.
 - Turbo builds workspace dependencies automatically; direct `pnpm --filter ...` commands do not.
 - Exact package names for filters: `@gitiempo/api`, `user-web`, `admin-web`, `@gitiempo/shared`, `@gitiempo/web-config`.
@@ -15,9 +17,11 @@
 - `apps/chrome-ext/` is only a placeholder (`.gitkeep`); do not assume the extension app exists yet.
 
 ## Source Of Truth
+
 - Prefer manifests and app-local config over root prose. The root README still mentions Kysely, but the live backend is NestJS + Drizzle.
 - Cross-package work usually spans one app plus `packages/shared` or `packages/web-config`; inspect only those paths instead of rescanning the whole monorepo.
 - Before implementing, check whether the planned change conflicts with documented behavior or requirements in `docs/`; if it does, escalate immediately instead of silently choosing one source.
+- For GitHub work planning and project-board operations, use `docs/GITHUB-PROJECT-WORKFLOW.md` for the repo's milestone, issue, sub-issue, and project-board rules.
 - There is no checked-in `.github/workflows/` CI config in this repo; do not assume CI will enforce anything beyond the package scripts.
 - `.npmrc` enforces `minimum-release-age=10080`, so installs can reject packages published within the last 7 days.
 - API request examples live in `bruno/`; use the `local` environment for manual endpoint checks.
