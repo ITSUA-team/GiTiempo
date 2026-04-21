@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_PIPE } from '@nestjs/core';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD, APP_PIPE, Reflector } from '@nestjs/core';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+  ThrottlerStorage,
+} from '@nestjs/throttler';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { validate } from './config/env.validation';
 import type { Env } from './config/env.validation';
@@ -39,6 +43,19 @@ import { CommonsModule } from './commons/commons.module';
     {
       provide: APP_PIPE,
       useClass: ZodValidationPipe,
+    },
+    {
+      provide: APP_GUARD,
+      // `ThrottlerGuard`'s constructor metadata lives in the published
+      // package and isn't re-emitted by our compiler, so Nest cannot always
+      // resolve `Reflector` via reflect-metadata. Wire it via an explicit
+      // factory to avoid that brittle path.
+      inject: ['THROTTLER:MODULE_OPTIONS', ThrottlerStorage, Reflector],
+      useFactory: (
+        options: ConstructorParameters<typeof ThrottlerGuard>[0],
+        storage: ThrottlerStorage,
+        reflector: Reflector,
+      ) => new ThrottlerGuard(options, storage, reflector),
     },
   ],
 })

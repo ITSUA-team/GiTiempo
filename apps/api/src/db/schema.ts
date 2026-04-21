@@ -6,3 +6,4 @@
  * module have a single entry point.
  */
 export * from '../users/schemas/users.schema';
+export * from '../auth/schemas/refresh-tokens.schema';

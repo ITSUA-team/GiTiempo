@@ -1,11 +1,24 @@
-import { Inject, Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { asc, eq } from 'drizzle-orm';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 import type { UserResponse, UpdateUserInput } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { users } from '../schemas/users.schema';
 
 type UserRow = typeof users.$inferSelect;
+
+export interface UpsertFromFirebaseInput {
+  firebaseUid: string;
+  email: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
 
 @Injectable()
 export class UsersService {
@@ -14,37 +27,36 @@ export class UsersService {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
 
   /**
-   * Returns the "current" user.
-   *
-   * NOTE: authentication is not wired yet. Until it is, "me" is defined
-   * as the first user from the seed, sorted by email ascending. This
-   * gives us a deterministic identity for development and contract tests.
+   * Looks up a user by local id. Returns the public response shape.
+   * Throws `UnauthorizedException` if the subject resolved from the
+   * access token no longer exists (account was deleted) — this is a
+   * re-auth signal, not a "not found" situation.
    */
-  async findCurrent(): Promise<UserResponse> {
+  async findById(id: string): Promise<UserResponse> {
     const [row] = await this.db
       .select()
       .from(users)
-      .orderBy(asc(users.email))
+      .where(eq(users.id, id))
       .limit(1);
-
-    if (!row) {
-      throw new NotFoundException(
-        'No users found. Run `pnpm --filter @gitiempo/api db:seed` first.',
-      );
-    }
-
+    if (!row) throw new UnauthorizedException('Unauthorized');
     return this.toResponse(row);
   }
 
-  /**
-   * Patches the "current" user. Same identity rule as `findCurrent`.
-   *
-   * `displayName` and `avatarUrl` are both optional but the schema
-   * guarantees at least one of them is present (validated upstream).
-   */
-  async updateCurrent(input: UpdateUserInput): Promise<UserResponse> {
-    const current = await this.findCurrent();
+  /** Same as `findById` but returns the raw row (internal use). */
+  async findRowById(id: string): Promise<UserRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    return row ?? null;
+  }
 
+  /**
+   * Patches mutable fields on the given user. Only fields present in
+   * `input` are written; omitted keys are left untouched.
+   */
+  async updateById(id: string, input: UpdateUserInput): Promise<UserResponse> {
     const [updated] = await this.db
       .update(users)
       .set({
@@ -56,16 +68,43 @@ export class UsersService {
           : {}),
         updatedAt: new Date(),
       })
-      .where(eq(users.id, current.id))
+      .where(eq(users.id, id))
       .returning();
-
-    if (!updated) {
-      // Extremely unlikely (we just read the row) but keep the contract honest.
-      throw new NotFoundException('User disappeared during update');
-    }
-
+    if (!updated) throw new NotFoundException('User not found');
     this.logger.log(`Updated user ${updated.id}`);
     return this.toResponse(updated);
+  }
+
+  /**
+   * Upserts a local user keyed by `firebase_uid`. Called during login
+   * after Firebase verification succeeds.
+   *
+   * On conflict we refresh `email`, `display_name`, `avatar_url`, and
+   * `updated_at` so the local profile stays in sync with the Firebase
+   * identity. `id` and `created_at` are immutable.
+   */
+  async upsertFromFirebase(input: UpsertFromFirebaseInput): Promise<UserRow> {
+    const now = new Date();
+    const [row] = await this.db
+      .insert(users)
+      .values({
+        firebaseUid: input.firebaseUid,
+        email: input.email,
+        displayName: input.displayName ?? null,
+        avatarUrl: input.avatarUrl ?? null,
+      })
+      .onConflictDoUpdate({
+        target: users.firebaseUid,
+        set: {
+          email: input.email,
+          displayName: input.displayName ?? null,
+          avatarUrl: input.avatarUrl ?? null,
+          updatedAt: now,
+        },
+      })
+      .returning();
+    if (!row) throw new Error('Failed to upsert user');
+    return row;
   }
 
   /** Maps a DB row to the public response shape (drops `firebaseUid`). */

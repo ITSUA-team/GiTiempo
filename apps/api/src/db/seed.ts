@@ -25,6 +25,14 @@ interface SeedUser {
 
 const SEED_USERS: SeedUser[] = [
   {
+    // Matches the test fake's default token `test:admin-uid:admin@example.com`
+    // used by e2e suites and bruno's local environment.
+    firebaseUid: 'admin-uid',
+    email: 'admin@example.com',
+    displayName: 'Admin (seed)',
+    avatarUrl: null,
+  },
+  {
     firebaseUid: 'seed-user-1',
     email: 'alice@gitiempo.dev',
     displayName: 'Alice (seed)',

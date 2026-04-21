@@ -1,46 +1,91 @@
 import { z } from 'zod';
 
-export const envSchema = z.object({
-  // --- Application ---
-  PORT: z.coerce.number().int().positive().default(3000),
-  NODE_ENV: z
-    .enum(['development', 'production', 'test'])
-    .default('development'),
+const firebaseProjectIdSchema = z.string().min(1);
+const firebaseClientEmailSchema = z.string().email();
+const firebasePrivateKeySchema = z
+  .string()
+  .min(1)
+  // `.env` files store PEM newlines as literal `\n`; normalize here.
+  .transform((val) => val.replace(/\\n/g, '\n'));
 
-  // --- Database ---
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+export const envSchema = z
+  .object({
+    // --- Application ---
+    PORT: z.coerce.number().int().positive().default(3000),
+    NODE_ENV: z
+      .enum(['development', 'production', 'test'])
+      .default('development'),
 
-  // --- CORS ---
-  ALLOWED_ORIGINS: z
-    .string()
-    .default('')
-    .transform((val) =>
-      val
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
-    ),
+    // --- Database ---
+    DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
-  // --- Logging ---
-  LOG_LEVEL: z
-    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
-    .default('info'),
-  LOG_EXTENDED: z
-    .string()
-    .default('false')
-    .transform((val) => val === 'true'),
+    // --- CORS ---
+    ALLOWED_ORIGINS: z
+      .string()
+      .default('')
+      .transform((val) =>
+        val
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
 
-  // --- Swagger ---
-  SWAGGER_ENABLED: z
-    .string()
-    .default('true')
-    .transform((val) => val === 'true'),
-  SWAGGER_PATH: z.string().default('docs'),
+    // --- Logging ---
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
+    LOG_EXTENDED: z
+      .string()
+      .default('false')
+      .transform((val) => val === 'true'),
 
-  // --- Rate limiting ---
-  THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
-  THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
-});
+    // --- Swagger ---
+    SWAGGER_ENABLED: z
+      .string()
+      .default('true')
+      .transform((val) => val === 'true'),
+    SWAGGER_PATH: z.string().default('docs'),
+
+    // --- Rate limiting ---
+    THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
+    THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
+
+    // --- JWT (access + refresh token secrets) ---
+    JWT_ACCESS_SECRET: z
+      .string()
+      .min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
+    JWT_REFRESH_SECRET: z
+      .string()
+      .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+    JWT_ACCESS_TTL: z.string().min(1).default('15m'),
+    JWT_REFRESH_TTL: z.string().min(1).default('7d'),
+    JWT_ISSUER: z.string().min(1).default('gitiempo-api'),
+    JWT_AUDIENCE: z.string().min(1).default('gitiempo-clients'),
+
+    // --- Firebase Admin ---
+    // Required in non-test environments. In test mode the fake provider is used,
+    // so missing values are allowed to keep CI runs hermetic.
+    FIREBASE_PROJECT_ID: firebaseProjectIdSchema.optional(),
+    FIREBASE_CLIENT_EMAIL: firebaseClientEmailSchema.optional(),
+    FIREBASE_PRIVATE_KEY: firebasePrivateKeySchema.optional(),
+  })
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV === 'test') return;
+    const required: Array<keyof typeof env> = [
+      'FIREBASE_PROJECT_ID',
+      'FIREBASE_CLIENT_EMAIL',
+      'FIREBASE_PRIVATE_KEY',
+    ];
+    for (const key of required) {
+      if (!env[key]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} is required when NODE_ENV=${env.NODE_ENV}`,
+        });
+      }
+    }
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

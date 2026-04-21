@@ -1,0 +1,35 @@
+meta {
+  name: Logout
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/auth/logout
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "refreshToken": "{{refreshToken}}"
+  }
+}
+
+tests {
+  test("status is 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}
+
+docs {
+  Terminates the current session by hard-deleting the refresh token row.
+
+  Requires the caller's own access token (bearer auth) so only the session
+  owner can terminate it. Always returns 204, whether or not the token was
+  recognized, to avoid existence leaks.
+}

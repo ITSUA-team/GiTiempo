@@ -7,7 +7,11 @@ meta {
 get {
   url: {{baseUrl}}/users/me
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
 }
 
 tests {
@@ -25,4 +29,9 @@ tests {
   test("does not leak firebaseUid", function() {
     expect(res.body).to.not.have.property("firebaseUid");
   });
+}
+
+docs {
+  Returns the user whose `sub` matches the bearer access token. Run the
+  `auth/Login` request first to populate `{{accessToken}}`.
 }

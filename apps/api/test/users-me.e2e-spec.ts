@@ -3,20 +3,22 @@ import { INestApplication } from '@nestjs/common';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { ADMIN_EMAIL, bearer, login } from './helpers/auth';
 
 /**
- * End-to-end tests for the Users module against the local Postgres.
+ * End-to-end tests for `/users/me` behind the global `JwtAuthGuard`.
  *
  * Pre-requisites (outside the test):
  *   - migrations applied:  pnpm --filter @gitiempo/api db:migrate
  *   - seed loaded:         pnpm --filter @gitiempo/api db:seed
  *
- * The "current" user is the first seeded user by email asc, which is
- * `alice@gitiempo.dev` per `src/db/seed.ts`.
+ * The suite logs in through the test-only fake Firebase provider and then
+ * exercises `/users/me` with a real bearer token. No real Firebase creds
+ * are required.
  */
 describe('Users (e2e)', () => {
   let app: INestApplication;
-  const SEED_FIRST_EMAIL = 'alice@gitiempo.dev';
+  let accessToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -25,6 +27,9 @@ describe('Users (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    const tokens = await login(app);
+    accessToken = tokens.accessToken;
   });
 
   afterAll(async () => {
@@ -32,10 +37,17 @@ describe('Users (e2e)', () => {
   });
 
   describe('GET /users/me', () => {
-    it('returns the first seeded user, without firebaseUid', async () => {
+    it('returns 401 without a bearer token', async () => {
       const res = await request(app.getHttpServer()).get('/users/me');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns the authenticated user, without firebaseUid', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(accessToken));
       expect(res.status).toBe(200);
-      expect(res.body.email).toBe(SEED_FIRST_EMAIL);
+      expect(res.body.email).toBe(ADMIN_EMAIL);
       expect(res.body).not.toHaveProperty('firebaseUid');
       expect(res.body).toHaveProperty('id');
       expect(res.body).toHaveProperty('createdAt');
@@ -44,21 +56,30 @@ describe('Users (e2e)', () => {
   });
 
   describe('PATCH /users/me', () => {
-    it('updates displayName and returns the new shape', async () => {
-      const next = `Alice e2e ${Date.now()}`;
+    it('returns 401 without a bearer token', async () => {
       const res = await request(app.getHttpServer())
         .patch('/users/me')
+        .send({ displayName: 'nope' });
+      expect(res.status).toBe(401);
+    });
+
+    it('updates displayName and returns the new shape', async () => {
+      const next = `Admin e2e ${Date.now()}`;
+      const res = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', bearer(accessToken))
         .send({ displayName: next });
 
       expect(res.status).toBe(200);
       expect(res.body.displayName).toBe(next);
-      expect(res.body.email).toBe(SEED_FIRST_EMAIL);
+      expect(res.body.email).toBe(ADMIN_EMAIL);
       expect(res.body).not.toHaveProperty('firebaseUid');
     });
 
     it('rejects an empty body with 400 + custom error envelope', async () => {
       const res = await request(app.getHttpServer())
         .patch('/users/me')
+        .set('Authorization', bearer(accessToken))
         .send({});
 
       expect(res.status).toBe(400);
@@ -71,6 +92,7 @@ describe('Users (e2e)', () => {
     it('rejects an invalid avatarUrl (not a url) with 400', async () => {
       const res = await request(app.getHttpServer())
         .patch('/users/me')
+        .set('Authorization', bearer(accessToken))
         .send({ avatarUrl: 'not-a-url' });
 
       expect(res.status).toBe(400);

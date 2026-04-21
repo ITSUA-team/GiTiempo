@@ -6,9 +6,11 @@ import { UsersService } from '../services/users.service';
 describe('UsersController', () => {
   let controller: UsersController;
   const usersService = {
-    findCurrent: vi.fn(),
-    updateCurrent: vi.fn(),
+    findById: vi.fn(),
+    updateById: vi.fn(),
   };
+
+  const sub = '11111111-1111-1111-1111-111111111111';
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -19,20 +21,20 @@ describe('UsersController', () => {
     controller = module.get(UsersController);
   });
 
-  it('GET /users/me delegates to UsersService.findCurrent', async () => {
-    const fake = { id: 'x' } as never;
-    usersService.findCurrent.mockResolvedValue(fake);
-    await expect(controller.getMe()).resolves.toBe(fake);
-    expect(usersService.findCurrent).toHaveBeenCalledOnce();
+  it('GET /users/me delegates to UsersService.findById with the subject', async () => {
+    const fake = { id: sub } as never;
+    usersService.findById.mockResolvedValue(fake);
+    await expect(controller.getMe(sub)).resolves.toBe(fake);
+    expect(usersService.findById).toHaveBeenCalledWith(sub);
   });
 
-  it('PATCH /users/me forwards body to UsersService.updateCurrent', async () => {
-    const fake = { id: 'x' } as never;
-    usersService.updateCurrent.mockResolvedValue(fake);
+  it('PATCH /users/me forwards subject + body to UsersService.updateById', async () => {
+    const fake = { id: sub } as never;
+    usersService.updateById.mockResolvedValue(fake);
     await expect(
-      controller.updateMe({ displayName: 'New' } as never),
+      controller.updateMe(sub, { displayName: 'New' } as never),
     ).resolves.toBe(fake);
-    expect(usersService.updateCurrent).toHaveBeenCalledWith({
+    expect(usersService.updateById).toHaveBeenCalledWith(sub, {
       displayName: 'New',
     });
   });

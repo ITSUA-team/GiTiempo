@@ -63,7 +63,14 @@ export const LoggerModuleConfig = LoggerModule.forRootAsync({
             }
           : {}),
         redact: {
-          paths: ['req.headers.authorization', 'req.headers.cookie'],
+          paths: [
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'req.body.firebaseIdToken',
+            'req.body.refreshToken',
+            'res.body.accessToken',
+            'res.body.refreshToken',
+          ],
           censor: '[REDACTED]',
         },
         autoLogging: {
