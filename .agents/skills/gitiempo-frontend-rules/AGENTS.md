@@ -33,8 +33,11 @@ Read the smallest relevant set of files for the task.
 - Admin screen details: `docs/ui/pages-admin.md`
 - User app notes: `apps/user-web/AGENTS.md`
 - Admin app notes: `apps/admin-web/AGENTS.md`
+- Relevant approved Pencil `.pen` screen for the task when one exists
 
 Do not invent alternate frontend conventions when these files already define them.
+Before implementing UI, inspect the smallest relevant docs first, then inspect the smallest relevant approved design source.
+If docs and design conflict, the docs are the source of truth.
 
 ## 3. Stack And Bootstrap
 
@@ -107,6 +110,13 @@ Do not invent alternate frontend conventions when these files already define the
 - Card shadow: `shadow-card`
 - Overlay shadow: `shadow-popover`
 - Modal shadow: `shadow-modal`
+
+### 4.6 Design Fidelity
+
+- Desktop frontend implementation is expected to be pixel-perfect to the approved design.
+- Match the approved font family, font size, font weight, line height, spacing, padding, gaps, radii, borders, layout alignment, and component hierarchy.
+- Reuse shared tokens and PrimeVue styling hooks to achieve that fidelity instead of introducing visual approximations.
+- If the design cannot be matched because of a technical constraint or a conflict in the source of truth, stop and ask instead of improvising.
 
 ## 5. PrimeVue Rules
 
@@ -309,10 +319,13 @@ When doing frontend work in this repo:
 1. Read `docs/ui/INDEX.md` first.
 2. Load only the minimal relevant UI section docs for the task.
 3. Check the nearest app `AGENTS.md` file.
-4. Prefer the smallest correct UI change.
-5. Reuse shared tokens and preset logic instead of introducing app-local styling forks.
-6. Verify the affected app with lint and typecheck.
-7. If `packages/web-config` changed, verify both web apps.
+4. Inspect the relevant approved `.pen` design screen before implementing when one exists.
+5. Prefer the smallest correct UI change.
+6. Implement desktop UI pixel-perfect to the approved design unless the user asked for a deliberate deviation.
+7. If docs and design conflict, follow the docs.
+8. Reuse shared tokens and preset logic instead of introducing app-local styling forks.
+9. Verify the affected app with lint and typecheck.
+10. If `packages/web-config` changed, verify both web apps.
 
 ## 12. Anti-Patterns To Avoid
 
