@@ -1,0 +1,30 @@
+schema: spec-driven
+
+context: |
+  Monorepo: GiTiempo (pnpm workspaces + Turborepo)
+  Backend app: apps/api using NestJS, Drizzle ORM, PostgreSQL, and OpenAPI export
+  Frontend apps: apps/user-web and apps/admin-web using Vue 3, Pinia, PrimeVue v4, Tailwind CSS v4, and Vue Router
+  Shared packages: packages/shared for Zod contracts and packages/web-config for shared frontend theme/bootstrap
+  Auth direction: frontend authenticates with Firebase Auth and the backend verifies identity and serves application APIs
+  OpenSpec domain rule: keep specs separated by layer under openspec/specs/backend, openspec/specs/frontend, and openspec/specs/shared
+  Cross-layer changes should add delta specs in each affected layer instead of collapsing backend and frontend behavior into one spec file
+
+rules:
+  proposal:
+    - Reference the relevant GitHub issue or parent issue when known.
+    - State which layer is affected: backend, frontend, shared, or multiple.
+    - Call out if the change modifies contracts or authentication behavior.
+  specs:
+    - Use behavior-first requirements with Given/When/Then scenarios.
+    - Keep backend behavior in openspec/specs/backend/<domain>/spec.md.
+    - Keep frontend behavior in openspec/specs/frontend/<domain>/spec.md.
+    - Keep cross-layer contracts and conventions in openspec/specs/shared/<domain>/spec.md.
+    - Avoid implementation details such as concrete class names unless behavior depends on them.
+  design:
+    - Group planned file changes by app or package.
+    - Reference the nearest AGENTS.md instructions for affected apps.
+    - Explain backend/frontend coordination when a change spans multiple layers.
+  tasks:
+    - Group tasks by area: API, user-web, admin-web, shared, docs.
+    - Keep tasks small enough to complete in one focused session when possible.
+    - Include verification tasks for each touched area.
