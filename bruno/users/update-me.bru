@@ -7,7 +7,11 @@ meta {
 patch {
   url: {{baseUrl}}/users/me
   body: json
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
 }
 
 body:json {
@@ -28,4 +32,9 @@ tests {
   test("does not leak firebaseUid", function() {
     expect(res.body).to.not.have.property("firebaseUid");
   });
+}
+
+docs {
+  Updates the authenticated user's mutable fields (`displayName`,
+  `avatarUrl`). At least one field is required by `updateUserSchema`.
 }

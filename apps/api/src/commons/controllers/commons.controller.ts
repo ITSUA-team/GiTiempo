@@ -10,8 +10,10 @@ import { Pool } from 'pg';
 import { SkipThrottle } from '@nestjs/throttler';
 import { PG_POOL } from '../../db/db.constants';
 import type { Env } from '../../config/env.validation';
+import { SkipAuth } from '../../auth/decorators/skip-auth.decorator';
 
 @ApiTags('commons')
+@SkipAuth()
 @SkipThrottle()
 @Controller('commons')
 export class CommonsController {

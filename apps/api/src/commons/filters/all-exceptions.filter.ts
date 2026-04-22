@@ -99,21 +99,38 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
 
-    // 2) Standard NestJS HttpException (and subclasses)
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
-      const res = exception.getResponse();
+    // 2) Standard NestJS HttpException (and subclasses).
+    //
+    // Use duck-typing rather than `instanceof HttpException`: in this
+    // workspace some third-party Nest modules (e.g. `@nestjs/throttler`
+    // at the repo root) resolve `@nestjs/common` from a different
+    // directory than `apps/api`, which makes `instanceof` unreliable
+    // across module boundaries. Any object that quacks like an
+    // HttpException (has `getStatus()` + `getResponse()`) is treated
+    // as one.
+    if (
+      exception instanceof HttpException ||
+      (typeof exception === 'object' &&
+        exception !== null &&
+        typeof (exception as { getStatus?: unknown }).getStatus ===
+          'function' &&
+        typeof (exception as { getResponse?: unknown }).getResponse ===
+          'function')
+    ) {
+      const httpEx = exception as HttpException;
+      const status = httpEx.getStatus();
+      const res = httpEx.getResponse();
       const errorName =
         typeof res === 'object' && res !== null && 'error' in res
           ? String((res as { error: unknown }).error)
-          : exception.name.replace(/Exception$/, '');
+          : httpEx.name.replace(/Exception$/, '');
       const message =
         typeof res === 'string'
           ? res
           : typeof res === 'object' && res !== null && 'message' in res
             ? ((res as { message: string | string[] }).message ??
-              exception.message)
-            : exception.message;
+              httpEx.message)
+            : httpEx.message;
       return {
         statusCode: status,
         error: errorName,

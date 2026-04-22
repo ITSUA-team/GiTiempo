@@ -1,0 +1,48 @@
+meta {
+  name: Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "firebaseIdToken": "{{firebaseIdToken}}"
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("returns a token pair", function() {
+    expect(res.body).to.have.property("accessToken");
+    expect(res.body).to.have.property("refreshToken");
+    expect(res.body).to.have.property("accessTokenExpiresIn");
+  });
+}
+
+script:post-response {
+  if (res.status === 200) {
+    bru.setEnvVar("accessToken", res.body.accessToken);
+    bru.setEnvVar("refreshToken", res.body.refreshToken);
+  }
+}
+
+docs {
+  Exchanges a Firebase ID token for a local access/refresh token pair.
+
+  In `NODE_ENV=test` the API runs with `FakeFirebaseAdminService`, which
+  accepts tokens shaped `test:<uid>:<email>[:<name>]`. The `local`
+  environment ships with `firebaseIdToken=test:admin-uid:admin@example.com`,
+  matching the user created by `pnpm --filter @gitiempo/api db:seed`.
+
+  On success this request stores `accessToken` / `refreshToken` into the
+  `local` environment so the other requests in this collection can use them.
+}

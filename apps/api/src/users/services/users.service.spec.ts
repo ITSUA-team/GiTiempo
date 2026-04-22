@@ -1,33 +1,55 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UsersService } from './users.service';
 import { DRIZZLE } from '../../db/db.constants';
 
 /**
- * Helper that builds a chainable Drizzle mock.
+ * Helper that builds a chainable Drizzle mock covering the two query
+ * shapes used by the service:
  *
- * The service uses two query shapes:
- *   db.select().from(...).orderBy(...).limit(...)        -> Promise<row[]>
- *   db.update(...).set(...).where(...).returning()       -> Promise<row[]>
- *
- * `selectRows` and `updateRows` control what each chain resolves to.
+ *   db.select().from(...).where(...).limit(...)           -> Promise<row[]>
+ *   db.update(...).set(...).where(...).returning()        -> Promise<row[]>
+ *   db.insert(...).values(...).onConflictDoUpdate(...)
+ *     .returning()                                        -> Promise<row[]>
  */
-function makeDbMock(opts: { selectRows: unknown[]; updateRows?: unknown[] }) {
-  const limit = vi.fn().mockResolvedValue(opts.selectRows);
-  const orderBy = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ orderBy });
+function makeDbMock(opts: {
+  selectRows?: unknown[];
+  updateRows?: unknown[];
+  insertRows?: unknown[];
+}) {
+  const limit = vi.fn().mockResolvedValue(opts.selectRows ?? []);
+  const whereSelect = vi.fn().mockReturnValue({ limit });
+  const from = vi.fn().mockReturnValue({ where: whereSelect });
   const select = vi.fn().mockReturnValue({ from });
 
-  const returning = vi.fn().mockResolvedValue(opts.updateRows ?? []);
-  const where = vi.fn().mockReturnValue({ returning });
-  const set = vi.fn().mockReturnValue({ where });
+  const returningUpdate = vi.fn().mockResolvedValue(opts.updateRows ?? []);
+  const whereUpdate = vi.fn().mockReturnValue({ returning: returningUpdate });
+  const set = vi.fn().mockReturnValue({ where: whereUpdate });
   const update = vi.fn().mockReturnValue({ set });
+
+  const returningInsert = vi.fn().mockResolvedValue(opts.insertRows ?? []);
+  const onConflictDoUpdate = vi
+    .fn()
+    .mockReturnValue({ returning: returningInsert });
+  const values = vi.fn().mockReturnValue({ onConflictDoUpdate });
+  const insert = vi.fn().mockReturnValue({ values });
 
   return {
     select,
     update,
-    _spies: { limit, orderBy, from, returning, where, set },
+    insert,
+    _spies: {
+      limit,
+      whereSelect,
+      from,
+      returningUpdate,
+      whereUpdate,
+      set,
+      onConflictDoUpdate,
+      values,
+      returningInsert,
+    },
   };
 }
 
@@ -46,8 +68,9 @@ describe('UsersService', () => {
   let dbMock: ReturnType<typeof makeDbMock>;
 
   async function build(opts: {
-    selectRows: unknown[];
+    selectRows?: unknown[];
     updateRows?: unknown[];
+    insertRows?: unknown[];
   }) {
     dbMock = makeDbMock(opts);
     const module: TestingModule = await Test.createTestingModule({
@@ -60,11 +83,11 @@ describe('UsersService', () => {
     vi.clearAllMocks();
   });
 
-  describe('findCurrent', () => {
-    it('returns the first user (by email asc) without firebaseUid', async () => {
+  describe('findById', () => {
+    it('returns the user without firebaseUid when found', async () => {
       await build({ selectRows: [sampleRow] });
 
-      const result = await service.findCurrent();
+      const result = await service.findById(sampleRow.id);
 
       expect(result).toEqual({
         id: sampleRow.id,
@@ -78,25 +101,41 @@ describe('UsersService', () => {
       expect(dbMock.select).toHaveBeenCalled();
     });
 
-    it('throws NotFound when there are no users', async () => {
+    it('throws Unauthorized when the subject user no longer exists', async () => {
       await build({ selectRows: [] });
 
-      await expect(service.findCurrent()).rejects.toBeInstanceOf(
-        NotFoundException,
+      await expect(service.findById(sampleRow.id)).rejects.toBeInstanceOf(
+        UnauthorizedException,
       );
     });
   });
 
-  describe('updateCurrent', () => {
+  describe('findRowById', () => {
+    it('returns the raw row when present', async () => {
+      await build({ selectRows: [sampleRow] });
+      const row = await service.findRowById(sampleRow.id);
+      expect(row).toBe(sampleRow);
+    });
+
+    it('returns null when missing', async () => {
+      await build({ selectRows: [] });
+      const row = await service.findRowById(sampleRow.id);
+      expect(row).toBeNull();
+    });
+  });
+
+  describe('updateById', () => {
     it('updates only the provided fields and returns the new shape', async () => {
       const updated = {
         ...sampleRow,
         displayName: 'Renamed',
         updatedAt: new Date('2026-01-02T00:00:00Z'),
       };
-      await build({ selectRows: [sampleRow], updateRows: [updated] });
+      await build({ updateRows: [updated] });
 
-      const result = await service.updateCurrent({ displayName: 'Renamed' });
+      const result = await service.updateById(sampleRow.id, {
+        displayName: 'Renamed',
+      });
 
       expect(dbMock._spies.set).toHaveBeenCalledWith(
         expect.objectContaining({ displayName: 'Renamed' }),
@@ -110,6 +149,46 @@ describe('UsersService', () => {
 
       expect(result.displayName).toBe('Renamed');
       expect(result).not.toHaveProperty('firebaseUid');
+    });
+
+    it('throws NotFound when no row was updated', async () => {
+      await build({ updateRows: [] });
+      await expect(
+        service.updateById(sampleRow.id, { displayName: 'x' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('upsertFromFirebase', () => {
+    it('returns the upserted row', async () => {
+      await build({ insertRows: [sampleRow] });
+
+      const row = await service.upsertFromFirebase({
+        firebaseUid: sampleRow.firebaseUid,
+        email: sampleRow.email,
+        displayName: sampleRow.displayName,
+        avatarUrl: sampleRow.avatarUrl,
+      });
+
+      expect(row).toBe(sampleRow);
+      expect(dbMock._spies.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firebaseUid: sampleRow.firebaseUid,
+          email: sampleRow.email,
+        }),
+      );
+      expect(dbMock._spies.onConflictDoUpdate).toHaveBeenCalled();
+    });
+
+    it('throws when the insert returned no rows', async () => {
+      await build({ insertRows: [] });
+
+      await expect(
+        service.upsertFromFirebase({
+          firebaseUid: 'x',
+          email: 'x@example.com',
+        }),
+      ).rejects.toThrow(/Failed to upsert user/);
     });
   });
 });

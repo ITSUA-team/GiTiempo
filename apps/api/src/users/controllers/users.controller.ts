@@ -6,13 +6,20 @@ import {
   HttpStatus,
   Patch,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { UsersService } from '../services/users.service';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly users: UsersService) {}
@@ -20,16 +27,17 @@ export class UsersController {
   /**
    * Returns the currently authenticated user.
    *
-   * Auth is not implemented yet — the service returns the first seeded
-   * user (by email asc) so the frontend has a stable "me" to talk to.
+   * Subject id is pulled from the verified access token payload via
+   * `@CurrentUser('sub')`; the global `JwtAuthGuard` guarantees `sub`
+   * is present for this route.
    */
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get the current user' })
   @ApiOkResponse({ type: UserResponseDto })
   @ZodSerializerDto(UserResponseDto)
-  getMe(): Promise<UserResponseDto> {
-    return this.users.findCurrent();
+  getMe(@CurrentUser('sub') sub: string): Promise<UserResponseDto> {
+    return this.users.findById(sub);
   }
 
   /**
@@ -43,7 +51,10 @@ export class UsersController {
   @ApiOperation({ summary: 'Update the current user' })
   @ApiOkResponse({ type: UserResponseDto })
   @ZodSerializerDto(UserResponseDto)
-  updateMe(@Body() body: UpdateUserDto): Promise<UserResponseDto> {
-    return this.users.updateCurrent(body);
+  updateMe(
+    @CurrentUser('sub') sub: string,
+    @Body() body: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.users.updateById(sub, body);
   }
 }
