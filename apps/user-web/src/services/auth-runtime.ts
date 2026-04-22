@@ -11,8 +11,10 @@ import {
   logoutAuthSession,
   refreshAuthSession,
 } from "@/services/auth-client";
+import { getCurrentUser } from "@/services/user-client";
 
 export interface AuthRuntime {
+  getCurrentUser: typeof getCurrentUser;
   loginWithFirebaseToken: typeof loginWithFirebaseToken;
   logoutSession: typeof logoutAuthSession;
   refreshSession: typeof refreshAuthSession;
@@ -53,6 +55,7 @@ async function signOutIdentityProviderRuntime(): Promise<void> {
 }
 
 const defaultAuthRuntime: AuthRuntime = {
+  getCurrentUser,
   loginWithFirebaseToken,
   logoutSession: logoutAuthSession,
   refreshSession: refreshAuthSession,

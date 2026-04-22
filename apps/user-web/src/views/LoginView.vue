@@ -70,16 +70,14 @@ async function handleGoogleSignIn(): Promise<void> {
             <p class="text-lg font-semibold text-text-dark">
               GiTiempo
             </p>
-            <p class="text-sm text-text-muted">
+            <p class="text-[13px] text-text-muted">
               Time tracking for modern product teams
             </p>
           </div>
         </div>
 
         <div class="flex max-w-[520px] flex-col gap-5 py-12 lg:py-0">
-          <h1
-            class="text-4xl font-semibold tracking-[-0.03em] text-text-dark sm:text-5xl"
-          >
+          <h1 class="text-[40px] font-semibold leading-[1.1] text-text-dark">
             Track work where your tasks already live.
           </h1>
           <p class="max-w-[34rem] text-base leading-7 text-text-muted">
@@ -88,24 +86,24 @@ async function handleGoogleSignIn(): Promise<void> {
           </p>
 
           <div class="grid gap-4 md:grid-cols-2">
-            <article class="rounded-lg bg-app-bg p-4 shadow-card">
+            <article class="rounded-[10px] bg-app-bg p-4 shadow-card">
               <div class="flex flex-col gap-2">
-                <p class="text-sm font-semibold text-text-dark">
+                <p class="text-base font-semibold text-text-dark">
                   Flexible task tracking
                 </p>
-                <p class="text-sm leading-6 text-text-muted">
+                <p class="text-[13px] leading-6 text-text-muted">
                   Attach tracked time to the right task context today, with room
                   for more integrations over time.
                 </p>
               </div>
             </article>
 
-            <article class="rounded-lg bg-app-bg p-4 shadow-card">
+            <article class="rounded-[10px] bg-app-bg p-4 shadow-card">
               <div class="flex flex-col gap-2">
-                <p class="text-sm font-semibold text-text-dark">
+                <p class="text-base font-semibold text-text-dark">
                   PM-ready reporting
                 </p>
-                <p class="text-sm leading-6 text-text-muted">
+                <p class="text-[13px] leading-6 text-text-muted">
                   Review projects, entries, members, invoices, and settings
                   without leaving one workspace.
                 </p>
@@ -121,12 +119,12 @@ async function handleGoogleSignIn(): Promise<void> {
       </section>
 
       <section
-        class="flex w-full items-center justify-center bg-app-bg px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12"
+        class="flex w-full items-center justify-center bg-app-bg px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
       >
-        <div class="w-full rounded-lg bg-surface p-6 shadow-card sm:p-8">
-          <div class="flex flex-col gap-6">
-            <div class="flex flex-col gap-1.5">
-              <p class="text-3xl font-semibold text-text-dark">
+        <div class="w-full rounded-[10px] bg-surface p-6 shadow-card">
+          <div class="flex flex-col gap-5">
+            <div class="flex flex-col gap-[6px]">
+              <p class="text-[28px] font-semibold text-text-dark">
                 Sign in
               </p>
               <p class="text-sm text-text-muted">
@@ -139,7 +137,7 @@ async function handleGoogleSignIn(): Promise<void> {
               @submit.prevent="handleEmailSignIn"
             >
               <label
-                class="flex flex-col gap-1.5 text-sm font-medium text-text-dark"
+                class="flex flex-col gap-[6px] text-[13px] font-medium text-text-dark"
               >
                 <span>Email</span>
                 <input
@@ -147,32 +145,34 @@ async function handleGoogleSignIn(): Promise<void> {
                   type="email"
                   autocomplete="email"
                   placeholder="alex@workspace.com"
-                  class="h-11 rounded-sm border border-divider bg-surface px-3 text-sm text-text-dark outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15"
+                  class="h-[42px] rounded-[6px] border border-divider bg-surface px-3 text-sm text-text-dark outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15"
                 >
               </label>
 
               <label
-                class="flex flex-col gap-1.5 text-sm font-medium text-text-dark"
+                class="flex flex-col gap-[6px] text-[13px] font-medium text-text-dark"
               >
-                <div class="flex items-center justify-between gap-3">
-                  <span>Password</span>
+                <span>Password</span>
+                <div
+                  class="flex h-[42px] items-center justify-between rounded-[6px] border border-divider bg-surface px-3 text-sm text-text-dark transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15"
+                >
+                  <input
+                    v-model="password"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="••••••••••"
+                    class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-text-dark outline-none"
+                  >
                   <button
                     type="button"
                     disabled
-                    class="text-xs font-semibold text-brand/50"
+                    class="shrink-0 text-[13px] font-semibold text-brand"
                     aria-disabled="true"
                     title="Password recovery is not available in MVP yet"
                   >
                     Forgot?
                   </button>
                 </div>
-                <input
-                  v-model="password"
-                  type="password"
-                  autocomplete="current-password"
-                  placeholder="••••••••••"
-                  class="h-11 rounded-sm border border-divider bg-surface px-3 text-sm text-text-dark outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15"
-                >
               </label>
 
               <p
@@ -185,7 +185,7 @@ async function handleGoogleSignIn(): Promise<void> {
               <div class="flex flex-col gap-3 pt-1">
                 <button
                   type="submit"
-                  class="flex h-11 items-center justify-center rounded-sm bg-brand px-4 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70"
+                  class="flex h-11 items-center justify-center rounded-[6px] bg-brand px-4 text-[15px] font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                   :disabled="authStore.isSubmitting"
                 >
                   Sign in
@@ -193,7 +193,7 @@ async function handleGoogleSignIn(): Promise<void> {
 
                 <button
                   type="button"
-                  class="flex h-11 items-center justify-center rounded-sm border border-divider bg-surface px-4 text-sm font-semibold text-text-dark transition hover:bg-app-bg disabled:cursor-not-allowed disabled:opacity-70"
+                  class="flex h-11 items-center justify-center rounded-[6px] border border-divider bg-surface px-4 text-[15px] font-semibold text-text-dark transition hover:bg-app-bg disabled:cursor-not-allowed disabled:opacity-70"
                   :disabled="authStore.isSubmitting"
                   @click="handleGoogleSignIn"
                 >

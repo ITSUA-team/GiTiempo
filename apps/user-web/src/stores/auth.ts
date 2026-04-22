@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { computed, shallowRef } from "vue";
-import type { TokenPairResponse } from "@gitiempo/shared";
+import type { TokenPairResponse, UserResponse } from "@gitiempo/shared";
 
 import {
   clearRefreshToken,
@@ -21,15 +21,42 @@ export const useAuthStore = defineStore("auth", () => {
   const accessToken = shallowRef<string | null>(null);
   const bootstrapComplete = shallowRef(false);
   const isBootstrapping = shallowRef(false);
+  const profile = shallowRef<UserResponse | null>(null);
   const isSubmitting = shallowRef(false);
 
   let bootstrapPromise: Promise<void> | null = null;
 
   const isAuthenticated = computed(() => accessToken.value !== null);
+  const displayName = computed(
+    () => profile.value?.displayName ?? "Alexey Tsukanov",
+  );
+  const workspaceName = computed(() => "Workspace Alpha");
+  const userInitials = computed(() => {
+    const source =
+      profile.value?.displayName?.trim() ||
+      profile.value?.email ||
+      displayName.value;
+    const parts = source
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase());
+
+    return parts.join("") || "GT";
+  });
 
   function clearSession(): void {
     accessToken.value = null;
+    profile.value = null;
     clearRefreshToken();
+  }
+
+  async function loadCurrentUser(nextAccessToken: string): Promise<void> {
+    try {
+      profile.value = await getAuthRuntime().getCurrentUser(nextAccessToken);
+    } catch {
+      profile.value = null;
+    }
   }
 
   async function bootstrapSession(): Promise<void> {
@@ -54,6 +81,7 @@ export const useAuthStore = defineStore("auth", () => {
 
         const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
         applyTokenPair(accessToken, tokenPair);
+        await loadCurrentUser(tokenPair.accessToken);
       } catch {
         clearSession();
       } finally {
@@ -81,6 +109,7 @@ export const useAuthStore = defineStore("auth", () => {
         await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
 
       applyTokenPair(accessToken, tokenPair);
+      await loadCurrentUser(tokenPair.accessToken);
       bootstrapComplete.value = true;
     } finally {
       isSubmitting.value = false;
@@ -96,6 +125,7 @@ export const useAuthStore = defineStore("auth", () => {
         await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
 
       applyTokenPair(accessToken, tokenPair);
+      await loadCurrentUser(tokenPair.accessToken);
       bootstrapComplete.value = true;
     } finally {
       isSubmitting.value = false;
@@ -133,11 +163,15 @@ export const useAuthStore = defineStore("auth", () => {
     accessToken,
     bootstrapComplete,
     bootstrapSession,
+    displayName,
     isAuthenticated,
     isBootstrapping,
     isSubmitting,
     loginWithEmailPassword,
     loginWithGoogle,
     logout,
+    profile,
+    userInitials,
+    workspaceName,
   };
 });

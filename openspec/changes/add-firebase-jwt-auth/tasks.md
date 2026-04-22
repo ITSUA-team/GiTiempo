@@ -87,16 +87,24 @@
 
 ## 13. Documentation, OpenAPI, and PR polish
 
-- [ ] 13.1 Run `pnpm openapi:export` and commit the regenerated `packages/shared/openapi.json`
-      - Blocked: `apps/api/src/openapi/export.ts` runs via `tsx --env-file=.env`, and `tsx`/esbuild does not emit usable `design:paramtypes` metadata for Nest DI. After introducing `AuthService` with a mid-list `@Inject(FIREBASE_ADMIN)` parameter, Nest resolves `ConfigService` as `undefined` during `openapi:export` boot. `nest build`, unit tests, and e2e tests are unaffected because they go through SWC (`apps/api/.swcrc` has `decoratorMetadata: true`).
-      - Follow-up: switch `openapi:export` off `tsx` (e.g. run against the SWC/`dist` build, or use a loader that preserves decorator metadata). Track as a separate tooling change; do not block this auth change on it.
+- [ ] 13.1 Run `pnpm openapi:export` and commit the regenerated `packages/shared/openapi.json` - Blocked: `apps/api/src/openapi/export.ts` runs via `tsx --env-file=.env`, and `tsx`/esbuild does not emit usable `design:paramtypes` metadata for Nest DI. After introducing `AuthService` with a mid-list `@Inject(FIREBASE_ADMIN)` parameter, Nest resolves `ConfigService` as `undefined` during `openapi:export` boot. `nest build`, unit tests, and e2e tests are unaffected because they go through SWC (`apps/api/.swcrc` has `decoratorMetadata: true`). - Follow-up: switch `openapi:export` off `tsx` (e.g. run against the SWC/`dist` build, or use a loader that preserves decorator metadata). Track as a separate tooling change; do not block this auth change on it.
 - [x] 13.2 Update `apps/api/AGENTS.md` only if env-var ownership text or required-steps text needs refinement for the new variables (do not duplicate information)
 - [x] 13.3 Update `bruno/` local environment collection with example `/auth/login`, `/auth/refresh`, `/auth/logout` requests using the test fake token
-- [ ] 13.4 Run and pass `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` from the repo root
-      - `pnpm lint` — pass
-      - `pnpm test` — pass (`@gitiempo/api` 51/51)
-      - `pnpm --filter @gitiempo/api test:e2e` — pass (22/22)
-      - `pnpm typecheck` — blocked by a pre-existing, unrelated TS6 deprecation in `apps/user-web/tsconfig.app.json` and `apps/admin-web/tsconfig.app.json` (`Option 'baseUrl' is deprecated ... specify "ignoreDeprecations": "6.0"`). Not caused by this change; tracked as a separate frontend tooling fix.
-- [ ] 13.5 Final sanity check: `pnpm openspec status --change "add-firebase-jwt-auth"` shows all artifacts done and all tasks checked
-      - Artifacts: complete (`4/4`, proposal/design/specs/tasks).
-      - Tasks: 13.1 and 13.4 intentionally left unchecked above with documented follow-ups; not blockers for this change.
+- [ ] 13.4 Run and pass `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` from the repo root - `pnpm lint` — pass - `pnpm test` — pass (`@gitiempo/api` 51/51) - `pnpm --filter @gitiempo/api test:e2e` — pass (22/22) - `pnpm typecheck` — blocked by a pre-existing, unrelated TS6 deprecation in `apps/user-web/tsconfig.app.json` and `apps/admin-web/tsconfig.app.json` (`Option 'baseUrl' is deprecated ... specify "ignoreDeprecations": "6.0"`). Not caused by this change; tracked as a separate frontend tooling fix.
+- [ ] 13.5 Final sanity check: `pnpm openspec status --change "add-firebase-jwt-auth"` shows all artifacts done and all tasks checked - Artifacts: complete (`4/4`, proposal/design/specs/tasks). - Tasks: 13.1 and 13.4 intentionally left unchecked above with documented follow-ups; not blockers for this change.
+
+## 14. Frontend UI pixel-alignment fixes
+
+- [x] 14.1 LoginView: Fix hero heading to exactly 40px fontSize with no letter-spacing override
+- [x] 14.2 LoginView: Fix brand subtitle, field labels, hero card body, and `Forgot?` text to 13px fontSize
+- [x] 14.3 LoginView: Fix hero card titles to 16px fontSize and card cornerRadius to 10px (`radius-lg`)
+- [x] 14.4 LoginView: Fix `Sign in` heading to 28px and button text to 15px fontSize
+- [x] 14.5 LoginView: Fix input height to 42px and all input/button cornerRadius to 6px (`radius-sm`)
+- [x] 14.6 LoginView: Move `Forgot?` inside the password input field and right-align it to match the approved design
+- [x] 14.7 LoginView: Fix sign-in panel gap to 20px and padding to 24px; fix right panel vertical padding to 48px at desktop
+- [x] 14.8 AppShell header: Fix logo to 32x32 with 10px radius, `GT` to 12px, and brand name to 16px
+- [x] 14.9 AppShell header: Replace generic signed-in copy with the actual user display name and avatar initials
+- [x] 14.10 AppShell sidebar: Fix container padding to 16px top/bottom and align nav item spacing with the documented shell rules
+- [x] 14.11 AppShell sidebar: Add the missing `Projects` nav item while keeping the documented icon-based navigation treatment
+- [x] 14.12 AppShell sidebar: Remove the sign-out action from the sidebar
+- [x] 14.13 ProfileView: Add the destructive outlined `Sign out` button at the bottom of the profile content area, right-aligned to match the approved design

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  ArrowRightStartOnRectangleIcon,
   ChartBarSquareIcon,
   ClockIcon,
   HomeIcon,
@@ -8,13 +7,12 @@ import {
   UserCircleIcon,
 } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
-import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
+import { RouterLink, RouterView, useRoute } from "vue-router";
 
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
-const router = useRouter();
 const authStore = useAuthStore();
 
 const navItems = computed(() => [
@@ -35,17 +33,22 @@ const navItems = computed(() => [
   },
   {
     icon: ChartBarSquareIcon,
+    label: "Projects",
+    name: routeNames.project,
+    to: { name: routeNames.project, params: { projectId: "workspace-alpha" } },
+  },
+  {
+    icon: ChartBarSquareIcon,
     label: "Profile",
     name: routeNames.profile,
   },
 ]);
 
-async function handleSignOut(): Promise<void> {
-  await authStore.logout();
-  await router.replace({ name: routeNames.login });
-}
-
 function isActive(name: string): boolean {
+  if (name === routeNames.project) {
+    return route.name === routeNames.project;
+  }
+
   return route.name === name;
 }
 </script>
@@ -57,35 +60,33 @@ function isActive(name: string): boolean {
     >
       <div class="flex items-center gap-3">
         <div
-          class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-tint text-sm font-semibold text-brand"
+          class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent-tint text-[12px] font-semibold text-brand"
         >
           GT
         </div>
-        <div class="flex flex-col gap-0.5">
-          <p class="text-sm font-semibold">
+        <div class="flex flex-col gap-[2px]">
+          <p class="text-[16px] font-semibold">
             GiTiempo
           </p>
           <p class="text-xs text-text-muted">
-            Member workspace
+            {{ authStore.workspaceName }}
           </p>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
         <div class="hidden text-right sm:block">
-          <p class="text-sm font-medium">
-            Signed in
-          </p>
-          <p class="text-xs text-text-muted">
-            User web
+          <p class="text-[13px] font-medium text-text-dark">
+            {{ authStore.displayName }}
           </p>
         </div>
         <button
           type="button"
-          class="flex h-10 w-10 items-center justify-center rounded-full border border-divider bg-app-bg text-text-muted"
-          aria-label="Account settings"
+          class="flex h-8 w-8 items-center justify-center rounded-full bg-accent-tint text-[12px] font-semibold text-brand"
+          aria-label="Account profile"
         >
-          <UserCircleIcon class="h-6 w-6" />
+          <span class="sm:hidden">{{ authStore.userInitials }}</span>
+          <UserCircleIcon class="hidden h-5 w-5 sm:block" />
         </button>
       </div>
     </header>
@@ -94,11 +95,11 @@ function isActive(name: string): boolean {
       <aside
         class="hidden border-r border-divider bg-surface sm:flex sm:w-16 sm:flex-col lg:w-60"
       >
-        <nav class="flex flex-1 flex-col gap-1 p-2">
+        <nav class="flex flex-1 flex-col gap-1 py-4">
           <RouterLink
             v-for="item in navItems"
             :key="item.name"
-            :to="{ name: item.name }"
+            :to="item.to ?? { name: item.name }"
             :class="[
               'flex h-11 items-center gap-3 rounded-r-md px-4 text-sm font-medium transition-colors',
               isActive(item.name)
@@ -116,19 +117,6 @@ function isActive(name: string): boolean {
             <span class="hidden lg:inline">{{ item.label }}</span>
           </RouterLink>
         </nav>
-
-        <div class="border-t border-divider p-2">
-          <button
-            type="button"
-            class="flex h-11 w-full items-center gap-3 rounded-r-md px-4 text-sm font-medium text-text-dark transition-colors hover:bg-app-bg"
-            @click="handleSignOut"
-          >
-            <ArrowRightStartOnRectangleIcon
-              class="h-5 w-5 shrink-0 text-text-muted"
-            />
-            <span class="hidden lg:inline">Sign out</span>
-          </button>
-        </div>
       </aside>
 
       <main class="flex-1 p-4 sm:p-6">
@@ -142,9 +130,9 @@ function isActive(name: string): boolean {
       <RouterLink
         v-for="item in navItems"
         :key="`mobile-${item.name}`"
-        :to="{ name: item.name }"
-        class="flex flex-1 flex-col items-center justify-center gap-1 text-xs"
+        :to="item.to ?? { name: item.name }"
         :class="isActive(item.name) ? 'text-brand' : 'text-text-muted'"
+        class="flex flex-1 flex-col items-center justify-center gap-1 text-xs"
       >
         <component
           :is="item.icon"

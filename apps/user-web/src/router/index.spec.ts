@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createMemoryHistory } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
+import type { UserResponse } from "@gitiempo/shared";
 
 import { clearRefreshToken } from "@/lib/session-storage";
 import { createAppRouter, routeNames } from "@/router";
@@ -12,7 +13,17 @@ import {
 import { useAuthStore } from "@/stores/auth";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
+  const currentUser: UserResponse = {
+    avatarUrl: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    displayName: "Alexey Tsukanov",
+    email: "alexey@example.com",
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+
   return {
+    getCurrentUser: async () => currentUser,
     loginWithFirebaseToken: async () => ({
       accessToken: "access-token",
       accessTokenExpiresIn: 900,

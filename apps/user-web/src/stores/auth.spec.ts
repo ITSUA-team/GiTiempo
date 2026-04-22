@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
+import type { UserResponse } from "@gitiempo/shared";
 
 import {
   clearRefreshToken,
@@ -14,7 +15,17 @@ import {
 import { useAuthStore } from "@/stores/auth";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
+  const currentUser: UserResponse = {
+    avatarUrl: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    displayName: "Alexey Tsukanov",
+    email: "alexey@example.com",
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+
   return {
+    getCurrentUser: async () => currentUser,
     loginWithFirebaseToken: async () => ({
       accessToken: "access-token",
       accessTokenExpiresIn: 900,
@@ -52,6 +63,7 @@ describe("useAuthStore", () => {
     expect(authStore.accessToken).toBe("restored-access-token");
     expect(getRefreshToken()).toBe("restored-refresh-token");
     expect(authStore.bootstrapComplete).toBe(true);
+    expect(authStore.displayName).toBe("Alexey Tsukanov");
   });
 
   it("clears invalid refresh token during bootstrap fallback", async () => {
@@ -85,6 +97,7 @@ describe("useAuthStore", () => {
     expect(authStore.accessToken).toBe("access-token");
     expect(getRefreshToken()).toBe("refresh-token-next");
     expect(authStore.bootstrapComplete).toBe(true);
+    expect(authStore.profile?.email).toBe("alexey@example.com");
   });
 
   it("clears tokens on logout even when API logout fails", async () => {
