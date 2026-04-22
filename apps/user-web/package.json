@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "firebase": "^12.4.0",
     "@gitiempo/shared": "workspace:*",
     "@gitiempo/web-config": "workspace:*",
     "@heroicons/vue": "^2.2.0",
