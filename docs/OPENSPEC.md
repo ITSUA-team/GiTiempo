@@ -15,47 +15,50 @@ GiTiempo uses OpenSpec as a project-local, behavior-first workflow for planned a
 - `openspec/changes/` contains proposed and active changes
 - `openspec/config.yaml` injects repo-specific context and artifact rules
 
-## Layer Separation Rule
+## Spec Layout
 
-OpenSpec specifications in GiTiempo are separated by layer.
+OpenSpec specifications in GiTiempo are organized by domain using flat paths under `openspec/specs/`.
 
-- `openspec/specs/backend/` for NestJS API, auth, data model, and server-side behavior
-- `openspec/specs/frontend/` for SPA shell behavior, pages, routing, and UI flows
-- `openspec/specs/shared/` for cross-layer contracts and API conventions
+- `openspec/specs/auth/` for authentication behavior
+- `openspec/specs/users/` for current-user and user-profile behavior
+- `openspec/specs/contracts/` for shared contracts
+- `openspec/specs/data-model/` for backend data-model behavior
+- `openspec/specs/api-conventions/` for shared API conventions
+- `openspec/specs/layout/`, `components/`, `user-pages/`, `admin-pages/` for frontend behavior
 
-Do not collapse backend and frontend behavior into one spec file when the responsibilities are different.
+Keep one domain per spec directory. When a change spans multiple domains, add one delta spec per affected domain.
 
 ## How To Place Future Delta Specs
 
-When a change affects only one layer, add the delta spec only in that layer.
+When a change affects only one domain, add the delta spec only for that domain.
 
 Examples:
 
-- Backend-only change: `openspec/changes/<change>/specs/backend/<domain>/spec.md`
-- Frontend-only change: `openspec/changes/<change>/specs/frontend/<domain>/spec.md`
-- Shared contract change: `openspec/changes/<change>/specs/shared/<domain>/spec.md`
+- Auth change: `openspec/changes/<change>/specs/auth/spec.md`
+- Frontend page change: `openspec/changes/<change>/specs/user-pages/spec.md`
+- Shared contract change: `openspec/changes/<change>/specs/contracts/spec.md`
 
-When a change spans multiple layers, add one delta spec per affected layer.
+When a change spans multiple domains, add one delta spec per affected domain.
 
 Example:
 
-- `openspec/changes/add-auth/specs/backend/auth/spec.md`
-- `openspec/changes/add-auth/specs/frontend/user-pages/spec.md`
-- `openspec/changes/add-auth/specs/shared/contracts/spec.md`
+- `openspec/changes/add-auth/specs/auth/spec.md`
+- `openspec/changes/add-auth/specs/user-pages/spec.md`
+- `openspec/changes/add-auth/specs/contracts/spec.md`
 
 ## Initial Seed Domains
 
 The initial seeded spec layout is:
 
-- `openspec/specs/backend/auth/spec.md`
-- `openspec/specs/backend/data-model/spec.md`
-- `openspec/specs/backend/users/spec.md`
-- `openspec/specs/frontend/layout/spec.md`
-- `openspec/specs/frontend/components/spec.md`
-- `openspec/specs/frontend/user-pages/spec.md`
-- `openspec/specs/frontend/admin-pages/spec.md`
-- `openspec/specs/shared/contracts/spec.md`
-- `openspec/specs/shared/api-conventions/spec.md`
+- `openspec/specs/auth/spec.md`
+- `openspec/specs/data-model/spec.md`
+- `openspec/specs/users/spec.md`
+- `openspec/specs/layout/spec.md`
+- `openspec/specs/components/spec.md`
+- `openspec/specs/user-pages/spec.md`
+- `openspec/specs/admin-pages/spec.md`
+- `openspec/specs/contracts/spec.md`
+- `openspec/specs/api-conventions/spec.md`
 
 ## Working Rule
 

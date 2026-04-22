@@ -4,7 +4,7 @@
 
 `docs/TECHNICAL-REQUIREMENTS.md` §2.2 and `docs/adr/002-jwt-authentication.md` already mandate: frontend authenticates via Firebase Auth, sends the Firebase ID token to `POST /api/auth/login`, backend verifies the token via Firebase Admin, upserts a local `users` row, and returns a short-lived JWT access token (15 min) plus a long-lived refresh token (7 days) with rotation on each refresh. `docs/API-ENDPOINTS.md` §1 lists `/auth/login`, `/auth/refresh`, `/auth/logout`, each with the body shape used here.
 
-OpenSpec already has descriptive requirements in `openspec/specs/backend/auth/spec.md` for Firebase identity verification, token pair issuance, authenticated request enforcement, and local user upsert. This change makes those requirements concrete (payload shape, `@SkipAuth` model, reuse detection, audit events) and wires them into code.
+OpenSpec already has descriptive requirements in `openspec/specs/auth/spec.md` for Firebase identity verification, token pair issuance, authenticated request enforcement, and local user upsert. This change makes those requirements concrete (payload shape, `@SkipAuth` model, reuse detection, audit events) and wires them into code.
 
 Three clients depend on this: User SPA, Admin SPA, and the future Chrome Extension — all use `Authorization: Bearer <access_token>` and a shared refresh endpoint; no cookies or cross-origin session state. SPAs must keep working during/after deployment; the `refresh_tokens` migration and the first `AuthModule` wiring must ship together.
 
@@ -29,7 +29,7 @@ Stakeholders: backend (`apps/api`), shared contracts (`packages/shared`), and op
 - Access-token revocation / blacklist (access tokens remain valid until their 15-minute TTL).
 - Scheduled cleanup of expired rows in `refresh_tokens`.
 - Seamless JWT signing-key rotation (`kid` header + multi-secret verification).
-- Updates to `openspec/specs/backend/auth/spec.md`; the change supplies delta specs under `openspec/changes/add-firebase-jwt-auth/specs/`.
+- Updates to `openspec/specs/auth/spec.md`; the change supplies delta specs under `openspec/changes/add-firebase-jwt-auth/specs/`.
 - Frontend changes in `apps/user-web` and `apps/admin-web`. They consume the new shared contracts in a later change.
 
 ## Decisions

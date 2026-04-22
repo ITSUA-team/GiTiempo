@@ -31,9 +31,9 @@ Deferred on purpose (follow-up proposals):
 
 ### Modified Capabilities
 
-- `backend/auth`: adds concrete Firebase verification semantics, token payload shape, refresh rotation with reuse detection, global `@SkipAuth` opt-out model, `@CurrentUser()` parameter decorator, auth-endpoint throttling, and structured audit logging.
-- `backend/users`: the current-user endpoint resolves the authenticated subject from the verified JWT instead of the dev placeholder "first user by email asc".
-- `shared/contracts`: adds shared auth request/response contracts (`loginRequestSchema`, `refreshRequestSchema`, `logoutRequestSchema`, `tokenPairResponseSchema`) consumed by both `apps/api` and the SPAs.
+- `auth`: adds concrete Firebase verification semantics, token payload shape, refresh rotation with reuse detection, global `@SkipAuth` opt-out model, `@CurrentUser()` parameter decorator, auth-endpoint throttling, and structured audit logging.
+- `users`: the current-user endpoint resolves the authenticated subject from the verified JWT instead of the dev placeholder "first user by email asc".
+- `contracts`: adds shared auth request/response contracts (`loginRequestSchema`, `refreshRequestSchema`, `logoutRequestSchema`, `tokenPairResponseSchema`) consumed by both `apps/api` and the SPAs.
 
 ## Impact
 

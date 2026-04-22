@@ -24,7 +24,7 @@ Build-ready engineering constraints derived from [PROPOSAL.md](./PROPOSAL.md).
 - Turborepo orchestrates build pipelines across packages.
 - The workspace root owns shared scripts for `dev`, `build`, `typecheck`, `test`, and `lint`.
 - TypeScript base compiler settings live in `tsconfig.base.json` and are extended by each app/package.
-- OpenSpec lives at the repo root in `openspec/` and separates behavior specs by layer: `openspec/specs/backend/`, `openspec/specs/frontend/`, and `openspec/specs/shared/`. See [OPENSPEC.md](./OPENSPEC.md).
+- OpenSpec lives at the repo root in `openspec/` and organizes behavior specs by domain under `openspec/specs/<domain>/`. See [OPENSPEC.md](./OPENSPEC.md).
 
 ---
 
