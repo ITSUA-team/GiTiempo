@@ -12,6 +12,7 @@
 - Shared PrimeVue config comes from `@gitiempo/web-config/theme`.
 - Shared CSS tokens are imported in `src/assets/main.css` from `@gitiempo/web-config/styles/tokens.css`.
 - Vite alias `@` points to `./src`.
+- Admin auth direction must stay aligned with `apps/user-web`: Firebase Auth on the frontend, backend token exchange, refresh-token bootstrap, and logout cleanup. Do not introduce a separate auth model for `admin-web`.
 - Before implementing a frontend change, inspect the minimal relevant `docs/ui/*` guidance first, then inspect the relevant approved design source. In this repo that usually means the active `.pen` file screen.
 - Desktop UI implementation is expected to be pixel-perfect to the approved design: match fonts, font sizes, spacing, sizing, radii, alignment, and component structure unless the user explicitly asks for a deviation.
 - If the docs and design conflict, the docs are the source of truth. Stop and ask only when the conflict is still ambiguous after following the docs.
@@ -24,4 +25,5 @@
 ## Verification
 
 - Frontend-only changes: `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`.
-- `test` is `vitest run --passWithNoTests`; treat it as a weak signal, not meaningful coverage.
+- For auth store, router guard, login flow, or session bootstrap changes, also run `pnpm --filter admin-web test`.
+- `test` is focused Vitest coverage for store/router behavior. Treat it as meaningful regression protection for that layer, but not as browser-level end-to-end proof.

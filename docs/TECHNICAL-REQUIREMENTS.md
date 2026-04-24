@@ -179,9 +179,9 @@ Both User SPA and Admin SPA share the same stack:
 | HTTP client       | Axios (or fetch wrapper from shared package)          |
 | Auth              | Firebase Auth SDK (client-side) → JWT tokens from API |
 
-### 3.0 Frontend Initialization Baseline
+### 3.0 Frontend Platform Baseline
 
-The initial web bootstrap includes:
+The current web frontend baseline includes:
 
 - Vite + Vue 3 + TypeScript for both `apps/user-web` and `apps/admin-web`
 - Tailwind CSS v4 using CSS-first `@theme` setup
@@ -189,7 +189,11 @@ The initial web bootstrap includes:
 - Pinia, Vue Router, VueUse, Heroicons, and PrimeIcons installed and connected
 - Shared contract exports from `packages/shared`
 - Shared frontend theme/bootstrap exports from `packages/web-config`
-- No API client, no Firebase wiring, and no product pages yet
+- Both SPAs are expected to use the same frontend auth model: Firebase sign-in, backend token exchange, refresh-token bootstrap, and logout cleanup
+- `apps/user-web` currently has route structure for login and authenticated pages mounted through an app shell
+- `apps/user-web` currently has the frontend auth wiring in place
+- Focused Vitest coverage in `apps/user-web` for auth store and router-guard behavior
+- `apps/admin-web` follows the same JWT session direction as `apps/user-web`, even where concrete route/screen implementation is still catching up
 
 ### 3.1 User SPA (`apps/user-web/`)
 

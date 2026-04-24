@@ -24,4 +24,5 @@
 ## Verification
 
 - Frontend-only changes: `pnpm --filter user-web lint && pnpm --filter user-web typecheck`.
-- `test` is `vitest run --passWithNoTests`; treat it as a weak signal, not meaningful coverage.
+- For auth store, router guard, login flow, or session bootstrap changes, also run `pnpm --filter user-web test`.
+- `test` is focused Vitest coverage for store/router behavior. Treat it as meaningful regression protection for that layer, but not as browser-level end-to-end proof.
