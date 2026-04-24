@@ -1,56 +1,34 @@
 <script setup lang="ts">
 import {
-  ChartBarSquareIcon,
-  ClockIcon,
+  Cog6ToothIcon,
+  CreditCardIcon,
+  DocumentChartBarIcon,
+  FolderIcon,
   HomeIcon,
-  ListBulletIcon,
   UserCircleIcon,
+  UsersIcon,
 } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 
-import { getAdminWorkspaceHref } from "@/lib/workspace-link";
+import { getUserWorkspaceHref } from "@/lib/workspace-link";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
 const authStore = useAuthStore();
-const adminWorkspaceHref = getAdminWorkspaceHref();
+const userWorkspaceHref = getUserWorkspaceHref();
 
 const navItems = computed(() => [
-  {
-    icon: HomeIcon,
-    label: "Dashboard",
-    name: routeNames.dashboard,
-  },
-  {
-    icon: ClockIcon,
-    label: "Timer",
-    name: routeNames.timer,
-  },
-  {
-    icon: ListBulletIcon,
-    label: "Time Entries",
-    name: routeNames.timeEntries,
-  },
-  {
-    icon: ChartBarSquareIcon,
-    label: "Projects",
-    name: routeNames.project,
-    to: { name: routeNames.project, params: { projectId: "workspace-alpha" } },
-  },
-  {
-    icon: ChartBarSquareIcon,
-    label: "Profile",
-    name: routeNames.profile,
-  },
+  { icon: HomeIcon, label: "Dashboard", name: routeNames.dashboard },
+  { icon: DocumentChartBarIcon, label: "Reports", name: routeNames.reports },
+  { icon: CreditCardIcon, label: "Invoices", name: routeNames.invoices },
+  { icon: UsersIcon, label: "Members", name: routeNames.members },
+  { icon: FolderIcon, label: "Projects", name: routeNames.projects },
+  { icon: Cog6ToothIcon, label: "Settings", name: routeNames.settings },
 ]);
 
 function isActive(name: string): boolean {
-  if (name === routeNames.project) {
-    return route.name === routeNames.project;
-  }
-
   return route.name === name;
 }
 </script>
@@ -78,10 +56,10 @@ function isActive(name: string): boolean {
 
       <div class="flex items-center gap-3">
         <a
-          :href="adminWorkspaceHref"
+          :href="userWorkspaceHref"
           class="hidden text-[13px] font-semibold text-brand transition hover:underline sm:block"
         >
-          Admin workspace
+          User workspace
         </a>
         <div class="hidden text-right sm:block">
           <p class="text-[13px] font-medium text-text-dark">
@@ -107,7 +85,7 @@ function isActive(name: string): boolean {
           <RouterLink
             v-for="item in navItems"
             :key="item.name"
-            :to="item.to ?? { name: item.name }"
+            :to="{ name: item.name }"
             :class="[
               'flex h-11 items-center gap-3 rounded-r-md px-4 text-sm font-medium transition-colors',
               isActive(item.name)
@@ -136,9 +114,9 @@ function isActive(name: string): boolean {
       class="fixed inset-x-0 bottom-0 z-20 flex h-16 border-t border-divider bg-surface sm:hidden"
     >
       <RouterLink
-        v-for="item in navItems"
+        v-for="item in navItems.slice(0, 5)"
         :key="`mobile-${item.name}`"
-        :to="item.to ?? { name: item.name }"
+        :to="{ name: item.name }"
         :class="isActive(item.name) ? 'text-brand' : 'text-text-muted'"
         class="flex flex-1 flex-col items-center justify-center gap-1 text-xs"
       >

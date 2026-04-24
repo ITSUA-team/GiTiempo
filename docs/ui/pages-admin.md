@@ -39,3 +39,8 @@
 - Single-column grouped form layout.
 - Workspace fields include name, default hourly rate, and currency.
 - Save action pinned per section or at the page bottom.
+
+## Cross-App Navigation
+
+- The admin SPA should expose a visible entry point back to the user workspace when the user SPA is available.
+- Prefer placing the cross-link in the shared shell identity/top-bar area so it stays consistent with the user SPA shell treatment.

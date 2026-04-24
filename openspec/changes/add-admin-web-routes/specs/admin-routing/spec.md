@@ -47,3 +47,19 @@ The `admin-web` router MUST treat the documented admin pages as authenticated de
 - **WHEN** an authenticated session navigates to the admin-web login route
 - **THEN** the router redirects the user to the default authenticated admin destination
 - **AND** the router may resume a preserved redirect target when one is valid
+
+### Requirement: Cross-SPA Switching Entry Points
+
+The web products MUST provide visible entry points between `user-web` and `admin-web` so users can switch workspaces from the application chrome or login experience.
+
+#### Scenario: Authenticated user switches workspaces
+
+- **WHEN** an authenticated user is inside either SPA shell
+- **THEN** the shell exposes a visible link to the counterpart workspace
+- **AND** the switch entry is placed in the shared identity or top-bar area rather than hidden inside page-specific content
+
+#### Scenario: Guest user finds the counterpart workspace
+
+- **WHEN** a guest user is on a login or auth-entry surface
+- **THEN** the experience exposes a visible link to the counterpart workspace
+- **AND** the cross-link does not replace the primary login action for the current SPA

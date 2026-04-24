@@ -2,6 +2,7 @@
 import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { getAdminWorkspaceHref } from "@/lib/workspace-link";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -12,6 +13,7 @@ const router = useRouter();
 const email = shallowRef("");
 const errorMessage = shallowRef<string | null>(null);
 const password = shallowRef("");
+const adminWorkspaceHref = getAdminWorkspaceHref();
 
 const redirectTarget = computed(() => {
   const redirect = route.query.redirect;
@@ -115,6 +117,12 @@ async function handleGoogleSignIn(): Promise<void> {
         <div class="flex flex-wrap gap-4 text-xs font-medium text-text-muted">
           <span>Secure workspace sign-in</span>
           <span>No dark mode for MVP</span>
+          <a
+            :href="adminWorkspaceHref"
+            class="text-brand transition hover:underline"
+          >
+            Need admin tools? Open the admin workspace.
+          </a>
         </div>
       </section>
 

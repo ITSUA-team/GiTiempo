@@ -9,6 +9,7 @@
 - Establish the route-level structure needed for protected admin pages to mount through the shared shell pattern.
 - Align admin-web route behavior with the same frontend auth direction as user-web so later admin auth/bootstrap work has a stable routing target.
 - Require implementation under this change to follow the change design and the existing project docs, with the docs remaining the source of truth if implementation details drift.
+- Add visible cross-link entry points between `user-web` and `admin-web` in the shared shell/login experience so users can switch workspaces without manually editing the URL.
 
 ## Capabilities
 
@@ -27,3 +28,4 @@
 - Future `apps/admin-web/src/views/*` and layout components mounted by the admin route map.
 - `openspec/specs/admin-routing/spec.md` as the source of truth for admin-web route behavior.
 - Verification against `docs/ui/pages-admin.md`, `docs/ui/layout.md`, `docs/TECHNICAL-REQUIREMENTS.md`, and `apps/admin-web/AGENTS.md` during implementation.
+- Follow-up project updates in both SPAs to add the documented cross-link affordances in the shell/login surfaces.

@@ -15,6 +15,7 @@ User SPA and Admin SPA share the same shell:
 
 - Left: product logo and workspace name.
 - Right: user avatar, display name, settings icon.
+- When both SPAs exist, include a visible cross-link to the counterpart workspace in the top-right identity area so users can move between user-web and admin-web without changing URLs manually.
 
 ### Sidebar Navigation
 
@@ -26,11 +27,11 @@ User SPA and Admin SPA share the same shell:
 
 ## Responsive Breakpoints
 
-| Breakpoint | Width | Tailwind prefix | Layout change |
-|---|---|---|---|
-| Mobile | `< 640px` | default | Sidebar hidden, bottom nav up to 5 items |
-| Tablet | `640px - 1024px` | `sm:` / `md:` | Sidebar collapses to icon-only `w-16` |
-| Desktop | `> 1024px` | `lg:` | Full sidebar `w-60` |
+| Breakpoint | Width            | Tailwind prefix | Layout change                            |
+| ---------- | ---------------- | --------------- | ---------------------------------------- |
+| Mobile     | `< 640px`        | default         | Sidebar hidden, bottom nav up to 5 items |
+| Tablet     | `640px - 1024px` | `sm:` / `md:`   | Sidebar collapses to icon-only `w-16`    |
+| Desktop    | `> 1024px`       | `lg:`           | Full sidebar `w-60`                      |
 
 MVP is desktop-first. Mobile is required but less polished.
 

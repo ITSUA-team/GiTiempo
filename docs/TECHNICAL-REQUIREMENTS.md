@@ -222,6 +222,7 @@ The current web frontend baseline includes:
 - Both SPAs import `packages/web-config` for shared PrimeVue and Tailwind bootstrap configuration.
 - Common UI patterns (avatars, date pickers, task selectors) can be extracted to a shared UI package later if duplication becomes problematic.
 - Both SPAs use the same JWT-based auth flow — Firebase Auth login → exchange for API tokens.
+- Both SPAs should expose visible cross-links to the counterpart workspace so users can switch between `user-web` and `admin-web` from the shell/login surfaces rather than relying on manual URL changes.
 
 ---
 
