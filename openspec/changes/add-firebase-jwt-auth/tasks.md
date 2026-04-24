@@ -110,6 +110,7 @@
 - [x] 14.11 AppShell sidebar: Add the missing `Projects` nav item while keeping the documented icon-based navigation treatment
 - [x] 14.12 AppShell sidebar: Remove the sign-out action from the sidebar
 - [x] 14.13 ProfileView: Add the destructive outlined `Sign out` button at the bottom of the profile content area, right-aligned to match the approved design
+- [x] 14.14 AppShell navigation: Remove icons from navigation links while preserving the approved spacing, active-state treatment, and responsive layout
 
 ## 15. Frontend tooling deprecation cleanup
 
