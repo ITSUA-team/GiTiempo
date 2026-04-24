@@ -3,7 +3,7 @@ import { createMemoryHistory } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
 import type { UserResponse } from "@gitiempo/shared";
 
-import { clearRefreshToken } from "@/lib/session-storage";
+import { clearRefreshToken, setRefreshToken } from "@/lib/session-storage";
 import { createAppRouter, routeNames } from "@/router";
 import {
   resetAuthRuntimeForTesting,
@@ -63,6 +63,35 @@ describe("app router auth guards", () => {
     expect(router.currentRoute.value.query.redirect).toBe("/timer");
   });
 
+  it("redirects to login after bootstrap rejects a persisted refresh token", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRefreshToken("stale-refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        refreshSession: async () => {
+          throw new Error("invalid refresh token");
+        },
+      }),
+    );
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/projects/workspace-alpha");
+    await router.isReady();
+
+    const authStore = useAuthStore(pinia);
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.query.redirect).toBe(
+      "/projects/workspace-alpha",
+    );
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.bootstrapComplete).toBe(true);
+  });
+
   it("redirects authenticated users away from login to the default route", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -100,5 +129,24 @@ describe("app router auth guards", () => {
     await router.isReady();
 
     expect(router.currentRoute.value.fullPath).toBe("/time-entries");
+  });
+
+  it("falls back to the default authenticated route for invalid redirect queries", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "access-token";
+    authStore.bootstrapComplete = true;
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/login?redirect=https://example.com/escape");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 });
