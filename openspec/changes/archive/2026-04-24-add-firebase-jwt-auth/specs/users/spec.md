@@ -1,10 +1,4 @@
-# Backend Current User Specification
-
-## Purpose
-
-Define backend behavior for reading and updating the authenticated current user profile.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Current User Read Endpoint
 
@@ -53,14 +47,3 @@ The backend SHALL allow updates only to mutable current-user profile fields defi
 - **GIVEN** no valid access token is presented
 - **WHEN** a current-user update request is received
 - **THEN** the backend rejects the request as unauthorized
-
-### Requirement: Stable Frontend Current User Contract
-
-The backend MUST shape current-user responses according to the shared public user contract.
-
-#### Scenario: Public contract excludes internal auth identifiers
-
-- GIVEN the backend serializes the authenticated current user
-- WHEN the response body is produced
-- THEN fields like internal Firebase UID are excluded
-- AND only the public user contract fields are returned

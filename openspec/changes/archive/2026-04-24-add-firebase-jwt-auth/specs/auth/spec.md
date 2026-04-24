@@ -1,10 +1,4 @@
-# Backend Authentication Specification
-
-## Purpose
-
-Define server-side authentication behavior for verifying identity, issuing API tokens, and enforcing authenticated access in the NestJS API.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Firebase Identity Verification
 
@@ -70,6 +64,8 @@ The backend SHALL issue one short-lived access token and one long-lived refresh 
 - **THEN** the backend rejects the request as unauthorized
 - **AND** refresh-token comparison uses a constant-time algorithm so that mismatch timing does not leak information
 
+## ADDED Requirements
+
 ### Requirement: Refresh Token Reuse Detection
 
 The backend MUST detect when a previously rotated (revoked) refresh token is presented again and MUST treat it as a session compromise event.
@@ -100,6 +96,8 @@ The backend MUST provide a logout endpoint that terminates the current device's 
 - **WHEN** the logout endpoint processes the request
 - **THEN** the backend does not leak whether the token existed
 - **AND** the response does not issue a new token pair
+
+## MODIFIED Requirements
 
 ### Requirement: Authenticated Request Enforcement
 
@@ -155,6 +153,8 @@ The backend MUST ensure that a verified Firebase identity maps to a local user r
 - **WHEN** the user logs in again
 - **THEN** the backend reuses the existing local user record
 - **AND** the backend may refresh mutable profile fields sourced from the verified identity
+
+## ADDED Requirements
 
 ### Requirement: Sensitive Auth Data Redaction
 
