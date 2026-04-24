@@ -95,6 +95,8 @@
 
 ## 14. Frontend UI pixel-alignment fixes
 
+- Scope note: an agent MAY execute only section `14` when the user request is explicitly limited to frontend/UI work for this change. In that mode, backend sections `1` through `13` do not need to be modified unless the frontend task reveals a concrete shared-contract or API dependency.
+
 - [x] 14.1 LoginView: Fix hero heading to exactly 40px fontSize with no letter-spacing override
 - [x] 14.2 LoginView: Fix brand subtitle, field labels, hero card body, and `Forgot?` text to 13px fontSize
 - [x] 14.3 LoginView: Fix hero card titles to 16px fontSize and card cornerRadius to 10px (`radius-lg`)
@@ -108,3 +110,10 @@
 - [x] 14.11 AppShell sidebar: Add the missing `Projects` nav item while keeping the documented icon-based navigation treatment
 - [x] 14.12 AppShell sidebar: Remove the sign-out action from the sidebar
 - [x] 14.13 ProfileView: Add the destructive outlined `Sign out` button at the bottom of the profile content area, right-aligned to match the approved design
+
+## 15. Frontend tooling deprecation cleanup
+
+- [ ] 15.1 Remove deprecated TypeScript `baseUrl` usage from `apps/user-web/tsconfig.app.json` and `apps/admin-web/tsconfig.app.json`, keeping the existing `@/*` alias working through non-deprecated configuration only
+- [ ] 15.2 Remove `ignoreDeprecations` entries that were only suppressing the deprecated frontend config once the non-deprecated configuration is in place
+- [ ] 15.3 Verify frontend tooling still resolves the `@/*` alias correctly in `user-web` and `admin-web` without deprecated TypeScript config
+- [ ] 15.4 Run and pass `pnpm --filter user-web typecheck`, `pnpm --filter admin-web typecheck`, and `pnpm typecheck` after the migration
