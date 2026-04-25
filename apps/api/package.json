@@ -22,7 +22,7 @@
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env src/db/seed.ts",
-    "openapi:export": "tsx --env-file=.env src/openapi/export.ts"
+    "openapi:export": "pnpm run build && node --env-file=.env dist/src/openapi/export.js"
   },
   "dependencies": {
     "@gitiempo/shared": "workspace:*",
@@ -79,4 +79,3 @@
     "vitest": "^4.1.4"
   }
 }
-
