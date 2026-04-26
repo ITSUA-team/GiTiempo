@@ -14,6 +14,9 @@ import { DbModule } from './db/db.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { CommonsModule } from './commons/commons.module';
+import { MembersModule } from './members/members.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
+import { InvitesModule } from './invites/invites.module';
 
 @Module({
   imports: [
@@ -34,8 +37,11 @@ import { CommonsModule } from './commons/commons.module';
       }),
     }),
     DbModule,
+    MembersModule,
     UsersModule,
     AuthModule,
+    WorkspacesModule,
+    InvitesModule,
     CommonsModule,
   ],
   controllers: [],
@@ -46,10 +52,6 @@ import { CommonsModule } from './commons/commons.module';
     },
     {
       provide: APP_GUARD,
-      // `ThrottlerGuard`'s constructor metadata lives in the published
-      // package and isn't re-emitted by our compiler, so Nest cannot always
-      // resolve `Reflector` via reflect-metadata. Wire it via an explicit
-      // factory to avoid that brittle path.
       inject: ['THROTTLER:MODULE_OPTIONS', ThrottlerStorage, Reflector],
       useFactory: (
         options: ConstructorParameters<typeof ThrottlerGuard>[0],

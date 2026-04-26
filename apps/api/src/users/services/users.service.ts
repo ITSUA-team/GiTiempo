@@ -4,10 +4,15 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
-import type { UserResponse, UpdateUserInput } from '@gitiempo/shared';
+import { and, eq } from 'drizzle-orm';
+import type {
+  UserResponse,
+  UpdateUserInput,
+  WorkspaceRole,
+} from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { users } from '../schemas/users.schema';
 
 type UserRow = typeof users.$inferSelect;
@@ -31,14 +36,20 @@ export class UsersService {
    * access token no longer exists (account was deleted) — this is a
    * re-auth signal, not a "not found" situation.
    */
-  async findById(id: string): Promise<UserResponse> {
+  async findById(id: string, workspaceId: string): Promise<UserResponse> {
     const [row] = await this.db
-      .select()
+      .select({
+        user: users,
+        role: workspaceMembers.role,
+      })
       .from(users)
-      .where(eq(users.id, id))
+      .innerJoin(workspaceMembers, eq(workspaceMembers.userId, users.id))
+      .where(
+        and(eq(users.id, id), eq(workspaceMembers.workspaceId, workspaceId)),
+      )
       .limit(1);
     if (!row) throw new UnauthorizedException('Unauthorized');
-    return this.toResponse(row);
+    return this.toResponse(row.user, row.role);
   }
 
   /** Same as `findById` but returns the raw row (internal use). */
@@ -55,7 +66,20 @@ export class UsersService {
    * Patches mutable fields on the given user. Only fields present in
    * `input` are written; omitted keys are left untouched.
    */
-  async updateById(id: string, input: UpdateUserInput): Promise<UserResponse> {
+  async findRowByFirebaseUid(firebaseUid: string): Promise<UserRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.firebaseUid, firebaseUid))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async updateById(
+    id: string,
+    workspaceId: string,
+    input: UpdateUserInput,
+  ): Promise<UserResponse> {
     const [updated] = await this.db
       .update(users)
       .set({
@@ -71,7 +95,26 @@ export class UsersService {
       .returning();
     if (!updated) throw new UnauthorizedException('Unauthorized');
     this.logger.log(`Updated user ${updated.id}`);
-    return this.toResponse(updated);
+    const role = await this.findRole(id, workspaceId);
+    return this.toResponse(updated, role);
+  }
+
+  async updateFromFirebase(
+    id: string,
+    input: UpsertFromFirebaseInput,
+  ): Promise<UserRow> {
+    const [updated] = await this.db
+      .update(users)
+      .set({
+        email: input.email,
+        displayName: input.displayName ?? null,
+        avatarUrl: input.avatarUrl ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    if (!updated) throw new UnauthorizedException('Unauthorized');
+    return updated;
   }
 
   /**
@@ -107,12 +150,31 @@ export class UsersService {
   }
 
   /** Maps a DB row to the public response shape (drops `firebaseUid`). */
-  private toResponse(row: UserRow): UserResponse {
+  private async findRole(
+    userId: string,
+    workspaceId: string,
+  ): Promise<WorkspaceRole> {
+    const [row] = await this.db
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.userId, userId),
+          eq(workspaceMembers.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+    if (!row) throw new UnauthorizedException('Unauthorized');
+    return row.role;
+  }
+
+  private toResponse(row: UserRow, role: WorkspaceRole): UserResponse {
     return {
       id: row.id,
       email: row.email,
       displayName: row.displayName,
       avatarUrl: row.avatarUrl,
+      role,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation';
+import { MembersService } from '../../members/services/members.service';
 import { UsersService } from '../../users/services/users.service';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
 import {
@@ -62,6 +63,7 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly refreshRepo: RefreshTokenRepository,
     private readonly users: UsersService,
+    private readonly members: MembersService,
   ) {
     this.refreshTtlMs = parseDurationMs(
       config.get('JWT_REFRESH_TTL', { infer: true }),
@@ -91,7 +93,15 @@ export class AuthService {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const row = await this.users.upsertFromFirebase({
+    const existingUser = await this.users.findRowByFirebaseUid(decoded.uid);
+    if (!existingUser) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const membership = await this.members.requireActiveMembershipForUser(
+      existingUser.id,
+    );
+    const row = await this.users.updateFromFirebase(existingUser.id, {
       firebaseUid: decoded.uid,
       email: decoded.email,
       displayName: decoded.name ?? null,
@@ -103,6 +113,8 @@ export class AuthService {
         sub: row.id,
         email: row.email,
         firebaseUid: row.firebaseUid,
+        workspaceId: membership.workspaceId,
+        role: membership.role,
       },
       randomUUID(),
     );
@@ -141,6 +153,9 @@ export class AuthService {
       await this.refreshRepo.deleteFamily(row.familyId);
       throw new UnauthorizedException('Unauthorized');
     }
+    const membership = await this.members.requireActiveMembershipForUser(
+      user.id,
+    );
 
     const { token, hash: newHash } = this.tokens.generateRefreshToken();
     const expiresAt = new Date(Date.now() + this.refreshTtlMs);
@@ -165,6 +180,8 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       firebaseUid: user.firebaseUid,
+      workspaceId: membership.workspaceId,
+      role: membership.role,
     });
     this.logger.log({
       event: 'auth.refresh.rotated',

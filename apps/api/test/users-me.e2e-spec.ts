@@ -6,7 +6,7 @@ import { AppModule } from '../src/app.module';
 import { ADMIN_EMAIL, bearer, login } from './helpers/auth';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { users } from '../src/db/schema';
+import { users, workspaceMembers, workspaces } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -106,24 +106,46 @@ describe('Users (e2e)', () => {
 
     it('returns 401 when the access token references a deleted user', async () => {
       const db = app.get<DrizzleDB>(DRIZZLE);
+      const uid = `deleted-user-${Date.now()}`;
+      const email = `${uid}@example.com`;
+      const [workspace] = await db.select().from(workspaces).limit(1);
+      if (!workspace) throw new Error('Expected seeded workspace');
+      const [user] = await db
+        .insert(users)
+        .values({
+          firebaseUid: uid,
+          email,
+          displayName: 'Deleted User',
+          avatarUrl: null,
+        })
+        .returning();
+      await db.insert(workspaceMembers).values({
+        workspaceId: workspace.id,
+        userId: user!.id,
+        role: 'member',
+      });
+      const deletedUserTokens = await login(
+        app,
+        `test:${uid}:${email}:Deleted User`,
+      );
 
       const getRes = await request(app.getHttpServer())
         .get('/users/me')
-        .set('Authorization', bearer(accessToken));
+        .set('Authorization', bearer(deletedUserTokens.accessToken));
       const userId = getRes.body.id as string;
 
       await db.delete(users).where(eq(users.id, userId));
 
       const patchRes = await request(app.getHttpServer())
         .patch('/users/me')
-        .set('Authorization', bearer(accessToken))
+        .set('Authorization', bearer(deletedUserTokens.accessToken))
         .send({ displayName: 'Ghost' });
 
       expect(patchRes.status).toBe(401);
 
       const getRes2 = await request(app.getHttpServer())
         .get('/users/me')
-        .set('Authorization', bearer(accessToken));
+        .set('Authorization', bearer(deletedUserTokens.accessToken));
       expect(getRes2.status).toBe(401);
     });
   });

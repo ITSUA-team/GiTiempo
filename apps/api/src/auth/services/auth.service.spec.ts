@@ -7,6 +7,7 @@ import { TokenService } from './token.service';
 import { FakeFirebaseAdminService } from './firebase-admin.fake';
 import { FIREBASE_ADMIN } from './firebase-admin.interface';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
+import { MembersService } from '../../members/services/members.service';
 import { UsersService } from '../../users/services/users.service';
 
 const envMap: Record<string, string> = {
@@ -32,6 +33,13 @@ const seedUserRow = {
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
 
+const seedMembership = {
+  id: '22222222-2222-2222-2222-222222222222',
+  userId: seedUserRow.id,
+  workspaceId: '33333333-3333-3333-3333-333333333333',
+  role: 'admin' as const,
+};
+
 describe('AuthService', () => {
   let service: AuthService;
   let tokens: TokenService;
@@ -44,8 +52,12 @@ describe('AuthService', () => {
     deleteById: ReturnType<typeof vi.fn>;
   };
   let users: {
-    upsertFromFirebase: ReturnType<typeof vi.fn>;
+    findRowByFirebaseUid: ReturnType<typeof vi.fn>;
+    updateFromFirebase: ReturnType<typeof vi.fn>;
     findRowById: ReturnType<typeof vi.fn>;
+  };
+  let members: {
+    requireActiveMembershipForUser: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -80,8 +92,12 @@ describe('AuthService', () => {
       deleteById: vi.fn().mockResolvedValue(undefined),
     };
     users = {
-      upsertFromFirebase: vi.fn().mockResolvedValue(seedUserRow),
+      findRowByFirebaseUid: vi.fn().mockResolvedValue(seedUserRow),
+      updateFromFirebase: vi.fn().mockResolvedValue(seedUserRow),
       findRowById: vi.fn().mockResolvedValue(seedUserRow),
+    };
+    members = {
+      requireActiveMembershipForUser: vi.fn().mockResolvedValue(seedMembership),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -92,6 +108,7 @@ describe('AuthService', () => {
         { provide: FIREBASE_ADMIN, useClass: FakeFirebaseAdminService },
         { provide: RefreshTokenRepository, useValue: repo },
         { provide: UsersService, useValue: users },
+        { provide: MembersService, useValue: members },
       ],
     }).compile();
     service = module.get(AuthService);
@@ -99,10 +116,14 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('verifies Firebase, upserts user, and issues a token pair', async () => {
+    it('verifies Firebase, resolves membership, and issues a token pair', async () => {
       const pair = await service.login('test:admin-uid:admin@example.com');
 
-      expect(users.upsertFromFirebase).toHaveBeenCalledWith({
+      expect(users.findRowByFirebaseUid).toHaveBeenCalledWith('admin-uid');
+      expect(members.requireActiveMembershipForUser).toHaveBeenCalledWith(
+        seedUserRow.id,
+      );
+      expect(users.updateFromFirebase).toHaveBeenCalledWith(seedUserRow.id, {
         firebaseUid: 'admin-uid',
         email: 'admin@example.com',
         displayName: null,
@@ -116,13 +137,24 @@ describe('AuthService', () => {
       const payload = tokens.verifyAccess(pair.accessToken);
       expect(payload.sub).toBe(seedUserRow.id);
       expect(payload.firebaseUid).toBe('admin-uid');
+      expect(payload.workspaceId).toBe(seedMembership.workspaceId);
+      expect(payload.role).toBe(seedMembership.role);
+    });
+
+    it('rejects Firebase users without local membership', async () => {
+      users.findRowByFirebaseUid.mockResolvedValueOnce(null);
+
+      await expect(
+        service.login('test:outside:outside@example.com'),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(repo.create).not.toHaveBeenCalled();
     });
 
     it('rejects invalid Firebase tokens with 401', async () => {
       await expect(service.login('not-a-test-token')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
-      expect(users.upsertFromFirebase).not.toHaveBeenCalled();
+      expect(users.findRowByFirebaseUid).not.toHaveBeenCalled();
       expect(repo.create).not.toHaveBeenCalled();
     });
   });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workspaceRoleSchema } from "./workspace-members.js";
 
 /**
  * Public-facing user schema (server -> client).
@@ -11,6 +12,7 @@ export const userResponseSchema = z.object({
   email: z.string().email(),
   displayName: z.string().nullable(),
   avatarUrl: z.string().nullable(),
+  role: workspaceRoleSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

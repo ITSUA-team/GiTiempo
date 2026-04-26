@@ -17,6 +17,7 @@ import { UsersService } from '../services/users.service';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../../auth/types/auth-user';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -29,8 +30,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Get the current user' })
   @ApiOkResponse({ type: UserResponseDto })
   @ZodSerializerDto(UserResponseDto)
-  getMe(@CurrentUser('sub') sub: string): Promise<UserResponseDto> {
-    return this.users.findById(sub);
+  getMe(@CurrentUser() user: AuthUser): Promise<UserResponseDto> {
+    return this.users.findById(user.sub, user.workspaceId);
   }
 
   @Patch('me')
@@ -39,9 +40,9 @@ export class UsersController {
   @ApiOkResponse({ type: UserResponseDto })
   @ZodSerializerDto(UserResponseDto)
   updateMe(
-    @CurrentUser('sub') sub: string,
+    @CurrentUser() user: AuthUser,
     @Body() body: UpdateUserDto,
   ): Promise<UserResponseDto> {
-    return this.users.updateById(sub, body);
+    return this.users.updateById(user.sub, user.workspaceId, body);
   }
 }

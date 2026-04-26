@@ -48,6 +48,8 @@ export class TokenService {
         sub: user.sub,
         email: user.email,
         firebaseUid: user.firebaseUid,
+        workspaceId: user.workspaceId,
+        role: user.role,
       },
       this.accessSecret,
       options,
@@ -63,12 +65,14 @@ export class TokenService {
     if (typeof decoded === 'string') {
       throw new Error('Unexpected access token payload (string form)');
     }
-    const { sub, email, firebaseUid, iss, aud, iat, exp } =
+    const { sub, email, firebaseUid, workspaceId, role, iss, aud, iat, exp } =
       decoded as Partial<JwtPayload>;
     if (
       typeof sub !== 'string' ||
       typeof email !== 'string' ||
       typeof firebaseUid !== 'string' ||
+      typeof workspaceId !== 'string' ||
+      (role !== 'admin' && role !== 'pm' && role !== 'member') ||
       typeof iss !== 'string' ||
       typeof aud !== 'string' ||
       typeof iat !== 'number' ||
@@ -76,7 +80,7 @@ export class TokenService {
     ) {
       throw new Error('Access token payload missing required claims');
     }
-    return { sub, email, firebaseUid, iss, aud, iat, exp };
+    return { sub, email, firebaseUid, workspaceId, role, iss, aud, iat, exp };
   }
 
   generateRefreshToken(): GeneratedRefreshToken {
