@@ -18,7 +18,7 @@
 
 ## Source Of Truth
 
-- Prefer manifests and app-local config over root prose. The root README still mentions Kysely, but the live backend is NestJS + Drizzle.
+- Prefer manifests and app-local config over root prose.
 - Cross-package work usually spans one app plus `packages/shared` or `packages/web-config`; inspect only those paths instead of rescanning the whole monorepo.
 - Before implementing, check whether the planned change conflicts with documented behavior or requirements in `docs/`; if it does, escalate immediately instead of silently choosing one source.
 - For GitHub work planning and project-board operations, use `docs/GITHUB-PROJECT-WORKFLOW.md` for the repo's milestone, issue, sub-issue, and project-board rules.

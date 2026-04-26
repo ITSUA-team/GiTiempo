@@ -4,6 +4,10 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { ADMIN_EMAIL, bearer, login } from './helpers/auth';
+import { DRIZZLE } from '../src/db/db.constants';
+import type { DrizzleDB } from '../src/db/db.types';
+import { users } from '../src/db/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * End-to-end tests for `/users/me` behind the global `JwtAuthGuard`.
@@ -98,6 +102,29 @@ describe('Users (e2e)', () => {
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('BadRequest');
       expect(res.body.details?.[0]?.path).toEqual(['avatarUrl']);
+    });
+
+    it('returns 401 when the access token references a deleted user', async () => {
+      const db = app.get<DrizzleDB>(DRIZZLE);
+
+      const getRes = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(accessToken));
+      const userId = getRes.body.id as string;
+
+      await db.delete(users).where(eq(users.id, userId));
+
+      const patchRes = await request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', bearer(accessToken))
+        .send({ displayName: 'Ghost' });
+
+      expect(patchRes.status).toBe(401);
+
+      const getRes2 = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(accessToken));
+      expect(getRes2.status).toBe(401);
     });
   });
 });

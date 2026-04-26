@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UsersService } from './users.service';
 import { DRIZZLE } from '../../db/db.constants';
@@ -151,11 +151,11 @@ describe('UsersService', () => {
       expect(result).not.toHaveProperty('firebaseUid');
     });
 
-    it('throws NotFound when no row was updated', async () => {
+    it('throws Unauthorized when no row was updated', async () => {
       await build({ updateRows: [] });
       await expect(
         service.updateById(sampleRow.id, { displayName: 'x' }),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 

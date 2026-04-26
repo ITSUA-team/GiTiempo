@@ -6,13 +6,16 @@ import { RefreshTokenRepository } from './refresh-token.repository';
  *
  *   db.insert(t).values(v).returning()             -> Promise<row[]>
  *   db.select().from(t).where(w).limit(n)          -> Promise<row[]>
+ *   db.update(t).set(v).where(w).returning()       -> Promise<row[]>
  *   db.update(t).set(v).where(w)                   -> Promise<void>
  *   db.delete(t).where(w)                          -> Promise<void>
+ *   db.transaction(fn)                             -> invokes fn(tx)
  */
 function makeDbMock(
   opts: {
     insertRows?: unknown[];
     selectRows?: unknown[];
+    updateReturningRows?: unknown[];
   } = {},
 ) {
   const returning = vi.fn().mockResolvedValue(opts.insertRows ?? []);
@@ -24,18 +27,48 @@ function makeDbMock(
   const from = vi.fn().mockReturnValue({ where: whereSelect });
   const select = vi.fn().mockReturnValue({ from });
 
+  const returningUpdate = vi
+    .fn()
+    .mockResolvedValue(opts.updateReturningRows ?? []);
+  const whereUpdateReturning = vi
+    .fn()
+    .mockReturnValue({ returning: returningUpdate });
   const whereUpdate = vi.fn().mockResolvedValue(undefined);
+  const setReturning = vi.fn().mockReturnValue({ where: whereUpdateReturning });
   const set = vi.fn().mockReturnValue({ where: whereUpdate });
   const update = vi.fn().mockReturnValue({ set });
 
   const whereDelete = vi.fn().mockResolvedValue(undefined);
   const deleteFn = vi.fn().mockReturnValue({ where: whereDelete });
 
+  const txReturning = vi.fn().mockResolvedValue(opts.insertRows ?? []);
+  const txValues = vi.fn().mockReturnValue({ returning: txReturning });
+  const txInsert = vi.fn().mockReturnValue({ values: txValues });
+
+  const txUpdateReturning = vi
+    .fn()
+    .mockResolvedValue(opts.updateReturningRows ?? []);
+  const txWhereUpdate = vi
+    .fn()
+    .mockReturnValue({ returning: txUpdateReturning });
+  const txSet = vi.fn().mockReturnValue({ where: txWhereUpdate });
+  const txUpdate = vi.fn().mockReturnValue({ set: txSet });
+
+  const transaction = vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      insert: txInsert,
+      update: txUpdate,
+      rollback: () => {},
+    };
+    return fn(tx);
+  });
+
   return {
     insert,
     select,
     update,
     delete: deleteFn,
+    transaction,
     _spies: {
       returning,
       values,
@@ -43,8 +76,18 @@ function makeDbMock(
       whereSelect,
       from,
       set,
+      setReturning,
       whereUpdate,
+      whereUpdateReturning,
+      returningUpdate,
       whereDelete,
+      txInsert,
+      txValues,
+      txReturning,
+      txUpdate,
+      txSet,
+      txWhereUpdate,
+      txUpdateReturning,
     },
   };
 }
@@ -173,6 +216,59 @@ describe('RefreshTokenRepository', () => {
       await repo.deleteById('row-1');
       expect(dbMock.delete).toHaveBeenCalled();
       expect(dbMock._spies.whereDelete).toHaveBeenCalled();
+    });
+  });
+
+  describe('rotateIfActive', () => {
+    const newRow = {
+      id: 'new-rt-id',
+      userId: sampleRow.userId,
+      familyId: sampleRow.familyId,
+      tokenHash: 'b'.repeat(64),
+      replacedBy: null,
+      revokedAt: null,
+      expiresAt: new Date('2026-03-01T00:00:00Z'),
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+    };
+
+    it('inserts new row and revokes old row atomically', async () => {
+      build({ insertRows: [newRow], updateReturningRows: [sampleRow] });
+      const result = await repo.rotateIfActive(sampleRow.id, {
+        userId: sampleRow.userId,
+        familyId: sampleRow.familyId,
+        tokenHash: newRow.tokenHash,
+        expiresAt: newRow.expiresAt,
+      });
+      expect(result).toEqual({ newRow });
+      expect(dbMock.transaction).toHaveBeenCalledOnce();
+      expect(dbMock._spies.txValues).toHaveBeenCalledWith(
+        expect.objectContaining({ tokenHash: newRow.tokenHash }),
+      );
+      expect(dbMock._spies.txSet).toHaveBeenCalledWith(
+        expect.objectContaining({ replacedBy: newRow.id }),
+      );
+    });
+
+    it('returns null when the old row is already revoked (race lost)', async () => {
+      build({ insertRows: [newRow], updateReturningRows: [] });
+      const result = await repo.rotateIfActive(sampleRow.id, {
+        userId: sampleRow.userId,
+        familyId: sampleRow.familyId,
+        tokenHash: newRow.tokenHash,
+        expiresAt: newRow.expiresAt,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('returns null when insert returns no rows', async () => {
+      build({ insertRows: [], updateReturningRows: [sampleRow] });
+      const result = await repo.rotateIfActive(sampleRow.id, {
+        userId: sampleRow.userId,
+        familyId: sampleRow.familyId,
+        tokenHash: newRow.tokenHash,
+        expiresAt: newRow.expiresAt,
+      });
+      expect(result).toBeNull();
     });
   });
 });

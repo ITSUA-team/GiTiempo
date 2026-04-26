@@ -2,7 +2,6 @@ import {
   Inject,
   Injectable,
   Logger,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
@@ -70,7 +69,7 @@ export class UsersService {
       })
       .where(eq(users.id, id))
       .returning();
-    if (!updated) throw new NotFoundException('User not found');
+    if (!updated) throw new UnauthorizedException('Unauthorized');
     this.logger.log(`Updated user ${updated.id}`);
     return this.toResponse(updated);
   }

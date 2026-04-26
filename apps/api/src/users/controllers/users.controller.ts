@@ -24,13 +24,6 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 
-  /**
-   * Returns the currently authenticated user.
-   *
-   * Subject id is pulled from the verified access token payload via
-   * `@CurrentUser('sub')`; the global `JwtAuthGuard` guarantees `sub`
-   * is present for this route.
-   */
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get the current user' })
@@ -40,12 +33,6 @@ export class UsersController {
     return this.users.findById(sub);
   }
 
-  /**
-   * Updates mutable fields on the current user.
-   *
-   * Body must contain at least one of `displayName` / `avatarUrl`,
-   * enforced by the shared Zod schema (`updateUserSchema`).
-   */
   @Patch('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update the current user' })

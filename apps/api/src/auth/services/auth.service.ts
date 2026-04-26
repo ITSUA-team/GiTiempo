@@ -49,21 +49,6 @@ function parseDurationMs(input: string): number {
   return value * multipliers[unit]!;
 }
 
-/**
- * Orchestrates the three auth flows:
- *
- *  - `login`   : verify Firebase ID token → upsert local user → issue
- *                fresh (access, refresh) pair, starting a new family.
- *  - `refresh` : rotate the refresh token with reuse-detection.
- *  - `logout`  : hard-delete the presented refresh token.
- *
- * Invariants (see design doc D1, D2):
- *  - Refresh tokens are stored only as `sha256` hex digests.
- *  - Rotation is soft-revoke + `replaced_by` link; a replay of a
- *    revoked token hard-deletes the entire family.
- *  - No raw Firebase ID token, refresh token, or access token is ever
- *    passed to the logger. Audit events log only `userId` / `familyId`.
- */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -159,13 +144,22 @@ export class AuthService {
 
     const { token, hash: newHash } = this.tokens.generateRefreshToken();
     const expiresAt = new Date(Date.now() + this.refreshTtlMs);
-    const newRow = await this.refreshRepo.create({
+    const rotated = await this.refreshRepo.rotateIfActive(row.id, {
       userId: user.id,
       familyId: row.familyId,
       tokenHash: newHash,
       expiresAt,
     });
-    await this.refreshRepo.markRevoked(row.id, newRow.id);
+
+    if (!rotated) {
+      await this.refreshRepo.deleteFamily(row.familyId);
+      this.logger.warn({
+        event: 'auth.refresh.reuse_detected',
+        userId: row.userId,
+        familyId: row.familyId,
+      });
+      throw new UnauthorizedException('Unauthorized');
+    }
 
     const accessToken = this.tokens.signAccess({
       sub: user.id,
@@ -184,12 +178,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Logout is idempotent: whether or not the presented token matches a
-   * row, the response is the same. This prevents existence oracles.
-   * Caller in the controller enforces bearer auth so only an already
-   * authenticated user can end a session.
-   */
   async logout(refreshToken: string, subjectUserId: string): Promise<void> {
     const hash = this.tokens.hashRefreshToken(refreshToken);
     const row = await this.refreshRepo.findByHashIncludingRevoked(hash);
@@ -206,11 +194,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Internal: issue a fresh (access, refresh) pair and persist the
-   * refresh hash. Caller supplies the family id so login can start a
-   * new family and (future) session flows can reuse an existing one.
-   */
   private async issueTokenPair(
     user: AuthUser,
     familyId: string,

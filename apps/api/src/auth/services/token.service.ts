@@ -36,10 +36,6 @@ export class TokenService {
     this.audience = config.get('JWT_AUDIENCE', { infer: true });
   }
 
-  /**
-   * Sign a short-lived HS256 access token.
-   * Payload is kept minimal (see design D3).
-   */
   signAccess(user: AuthUser): string {
     const options: SignOptions = {
       algorithm: 'HS256',
@@ -58,10 +54,6 @@ export class TokenService {
     );
   }
 
-  /**
-   * Verify signature + `iss` + `aud` + `exp`. Throws on any failure.
-   * Returns a strongly-typed payload.
-   */
   verifyAccess(token: string): JwtPayload {
     const decoded = jwt.verify(token, this.accessSecret, {
       algorithms: ['HS256'],
@@ -87,31 +79,16 @@ export class TokenService {
     return { sub, email, firebaseUid, iss, aud, iat, exp };
   }
 
-  /**
-   * Generate a new opaque refresh token.
-   * 32 bytes → 43-char base64url string; `hash = sha256(token)` hex.
-   */
   generateRefreshToken(): GeneratedRefreshToken {
     const token = randomBytes(32).toString('base64url');
     const hash = this.hashRefreshToken(token);
     return { token, hash };
   }
 
-  /**
-   * Hash a raw refresh token the same way stored hashes were produced.
-   * Exposed so repositories / services can look up by hash without
-   * round-tripping through `generateRefreshToken`.
-   */
   hashRefreshToken(rawToken: string): string {
     return createHash('sha256').update(rawToken).digest('hex');
   }
 
-  /**
-   * Constant-time comparison of a raw refresh token against a stored
-   * `sha256` hex digest. Lengths differing from the expected hash size
-   * return false without running the timing-safe comparison (a length
-   * mismatch is not a secret).
-   */
   compareRefreshHash(rawToken: string, storedHash: string): boolean {
     const computed = this.hashRefreshToken(rawToken);
     const a = Buffer.from(computed, 'hex');

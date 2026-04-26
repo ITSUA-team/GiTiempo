@@ -39,6 +39,7 @@ describe('AuthService', () => {
     create: ReturnType<typeof vi.fn>;
     findByHashIncludingRevoked: ReturnType<typeof vi.fn>;
     markRevoked: ReturnType<typeof vi.fn>;
+    rotateIfActive: ReturnType<typeof vi.fn>;
     deleteFamily: ReturnType<typeof vi.fn>;
     deleteById: ReturnType<typeof vi.fn>;
   };
@@ -61,6 +62,20 @@ describe('AuthService', () => {
       })),
       findByHashIncludingRevoked: vi.fn(),
       markRevoked: vi.fn().mockResolvedValue(undefined),
+      rotateIfActive: vi.fn(
+        async (_oldId: string, input: Record<string, unknown>) => ({
+          newRow: {
+            id: 'rt-' + Math.random().toString(16).slice(2, 10),
+            userId: input.userId,
+            familyId: input.familyId,
+            tokenHash: input.tokenHash,
+            replacedBy: null,
+            revokedAt: null,
+            expiresAt: input.expiresAt,
+            createdAt: new Date(),
+          },
+        }),
+      ),
       deleteFamily: vi.fn().mockResolvedValue(undefined),
       deleteById: vi.fn().mockResolvedValue(undefined),
     };
@@ -135,12 +150,13 @@ describe('AuthService', () => {
 
       expect(pair.accessToken).toMatch(/^eyJ/);
       expect(pair.refreshToken).not.toBe(first.refreshToken);
-      expect(repo.markRevoked).toHaveBeenCalledOnce();
-      // Family id preserved across rotation.
-      const secondCreateCall = repo.create.mock.calls.at(-1)![0] as {
-        familyId: string;
-      };
-      expect(secondCreateCall.familyId).toBe(existingRow.familyId);
+      expect(repo.rotateIfActive).toHaveBeenCalledOnce();
+      const rotateCall = repo.rotateIfActive.mock.calls[0] as [
+        string,
+        Record<string, unknown>,
+      ];
+      expect(rotateCall[0]).toBe('old-row');
+      expect(rotateCall[1].familyId).toBe(existingRow.familyId);
     });
 
     it('detects reuse of a revoked token and destroys the family', async () => {
@@ -184,6 +200,26 @@ describe('AuthService', () => {
       await expect(service.refresh('whatever')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
+    });
+
+    it('treats atomic rotation loss as reuse and destroys the family', async () => {
+      const existingRow = {
+        id: 'old-row',
+        userId: seedUserRow.id,
+        familyId: 'family-race',
+        tokenHash: 'abc',
+        replacedBy: null,
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+      };
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce(existingRow);
+      repo.rotateIfActive.mockResolvedValueOnce(null);
+
+      await expect(service.refresh('some-raw-token')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      expect(repo.deleteFamily).toHaveBeenCalledWith('family-race');
     });
   });
 

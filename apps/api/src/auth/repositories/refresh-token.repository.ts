@@ -4,6 +4,10 @@ import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { refreshTokens } from '../schemas/refresh-tokens.schema';
 
+export interface RotateIfActiveResult {
+  newRow: RefreshTokenRow;
+}
+
 export type RefreshTokenRow = typeof refreshTokens.$inferSelect;
 
 export interface CreateRefreshTokenInput {
@@ -116,5 +120,48 @@ export class RefreshTokenRepository {
   /** Hard-delete a single row by id. Used by logout. */
   async deleteById(id: string): Promise<void> {
     await this.db.delete(refreshTokens).where(eq(refreshTokens.id, id));
+  }
+
+  /**
+   * Atomically rotate a refresh token inside a single transaction.
+   *
+   * Inserts a new row, then attempts a compare-and-set update on the
+   * old row: `SET revoked_at = now(), replaced_by = <newId> WHERE
+   * id = <oldId> AND revoked_at IS NULL`.  If another concurrent
+   * refresh already revoked the old row the update matches 0 rows,
+   * the transaction is rolled back, and `null` is returned.
+   */
+  async rotateIfActive(
+    oldId: string,
+    input: CreateRefreshTokenInput,
+  ): Promise<RotateIfActiveResult | null> {
+    return this.db.transaction(async (tx) => {
+      const [newRow] = await tx
+        .insert(refreshTokens)
+        .values({
+          userId: input.userId,
+          familyId: input.familyId,
+          tokenHash: input.tokenHash,
+          expiresAt: input.expiresAt,
+        })
+        .returning();
+      if (!newRow) {
+        tx.rollback();
+      }
+
+      const [updated] = await tx
+        .update(refreshTokens)
+        .set({ revokedAt: new Date(), replacedBy: newRow.id })
+        .where(
+          and(eq(refreshTokens.id, oldId), isNull(refreshTokens.revokedAt)),
+        )
+        .returning();
+
+      if (!updated) {
+        tx.rollback();
+      }
+
+      return { newRow };
+    });
   }
 }
