@@ -54,20 +54,25 @@ See [ADR 002](./adr/002-jwt-authentication.md) for rationale.
 ```
 User → Firebase Auth (Google SSO or email/password) on frontend
                                ↓
-                          Frontend receives Firebase ID token (JWT)
+                           Frontend receives Firebase ID token (JWT)
                                ↓
-                          Frontend sends Firebase ID token to POST /api/auth/login
+                           Frontend sends Firebase ID token to POST /api/auth/login
                                ↓
-                          Backend verifies Firebase ID token via Firebase Admin SDK
+                           Backend verifies Firebase ID token via Firebase Admin SDK
                                ↓
-                          Backend creates/updates User record (firebaseUid)
+                           Backend resolves local user and active workspace membership
                                ↓
-                          Backend issues JWT access token (short-lived) + refresh token (long-lived)
+                           If no active membership → 401 Unauthorized
                                ↓
-                          Frontend stores tokens in memory (access) and localStorage (refresh)
+                           Backend issues JWT access token (short-lived) + refresh token (long-lived)
+                           Access token carries: sub, email, firebaseUid, workspaceId, role
                                ↓
-                          All API requests include: Authorization: Bearer <access_token>
+                           Frontend stores tokens in memory (access) and localStorage (refresh)
+                               ↓
+                           All API requests include: Authorization: Bearer <access_token>
 ```
+
+**Onboarding model:** Application access is invite-only. New users are added exclusively through the invite-acceptance flow (`POST /invites/accept`). The login endpoint does not create users or memberships — it only issues sessions for users who already have an active workspace membership.
 
 **Token lifecycle:**
 
@@ -147,7 +152,6 @@ Three roles: `admin`, `pm`, `member`.
 
 ### 2.6 Migration & Seed Rules
 
-- **Migrations** managed via Kysely migration files in `apps/api/src/db/migrations/`.
 - Each migration is a single `.ts` file exporting `up()` and `down()`.
 - Migrations run automatically on API startup (configurable).
 - **Seed data** in `apps/api/src/db/seeds/` — only for development/staging.

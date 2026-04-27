@@ -121,4 +121,27 @@ describe('Auth (e2e)', () => {
       expect(refreshB.status).toBe(200);
     });
   });
+
+  describe('POST /auth/refresh (concurrency)', () => {
+    it('atomic rotation ensures only one refresh per token can succeed', async () => {
+      const session = await login(app);
+
+      const [res1, res2] = await Promise.all([
+        request(app.getHttpServer())
+          .post('/auth/refresh')
+          .send({ refreshToken: session.refreshToken }),
+        request(app.getHttpServer())
+          .post('/auth/refresh')
+          .send({ refreshToken: session.refreshToken }),
+      ]);
+
+      const statuses = [res1.status, res2.status].sort();
+      expect(statuses).toEqual([200, 401]);
+
+      const replay = await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: session.refreshToken });
+      expect(replay.status).toBe(401);
+    });
+  });
 });

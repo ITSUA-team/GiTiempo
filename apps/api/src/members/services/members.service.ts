@@ -1,0 +1,217 @@
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { and, count, eq } from 'drizzle-orm';
+import type {
+  UpdateWorkspaceMemberRoleInput,
+  WorkspaceMemberResponse,
+  WorkspaceRole,
+} from '@gitiempo/shared';
+import { DRIZZLE } from '../../db/db.constants';
+import type { DrizzleDB } from '../../db/db.types';
+import { users } from '../../users/schemas/users.schema';
+import {
+  workspaceMembers,
+  type WorkspaceRole as DbWorkspaceRole,
+} from '../schemas/workspace-members.schema';
+
+export interface ActiveMembership {
+  id: string;
+  userId: string;
+  workspaceId: string;
+  role: WorkspaceRole;
+}
+
+@Injectable()
+export class MembersService {
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+
+  async resolveActiveMembershipForUser(
+    userId: string,
+  ): Promise<ActiveMembership | null> {
+    const [row] = await this.db
+      .select({
+        id: workspaceMembers.id,
+        userId: workspaceMembers.userId,
+        workspaceId: workspaceMembers.workspaceId,
+        role: workspaceMembers.role,
+      })
+      .from(workspaceMembers)
+      .where(eq(workspaceMembers.userId, userId))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async resolveActiveMembership(
+    userId: string,
+    workspaceId: string,
+  ): Promise<ActiveMembership | null> {
+    const [row] = await this.db
+      .select({
+        id: workspaceMembers.id,
+        userId: workspaceMembers.userId,
+        workspaceId: workspaceMembers.workspaceId,
+        role: workspaceMembers.role,
+      })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.userId, userId),
+          eq(workspaceMembers.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async requireActiveMembershipForUser(
+    userId: string,
+  ): Promise<ActiveMembership> {
+    const membership = await this.resolveActiveMembershipForUser(userId);
+    if (!membership) throw new UnauthorizedException('Unauthorized');
+    return membership;
+  }
+
+  async requireActiveMembership(
+    userId: string,
+    workspaceId: string,
+  ): Promise<ActiveMembership> {
+    const membership = await this.resolveActiveMembership(userId, workspaceId);
+    if (!membership) throw new UnauthorizedException('Unauthorized');
+    return membership;
+  }
+
+  async requireAdmin(userId: string, workspaceId: string): Promise<void> {
+    const membership = await this.requireActiveMembership(userId, workspaceId);
+    if (membership.role !== 'admin') {
+      throw new ForbiddenException('Forbidden');
+    }
+  }
+
+  async listMembers(workspaceId: string): Promise<WorkspaceMemberResponse[]> {
+    const rows = await this.db
+      .select({
+        id: workspaceMembers.id,
+        workspaceId: workspaceMembers.workspaceId,
+        userId: workspaceMembers.userId,
+        email: users.email,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        role: workspaceMembers.role,
+        joinedAt: workspaceMembers.joinedAt,
+      })
+      .from(workspaceMembers)
+      .innerJoin(users, eq(users.id, workspaceMembers.userId))
+      .where(eq(workspaceMembers.workspaceId, workspaceId));
+
+    return rows.map((row) => ({
+      ...row,
+      joinedAt: row.joinedAt.toISOString(),
+    }));
+  }
+
+  async updateMemberRole(
+    workspaceId: string,
+    memberId: string,
+    input: UpdateWorkspaceMemberRoleInput,
+  ): Promise<WorkspaceMemberResponse> {
+    return this.db.transaction(async (tx) => {
+      const [target] = await tx
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.id, memberId),
+            eq(workspaceMembers.workspaceId, workspaceId),
+          ),
+        )
+        .limit(1);
+
+      if (!target) throw new NotFoundException('Member not found');
+      await this.assertCanLoseAdminRole(
+        tx,
+        workspaceId,
+        target.role,
+        input.role,
+      );
+
+      const [updated] = await tx
+        .update(workspaceMembers)
+        .set({ role: input.role as DbWorkspaceRole })
+        .where(eq(workspaceMembers.id, memberId))
+        .returning();
+      if (!updated) throw new Error('Failed to update member role');
+
+      const [row] = await tx
+        .select({
+          id: workspaceMembers.id,
+          workspaceId: workspaceMembers.workspaceId,
+          userId: workspaceMembers.userId,
+          email: users.email,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          role: workspaceMembers.role,
+          joinedAt: workspaceMembers.joinedAt,
+        })
+        .from(workspaceMembers)
+        .innerJoin(users, eq(users.id, workspaceMembers.userId))
+        .where(eq(workspaceMembers.id, updated.id))
+        .limit(1);
+
+      if (!row) throw new Error('Failed to load updated member');
+      return { ...row, joinedAt: row.joinedAt.toISOString() };
+    });
+  }
+
+  async removeMember(workspaceId: string, memberId: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const [target] = await tx
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.id, memberId),
+            eq(workspaceMembers.workspaceId, workspaceId),
+          ),
+        )
+        .limit(1);
+
+      if (!target) throw new NotFoundException('Member not found');
+      await this.assertCanLoseAdminRole(tx, workspaceId, target.role, null);
+
+      await tx
+        .delete(workspaceMembers)
+        .where(eq(workspaceMembers.id, memberId));
+    });
+  }
+
+  private async assertCanLoseAdminRole(
+    db: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    currentRole: WorkspaceRole,
+    nextRole: WorkspaceRole | null,
+  ): Promise<void> {
+    if (currentRole !== 'admin' || nextRole === 'admin') return;
+
+    const [row] = await db
+      .select({ value: count() })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.role, 'admin'),
+        ),
+      );
+
+    if ((row?.value ?? 0) <= 1) {
+      throw new ConflictException('Workspace must have at least one admin');
+    }
+  }
+}

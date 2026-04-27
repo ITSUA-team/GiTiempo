@@ -182,7 +182,7 @@ API environment variables are documented in `apps/api/.env.example`. Copy it to 
 
 | Layer | Technology |
 |---|---|
-| Backend | NestJS, Kysely, PostgreSQL |
+| Backend | NestJS, Drizzle ORM, PostgreSQL |
 | Frontend | Vue 3, Pinia, PrimeVue, Tailwind CSS |
 | Build | Turborepo, pnpm workspaces, Vite |
 | Auth | Firebase Auth |

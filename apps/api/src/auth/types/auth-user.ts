@@ -8,4 +8,6 @@ export interface AuthUser {
   sub: string;
   email: string;
   firebaseUid: string;
+  workspaceId: string;
+  role: 'admin' | 'pm' | 'member';
 }

@@ -17,6 +17,7 @@ import { UsersService } from '../services/users.service';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../../auth/types/auth-user';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -24,37 +25,24 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 
-  /**
-   * Returns the currently authenticated user.
-   *
-   * Subject id is pulled from the verified access token payload via
-   * `@CurrentUser('sub')`; the global `JwtAuthGuard` guarantees `sub`
-   * is present for this route.
-   */
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get the current user' })
   @ApiOkResponse({ type: UserResponseDto })
   @ZodSerializerDto(UserResponseDto)
-  getMe(@CurrentUser('sub') sub: string): Promise<UserResponseDto> {
-    return this.users.findById(sub);
+  getMe(@CurrentUser() user: AuthUser): Promise<UserResponseDto> {
+    return this.users.findById(user.sub, user.workspaceId);
   }
 
-  /**
-   * Updates mutable fields on the current user.
-   *
-   * Body must contain at least one of `displayName` / `avatarUrl`,
-   * enforced by the shared Zod schema (`updateUserSchema`).
-   */
   @Patch('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update the current user' })
   @ApiOkResponse({ type: UserResponseDto })
   @ZodSerializerDto(UserResponseDto)
   updateMe(
-    @CurrentUser('sub') sub: string,
+    @CurrentUser() user: AuthUser,
     @Body() body: UpdateUserDto,
   ): Promise<UserResponseDto> {
-    return this.users.updateById(sub, body);
+    return this.users.updateById(user.sub, user.workspaceId, body);
   }
 }

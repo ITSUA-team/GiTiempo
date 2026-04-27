@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UsersService } from './users.service';
 import { DRIZZLE } from '../../db/db.constants';
@@ -20,7 +20,8 @@ function makeDbMock(opts: {
 }) {
   const limit = vi.fn().mockResolvedValue(opts.selectRows ?? []);
   const whereSelect = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ where: whereSelect });
+  const innerJoin = vi.fn().mockReturnValue({ where: whereSelect });
+  const from = vi.fn().mockReturnValue({ where: whereSelect, innerJoin });
   const select = vi.fn().mockReturnValue({ from });
 
   const returningUpdate = vi.fn().mockResolvedValue(opts.updateRows ?? []);
@@ -43,6 +44,7 @@ function makeDbMock(opts: {
       limit,
       whereSelect,
       from,
+      innerJoin,
       returningUpdate,
       whereUpdate,
       set,
@@ -62,6 +64,9 @@ const sampleRow = {
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
+
+const workspaceId = '22222222-2222-2222-2222-222222222222';
+const sampleRole = 'admin' as const;
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -85,15 +90,16 @@ describe('UsersService', () => {
 
   describe('findById', () => {
     it('returns the user without firebaseUid when found', async () => {
-      await build({ selectRows: [sampleRow] });
+      await build({ selectRows: [{ user: sampleRow, role: sampleRole }] });
 
-      const result = await service.findById(sampleRow.id);
+      const result = await service.findById(sampleRow.id, workspaceId);
 
       expect(result).toEqual({
         id: sampleRow.id,
         email: sampleRow.email,
         displayName: sampleRow.displayName,
         avatarUrl: sampleRow.avatarUrl,
+        role: sampleRole,
         createdAt: sampleRow.createdAt.toISOString(),
         updatedAt: sampleRow.updatedAt.toISOString(),
       });
@@ -104,9 +110,9 @@ describe('UsersService', () => {
     it('throws Unauthorized when the subject user no longer exists', async () => {
       await build({ selectRows: [] });
 
-      await expect(service.findById(sampleRow.id)).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
+      await expect(
+        service.findById(sampleRow.id, workspaceId),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 
@@ -131,9 +137,12 @@ describe('UsersService', () => {
         displayName: 'Renamed',
         updatedAt: new Date('2026-01-02T00:00:00Z'),
       };
-      await build({ updateRows: [updated] });
+      await build({
+        selectRows: [{ role: sampleRole }],
+        updateRows: [updated],
+      });
 
-      const result = await service.updateById(sampleRow.id, {
+      const result = await service.updateById(sampleRow.id, workspaceId, {
         displayName: 'Renamed',
       });
 
@@ -148,47 +157,16 @@ describe('UsersService', () => {
       expect(setArg).not.toHaveProperty('avatarUrl');
 
       expect(result.displayName).toBe('Renamed');
+      expect(result.role).toBe(sampleRole);
       expect(result).not.toHaveProperty('firebaseUid');
     });
 
-    it('throws NotFound when no row was updated', async () => {
+    it('throws Unauthorized when no row was updated', async () => {
       await build({ updateRows: [] });
       await expect(
-        service.updateById(sampleRow.id, { displayName: 'x' }),
-      ).rejects.toBeInstanceOf(NotFoundException);
+        service.updateById(sampleRow.id, workspaceId, { displayName: 'x' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 
-  describe('upsertFromFirebase', () => {
-    it('returns the upserted row', async () => {
-      await build({ insertRows: [sampleRow] });
-
-      const row = await service.upsertFromFirebase({
-        firebaseUid: sampleRow.firebaseUid,
-        email: sampleRow.email,
-        displayName: sampleRow.displayName,
-        avatarUrl: sampleRow.avatarUrl,
-      });
-
-      expect(row).toBe(sampleRow);
-      expect(dbMock._spies.values).toHaveBeenCalledWith(
-        expect.objectContaining({
-          firebaseUid: sampleRow.firebaseUid,
-          email: sampleRow.email,
-        }),
-      );
-      expect(dbMock._spies.onConflictDoUpdate).toHaveBeenCalled();
-    });
-
-    it('throws when the insert returned no rows', async () => {
-      await build({ insertRows: [] });
-
-      await expect(
-        service.upsertFromFirebase({
-          firebaseUid: 'x',
-          email: 'x@example.com',
-        }),
-      ).rejects.toThrow(/Failed to upsert user/);
-    });
-  });
 });
