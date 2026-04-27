@@ -1,0 +1,220 @@
+import { randomBytes } from 'node:crypto';
+import {
+  ConflictException,
+  ForbiddenException,
+  GoneException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { and, eq } from 'drizzle-orm';
+import type {
+  AcceptWorkspaceInviteInput,
+  CreateWorkspaceInviteInput,
+  WorkspaceInviteResponse,
+} from '@gitiempo/shared';
+import {
+  FIREBASE_ADMIN,
+  type FirebaseAdminService,
+} from '../../auth/services/firebase-admin.interface';
+import { DRIZZLE } from '../../db/db.constants';
+import type { DrizzleDB } from '../../db/db.types';
+import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
+import { users } from '../../users/schemas/users.schema';
+import { workspaces } from '../../workspaces/schemas/workspaces.schema';
+import { invites } from '../schemas/invites.schema';
+import { InviteDeliveryService } from './invite-delivery.service';
+
+type InviteRow = typeof invites.$inferSelect;
+
+@Injectable()
+export class InvitesService {
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    @Inject(FIREBASE_ADMIN) private readonly firebase: FirebaseAdminService,
+    private readonly delivery: InviteDeliveryService,
+  ) {}
+
+  async listInvites(workspaceId: string): Promise<WorkspaceInviteResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(invites)
+      .where(
+        and(
+          eq(invites.workspaceId, workspaceId),
+          eq(invites.status, 'pending'),
+        ),
+      );
+
+    return rows.map((row) => this.toResponse(row));
+  }
+
+  async createInvite(
+    workspaceId: string,
+    invitedBy: string,
+    input: CreateWorkspaceInviteInput,
+  ): Promise<WorkspaceInviteResponse> {
+    const email = normalizeEmail(input.email);
+    const [existing] = await this.db
+      .select({ id: invites.id })
+      .from(invites)
+      .where(
+        and(
+          eq(invites.workspaceId, workspaceId),
+          eq(invites.email, email),
+          eq(invites.status, 'pending'),
+        ),
+      )
+      .limit(1);
+    if (existing) throw new ConflictException('Pending invite already exists');
+
+    const [workspace] = await this.db
+      .select({ name: workspaces.name })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+    if (!workspace) throw new UnauthorizedException('Unauthorized');
+
+    const token = randomBytes(32).toString('base64url');
+    const [row] = await this.db
+      .insert(invites)
+      .values({
+        workspaceId,
+        email,
+        token,
+        invitedBy,
+        role: input.role,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+    if (!row) throw new Error('Failed to create invite');
+
+    await this.delivery.deliver({
+      email,
+      token,
+      workspaceName: workspace.name,
+    });
+
+    return this.toResponse(row);
+  }
+
+  async cancelInvite(workspaceId: string, inviteId: string): Promise<void> {
+    const [row] = await this.db
+      .update(invites)
+      .set({ status: 'expired' })
+      .where(
+        and(
+          eq(invites.id, inviteId),
+          eq(invites.workspaceId, workspaceId),
+          eq(invites.status, 'pending'),
+        ),
+      )
+      .returning();
+    if (!row) throw new NotFoundException('Pending invite not found');
+  }
+
+  async acceptInvite(input: AcceptWorkspaceInviteInput): Promise<void> {
+    const invite = await this.findInviteByToken(input.token);
+    this.assertInviteCanBeAccepted(invite);
+
+    const decoded = await this.firebase.verifyIdToken(input.firebaseIdToken);
+    if (!decoded.email) throw new UnauthorizedException('Unauthorized');
+
+    const email = normalizeEmail(decoded.email);
+    if (email !== invite.email) {
+      throw new ForbiddenException('Invite email does not match identity');
+    }
+
+    await this.db.transaction(async (tx) => {
+      const [currentInvite] = await tx
+        .select()
+        .from(invites)
+        .where(eq(invites.id, invite.id))
+        .limit(1);
+      if (!currentInvite) throw new NotFoundException('Invite not found');
+      this.assertInviteCanBeAccepted(currentInvite);
+
+      const [userRow] = await tx
+        .insert(users)
+        .values({
+          firebaseUid: decoded.uid,
+          email,
+          displayName: decoded.name ?? null,
+          avatarUrl: decoded.picture ?? null,
+        })
+        .onConflictDoUpdate({
+          target: users.firebaseUid,
+          set: {
+            email,
+            displayName: decoded.name ?? null,
+            avatarUrl: decoded.picture ?? null,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      if (!userRow) throw new Error('Failed to create invite user');
+
+      const [existingMembership] = await tx
+        .select({ id: workspaceMembers.id })
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, currentInvite.workspaceId),
+            eq(workspaceMembers.userId, userRow.id),
+          ),
+        )
+        .limit(1);
+      if (existingMembership) {
+        throw new ConflictException('User is already a workspace member');
+      }
+
+      await tx.insert(workspaceMembers).values({
+        workspaceId: currentInvite.workspaceId,
+        userId: userRow.id,
+        role: currentInvite.role,
+      });
+
+      await tx
+        .update(invites)
+        .set({ status: 'accepted' })
+        .where(eq(invites.id, currentInvite.id));
+    });
+  }
+
+  private async findInviteByToken(token: string): Promise<InviteRow> {
+    const [row] = await this.db
+      .select()
+      .from(invites)
+      .where(eq(invites.token, token))
+      .limit(1);
+    if (!row) throw new NotFoundException('Invite not found');
+    return row;
+  }
+
+  private assertInviteCanBeAccepted(invite: InviteRow): void {
+    if (invite.status !== 'pending') {
+      throw new ConflictException('Invite cannot be accepted');
+    }
+    if (invite.expiresAt.getTime() <= Date.now()) {
+      throw new GoneException('Invite has expired');
+    }
+  }
+
+  private toResponse(row: InviteRow): WorkspaceInviteResponse {
+    return {
+      id: row.id,
+      workspaceId: row.workspaceId,
+      email: row.email,
+      invitedBy: row.invitedBy,
+      role: row.role,
+      status: row.status,
+      expiresAt: row.expiresAt.toISOString(),
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}

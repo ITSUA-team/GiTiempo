@@ -25,6 +25,8 @@ const SUBJECT = {
   sub: '00000000-0000-0000-0000-000000000001',
   email: 'user@example.com',
   firebaseUid: 'fb-uid-1',
+  workspaceId: '00000000-0000-0000-0000-000000000002',
+  role: 'admin' as const,
 };
 
 describe('TokenService', () => {
@@ -41,6 +43,8 @@ describe('TokenService', () => {
       expect(payload.sub).toBe(SUBJECT.sub);
       expect(payload.email).toBe(SUBJECT.email);
       expect(payload.firebaseUid).toBe(SUBJECT.firebaseUid);
+      expect(payload.workspaceId).toBe(SUBJECT.workspaceId);
+      expect(payload.role).toBe(SUBJECT.role);
       expect(payload.iss).toBe(TEST_CONFIG.JWT_ISSUER);
       expect(payload.aud).toBe(TEST_CONFIG.JWT_AUDIENCE);
       expect(typeof payload.iat).toBe('number');
@@ -70,6 +74,8 @@ describe('TokenService', () => {
           sub: SUBJECT.sub,
           email: SUBJECT.email,
           firebaseUid: SUBJECT.firebaseUid,
+          workspaceId: SUBJECT.workspaceId,
+          role: SUBJECT.role,
         },
         TEST_CONFIG.JWT_ACCESS_SECRET!,
         {
@@ -88,6 +94,8 @@ describe('TokenService', () => {
           sub: SUBJECT.sub,
           email: SUBJECT.email,
           firebaseUid: SUBJECT.firebaseUid,
+          workspaceId: SUBJECT.workspaceId,
+          role: SUBJECT.role,
         },
         TEST_CONFIG.JWT_ACCESS_SECRET!,
         {
@@ -106,6 +114,8 @@ describe('TokenService', () => {
           sub: SUBJECT.sub,
           email: SUBJECT.email,
           firebaseUid: SUBJECT.firebaseUid,
+          workspaceId: SUBJECT.workspaceId,
+          role: SUBJECT.role,
         },
         TEST_CONFIG.JWT_ACCESS_SECRET!,
         {
@@ -127,6 +137,8 @@ describe('TokenService', () => {
           sub: SUBJECT.sub,
           email: SUBJECT.email,
           firebaseUid: SUBJECT.firebaseUid,
+          workspaceId: SUBJECT.workspaceId,
+          role: SUBJECT.role,
           iss: TEST_CONFIG.JWT_ISSUER,
           aud: TEST_CONFIG.JWT_AUDIENCE,
           iat: Math.floor(Date.now() / 1000),

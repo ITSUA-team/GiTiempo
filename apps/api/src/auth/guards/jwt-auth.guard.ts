@@ -50,6 +50,8 @@ export class JwtAuthGuard implements CanActivate {
         sub: payload.sub,
         email: payload.email,
         firebaseUid: payload.firebaseUid,
+        workspaceId: payload.workspaceId,
+        role: payload.role,
       };
       return true;
     } catch (err) {

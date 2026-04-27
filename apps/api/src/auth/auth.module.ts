@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.validation';
+import { MembersModule } from '../members/members.module';
 import { UsersModule } from '../users/users.module';
 import { AuthService } from './services/auth.service';
 import { AuthController } from './controllers/auth.controller';
@@ -26,7 +27,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
  */
 @Global()
 @Module({
-  imports: [UsersModule],
+  imports: [UsersModule, MembersModule],
   providers: [
     AuthService,
     TokenService,
@@ -45,6 +46,6 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
   controllers: [AuthController],
-  exports: [TokenService, AuthService],
+  exports: [TokenService, AuthService, FIREBASE_ADMIN],
 })
 export class AuthModule {}

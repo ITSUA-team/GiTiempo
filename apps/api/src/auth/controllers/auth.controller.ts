@@ -17,20 +17,6 @@ import { RefreshDto } from '../dto/refresh.dto';
 import { LogoutDto } from '../dto/logout.dto';
 import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
 
-/**
- * HTTP surface for Firebase-backed auth:
- *
- *  - `POST /auth/login`   (public)   — exchange a Firebase ID token for a
- *                                      local (access, refresh) pair.
- *  - `POST /auth/refresh` (public)   — rotate a refresh token.
- *  - `POST /auth/logout`  (bearer)   — end the session tied to a refresh
- *                                      token. Bearer auth is required so
- *                                      only the session owner can call it.
- *
- * Per-route throttling is stricter than the global default to blunt
- * credential-stuffing and refresh-replay probes before the heavier
- * Firebase and DB work runs.
- */
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {

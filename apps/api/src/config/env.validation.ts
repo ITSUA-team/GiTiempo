@@ -7,6 +7,10 @@ const firebasePrivateKeySchema = z
   .min(1)
   // `.env` files store PEM newlines as literal `\n`; normalize here.
   .transform((val) => val.replace(/\\n/g, '\n'));
+const optionalNonEmptyString = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().min(1).optional(),
+);
 
 export const envSchema = z
   .object({
@@ -62,6 +66,20 @@ export const envSchema = z
     JWT_ISSUER: z.string().min(1).default('gitiempo-api'),
     JWT_AUDIENCE: z.string().min(1).default('gitiempo-clients'),
 
+    // --- Application URLs ---
+    USER_SPA_URL: z.string().url().default('http://localhost:5173'),
+
+    // --- Invite email delivery ---
+    SMTP_HOST: optionalNonEmptyString,
+    SMTP_PORT: z.coerce.number().int().positive().default(587),
+    SMTP_USER: optionalNonEmptyString,
+    SMTP_PASSWORD: optionalNonEmptyString,
+    EMAIL_FROM: z.string().email().default('noreply@example.com'),
+    INVITES_EMAIL_CONSOLE_FALLBACK: z
+      .string()
+      .default('true')
+      .transform((val) => val === 'true'),
+
     // --- Firebase Admin ---
     // Required in non-test environments. In test mode the fake provider is used,
     // so missing values are allowed to keep CI runs hermetic.
@@ -84,6 +102,15 @@ export const envSchema = z
           message: `${key} is required when NODE_ENV=${env.NODE_ENV}`,
         });
       }
+    }
+
+    if (!env.INVITES_EMAIL_CONSOLE_FALLBACK && !env.SMTP_HOST) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMTP_HOST'],
+        message:
+          'SMTP_HOST is required when INVITES_EMAIL_CONSOLE_FALLBACK=false',
+      });
     }
   });
 
