@@ -87,13 +87,15 @@
 
 ## 13. Documentation, OpenAPI, and PR polish
 
-- [ ] 13.1 Run `pnpm openapi:export` and commit the regenerated `packages/shared/openapi.json` - Blocked: `apps/api/src/openapi/export.ts` runs via `tsx --env-file=.env`, and `tsx`/esbuild does not emit usable `design:paramtypes` metadata for Nest DI. After introducing `AuthService` with a mid-list `@Inject(FIREBASE_ADMIN)` parameter, Nest resolves `ConfigService` as `undefined` during `openapi:export` boot. `nest build`, unit tests, and e2e tests are unaffected because they go through SWC (`apps/api/.swcrc` has `decoratorMetadata: true`). - Follow-up: switch `openapi:export` off `tsx` (e.g. run against the SWC/`dist` build, or use a loader that preserves decorator metadata). Track as a separate tooling change; do not block this auth change on it.
+- [x] 13.1 Run `pnpm openapi:export` and commit the regenerated `packages/shared/openapi.json` - Fixed by switching `apps/api`'s `openapi:export` script to the build-based `nest build` + `node --env-file=.env dist/src/openapi/export.js` workflow so Nest boots with emitted decorator metadata. `pnpm openapi:export` now passes.
 - [x] 13.2 Update `apps/api/AGENTS.md` only if env-var ownership text or required-steps text needs refinement for the new variables (do not duplicate information)
 - [x] 13.3 Update `bruno/` local environment collection with example `/auth/login`, `/auth/refresh`, `/auth/logout` requests using the test fake token
-- [ ] 13.4 Run and pass `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` from the repo root - `pnpm lint` — pass - `pnpm test` — pass (`@gitiempo/api` 51/51) - `pnpm --filter @gitiempo/api test:e2e` — pass (22/22) - `pnpm typecheck` — blocked by a pre-existing, unrelated TS6 deprecation in `apps/user-web/tsconfig.app.json` and `apps/admin-web/tsconfig.app.json` (`Option 'baseUrl' is deprecated ... specify "ignoreDeprecations": "6.0"`). Not caused by this change; tracked as a separate frontend tooling fix.
-- [ ] 13.5 Final sanity check: `pnpm openspec status --change "add-firebase-jwt-auth"` shows all artifacts done and all tasks checked - Artifacts: complete (`4/4`, proposal/design/specs/tasks). - Tasks: 13.1 and 13.4 intentionally left unchecked above with documented follow-ups; not blockers for this change.
+- [x] 13.4 Run and pass `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` from the repo root - `pnpm lint` — pass - `pnpm typecheck` — pass after migrating the frontend apps off deprecated TypeScript `baseUrl` config - `pnpm test` — pass (`@gitiempo/api` 51/51, `user-web` 7/7) - `pnpm test:e2e` — pass (`@gitiempo/api` 22/22).
+- [x] 13.5 Final sanity check: `openspec status --change "add-firebase-jwt-auth" --json` shows all artifacts done (`4/4`, proposal/design/specs/tasks) and the task list is fully complete after checking 13.1, 13.4, and section 15.
 
 ## 14. Frontend UI pixel-alignment fixes
+
+- Scope note: an agent MAY execute only section `14` when the user request is explicitly limited to frontend/UI work for this change. In that mode, backend sections `1` through `13` do not need to be modified unless the frontend task reveals a concrete shared-contract or API dependency.
 
 - [x] 14.1 LoginView: Fix hero heading to exactly 40px fontSize with no letter-spacing override
 - [x] 14.2 LoginView: Fix brand subtitle, field labels, hero card body, and `Forgot?` text to 13px fontSize
@@ -108,3 +110,11 @@
 - [x] 14.11 AppShell sidebar: Add the missing `Projects` nav item while keeping the documented icon-based navigation treatment
 - [x] 14.12 AppShell sidebar: Remove the sign-out action from the sidebar
 - [x] 14.13 ProfileView: Add the destructive outlined `Sign out` button at the bottom of the profile content area, right-aligned to match the approved design
+- [x] 14.14 AppShell navigation: Remove icons from navigation links while preserving the approved spacing, active-state treatment, and responsive layout
+
+## 15. Frontend tooling deprecation cleanup
+
+- [x] 15.1 Remove deprecated TypeScript `baseUrl` usage from `apps/user-web/tsconfig.app.json` and `apps/admin-web/tsconfig.app.json`, keeping the existing `@/*` alias working through non-deprecated configuration only
+- [x] 15.2 Remove `ignoreDeprecations` entries that were only suppressing the deprecated frontend config once the non-deprecated configuration is in place
+- [x] 15.3 Verify frontend tooling still resolves the `@/*` alias correctly in `user-web` and `admin-web` without deprecated TypeScript config
+- [x] 15.4 Run and pass `pnpm --filter user-web typecheck`, `pnpm --filter admin-web typecheck`, and `pnpm typecheck` after the migration

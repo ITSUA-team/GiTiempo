@@ -111,6 +111,10 @@ export const useAuthStore = defineStore("auth", () => {
       applyTokenPair(accessToken, tokenPair);
       await loadCurrentUser(tokenPair.accessToken);
       bootstrapComplete.value = true;
+    } catch (error) {
+      clearSession();
+      bootstrapComplete.value = true;
+      throw error;
     } finally {
       isSubmitting.value = false;
     }
@@ -127,6 +131,10 @@ export const useAuthStore = defineStore("auth", () => {
       applyTokenPair(accessToken, tokenPair);
       await loadCurrentUser(tokenPair.accessToken);
       bootstrapComplete.value = true;
+    } catch (error) {
+      clearSession();
+      bootstrapComplete.value = true;
+      throw error;
     } finally {
       isSubmitting.value = false;
     }

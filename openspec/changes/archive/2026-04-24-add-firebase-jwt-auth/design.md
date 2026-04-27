@@ -147,9 +147,17 @@ Grouped by package, per the `design` rule. Controller- and service-level details
 
 ## Backend / Frontend Coordination
 
-- No frontend code is modified in this change. Shared contract consumers (User SPA, Admin SPA, future Chrome Extension) can start calling the new endpoints once `packages/shared` is republished/linked, but that is a separate proposal per the "Non-Goals" list.
+- This change can be applied in two valid scopes depending on the requested work: full-stack auth implementation, or frontend-only implementation for the UI tasks already captured in `tasks.md` section `14`.
+- When the requested work is frontend-only, the agent may limit changes to `apps/user-web`, `apps/admin-web`, and any directly related shared frontend packages/config without touching `apps/api`.
+- Shared contract consumers (User SPA, Admin SPA, future Chrome Extension) can start calling the new endpoints once `packages/shared` is republished/linked, but that remains separate from frontend-only visual or shell work.
 - The Swagger document remains the source of truth for cross-layer contracts. `pnpm openapi:export` runs after the API is green, and the regenerated `packages/shared/openapi.json` is committed in the same change so downstream generators keep working.
 - Until SPAs adopt the new endpoints, they continue to call `/users/me` unauthenticated today. **BREAKING**: once this change is deployed, they will receive 401 until they supply a bearer token. This cutover is intentional and explicitly flagged in the proposal; coordinated rollout is an operator concern (ship frontend changes in a follow-up change before deploying this one to production, or gate the deploy via environment).
+
+## Frontend Tooling Guardrails
+
+- Frontend work under this change MUST not rely on deprecated TypeScript compiler options when a supported configuration exists.
+- In particular, agents should remove deprecated `baseUrl` usage from the Vue app tsconfigs instead of normalizing around `ignoreDeprecations` as a long-term solution.
+- Temporary deprecation suppression is acceptable only as a short-lived bridge while migrating to the non-deprecated configuration in the same change; do not leave new suppression-only config behind once the migration is complete.
 
 ## Risks / Trade-offs
 

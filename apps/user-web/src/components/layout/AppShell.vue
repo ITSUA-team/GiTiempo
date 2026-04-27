@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-  ChartBarSquareIcon,
-  ClockIcon,
-  HomeIcon,
-  ListBulletIcon,
-  UserCircleIcon,
-} from "@heroicons/vue/24/outline";
+import { UserCircleIcon } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 
@@ -19,28 +13,23 @@ const adminWorkspaceHref = getAdminWorkspaceHref();
 
 const navItems = computed(() => [
   {
-    icon: HomeIcon,
     label: "Dashboard",
     name: routeNames.dashboard,
   },
   {
-    icon: ClockIcon,
     label: "Timer",
     name: routeNames.timer,
   },
   {
-    icon: ListBulletIcon,
     label: "Time Entries",
     name: routeNames.timeEntries,
   },
   {
-    icon: ChartBarSquareIcon,
     label: "Projects",
     name: routeNames.project,
     to: { name: routeNames.project, params: { projectId: "workspace-alpha" } },
   },
   {
-    icon: ChartBarSquareIcon,
     label: "Profile",
     name: routeNames.profile,
   },
@@ -101,7 +90,7 @@ function isActive(name: string): boolean {
 
     <div class="flex min-h-[calc(100vh-4rem)]">
       <aside
-        class="hidden border-r border-divider bg-surface sm:flex sm:w-16 sm:flex-col lg:w-60"
+        class="hidden border-r border-divider bg-surface sm:flex sm:w-52 sm:flex-col lg:w-60"
       >
         <nav class="flex flex-1 flex-col gap-1 py-4">
           <RouterLink
@@ -109,20 +98,13 @@ function isActive(name: string): boolean {
             :key="item.name"
             :to="item.to ?? { name: item.name }"
             :class="[
-              'flex h-11 items-center gap-3 rounded-r-md px-4 text-sm font-medium transition-colors',
+              'flex h-11 items-center rounded-r-md px-4 text-sm font-medium transition-colors',
               isActive(item.name)
                 ? 'border-l-[3px] border-brand bg-accent-tint text-brand font-semibold'
                 : 'text-text-dark hover:bg-app-bg',
             ]"
           >
-            <component
-              :is="item.icon"
-              :class="[
-                'h-5 w-5 shrink-0',
-                isActive(item.name) ? 'text-brand' : 'text-text-muted',
-              ]"
-            />
-            <span class="hidden lg:inline">{{ item.label }}</span>
+            <span>{{ item.label }}</span>
           </RouterLink>
         </nav>
       </aside>
@@ -140,12 +122,8 @@ function isActive(name: string): boolean {
         :key="`mobile-${item.name}`"
         :to="item.to ?? { name: item.name }"
         :class="isActive(item.name) ? 'text-brand' : 'text-text-muted'"
-        class="flex flex-1 flex-col items-center justify-center gap-1 text-xs"
+        class="flex flex-1 items-center justify-center px-2 text-center text-xs font-medium"
       >
-        <component
-          :is="item.icon"
-          class="h-5 w-5"
-        />
         <span>{{ item.label }}</span>
       </RouterLink>
     </nav>

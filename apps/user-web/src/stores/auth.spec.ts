@@ -66,6 +66,28 @@ describe("useAuthStore", () => {
     expect(authStore.displayName).toBe("Alexey Tsukanov");
   });
 
+  it("stays in guest state when bootstrap starts without a persisted refresh token", async () => {
+    let refreshCalls = 0;
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        refreshSession: async () => {
+          refreshCalls += 1;
+          throw new Error("refresh should not run without a token");
+        },
+      }),
+    );
+
+    const authStore = useAuthStore();
+
+    await authStore.bootstrapSession();
+
+    expect(refreshCalls).toBe(0);
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.profile).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(authStore.bootstrapComplete).toBe(true);
+  });
+
   it("clears invalid refresh token during bootstrap fallback", async () => {
     setRefreshToken("persisted-refresh-token");
     setAuthRuntimeForTesting(
@@ -82,6 +104,7 @@ describe("useAuthStore", () => {
 
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.accessToken).toBeNull();
+    expect(authStore.profile).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
   });
@@ -98,6 +121,110 @@ describe("useAuthStore", () => {
     expect(getRefreshToken()).toBe("refresh-token-next");
     expect(authStore.bootstrapComplete).toBe(true);
     expect(authStore.profile?.email).toBe("alexey@example.com");
+  });
+
+  it("clears stale local session state when login exchange fails", async () => {
+    setRefreshToken("stale-refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        loginWithFirebaseToken: async () => {
+          throw new Error("login exchange failed");
+        },
+      }),
+    );
+
+    const authStore = useAuthStore();
+    authStore.accessToken = "stale-access-token";
+    authStore.profile = {
+      avatarUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Stale User",
+      email: "stale@example.com",
+      id: "stale-user-id",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await expect(
+      authStore.loginWithEmailPassword("alex@example.com", "password123"),
+    ).rejects.toThrow("login exchange failed");
+
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.accessToken).toBeNull();
+    expect(authStore.profile).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(authStore.bootstrapComplete).toBe(true);
+    expect(authStore.isSubmitting).toBe(false);
+  });
+
+  it("logs in with Google and persists the token pair", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+
+    const authStore = useAuthStore();
+
+    await authStore.loginWithGoogle();
+
+    expect(authStore.isAuthenticated).toBe(true);
+    expect(authStore.accessToken).toBe("access-token");
+    expect(getRefreshToken()).toBe("refresh-token-next");
+    expect(authStore.profile?.email).toBe("alexey@example.com");
+    expect(authStore.bootstrapComplete).toBe(true);
+  });
+
+  it("clears stale local session state when Google login fails", async () => {
+    setRefreshToken("stale-refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithGoogle: async () => {
+          throw new Error("google sign in failed");
+        },
+      }),
+    );
+
+    const authStore = useAuthStore();
+    authStore.accessToken = "stale-access-token";
+    authStore.profile = {
+      avatarUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Stale User",
+      email: "stale@example.com",
+      id: "stale-user-id",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await expect(authStore.loginWithGoogle()).rejects.toThrow(
+      "google sign in failed",
+    );
+
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.accessToken).toBeNull();
+    expect(authStore.profile).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(authStore.bootstrapComplete).toBe(true);
+    expect(authStore.isSubmitting).toBe(false);
+  });
+
+  it("clears tokens on logout when API logout succeeds", async () => {
+    let logoutCalls = 0;
+    setRefreshToken("persisted-refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        logoutSession: async () => {
+          logoutCalls += 1;
+        },
+      }),
+    );
+
+    const authStore = useAuthStore();
+    authStore.accessToken = "current-access-token";
+
+    await authStore.logout();
+
+    expect(logoutCalls).toBe(1);
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.accessToken).toBeNull();
+    expect(authStore.profile).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(authStore.bootstrapComplete).toBe(true);
   });
 
   it("clears tokens on logout even when API logout fails", async () => {
@@ -117,6 +244,8 @@ describe("useAuthStore", () => {
 
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.accessToken).toBeNull();
+    expect(authStore.profile).toBeNull();
     expect(getRefreshToken()).toBeNull();
+    expect(authStore.bootstrapComplete).toBe(true);
   });
 });

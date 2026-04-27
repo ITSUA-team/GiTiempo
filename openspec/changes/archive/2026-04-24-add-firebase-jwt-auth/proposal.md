@@ -35,6 +35,12 @@ Deferred on purpose (follow-up proposals):
 - `users`: the current-user endpoint resolves the authenticated subject from the verified JWT instead of the dev placeholder "first user by email asc".
 - `contracts`: adds shared auth request/response contracts (`loginRequestSchema`, `refreshRequestSchema`, `logoutRequestSchema`, `tokenPairResponseSchema`) consumed by both `apps/api` and the SPAs.
 
+## Implementation Scope Note
+
+- An agent applying this change MAY work on only the frontend portion of the application when the requested work is limited to the UI tasks captured under section `14` of `tasks.md`.
+- In that frontend-only mode, backend/auth tasks do not need to be re-opened or modified unless the requested frontend work depends on a backend contract change.
+- When working on the frontend portion of this change, agents MUST avoid introducing or preserving deprecated toolchain options where a supported replacement is available. Do not add new deprecation-suppression-only config when the deprecated setting can be removed or migrated.
+
 ## Impact
 
 - **Code**
