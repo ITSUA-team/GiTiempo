@@ -6,8 +6,8 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import type { WorkspaceRole } from '@gitiempo/shared';
 import { users } from '../../users/schemas/users.schema';
-import type { WorkspaceRole } from '../../members/schemas/workspace-members.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 
 export const INVITE_STATUSES = ['pending', 'accepted', 'expired'] as const;

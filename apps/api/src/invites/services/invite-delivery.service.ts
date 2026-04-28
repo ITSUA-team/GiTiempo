@@ -17,9 +17,10 @@ export class InviteDeliveryService {
 
   async deliver(input: DeliverInviteInput): Promise<void> {
     const inviteUrl = this.buildInviteUrl(input.token);
-    const consoleFallback = this.config.get('INVITES_EMAIL_CONSOLE_FALLBACK', {
-      infer: true,
-    });
+    const isProduction = process.env.NODE_ENV === 'production';
+    const consoleFallback =
+      !isProduction &&
+      this.config.get('INVITES_EMAIL_CONSOLE_FALLBACK', { infer: true });
 
     if (consoleFallback) {
       this.logger.log({

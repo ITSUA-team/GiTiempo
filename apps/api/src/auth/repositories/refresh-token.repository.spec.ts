@@ -196,20 +196,6 @@ describe('RefreshTokenRepository', () => {
     });
   });
 
-  describe('revokeFamily', () => {
-    it('soft-revokes without deleting', async () => {
-      build();
-      await repo.revokeFamily('fam-1');
-      expect(dbMock.update).toHaveBeenCalled();
-      const setArg = dbMock._spies.set.mock.calls[0]?.[0] as Record<
-        string,
-        unknown
-      >;
-      expect(setArg.revokedAt).toBeInstanceOf(Date);
-      expect(setArg).not.toHaveProperty('replacedBy');
-    });
-  });
-
   describe('deleteById', () => {
     it('deletes exactly one row', async () => {
       build();

@@ -15,10 +15,7 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { users } from '../../users/schemas/users.schema';
-import {
-  workspaceMembers,
-  type WorkspaceRole as DbWorkspaceRole,
-} from '../schemas/workspace-members.schema';
+import { workspaceMembers } from '../schemas/workspace-members.schema';
 
 export interface ActiveMembership {
   id: string;
@@ -144,7 +141,7 @@ export class MembersService {
 
       const [updated] = await tx
         .update(workspaceMembers)
-        .set({ role: input.role as DbWorkspaceRole })
+        .set({ role: input.role })
         .where(eq(workspaceMembers.id, memberId))
         .returning();
       if (!updated) throw new Error('Failed to update member role');
@@ -199,6 +196,17 @@ export class MembersService {
     nextRole: WorkspaceRole | null,
   ): Promise<void> {
     if (currentRole !== 'admin' || nextRole === 'admin') return;
+
+    await db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.role, 'admin'),
+        ),
+      )
+      .for('update');
 
     const [row] = await db
       .select({ value: count() })

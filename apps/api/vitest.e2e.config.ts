@@ -2,6 +2,8 @@ import { resolve } from 'node:path';
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
+process.env.INVITES_EMAIL_CONSOLE_FALLBACK = 'true';
+
 /**
  * E2E tests run against a real Postgres instance (the local dev DB).
  * They live in `test/` and rely on running migrations + seed before suite.

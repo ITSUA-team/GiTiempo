@@ -1,3 +1,5 @@
+import type { WorkspaceRole } from '@gitiempo/shared';
+
 /**
  * Authenticated subject mapped onto `req.user` by `JwtAuthGuard`.
  *
@@ -9,5 +11,5 @@ export interface AuthUser {
   email: string;
   firebaseUid: string;
   workspaceId: string;
-  role: 'admin' | 'pm' | 'member';
+  role: WorkspaceRole;
 }
