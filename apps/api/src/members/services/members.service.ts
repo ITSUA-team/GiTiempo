@@ -200,6 +200,17 @@ export class MembersService {
   ): Promise<void> {
     if (currentRole !== 'admin' || nextRole === 'admin') return;
 
+    await db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.role, 'admin'),
+        ),
+      )
+      .for('update');
+
     const [row] = await db
       .select({ value: count() })
       .from(workspaceMembers)

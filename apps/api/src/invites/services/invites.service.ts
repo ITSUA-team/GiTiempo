@@ -90,11 +90,19 @@ export class InvitesService {
       .returning();
     if (!row) throw new Error('Failed to create invite');
 
-    await this.delivery.deliver({
-      email,
-      token,
-      workspaceName: workspace.name,
-    });
+    try {
+      await this.delivery.deliver({
+        email,
+        token,
+        workspaceName: workspace.name,
+      });
+    } catch (error) {
+      await this.db
+        .update(invites)
+        .set({ status: 'expired' })
+        .where(eq(invites.id, row.id));
+      throw error;
+    }
 
     return this.toResponse(row);
   }

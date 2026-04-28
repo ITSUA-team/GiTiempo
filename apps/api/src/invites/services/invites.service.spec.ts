@@ -114,3 +114,93 @@ describe('InvitesService', () => {
     expect(updateInviteWhere).toHaveBeenCalled();
   });
 });
+
+describe('InvitesService createInvite', () => {
+  function makeCreateEnv(options?: { deliveryError?: boolean }) {
+    const updateSetWhere = vi.fn().mockResolvedValue(undefined);
+
+    const emptyLimit = vi.fn().mockResolvedValue([]);
+    const emptyWhere = vi.fn().mockReturnValue({ limit: emptyLimit });
+    const emptyFrom = vi.fn().mockReturnValue({ where: emptyWhere });
+    const emptySelect = { from: emptyFrom };
+
+    const workspaceLimit = vi
+      .fn()
+      .mockResolvedValue([{ name: 'Test Workspace' }]);
+    const workspaceWhere = vi.fn().mockReturnValue({ limit: workspaceLimit });
+    const workspaceFrom = vi.fn().mockReturnValue({ where: workspaceWhere });
+    const workspaceSelect = { from: workspaceFrom };
+
+    const db = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(emptySelect)
+        .mockReturnValueOnce(workspaceSelect),
+      insert: vi.fn().mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([
+            {
+              id: 'invite-new',
+              workspaceId: 'workspace-1',
+              email: 'user@example.com',
+              token: 'new-token',
+              invitedBy: 'admin-1',
+              role: 'member',
+              status: 'pending',
+              expiresAt: new Date('2099-01-01T00:00:00Z'),
+              createdAt: new Date('2026-01-01T00:00:00Z'),
+            },
+          ]),
+        }),
+      }),
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: updateSetWhere }),
+      }),
+    };
+
+    const delivery = {
+      deliver: options?.deliveryError
+        ? vi.fn().mockRejectedValue(new Error('SMTP failed'))
+        : vi.fn().mockResolvedValue(undefined),
+    };
+
+    const service = new InvitesService(
+      db as never,
+      { verifyIdToken: vi.fn() } as never,
+      delivery as never,
+    );
+
+    return { service, db, delivery, updateSetWhere };
+  }
+
+  it('expires invite when delivery fails', async () => {
+    const { service, delivery, updateSetWhere } = makeCreateEnv({
+      deliveryError: true,
+    });
+
+    await expect(
+      service.createInvite('workspace-1', 'admin-1', {
+        email: 'user@example.com',
+        role: 'member',
+      }),
+    ).rejects.toThrow('SMTP failed');
+
+    expect(delivery.deliver).toHaveBeenCalled();
+    expect(updateSetWhere).toHaveBeenCalled();
+  });
+
+  it('allows retry after previous delivery failure expired the invite', async () => {
+    const { service, delivery } = makeCreateEnv();
+
+    const result = await service.createInvite('workspace-1', 'admin-1', {
+      email: 'user@example.com',
+      role: 'member',
+    });
+
+    expect(delivery.deliver).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      email: 'user@example.com',
+      status: 'pending',
+    });
+  });
+});
