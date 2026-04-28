@@ -8,22 +8,21 @@ Define backend behavior for reading and updating the authenticated current user 
 
 ### Requirement: Current User Read Endpoint
 
-The backend MUST provide a current-user endpoint that returns the authenticated user's public profile. The authenticated user MUST be resolved from the verified access token rather than from any development-time placeholder.
+The backend MUST provide a current-user endpoint that returns the authenticated user's public profile and workspace role. The authenticated user MUST be resolved from the verified access token rather than from any development-time placeholder.
 
 #### Scenario: Authenticated user requests own profile
 
 - **GIVEN** an authenticated API request is made to the current-user endpoint
 - **WHEN** the backend resolves the authenticated user
-- **THEN** the backend uses the subject claim of the verified access token to look up the local user
-- **AND** the response returns the user's public profile fields
+- **THEN** the response returns the user's public profile fields
+- **AND** the response includes the user's current workspace role
 - **AND** internal-only identity fields are not exposed in the response body
 
 #### Scenario: Unauthenticated request to current-user endpoint
 
-- **GIVEN** no valid access token is presented
+- **GIVEN** no valid authenticated user context is available
 - **WHEN** the current-user endpoint is requested
 - **THEN** the backend rejects the request as unauthorized
-- **AND** no placeholder or fallback user is returned
 
 #### Scenario: Access token references missing user
 
@@ -58,9 +57,10 @@ The backend SHALL allow updates only to mutable current-user profile fields defi
 
 The backend MUST shape current-user responses according to the shared public user contract.
 
-#### Scenario: Public contract excludes internal auth identifiers
+#### Scenario: Public contract excludes internal auth identifiers and includes role
 
-- GIVEN the backend serializes the authenticated current user
-- WHEN the response body is produced
-- THEN fields like internal Firebase UID are excluded
-- AND only the public user contract fields are returned
+- **GIVEN** the backend serializes the authenticated current user
+- **WHEN** the response body is produced
+- **THEN** fields like internal Firebase UID are excluded
+- **AND** the user's workspace role is included
+- **AND** only the public user contract fields are returned

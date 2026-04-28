@@ -62,10 +62,6 @@ export class UsersService {
     return row ?? null;
   }
 
-  /**
-   * Patches mutable fields on the given user. Only fields present in
-   * `input` are written; omitted keys are left untouched.
-   */
   async findRowByFirebaseUid(firebaseUid: string): Promise<UserRow | null> {
     const [row] = await this.db
       .select()

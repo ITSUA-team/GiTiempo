@@ -189,6 +189,42 @@ describe('AuthService', () => {
       ];
       expect(rotateCall[0]).toBe('old-row');
       expect(rotateCall[1].familyId).toBe(existingRow.familyId);
+
+      const payload = tokens.verifyAccess(pair.accessToken);
+      expect(payload.sub).toBe(seedUserRow.id);
+      expect(payload.firebaseUid).toBe(seedUserRow.firebaseUid);
+      expect(payload.workspaceId).toBe(seedMembership.workspaceId);
+      expect(payload.role).toBe(seedMembership.role);
+    });
+
+    it('reflects current role after role change', async () => {
+      const first = await service.login('test:admin-uid:admin@example.com');
+      const firstCreateCall = repo.create.mock.calls[0]![0] as {
+        tokenHash: string;
+        familyId: string;
+      };
+      const existingRow = {
+        id: 'old-row-role',
+        userId: seedUserRow.id,
+        familyId: firstCreateCall.familyId,
+        tokenHash: firstCreateCall.tokenHash,
+        replacedBy: null,
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+      };
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce(existingRow);
+
+      members.requireActiveMembershipForUser.mockResolvedValueOnce({
+        ...seedMembership,
+        role: 'pm',
+      });
+
+      const pair = await service.refresh(first.refreshToken);
+
+      const payload = tokens.verifyAccess(pair.accessToken);
+      expect(payload.sub).toBe(seedUserRow.id);
+      expect(payload.role).toBe('pm');
     });
 
     it('detects reuse of a revoked token and destroys the family', async () => {

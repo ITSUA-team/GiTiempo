@@ -77,7 +77,7 @@ export const envSchema = z
     EMAIL_FROM: z.string().email().default('noreply@example.com'),
     INVITES_EMAIL_CONSOLE_FALLBACK: z
       .string()
-      .default('true')
+      .default('false')
       .transform((val) => val === 'true'),
 
     // --- Firebase Admin ---

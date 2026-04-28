@@ -168,5 +168,4 @@ describe('UsersService', () => {
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
-
 });

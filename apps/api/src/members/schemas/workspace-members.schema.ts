@@ -6,12 +6,9 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import type { WorkspaceRole } from '@gitiempo/shared';
 import { users } from '../../users/schemas/users.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
-
-export const WORKSPACE_ROLES = ['admin', 'pm', 'member'] as const;
-
-export type WorkspaceRole = (typeof WORKSPACE_ROLES)[number];
 
 export const workspaceMembers = pgTable(
   'workspace_members',

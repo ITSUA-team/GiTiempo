@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type {
   UpdateWorkspaceInput,
@@ -64,7 +59,7 @@ export class WorkspacesService {
       })
       .where(eq(workspaceSettings.workspaceId, workspaceId))
       .returning();
-    if (!row) throw new NotFoundException('Workspace settings not found');
+    if (!row) throw new UnauthorizedException('Unauthorized');
     return this.toSettingsResponse(row);
   }
 
@@ -86,7 +81,7 @@ export class WorkspacesService {
       .from(workspaceSettings)
       .where(eq(workspaceSettings.workspaceId, workspaceId))
       .limit(1);
-    if (!row) throw new NotFoundException('Workspace settings not found');
+    if (!row) throw new UnauthorizedException('Unauthorized');
     return row;
   }
 
