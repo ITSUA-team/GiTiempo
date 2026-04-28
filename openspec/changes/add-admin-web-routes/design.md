@@ -1,49 +1,83 @@
 ## Context
 
-`apps/admin-web/src/main.ts` currently creates Vue Router with `routes: []`, and `App.vue` still renders a bootstrap placeholder rather than a routed application shell. At the same time, the project docs already define the intended admin surface area in `docs/ui/pages-admin.md` and the shared shell expectations in `openspec/specs/layout/spec.md`.
+`apps/admin-web` is no longer a route-less placeholder. It already mounts a dedicated router, a protected shell route, child routes for the documented admin pages, and a guest-only `/login` route. The remaining gap is that the login route is still a placeholder surface and the auth store only marks bootstrap as complete without restoring or acquiring a real session.
 
-Issue `#48` is specifically about removing route ambiguity before page implementation continues. The nearest app instructions in `apps/admin-web/AGENTS.md` also require admin-web to stay aligned with user-web on auth direction: Firebase Auth on the frontend, backend token exchange, refresh-token bootstrap, and logout cleanup. That means the route map should be designed around authenticated shell entry from the start rather than as a public-only route list.
+That creates a direct mismatch with the current project docs:
 
-This change is frontend-only and route-structure focused. It does not implement the admin pages themselves, but it should define a stable map for dashboard, reports, invoices, members, projects, and settings so later admin work lands against known route contracts.
+- `docs/TECHNICAL-REQUIREMENTS.md` says both SPAs use the same Firebase-to-JWT login flow and refresh-token bootstrap model.
+- `apps/admin-web/AGENTS.md` explicitly forbids introducing a separate auth model for admin-web.
+- `apps/user-web` already demonstrates the intended frontend auth behavior through its auth store, runtime boundary, refresh-token persistence, and login view.
+
+This change should therefore stop describing the already-finished route scaffold as the main work and instead define the missing admin auth entry behavior around that scaffold. The scope stays frontend-only: no backend auth semantics change, but the admin SPA must consume the same auth endpoints and behave consistently with the documented web-app direction.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Define the admin-web route inventory based on the documented admin page set.
-- Define how protected admin pages mount through the shared application shell pattern.
-- Define guest-only versus authenticated route entry behavior so future auth/bootstrap work has a stable route target.
-- Keep admin-web aligned with the same frontend auth direction as user-web.
+- Keep the existing admin route inventory, but make its auth behavior match the current docs and the working user-web model.
+- Define the missing admin session bootstrap, login exchange, and logout cleanup behavior.
+- Replace the placeholder admin login surface with a real Firebase-backed login entry that uses the current API contract.
+- Keep protected admin navigation dependent on normalized auth state before redirects finalize.
+- Preserve the documented shell and cross-SPA switching patterns while avoiding a second, divergent auth implementation.
 
 **Non-Goals:**
 
+- Reworking the already-landed admin route inventory unless needed to support the real auth flow.
 - Building the full page content for dashboard, reports, invoices, members, projects, or settings.
 - Changing backend auth semantics, contracts, or role rules.
 - Designing a separate admin-only auth model that diverges from user-web.
-- Introducing browser-level auth tests or non-routing feature work in this change.
+- Extracting a large shared frontend-auth package unless the minimal app-local implementation proves insufficient.
 
 ## Decisions
 
-### D1. Introduce a dedicated admin-routing capability
+### D1. Add a dedicated admin-auth capability instead of overloading routing-only language
 
-- Model the route-map behavior in a new `admin-routing` spec instead of overloading `admin-pages`.
-- **Why:** `admin-pages` already defines what each screen must do, while this issue is about how those screens are entered and mounted.
-- **Alternatives considered:** modifying `admin-pages` only (rejected because route inventory and auth-aware entry are a different concern than page behavior).
+- Model the missing login exchange, session restoration, and logout cleanup behavior in a new `admin-auth` capability.
+- **Why:** the current flaw is not just routing. It is the missing session-state lifecycle that the router depends on.
+- **Alternatives considered:** putting all auth expectations into `admin-routing` (rejected because auth state normalization and token lifecycle are a separate concern from path inventory).
 
-### D2. Mirror the user-web route architecture pattern where practical
+### D2. Keep the current admin route tree and make its guard semantics mirror user-web
 
-- The admin route map should use the same high-level pattern as user-web: a guest entry route for login and a protected shell route with child page routes.
-- **Why:** project docs and app instructions already require the same auth direction across both SPAs, and using one routing shape reduces future divergence.
-- **Alternatives considered:** keeping admin-web as a flat route list until auth is implemented (rejected because it would force later route reshaping and make guard behavior ambiguous).
+- Preserve the existing guest `/login` route plus protected shell/child-route structure, but require the guard to await bootstrap before deciding whether a protected route is allowed.
+- **Why:** route inventory is already present, and the user-web implementation has already proven the guard-plus-bootstrap pattern needed to avoid redirect flicker and invalid anonymous fallbacks.
+- **Alternatives considered:** leaving the current no-op bootstrap in place until later auth work (rejected because it preserves the user/admin docs mismatch and makes the login route intentionally non-functional).
 
-### D3. Keep route definitions ahead of page implementation
+### D3. Reuse the user-web auth shape, but prefer a minimal admin-web-local implementation
 
-- Define route names, paths, and protected-route ownership now, even if some routes still mount placeholders initially.
-- **Why:** this unblocks future page work and avoids multiple changes competing to define the same route structure later.
-- **Alternatives considered:** waiting for each page issue to define its own route incrementally (rejected because it increases the chance of inconsistent paths and shell behavior).
+- Reuse the same auth endpoints, session-storage rules, runtime boundaries, and redirect semantics already established in `apps/user-web`, but keep the first implementation local to `apps/admin-web` unless a tiny shared leaf abstraction is clearly better.
+- **Why:** this follows the repo's documented single auth model without prematurely introducing a large shared frontend-auth package.
+- **Alternatives considered:** extracting a shared SPA auth package immediately (rejected as unnecessary abstraction for the current scope).
+
+### D4. Replace the placeholder admin login surface with the documented authentication methods
+
+- The admin login page should become a real sign-in surface with email/password and Google entry paths, user-web-style error handling, and a visible link back to `user-web`.
+- **Why:** the current login page explicitly says real login is a future change, which contradicts the current docs and leaves the guest route intentionally incomplete.
+- **Alternatives considered:** keeping the login route informational and focusing only on route guards (rejected because the docs already require a working shared auth direction across both SPAs).
+
+### D5. Keep shell and login cross-links explicit in both directions
+
+- Both the admin login page and authenticated shell should expose a clear link back to `user-web`, matching the counterpart link already documented from the user side.
+- **Why:** the docs treat workspace switching as a product requirement, not a nice-to-have.
+- **Alternatives considered:** leaving the cross-link only on the login surface (rejected because authenticated users also need an obvious way to switch products).
+
+### D6. Define focused regression tests around auth normalization and redirects
+
+- The implementation should include focused unit-level and router-level tests that mirror the critical user-web auth cases adapted to admin-web.
+- Proposed minimum cases:
+  - bootstrap restores a session from a valid refresh token and rotates stored credentials
+  - bootstrap clears state when the refresh token is missing, invalid, or rejected
+  - email/password login stores tokens and loads the current user profile
+  - Google login stores tokens and loads the current user profile
+  - failed login exchange clears stale local session state
+  - logout clears local session state even if the backend logout request fails
+  - anonymous access to a protected admin route redirects to `/login` with the original destination preserved
+  - authenticated access to `/login` redirects to the default admin route or a valid preserved redirect target
+  - invalid redirect targets are ignored in favor of the default authenticated route
+- **Why:** the largest regression risk is not static route presence, but subtle auth-state and redirect behavior drift away from the working user-web model.
+- **Alternatives considered:** relying only on lint/typecheck or future browser-level tests (rejected because the core risk here is deterministic store/router behavior that focused Vitest coverage can catch cheaply).
 
 ## Risks / Trade-offs
 
-- **[Risk] Route names or paths may need revision once admin auth/bootstrap work is implemented.** → Mitigation: keep the route inventory aligned with user-web patterns and document the auth-aware entry assumptions explicitly in the spec.
-- **[Risk] Defining the shell-first route structure before real pages exist can feel abstract.** → Mitigation: keep the spec centered on concrete page paths from `docs/ui/pages-admin.md` and the existing shared layout requirements.
-- **[Trade-off] This change defines navigation structure, not completed screens.** Accepted because issue `#48` is about removing route ambiguity, not delivering the full admin experience.
+- **[Risk] Duplicating a portion of user-web auth code in admin-web can drift later.** -> Mitigation: keep the structure intentionally parallel, cover it with focused tests, and only extract shared code when duplication becomes active maintenance pain.
+- **[Risk] Admin login may expose backend membership or role failures that were previously hidden by the placeholder page.** -> Mitigation: keep error handling generic and aligned with the current backend auth contract instead of inventing admin-specific responses.
+- **[Trade-off] This change broadens a route-focused proposal into auth-aware entry behavior.** Accepted because the current route scaffold already exists and the meaningful remaining product flaw is the missing admin auth flow.

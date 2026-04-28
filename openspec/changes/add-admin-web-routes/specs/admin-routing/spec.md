@@ -38,15 +38,22 @@ The `admin-web` router MUST treat the documented admin pages as authenticated de
 
 #### Scenario: Anonymous user requests a protected admin page
 
-- **WHEN** an anonymous session navigates to a protected admin-web route
-- **THEN** the router redirects the user to the guest login entry
+- **WHEN** a browser session navigates to a protected admin-web route
+- **THEN** the router waits for admin auth bootstrap to normalize the session before treating the navigation result as final
+- **AND** if the normalized session is anonymous the router redirects the user to the guest login entry
 - **AND** the requested destination is preserved for later authenticated navigation
 
 #### Scenario: Authenticated user requests the guest login route
 
-- **WHEN** an authenticated session navigates to the admin-web login route
+- **WHEN** an authenticated session navigates to the admin-web login route after auth bootstrap completes
 - **THEN** the router redirects the user to the default authenticated admin destination
 - **AND** the router may resume a preserved redirect target when one is valid
+
+#### Scenario: Invalid redirect target falls back safely
+
+- **WHEN** an authenticated session reaches the admin-web login route with a redirect query that is missing, malformed, or points outside the SPA
+- **THEN** the router ignores that redirect value
+- **AND** the router redirects the user to the default authenticated admin destination
 
 ### Requirement: Cross-SPA Switching Entry Points
 

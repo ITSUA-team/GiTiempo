@@ -1,17 +1,18 @@
-## 1. Router Structure
+## 1. Admin Auth Session Layer
 
-- [x] 1.1 Extract the admin-web router from `src/main.ts` into `src/router/index.ts` and define route entries for dashboard, reports, invoices, members, projects, settings, and login
-- [x] 1.2 Add route names and path structure that match the documented admin UI page inventory and reserve login as the guest-only entry route
+- [x] 1.1 Add the admin-web auth runtime/client/session-storage modules needed to support Firebase sign-in, backend token exchange, current-user loading, refresh-token restoration, and logout cleanup.
+- [x] 1.2 Implement the admin-web auth store with bootstrap status, authenticated session state, login methods for email/password and Google, current-user loading, and local-session cleanup on failure.
 
-## 2. Auth-Aware Shell Mounting
+## 2. Auth-Aware Entry And Routing
 
-- [x] 2.1 Create the authenticated admin app-shell route structure so protected admin pages mount through the shared shell pattern
-- [x] 2.2 Add stub protected views or placeholders so each documented admin route resolves through the shell without waiting for the full page implementations
-- [x] 2.3 Add admin-web route metadata and navigation-guard behavior so anonymous users are redirected to login and authenticated users are redirected away from login to the default protected route
-- [x] 2.4 Update the current project implementation to add the documented cross-link entry points between `user-web` and `admin-web` in the shell/login surfaces
+- [x] 2.1 Replace the placeholder admin login view with a real Firebase-backed login entry that offers email/password and Google sign-in, generic auth-error handling, and the documented link back to `user-web`.
+- [x] 2.2 Update the admin-web router guard so it waits for auth bootstrap before resolving protected-route redirects and guest-only login redirects.
+- [x] 2.3 Preserve valid redirect targets through login and restore the default authenticated destination when no valid redirect is present.
+- [x] 2.4 Keep or add the documented cross-link entry points between `user-web` and `admin-web` in both shell and login surfaces.
 
 ## 3. Verification
 
-- [x] 3.1 Verify the `admin-routing` spec and planned route map against `docs/ui/pages-admin.md`, `docs/ui/layout.md`, `docs/TECHNICAL-REQUIREMENTS.md`, and `apps/admin-web/AGENTS.md`
-- [x] 3.2 Add or update focused tests for the admin-web router route inventory and auth-aware redirect behavior
-- [x] 3.3 Run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test` and resolve any issues
+- [x] 3.1 Add or update focused tests for the admin auth store, bootstrap restoration behavior, and router auth redirects.
+- [x] 3.2 Cover these minimum regression cases in `admin-web` tests: successful refresh bootstrap, failed refresh bootstrap, successful email/password login, successful Google login, failed login exchange clearing stale state, logout cleanup on backend failure, anonymous protected-route redirect, authenticated login-route redirect, and invalid redirect fallback behavior.
+- [x] 3.3 Verify the implementation against `docs/TECHNICAL-REQUIREMENTS.md`, `docs/ui/layout.md`, `docs/ui/pages-admin.md`, `apps/admin-web/AGENTS.md`, and the user-web auth behavior it is intended to mirror.
+- [x] 3.4 Run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test` and resolve any issues.

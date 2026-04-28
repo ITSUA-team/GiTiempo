@@ -1,13 +1,51 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createMemoryHistory } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
+import type { UserResponse } from "@gitiempo/shared";
 
+import { clearRefreshToken, setRefreshToken } from "@/lib/session-storage";
 import { createAppRouter, routeNames } from "@/router";
+import {
+  resetAuthRuntimeForTesting,
+  setAuthRuntimeForTesting,
+  type AuthRuntime,
+} from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
+
+function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
+  const currentUser: UserResponse = {
+    avatarUrl: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    displayName: "Admin User",
+    email: "admin@example.com",
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    role: "admin",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  return {
+    getCurrentUser: async () => currentUser,
+    loginWithFirebaseToken: async () => ({
+      accessToken: "access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "refresh-token-next",
+    }),
+    logoutSession: async () => undefined,
+    refreshSession: async () => {
+      throw new Error("no refresh token");
+    },
+    signInWithEmailPassword: async () => "firebase-email-token",
+    signInWithGoogle: async () => "firebase-google-token",
+    signOutIdentityProvider: async () => undefined,
+    ...overrides,
+  };
+}
 
 describe("admin router", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    clearRefreshToken();
+    resetAuthRuntimeForTesting();
   });
 
   it("defines the documented admin route inventory", () => {
@@ -28,6 +66,7 @@ describe("admin router", () => {
   it("redirects anonymous users to login and preserves the requested route", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    setAuthRuntimeForTesting(createRuntimeMock());
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia,
@@ -38,6 +77,33 @@ describe("admin router", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.query.redirect).toBe("/reports");
+  });
+
+  it("redirects to login after bootstrap rejects a persisted refresh token", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRefreshToken("stale-refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        refreshSession: async () => {
+          throw new Error("invalid refresh token");
+        },
+      }),
+    );
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/projects");
+    await router.isReady();
+
+    const authStore = useAuthStore(pinia);
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.query.redirect).toBe("/projects");
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.bootstrapComplete).toBe(true);
   });
 
   it("redirects authenticated users away from login to the default route", async () => {
@@ -74,5 +140,23 @@ describe("admin router", () => {
     await router.isReady();
 
     expect(router.currentRoute.value.fullPath).toBe("/settings");
+  });
+
+  it("falls back to the default authenticated route for invalid redirect queries", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "admin-access-token";
+    authStore.bootstrapComplete = true;
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/login?redirect=https://example.com/escape");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 });
