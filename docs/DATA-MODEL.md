@@ -17,21 +17,31 @@ Entity definitions and relationships for GI Tiempo.
        ▼                                                    ▼
 ┌──────────────┐       ┌───────────────────┐       ┌──────────────┐
 │   projects   │──1:N──│project_assignments│──N:1──│ time_entries  │
-└──────┬───────┘       │  (PM → Project)   │       └──────┬───────┘
+└──────┬───────┘       │ (User → Project)  │       └──────┬───────┘
        │               │has workspace_id   │              │ │
        │ 1:N           └───────────────────┘              │ │ N:0..1
        ▼                                                  │ │
 ┌──────────────┐                                          │ ▼
 │    tasks     │──────────────────────────────────────────┘ ┌──────────────┐
 │has workspace_id│     (N:1)                                │   invoices   │
-└──────────────┘                                            └──────────────┘
+└──────┬───────┘                                            └──────────────┘
+       │
+       │ 1:N
+       ▼
+┌─────────────────────┐
+│ task_external_refs  │
+└─────────────────────┘
+
+┌────────────────────────┐
+│ project_external_refs  │──N:1── projects
+└────────────────────────┘
 
 ┌──────────────┐       ┌────────────────────┐
 │   invites    │       │workspace_settings  │──1:1── workspaces
 └──────────────┘       └────────────────────┘
 
   workspaces owns: projects, invoices, invites, workspace_settings, workspace_members
-  Denormalized workspace_id on: tasks, time_entries, project_assignments
+  Denormalized workspace_id on: tasks, time_entries, project_assignments, external refs
   github_connections belongs to users (workspace-independent)
 ```
 
@@ -132,7 +142,7 @@ Joins users to workspaces with a role. In single-tenant MVP, each user has exact
 
 ### Project (`projects`)
 
-Groups tasks within a workspace. A project can map to a **GitHub Project (V2)** (board with issues from multiple repos), a **GitHub Repository** (issues within a single repo), or be created manually (no GitHub link).
+Groups tasks within a workspace. Projects are provider-neutral core records: a project may be purely local, or it may be linked to one or more external providers through `project_external_refs`. GitHub is the MVP integration, not part of the core project schema.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -140,40 +150,59 @@ Groups tasks within a workspace. A project can map to a **GitHub Project (V2)** 
 | `workspace_id` | UUID | FK → `workspaces.id`, NOT NULL | |
 | `name` | VARCHAR(255) | NOT NULL | Project display name |
 | `color` | VARCHAR(7) | | Hex color code (e.g. `#FF5733`) |
-| `source_type` | VARCHAR(20) | NOT NULL, default `'github_project'` | `'github_project'`, `'github_repo'`, or `'manual'` |
-| `github_project_id` | BIGINT | UNIQUE, nullable | GitHub Project V2 ID (if `source_type = 'github_project'`) |
-| `github_project_number` | INT | nullable | GitHub Project number within org |
-| `github_org_login` | VARCHAR(255) | nullable | GitHub organization login |
-| `github_repo_id` | BIGINT | UNIQUE, nullable | GitHub repository ID (if `source_type = 'github_repo'`) |
-| `github_repo_full_name` | VARCHAR(500) | UNIQUE, nullable | `owner/repo` slug (if `source_type = 'github_repo'`) |
 | `is_active` | BOOLEAN | NOT NULL, default `true` | Soft-disable project |
-| `synced_at` | TIMESTAMPTZ | nullable | Last successful sync from GitHub |
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 
 **Indexes:**
 - `projects_workspace_id_idx` on `workspace_id`
-- `projects_github_project_id_unique` UNIQUE on `github_project_id` (where not null)
-- `projects_github_repo_id_unique` UNIQUE on `github_repo_id` (where not null)
-- `projects_github_repo_full_name_idx` on `github_repo_full_name` (for extension auto-create lookups)
+- `projects_workspace_id_active_idx` on `(workspace_id, is_active)`
 
 **Notes:**
-- `source_type = 'github_project'`: `github_project_id`, `github_project_number`, `github_org_login` are set. Repo fields are null.
-- `source_type = 'github_repo'`: `github_repo_id`, `github_repo_full_name`, `github_org_login` are set. Project fields are null.
-- `source_type = 'manual'`: all GitHub fields are null.
-- Extension auto-creation uses `source_type = 'github_repo'` — when a timer is started from the extension, the repo becomes the project.
+- Local/manual projects have no external reference rows.
+- Provider-specific identifiers, URLs, and sync metadata live in `project_external_refs`.
+
+---
+
+### ProjectExternalRef (`project_external_refs`)
+
+Links a core project to an external provider object, such as a GitHub repository or GitHub Project V2 board. This keeps the project table stable when future integrations such as Jira or Trello are added.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | UUID | PK, default `gen_random_uuid()` | |
+| `workspace_id` | UUID | FK → `workspaces.id`, NOT NULL | Denormalized from project for multi-tenant queries |
+| `project_id` | UUID | FK → `projects.id`, NOT NULL | Linked core project |
+| `provider` | VARCHAR(50) | NOT NULL | Integration provider, e.g. `github` |
+| `external_type` | VARCHAR(50) | NOT NULL | Provider object type, e.g. `repository`, `project_v2` |
+| `external_id` | VARCHAR(255) | nullable | Stable provider ID when available; stored as string to avoid numeric precision issues |
+| `external_key` | VARCHAR(500) | NOT NULL | Human-readable lookup key, e.g. `owner/repo` |
+| `external_url` | TEXT | nullable | Canonical provider URL |
+| `metadata` | JSONB | NOT NULL, default `'{}'` | Provider-specific fields not needed for core queries |
+| `synced_at` | TIMESTAMPTZ | nullable | Last successful sync from the provider |
+| `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
+| `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
+
+**Indexes:**
+- `project_external_refs_project_id_idx` on `project_id`
+- `project_external_refs_workspace_provider_key_unique` UNIQUE on `(workspace_id, provider, external_type, external_key)`
+- `project_external_refs_workspace_provider_id_idx` on `(workspace_id, provider, external_type, external_id)` where `external_id` is not null
+
+**Notes:**
+- GitHub repository auto-create uses `provider = 'github'`, `external_type = 'repository'`, and `external_key = 'owner/repo'`.
+- GitHub-specific fields such as repository ID, project number, or organization login belong here or in `metadata`, not in `projects`.
 
 ---
 
 ### ProjectAssignment (`project_assignments`)
 
-Links Project Managers to specific projects. Determines which projects a PM can view and manage in the admin frontend. Admins have implicit access to all projects and are not listed here.
+Links workspace users to specific projects. Determines which active projects `pm` and `member` users can see and work with. Admins have implicit access to all projects and are not listed here.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | UUID | PK, default `gen_random_uuid()` | |
 | `project_id` | UUID | FK → `projects.id`, NOT NULL | |
-| `user_id` | UUID | FK → `users.id`, NOT NULL | Must be a user with `role = 'pm'` |
+| `user_id` | UUID | FK → `users.id`, NOT NULL | Must be an active workspace member with role `pm` or `member` at assignment time |
 | `workspace_id` | UUID | FK → `workspaces.id`, NOT NULL | Denormalized from project for multi-tenant queries |
 | `assigned_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `assigned_by` | UUID | FK → `users.id`, NOT NULL | Admin who assigned |
@@ -183,11 +212,15 @@ Links Project Managers to specific projects. Determines which projects a PM can 
 - `project_assignments_user_id_idx` on `user_id`
 - `project_assignments_workspace_id_idx` on `workspace_id`
 
+**Notes:**
+- Assignments remain valid when a user changes between `pm` and `member`; the role controls allowed actions, while the assignment controls project visibility.
+- Admins manage assignments but do not need assignment rows for project access.
+
 ---
 
 ### Task (`tasks`)
 
-A trackable unit of work. Every task belongs to a project. Synced from a GitHub issue (from any repo within the GitHub Project, or from a single repo) or created manually with optional push to GitHub.
+A trackable unit of work. Every task belongs to a project. Tasks are provider-neutral core records: a task may be purely local, or it may be linked to one or more external provider work items through `task_external_refs`.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -195,27 +228,50 @@ A trackable unit of work. Every task belongs to a project. Synced from a GitHub 
 | `project_id` | UUID | FK → `projects.id`, NOT NULL | |
 | `workspace_id` | UUID | FK → `workspaces.id`, NOT NULL | Denormalized from project for multi-tenant queries |
 | `title` | TEXT | NOT NULL | Task title |
-| `is_manual` | BOOLEAN | NOT NULL, default `false` | `true` = created locally |
-| `github_issue_number` | INT | nullable | GitHub issue number |
-| `github_issue_id` | BIGINT | nullable | GitHub issue node ID |
-| `github_repo_full_name` | VARCHAR(500) | nullable | `owner/repo` — issue can be from any repo |
 | `status` | VARCHAR(20) | NOT NULL, default `'open'` | `'open'` or `'closed'` |
 | `is_active` | BOOLEAN | NOT NULL, default `true` | Soft-disable task |
-| `synced_at` | TIMESTAMPTZ | nullable | Last sync from GitHub |
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 
 **Indexes:**
 - `tasks_project_id_idx` on `project_id`
 - `tasks_workspace_id_idx` on `workspace_id`
-- `tasks_github_issue_unique` UNIQUE on `(github_repo_full_name, github_issue_number)` (where `is_manual = false`)
-
-**Note:** The unique constraint on GitHub issue is global (not workspace-scoped). In single-tenant MVP this is correct. For future multi-tenant migration, this constraint must be extended to include the workspace scope (via project).
+- `tasks_workspace_project_active_idx` on `(workspace_id, project_id, is_active)`
 
 **Notes:**
-- GitHub-synced tasks: `is_manual = false`, `github_issue_number`, `github_issue_id`, and `github_repo_full_name` are set.
-- Manual tasks: `is_manual = true`, GitHub fields are null. User can optionally push to GitHub (creating an issue in a selected repo), at which point GitHub fields are populated.
-- Extension auto-creation creates tasks with `is_manual = false` and populates GitHub fields from the issue page.
+- Local/manual tasks have no external reference rows.
+- Provider-specific issue, card, ticket, URL, and sync metadata live in `task_external_refs`.
+
+---
+
+### TaskExternalRef (`task_external_refs`)
+
+Links a core task to an external provider work item, such as a GitHub issue. This keeps task tracking independent from any single integration provider.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | UUID | PK, default `gen_random_uuid()` | |
+| `workspace_id` | UUID | FK → `workspaces.id`, NOT NULL | Denormalized from task/project for multi-tenant queries |
+| `project_id` | UUID | FK → `projects.id`, NOT NULL | Denormalized for provider lookups within project scope |
+| `task_id` | UUID | FK → `tasks.id`, NOT NULL | Linked core task |
+| `provider` | VARCHAR(50) | NOT NULL | Integration provider, e.g. `github` |
+| `external_type` | VARCHAR(50) | NOT NULL | Provider object type, e.g. `issue` |
+| `external_id` | VARCHAR(255) | nullable | Stable provider ID when available; stored as string to avoid numeric precision issues |
+| `external_key` | VARCHAR(500) | NOT NULL | Human-readable lookup key, e.g. `owner/repo#123` |
+| `external_url` | TEXT | nullable | Canonical provider URL |
+| `metadata` | JSONB | NOT NULL, default `'{}'` | Provider-specific fields not needed for core queries |
+| `synced_at` | TIMESTAMPTZ | nullable | Last successful sync from the provider |
+| `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
+| `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
+
+**Indexes:**
+- `task_external_refs_task_id_idx` on `task_id`
+- `task_external_refs_workspace_provider_key_unique` UNIQUE on `(workspace_id, provider, external_type, external_key)`
+- `task_external_refs_workspace_provider_id_idx` on `(workspace_id, provider, external_type, external_id)` where `external_id` is not null
+
+**Notes:**
+- GitHub issue auto-create uses `provider = 'github'`, `external_type = 'issue'`, and `external_key = 'owner/repo#123'`.
+- GitHub-specific fields such as issue number, issue node ID, or repository full name belong here or in `metadata`, not in `tasks`.
 
 ---
 
@@ -310,13 +366,12 @@ Pending workspace invitation.
 |---|---|---|
 | `workspace_members` | `role` | `admin`, `pm`, `member` |
 | `invites` | `role` | `admin`, `pm`, `member` |
-| `projects` | `source_type` | `github_project`, `github_repo`, `manual` |
 | `tasks` | `status` | `open`, `closed` |
-| `tasks` | `is_manual` | `true` (local), `false` (GitHub-synced) |
 | `time_entries` | `source` | `web`, `extension`, `manual` |
 | `invoices` | `status` | `draft`, `sent`, `paid` |
 | `invites` | `status` | `pending`, `accepted`, `expired` |
 | `github_connections` | `connected` | `true`, `false` |
+| `project_external_refs`, `task_external_refs` | `provider` | application-validated integration key, e.g. `github` |
 
 All enums are stored as `VARCHAR` with application-level validation via Zod schemas in `packages/shared`.
 
@@ -333,12 +388,14 @@ All enums are stored as `VARCHAR` with application-level validation via Zod sche
 | `workspaces` → `invites` | CASCADE |
 | `projects` → `tasks` | RESTRICT (must delete/archive tasks first) |
 | `projects` → `project_assignments` | CASCADE |
+| `projects` → `project_external_refs` | CASCADE |
+| `tasks` → `task_external_refs` | CASCADE |
 | `tasks` → `time_entries` | RESTRICT (must delete time entries first) |
 | `invoices` → `time_entries` | SET NULL (deleting invoice unlinks entries) |
 | `users` → `time_entries` | RESTRICT |
 | `users` → `workspace_members` | CASCADE |
 | `users` → `github_connections` | CASCADE |
-| `users` → `project_assignments` | CASCADE |
+| `users` → `project_assignments` | CASCADE through workspace membership removal |
 
 **Soft deletes:** Projects and Tasks use `is_active` flag instead of hard deletes. Time entries are never deleted by cascade — admins can manually remove them.
 

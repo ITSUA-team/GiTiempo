@@ -57,9 +57,9 @@ Both modes produce a `TimeEntry` record linked to a task and the current user.
 
 ### 3. Manual Task & Project Creation
 
-When a task or project does not exist in GitHub (or the user has no GitHub connection), users can create a local entry within the workspace to track time against it. Every task belongs to a project. Manual tasks coexist with GitHub-synced tasks in the same workspace.
+When a task or project does not exist in an external provider (or the user has no connected integration), users can create local work records within the workspace. Admins and Project Managers can create projects; any active member with visibility to an active project can create tasks within that project. Manual tasks coexist with externally synced tasks in the same workspace.
 
-When creating a manual task, the user can optionally choose to also create it as a GitHub issue (selecting the target repository), if they have a GitHub connection.
+When creating a manual task, the user can optionally choose to also create it in a connected external provider, such as GitHub, if the integration supports task creation.
 
 ### 4. Reports
 
@@ -105,9 +105,9 @@ A Chrome extension adds **Start/Stop Timer** and other controls directly onto Gi
 - Signs in with email or Google (Firebase Auth)
 - Tracks time against tasks (timer or manual interval)
 - Edits own time entries
-- Views time entries of other users within a project (read-only, via project view)
+- Views time entries of other users within assigned projects (read-only, via project view)
 - Can connect GitHub account for GitHub-based task selection and Chrome extension
-- Can work with manual tasks/projects without GitHub
+- Can work with manual tasks inside assigned projects without GitHub
 
 ### Project Manager
 
@@ -127,7 +127,7 @@ A Chrome extension adds **Start/Stop Timer** and other controls directly onto Gi
 - Accesses admin frontend
 - Full visibility across all projects
 - Manages invites and user roles
-- Assigns Project Managers to projects
+- Assigns Project Managers and members to projects
 - Manages workspace settings and GitHub connection
 - Manages app settings
 
@@ -138,15 +138,16 @@ A Chrome extension adds **Start/Stop Timer** and other controls directly onto Gi
 | Track time (timer/manual) | ✅ | ✅ | ✅ |
 | View own time entries | ✅ | ✅ | ✅ |
 | Edit own time entries | ✅ | ✅ | ✅ |
-| Create manual tasks/projects | ✅ | ✅ | ✅ |
+| Create manual projects | ✅ | ✅ | ❌ |
+| Create manual tasks | ✅ | ✅ (assigned projects) | ✅ (assigned projects) |
 | Connect GitHub account | ✅ | ✅ | ✅ |
-| View team time entries | ✅ (all) | ✅ (assigned projects) | ✅ (per project, read-only) |
+| View team time entries | ✅ (all) | ✅ (assigned projects) | ✅ (assigned projects, read-only) |
 | Access admin frontend | ✅ | ✅ | ❌ |
 | Generate reports | ✅ (all) | ✅ (assigned) | ❌ |
 | Manage invoices | ✅ (all) | ✅ (assigned) | ❌ |
 | Manage work visibility | ✅ | ✅ (assigned) | ❌ |
 | Invite members | ✅ | ❌ | ❌ |
-| Assign PMs to projects | ✅ | ❌ | ❌ |
+| Assign users to projects | ✅ | ❌ | ❌ |
 | Manage workspace settings | ✅ | ❌ | ❌ |
 | Manage app settings | ✅ | ❌ | ❌ |
 
