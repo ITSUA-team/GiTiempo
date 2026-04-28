@@ -19,6 +19,7 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     displayName: "Alexey Tsukanov",
     email: "alexey@example.com",
     id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    role: "member",
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
 
