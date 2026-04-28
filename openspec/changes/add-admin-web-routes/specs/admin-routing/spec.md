@@ -31,6 +31,7 @@ The `admin-web` SPA MUST separate guest-only entry from authenticated applicatio
 - **WHEN** the admin-web router defines authenticated application routes
 - **THEN** the protected routes are mounted under the shared admin shell structure
 - **AND** the dashboard, reports, invoices, members, projects, and settings pages resolve within that authenticated shell
+- **AND** the guest-only login route remains outside that authenticated shell
 
 ### Requirement: Protected Admin Navigation Behavior
 

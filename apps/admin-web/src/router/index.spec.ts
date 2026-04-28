@@ -63,6 +63,42 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.settings)).toBe(true);
   });
 
+  it("mounts documented admin pages inside the authenticated shell while keeping login guest-only", () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const protectedRoutes = [
+      { path: "/", name: routeNames.dashboard },
+      { path: "/reports", name: routeNames.reports },
+      { path: "/invoices", name: routeNames.invoices },
+      { path: "/members", name: routeNames.members },
+      { path: "/projects", name: routeNames.projects },
+      { path: "/settings", name: routeNames.settings },
+    ] as const;
+
+    for (const route of protectedRoutes) {
+      const resolved = router.resolve(route.path);
+
+      expect(resolved.name).toBe(route.name);
+      expect(resolved.meta.requiresAuth).toBe(true);
+      expect(resolved.meta.guestOnly).toBeUndefined();
+      expect(resolved.matched).toHaveLength(2);
+      expect(resolved.matched[0]?.path).toBe("/");
+      expect(resolved.matched[0]?.meta.requiresAuth).toBe(true);
+      expect(resolved.matched[1]?.name).toBe(route.name);
+    }
+
+    const loginRoute = router.resolve("/login");
+
+    expect(loginRoute.name).toBe(routeNames.login);
+    expect(loginRoute.meta.guestOnly).toBe(true);
+    expect(loginRoute.meta.requiresAuth).toBeUndefined();
+    expect(loginRoute.matched).toHaveLength(1);
+    expect(loginRoute.matched[0]?.path).toBe("/login");
+  });
+
   it("redirects anonymous users to login and preserves the requested route", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);

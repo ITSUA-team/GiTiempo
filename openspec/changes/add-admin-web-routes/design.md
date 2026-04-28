@@ -73,6 +73,7 @@ This change should therefore stop describing the already-finished route scaffold
   - anonymous access to a protected admin route redirects to `/login` with the original destination preserved
   - authenticated access to `/login` redirects to the default admin route or a valid preserved redirect target
   - invalid redirect targets are ignored in favor of the default authenticated route
+  - every documented admin page route resolves through the authenticated shell, while `/login` remains a separate guest-only route
 - **Why:** the largest regression risk is not static route presence, but subtle auth-state and redirect behavior drift away from the working user-web model.
 - **Alternatives considered:** relying only on lint/typecheck or future browser-level tests (rejected because the core risk here is deterministic store/router behavior that focused Vitest coverage can catch cheaply).
 
