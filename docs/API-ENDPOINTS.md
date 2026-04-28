@@ -60,7 +60,7 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | GET | `/projects` | JWT | Any | List workspace projects. Admins: all projects. PMs/members: assigned active projects only. |
 | POST | `/projects` | JWT | Admin/PM | Create a provider-neutral project. PM creators are automatically assigned to the created project. |
 | GET | `/projects/:id` | JWT | Any | Get project details. Admins can read active or inactive projects. PMs/members can read assigned active projects only. |
-| PATCH | `/projects/:id` | JWT | Admin/PM | Update project (name, color, isActive). Admins can update any project; PMs can update assigned projects only. |
+| PATCH | `/projects/:id` | JWT | Admin/PM | Update project. Admins can update name, color, and isActive on any project; PMs can update name and color on assigned active projects only. |
 
 ---
 
@@ -83,7 +83,7 @@ Assignments control project visibility for non-admin users. Admins have implicit
 | GET | `/projects/:id/tasks` | JWT | Any | List tasks for a visible project. Non-admin users need assignment to an active project. |
 | POST | `/projects/:id/tasks` | JWT | Any | Create a provider-neutral task in a visible active project. |
 | GET | `/tasks/:id` | JWT | Any | Get task details when the user has visibility to the task's project. |
-| PATCH | `/tasks/:id` | JWT | Any | Update task (title, status, isActive) when the user has visibility to the task's project. |
+| PATCH | `/tasks/:id` | JWT | Any | Update task (title, status, isActive) when the user has visibility to the task's active project. |
 | POST | `/projects/:id/tasks/sync` | JWT | Any | Trigger task sync from the project's configured external provider refs. |
 
 ---
