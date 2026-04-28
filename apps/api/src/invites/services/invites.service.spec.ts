@@ -1,7 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { users } from '../../users/schemas/users.schema';
 import { InvitesService } from './invites.service';
 
 const pendingInvite = {
@@ -26,6 +25,12 @@ const acceptedUser = {
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
 
+function makeUsersService() {
+  return {
+    upsertFromFirebase: vi.fn().mockResolvedValue(acceptedUser),
+  };
+}
+
 function selectRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
@@ -42,15 +47,6 @@ function makeService(options: { firebaseEmail: string }) {
       .mockReturnValueOnce(selectRows([pendingInvite]))
       .mockReturnValueOnce(selectRows([])),
     insert: vi.fn((table) => {
-      if (table === users) {
-        return {
-          values: vi.fn().mockReturnValue({
-            onConflictDoUpdate: vi.fn().mockReturnValue({
-              returning: vi.fn().mockResolvedValue([acceptedUser]),
-            }),
-          }),
-        };
-      }
       if (table === workspaceMembers) return { values: insertMembershipValues };
       throw new Error('Unexpected table insert');
     }),
@@ -69,15 +65,17 @@ function makeService(options: { firebaseEmail: string }) {
       name: acceptedUser.displayName,
     }),
   };
+  const usersService = makeUsersService();
   const delivery = { deliver: vi.fn() };
-
   return {
     service: new InvitesService(
       db as never,
       firebase as never,
+      usersService as never,
       delivery as never,
     ),
     db,
+    usersService,
     insertMembershipValues,
     updateInviteWhere,
   };
@@ -97,9 +95,8 @@ describe('InvitesService', () => {
   });
 
   it('creates membership and accepts the invite for a matching identity', async () => {
-    const { service, insertMembershipValues, updateInviteWhere } = makeService({
-      firebaseEmail: 'New.User@Example.com',
-    });
+    const { service, usersService, insertMembershipValues, updateInviteWhere } =
+      makeService({ firebaseEmail: 'New.User@Example.com' });
 
     await service.acceptInvite({
       token: 'invite-token',
@@ -110,6 +107,12 @@ describe('InvitesService', () => {
       workspaceId: pendingInvite.workspaceId,
       userId: acceptedUser.id,
       role: pendingInvite.role,
+    });
+    expect(usersService.upsertFromFirebase).toHaveBeenCalledWith({
+      firebaseUid: acceptedUser.firebaseUid,
+      email: pendingInvite.email,
+      displayName: acceptedUser.displayName,
+      avatarUrl: null,
     });
     expect(updateInviteWhere).toHaveBeenCalled();
   });
@@ -163,10 +166,12 @@ describe('InvitesService createInvite', () => {
         ? vi.fn().mockRejectedValue(new Error('SMTP failed'))
         : vi.fn().mockResolvedValue(undefined),
     };
+    const usersService = makeUsersService();
 
     const service = new InvitesService(
       db as never,
       { verifyIdToken: vi.fn() } as never,
+      usersService as never,
       delivery as never,
     );
 

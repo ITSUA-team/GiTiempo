@@ -1,3 +1,5 @@
+import type { WorkspaceRole } from '@gitiempo/shared';
+
 /**
  * Shape of the HS256 access token payload issued by `TokenService`.
  *
@@ -13,7 +15,7 @@ export interface JwtPayload {
   email: string;
   firebaseUid: string;
   workspaceId: string;
-  role: 'admin' | 'pm' | 'member';
+  role: WorkspaceRole;
   iss: string;
   aud: string;
   iat: number;

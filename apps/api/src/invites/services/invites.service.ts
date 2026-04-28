@@ -21,7 +21,7 @@ import {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { users } from '../../users/schemas/users.schema';
+import { UsersService } from '../../users/services/users.service';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { invites } from '../schemas/invites.schema';
 import { InviteDeliveryService } from './invite-delivery.service';
@@ -33,6 +33,7 @@ export class InvitesService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     @Inject(FIREBASE_ADMIN) private readonly firebase: FirebaseAdminService,
+    private readonly users: UsersService,
     private readonly delivery: InviteDeliveryService,
   ) {}
 
@@ -134,6 +135,13 @@ export class InvitesService {
       throw new ForbiddenException('Invite email does not match identity');
     }
 
+    const userRow = await this.users.upsertFromFirebase({
+      firebaseUid: decoded.uid,
+      email,
+      displayName: decoded.name ?? null,
+      avatarUrl: decoded.picture ?? null,
+    });
+
     await this.db.transaction(async (tx) => {
       const [currentInvite] = await tx
         .select()
@@ -142,26 +150,6 @@ export class InvitesService {
         .limit(1);
       if (!currentInvite) throw new NotFoundException('Invite not found');
       this.assertInviteCanBeAccepted(currentInvite);
-
-      const [userRow] = await tx
-        .insert(users)
-        .values({
-          firebaseUid: decoded.uid,
-          email,
-          displayName: decoded.name ?? null,
-          avatarUrl: decoded.picture ?? null,
-        })
-        .onConflictDoUpdate({
-          target: users.firebaseUid,
-          set: {
-            email,
-            displayName: decoded.name ?? null,
-            avatarUrl: decoded.picture ?? null,
-            updatedAt: new Date(),
-          },
-        })
-        .returning();
-      if (!userRow) throw new Error('Failed to create invite user');
 
       const [existingMembership] = await tx
         .select({ id: workspaceMembers.id })

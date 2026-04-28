@@ -18,10 +18,8 @@ import { sql } from 'drizzle-orm';
 import { users } from '../users/schemas/users.schema';
 import { workspaces } from '../workspaces/schemas/workspaces.schema';
 import { workspaceSettings } from '../workspaces/schemas/workspace-settings.schema';
-import {
-  workspaceMembers,
-  type WorkspaceRole,
-} from '../members/schemas/workspace-members.schema';
+import type { WorkspaceRole } from '@gitiempo/shared';
+import { workspaceMembers } from '../members/schemas/workspace-members.schema';
 import { invites } from '../invites/schemas/invites.schema';
 
 interface SeedUser {

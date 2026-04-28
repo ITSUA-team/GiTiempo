@@ -100,23 +100,6 @@ export class RefreshTokenRepository {
       .where(eq(refreshTokens.familyId, familyId));
   }
 
-  /**
-   * Soft-revoke every non-revoked row in a family without deleting.
-   * Currently unused; kept for forward compatibility with session
-   * management features.
-   */
-  async revokeFamily(familyId: string): Promise<void> {
-    await this.db
-      .update(refreshTokens)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(refreshTokens.familyId, familyId),
-          isNull(refreshTokens.revokedAt),
-        ),
-      );
-  }
-
   /** Hard-delete a single row by id. Used by logout. */
   async deleteById(id: string): Promise<void> {
     await this.db.delete(refreshTokens).where(eq(refreshTokens.id, id));
