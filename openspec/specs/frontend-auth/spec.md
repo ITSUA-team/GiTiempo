@@ -8,11 +8,18 @@ Define user-web authentication behavior for login exchange handling, session res
 
 ### Requirement: Frontend Login Exchange Behavior
 
-The user-web frontend MUST normalize both successful and failed login attempts through its auth session layer so the application enters the correct authenticated or guest state after a login action.
+The user-web frontend MUST authenticate through Firebase Auth and normalize both successful and failed backend token exchanges through its auth session layer so the application enters the correct authenticated or guest state after a login action.
 
-#### Scenario: Email or Google login succeeds
+#### Scenario: Email and password login succeeds
 
-- **WHEN** the user-web auth flow receives a valid Firebase-backed login result and completes the backend token exchange
+- **WHEN** the user successfully authenticates with email and password through Firebase Auth and the backend token exchange succeeds
+- **THEN** the frontend stores the new access token in session state
+- **AND** the frontend persists the rotated refresh token for later restoration
+- **AND** the frontend resolves the authenticated user profile for the active session
+
+#### Scenario: Google login succeeds
+
+- **WHEN** the user successfully authenticates with Google through Firebase Auth and the backend token exchange succeeds
 - **THEN** the frontend stores the new access token in session state
 - **AND** the frontend persists the rotated refresh token for later restoration
 - **AND** the frontend resolves the authenticated user profile for the active session
@@ -33,11 +40,12 @@ The user-web frontend MUST normalize application startup based on the persisted 
 - **THEN** the frontend restores an authenticated session from the refresh flow
 - **AND** the frontend replaces the persisted refresh token with the rotated value returned by the backend
 - **AND** the bootstrap state completes as authenticated
+- **AND** protected-route navigation resolves only after session normalization completes
 
-#### Scenario: Stored refresh token is invalid
+#### Scenario: Refresh token is missing or invalid
 
-- **WHEN** application bootstrap begins with an invalid or rejected persisted refresh token
-- **THEN** the frontend clears the unusable persisted refresh token
+- **WHEN** application bootstrap begins without a usable persisted refresh token or with an invalid or rejected persisted refresh token
+- **THEN** the frontend clears the unusable persisted refresh token when one exists
 - **AND** the frontend completes bootstrap in a guest session state
 
 ### Requirement: Frontend Route Guard Redirects
@@ -64,11 +72,17 @@ The user-web frontend MUST clear local session state during logout even if the b
 - **WHEN** an authenticated user logs out and the backend accepts the logout request
 - **THEN** the frontend clears the access token from session state
 - **AND** the frontend clears the persisted refresh token
-- **AND** the frontend returns the app to guest behavior
+- **AND** the frontend returns the app to guest behavior on the login route
 
 #### Scenario: Logout API request fails
 
 - **WHEN** an authenticated user logs out and the backend logout request fails
 - **THEN** the frontend still clears the local access token from session state
 - **AND** the frontend still clears the persisted refresh token
-- **AND** the frontend returns the app to guest behavior
+- **AND** the frontend returns the app to guest behavior on the login route
+
+#### Scenario: Session restoration can no longer succeed
+
+- **WHEN** the frontend determines that session restoration or refresh can no longer succeed
+- **THEN** the frontend clears any stored session tokens
+- **AND** the frontend treats the browser session as anonymous

@@ -17,10 +17,10 @@ Session cookies cannot be shared across these origins without complex workaround
 Use **JWT access/refresh token pair** instead of session cookies:
 
 1. Frontend authenticates user via Firebase Auth (Google SSO or email/password).
-2. Frontend sends Firebase ID token to `POST /api/auth/login`.
-3. Backend verifies the Firebase ID token, creates/updates the user, and returns a short-lived JWT access token (15 min) and a long-lived refresh token (7 days).
+2. Frontend sends Firebase ID token to `POST /auth/login`.
+3. Backend verifies the Firebase ID token, requires an existing local user with active workspace membership, and returns a short-lived JWT access token (15 min) and a long-lived refresh token (7 days).
 4. All API requests include the access token in `Authorization: Bearer <token>` header.
-5. When the access token expires, the frontend calls `POST /api/auth/refresh` with the refresh token to obtain a new pair.
+5. When the access token expires, the frontend calls `POST /auth/refresh` with the refresh token to obtain a new pair.
 6. Refresh tokens are rotated on each use (old token invalidated).
 
 Backend configures CORS via `ALLOWED_ORIGINS` environment variable.

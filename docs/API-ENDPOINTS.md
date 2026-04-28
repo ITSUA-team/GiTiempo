@@ -2,7 +2,9 @@
 
 REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `Authorization: Bearer <access_token>` header unless noted otherwise.
 
-**Base path:** `/api`
+**Base path:** `/`
+
+The NestJS app currently exposes routes directly as `/auth/*`, `/users/*`, etc. If a deployed environment adds a reverse-proxy prefix such as `/api`, that prefix is infrastructure-specific and not part of the application route contract in this repo.
 
 ---
 
