@@ -86,10 +86,19 @@ export class MembersService {
   }
 
   async requireAdmin(userId: string, workspaceId: string): Promise<void> {
+    await this.requireRole(userId, workspaceId, ['admin']);
+  }
+
+  async requireRole(
+    userId: string,
+    workspaceId: string,
+    roles: readonly WorkspaceRole[],
+  ): Promise<ActiveMembership> {
     const membership = await this.requireActiveMembership(userId, workspaceId);
-    if (membership.role !== 'admin') {
+    if (!roles.includes(membership.role)) {
       throw new ForbiddenException('Forbidden');
     }
+    return membership;
   }
 
   async listMembers(workspaceId: string): Promise<WorkspaceMemberResponse[]> {
