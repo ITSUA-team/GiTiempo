@@ -1,8 +1,14 @@
-function getWorkspaceHref(
-  configuredUrl: string | undefined,
-  localhostPort: string,
-  fallbackPath: string,
-): string {
+export interface CounterpartWorkspaceLinkOptions {
+  configuredUrl?: string;
+  fallbackPath: string;
+  localhostPort: string;
+}
+
+export function getCounterpartWorkspaceHref({
+  configuredUrl,
+  fallbackPath,
+  localhostPort,
+}: CounterpartWorkspaceLinkOptions): string {
   const trimmedUrl = configuredUrl?.trim();
 
   if (trimmedUrl) {
@@ -21,8 +27,4 @@ function getWorkspaceHref(
   }
 
   return new URL(fallbackPath, origin).toString();
-}
-
-export function getAdminWorkspaceHref(): string {
-  return getWorkspaceHref(import.meta.env.VITE_ADMIN_APP_URL, "5174", "/login");
 }

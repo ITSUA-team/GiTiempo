@@ -10,14 +10,18 @@ import {
 } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
+import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
-import { getUserWorkspaceHref } from "@/lib/workspace-link";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
 const authStore = useAuthStore();
-const userWorkspaceHref = getUserWorkspaceHref();
+const userWorkspaceHref = getCounterpartWorkspaceHref({
+  configuredUrl: import.meta.env.VITE_USER_APP_URL,
+  fallbackPath: "/login",
+  localhostPort: "5173",
+});
 
 const navItems = computed(() => [
   { icon: HomeIcon, label: "Dashboard", name: routeNames.dashboard },

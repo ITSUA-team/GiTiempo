@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
-import { getUserWorkspaceHref } from "@/lib/workspace-link";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -13,7 +13,11 @@ const router = useRouter();
 const email = shallowRef("");
 const errorMessage = shallowRef<string | null>(null);
 const password = shallowRef("");
-const userWorkspaceHref = getUserWorkspaceHref();
+const userWorkspaceHref = getCounterpartWorkspaceHref({
+  configuredUrl: import.meta.env.VITE_USER_APP_URL,
+  fallbackPath: "/login",
+  localhostPort: "5173",
+});
 
 const redirectTarget = computed(() => {
   const redirect = route.query.redirect;

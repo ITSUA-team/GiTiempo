@@ -6,7 +6,7 @@ import {
   clearRefreshToken,
   getRefreshToken,
   setRefreshToken,
-} from "@/lib/session-storage";
+} from "@gitiempo/web-shared/session-storage";
 import {
   resetAuthRuntimeForTesting,
   setAuthRuntimeForTesting,

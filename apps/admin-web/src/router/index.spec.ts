@@ -3,7 +3,10 @@ import { createMemoryHistory } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
 import type { UserResponse } from "@gitiempo/shared";
 
-import { clearRefreshToken, setRefreshToken } from "@/lib/session-storage";
+import {
+  clearRefreshToken,
+  setRefreshToken,
+} from "@gitiempo/web-shared/session-storage";
 import { createAppRouter, routeNames } from "@/router";
 import {
   resetAuthRuntimeForTesting,

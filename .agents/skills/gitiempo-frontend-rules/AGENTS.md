@@ -1,6 +1,6 @@
 # GiTiempo Frontend Rules
 
-**Version 1.0.0**
+**Version 1.1.0**
 GiTiempo Frontend Rules
 April 2026
 
@@ -16,6 +16,7 @@ April 2026
 
 - Applies to `apps/user-web` and `apps/admin-web`.
 - Applies to shared frontend theme/bootstrap code in `packages/web-config`.
+- Applies to shared frontend browser/runtime leaf extraction between the two SPAs.
 - Applies to app UI built with PrimeVue and Tailwind CSS.
 - The Chrome extension is an exception: it uses Tailwind only, but should still share the same design tokens where practical.
 
@@ -63,6 +64,20 @@ If docs and design conflict, the docs are the source of truth.
 - `ToastService` and `ConfirmationService` should be wired during app bootstrap so toasts and confirmation flows do not require bootstrap changes later.
 - Shared frontend-only bootstrap and theme code belongs in `packages/web-config`.
 - Shared contracts belong in `packages/shared/src/contracts/` when the UI task changes payload shapes or validators.
+
+### 3.4 Shared Frontend Leaf Boundaries
+
+- Extract only browser/runtime leaf modules that are already behaviorally identical across `apps/user-web` and `apps/admin-web`.
+- First-wave sharing candidates are:
+  - auth HTTP request helpers
+  - current-user client helpers
+  - refresh-token storage helpers
+  - counterpart-workspace link helpers
+- A dedicated frontend package is the preferred home for shared browser/runtime code.
+- Do not move these runtime leaves into `@gitiempo/shared`, which must remain backend-safe and contract-focused.
+- Do not move these runtime leaves into `@gitiempo/web-config`, which must remain theme/bootstrap-focused.
+- Keep `stores/auth.ts`, `router/index.ts`, route maps, route-level views, and product-specific shell/login composition app-local unless there are two stable call sites and clear evidence that a smaller shared abstraction is already justified.
+- When comparing login or shell UI between the SPAs, extract only sub-regions with stable repeated structure; do not force full-page unification.
 
 ## 4. Tailwind Token Rules
 
@@ -312,6 +327,12 @@ Do not re-implement behavior already handled by PrimeVue for these components:
 - Use `packages/web-config` for shared PrimeVue preset and token-level frontend configuration.
 - If shared theme code changes, verify both web apps.
 
+### 10.4 Frontend Auth And Router Parity
+
+- `apps/admin-web` auth direction must stay aligned with `apps/user-web`: Firebase Auth on the frontend, backend token exchange, refresh-token bootstrap, and logout cleanup.
+- When an auth/session/router behavior is already established in one SPA and documented in specs, mirror that behavior in the counterpart SPA unless the docs explicitly diverge.
+- Prefer small local orchestration around shared leaves over inventing a second auth model.
+
 ## 11. Implementation Workflow
 
 When doing frontend work in this repo:
@@ -324,10 +345,46 @@ When doing frontend work in this repo:
 6. Implement desktop UI pixel-perfect to the approved design unless the user asked for a deliberate deviation.
 7. If docs and design conflict, follow the docs.
 8. Reuse shared tokens and preset logic instead of introducing app-local styling forks.
-9. Verify the affected app with lint and typecheck.
-10. If `packages/web-config` changed, verify both web apps.
+9. When both SPAs contain matching browser/runtime helpers, prefer extracting the smallest proven-identical leaf instead of maintaining silent duplication.
+10. Keep app-specific orchestration local unless two stable call sites justify sharing more.
+11. Verify the affected app with lint and typecheck.
+12. If shared frontend code changed, verify both web apps.
 
-## 12. Anti-Patterns To Avoid
+## 12. Frontend Auth And Router Regression Testing
+
+Use focused frontend tests to protect normalized session behavior.
+
+### 12.1 When To Add Or Update Tests
+
+- Add or update focused tests whenever a change touches auth store behavior, Firebase runtime wiring, login flow, session bootstrap, logout cleanup, route guards, or preserved redirects.
+- Treat `pnpm --filter user-web test` and `pnpm --filter admin-web test` as required verification for those changes, not optional extras.
+
+### 12.2 Minimum High-Value Coverage
+
+- Bootstrap restores a session from a valid refresh token and rotates stored credentials.
+- Bootstrap clears state when the refresh token is missing, invalid, or rejected.
+- Email/password login stores the token pair and loads the current user profile.
+- Google login stores the token pair and loads the current user profile.
+- Failed login clears stale local session state.
+- Logout clears local session state even if the backend logout request fails.
+- Anonymous access to a protected route redirects to `/login` and preserves the requested destination.
+- Authenticated access to `/login` redirects to the default authenticated route or a valid preserved redirect target.
+- Invalid redirect targets fall back to the default authenticated route.
+
+### 12.3 Shared Leaf Contract Tests
+
+- If a change touches shared auth HTTP helpers or current-user client helpers, add service-level tests at the fetch boundary.
+- Verify request paths, auth headers, payload shapes, response parsing, and error propagation.
+- Do not rely only on store-level runtime mocks when the real risk is HTTP client or schema drift.
+
+### 12.4 Test Design Rules
+
+- Prefer behavior assertions over router internals or implementation traces.
+- Do not treat route presence or exact `matched[]` structure as sufficient proof of auth behavior.
+- Keep store/router tests focused on deterministic session normalization behavior.
+- Add component tests when UI wiring itself is the regression risk, such as login submission, visible error state, or counterpart-workspace links.
+
+## 13. Anti-Patterns To Avoid
 
 - Raw hex colors in Vue templates or class attributes
 - Rebuilding standard controls with plain HTML instead of PrimeVue
@@ -336,15 +393,18 @@ When doing frontend work in this repo:
 - Breaking or overriding PrimeVue ARIA behavior through customization
 - One-off token values that should live in the shared theme
 - Adding dark-mode-specific behavior for MVP work
+- Extracting full auth stores, routers, or route-level pages into shared code just because two SPAs currently look similar
+- Treating duplicated browser/runtime leaves as acceptable long-term when both SPAs already implement the same behavior
+- Relying only on route inventory tests for auth/router changes while skipping session-lifecycle regression cases
 
-## 13. Verification Commands
+## 14. Verification Commands
 
 Frontend-only verification commands:
 
 - `pnpm --filter user-web lint && pnpm --filter user-web typecheck`
 - `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`
 
-If a task changes shared frontend code in `packages/web-config`, run both commands.
+If a task changes shared frontend code in `packages/web-config` or a dedicated shared frontend package, run both commands and both frontend test suites.
 
 ---
 

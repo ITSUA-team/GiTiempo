@@ -1,0 +1,38 @@
+{
+  "name": "@gitiempo/web-shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./auth": {
+      "types": "./src/auth/index.ts",
+      "default": "./src/auth/index.ts"
+    },
+    "./session-storage": {
+      "types": "./src/session-storage.ts",
+      "default": "./src/session-storage.ts"
+    },
+    "./workspace-link": {
+      "types": "./src/workspace-link.ts",
+      "default": "./src/workspace-link.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@gitiempo/shared": "workspace:*",
+    "firebase": "^12.4.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

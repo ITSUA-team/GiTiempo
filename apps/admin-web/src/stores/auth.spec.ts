@@ -6,7 +6,7 @@ import {
   clearRefreshToken,
   getRefreshToken,
   setRefreshToken,
-} from "@/lib/session-storage";
+} from "@gitiempo/web-shared/session-storage";
 import {
   resetAuthRuntimeForTesting,
   setAuthRuntimeForTesting,
@@ -172,12 +172,17 @@ describe("useAuthStore", () => {
     expect(authStore.bootstrapComplete).toBe(true);
   });
 
-  it("clears tokens on logout even when API logout fails", async () => {
+  it("clears tokens and signs out identity provider on successful logout", async () => {
+    let logoutCalls = 0;
+    let identitySignOutCalls = 0;
     setRefreshToken("persisted-refresh-token");
     setAuthRuntimeForTesting(
       createRuntimeMock({
         logoutSession: async () => {
-          throw new Error("logout failed");
+          logoutCalls += 1;
+        },
+        signOutIdentityProvider: async () => {
+          identitySignOutCalls += 1;
         },
       }),
     );
@@ -187,6 +192,35 @@ describe("useAuthStore", () => {
 
     await authStore.logout();
 
+    expect(logoutCalls).toBe(1);
+    expect(identitySignOutCalls).toBe(1);
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.accessToken).toBeNull();
+    expect(authStore.profile).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(authStore.bootstrapComplete).toBe(true);
+  });
+
+  it("clears tokens on logout even when API logout fails", async () => {
+    let identitySignOutCalls = 0;
+    setRefreshToken("persisted-refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        logoutSession: async () => {
+          throw new Error("logout failed");
+        },
+        signOutIdentityProvider: async () => {
+          identitySignOutCalls += 1;
+        },
+      }),
+    );
+
+    const authStore = useAuthStore();
+    authStore.accessToken = "current-access-token";
+
+    await authStore.logout();
+
+    expect(identitySignOutCalls).toBe(1);
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.accessToken).toBeNull();
     expect(authStore.profile).toBeNull();
