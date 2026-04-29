@@ -17,6 +17,8 @@ import { CommonsModule } from './commons/commons.module';
 import { MembersModule } from './members/members.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { InvitesModule } from './invites/invites.module';
+import { ProjectsModule } from './projects/projects.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { InvitesModule } from './invites/invites.module';
     AuthModule,
     WorkspacesModule,
     InvitesModule,
+    ProjectsModule,
+    TasksModule,
     CommonsModule,
   ],
   controllers: [],

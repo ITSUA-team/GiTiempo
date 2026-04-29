@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { MembersService } from './members.service';
 
@@ -20,6 +20,13 @@ function makeLockAndCountSelect(lockRows: unknown[], countRows: unknown[]) {
       .mockReturnValueOnce(countCall()),
     forFn,
   };
+}
+
+function makeMembershipSelect(rows: unknown[]) {
+  const limit = vi.fn().mockResolvedValue(rows);
+  const where = vi.fn().mockReturnValue({ limit });
+  const from = vi.fn().mockReturnValue({ where });
+  return { select: vi.fn().mockReturnValue({ from }) };
 }
 
 describe('MembersService', () => {
@@ -90,5 +97,21 @@ describe('MembersService', () => {
     await assertCanLoseAdminRole(tx, 'workspace-1', 'admin', 'member');
 
     expect(forFn).toHaveBeenCalledWith('update');
+  });
+
+  it('rejects role checks against the current database membership', async () => {
+    const db = makeMembershipSelect([
+      {
+        id: 'membership-1',
+        userId: 'user-1',
+        workspaceId: 'workspace-1',
+        role: 'member',
+      },
+    ]);
+    const service = new MembersService(db as never);
+
+    await expect(
+      service.requireRole('user-1', 'workspace-1', ['admin', 'pm']),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
