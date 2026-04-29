@@ -124,7 +124,8 @@ User → clicks "Connect GitHub" in profile settings
 
 **On-demand sync (lazy):**
 
-- Projects and tasks are synced from GitHub when the user requests them.
+- Projects and tasks are provider-neutral core records. External provider identity is stored in external reference tables, not as `github_*` fields on core records.
+- GitHub is the MVP sync adapter and populates `project_external_refs` / `task_external_refs` with `provider = 'github'`.
 - The backend maintains a local cache. Stale data is refreshed on the next request.
 - No background jobs or webhooks for sync in MVP — the user's action triggers the refresh.
 
@@ -136,11 +137,12 @@ Three roles: `admin`, `pm`, `member`.
 | ------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `AuthGuard`         | Verifies JWT access token from `Authorization` header. Attaches `user` to request.                         |
 | `RoleGuard`         | Checks `WorkspaceMember.role` against required roles.                                                      |
-| `ProjectScopeGuard` | For PM-specific endpoints: verifies PM is assigned to the requested project via `ProjectAssignment` table. |
+| `ProjectScopeGuard` | For project-scoped endpoints: admins have implicit access; `pm` and `member` users need assignment to an active project. |
 
 **Admin endpoints** require `role = 'admin'`.
-**PM endpoints** require `role IN ('admin', 'pm')` + project scope check for PMs.
-**Member endpoints** require any authenticated user.
+**PM management endpoints** require `role IN ('admin', 'pm')`; PMs are limited to assigned projects.
+**Member project endpoints** require any authenticated user with project visibility.
+**Project assignment endpoints** are admin-only; assignment targets may be `pm` or `member` users. Assignments remain valid if a user changes between `pm` and `member`.
 
 ### 2.5 API Design Principles
 
@@ -206,7 +208,7 @@ The current web frontend baseline includes:
 - Dashboard — active timer, recent time entries
 - Timer — task selector (org → project/repo → issue), start/stop
 - Time Entries — list, edit, delete own entries
-- Project View — project members' time entries (read-only)
+- Project View — visible project members' time entries (read-only)
 - Profile — display name, GitHub connection (connect/disconnect)
 
 ### 3.2 Admin SPA (`apps/admin-web/`)
@@ -216,8 +218,8 @@ The current web frontend baseline includes:
 - Dashboard — workspace overview, summary stats
 - Reports — filter by project/user/date range, aggregated tables (PM: assigned projects only)
 - Invoices — create, view status, list (PM: assigned projects only)
-- Members — invite, manage roles, assign PMs to projects (Admin only)
-- Projects — manage project visibility, assign PMs (Admin only)
+- Members — invite, manage roles, assign users to projects (Admin only)
+- Projects — manage project visibility and user assignments (Admin only)
 - Settings — workspace config: name, currency, default hourly rate (Admin only)
 
 ### 3.3 Shared UI Patterns
@@ -249,13 +251,13 @@ POST /api/time-entries/timer/start-from-github
 Body: { githubRepo: "org/repo", issueNumber: 123, issueTitle: "Bug fix..." }
 
 Backend logic:
-1. Find or create Project for "org/repo" (sourceType: 'github_repo')
-2. Find or create Task for issue #123 within that project
+1. Find or create Project for "org/repo" and link it through `project_external_refs` (`provider: 'github'`, `external_type: 'repository'`, `external_key: 'org/repo'`)
+2. Find or create Task for issue #123 within that project and link it through `task_external_refs` (`provider: 'github'`, `external_type: 'issue'`, `external_key: 'org/repo#123'`)
 3. Create TimeEntry (running timer) linked to the task and user
 4. Return the time entry
 ```
 
-This means the **first person to start a timer on any GitHub issue** automatically creates the project and task in the application. Subsequent users on the same issue will find the existing task. No manual setup required.
+This means the **first person to start a timer on any GitHub issue** automatically creates provider-neutral project and task records plus GitHub external refs. Subsequent users on the same issue will find the existing records through those refs. No manual setup required.
 
 ---
 
@@ -316,6 +318,8 @@ Each adapter implements:
 - `syncTasks(projectId, userToken)` — pull tasks from external system into the project
 - `createTask(projectId, data, userToken)` — create task in external system (if supported)
 - `resolveTask(externalRef)` — find or create a local task from an external reference (used by Chrome Extension auto-create)
+
+Adapters MUST keep provider-specific identifiers, URLs, and raw metadata in `project_external_refs` and `task_external_refs`. Core `projects` and `tasks` remain integration-neutral so future providers do not require schema changes to the core work-tracking model.
 
 ---
 

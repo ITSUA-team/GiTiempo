@@ -59,20 +59,22 @@ The NestJS app currently exposes routes directly as `/auth/*`, `/users/*`, etc. 
 
 | Method | Path | Auth | Role | Description |
 |---|---|---|---|---|
-| GET | `/projects` | JWT | Any | List workspace projects. Admins: all projects. PMs: assigned projects only. Members: all active projects. |
-| POST | `/projects` | JWT | Any | Create project (manual or from GitHub) |
-| GET | `/projects/:id` | JWT | Any | Get project details |
-| PATCH | `/projects/:id` | JWT | Admin/PM | Update project (name, color, isActive) |
+| GET | `/projects` | JWT | Any | List workspace projects. Admins: all projects. PMs/members: assigned active projects only. |
+| POST | `/projects` | JWT | Admin/PM | Create a provider-neutral project. PM creators are automatically assigned to the created project. |
+| GET | `/projects/:id` | JWT | Any | Get project details. Admins can read active or inactive projects. PMs/members can read assigned active projects only. |
+| PATCH | `/projects/:id` | JWT | Admin/PM | Update project (name, color, isActive). Admins can update any project; PMs can update assigned projects only. |
 
 ---
 
-## 6. Project Assignments (PM ↔ Project)
+## 6. Project Assignments
 
 | Method | Path | Auth | Role | Description |
 |---|---|---|---|---|
-| GET | `/projects/:id/assignments` | JWT | Admin | List PM assignments for a project |
-| POST | `/projects/:id/assignments` | JWT | Admin | Assign PM to project |
-| DELETE | `/projects/:id/assignments/:userId` | JWT | Admin | Remove PM from project |
+| GET | `/projects/:id/assignments` | JWT | Admin | List user assignments for a project |
+| POST | `/projects/:id/assignments` | JWT | Admin | Assign a `pm` or `member` user to project |
+| DELETE | `/projects/:id/assignments/:userId` | JWT | Admin | Remove a `pm` or `member` assignment from project |
+
+Assignments control project visibility for non-admin users. Admins have implicit access to all projects and do not need assignment rows.
 
 ---
 
@@ -80,11 +82,11 @@ The NestJS app currently exposes routes directly as `/auth/*`, `/users/*`, etc. 
 
 | Method | Path | Auth | Role | Description |
 |---|---|---|---|---|
-| GET | `/projects/:id/tasks` | JWT | Any | List tasks in project (synced + manual) |
-| POST | `/projects/:id/tasks` | JWT | Any | Create manual task (optionally push to GitHub) |
-| GET | `/tasks/:id` | JWT | Any | Get task details |
-| PATCH | `/tasks/:id` | JWT | Any | Update task (title, status, isActive) |
-| POST | `/projects/:id/tasks/sync` | JWT | Any | Trigger sync of tasks from GitHub for this project |
+| GET | `/projects/:id/tasks` | JWT | Any | List tasks for a visible project. Non-admin users need assignment to an active project. |
+| POST | `/projects/:id/tasks` | JWT | Any | Create a provider-neutral task in a visible active project. |
+| GET | `/tasks/:id` | JWT | Any | Get task details when the user has visibility to the task's project. |
+| PATCH | `/tasks/:id` | JWT | Any | Update task (title, status, isActive) when the user has visibility to the task's project. |
+| POST | `/projects/:id/tasks/sync` | JWT | Any | Trigger task sync from the project's configured external provider refs. |
 
 ---
 
@@ -111,7 +113,7 @@ The NestJS app currently exposes routes directly as `/auth/*`, `/users/*`, etc. 
 
 | Method | Path | Auth | Role | Description |
 |---|---|---|---|---|
-| GET | `/projects/:id/time-entries` | JWT | Any | List all time entries for a project. Admins: all projects. PMs: assigned projects only. Members: any project (read-only, no edit/delete). |
+| GET | `/projects/:id/time-entries` | JWT | Any | List all time entries for a project. Admins: all projects. PMs/members: assigned active projects only. Members remain read-only for other users' entries. |
 
 ---
 
