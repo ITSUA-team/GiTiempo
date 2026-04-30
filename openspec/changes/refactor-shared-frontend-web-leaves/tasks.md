@@ -35,7 +35,7 @@
 - [x] 6.1 Add an `admin-web` login view component test that exercises email/password and Google sign-in through the public UI, verifies redirect-to-requested-route or dashboard on success, and verifies visible error handling without navigation on failure.
 - [x] 6.2 Add service-level tests for the shared auth HTTP leaf modules and current-user client helper to verify request paths, auth headers, payload shapes, response parsing, and error propagation against mocked `fetch` boundaries.
 - [x] 6.3 Add service-level tests for the shared auth runtime helper to verify email/password sign-in, Google sign-in, identity-provider sign-out, and no-Firebase-config sign-out behavior.
-- [x] 6.4 Add service-level tests for the shared workspace-link resolver to verify configured app URLs, localhost port fallback, same-origin fallback, no-window fallback, and both user-to-admin and admin-to-user target configurations.
+- [x] 6.4 Add service-level tests for the shared workspace-link resolver to verify configured app URLs, same-origin fallback, no-window fallback, and both user-to-admin and admin-to-user target configurations.
 - [x] 6.5 Add `admin-web` logout/auth-shell behavior tests that verify logout clears guest state after both successful and failed API logout, signs out the identity provider, and preserves visible counterpart-workspace links on login and authenticated shell surfaces.
 
 ## 7. Shared PrimeVue Component And Zod Validation Proposal
@@ -61,10 +61,10 @@
 ## 9. Shared Authenticated Header Proposal
 
 - [x] 9.1 Compare `apps/user-web/src/components/layout/AppShell.vue` and `apps/admin-web/src/components/layout/AdminAppShell.vue` header regions and confirm the header chrome can be parameterized without moving auth-store reads, route names, counterpart href resolution, sidebars, or router-view composition into shared code.
-- [x] 9.2 Add a shared `WorkspaceHeader` component in `@gitiempo/web-shared` for the sticky top bar, product mark/name, workspace name, counterpart workspace link, display name, avatar, and optional settings/profile action.
+- [x] 9.2 Add a shared `WorkspaceHeader` component in `@gitiempo/web-shared` for the sticky top bar, product mark/name, workspace name, counterpart workspace link, display name, and avatar.
 - [x] 9.3 Update both app shells to consume the shared header while keeping app-local auth store access, environment-derived counterpart hrefs, route targets, navigation, and shell composition.
 - [x] 9.4 Run `suggestCanonicalClasses` on new/touched shared header markup and replace arbitrary classes with canonical equivalents when available, including `rounded-[10px]` to `rounded-lg`.
-- [x] 9.5 Add or update component/shell tests for shared header rendering, visible counterpart workspace links, avatar/display identity, and optional settings/profile action behavior.
+- [x] 9.5 Add or update component/shell tests for shared header rendering, visible counterpart workspace links, and avatar/display identity behavior.
 - [x] 9.6 Verify `@gitiempo/web-shared`, `user-web`, and `admin-web` lint, typecheck, and tests after the header extraction.
 
 ## 10. Shared Tailwind Source Registration Proposal

@@ -8,6 +8,16 @@ The frontend codebase MUST place browser-only leaf logic in a shared frontend lo
 - **THEN** the implementation uses one shared frontend module for that behavior
 - **AND** the two SPAs do not keep separate app-local copies of the same leaf logic
 
+#### Scenario: Shared auth runtime behavior stays aligned
+- **WHEN** either SPA performs backend token exchange, token refresh, logout, current-user loading, or identity-provider sign-in/sign-out through behavior that is already identical
+- **THEN** both SPAs use the same shared frontend auth leaf implementation for that identical behavior
+- **AND** the shared extraction does not change the existing auth contract or runtime semantics
+
+#### Scenario: Shared counterpart workspace links stay aligned
+- **WHEN** either SPA renders a link to the counterpart workspace
+- **THEN** it uses the same shared frontend workspace-link resolver
+- **AND** configured counterpart workspace URL behavior stays consistent across both SPAs
+
 ### Requirement: Shared Frontend Extraction Preserves App-Level Ownership
 The frontend codebase MUST keep route-level composition and app-specific orchestration local unless a larger abstraction has at least two stable call sites and no product-specific behavior leakage.
 
@@ -77,11 +87,6 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 - **THEN** the duplicated top bar markup is implemented as a shared prop-driven Vue component
 - **AND** app shells continue to own auth-store reads, environment-derived counterpart URLs, route names, router views, sidebars, and page composition
 
-#### Scenario: Header exposes counterpart workspace and optional action
-- **WHEN** the shared header is rendered by an authenticated app shell
-- **THEN** it exposes a visible counterpart workspace link in the top-right identity area
-- **AND** it can render an optional internal settings/profile action without hard-coding either app's route names in the shared package
-
 #### Scenario: Shared header omits settings/profile action after simplification
 - **WHEN** the shared authenticated header surface is simplified to the invariant identity controls
 - **THEN** the shared header renders the counterpart workspace link, display name, and avatar
@@ -100,22 +105,21 @@ The frontend codebase SHALL extract authenticated shell navigation into `@gitiem
 - **THEN** it uses the current `user-web` text-only nav styling as the base for both sidebar and mobile navigation
 - **AND** it does not render per-item icons in either app
 
-### Requirement: Shared Header Markup Uses Canonical Tailwind Classes
-Shared header components SHALL prefer canonical design-system Tailwind utilities over arbitrary utility values when an equivalent exists.
+### Requirement: Shared Header Markup Uses Documented Tailwind Utilities
+Shared header components SHALL prefer documented design-system Tailwind utilities over one-off arbitrary utility values when an equivalent exists.
 
-#### Scenario: Canonical class review is applied to shared header extraction
-- **WHEN** new or touched shared header markup contains arbitrary utilities
-- **THEN** the implementation checks those classes with `suggestCanonicalClasses`
-- **AND** replaces arbitrary classes with canonical equivalents where available, such as `rounded-[10px]` to `rounded-lg`
-- **AND** keeps arbitrary values only when no documented/canonical equivalent exists or exact design fidelity requires the arbitrary value
+#### Scenario: Shared header prefers documented utility classes
+- **WHEN** new or touched shared header markup uses utility classes
+- **THEN** it prefers documented token and utility classes when an equivalent exists
+- **AND** arbitrary values remain only where exact layout or fidelity requirements cannot be expressed with the documented utility set
 
 ### Requirement: Consuming SPAs Generate Styles For Shared Vue Components
 The frontend codebase SHALL ensure Tailwind CSS scans shared frontend Vue component sources used by both SPAs.
 
 #### Scenario: Shared component classes are generated in app stylesheets
 - **WHEN** `user-web` or `admin-web` imports Vue components from `@gitiempo/web-shared`
-- **THEN** that SPA's Tailwind CSS entry registers the shared package source path with Tailwind v4 `@source`
-- **AND** utility classes that exist only inside shared SFCs or shared PrimeVue `pt` class strings are emitted in the consuming app stylesheet
+- **THEN** the consuming app stylesheet generation includes utility classes that exist only inside shared SFCs or shared PrimeVue `pt` class strings
+- **AND** shared components do not render without their required utility CSS in the consuming SPA
 
 #### Scenario: Shared Tailwind source registration is documented
 - **WHEN** shared frontend component source paths are added to app Tailwind scanning
@@ -129,12 +133,7 @@ The frontend codebase SHALL use frontend-scoped Tailwind ESLint rules to surface
 - **THEN** they apply to `apps/user-web/src`, `apps/admin-web/src`, and `packages/web-shared/src`
 - **AND** non-frontend packages do not receive Tailwind lint noise
 
-#### Scenario: Class ordering warnings are autofixed before manual cleanup
-- **WHEN** Tailwind lint reports class-order warnings in touched shared/frontend templates
-- **THEN** the implementation applies autofix-first ordering cleanup
-- **AND** follows with a small manual pass only for safe canonical replacements that preserve the current UI
-
-#### Scenario: Fidelity-specific arbitrary values may remain
-- **WHEN** a warned class uses an arbitrary value with no equivalent canonical utility or where the canonical scale would change the approved layout
-- **THEN** the implementation may keep that arbitrary value
-- **AND** examples include `border-l-[3px]` and `min-h-[calc(100vh-4rem)]`
+#### Scenario: Shared frontend lint highlights safe cleanup opportunities
+- **WHEN** Tailwind lint reports class-order or obvious utility cleanup warnings in touched shared/frontend templates
+- **THEN** the implementation resolves or intentionally retains those warnings with current UI fidelity in mind
+- **AND** the warning surface stays focused on frontend/shared markup rather than unrelated packages

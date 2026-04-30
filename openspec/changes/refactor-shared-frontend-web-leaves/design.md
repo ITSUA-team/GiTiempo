@@ -77,10 +77,9 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 ### D3d. Extract duplicated authenticated header chrome without sharing shell orchestration
 
 - The authenticated headers in `apps/user-web/src/components/layout/AppShell.vue` and `apps/admin-web/src/components/layout/AdminAppShell.vue` should be promoted into a shared `WorkspaceHeader` component when their structure remains identical after parameterization.
-- The shared header should own only presentational chrome: the sticky top bar, product mark, product name, workspace name, counterpart workspace link, display name, avatar, and optional settings/profile action.
+- The shared header should own only presentational chrome: the sticky top bar, product mark, product name, workspace name, counterpart workspace link, display name, and avatar.
 - Consuming app shells should continue owning auth-store reads, route names, route targets, and counterpart href resolution from `VITE_USER_APP_URL` / `VITE_ADMIN_APP_URL`.
-- The shared header should accept typed props for `workspaceName`, `displayName`, `userInitials`, `counterpartHref`, `counterpartLabel`, optional product/logo labels, and an optional internal settings/profile route target.
-- The missing top-right settings/profile action required by `docs/ui/layout.md` should be represented by an optional header action so `admin-web` can point to Settings and `user-web` can point to Profile if product direction approves that mapping.
+- The shared header should accept typed props for `workspaceName`, `displayName`, `userInitials`, `counterpartHref`, `counterpartLabel`, and optional product/logo labels.
 - Full authenticated shells remain app-local; this extraction should not move sidebars, route maps, router views, auth stores, or environment handling into `@gitiempo/web-shared`.
 - **Why:** the header is now a stable repeated shell sub-region with two concrete call sites, while the rest of the shell still contains app-specific navigation and route composition.
 
@@ -109,11 +108,11 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 - `AdminAppShell.vue` should drop Heroicon-based navigation rendering and adopt the same text-only visual language as `user-web`.
 - **Why:** the nav markup is now a repeated shell leaf with two concrete call sites, but route maps and app-specific nav contents still belong to each app.
 
-### D3h. Remove the shared header settings/profile action
+### D3h. Shared header omits app-specific settings/profile action
 
-- The shared authenticated header should no longer expose an optional internal settings/profile action.
+- The shared authenticated header should not expose an internal settings/profile action.
 - `WorkspaceHeader` should keep only the product/workspace identity block on the left and the counterpart workspace link, display name, and avatar on the right.
-- Consuming shells should stop passing settings/profile route targets into the shared header.
+- Consuming shells should not pass settings/profile route targets into the shared header.
 - **Why:** the desired shared shell chrome is a simpler invariant surface, while app-specific settings/profile entry points can be handled elsewhere in each SPA.
 
 ### D3i. Add targeted Tailwind ESLint guidance for shared frontend markup
@@ -171,6 +170,5 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 
 - Which first shared UI component should lead the migration: the auth sign-in form is the strongest candidate because both SPAs have the same structure and behavior with only copy/placeholder differences.
 - Whether the login hero/supporting-card region remains stable enough for a shared prop-driven component once the real product copy starts to diverge.
-- Whether the user app header settings icon should link to Profile, while the admin app header icon links to Settings.
 - Whether shared mobile bottom navigation should keep the current admin limit of five items or render all text-only items consistently with the chosen user-web base.
 - Whether `WorkspaceHeaderIdentity.vue` still deserves a separate shared component after the header simplification, or should be folded into `WorkspaceHeader` during the Tailwind cleanup pass.

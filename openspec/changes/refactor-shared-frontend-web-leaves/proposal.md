@@ -29,11 +29,10 @@ Follow-up inspection also found one deprecated Zod error helper usage and a few 
 ## Capabilities
 
 ### New Capabilities
-- `frontend-shared-leaves`: defines which identical cross-SPA frontend utilities, shared Vue components, browser-only Zod form schemas, and validation helper patterns must be shared instead of maintained as duplicated app-local copies.
+- `frontend-shared-leaves`: defines the shared cross-SPA frontend runtime behavior, counterpart-workspace link behavior, identical shared utilities, shared Vue components, browser-only Zod form schemas, and validation helper patterns that must live in one shared frontend surface instead of drifting across duplicated app-local copies.
 
 ### Modified Capabilities
-- `frontend-auth`: require both SPAs to consume the same shared frontend auth leaf utilities where the login, refresh, logout, and current-user client behavior is identical.
-- `frontend-routing`: require both SPAs to consume the same shared cross-app workspace-link resolution behavior where navigation to the counterpart SPA follows the same rules.
+- None.
 
 ## Impact
 
