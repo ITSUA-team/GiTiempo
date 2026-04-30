@@ -17,7 +17,7 @@ import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { tasks } from '../schemas/tasks.schema';
 
-type TaskRow = typeof tasks.$inferSelect;
+export type TaskRow = typeof tasks.$inferSelect;
 
 @Injectable()
 export class TasksService {
@@ -96,7 +96,7 @@ export class TasksService {
     return this.toResponse(row);
   }
 
-  private async requireVisibleTask(
+  async requireVisibleTask(
     user: AuthUser,
     taskId: string,
   ): Promise<{ task: TaskRow; project: ProjectRow }> {
@@ -112,6 +112,20 @@ export class TasksService {
       row.projectId,
     );
     return { task: row, project };
+  }
+
+  async requireTrackableTask(
+    user: AuthUser,
+    taskId: string,
+  ): Promise<{ task: TaskRow; project: ProjectRow }> {
+    const result = await this.requireVisibleTask(user, taskId);
+    if (!result.project.isActive) {
+      throw new UnprocessableEntityException('Project is inactive');
+    }
+    if (!result.task.isActive) {
+      throw new UnprocessableEntityException('Task is inactive');
+    }
+    return result;
   }
 
   private toResponse(row: TaskRow): TaskResponse {

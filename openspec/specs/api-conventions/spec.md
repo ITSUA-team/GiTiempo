@@ -3,9 +3,7 @@
 ## Purpose
 
 Define the cross-layer API contract conventions that GiTiempo clients and the backend should follow consistently.
-
 ## Requirements
-
 ### Requirement: JSON REST API Surface
 
 The API SHALL expose JSON-based REST endpoints beneath the `/api` base path.
@@ -39,7 +37,7 @@ The API MUST return a standard error body with status code, error label, and mes
 
 ### Requirement: Shared Pagination And Filter Vocabulary
 
-List and report endpoints SHOULD use a consistent shared query vocabulary for pagination and filtering.
+List and report endpoints MUST use a consistent shared query vocabulary for pagination and filtering.
 
 #### Scenario: Paginated list request
 
@@ -52,3 +50,11 @@ List and report endpoints SHOULD use a consistent shared query vocabulary for pa
 - GIVEN a client filters time entries or reports
 - WHEN date filtering is supplied
 - THEN the request uses the shared `dateFrom` and `dateTo` parameter names
+
+#### Scenario: Time-entry list started-at filtering
+
+- GIVEN a client filters own or project time-entry lists by date
+- WHEN `dateFrom` or `dateTo` is supplied
+- THEN `dateFrom` includes entries whose start time is equal to the boundary
+- AND `dateTo` excludes entries whose start time is equal to the boundary
+
