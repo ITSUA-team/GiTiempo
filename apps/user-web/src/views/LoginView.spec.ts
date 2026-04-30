@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory } from "vue-router";
 import PrimeVue from "primevue/config";
@@ -72,6 +72,11 @@ describe("LoginView", () => {
   beforeEach(() => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
+    vi.stubEnv("VITE_ADMIN_APP_URL", "https://admin.example.test/login");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("signs in with email/password through the UI and redirects to the requested route", async () => {
@@ -124,6 +129,8 @@ describe("LoginView", () => {
     const workspaceLink = wrapper.get("a");
 
     expect(workspaceLink.text()).toContain("Open the admin workspace");
-    expect(workspaceLink.attributes("href")).toBe("http://localhost:5174");
+    expect(workspaceLink.attributes("href")).toBe(
+      "https://admin.example.test/login",
+    );
   });
 });

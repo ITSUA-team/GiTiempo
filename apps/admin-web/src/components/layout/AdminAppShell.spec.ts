@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
@@ -13,6 +13,11 @@ import { useAuthStore } from "@/stores/auth";
 describe("AdminAppShell", () => {
   beforeEach(() => {
     clearRefreshToken();
+    vi.stubEnv("VITE_USER_APP_URL", "https://user.example.test/login");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("preserves the visible user workspace link and shared navigation", async () => {
@@ -34,7 +39,9 @@ describe("AdminAppShell", () => {
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
       },
     });
-    const workspaceLink = wrapper.get('a[href="http://localhost:5173"]');
+    const workspaceLink = wrapper.get(
+      'a[href="https://user.example.test/login"]',
+    );
     const settingsLinks = wrapper.findAll('a[href="/settings"]');
 
     expect(workspaceLink.text()).toBe("User workspace");

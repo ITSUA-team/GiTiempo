@@ -8,9 +8,10 @@ import WorkspaceHeader from "./WorkspaceHeader.vue";
 
 describe("WorkspaceHeader", () => {
   it("renders workspace identity and counterpart link", () => {
+    const counterpartHref = "https://admin.example.test/login";
     const wrapper = mount(WorkspaceHeader, {
       props: {
-        counterpartHref: "http://localhost:5174",
+        counterpartHref,
         counterpartLabel: "Admin workspace",
         displayName: "Alexey Tsukanov",
         userInitials: "AT",
@@ -25,7 +26,7 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.text()).toContain("Workspace Alpha");
     expect(wrapper.text()).toContain("Alexey Tsukanov");
     expect(wrapper.text()).toContain("AT");
-    expect(wrapper.get('a[href="http://localhost:5174"]').text()).toBe(
+    expect(wrapper.get(`a[href="${counterpartHref}"]`).text()).toBe(
       "Admin workspace",
     );
     expect(wrapper.findAll("[aria-label]")).toHaveLength(1);

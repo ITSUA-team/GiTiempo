@@ -19,7 +19,6 @@ const errorMessage = shallowRef<string | null>(null);
 const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: import.meta.env.VITE_USER_APP_URL,
   fallbackPath: "/login",
-  localhostPort: "5173",
 });
 const introBadgeItems = [
   "Guest-only admin entry",

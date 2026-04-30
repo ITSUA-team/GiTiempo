@@ -12,7 +12,6 @@ const authStore = useAuthStore();
 const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: import.meta.env.VITE_ADMIN_APP_URL,
   fallbackPath: "/login",
-  localhostPort: "5174",
 });
 
 const navItems = computed(() => [

@@ -19,7 +19,6 @@ const errorMessage = shallowRef<string | null>(null);
 const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: import.meta.env.VITE_ADMIN_APP_URL,
   fallbackPath: "/login",
-  localhostPort: "5174",
 });
 const introBadgeItems = ["Secure workspace sign-in", "No dark mode for MVP"];
 const introFeatureCards = [

@@ -14,7 +14,7 @@ export default defineConfig({
     environment: "jsdom",
     environmentOptions: {
       jsdom: {
-        url: "http://localhost:5174/login",
+        url: "https://admin.example.test/login",
       },
     },
     globals: true,
