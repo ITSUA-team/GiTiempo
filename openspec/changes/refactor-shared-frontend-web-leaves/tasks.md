@@ -57,3 +57,12 @@
 - [x] 8.3 Compare `apps/user-web/src/components/app/PlaceholderPage.vue` and `apps/admin-web/src/components/app/PlaceholderPage.vue` and extract a shared prop-driven placeholder scaffold into `@gitiempo/web-shared` if no meaningful structural divergence exists.
 - [x] 8.4 Compare the login hero/supporting-card regions in `apps/user-web/src/views/LoginView.vue` and `apps/admin-web/src/views/LoginView.vue` and extract any stable presentational micro-components that remain duplicated after parameterization.
 - [x] 8.5 Verify affected package/app lint, typecheck, and tests after any follow-up extraction or deprecated-API cleanup.
+
+## 9. Shared Authenticated Header Proposal
+
+- [x] 9.1 Compare `apps/user-web/src/components/layout/AppShell.vue` and `apps/admin-web/src/components/layout/AdminAppShell.vue` header regions and confirm the header chrome can be parameterized without moving auth-store reads, route names, counterpart href resolution, sidebars, or router-view composition into shared code.
+- [x] 9.2 Add a shared `WorkspaceHeader` component in `@gitiempo/web-shared` for the sticky top bar, product mark/name, workspace name, counterpart workspace link, display name, avatar, and optional settings/profile action.
+- [x] 9.3 Update both app shells to consume the shared header while keeping app-local auth store access, environment-derived counterpart hrefs, route targets, navigation, and shell composition.
+- [x] 9.4 Run `suggestCanonicalClasses` on new/touched shared header markup and replace arbitrary classes with canonical equivalents when available, including `rounded-[10px]` to `rounded-lg`.
+- [x] 9.5 Add or update component/shell tests for shared header rendering, visible counterpart workspace links, avatar/display identity, and optional settings/profile action behavior.
+- [x] 9.6 Verify `@gitiempo/web-shared`, `user-web`, and `admin-web` lint, typecheck, and tests after the header extraction.

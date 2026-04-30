@@ -9,7 +9,7 @@ import {
 } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
-import { WorkspaceHeaderIdentity } from "@gitiempo/web-shared";
+import { WorkspaceHeader } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { routeNames } from "@/router";
@@ -39,32 +39,15 @@ function isActive(name: string): boolean {
 
 <template>
   <div class="min-h-screen bg-app-bg text-text-dark">
-    <header
-      class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-divider bg-surface px-4 sm:px-6"
-    >
-      <div class="flex items-center gap-3">
-        <div
-          class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent-tint text-[12px] font-semibold text-brand"
-        >
-          GT
-        </div>
-        <div class="flex flex-col gap-[2px]">
-          <p class="text-[16px] font-semibold">
-            GiTiempo
-          </p>
-          <p class="text-xs text-text-muted">
-            {{ authStore.workspaceName }}
-          </p>
-        </div>
-      </div>
-
-      <WorkspaceHeaderIdentity
-        :counterpart-href="userWorkspaceHref"
-        counterpart-label="User workspace"
-        :display-name="authStore.displayName"
-        :user-initials="authStore.userInitials"
-      />
-    </header>
+    <WorkspaceHeader
+      :counterpart-href="userWorkspaceHref"
+      counterpart-label="User workspace"
+      :display-name="authStore.displayName"
+      :settings-to="{ name: routeNames.settings }"
+      settings-label="Open workspace settings"
+      :user-initials="authStore.userInitials"
+      :workspace-name="authStore.workspaceName"
+    />
 
     <div class="flex min-h-[calc(100vh-4rem)]">
       <aside
@@ -85,7 +68,7 @@ function isActive(name: string): boolean {
             <component
               :is="item.icon"
               :class="[
-                'h-5 w-5 shrink-0',
+                'size-5 shrink-0',
                 isActive(item.name) ? 'text-brand' : 'text-text-muted',
               ]"
             />
@@ -111,7 +94,7 @@ function isActive(name: string): boolean {
       >
         <component
           :is="item.icon"
-          class="h-5 w-5"
+          class="size-5"
         />
         <span>{{ item.label }}</span>
       </RouterLink>

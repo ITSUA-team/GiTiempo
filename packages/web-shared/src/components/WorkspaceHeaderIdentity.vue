@@ -28,7 +28,7 @@ const props = defineProps<{
       class="size-8"
       aria-label="Account profile"
       :pt="{
-        root: 'bg-accent-tint text-[12px] font-semibold text-brand',
+        root: 'bg-accent-tint text-xs font-semibold text-brand',
       }"
     />
   </div>

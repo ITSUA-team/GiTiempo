@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
-import { WorkspaceHeaderIdentity } from "@gitiempo/web-shared";
+import { WorkspaceHeader } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { routeNames } from "@/router";
@@ -50,32 +50,15 @@ function isActive(name: string): boolean {
 
 <template>
   <div class="min-h-screen bg-app-bg text-text-dark">
-    <header
-      class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-divider bg-surface px-4 sm:px-6"
-    >
-      <div class="flex items-center gap-3">
-        <div
-          class="flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent-tint text-[12px] font-semibold text-brand"
-        >
-          GT
-        </div>
-        <div class="flex flex-col gap-[2px]">
-          <p class="text-[16px] font-semibold">
-            GiTiempo
-          </p>
-          <p class="text-xs text-text-muted">
-            {{ authStore.workspaceName }}
-          </p>
-        </div>
-      </div>
-
-      <WorkspaceHeaderIdentity
-        :counterpart-href="adminWorkspaceHref"
-        counterpart-label="Admin workspace"
-        :display-name="authStore.displayName"
-        :user-initials="authStore.userInitials"
-      />
-    </header>
+    <WorkspaceHeader
+      :counterpart-href="adminWorkspaceHref"
+      counterpart-label="Admin workspace"
+      :display-name="authStore.displayName"
+      :settings-to="{ name: routeNames.profile }"
+      settings-label="Open profile settings"
+      :user-initials="authStore.userInitials"
+      :workspace-name="authStore.workspaceName"
+    />
 
     <div class="flex min-h-[calc(100vh-4rem)]">
       <aside

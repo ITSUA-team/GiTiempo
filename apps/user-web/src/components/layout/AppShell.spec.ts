@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
@@ -6,20 +8,20 @@ import { createMemoryHistory } from "vue-router";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
-import AdminAppShell from "./AdminAppShell.vue";
+import AppShell from "./AppShell.vue";
 import { createAppRouter } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
-describe("AdminAppShell", () => {
+describe("AppShell", () => {
   beforeEach(() => {
     clearRefreshToken();
   });
 
-  it("preserves the visible user workspace link and settings action", async () => {
+  it("preserves the visible admin workspace link and profile action", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore(pinia);
-    authStore.accessToken = "admin-access-token";
+    authStore.accessToken = "user-access-token";
     authStore.bootstrapComplete = true;
 
     const router = createAppRouter({
@@ -29,17 +31,15 @@ describe("AdminAppShell", () => {
     await router.push("/");
     await router.isReady();
 
-    const wrapper = mount(AdminAppShell, {
+    const wrapper = mount(AppShell, {
       global: {
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
       },
     });
-    const workspaceLink = wrapper.get('a[href="http://localhost:5173"]');
-    const settingsLink = wrapper.get(
-      'a[aria-label="Open workspace settings"]',
-    );
+    const workspaceLink = wrapper.get('a[href="http://localhost:5174"]');
+    const profileLink = wrapper.get('a[aria-label="Open profile settings"]');
 
-    expect(workspaceLink.text()).toBe("User workspace");
-    expect(settingsLink.attributes("href")).toBe("/settings");
+    expect(workspaceLink.text()).toBe("Admin workspace");
+    expect(profileLink.attributes("href")).toBe("/profile");
   });
 });

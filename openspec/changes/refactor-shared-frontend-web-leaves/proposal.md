@@ -16,6 +16,8 @@ Follow-up inspection also found one deprecated Zod error helper usage and a few 
 - Replace deprecated Zod error formatting helpers with non-deprecated Zod v4 APIs in shared frontend validation code.
 - Evaluate and extract additional repeated user/admin micro-components such as placeholder-page scaffolds and login hero/supporting-card blocks when the structure is still stable after parameterization.
 - Adopt `@primevue/forms` for shared PrimeVue-based auth forms so Zod resolver wiring, field state, and error rendering are standardized across both SPAs.
+- Evaluate the duplicated authenticated header chrome in both SPAs and extract a shared prop-driven header component when app-local stores, route names, and environment-derived counterpart URLs can remain outside the shared package.
+- Run a canonical Tailwind class review on new or touched shared header components and replace arbitrary utilities with documented equivalents when they exist.
 - Keep app-specific router, store, page, and role-specific UX behavior local unless two concrete call sites justify sharing.
 - Avoid backend, API contract, database, OpenAPI, or auth-semantics changes as part of this change.
 

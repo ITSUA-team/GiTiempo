@@ -68,3 +68,25 @@ The frontend codebase SHALL review repeated user/admin presentational micro-bloc
 - **WHEN** both SPAs keep materially identical placeholder-page scaffolds with only copy differences
 - **THEN** that scaffold should be considered for extraction into a shared prop-driven Vue component
 - **AND** app-specific route ownership and copy remain in the consuming app
+
+### Requirement: Shared Authenticated Header Chrome Is Extractable
+The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/web-shared` when the user/admin header structure is identical and all app-specific orchestration can remain local.
+
+#### Scenario: Header chrome is shared without sharing shell orchestration
+- **WHEN** `user-web` and `admin-web` render the same authenticated top bar structure with only workspace, identity, counterpart-link, and optional action differences
+- **THEN** the duplicated top bar markup is implemented as a shared prop-driven Vue component
+- **AND** app shells continue to own auth-store reads, environment-derived counterpart URLs, route names, router views, sidebars, and page composition
+
+#### Scenario: Header exposes counterpart workspace and optional action
+- **WHEN** the shared header is rendered by an authenticated app shell
+- **THEN** it exposes a visible counterpart workspace link in the top-right identity area
+- **AND** it can render an optional internal settings/profile action without hard-coding either app's route names in the shared package
+
+### Requirement: Shared Header Markup Uses Canonical Tailwind Classes
+Shared header components SHALL prefer canonical design-system Tailwind utilities over arbitrary utility values when an equivalent exists.
+
+#### Scenario: Canonical class review is applied to shared header extraction
+- **WHEN** new or touched shared header markup contains arbitrary utilities
+- **THEN** the implementation checks those classes with `suggestCanonicalClasses`
+- **AND** replaces arbitrary classes with canonical equivalents where available, such as `rounded-[10px]` to `rounded-lg`
+- **AND** keeps arbitrary values only when no documented/canonical equivalent exists or exact design fidelity requires the arbitrary value

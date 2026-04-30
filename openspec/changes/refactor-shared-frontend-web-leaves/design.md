@@ -74,6 +74,24 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 - Extract these only if the user/admin variants can remain prop-driven without pushing role-specific copy or route semantics into the shared package.
 - **Why:** these are the clearest remaining duplicated presentational blocks with two stable call sites.
 
+### D3d. Extract duplicated authenticated header chrome without sharing shell orchestration
+
+- The authenticated headers in `apps/user-web/src/components/layout/AppShell.vue` and `apps/admin-web/src/components/layout/AdminAppShell.vue` should be promoted into a shared `WorkspaceHeader` component when their structure remains identical after parameterization.
+- The shared header should own only presentational chrome: the sticky top bar, product mark, product name, workspace name, counterpart workspace link, display name, avatar, and optional settings/profile action.
+- Consuming app shells should continue owning auth-store reads, route names, route targets, and counterpart href resolution from `VITE_USER_APP_URL` / `VITE_ADMIN_APP_URL`.
+- The shared header should accept typed props for `workspaceName`, `displayName`, `userInitials`, `counterpartHref`, `counterpartLabel`, optional product/logo labels, and an optional internal settings/profile route target.
+- The missing top-right settings/profile action required by `docs/ui/layout.md` should be represented by an optional header action so `admin-web` can point to Settings and `user-web` can point to Profile if product direction approves that mapping.
+- Full authenticated shells remain app-local; this extraction should not move sidebars, route maps, router views, auth stores, or environment handling into `@gitiempo/web-shared`.
+- **Why:** the header is now a stable repeated shell sub-region with two concrete call sites, while the rest of the shell still contains app-specific navigation and route composition.
+
+### D3e. Review new shared header classes for canonical Tailwind utilities
+
+- New or touched shared header components should be checked with `suggestCanonicalClasses` before closure.
+- Arbitrary utilities should be replaced with documented canonical classes when an equivalent exists, such as `rounded-[10px]` becoming `rounded-lg`.
+- Keep arbitrary utilities only when no documented/canonical equivalent exists or exact design fidelity requires the arbitrary value.
+- Apply this review to `WorkspaceHeader`, any retained `WorkspaceHeaderIdentity` markup, and touched header markup in both app shells.
+- **Why:** shared components become design-system precedents, so they should prefer canonical token utilities over one-off arbitrary classes.
+
 ### D4. Preserve app-local orchestration boundaries
 
 - `stores/auth.ts`, `router/index.ts`, route maps, and app-specific pages remain local even when they consume shared leaf modules.
@@ -103,9 +121,12 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 5. Add or move shared browser-only Zod form schemas for extracted shared forms.
 6. Remove deprecated Zod helper usage from the shared validation path.
 7. Evaluate duplicate placeholder/login-presentational blocks for extraction into `@gitiempo/web-shared`.
-8. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
+8. Evaluate duplicated authenticated header chrome for extraction into a shared prop-driven header component.
+9. Run canonical Tailwind class review on new/touched shared header markup and replace canonical equivalents before closure.
+10. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
 
 ## Open Questions
 
 - Which first shared UI component should lead the migration: the auth sign-in form is the strongest candidate because both SPAs have the same structure and behavior with only copy/placeholder differences.
 - Whether the login hero/supporting-card region remains stable enough for a shared prop-driven component once the real product copy starts to diverge.
+- Whether the user app header settings icon should link to Profile, while the admin app header icon links to Settings.
