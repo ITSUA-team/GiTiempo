@@ -116,6 +116,18 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 - Consuming shells should stop passing settings/profile route targets into the shared header.
 - **Why:** the desired shared shell chrome is a simpler invariant surface, while app-specific settings/profile entry points can be handled elsewhere in each SPA.
 
+### D3i. Add targeted Tailwind ESLint guidance for shared frontend markup
+
+- Add `eslint-plugin-tailwindcss` rules only to the frontend Vue/TS surfaces that render shared UI: `apps/user-web/src`, `apps/admin-web/src`, and `packages/web-shared/src`.
+- Start with warning-level rules that are useful without forcing broad visual churn:
+  - `tailwindcss/classnames-order`
+  - `tailwindcss/enforces-shorthand`
+  - `tailwindcss/no-unnecessary-arbitrary-value`
+- Use autofix for class ordering first, then do a small manual pass for safe canonical replacements that preserve the current design intent.
+- Safe manual replacements include cases such as `h-10 w-10` to `size-10`, `gap-[6px]` to `gap-1.5`, `rounded-[10px]` to `rounded-lg`, and `text-[12px]` to `text-xs` when the resulting token matches current UI expectations.
+- Keep arbitrary values such as `border-l-[3px]`, `min-h-[calc(100vh-4rem)]`, and layout-specific width constraints when the canonical Tailwind scale would change the approved layout or visual weight.
+- **Why:** the shared components are becoming the precedent for frontend shell and auth markup, so lint should surface non-canonical Tailwind usage early while still allowing exact design fidelity where needed.
+
 ### D4. Preserve app-local orchestration boundaries
 
 - `stores/auth.ts`, `router/index.ts`, route maps, and app-specific pages remain local even when they consume shared leaf modules.
@@ -150,7 +162,10 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 10. Register shared component source paths with Tailwind in both SPA CSS entries and document the requirement.
 11. Evaluate duplicated authenticated navigation for extraction into a shared text-only navigation component using `user-web` as the base.
 12. Remove the shared header settings/profile action and update consuming shells/tests accordingly.
-13. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
+13. Add targeted Tailwind ESLint rules for shared frontend markup and verify lint output stays scoped to the frontend packages.
+14. Autofix class ordering warnings in `@gitiempo/web-shared`, `user-web`, and `admin-web`, then apply a small manual pass for safe canonical replacements.
+15. Re-run focused frontend lint checks and confirm any remaining warnings are intentional fidelity exceptions.
+16. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
 
 ## Open Questions
 
@@ -158,3 +173,4 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 - Whether the login hero/supporting-card region remains stable enough for a shared prop-driven component once the real product copy starts to diverge.
 - Whether the user app header settings icon should link to Profile, while the admin app header icon links to Settings.
 - Whether shared mobile bottom navigation should keep the current admin limit of five items or render all text-only items consistently with the chosen user-web base.
+- Whether `WorkspaceHeaderIdentity.vue` still deserves a separate shared component after the header simplification, or should be folded into `WorkspaceHeader` during the Tailwind cleanup pass.

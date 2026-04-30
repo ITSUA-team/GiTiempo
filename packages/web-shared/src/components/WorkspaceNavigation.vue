@@ -19,7 +19,7 @@ function isActive(name: string): boolean {
 
 <template>
   <aside
-    class="hidden border-r border-divider bg-surface sm:flex sm:w-52 sm:flex-col lg:w-60"
+    class="border-divider bg-surface hidden border-r sm:flex sm:w-52 sm:flex-col lg:w-60"
   >
     <nav class="flex flex-1 flex-col gap-1 py-4">
       <RouterLink
@@ -29,7 +29,7 @@ function isActive(name: string): boolean {
         :class="[
           'flex h-11 items-center rounded-r-md px-4 text-sm font-medium transition-colors',
           isActive(item.name)
-            ? 'border-l-[3px] border-brand bg-accent-tint text-brand font-semibold'
+            ? 'border-brand bg-accent-tint text-brand border-l-[3px] font-semibold'
             : 'text-text-dark hover:bg-app-bg',
         ]"
       >
@@ -39,7 +39,7 @@ function isActive(name: string): boolean {
   </aside>
 
   <nav
-    class="fixed inset-x-0 bottom-0 z-20 flex h-16 border-t border-divider bg-surface sm:hidden"
+    class="border-divider bg-surface fixed inset-x-0 bottom-0 z-20 flex h-16 border-t sm:hidden"
   >
     <RouterLink
       v-for="item in props.items"

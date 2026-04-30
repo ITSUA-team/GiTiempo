@@ -83,7 +83,7 @@ async function handleGoogleSignIn(): Promise<void> {
 </script>
 
 <template>
-  <div class="min-h-screen bg-app-bg text-text-dark">
+  <div class="bg-app-bg text-text-dark min-h-screen">
     <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
       <AuthIntroPanel
         workspace-label="Admin workspace access"
@@ -98,7 +98,7 @@ async function handleGoogleSignIn(): Promise<void> {
       />
 
       <section
-        class="flex w-full items-center justify-center bg-app-bg px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
+        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
       >
         <AuthSignInForm
           title="Admin sign in"

@@ -82,3 +82,12 @@
 - [x] 11.4 Update `AppShell.vue` and `AdminAppShell.vue` to consume the shared navigation component, dropping admin nav icons and keeping app-local nav item arrays, optional `to` overrides, active-state logic, and `RouterView` composition.
 - [x] 11.5 Add or update component/shell tests for shared navigation rendering, active-state styling, mobile navigation behavior, and header simplification after removing the shared settings/profile action.
 - [x] 11.6 Verify `@gitiempo/web-shared`, `user-web`, and `admin-web` lint, typecheck, and tests after the navigation extraction.
+
+## 12. Tailwind ESLint Cleanup Follow-Up
+
+- [x] 12.1 Add frontend-scoped Tailwind ESLint rules in `eslint.config.mjs` for `apps/user-web/src`, `apps/admin-web/src`, and `packages/web-shared/src`, keeping the rules at warning level initially.
+- [x] 12.2 Run targeted frontend lint commands and confirm the new Tailwind warnings are limited to shared/frontend surfaces rather than non-frontend packages.
+- [x] 12.3 Autofix `tailwindcss/classnames-order` warnings in `packages/web-shared/src/components/*`, `apps/user-web/src/components/layout/AppShell.vue`, `apps/admin-web/src/components/layout/AdminAppShell.vue`, `apps/user-web/src/views/LoginView.vue`, `apps/admin-web/src/views/LoginView.vue`, and `apps/user-web/src/views/ProfileView.vue`.
+- [x] 12.4 Apply a small manual pass for safe canonical replacements surfaced by the warning review, including cases such as `h-10 w-10` to `size-10`, `gap-[6px]` to `gap-1.5`, `rounded-[10px]` to `rounded-lg`, and `text-[12px]` to `text-xs` only where visual parity is preserved.
+- [x] 12.5 Keep intentional arbitrary values such as `border-l-[3px]`, `min-h-[calc(100vh-4rem)]`, and layout-specific width constraints when canonical utilities would change the approved UI.
+- [x] 12.6 Re-run `pnpm --filter @gitiempo/web-shared lint`, `pnpm --filter user-web lint`, `pnpm --filter admin-web lint`, and `pnpm lint`, then confirm the remaining Tailwind warnings are either resolved or explicitly intentional.

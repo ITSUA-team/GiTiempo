@@ -26,7 +26,7 @@ const navItems = computed(() => [
 </script>
 
 <template>
-  <div class="min-h-screen bg-app-bg text-text-dark">
+  <div class="bg-app-bg text-text-dark min-h-screen">
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"

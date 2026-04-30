@@ -47,13 +47,13 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
 </script>
 
 <template>
-  <div class="w-full rounded-[10px] bg-surface p-6 shadow-card">
+  <div class="bg-surface shadow-card w-full rounded-lg p-6">
     <div class="flex flex-col gap-5">
-      <div class="flex flex-col gap-[6px]">
-        <p class="text-[28px] font-semibold text-text-dark">
+      <div class="flex flex-col gap-1.5">
+        <p class="text-text-dark text-[28px] font-semibold">
           {{ props.title }}
         </p>
-        <p class="text-sm text-text-muted">
+        <p class="text-text-muted text-sm">
           {{ props.description }}
         </p>
       </div>
@@ -68,7 +68,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
         <div class="flex flex-col gap-1">
           <label
             for="sign-in-email"
-            class="text-[13px] font-medium text-text-dark"
+            class="text-text-dark text-[13px] font-medium"
           >
             Email
           </label>
@@ -97,7 +97,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
         <div class="flex flex-col gap-1">
           <label
             for="sign-in-password"
-            class="text-[13px] font-medium text-text-dark"
+            class="text-text-dark text-[13px] font-medium"
           >
             Password
           </label>
@@ -126,7 +126,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
 
         <p
           v-if="props.errorMessage"
-          class="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          class="border-destructive/20 bg-destructive/5 text-destructive rounded-sm border px-3 py-2 text-sm"
           data-testid="sign-in-error"
         >
           {{ props.errorMessage }}
@@ -155,7 +155,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
         </div>
       </Form>
 
-      <p class="text-xs leading-5 text-text-muted">
+      <p class="text-text-muted text-xs leading-5">
         By continuing, you agree to your workspace authentication policy.
       </p>
     </div>

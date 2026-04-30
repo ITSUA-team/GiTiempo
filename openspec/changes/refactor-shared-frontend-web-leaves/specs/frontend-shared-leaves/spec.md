@@ -120,3 +120,21 @@ The frontend codebase SHALL ensure Tailwind CSS scans shared frontend Vue compon
 #### Scenario: Shared Tailwind source registration is documented
 - **WHEN** shared frontend component source paths are added to app Tailwind scanning
 - **THEN** the UI setup documentation records the requirement so future shared UI packages or moved components receive the same source registration
+
+### Requirement: Shared Frontend Tailwind Markup Is Reviewed With Frontend-Scoped Linting
+The frontend codebase SHALL use frontend-scoped Tailwind ESLint rules to surface class ordering and obvious canonical utility cleanup opportunities in shared frontend markup.
+
+#### Scenario: Tailwind lint rules stay scoped to shared frontend surfaces
+- **WHEN** Tailwind ESLint rules are enabled for this refactor
+- **THEN** they apply to `apps/user-web/src`, `apps/admin-web/src`, and `packages/web-shared/src`
+- **AND** non-frontend packages do not receive Tailwind lint noise
+
+#### Scenario: Class ordering warnings are autofixed before manual cleanup
+- **WHEN** Tailwind lint reports class-order warnings in touched shared/frontend templates
+- **THEN** the implementation applies autofix-first ordering cleanup
+- **AND** follows with a small manual pass only for safe canonical replacements that preserve the current UI
+
+#### Scenario: Fidelity-specific arbitrary values may remain
+- **WHEN** a warned class uses an arbitrary value with no equivalent canonical utility or where the canonical scale would change the approved layout
+- **THEN** the implementation may keep that arbitrary value
+- **AND** examples include `border-l-[3px]` and `min-h-[calc(100vh-4rem)]`

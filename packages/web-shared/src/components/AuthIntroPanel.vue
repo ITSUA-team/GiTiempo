@@ -19,29 +19,29 @@ const props = defineProps<{
 
 <template>
   <section
-    class="flex flex-1 flex-col justify-between bg-surface px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
+    class="bg-surface flex flex-1 flex-col justify-between px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
   >
     <div class="flex items-center gap-3">
       <div
-        class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-tint text-sm font-semibold text-brand"
+        class="bg-accent-tint text-brand flex size-10 items-center justify-center rounded-xl text-sm font-semibold"
       >
         GT
       </div>
       <div class="flex flex-col gap-0.5">
-        <p class="text-lg font-semibold text-text-dark">
+        <p class="text-text-dark text-lg font-semibold">
           {{ props.productTagline }}
         </p>
-        <p class="text-[13px] text-text-muted">
+        <p class="text-text-muted text-[13px]">
           {{ props.workspaceLabel }}
         </p>
       </div>
     </div>
 
     <div class="flex max-w-[520px] flex-col gap-5 py-12 lg:py-0">
-      <h1 class="text-[40px] font-semibold leading-[1.1] text-text-dark">
+      <h1 class="text-text-dark text-[40px] leading-[1.1] font-semibold">
         {{ props.heroTitle }}
       </h1>
-      <p class="max-w-[34rem] text-base leading-7 text-text-muted">
+      <p class="text-text-muted max-w-[34rem] text-base leading-7">
         {{ props.heroDescription }}
       </p>
 
@@ -49,13 +49,13 @@ const props = defineProps<{
         <article
           v-for="feature in props.featureCards"
           :key="feature.title"
-          class="rounded-[10px] bg-app-bg p-4 shadow-card"
+          class="bg-app-bg shadow-card rounded-lg p-4"
         >
           <div class="flex flex-col gap-2">
-            <p class="text-base font-semibold text-text-dark">
+            <p class="text-text-dark text-base font-semibold">
               {{ feature.title }}
             </p>
-            <p class="text-[13px] leading-6 text-text-muted">
+            <p class="text-text-muted text-[13px] leading-6">
               {{ feature.description }}
             </p>
           </div>
@@ -63,7 +63,7 @@ const props = defineProps<{
       </div>
     </div>
 
-    <div class="flex flex-wrap gap-4 text-xs font-medium text-text-muted">
+    <div class="text-text-muted flex flex-wrap gap-4 text-xs font-medium">
       <span
         v-for="badge in props.badgeItems"
         :key="badge"

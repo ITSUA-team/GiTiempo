@@ -13,12 +13,12 @@ const props = defineProps<{
   <div class="flex items-center gap-3">
     <a
       :href="props.counterpartHref"
-      class="hidden text-[13px] font-semibold text-brand transition hover:underline sm:block"
+      class="text-brand hidden text-[13px] font-semibold transition hover:underline sm:block"
     >
       {{ props.counterpartLabel }}
     </a>
     <div class="hidden text-right sm:block">
-      <p class="text-[13px] font-medium text-text-dark">
+      <p class="text-text-dark text-[13px] font-medium">
         {{ props.displayName }}
       </p>
     </div>

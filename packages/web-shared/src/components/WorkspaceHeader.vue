@@ -20,11 +20,11 @@ const props = withDefaults(
 
 <template>
   <header
-    class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-divider bg-surface px-4 sm:px-6"
+    class="border-divider bg-surface sticky top-0 z-20 flex h-16 items-center justify-between border-b px-4 sm:px-6"
   >
     <div class="flex items-center gap-3">
       <div
-        class="flex size-8 items-center justify-center rounded-lg bg-accent-tint text-xs font-semibold text-brand"
+        class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs font-semibold"
       >
         {{ props.workspaceShortName }}
       </div>
@@ -32,7 +32,7 @@ const props = withDefaults(
         <p class="text-base font-semibold">
           {{ props.productName }}
         </p>
-        <p class="text-xs text-text-muted">
+        <p class="text-text-muted text-xs">
           {{ props.workspaceName }}
         </p>
       </div>
@@ -41,12 +41,12 @@ const props = withDefaults(
     <div class="flex items-center gap-3">
       <a
         :href="props.counterpartHref"
-        class="hidden text-[13px] font-semibold text-brand transition hover:underline sm:block"
+        class="text-brand hidden text-[13px] font-semibold transition hover:underline sm:block"
       >
         {{ props.counterpartLabel }}
       </a>
       <div class="hidden text-right sm:block">
-        <p class="text-[13px] font-medium text-text-dark">
+        <p class="text-text-dark text-[13px] font-medium">
           {{ props.displayName }}
         </p>
       </div>

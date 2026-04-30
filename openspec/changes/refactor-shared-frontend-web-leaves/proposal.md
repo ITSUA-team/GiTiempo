@@ -21,6 +21,8 @@ Follow-up inspection also found one deprecated Zod error helper usage and a few 
 - Register `@gitiempo/web-shared` source files with each SPA's Tailwind v4 CSS entry so utility classes used only inside shared Vue components are generated in consuming app stylesheets.
 - Evaluate the duplicated authenticated shell navigation in both SPAs and extract a shared text-only navigation component for sidebar and mobile navigation using `user-web` as the presentational base.
 - Remove the settings/profile action from the shared authenticated header so counterpart workspace link, display name, and avatar remain the only shared header identity controls.
+- Add targeted Tailwind ESLint rules for the frontend apps and `@gitiempo/web-shared` so class ordering and obvious canonical utility issues are surfaced during normal lint runs.
+- Use the new Tailwind ESLint warnings to clean up touched shared/frontend shell markup with autofix-first class reordering and a small manual pass for safe canonical replacements.
 - Keep app-specific router, store, page, and role-specific UX behavior local unless two concrete call sites justify sharing.
 - Avoid backend, API contract, database, OpenAPI, or auth-semantics changes as part of this change.
 
@@ -35,7 +37,7 @@ Follow-up inspection also found one deprecated Zod error helper usage and a few 
 
 ## Impact
 
-- Affected code: `apps/user-web/src/services/*`, `apps/admin-web/src/services/*`, `apps/user-web/src/lib/*`, `apps/admin-web/src/lib/*`, `apps/*/src/views/LoginView.vue`, `apps/*/src/components/layout/*Shell.vue`, `apps/*/src/assets/main.css`, `apps/*/src/components/app/PlaceholderPage.vue`, `apps/user-web/src/views/ProfileView.vue`, and `@gitiempo/web-shared`.
+- Affected code: `apps/user-web/src/services/*`, `apps/admin-web/src/services/*`, `apps/user-web/src/lib/*`, `apps/admin-web/src/lib/*`, `apps/*/src/views/LoginView.vue`, `apps/*/src/components/layout/*Shell.vue`, `apps/*/src/assets/main.css`, `apps/*/src/components/app/PlaceholderPage.vue`, `apps/user-web/src/views/ProfileView.vue`, `eslint.config.mjs`, and `@gitiempo/web-shared`.
 - No backend endpoint, database, or OpenAPI changes.
 - Contract-facing shared Zod schemas may be extended only if the frontend payload is also an API contract; browser-only form schemas stay in `@gitiempo/web-shared`.
 - Frontend verification will need focused lint, typecheck, shared package checks, and auth/router/component regression tests in both SPAs after the shared extraction.
