@@ -4,7 +4,7 @@
 
 - Use this file for `packages/web-shared` only.
 - This package is for shared browser/runtime helpers, browser-only validation, and reusable Vue components used by both `apps/user-web` and `apps/admin-web`.
-- For UI behavior and styling rules, also inspect the minimal relevant `../../docs/ui/*` files and the nearest app `AGENTS.md` files.
+- For shared Vue UI work, follow `../../docs/ui/INDEX.md` first, then inspect the minimal relevant `../../docs/ui/*` files and the app `AGENTS.md` files for every app that renders the component.
 
 ## What Belongs Here
 
@@ -42,3 +42,7 @@
 - Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck`.
 - Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`.
 - If auth/session/router leaves changed, also run `pnpm --filter user-web test` and `pnpm --filter admin-web test`.
+
+## Execution Rule
+
+- In the first progress update before shared frontend edits, name the `docs/ui/*` files you used for the task.

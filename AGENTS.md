@@ -29,7 +29,9 @@
 
 ## Cross-App Frontend
 
+- For any UI implementation or refactor in `apps/user-web`, `apps/admin-web`, `packages/web-config`, or shared Vue UI in `packages/web-shared`, load the `gitiempo-frontend-rules` skill first.
 - UI behavior and styling rules live in `docs/ui/*` and the nearest app `AGENTS.md`; do not duplicate or invent parallel frontend conventions elsewhere.
+- For any frontend UI task, read `docs/ui/INDEX.md` first, then only the smallest relevant `docs/ui/*` section files before reading or editing implementation files.
 - `packages/web-config` is for shared PrimeVue preset, design tokens, and frontend bootstrap/theme wiring.
 - `packages/web-shared` is for shared browser/runtime helpers, browser-only form schemas, and reusable Vue components used by both SPAs.
 - Keep `@gitiempo/shared` backend-safe and contract-focused. Do not move browser/runtime frontend helpers there.
