@@ -30,11 +30,8 @@ Use this skill when:
 ## Source Of Truth
 
 - `docs/ui/INDEX.md`
-- `docs/ui/setup.md`
-- `docs/ui/components.md`
-- `docs/ui/layout.md`
-- `docs/ui/patterns.md`
-- `docs/ui/accessibility.md`
+- nearest app `AGENTS.md`
+- `packages/web-shared/AGENTS.md` when changing shared frontend UI or browser/runtime leaves
 
 ## Repo Paths
 
