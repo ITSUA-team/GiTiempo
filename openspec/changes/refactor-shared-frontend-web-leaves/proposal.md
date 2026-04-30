@@ -19,6 +19,8 @@ Follow-up inspection also found one deprecated Zod error helper usage and a few 
 - Evaluate the duplicated authenticated header chrome in both SPAs and extract a shared prop-driven header component when app-local stores, route names, and environment-derived counterpart URLs can remain outside the shared package.
 - Run a canonical Tailwind class review on new or touched shared header components and replace arbitrary utilities with documented equivalents when they exist.
 - Register `@gitiempo/web-shared` source files with each SPA's Tailwind v4 CSS entry so utility classes used only inside shared Vue components are generated in consuming app stylesheets.
+- Evaluate the duplicated authenticated shell navigation in both SPAs and extract a shared text-only navigation component for sidebar and mobile navigation using `user-web` as the presentational base.
+- Remove the settings/profile action from the shared authenticated header so counterpart workspace link, display name, and avatar remain the only shared header identity controls.
 - Keep app-specific router, store, page, and role-specific UX behavior local unless two concrete call sites justify sharing.
 - Avoid backend, API contract, database, OpenAPI, or auth-semantics changes as part of this change.
 

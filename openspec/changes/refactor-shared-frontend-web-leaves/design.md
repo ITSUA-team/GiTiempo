@@ -100,6 +100,22 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 - Document this requirement in `docs/ui/setup.md` so new shared frontend packages or moved shared components do not silently lose styles.
 - **Why:** Tailwind v4 automatic source detection can miss external workspace packages; without explicit `@source`, shared components render DOM with class attributes but the corresponding utility CSS may not be emitted.
 
+### D3g. Extract shared authenticated navigation from user-web text-only shell chrome
+
+- The sidebar and mobile navigation regions in `apps/user-web/src/components/layout/AppShell.vue` and `apps/admin-web/src/components/layout/AdminAppShell.vue` should be promoted into a shared `WorkspaceNavigation` component when they can be parameterized without moving route names, item definitions, active-route logic, or shell composition into shared code.
+- Use the current `user-web` navigation as the presentational base for both SPAs.
+- The shared navigation should be text-only for both desktop/tablet sidebar and mobile bottom navigation; do not keep icon support in the shared component.
+- The shared component should accept typed `items`, preserve optional per-item `to` overrides, and support shared rendering of sidebar plus mobile nav while leaving route ownership and active-state computation in the consuming shell.
+- `AdminAppShell.vue` should drop Heroicon-based navigation rendering and adopt the same text-only visual language as `user-web`.
+- **Why:** the nav markup is now a repeated shell leaf with two concrete call sites, but route maps and app-specific nav contents still belong to each app.
+
+### D3h. Remove the shared header settings/profile action
+
+- The shared authenticated header should no longer expose an optional internal settings/profile action.
+- `WorkspaceHeader` should keep only the product/workspace identity block on the left and the counterpart workspace link, display name, and avatar on the right.
+- Consuming shells should stop passing settings/profile route targets into the shared header.
+- **Why:** the desired shared shell chrome is a simpler invariant surface, while app-specific settings/profile entry points can be handled elsewhere in each SPA.
+
 ### D4. Preserve app-local orchestration boundaries
 
 - `stores/auth.ts`, `router/index.ts`, route maps, and app-specific pages remain local even when they consume shared leaf modules.
@@ -132,10 +148,13 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 8. Evaluate duplicated authenticated header chrome for extraction into a shared prop-driven header component.
 9. Run canonical Tailwind class review on new/touched shared header markup and replace canonical equivalents before closure.
 10. Register shared component source paths with Tailwind in both SPA CSS entries and document the requirement.
-11. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
+11. Evaluate duplicated authenticated navigation for extraction into a shared text-only navigation component using `user-web` as the base.
+12. Remove the shared header settings/profile action and update consuming shells/tests accordingly.
+13. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
 
 ## Open Questions
 
 - Which first shared UI component should lead the migration: the auth sign-in form is the strongest candidate because both SPAs have the same structure and behavior with only copy/placeholder differences.
 - Whether the login hero/supporting-card region remains stable enough for a shared prop-driven component once the real product copy starts to diverge.
 - Whether the user app header settings icon should link to Profile, while the admin app header icon links to Settings.
+- Whether shared mobile bottom navigation should keep the current admin limit of five items or render all text-only items consistently with the chosen user-web base.

@@ -1,15 +1,7 @@
 <script setup lang="ts">
-import {
-  Cog6ToothIcon,
-  CreditCardIcon,
-  DocumentChartBarIcon,
-  FolderIcon,
-  HomeIcon,
-  UsersIcon,
-} from "@heroicons/vue/24/outline";
 import { computed } from "vue";
-import { RouterLink, RouterView, useRoute } from "vue-router";
-import { WorkspaceHeader } from "@gitiempo/web-shared";
+import { RouterView, useRoute } from "vue-router";
+import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { routeNames } from "@/router";
@@ -24,17 +16,13 @@ const userWorkspaceHref = getCounterpartWorkspaceHref({
 });
 
 const navItems = computed(() => [
-  { icon: HomeIcon, label: "Dashboard", name: routeNames.dashboard },
-  { icon: DocumentChartBarIcon, label: "Reports", name: routeNames.reports },
-  { icon: CreditCardIcon, label: "Invoices", name: routeNames.invoices },
-  { icon: UsersIcon, label: "Members", name: routeNames.members },
-  { icon: FolderIcon, label: "Projects", name: routeNames.projects },
-  { icon: Cog6ToothIcon, label: "Settings", name: routeNames.settings },
+  { label: "Dashboard", name: routeNames.dashboard },
+  { label: "Reports", name: routeNames.reports },
+  { label: "Invoices", name: routeNames.invoices },
+  { label: "Members", name: routeNames.members },
+  { label: "Projects", name: routeNames.projects },
+  { label: "Settings", name: routeNames.settings },
 ]);
-
-function isActive(name: string): boolean {
-  return route.name === name;
-}
 </script>
 
 <template>
@@ -43,61 +31,19 @@ function isActive(name: string): boolean {
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
       :display-name="authStore.displayName"
-      :settings-to="{ name: routeNames.settings }"
-      settings-label="Open workspace settings"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"
     />
 
     <div class="flex min-h-[calc(100vh-4rem)]">
-      <aside
-        class="hidden border-r border-divider bg-surface sm:flex sm:w-16 sm:flex-col lg:w-60"
-      >
-        <nav class="flex flex-1 flex-col gap-1 py-4">
-          <RouterLink
-            v-for="item in navItems"
-            :key="item.name"
-            :to="{ name: item.name }"
-            :class="[
-              'flex h-11 items-center gap-3 rounded-r-md px-4 text-sm font-medium transition-colors',
-              isActive(item.name)
-                ? 'border-l-[3px] border-brand bg-accent-tint text-brand font-semibold'
-                : 'text-text-dark hover:bg-app-bg',
-            ]"
-          >
-            <component
-              :is="item.icon"
-              :class="[
-                'size-5 shrink-0',
-                isActive(item.name) ? 'text-brand' : 'text-text-muted',
-              ]"
-            />
-            <span class="hidden lg:inline">{{ item.label }}</span>
-          </RouterLink>
-        </nav>
-      </aside>
+      <WorkspaceNavigation
+        :active-name="route.name?.toString()"
+        :items="navItems"
+      />
 
       <main class="flex-1 p-4 sm:p-6">
         <RouterView />
       </main>
     </div>
-
-    <nav
-      class="fixed inset-x-0 bottom-0 z-20 flex h-16 border-t border-divider bg-surface sm:hidden"
-    >
-      <RouterLink
-        v-for="item in navItems.slice(0, 5)"
-        :key="`mobile-${item.name}`"
-        :to="{ name: item.name }"
-        :class="isActive(item.name) ? 'text-brand' : 'text-text-muted'"
-        class="flex flex-1 flex-col items-center justify-center gap-1 text-xs"
-      >
-        <component
-          :is="item.icon"
-          class="size-5"
-        />
-        <span>{{ item.label }}</span>
-      </RouterLink>
-    </nav>
   </div>
 </template>

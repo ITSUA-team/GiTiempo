@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { Cog6ToothIcon } from "@heroicons/vue/24/outline";
 import Avatar from "primevue/avatar";
-import { RouterLink, type RouteLocationRaw } from "vue-router";
 
 const props = withDefaults(
   defineProps<{
@@ -9,16 +7,12 @@ const props = withDefaults(
     counterpartLabel: string;
     displayName: string;
     productName?: string;
-    settingsLabel?: string;
-    settingsTo?: RouteLocationRaw;
     userInitials: string;
     workspaceName: string;
     workspaceShortName?: string;
   }>(),
   {
     productName: "GiTiempo",
-    settingsLabel: "Settings",
-    settingsTo: undefined,
     workspaceShortName: "GT",
   },
 );
@@ -51,17 +45,6 @@ const props = withDefaults(
       >
         {{ props.counterpartLabel }}
       </a>
-      <RouterLink
-        v-if="props.settingsTo"
-        :to="props.settingsTo"
-        :aria-label="props.settingsLabel"
-        class="hidden rounded-md p-2 text-text-muted transition hover:bg-app-bg hover:text-brand sm:flex"
-      >
-        <Cog6ToothIcon
-          class="size-5"
-          aria-hidden="true"
-        />
-      </RouterLink>
       <div class="hidden text-right sm:block">
         <p class="text-[13px] font-medium text-text-dark">
           {{ props.displayName }}

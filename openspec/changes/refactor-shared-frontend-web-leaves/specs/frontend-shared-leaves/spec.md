@@ -82,6 +82,24 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 - **THEN** it exposes a visible counterpart workspace link in the top-right identity area
 - **AND** it can render an optional internal settings/profile action without hard-coding either app's route names in the shared package
 
+#### Scenario: Shared header omits settings/profile action after simplification
+- **WHEN** the shared authenticated header surface is simplified to the invariant identity controls
+- **THEN** the shared header renders the counterpart workspace link, display name, and avatar
+- **AND** it does not render a shared settings/profile action
+
+### Requirement: Shared Authenticated Navigation Uses User-Web Text-Only Base
+The frontend codebase SHALL extract authenticated shell navigation into `@gitiempo/web-shared` when the user/admin nav structure can be shared without moving route ownership or active-state logic out of the apps.
+
+#### Scenario: Shared navigation keeps app-local route ownership
+- **WHEN** `user-web` and `admin-web` consume a shared navigation component
+- **THEN** each app still defines its own nav item list, route names, optional route targets, and active-state logic
+- **AND** the shared component owns only presentational sidebar/mobile nav rendering
+
+#### Scenario: Shared navigation uses text-only user-web visual language
+- **WHEN** the shared authenticated navigation is rendered in either SPA
+- **THEN** it uses the current `user-web` text-only nav styling as the base for both sidebar and mobile navigation
+- **AND** it does not render per-item icons in either app
+
 ### Requirement: Shared Header Markup Uses Canonical Tailwind Classes
 Shared header components SHALL prefer canonical design-system Tailwind utilities over arbitrary utility values when an equivalent exists.
 

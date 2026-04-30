@@ -37,7 +37,6 @@
   },
   "dependencies": {
     "@gitiempo/shared": "workspace:*",
-    "@heroicons/vue": "^2.2.0",
     "@primevue/forms": "^4.5.5",
     "firebase": "^12.4.0",
     "primevue": "^4.5.5",

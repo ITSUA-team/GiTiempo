@@ -15,7 +15,7 @@ describe("AdminAppShell", () => {
     clearRefreshToken();
   });
 
-  it("preserves the visible user workspace link and settings action", async () => {
+  it("preserves the visible user workspace link and shared navigation", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore(pinia);
@@ -35,11 +35,10 @@ describe("AdminAppShell", () => {
       },
     });
     const workspaceLink = wrapper.get('a[href="http://localhost:5173"]');
-    const settingsLink = wrapper.get(
-      'a[aria-label="Open workspace settings"]',
-    );
+    const settingsLinks = wrapper.findAll('a[href="/settings"]');
 
     expect(workspaceLink.text()).toBe("User workspace");
-    expect(settingsLink.attributes("href")).toBe("/settings");
+    expect(wrapper.find('[aria-label="Open workspace settings"]').exists()).toBe(false);
+    expect(settingsLinks).toHaveLength(2);
   });
 });

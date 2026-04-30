@@ -73,3 +73,12 @@
 - [x] 10.2 Add Tailwind `@source` registration for `../../../../packages/web-shared/src` to `apps/user-web/src/assets/main.css` and `apps/admin-web/src/assets/main.css`.
 - [x] 10.3 Document the shared-source registration requirement in `docs/ui/setup.md` for future shared frontend component packages or moved shared UI.
 - [x] 10.4 Verify both SPA builds generate shared component utility classes and run affected lint/typecheck checks.
+
+## 11. Shared Authenticated Navigation Proposal
+
+- [x] 11.1 Compare the remaining authenticated navigation regions in `apps/user-web/src/components/layout/AppShell.vue` and `apps/admin-web/src/components/layout/AdminAppShell.vue` and confirm the sidebar/mobile navigation can be parameterized without moving nav item definitions, route names, active-state logic, or shell composition into shared code.
+- [x] 11.2 Remove the shared header settings/profile action from `WorkspaceHeader` and from both consuming app shells, updating related tests.
+- [x] 11.3 Add a shared text-only `WorkspaceNavigation` component in `@gitiempo/web-shared` using the current `user-web` nav as the presentational base for both sidebar and mobile navigation.
+- [x] 11.4 Update `AppShell.vue` and `AdminAppShell.vue` to consume the shared navigation component, dropping admin nav icons and keeping app-local nav item arrays, optional `to` overrides, active-state logic, and `RouterView` composition.
+- [x] 11.5 Add or update component/shell tests for shared navigation rendering, active-state styling, mobile navigation behavior, and header simplification after removing the shared settings/profile action.
+- [x] 11.6 Verify `@gitiempo/web-shared`, `user-web`, and `admin-web` lint, typecheck, and tests after the navigation extraction.
