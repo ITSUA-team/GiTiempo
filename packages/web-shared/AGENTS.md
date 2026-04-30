@@ -1,0 +1,44 @@
+# Web Shared Agent Notes
+
+## Scope
+
+- Use this file for `packages/web-shared` only.
+- This package is for shared browser/runtime helpers, browser-only validation, and reusable Vue components used by both `apps/user-web` and `apps/admin-web`.
+- For UI behavior and styling rules, also inspect the minimal relevant `../../docs/ui/*` files and the nearest app `AGENTS.md` files.
+
+## What Belongs Here
+
+- Shared auth HTTP helpers.
+- Shared current-user client helpers.
+- Shared refresh-token storage helpers.
+- Shared counterpart-workspace link helpers.
+- Browser-only shared Zod schemas.
+- Small PrimeVue-based Vue components with stable props/emits contracts and at least two real SPA call sites.
+
+## What Stays App-Local
+
+- `stores/auth.ts` orchestration.
+- `router/index.ts` and route maps.
+- Route-level views and page composition.
+- Product-specific shell and login composition.
+- Any abstraction that is not already proven behaviorally identical in both SPAs.
+
+## Package Boundaries
+
+- Keep `@gitiempo/shared` backend-safe and contract-focused. Contract-facing request and response schemas belong there.
+- Keep `@gitiempo/web-config` focused on shared PrimeVue preset, tokens, and frontend bootstrap/theme wiring.
+- Do not move browser/runtime frontend helpers into `@gitiempo/shared` or `@gitiempo/web-config`.
+- Prefer extracting the smallest proven-identical leaf instead of forcing full-page or full-store sharing.
+
+## Auth And Router Regression Coverage
+
+- When changing shared auth/session helpers, protect normalized session behavior, not just route presence.
+- Cover bootstrap restore, invalid refresh-token fallback, email/password login, Google login, failed login stale-state cleanup, logout cleanup, protected-route redirect preservation, authenticated guest-route redirect, and invalid redirect fallback.
+- If a change touches shared auth HTTP helpers or current-user client helpers, add fetch-boundary tests for request path, headers, payload shape, response parsing, and error propagation.
+- Prefer behavior assertions over router internals or implementation traces.
+
+## Verification
+
+- Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck`.
+- Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`.
+- If auth/session/router leaves changed, also run `pnpm --filter user-web test` and `pnpm --filter admin-web test`.

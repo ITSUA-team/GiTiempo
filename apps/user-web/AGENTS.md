@@ -13,6 +13,7 @@
 - Shared CSS tokens are imported in `src/assets/main.css` from `@gitiempo/web-config/styles/tokens.css`.
 - Use PrimeVue components for standard app UI controls instead of raw buttons, inputs, tags, avatars, dialogs, tables, selectors, or loading widgets when PrimeVue has an equivalent.
 - Use Zod schemas for shared or contract-facing form/API validation. Put contract schemas in `../../packages/shared/src/contracts/*` and shared browser-only form schemas/helpers in `../../packages/web-shared/src/*`.
+- If the task changes shared browser/runtime helpers or shared Vue components used by both SPAs, inspect `../../packages/web-shared/AGENTS.md` too.
 - Shared Vue components that are reused by both web SPAs belong in `../../packages/web-shared`, while full route pages and app-specific shell/login composition stay app-local.
 - Vite alias `@` points to `./src`.
 - Before implementing a frontend change, inspect the minimal relevant `docs/ui/*` guidance first, then inspect the relevant approved design source. In this repo that usually means the active `.pen` file screen.
@@ -28,4 +29,5 @@
 
 - Frontend-only changes: `pnpm --filter user-web lint && pnpm --filter user-web typecheck`.
 - For auth store, router guard, login flow, or session bootstrap changes, also run `pnpm --filter user-web test`.
+- If the task changes `../../packages/web-config` or `../../packages/web-shared`, verify the matching admin app too.
 - `test` is focused Vitest coverage for store/router behavior. Treat it as meaningful regression protection for that layer, but not as browser-level end-to-end proof.
