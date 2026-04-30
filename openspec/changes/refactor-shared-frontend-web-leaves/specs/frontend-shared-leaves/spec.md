@@ -64,11 +64,11 @@ Shared frontend validation code MUST avoid deprecated Zod v4 error helper method
 - **AND** it does not rely on deprecated `ZodError.flatten()` or `ZodError.format()` methods
 
 ### Requirement: Shared Auth Forms Use PrimeVue Forms
-The frontend codebase SHALL use `@primevue/forms` for shared authentication forms in `@gitiempo/web-shared`.
+The frontend codebase SHALL use one shared form orchestration approach for shared authentication forms in `@gitiempo/web-shared`.
 
-#### Scenario: Shared auth form uses PrimeVue form orchestration
+#### Scenario: Shared auth form uses one orchestration flow
 - **WHEN** a shared auth form collects credentials for both `user-web` and `admin-web`
-- **THEN** it uses `@primevue/forms` with a Zod resolver for validation and submit orchestration
+- **THEN** it uses one shared form orchestration flow for validation and submit handling across both SPAs
 - **AND** field-level invalid state and error rendering integrate with PrimeVue input components
 
 ### Requirement: Additional Duplicated Presentational Blocks Are Reviewed For Sharing
@@ -83,7 +83,7 @@ The frontend codebase SHALL review repeated user/admin presentational micro-bloc
 The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/web-shared` when the user/admin header structure is identical and all app-specific orchestration can remain local.
 
 #### Scenario: Header chrome is shared without sharing shell orchestration
-- **WHEN** `user-web` and `admin-web` render the same authenticated top bar structure with only workspace, identity, counterpart-link, and optional action differences
+- **WHEN** `user-web` and `admin-web` render the same authenticated top bar structure with only workspace and identity data differences
 - **THEN** the duplicated top bar markup is implemented as a shared prop-driven Vue component
 - **AND** app shells continue to own auth-store reads, environment-derived counterpart URLs, route names, router views, sidebars, and page composition
 
@@ -126,14 +126,14 @@ The frontend codebase SHALL ensure Tailwind CSS scans shared frontend Vue compon
 - **THEN** the UI setup documentation records the requirement so future shared UI packages or moved components receive the same source registration
 
 ### Requirement: Shared Frontend Tailwind Markup Is Reviewed With Frontend-Scoped Linting
-The frontend codebase SHALL use frontend-scoped Tailwind ESLint rules to surface class ordering and obvious canonical utility cleanup opportunities in shared frontend markup.
+The frontend codebase SHALL use frontend-scoped markup review to surface class ordering and obvious canonical utility cleanup opportunities in shared frontend markup.
 
 #### Scenario: Tailwind lint rules stay scoped to shared frontend surfaces
-- **WHEN** Tailwind ESLint rules are enabled for this refactor
-- **THEN** they apply to `apps/user-web/src`, `apps/admin-web/src`, and `packages/web-shared/src`
-- **AND** non-frontend packages do not receive Tailwind lint noise
+- **WHEN** markup-review automation is enabled for this refactor
+- **THEN** it stays scoped to `apps/user-web/src`, `apps/admin-web/src`, and `packages/web-shared/src`
+- **AND** non-frontend packages do not receive unrelated markup-review noise
 
 #### Scenario: Shared frontend lint highlights safe cleanup opportunities
-- **WHEN** Tailwind lint reports class-order or obvious utility cleanup warnings in touched shared/frontend templates
+- **WHEN** markup review reports class-order or obvious utility cleanup warnings in touched shared/frontend templates
 - **THEN** the implementation resolves or intentionally retains those warnings with current UI fidelity in mind
 - **AND** the warning surface stays focused on frontend/shared markup rather than unrelated packages
