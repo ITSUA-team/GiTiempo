@@ -19,6 +19,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
 import { InvitesModule } from './invites/invites.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
+import { TimeEntriesModule } from './time-entries/time-entries.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { TasksModule } from './tasks/tasks.module';
     InvitesModule,
     ProjectsModule,
     TasksModule,
+    TimeEntriesModule,
     CommonsModule,
   ],
   controllers: [],
