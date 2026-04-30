@@ -140,6 +140,9 @@ app.use(PrimeVue, {
 - `cssLayer` is required when using Tailwind classes in PrimeVue `pt` overrides.
 - Shared Zod and TypeScript contracts live in `packages/shared/src/contracts/`.
 - Shared frontend-only theme/bootstrap code lives in `packages/web-config/`.
+- Shared frontend-only runtime helpers and reusable Vue components live in `packages/web-shared/`.
+- Shared Vue components must be component-aware package exports and should be small PrimeVue-based blocks with stable props/emits contracts.
+- Frontend form and API boundary validation should use Zod schemas from `@gitiempo/shared` for contract-facing shapes or from `@gitiempo/web-shared` for browser-only shared form shapes.
 - Swagger / OpenAPI is intentionally deferred to `apps/api`; it is not part of the web app bootstrap.
 
 ## PT Usage

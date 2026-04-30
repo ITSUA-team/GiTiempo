@@ -17,6 +17,7 @@ April 2026
 - Applies to `apps/user-web` and `apps/admin-web`.
 - Applies to shared frontend theme/bootstrap code in `packages/web-config`.
 - Applies to shared frontend browser/runtime leaf extraction between the two SPAs.
+- Applies to shared Vue component extraction between the two SPAs.
 - Applies to app UI built with PrimeVue and Tailwind CSS.
 - The Chrome extension is an exception: it uses Tailwind only, but should still share the same design tokens where practical.
 
@@ -64,6 +65,7 @@ If docs and design conflict, the docs are the source of truth.
 - `ToastService` and `ConfirmationService` should be wired during app bootstrap so toasts and confirmation flows do not require bootstrap changes later.
 - Shared frontend-only bootstrap and theme code belongs in `packages/web-config`.
 - Shared contracts belong in `packages/shared/src/contracts/` when the UI task changes payload shapes or validators.
+- Shared frontend-only runtime helpers, browser-only form schemas, and reusable Vue components belong in `packages/web-shared`.
 
 ### 3.4 Shared Frontend Leaf Boundaries
 
@@ -76,6 +78,7 @@ If docs and design conflict, the docs are the source of truth.
 - A dedicated frontend package is the preferred home for shared browser/runtime code.
 - Do not move these runtime leaves into `@gitiempo/shared`, which must remain backend-safe and contract-focused.
 - Do not move these runtime leaves into `@gitiempo/web-config`, which must remain theme/bootstrap-focused.
+- Shared Vue components are allowed in `@gitiempo/web-shared` when they are small PrimeVue-based blocks with stable props/emits contracts and at least two real SPA call sites.
 - Keep `stores/auth.ts`, `router/index.ts`, route maps, route-level views, and product-specific shell/login composition app-local unless there are two stable call sites and clear evidence that a smaller shared abstraction is already justified.
 - When comparing login or shell UI between the SPAs, extract only sub-regions with stable repeated structure; do not force full-page unification.
 
@@ -139,6 +142,7 @@ If docs and design conflict, the docs are the source of truth.
 
 - Prefer PrimeVue components for app UI.
 - Do not rebuild standard controls with raw HTML when PrimeVue already provides the component.
+- Raw `<button>`, `<input>`, `<textarea>`, `<select>`, custom status pills, custom avatars, custom tables, custom dialogs, and custom loading spinners are not allowed for standard SPA UI when a PrimeVue equivalent exists.
 - PrimeIcons should only be used for icons rendered internally by PrimeVue.
 
 ### 5.2 Styling Order
@@ -177,6 +181,14 @@ If docs and design conflict, the docs are the source of truth.
 - Always use a real `<label>` associated with the field.
 - Use `invalid` plus helper text for error states.
 - Default to `class="w-full"`.
+- Use Zod to validate shared or contract-facing form payloads before they cross store, Firebase, or HTTP boundaries.
+
+### 6.2.1 Zod Validation Boundaries
+
+- Contract-facing request and response schemas belong in `packages/shared/src/contracts/`.
+- Browser-only shared form schemas belong in `packages/web-shared`.
+- Response parsing belongs at shared HTTP client boundaries so both SPAs fail consistently on API drift.
+- Do not duplicate the same frontend schema in both apps; extract it to the correct shared package.
 
 ### 6.3 Tables
 
@@ -325,7 +337,8 @@ Do not re-implement behavior already handled by PrimeVue for these components:
 ### 10.3 Shared Frontend Package
 
 - Use `packages/web-config` for shared PrimeVue preset and token-level frontend configuration.
-- If shared theme code changes, verify both web apps.
+- Use `packages/web-shared` for shared browser/runtime helpers, browser-only form schemas, and reusable Vue components.
+- If shared theme or shared frontend package code changes, verify both web apps.
 
 ### 10.4 Frontend Auth And Router Parity
 
@@ -346,9 +359,10 @@ When doing frontend work in this repo:
 7. If docs and design conflict, follow the docs.
 8. Reuse shared tokens and preset logic instead of introducing app-local styling forks.
 9. When both SPAs contain matching browser/runtime helpers, prefer extracting the smallest proven-identical leaf instead of maintaining silent duplication.
-10. Keep app-specific orchestration local unless two stable call sites justify sharing more.
-11. Verify the affected app with lint and typecheck.
-12. If shared frontend code changed, verify both web apps.
+10. When both SPAs contain matching PrimeVue-based UI blocks, extract the smallest stable shared Vue component into `packages/web-shared`.
+11. Keep app-specific orchestration local unless two stable call sites justify sharing more.
+12. Verify the affected app with lint and typecheck.
+13. If shared frontend code changed, verify both web apps.
 
 ## 12. Frontend Auth And Router Regression Testing
 
@@ -388,12 +402,13 @@ Use focused frontend tests to protect normalized session behavior.
 
 - Raw hex colors in Vue templates or class attributes
 - Rebuilding standard controls with plain HTML instead of PrimeVue
+- Duplicating the same Zod form schema or shared PrimeVue UI block in both SPAs
 - Deep CSS selectors to fight PrimeVue styling
 - `!important` for normal styling conflicts
 - Breaking or overriding PrimeVue ARIA behavior through customization
 - One-off token values that should live in the shared theme
 - Adding dark-mode-specific behavior for MVP work
-- Extracting full auth stores, routers, or route-level pages into shared code just because two SPAs currently look similar
+- Extracting full auth stores, routers, shells, login pages, or route-level pages into shared code just because two SPAs currently look similar
 - Treating duplicated browser/runtime leaves as acceptable long-term when both SPAs already implement the same behavior
 - Relying only on route inventory tests for auth/router changes while skipping session-lifecycle regression cases
 

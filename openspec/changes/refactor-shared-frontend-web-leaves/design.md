@@ -1,6 +1,6 @@
 ## Context
 
-`apps/user-web` and `apps/admin-web` currently duplicate several frontend auth and navigation leaves almost line-for-line: auth HTTP client helpers, current-user client helpers, refresh-token storage, workspace-link resolution, and matching auth runtime wiring. The two login pages and authenticated shells also contain smaller structurally similar UI regions, but they are not fully identical products and should not be forced into a single large abstraction.
+`apps/user-web` and `apps/admin-web` currently duplicate several frontend auth and navigation leaves almost line-for-line: auth HTTP client helpers, current-user client helpers, refresh-token storage, workspace-link resolution, and matching auth runtime wiring. The two login pages and authenticated shells also contain smaller structurally similar UI regions, the two placeholder-page scaffolds are effectively duplicated, and the user profile page contains standard controls that should use PrimeVue. These regions are candidates for small shared PrimeVue-based components, but the products are not fully identical and should not be forced into a single large abstraction.
 
 The nearest app guidance already requires both SPAs to stay aligned on auth direction, while `docs/TECHNICAL-REQUIREMENTS.md` treats shared frontend behavior as a product expectation across both web apps. This change is frontend-only and must not alter backend endpoints, contracts, or auth semantics.
 
@@ -8,12 +8,14 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 
 **Goals:**
 - Remove duplicated frontend leaf code that is already identical across `user-web` and `admin-web`.
-- Create one shared frontend location for browser-only runtime helpers and small reusable UI pieces consumed by both SPAs.
+- Create one shared frontend location for browser-only runtime helpers, browser-only Zod form schemas, and small reusable Vue components consumed by both SPAs.
+- Convert shared or repeated standard UI blocks to PrimeVue components with token-based styling.
+- Remove deprecated Zod error helper usage from shared frontend validation code.
 - Keep auth behavior, redirect rules, and cross-app navigation semantics unchanged while reducing drift risk.
 - Evaluate current shell/login similarity and extract only the parts with two real call sites and stable behavior.
 
 **Non-Goals:**
-- Changing backend auth, API contracts, or shared Zod schemas.
+- Changing backend auth, API contracts, or contract-facing shared Zod schemas unless an extracted frontend form is also an API contract.
 - Forcing full store, router, shell, or login-page unification.
 - Moving product-specific copy, route maps, or role-specific UX into shared code.
 - Reworking theme/token ownership in `@gitiempo/web-config` beyond what is needed for shared frontend leaves.
@@ -40,12 +42,37 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 - **Why:** these are the highest-confidence drift points and provide the largest maintainability gain with the lowest abstraction risk.
 - **Alternatives considered:** extracting entire auth stores or route guards immediately (rejected because app-level orchestration still deserves local ownership).
 
-### D3. Treat shared Vue components as optional second-wave extraction, not a prerequisite
+### D3. Make `@gitiempo/web-shared` component-aware for small shared Vue components
 
-- Shared Vue components should be introduced only for the small login/shell regions that are materially the same after comparing both apps, such as a shared auth-panel structure or shared shell identity/cross-link block.
+- Shared Vue components should be introduced for the small login/shell/profile regions that are materially the same after comparing both apps, such as a shared auth sign-in form, account identity/avatar block, status tag block, or profile form field block.
+- The shared package must support `.vue` source exports and typechecking so both SPAs can import shared components directly.
+- Shared components must use PrimeVue for standard controls (`Button`, `InputText`, `Password`, `Tag`, `Avatar`, `Dialog`, `DataTable`, `Select`, loading components) and Tailwind token utilities for layout overrides.
+- Shared components must expose explicit typed props/emits contracts and must not import app-local stores, routers, route names, or view-specific copy.
 - Full-page login views and full authenticated shells remain app-local composition surfaces.
 - **Why:** the two current pages are similar enough to justify reviewing component reuse, but not similar enough to justify a single monolithic shared page component.
 - **Alternatives considered:** sharing the entire login page or shell component (rejected because copy, nav structure, icons, and app-specific route composition already differ).
+
+### D3a. Use Zod at shared frontend form and API boundaries
+
+- Contract-facing payload and response schemas remain in `@gitiempo/shared`.
+- Browser-only form schemas used by both SPAs belong in `@gitiempo/web-shared` next to the shared form component or a dedicated validation module.
+- Shared HTTP clients continue parsing API responses with Zod so both SPAs fail consistently on API drift.
+- Login form data should be validated before it crosses the store/Firebase boundary, with validation errors surfaced through PrimeVue `invalid` state and helper text.
+- Deprecated `ZodError` helpers such as `.flatten()` and `.format()` should not be used in new shared frontend code; prefer non-deprecated v4 APIs or direct issue mapping for shallow forms.
+- **Why:** TypeScript types do not protect runtime form and API boundaries, and duplicating the same schema in two apps creates drift risk.
+
+### D3b. Adopt `@primevue/forms` for shared auth forms
+
+- Shared authentication forms in `@gitiempo/web-shared` should use `@primevue/forms` with the Zod resolver instead of a manually managed native `<form>` validation flow.
+- PrimeVue field widgets remain the control surface, while `@primevue/forms` owns submit handling, field state, and validation result mapping.
+- This decision applies to the shared auth sign-in form first; app-local forms can stay native until they are shared or otherwise need the same abstraction.
+- **Why:** the repo wants PrimeVue-native form orchestration here, not only PrimeVue field widgets.
+
+### D3c. Continue second-wave shared micro-component extraction
+
+- The next shared component candidates after the auth sign-in form and shell identity block are the duplicate placeholder-page scaffold and the login hero/supporting-card micro-blocks.
+- Extract these only if the user/admin variants can remain prop-driven without pushing role-specific copy or route semantics into the shared package.
+- **Why:** these are the clearest remaining duplicated presentational blocks with two stable call sites.
 
 ### D4. Preserve app-local orchestration boundaries
 
@@ -61,17 +88,24 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 
 ## Risks / Trade-offs
 
-- **[Risk] New shared frontend package adds one more dependency surface in the monorepo.** -> Mitigation: keep its scope narrow and limited to browser/runtime helpers and tiny UI building blocks with clear exports.
+- **[Risk] Shared Vue exports add component build/typecheck complexity to `@gitiempo/web-shared`.** -> Mitigation: keep components small, export source SFCs deliberately, and verify both consuming SPAs plus the shared package.
 - **[Risk] Over-extracting UI could make future app-specific UX changes slower.** -> Mitigation: keep route-level views and major layout composition local; only extract components with two stable call sites.
+- **[Risk] Form validation may accidentally become app-specific inside shared components.** -> Mitigation: keep browser-only shared schemas generic and keep app-specific copy, redirects, and store orchestration in consuming views.
+- **[Risk] Adding `@primevue/forms` expands package and test surface area.** -> Mitigation: scope adoption to shared auth forms first, wire it with Zod resolvers, and verify both consuming SPAs plus the shared package.
 - **[Risk] Partial migration can leave old and new helper patterns coexisting.** -> Mitigation: migrate both SPAs within the same change and remove superseded local copies before closing the work.
 
 ## Migration Plan
 
 1. Create the shared frontend package and expose only the initial leaf APIs.
 2. Migrate `user-web` and `admin-web` to the shared leaf modules in the same branch.
-3. Compare login/shell regions and extract only any justified shared micro-components.
-4. Remove duplicated local helpers once both SPAs compile and tests pass.
+3. Make `@gitiempo/web-shared` component-aware for small shared Vue SFC exports.
+4. Compare login/shell/profile regions and extract only justified shared PrimeVue micro-components.
+5. Add or move shared browser-only Zod form schemas for extracted shared forms.
+6. Remove deprecated Zod helper usage from the shared validation path.
+7. Evaluate duplicate placeholder/login-presentational blocks for extraction into `@gitiempo/web-shared`.
+8. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
 
 ## Open Questions
 
-- Whether the shared UI extraction should stop at utility/composable level in the first pass if the login/shell markup starts to diverge during implementation.
+- Which first shared UI component should lead the migration: the auth sign-in form is the strongest candidate because both SPAs have the same structure and behavior with only copy/placeholder differences.
+- Whether the login hero/supporting-card region remains stable enough for a shared prop-driven component once the real product copy starts to diverge.

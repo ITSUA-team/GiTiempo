@@ -5,11 +5,11 @@ import {
   DocumentChartBarIcon,
   FolderIcon,
   HomeIcon,
-  UserCircleIcon,
   UsersIcon,
 } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
+import { WorkspaceHeaderIdentity } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { routeNames } from "@/router";
@@ -58,27 +58,12 @@ function isActive(name: string): boolean {
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <a
-          :href="userWorkspaceHref"
-          class="hidden text-[13px] font-semibold text-brand transition hover:underline sm:block"
-        >
-          User workspace
-        </a>
-        <div class="hidden text-right sm:block">
-          <p class="text-[13px] font-medium text-text-dark">
-            {{ authStore.displayName }}
-          </p>
-        </div>
-        <button
-          type="button"
-          class="flex h-8 w-8 items-center justify-center rounded-full bg-accent-tint text-[12px] font-semibold text-brand"
-          aria-label="Account profile"
-        >
-          <span class="sm:hidden">{{ authStore.userInitials }}</span>
-          <UserCircleIcon class="hidden h-5 w-5 sm:block" />
-        </button>
-      </div>
+      <WorkspaceHeaderIdentity
+        :counterpart-href="userWorkspaceHref"
+        counterpart-label="User workspace"
+        :display-name="authStore.displayName"
+        :user-initials="authStore.userInitials"
+      />
     </header>
 
     <div class="flex min-h-[calc(100vh-4rem)]">

@@ -11,6 +11,9 @@
 - App bootstrap is in `src/main.ts`.
 - Shared PrimeVue config comes from `@gitiempo/web-config/theme`.
 - Shared CSS tokens are imported in `src/assets/main.css` from `@gitiempo/web-config/styles/tokens.css`.
+- Use PrimeVue components for standard app UI controls instead of raw buttons, inputs, tags, avatars, dialogs, tables, selectors, or loading widgets when PrimeVue has an equivalent.
+- Use Zod schemas for shared or contract-facing form/API validation. Put contract schemas in `../../packages/shared/src/contracts/*` and shared browser-only form schemas/helpers in `../../packages/web-shared/src/*`.
+- Shared Vue components that are reused by both web SPAs belong in `../../packages/web-shared`, while full route pages and app-specific shell/login composition stay app-local.
 - Vite alias `@` points to `./src`.
 - Before implementing a frontend change, inspect the minimal relevant `docs/ui/*` guidance first, then inspect the relevant approved design source. In this repo that usually means the active `.pen` file screen.
 - Desktop UI implementation is expected to be pixel-perfect to the approved design: match fonts, font sizes, spacing, sizing, radii, alignment, and component structure unless the user explicitly asks for a deviation.

@@ -1,8 +1,10 @@
+// @vitest-environment jsdom
+
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
+import PrimeVue from "primevue/config";
 import type { UserResponse } from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
@@ -18,10 +20,10 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
     createdAt: "2026-01-01T00:00:00.000Z",
-    displayName: "Admin User",
-    email: "admin@example.com",
+    displayName: "Alexey Tsukanov",
+    email: "alexey@example.com",
     id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-    role: "admin",
+    role: "member",
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
 
@@ -75,15 +77,15 @@ describe("LoginView", () => {
   it("signs in with email/password through the UI and redirects to the requested route", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { router, wrapper } = await mountLoginView(
-      "/login?redirect=%2Freports",
+      "/login?redirect=%2Ftime-entries",
     );
 
-    await wrapper.get('[data-testid="sign-in-email"]').setValue("admin@example.com");
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
     await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
     await wrapper.get("form").trigger("submit");
     await flushPromises();
 
-    expect(router.currentRoute.value.fullPath).toBe("/reports");
+    expect(router.currentRoute.value.fullPath).toBe("/time-entries");
   });
 
   it("signs in with Google through the UI and redirects to the dashboard", async () => {
@@ -100,28 +102,28 @@ describe("LoginView", () => {
     setAuthRuntimeForTesting(
       createRuntimeMock({
         signInWithEmailPassword: async () => {
-          throw new Error("Invalid admin credentials");
+          throw new Error("Invalid user credentials");
         },
       }),
     );
     const { router, wrapper } = await mountLoginView();
 
-    await wrapper.get('[data-testid="sign-in-email"]').setValue("admin@example.com");
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
     await wrapper.get('[data-testid="sign-in-password"]').setValue("bad-password");
     await wrapper.get("form").trigger("submit");
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Invalid admin credentials");
+    expect(wrapper.text()).toContain("Invalid user credentials");
     expect(router.currentRoute.value.name).toBe(routeNames.login);
   });
 
-  it("preserves the visible user workspace link", async () => {
+  it("preserves the visible admin workspace link", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();
 
     const workspaceLink = wrapper.get("a");
 
-    expect(workspaceLink.text()).toContain("Open the user workspace");
-    expect(workspaceLink.attributes("href")).toBe("http://localhost:5173");
+    expect(workspaceLink.text()).toContain("Open the admin workspace");
+    expect(workspaceLink.attributes("href")).toBe("http://localhost:5174");
   });
 });

@@ -58,6 +58,10 @@
 
 All PrimeVue components receive brand styling primarily through the global preset. Use `pt` for per-instance Tailwind overrides. Do not use `!important` or deep CSS selectors.
 
+Standard app UI must use PrimeVue components when PrimeVue has an equivalent. Do not use raw `<button>`, `<input>`, `<textarea>`, `<select>`, custom status pills, custom avatars, custom tables, custom dialogs, or custom loading spinners for normal SPA UI unless the component is explicitly outside PrimeVue scope or the approved design requires a bespoke non-standard control.
+
+When the same PrimeVue-based UI block is used by both `apps/user-web` and `apps/admin-web`, prefer a small shared Vue component in `packages/web-shared` instead of duplicated app-local markup. Keep route-level pages, full shells, route maps, and product-specific copy app-local unless the shared component has a stable parameterized contract.
+
 ## Component Conventions
 
 ### Buttons
@@ -78,7 +82,7 @@ Use PrimeVue `<Button>`. Do not recreate app buttons with raw HTML unless the su
 
 ### Form Inputs
 
-Use `<InputText>`, `<Textarea>`, `<InputNumber>`, and `<Password>`.
+Use `<InputText>`, `<Textarea>`, `<InputNumber>`, and `<Password>`. For form payloads that are shared between apps or map to API contracts, validate with Zod before submitting.
 
 - Wrap in `<div class="flex flex-col gap-1">` with a real `<label>`.
 - Single-line height: `h-[38px]`.
@@ -92,6 +96,23 @@ Use `<InputText>`, `<Textarea>`, `<InputNumber>`, and `<Password>`.
   <InputText id="name" v-model="name" :invalid="!!errors.name" class="w-full" />
   <small v-if="errors.name" class="text-xs text-destructive">{{ errors.name }}</small>
 </div>
+```
+
+### Forms And Zod
+
+- Use shared Zod schemas from `@gitiempo/shared` for contract-facing payloads and responses.
+- Keep browser-only form schemas close to the form or in `packages/web-shared` when both SPAs use the same form.
+- Parse or `safeParse` form data before calling stores, Firebase, or HTTP clients when invalid input can otherwise cross a boundary.
+- Keep response parsing in shared HTTP clients so both SPAs fail consistently on API drift.
+- Do not duplicate the same Zod schema in both apps; extract it to `@gitiempo/shared` when it is contract-facing or `@gitiempo/web-shared` when it is frontend-only.
+
+```typescript
+const result = emailPasswordSignInSchema.safeParse({ email, password })
+
+if (!result.success) {
+  // Show field-level errors through PrimeVue invalid/helper UI.
+  return
+}
 ```
 
 ### Tables

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, shallowRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import {
+  AuthIntroPanel,
+  AuthSignInForm,
+  type EmailPasswordSignInInput,
+} from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { routeNames } from "@/router";
@@ -10,14 +15,28 @@ const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 
-const email = shallowRef("");
 const errorMessage = shallowRef<string | null>(null);
-const password = shallowRef("");
 const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: import.meta.env.VITE_USER_APP_URL,
   fallbackPath: "/login",
   localhostPort: "5173",
 });
+const introBadgeItems = [
+  "Guest-only admin entry",
+  "Shared auth direction with user-web",
+];
+const introFeatureCards = [
+  {
+    title: "Admin-ready reports",
+    description:
+      "Review team time, project summaries, and invoice inputs from a single authenticated workspace.",
+  },
+  {
+    title: "Shared workspace auth",
+    description:
+      "Use the same Firebase-backed workspace identity as the user app, without maintaining a second login model.",
+  },
+];
 
 const redirectTarget = computed(() => {
   const redirect = route.query.redirect;
@@ -37,11 +56,14 @@ function getErrorMessage(error: unknown): string {
     : "Something went wrong while signing in.";
 }
 
-async function handleEmailSignIn(): Promise<void> {
+async function handleEmailSignIn({
+  email,
+  password,
+}: EmailPasswordSignInInput): Promise<void> {
   errorMessage.value = null;
 
   try {
-    await authStore.loginWithEmailPassword(email.value, password.value);
+    await authStore.loginWithEmailPassword(email, password);
     await navigateAfterLogin();
   } catch (error) {
     errorMessage.value = getErrorMessage(error);
@@ -63,162 +85,30 @@ async function handleGoogleSignIn(): Promise<void> {
 <template>
   <div class="min-h-screen bg-app-bg text-text-dark">
     <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
-      <section
-        class="flex flex-1 flex-col justify-between bg-surface px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-tint text-sm font-semibold text-brand"
-          >
-            GT
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <p class="text-lg font-semibold text-text-dark">
-              GiTiempo
-            </p>
-            <p class="text-[13px] text-text-muted">
-              Admin workspace access
-            </p>
-          </div>
-        </div>
-
-        <div class="flex max-w-[520px] flex-col gap-5 py-12 lg:py-0">
-          <h1 class="text-[40px] font-semibold leading-[1.1] text-text-dark">
-            Manage reporting, members, and projects in one workspace.
-          </h1>
-          <p class="max-w-[34rem] text-base leading-7 text-text-muted">
-            Sign in with your workspace account to access reports, invoicing,
-            member management, and settings from the admin side of GiTiempo.
-          </p>
-
-          <div class="grid gap-4 md:grid-cols-2">
-            <article class="rounded-[10px] bg-app-bg p-4 shadow-card">
-              <div class="flex flex-col gap-2">
-                <p class="text-base font-semibold text-text-dark">
-                  Admin-ready reports
-                </p>
-                <p class="text-[13px] leading-6 text-text-muted">
-                  Review team time, project summaries, and invoice inputs from a
-                  single authenticated workspace.
-                </p>
-              </div>
-            </article>
-
-            <article class="rounded-[10px] bg-app-bg p-4 shadow-card">
-              <div class="flex flex-col gap-2">
-                <p class="text-base font-semibold text-text-dark">
-                  Shared workspace auth
-                </p>
-                <p class="text-[13px] leading-6 text-text-muted">
-                  Use the same Firebase-backed workspace identity as the user
-                  app, without maintaining a second login model.
-                </p>
-              </div>
-            </article>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-4 text-xs font-medium text-text-muted">
-          <span>Guest-only admin entry</span>
-          <span>Shared auth direction with user-web</span>
-          <a
-            :href="userWorkspaceHref"
-            class="text-brand transition hover:underline"
-          >
-            Need time tracking? Open the user workspace.
-          </a>
-        </div>
-      </section>
+      <AuthIntroPanel
+        workspace-label="Admin workspace access"
+        hero-title="Manage reporting, members, and projects in one workspace."
+        hero-description="Sign in with your workspace account to access reports, invoicing, member management, and settings from the admin side of GiTiempo."
+        :feature-cards="introFeatureCards"
+        :badge-items="introBadgeItems"
+        :counterpart-href="userWorkspaceHref"
+        counterpart-label="the user workspace"
+        counterpart-prompt="Need time tracking? Open"
+        product-tagline="GiTiempo"
+      />
 
       <section
         class="flex w-full items-center justify-center bg-app-bg px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
       >
-        <div class="w-full rounded-[10px] bg-surface p-6 shadow-card">
-          <div class="flex flex-col gap-5">
-            <div class="flex flex-col gap-[6px]">
-              <p class="text-[28px] font-semibold text-text-dark">
-                Admin sign in
-              </p>
-              <p class="text-sm text-text-muted">
-                Use your workspace account to continue into the admin workspace.
-              </p>
-            </div>
-
-            <form
-              class="flex flex-col gap-4"
-              @submit.prevent="handleEmailSignIn"
-            >
-              <label
-                class="flex flex-col gap-[6px] text-[13px] font-medium text-text-dark"
-              >
-                <span>Email</span>
-                <input
-                  v-model="email"
-                  type="email"
-                  autocomplete="email"
-                  placeholder="admin@workspace.com"
-                  class="h-[42px] rounded-[6px] border border-divider bg-surface px-3 text-sm text-text-dark outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15"
-                >
-              </label>
-
-              <label
-                class="flex flex-col gap-[6px] text-[13px] font-medium text-text-dark"
-              >
-                <span>Password</span>
-                <div
-                  class="flex h-[42px] items-center justify-between rounded-[6px] border border-divider bg-surface px-3 text-sm text-text-dark transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15"
-                >
-                  <input
-                    v-model="password"
-                    type="password"
-                    autocomplete="current-password"
-                    placeholder="••••••••••"
-                    class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-text-dark outline-none"
-                  >
-                  <button
-                    type="button"
-                    disabled
-                    class="shrink-0 text-[13px] font-semibold text-brand"
-                    aria-disabled="true"
-                    title="Password recovery is not available in MVP yet"
-                  >
-                    Forgot?
-                  </button>
-                </div>
-              </label>
-
-              <p
-                v-if="errorMessage"
-                class="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-              >
-                {{ errorMessage }}
-              </p>
-
-              <div class="flex flex-col gap-3 pt-1">
-                <button
-                  type="submit"
-                  class="flex h-11 items-center justify-center rounded-[6px] bg-brand px-4 text-[15px] font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
-                  :disabled="authStore.isSubmitting"
-                >
-                  Sign in
-                </button>
-
-                <button
-                  type="button"
-                  class="flex h-11 items-center justify-center rounded-[6px] border border-divider bg-surface px-4 text-[15px] font-semibold text-text-dark transition hover:bg-app-bg disabled:cursor-not-allowed disabled:opacity-70"
-                  :disabled="authStore.isSubmitting"
-                  @click="handleGoogleSignIn"
-                >
-                  Continue with Google
-                </button>
-              </div>
-            </form>
-
-            <p class="text-xs leading-5 text-text-muted">
-              By continuing, you agree to your workspace authentication policy.
-            </p>
-          </div>
-        </div>
+        <AuthSignInForm
+          title="Admin sign in"
+          description="Use your workspace account to continue into the admin workspace."
+          email-placeholder="admin@workspace.com"
+          :error-message="errorMessage"
+          :is-submitting="authStore.isSubmitting"
+          @submit-credentials="handleEmailSignIn"
+          @submit-google="handleGoogleSignIn"
+        />
       </section>
     </div>
   </div>

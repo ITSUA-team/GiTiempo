@@ -37,3 +37,23 @@
 - [x] 6.3 Add service-level tests for the shared auth runtime helper to verify email/password sign-in, Google sign-in, identity-provider sign-out, and no-Firebase-config sign-out behavior.
 - [x] 6.4 Add service-level tests for the shared workspace-link resolver to verify configured app URLs, localhost port fallback, same-origin fallback, no-window fallback, and both user-to-admin and admin-to-user target configurations.
 - [x] 6.5 Add `admin-web` logout/auth-shell behavior tests that verify logout clears guest state after both successful and failed API logout, signs out the identity provider, and preserves visible counterpart-workspace links on login and authenticated shell surfaces.
+
+## 7. Shared PrimeVue Component And Zod Validation Proposal
+
+- [x] 7.1 Make `@gitiempo/web-shared` component-aware for shared `.vue` exports, including TypeScript/Vue typechecking and package export paths for components.
+- [x] 7.2 Add a shared PrimeVue auth sign-in form component for the duplicated `user-web` and `admin-web` login form region, with typed props/emits and no app-local store/router imports.
+- [x] 7.3 Add shared browser-only Zod validation for the email/password form payload used by both login views, or place the schema in `@gitiempo/shared` only if it becomes contract-facing.
+- [x] 7.4 Update `apps/user-web/src/views/LoginView.vue` and `apps/admin-web/src/views/LoginView.vue` to consume the shared form component while keeping full-page copy, hero content, redirect handling, and counterpart links app-local.
+- [x] 7.5 Replace standard raw controls in `apps/user-web/src/views/ProfileView.vue` with PrimeVue `InputText`, `Button`, `Tag`, and `Avatar`, extracting any repeated stable blocks to `@gitiempo/web-shared` if there are two call sites.
+- [x] 7.6 Replace shell account/profile raw button regions in both app shells with a shared PrimeVue-based identity/avatar component if the compared regions remain structurally identical.
+- [x] 7.7 Remove raw hex classes from affected Vue templates and use shared token utilities or PrimeVue severity styling.
+- [x] 7.8 Add or update component tests for the shared auth sign-in form and consuming login views, covering validation errors, email/password submit, Google submit, disabled/loading state, and visible error rendering.
+- [x] 7.9 Verify with `pnpm --filter @gitiempo/web-shared lint`, `pnpm --filter @gitiempo/web-shared typecheck`, `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, `pnpm --filter user-web test`, `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`.
+
+## 8. Follow-Up Shared Frontend Cleanup Proposal
+
+- [x] 8.1 Replace deprecated `ZodError.flatten()` usage in the shared auth sign-in form with a non-deprecated Zod v4 error collection approach.
+- [x] 8.2 Add `@primevue/forms` to the shared frontend package and update the shared auth sign-in form to use PrimeVue form orchestration with the Zod resolver.
+- [x] 8.3 Compare `apps/user-web/src/components/app/PlaceholderPage.vue` and `apps/admin-web/src/components/app/PlaceholderPage.vue` and extract a shared prop-driven placeholder scaffold into `@gitiempo/web-shared` if no meaningful structural divergence exists.
+- [x] 8.4 Compare the login hero/supporting-card regions in `apps/user-web/src/views/LoginView.vue` and `apps/admin-web/src/views/LoginView.vue` and extract any stable presentational micro-components that remain duplicated after parameterization.
+- [x] 8.5 Verify affected package/app lint, typecheck, and tests after any follow-up extraction or deprecated-API cleanup.

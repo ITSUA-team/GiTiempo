@@ -1,7 +1,9 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
+import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
+import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 import AdminAppShell from "./AdminAppShell.vue";
@@ -29,7 +31,7 @@ describe("AdminAppShell", () => {
 
     const wrapper = mount(AdminAppShell, {
       global: {
-        plugins: [pinia, router],
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
       },
     });
     const workspaceLink = wrapper.get('a[href="http://localhost:5173"]');

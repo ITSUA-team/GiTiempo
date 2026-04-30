@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import Avatar from "primevue/avatar";
+import Button from "primevue/button";
+import InputText from "primevue/inputtext";
+import Tag from "primevue/tag";
 import { useRouter } from "vue-router";
 
 import { routeNames } from "@/router";
@@ -30,11 +34,14 @@ async function handleSignOut(): Promise<void> {
       >
         <div class="flex flex-col gap-4">
           <div class="flex items-center gap-4">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-accent-tint text-[12px] font-semibold text-brand"
-            >
-              {{ authStore.userInitials }}
-            </div>
+            <Avatar
+              :label="authStore.userInitials"
+              shape="circle"
+              class="size-10"
+              :pt="{
+                root: 'bg-accent-tint text-[12px] font-semibold text-brand',
+              }"
+            />
             <div class="flex flex-col gap-0.5">
               <p class="text-sm font-semibold text-text-dark">
                 {{ authStore.displayName }}
@@ -46,43 +53,54 @@ async function handleSignOut(): Promise<void> {
           </div>
 
           <div class="grid gap-4">
-            <label class="flex flex-col gap-[6px]">
-              <span class="text-[13px] font-medium text-text-dark">
+            <div class="flex flex-col gap-1">
+              <label
+                for="profile-display-name"
+                class="text-[13px] font-medium text-text-dark"
+              >
                 Display name
-              </span>
-              <input
-                :value="authStore.displayName"
-                type="text"
+              </label>
+              <InputText
+                input-id="profile-display-name"
+                :model-value="authStore.displayName"
                 disabled
-                class="h-[42px] rounded-[6px] border border-divider bg-surface px-3 text-sm text-text-dark outline-none disabled:cursor-default"
-              >
-            </label>
+                class="h-[42px] w-full"
+              />
+            </div>
 
-            <label class="flex flex-col gap-[6px]">
-              <span class="text-[13px] font-medium text-text-dark">Email</span>
-              <input
-                :value="authStore.profile?.email ?? 'alexey@example.com'"
-                type="email"
-                disabled
-                class="h-[42px] rounded-[6px] border border-divider bg-app-bg px-3 text-sm text-text-muted outline-none disabled:cursor-default"
+            <div class="flex flex-col gap-1">
+              <label
+                for="profile-email"
+                class="text-[13px] font-medium text-text-dark"
               >
-            </label>
+                Email
+              </label>
+              <InputText
+                input-id="profile-email"
+                :model-value="authStore.profile?.email ?? 'alexey@example.com'"
+                disabled
+                class="h-[42px] w-full"
+                :pt="{
+                  root: 'bg-app-bg text-text-muted',
+                }"
+              />
+            </div>
 
             <div class="flex justify-end gap-2">
-              <button
+              <Button
                 type="button"
+                label="Cancel"
+                severity="secondary"
+                variant="outlined"
+                size="small"
                 disabled
-                class="rounded-[6px] border border-divider bg-surface px-4 py-[10px] text-[11px] font-semibold text-text-dark"
-              >
-                Cancel
-              </button>
-              <button
+              />
+              <Button
                 type="button"
+                label="Save changes"
+                size="small"
                 disabled
-                class="rounded-[6px] bg-brand px-4 py-[10px] text-[11px] font-semibold text-white"
-              >
-                Save changes
-              </button>
+              />
             </div>
           </div>
         </div>
@@ -116,39 +134,44 @@ async function handleSignOut(): Promise<void> {
           </div>
 
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <span
-              class="rounded bg-[#E8F5E9] px-2 py-1 text-[10px] font-semibold text-[#2E7D32]"
-            >
-              Connected
-            </span>
+            <Tag
+              value="Connected"
+              severity="success"
+              :pt="{
+                root: 'rounded-sm bg-status-active-bg px-2 py-1 text-[10px] font-semibold text-status-active-text',
+                label: 'leading-none',
+              }"
+            />
             <div class="flex gap-2">
-              <button
+              <Button
                 type="button"
+                label="Reconnect"
+                severity="secondary"
+                variant="outlined"
+                size="small"
                 disabled
-                class="rounded-[6px] border border-divider bg-surface px-4 py-[10px] text-[11px] font-semibold text-text-dark"
-              >
-                Reconnect
-              </button>
-              <button
+              />
+              <Button
                 type="button"
+                label="Disconnect"
+                severity="danger"
+                variant="outlined"
+                size="small"
                 disabled
-                class="rounded-[6px] border border-destructive bg-surface px-4 py-[10px] text-[11px] font-semibold text-destructive"
-              >
-                Disconnect
-              </button>
+              />
             </div>
           </div>
         </div>
       </section>
 
       <div class="flex justify-end pt-4">
-        <button
+        <Button
           type="button"
-          class="rounded-[6px] border border-destructive bg-surface px-4 py-[10px] text-sm font-semibold text-destructive transition hover:bg-destructive/5"
+          label="Sign out"
+          severity="danger"
+          variant="outlined"
           @click="handleSignOut"
-        >
-          Sign out
-        </button>
+        />
       </div>
     </div>
   </section>
