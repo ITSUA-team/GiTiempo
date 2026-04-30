@@ -90,3 +90,15 @@ Shared header components SHALL prefer canonical design-system Tailwind utilities
 - **THEN** the implementation checks those classes with `suggestCanonicalClasses`
 - **AND** replaces arbitrary classes with canonical equivalents where available, such as `rounded-[10px]` to `rounded-lg`
 - **AND** keeps arbitrary values only when no documented/canonical equivalent exists or exact design fidelity requires the arbitrary value
+
+### Requirement: Consuming SPAs Generate Styles For Shared Vue Components
+The frontend codebase SHALL ensure Tailwind CSS scans shared frontend Vue component sources used by both SPAs.
+
+#### Scenario: Shared component classes are generated in app stylesheets
+- **WHEN** `user-web` or `admin-web` imports Vue components from `@gitiempo/web-shared`
+- **THEN** that SPA's Tailwind CSS entry registers the shared package source path with Tailwind v4 `@source`
+- **AND** utility classes that exist only inside shared SFCs or shared PrimeVue `pt` class strings are emitted in the consuming app stylesheet
+
+#### Scenario: Shared Tailwind source registration is documented
+- **WHEN** shared frontend component source paths are added to app Tailwind scanning
+- **THEN** the UI setup documentation records the requirement so future shared UI packages or moved components receive the same source registration

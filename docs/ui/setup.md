@@ -12,6 +12,7 @@ Current workspace setup:
 - `apps/user-web/src/assets/main.css`
 - `apps/admin-web/src/assets/main.css`
 - Shared token source: `packages/web-config/src/styles/tokens.css`
+- Shared component source registration: `@source "../../../../packages/web-shared/src"` in each app CSS entry
 - Vite integration via `@tailwindcss/vite` in each app's `vite.config.ts`
 
 - Use `@theme inline` when a token references another CSS variable via `var(...)`.
@@ -58,6 +59,18 @@ Current workspace setup:
 ```
 
 Tokens become Tailwind utilities such as `bg-brand`, `text-text-muted`, `rounded-sm`, and `shadow-card`.
+
+When an app consumes Vue components from `@gitiempo/web-shared`, register the shared package with Tailwind v4 using `@source` in that app's CSS entry. Tailwind's automatic source detection can miss external workspace packages, which leads to rendered shared components whose class attributes exist in the DOM but whose utility CSS is missing from the generated stylesheet.
+
+```css
+@import "tailwindcss";
+@import "primeicons/primeicons.css";
+@import "@gitiempo/web-config/styles/tokens.css";
+
+@source "../../../../packages/web-shared/src";
+```
+
+Use the package `src` directory rather than only `components` so shared PrimeVue `pt` class strings and future shared class-bearing helpers are scanned too.
 
 If the team wants a locked-down palette, also reset `--color-*` and `--shadow-*` before redefining them.
 

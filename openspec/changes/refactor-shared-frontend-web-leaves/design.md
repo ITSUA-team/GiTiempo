@@ -92,6 +92,14 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 - Apply this review to `WorkspaceHeader`, any retained `WorkspaceHeaderIdentity` markup, and touched header markup in both app shells.
 - **Why:** shared components become design-system precedents, so they should prefer canonical token utilities over one-off arbitrary classes.
 
+### D3f. Register shared component sources with Tailwind v4 in consuming apps
+
+- Each SPA stylesheet that imports Tailwind should explicitly register `@gitiempo/web-shared` source files with Tailwind v4 `@source` so classes used only in shared package SFCs are generated in app CSS.
+- Add the shared package source path to both `apps/user-web/src/assets/main.css` and `apps/admin-web/src/assets/main.css`.
+- Prefer registering `../../../../packages/web-shared/src` rather than only `components` so future shared class-bearing helpers or PrimeVue `pt` strings are also detected.
+- Document this requirement in `docs/ui/setup.md` so new shared frontend packages or moved shared components do not silently lose styles.
+- **Why:** Tailwind v4 automatic source detection can miss external workspace packages; without explicit `@source`, shared components render DOM with class attributes but the corresponding utility CSS may not be emitted.
+
 ### D4. Preserve app-local orchestration boundaries
 
 - `stores/auth.ts`, `router/index.ts`, route maps, and app-specific pages remain local even when they consume shared leaf modules.
@@ -123,7 +131,8 @@ The nearest app guidance already requires both SPAs to stay aligned on auth dire
 7. Evaluate duplicate placeholder/login-presentational blocks for extraction into `@gitiempo/web-shared`.
 8. Evaluate duplicated authenticated header chrome for extraction into a shared prop-driven header component.
 9. Run canonical Tailwind class review on new/touched shared header markup and replace canonical equivalents before closure.
-10. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
+10. Register shared component source paths with Tailwind in both SPA CSS entries and document the requirement.
+11. Remove duplicated local helpers and markup once both SPAs compile and tests pass.
 
 ## Open Questions
 

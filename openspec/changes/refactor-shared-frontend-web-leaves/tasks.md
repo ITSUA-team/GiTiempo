@@ -66,3 +66,10 @@
 - [x] 9.4 Run `suggestCanonicalClasses` on new/touched shared header markup and replace arbitrary classes with canonical equivalents when available, including `rounded-[10px]` to `rounded-lg`.
 - [x] 9.5 Add or update component/shell tests for shared header rendering, visible counterpart workspace links, avatar/display identity, and optional settings/profile action behavior.
 - [x] 9.6 Verify `@gitiempo/web-shared`, `user-web`, and `admin-web` lint, typecheck, and tests after the header extraction.
+
+## 10. Shared Tailwind Source Registration Proposal
+
+- [x] 10.1 Confirm Tailwind v4 app CSS entries do not currently scan `packages/web-shared/src`, causing classes used only by shared components to be missing from generated app CSS.
+- [x] 10.2 Add Tailwind `@source` registration for `../../../../packages/web-shared/src` to `apps/user-web/src/assets/main.css` and `apps/admin-web/src/assets/main.css`.
+- [x] 10.3 Document the shared-source registration requirement in `docs/ui/setup.md` for future shared frontend component packages or moved shared UI.
+- [x] 10.4 Verify both SPA builds generate shared component utility classes and run affected lint/typecheck checks.
