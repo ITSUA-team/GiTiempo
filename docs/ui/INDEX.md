@@ -6,12 +6,13 @@ Read this file first. Load only the linked section files needed for the task.
 
 - Stack: Tailwind CSS v4, PrimeVue v4 styled mode, Heroicons for custom icons.
 - Rule: Prefer PrimeVue components for app UI and use Tailwind utility classes through tokens and `pt` overrides.
+- Rule: Validate frontend form payloads and API boundaries with shared Zod schemas where a payload shape is shared or contract-facing.
 - Rule: The Chrome extension uses Tailwind only and shares the same design tokens.
 
 ## Fast Start
 
 - Need app setup or theme config: read `setup.md`.
-- Need design tokens or reusable component rules: read `components.md`.
+- Need design tokens, reusable component rules, forms, or validation: read `components.md`.
 - Need shell, sidebar, or responsive behavior: read `layout.md`.
 - Need User SPA screens: read `pages-user.md`.
 - Need Admin SPA screens: read `pages-admin.md`.
@@ -24,6 +25,8 @@ Read this file first. Load only the linked section files needed for the task.
 - Do not use raw hex values in class attributes. Use token utilities such as `bg-brand` and `text-text-muted`.
 - PrimeVue brand styling comes from the global preset first, `pt` overrides second.
 - If a `pt` utility class does not apply, fix preset tokens or CSS layer order instead of adding deep selectors or `!important`.
+- Use PrimeVue controls instead of raw form controls, buttons, tags, avatars, dialogs, tables, selectors, and loading widgets when the app UI has a PrimeVue equivalent.
+- Use Zod schemas for shared or contract-facing frontend validation; keep API request/response parsing at shared HTTP client boundaries.
 - Dark mode is disabled for MVP.
 - Mobile is required, but desktop-first polish is acceptable for MVP.
 

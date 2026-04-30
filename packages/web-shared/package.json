@@ -1,0 +1,56 @@
+{
+  "name": "@gitiempo/web-shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./auth": {
+      "types": "./src/auth/index.ts",
+      "default": "./src/auth/index.ts"
+    },
+    "./components": {
+      "types": "./src/components/index.ts",
+      "default": "./src/components/index.ts"
+    },
+    "./session-storage": {
+      "types": "./src/session-storage.ts",
+      "default": "./src/session-storage.ts"
+    },
+    "./validation": {
+      "types": "./src/validation/index.ts",
+      "default": "./src/validation/index.ts"
+    },
+    "./workspace-link": {
+      "types": "./src/workspace-link.ts",
+      "default": "./src/workspace-link.ts"
+    }
+  },
+  "scripts": {
+    "build": "vue-tsc -p tsconfig.json",
+    "typecheck": "vue-tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint src --ext .ts,.vue"
+  },
+  "dependencies": {
+    "@gitiempo/shared": "workspace:*",
+    "@primevue/forms": "^4.5.5",
+    "firebase": "^12.4.0",
+    "primevue": "^4.5.5",
+    "vue": "^3.5.32",
+    "vue-router": "^5.0.4",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^27.2.0",
+    "typescript": "^5.8.3",
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4",
+    "vue-tsc": "^3.2.6"
+  }
+}

@@ -1,4 +1,4 @@
-const REFRESH_TOKEN_STORAGE_KEY = "gitiempo.refresh-token";
+export const REFRESH_TOKEN_STORAGE_KEY = "gitiempo.refresh-token";
 
 type StorageLike = Pick<Storage, "getItem" | "removeItem" | "setItem">;
 
@@ -39,5 +39,3 @@ export function setRefreshToken(refreshToken: string): void {
 export function clearRefreshToken(): void {
   getStorage().removeItem(REFRESH_TOKEN_STORAGE_KEY);
 }
-
-export { REFRESH_TOKEN_STORAGE_KEY };

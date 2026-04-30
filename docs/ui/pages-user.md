@@ -37,3 +37,8 @@
 - Editable display name.
 - GitHub connection card with connected/disconnected states.
 - Sign out action at the bottom using a ghost/destructive treatment.
+
+## Cross-App Navigation
+
+- The user SPA should expose a visible entry point to the admin workspace when the admin SPA is available.
+- Prefer placing the cross-link in the shared shell identity/top-bar area so it is available from authenticated user pages without competing with page-level actions.

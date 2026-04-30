@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import globals from "globals";
+import tailwindPlugin from "eslint-plugin-tailwindcss";
 import tsParser from "@typescript-eslint/parser";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import vuePlugin from "eslint-plugin-vue";
@@ -41,6 +42,21 @@ export default [
         { argsIgnorePattern: "^_" },
       ],
       "vue/multi-word-component-names": "off",
+    },
+  },
+  {
+    files: [
+      "apps/user-web/src/**/*.{ts,tsx,vue}",
+      "apps/admin-web/src/**/*.{ts,tsx,vue}",
+      "packages/web-shared/src/**/*.{ts,vue}",
+    ],
+    plugins: {
+      tailwindcss: tailwindPlugin,
+    },
+    rules: {
+      "tailwindcss/classnames-order": ["warn", { config: {} }],
+      "tailwindcss/enforces-shorthand": ["warn", { config: {} }],
+      "tailwindcss/no-unnecessary-arbitrary-value": ["warn", { config: {} }],
     },
   },
 ];

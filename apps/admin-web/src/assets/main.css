@@ -2,6 +2,8 @@
 @import "primeicons/primeicons.css";
 @import "@gitiempo/web-config/styles/tokens.css";
 
+@source "../../../../packages/web-shared/src";
+
 :root {
   font-family: "Inter", sans-serif;
   color: var(--color-text-dark);

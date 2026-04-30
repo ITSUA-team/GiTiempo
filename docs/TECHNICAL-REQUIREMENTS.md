@@ -56,7 +56,7 @@ User → Firebase Auth (Google SSO or email/password) on frontend
                                ↓
                            Frontend receives Firebase ID token (JWT)
                                ↓
-                           Frontend sends Firebase ID token to POST /api/auth/login
+                           Frontend sends Firebase ID token to POST /auth/login
                                ↓
                            Backend verifies Firebase ID token via Firebase Admin SDK
                                ↓
@@ -72,7 +72,7 @@ User → Firebase Auth (Google SSO or email/password) on frontend
                            All API requests include: Authorization: Bearer <access_token>
 ```
 
-**Onboarding model:** Application access is invite-only. New users are added exclusively through the invite-acceptance flow (`POST /invites/accept`). The login endpoint does not create users or memberships — it only issues sessions for users who already have an active workspace membership.
+**Onboarding model:** Application access is invite-only. New users are added exclusively through the invite-acceptance flow (`POST /invites/accept`). The login endpoint does not create users or memberships - it only issues sessions for users who already have an existing local user record and an active workspace membership.
 
 **Token lifecycle:**
 
@@ -81,7 +81,7 @@ User → Firebase Auth (Google SSO or email/password) on frontend
 | Access token (JWT) | 15 minutes | Memory (frontend), `chrome.storage` (extension)       |
 | Refresh token      | 7 days     | localStorage (frontend), `chrome.storage` (extension) |
 
-**Refresh flow:** When the access token expires, the frontend calls `POST /api/auth/refresh` with the refresh token. The backend validates the refresh token, rotates it (invalidates old, issues new), and returns a new access/refresh pair.
+**Refresh flow:** When the access token expires, the frontend calls `POST /auth/refresh` with the refresh token. The backend validates the refresh token, rotates it (invalidates old, issues new), and returns a new access/refresh pair.
 
 **CORS:** The backend configures CORS with allowed origins from the `ALLOWED_ORIGINS` environment variable (comma-separated list of frontend URLs).
 
@@ -96,14 +96,14 @@ See [ADR 003](./adr/003-github-app-user-to-server.md) for rationale.
 ```
 User → clicks "Connect GitHub" in profile settings
                                ↓
-                          Frontend calls GET /api/github/auth-url (with JWT)
+                           Frontend calls GET /github/auth-url (with JWT)
                                ↓
                           Backend generates signed `state` param (JWT containing userId + nonce)
                           and returns GitHub OAuth authorization URL with state
                                ↓
                           Browser navigates to GitHub → user authorizes the app
                                ↓
-                          GitHub redirects to GET /api/github/callback?code=...&state=...
+                           GitHub redirects to GET /github/callback?code=...&state=...
                           (browser redirect — no Authorization header)
                                ↓
                           Backend validates `state` signature to identify the user
@@ -185,9 +185,9 @@ Both User SPA and Admin SPA share the same stack:
 | HTTP client       | Axios (or fetch wrapper from shared package)          |
 | Auth              | Firebase Auth SDK (client-side) → JWT tokens from API |
 
-### 3.0 Frontend Initialization Baseline
+### 3.0 Frontend Platform Baseline
 
-The initial web bootstrap includes:
+The current web frontend baseline includes:
 
 - Vite + Vue 3 + TypeScript for both `apps/user-web` and `apps/admin-web`
 - Tailwind CSS v4 using CSS-first `@theme` setup
@@ -195,7 +195,11 @@ The initial web bootstrap includes:
 - Pinia, Vue Router, VueUse, Heroicons, and PrimeIcons installed and connected
 - Shared contract exports from `packages/shared`
 - Shared frontend theme/bootstrap exports from `packages/web-config`
-- No API client, no Firebase wiring, and no product pages yet
+- Both SPAs are expected to use the same frontend auth model: Firebase sign-in, backend token exchange, refresh-token bootstrap, and logout cleanup
+- `apps/user-web` currently has route structure for login and authenticated pages mounted through an app shell
+- `apps/user-web` currently has the frontend auth wiring in place: Firebase email/password or Google sign-in, `POST /auth/login` token exchange, `GET /users/me` profile bootstrap, `POST /auth/refresh` session restore, and `POST /auth/logout` cleanup
+- Focused Vitest coverage in `apps/user-web` for auth store and router-guard behavior
+- `apps/admin-web` follows the same JWT session direction as `apps/user-web`, even where concrete route/screen implementation is still catching up
 
 ### 3.1 User SPA (`apps/user-web/`)
 
@@ -223,7 +227,8 @@ The initial web bootstrap includes:
 - Both SPAs import `packages/shared` for types and validation schemas.
 - Both SPAs import `packages/web-config` for shared PrimeVue and Tailwind bootstrap configuration.
 - Common UI patterns (avatars, date pickers, task selectors) can be extracted to a shared UI package later if duplication becomes problematic.
-- Both SPAs use the same JWT-based auth flow — Firebase Auth login → exchange for API tokens.
+- Both SPAs use the same JWT-based auth flow - Firebase Auth login, exchange the Firebase ID token at `POST /auth/login`, then use the returned JWT access token for API requests.
+- Both SPAs should expose visible cross-links to the counterpart workspace so users can switch between `user-web` and `admin-web` from the shell/login surfaces rather than relying on manual URL changes.
 
 ---
 

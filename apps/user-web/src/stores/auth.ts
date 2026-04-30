@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
 import { computed, shallowRef } from "vue";
 import type { TokenPairResponse, UserResponse } from "@gitiempo/shared";
-
 import {
   clearRefreshToken,
   getRefreshToken,
   setRefreshToken,
-} from "@/lib/session-storage";
+} from "@gitiempo/web-shared/session-storage";
+
 import { getAuthRuntime } from "@/services/auth-runtime";
 
 function applyTokenPair(

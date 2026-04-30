@@ -127,6 +127,16 @@
                       "fontWeight": "600"
                     }
                   ]
+                },
+                {
+                  "type": "text",
+                  "id": "Qlot9",
+                  "name": "userSwitch",
+                  "fill": "#5D2B85",
+                  "content": "Admin workspace",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "600"
                 }
               ]
             }
@@ -2219,6 +2229,16 @@
                       "fontWeight": "600"
                     }
                   ]
+                },
+                {
+                  "type": "text",
+                  "id": "YK6LM",
+                  "name": "adminSwitch",
+                  "fill": "#5D2B85",
+                  "content": "User workspace",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "600"
                 }
               ]
             }
@@ -12997,6 +13017,16 @@
                   "id": "R7Dsq",
                   "fill": "$color-text-muted",
                   "content": "No dark mode for MVP",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "TQwPI",
+                  "name": "loginSwitch",
+                  "fill": "#5D2B85",
+                  "content": "Need admin tools? Open the admin workspace.",
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "500"
