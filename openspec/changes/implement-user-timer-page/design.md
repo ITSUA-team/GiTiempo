@@ -71,6 +71,16 @@ Affected app/package guidance:
 
    Rationale: If timer-page work extracts fetch-boundary logic out of existing clients, the resulting helper is not auth-specific and should live under a neutral shared browser/runtime path. This avoids misleading package ownership and prevents future non-auth consumers from accumulating under an unrelated namespace.
 
+9. Lock project and task selection while a timer is running.
+
+   Rationale: Once the current timer is active, the page summary and stop action are driven by `current.timeEntry`, not by a newly chosen selector value. Allowing users or future code paths to mutate project/task selection while the timer is running creates UI drift and makes support/debugging harder because the selectors no longer represent an actionable start state.
+
+   Alternative considered: Leave selectors enabled and ignore them while the timer is running. Rejected because it permits misleading state changes and relies on maintainers remembering that the selectors are visually editable but behaviorally inert.
+
+10. Treat extracted transport helpers as a full consolidation point, not an extra variant.
+
+   Rationale: The timer page may justify extracting shared fetch-boundary logic, but the extraction only reduces support cost if it replaces nearby duplicates and carries direct boundary tests. Adding a new helper while leaving old variants intact increases drift risk instead of reducing it.
+
 ## Risks / Trade-offs
 
 - API errors can leave stale local UI state → Refetch current timer after successful start/stop/manual-entry actions and show toast errors for failed actions.
@@ -82,3 +92,5 @@ Affected app/package guidance:
 - Transport helpers can drift if timer-specific fetch logic is cloned from existing auth/current-user clients → Reuse or extract shared fetch-boundary helpers before adding another variant.
 - Timer UI can appear frozen if the elapsed display bypasses the reactive source updated by the interval → Make the rendered `HH:MM:SS` value depend directly on the ticking reactive state.
 - Feature state becomes harder to reason about if composable refs are re-wrapped into a second proxy shape at the page level → Keep one explicit state representation between composable, component, and tests.
+- Running timer selectors can drift away from the active entry if project/task remains editable during a running timer → Disable selector controls and reject project/task mutation in feature logic while the timer is active.
+- Extracted fetch-boundary helpers can become a fourth local variant instead of a consolidation point → When introducing a shared helper, migrate sibling clients or keep the helper local until shared adoption is part of the same change, and cover the helper/client boundary with direct tests.

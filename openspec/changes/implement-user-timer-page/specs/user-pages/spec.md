@@ -42,6 +42,14 @@ The timer page MUST allow authenticated users to track time against visible work
 - **THEN** the page stops the current timer
 - **AND** the page refreshes the current timer state to show that no timer is running
 
+#### Scenario: Running timer locks project and task selection
+
+- **GIVEN** the user has a running timer
+- **WHEN** the running timer state is rendered
+- **THEN** the project selector is disabled
+- **AND** the task selector is disabled
+- **AND** the page does not allow project or task selection state to change until the running timer has been stopped
+
 #### Scenario: Timer CTA label follows running state
 
 - **GIVEN** the timer page renders
@@ -73,10 +81,17 @@ The timer page MUST allow authenticated users to track time against visible work
 #### Scenario: Stateful timer behavior remains verifiable
 
 - **WHEN** the timer page implementation is updated
-- **THEN** stateful behavior such as CTA label switching, project-to-task reset rules, and manual interval validation remains covered by focused page or composable tests
+- **THEN** stateful behavior such as CTA label switching, project-to-task reset rules, running-timer selector locking, and manual interval validation remains covered by focused page or composable tests
 
 #### Scenario: Timer page keeps a single feature-state representation
 
 - **WHEN** the timer page composes route-level UI with timer-page behavior
 - **THEN** the page keeps one explicit feature-state representation between the composable and the component surface
 - **AND** it does not introduce an additional proxy layer only to change template ergonomics
+
+#### Scenario: Timer page fetch boundaries remain aligned with shared transport conventions
+
+- **WHEN** timer-page API helpers are introduced or refactored
+- **THEN** they reuse the repository error-message order (`message`, then `error`, then status fallback)
+- **AND** any extracted shared fetch helper replaces nearby duplicate request logic instead of becoming an extra transport variant
+- **AND** the fetch boundary has direct tests for request path, headers, payload shape, response parsing, and API error propagation
