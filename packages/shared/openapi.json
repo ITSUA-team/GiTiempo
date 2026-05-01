@@ -606,6 +606,63 @@
         ]
       }
     },
+    "/projects/management-summary": {
+      "get": {
+        "operationId": "ProjectsController_getManagementSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagementProjectSummaryResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin or PM role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get management project summary",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/projects/my-summary": {
+      "get": {
+        "operationId": "ProjectsController_getMySummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyProjectSummaryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current user project summary",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/projects/{id}": {
       "get": {
         "operationId": "ProjectsController_getProject",
@@ -2021,6 +2078,24 @@
             "type": "string",
             "nullable": true
           },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "github"
+            ]
+          },
+          "totalHours": {
+            "type": "number",
+            "minimum": 0
+          },
           "isActive": {
             "type": "boolean"
           },
@@ -2040,9 +2115,60 @@
           "workspaceId",
           "name",
           "color",
+          "visibility",
+          "source",
+          "totalHours",
           "isActive",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ManagementProjectSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "activeProjects": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "privateProjects": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "publicProjects": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "activeProjects",
+          "privateProjects",
+          "publicProjects"
+        ]
+      },
+      "MyProjectSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "visibleProjects": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "trackedHoursWeek": {
+            "type": "number",
+            "minimum": 0
+          },
+          "trackedHoursMonth": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "visibleProjects",
+          "trackedHoursWeek",
+          "trackedHoursMonth"
         ]
       },
       "CreateProjectDto": {
@@ -2057,6 +2183,13 @@
             "type": "string",
             "pattern": "^#[0-9A-Fa-f]{6}$",
             "nullable": true
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ]
           }
         },
         "required": [
@@ -2076,6 +2209,13 @@
             "type": "string",
             "pattern": "^#[0-9A-Fa-f]{6}$",
             "nullable": true
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ]
           },
           "isActive": {
             "type": "boolean"
