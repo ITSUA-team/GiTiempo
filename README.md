@@ -89,7 +89,10 @@ pnpm lint               # Lint all packages
 
 ```bash
 pnpm test               # Run tests across all packages
+pnpm test:e2e           # Run e2e tests through the configured workspace task
 ```
+
+API integration/e2e automation must use an isolated PostgreSQL database, not a developer, staging, or production database. See [docs/testing.md](docs/testing.md).
 
 ## Working with Packages
 
@@ -177,6 +180,10 @@ A 7-day minimum age policy is configured in `.npmrc` — freshly published packa
 ## Environment Variables
 
 API environment variables are documented in `apps/api/.env.example`. Copy it to `apps/api/.env` and fill in the values before starting the backend.
+
+## Deployment
+
+Frontend apps deploy independently to Cloudflare Workers Static Assets. The API deploys to a VPS as a Docker image managed by Docker Compose. See [docs/deployment.md](docs/deployment.md).
 
 ## Tech Stack
 

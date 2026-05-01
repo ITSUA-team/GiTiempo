@@ -6,7 +6,7 @@
 ## Context
 
 The application has three clients (User SPA, Admin SPA, Chrome Extension) hosted on different origins:
-- SPAs on Cloudflare Pages (`app.tiempo.com`, `admin.tiempo.com`)
+- SPAs on Cloudflare Workers Static Assets (`app.tiempo.com`, `admin.tiempo.com`)
 - API on VPS (`api.tiempo.com`)
 - Chrome Extension running on `github.com`
 
