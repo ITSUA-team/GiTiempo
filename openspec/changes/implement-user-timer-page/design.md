@@ -59,6 +59,10 @@ Affected app/package guidance:
 
    Rationale: UI docs require PrimeVue for standard controls and token utilities for styling. The page should match the `.pen` desktop layout while remaining responsive on mobile.
 
+6. Keep page orchestration separate from transport duplication and presentational empty states.
+
+   Rationale: Timer-page behavior combines async project/task loading, running-timer state, derived CTA mode, and manual-entry validation. To keep support cost down, the implementation must avoid duplicating fetch-boundary helpers that already exist elsewhere, must distinguish request failures from true empty data states, and should keep route-level UI composition separate from stateful orchestration when the page grows beyond a single responsibility.
+
 ## Risks / Trade-offs
 
 - API errors can leave stale local UI state → Refetch current timer after successful start/stop/manual-entry actions and show toast errors for failed actions.
@@ -66,3 +70,5 @@ Affected app/package guidance:
 - Manual interval date/time composition can produce invalid ranges → Validate in the page before submit and rely on shared API validation as the final boundary.
 - Project/task lists may be empty for some users → Render disabled downstream controls and clear empty-state guidance rather than exposing an enabled CTA.
 - A running timer may belong to a task different from the current selector → Render the running timer summary from `current.timeEntry` and make the CTA stop that running timer.
+- UI fetch failures can be mistaken for empty data if state is collapsed too early → Keep request-error state separate from empty collections and render the error state with priority over empty messaging.
+- Transport helpers can drift if timer-specific fetch logic is cloned from existing auth/current-user clients → Reuse or extract shared fetch-boundary helpers before adding another variant.

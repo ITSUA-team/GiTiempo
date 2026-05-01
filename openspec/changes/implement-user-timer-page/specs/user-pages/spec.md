@@ -19,6 +19,13 @@ The timer page MUST allow authenticated users to track time against visible work
 - **THEN** the task selector loads tasks for that selected project
 - **AND** the task selector lists only tasks from that project that the user can see
 
+#### Scenario: Task loading failure does not render as empty data
+
+- **GIVEN** the user has selected a project
+- **WHEN** the task request fails
+- **THEN** the page renders an explicit error state for that failed request
+- **AND** the page does not replace that failure with a "no tasks available" empty-state message
+
 #### Scenario: Timer started from selected task
 
 - **GIVEN** the user has no running timer
@@ -55,3 +62,8 @@ The timer page MUST allow authenticated users to track time against visible work
 - **WHEN** the timer page renders
 - **THEN** it does not require GitHub connection state
 - **AND** it does not show organization, repository, issue, freeform manual-task fallback, or pause/resume controls
+
+#### Scenario: Stateful timer behavior remains verifiable
+
+- **WHEN** the timer page implementation is updated
+- **THEN** stateful behavior such as CTA label switching, project-to-task reset rules, and manual interval validation remains covered by focused page or composable tests

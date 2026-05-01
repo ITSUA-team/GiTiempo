@@ -11,6 +11,7 @@
 - [ ] 2.3 Implement the running timer card with centered elapsed time, current project/task summary, and a single large CTA labeled `Start` when idle and `Stop` when running.
 - [ ] 2.4 Implement the manual interval panel below timer actions with PrimeVue date/time controls and add-entry action.
 - [ ] 2.5 Add empty/error UI states for no visible projects, no tasks in selected project, and failed API actions using existing token-backed styling.
+- [ ] 2.6 Keep failed task/project fetch states distinct from empty-state messaging.
 
 ## 3. Behavior
 
@@ -25,3 +26,4 @@
 - [ ] 4.1 Add focused tests for timer page helper logic or component behavior where practical.
 - [ ] 4.2 Run `pnpm --filter user-web lint`.
 - [ ] 4.3 Run `pnpm --filter user-web typecheck`.
+- [ ] 4.4 Do not mark the change complete until CTA label switching, project/task reset behavior, and manual interval validation have focused page or composable test coverage.
