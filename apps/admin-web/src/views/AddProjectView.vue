@@ -91,7 +91,7 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-5">
     <!-- Back link -->
     <button
       class="text-brand text-left text-sm font-semibold hover:opacity-80"
@@ -134,38 +134,6 @@
                 class="w-full"
                 :disabled="isSubmitting"
                 maxlength="255"
-              />
-            </div>
-
-            <!-- Source (read-only) -->
-            <div class="flex flex-col gap-2">
-              <label
-                for="source"
-                class="text-text-dark text-xs font-medium uppercase tracking-wide"
-              >
-                Source
-              </label>
-              <InputText
-                id="source"
-                value="Manual"
-                disabled
-                class="bg-app-bg w-full"
-              />
-            </div>
-
-            <!-- Project Manager (read-only) -->
-            <div class="flex flex-col gap-2">
-              <label
-                for="pm"
-                class="text-text-dark text-xs font-medium uppercase tracking-wide"
-              >
-                Project manager
-              </label>
-              <InputText
-                id="pm"
-                value="Current User"
-                disabled
-                class="bg-app-bg w-full"
               />
             </div>
 
@@ -251,24 +219,26 @@
           </p>
 
           <!-- Manual option (selected) -->
-          <div class="border-brand bg-accent-tint mb-3 rounded border p-3">
+          <div class="border-brand bg-accent-tint mb-3 rounded-lg border p-3">
             <div class="text-brand mb-1 text-sm font-semibold">
               Manual project
             </div>
             <p class="text-text-muted text-xs">
-              Add a project manually to get started
+              Use this when a project is internal, still being prepared, or not
+              available through a workspace import yet.
             </p>
           </div>
 
           <!-- Import option (disabled) -->
           <div
-            class="border-divider bg-app-bg mb-4 rounded border p-3 opacity-50"
+            class="border-divider bg-app-bg mb-4 rounded-lg border p-3 opacity-50"
           >
             <div class="text-text-dark mb-1 text-sm font-semibold">
               Workspace import
             </div>
             <p class="text-text-muted text-xs">
-              Link directly from your installed workspace
+              Use imports when the project already exists in a connected
+              workspace and should keep its external context.
             </p>
           </div>
 
