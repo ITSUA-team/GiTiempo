@@ -80,8 +80,10 @@ The timer page MUST allow authenticated users to track time against visible work
 - **AND** the user submits a manual interval that the API rejects because it conflicts with that active timer
 - **WHEN** the manual-entry request fails
 - **THEN** the page shows an error toast with the API failure message
+- **AND** the page refreshes current timer state before deciding whether the page is idle or running
 - **AND** the page keeps the running timer state rendered from the current active entry
 - **AND** the page keeps the manual interval inputs available for correction instead of resetting them as if the request had succeeded
+- **AND** the manual-entry failure is rendered only in the manual interval panel, not duplicated in the timer CTA error region
 
 #### Scenario: Timer page shows toast feedback for API outcomes
 
@@ -95,6 +97,14 @@ The timer page MUST allow authenticated users to track time against visible work
 - **WHEN** the API returns a running timer
 - **THEN** the page updates the selected project and selected task to match the current active time entry
 - **AND** the running timer summary and selector values stay aligned to that authoritative server state
+
+#### Scenario: Start-timer conflict refreshes authoritative current timer state
+
+- **GIVEN** the page appears idle locally
+- **WHEN** the user starts a timer and the API rejects the request because a timer is already running
+- **THEN** the page shows an error toast with the API failure message
+- **AND** the page refreshes current timer state
+- **AND** if the refresh returns a running timer, the page renders that active timer and resyncs the project and task selector values from it
 
 #### Scenario: Timer page excludes external-provider-only behavior
 
@@ -118,4 +128,10 @@ The timer page MUST allow authenticated users to track time against visible work
 - **WHEN** timer-page API helpers are introduced or refactored
 - **THEN** they reuse the repository error-message order (`message`, then `error`, then status fallback)
 - **AND** any extracted shared fetch helper replaces nearby duplicate request logic instead of becoming an extra transport variant
+- **AND** any extracted low-level fetch helper is not exported from the root shared package barrel unless it is intentionally part of the public frontend package contract
 - **AND** the fetch boundary has direct tests for request path, headers, payload shape, response parsing, and API error propagation
+
+#### Scenario: Timer page does not land new Vue lint warning debt
+
+- **WHEN** timer-page Vue markup is added or rewritten
+- **THEN** auto-fixable lint warnings such as Tailwind class order, Vue attribute order, and formatting warnings are fixed before the timer-page tasks are marked complete

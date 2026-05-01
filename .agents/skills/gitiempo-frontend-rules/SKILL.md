@@ -62,10 +62,13 @@ Use this skill when:
 - When adding a new frontend fetch path, reuse the existing repository error-message shape (`message`, then `error`, then status fallback) rather than inventing a new parse order or response-handling branch.
 - New or changed frontend fetch-boundary helpers must have focused tests for request path, auth headers, payload shape, response parsing, and API error propagation. Composable or page tests do not replace boundary-level coverage.
 - For frontend API calls that load, mutate, or reconcile user-visible feature state, provide user-visible toast feedback for the outcome. Use success toasts for completed mutations and error toasts for failed reads or writes; inline empty/error UI can complement this but must not be the only feedback channel.
+- Do not export low-level shared transport primitives such as generic JSON request helpers from a root package barrel unless they are intentionally part of the public package contract. Prefer domain clients or a narrow explicit subpath so future features do not bypass app-local/client ownership boundaries.
 - For time-based or event-driven UI state, ensure rendered output depends on the reactive source that is actually updated. Do not update a ticking ref, timer, or subscription state if the computed/template output bypasses that reactive value.
 - When a running or locked feature state invalidates upstream selectors or filters, enforce that invariant in both places: disable the UI control and block the underlying state mutation in the composable/store action. Do not rely on the template alone to protect feature invariants.
 - When the backend returns authoritative feature state such as a running timer, active assignment, or persisted selection owner, resync the dependent local selectors from that server state after initial load and after successful mutations. Do not leave stale local selection values pointing at an idle or superseded context.
-- When an API rejects a user action because it conflicts with current authoritative state, surface that exact failure to the user, keep the authoritative state rendered, and avoid clearing or mutating local form inputs as if the action had succeeded.
+- When an API rejects a user action because it conflicts with current authoritative state, surface that exact failure to the user, refresh or reload the authoritative state, keep that state rendered, and avoid clearing or mutating local form inputs as if the action had succeeded.
+- Keep error state scoped to the UI/action that produced it. Do not copy one failure into multiple unrelated page-level error refs or render duplicate inline error blocks for the same failed API action; use one local inline state plus toast feedback.
+- New Vue UI files should not add fresh lint warning debt. If lint reports auto-fixable class ordering, attribute ordering, or formatting warnings for newly added/rewritten Vue markup, fix them before marking the task complete.
 
 ## Verification
 

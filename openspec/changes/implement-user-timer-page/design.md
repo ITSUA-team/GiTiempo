@@ -99,10 +99,35 @@ Affected app/package guidance:
 
    Alternative considered: Reset the form after any submit attempt and rely on generic error text. Rejected because it hides the real conflict source and discards the user's corrective context.
 
+14. Treat conflict errors as a signal to refresh current timer state.
+
+   Rationale: A conflict can mean the local page is stale because another tab/device already started or changed a timer. Showing only the rejection leaves the page in the stale local state that caused the failed action. Refreshing current timer state after timer-start and manual-entry conflicts restores the backend as the source of truth and lets selector resync rules run.
+
+   Alternative considered: Keep local state unchanged and rely on the user to refresh manually. Rejected because it preserves misleading idle/running state after the backend has already told the page its state is stale.
+
+15. Keep timer-page action errors scoped to their owning UI region.
+
+   Rationale: Start/stop failures belong near the timer CTA. Manual-entry failures belong in the manual interval panel. Copying one failure into both regions makes the page look like two actions failed, increases support ambiguity, and creates unnecessary coupling between unrelated UI sections.
+
+   Alternative considered: Maintain one broad page-level action error for all failures. Rejected because the page has multiple independent action surfaces with different recovery paths.
+
+16. Keep shared transport helpers narrow and intentionally exported.
+
+   Rationale: The timer page can justify a neutral shared fetch helper to consolidate existing auth/current-user transport behavior, but root-exporting a generic request primitive makes it easy for future pages to bypass app-local domain clients. Low-level helpers should stay internal or use an explicit subpath with a deliberate public contract.
+
+   Alternative considered: Export the helper from the root shared package for convenience. Rejected because convenience exports tend to become accidental architecture and increase feature-to-transport coupling.
+
+17. Do not complete the timer page with new Vue lint warning debt.
+
+   Rationale: The timer page is a new implementation surface, so class ordering, attribute ordering, and formatting warnings are avoidable at introduction time. Leaving warning-heavy new markup normalizes noisy diffs and makes future UI reviews more expensive.
+
+   Alternative considered: Accept warnings because lint exits successfully. Rejected because the warnings are concentrated in newly authored code and are mostly mechanical to fix before merge.
+
 ## Risks / Trade-offs
 
 - API errors can leave stale local UI state → Refetch current timer after successful start/stop/manual-entry actions and show toast errors for failed actions.
 - Missing per-request feedback can make timer actions look ignored or stuck → Show toast feedback for failed reads and for both success/failure of start, stop, and manual-entry mutations.
+- Conflict errors can indicate the page is stale relative to another tab/device → Refresh current timer state after start/manual-entry conflicts before keeping the page idle.
 - Client clock drift can affect displayed elapsed time → Treat the server `startedAt` as authoritative and recompute from it; the stored backend duration remains authoritative after stop.
 - Manual interval date/time composition can produce invalid ranges → Validate in the page before submit and rely on shared API validation as the final boundary.
 - Project/task lists may be empty for some users → Render disabled downstream controls and clear empty-state guidance rather than exposing an enabled CTA.
@@ -114,4 +139,7 @@ Affected app/package guidance:
 - Feature state becomes harder to reason about if composable refs are re-wrapped into a second proxy shape at the page level → Keep one explicit state representation between composable, component, and tests.
 - Running timer selectors can drift away from the active entry if project/task remains editable during a running timer → Disable selector controls and reject project/task mutation in feature logic while the timer is active.
 - Manual-entry conflict failures can erase the user's corrective context → Preserve entered date/time values on conflict errors, render the active timer as authoritative, and show the exact API message in a toast.
+- Duplicated inline errors can imply multiple failed actions for one API rejection → Keep manual-entry errors scoped to the manual interval panel and start/stop errors scoped to the timer CTA region.
 - Extracted fetch-boundary helpers can become a fourth local variant instead of a consolidation point → When introducing a shared helper, migrate sibling clients or keep the helper local until shared adoption is part of the same change, and cover the helper/client boundary with direct tests.
+- Root-exported transport helpers can become accidental architecture for future pages → Keep low-level request helpers internal or expose them only through an explicit narrow subpath, not the root shared package barrel.
+- Newly authored Vue markup can introduce avoidable warning debt → Fix auto-fixable Tailwind class-order, Vue attribute-order, and formatting warnings before marking timer-page implementation complete.
