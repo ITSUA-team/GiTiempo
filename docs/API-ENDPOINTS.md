@@ -57,7 +57,7 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 
 | Method | Path            | Auth | Role     | Description                                                                                                                                 |
 | ------ | --------------- | ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/projects`     | JWT  | Any      | List workspace projects. Admins: all projects. PMs/members: assigned active projects only.                                                  |
+| GET    | `/projects`     | JWT  | Any      | List workspace projects. Admins: all projects, with optional `assignedUserId` filter returning all projects assigned to that user (active and inactive). PMs/members: assigned active projects only. |
 | POST   | `/projects`     | JWT  | Admin/PM | Create a provider-neutral project. PM creators are automatically assigned to the created project.                                           |
 | GET    | `/projects/:id` | JWT  | Any      | Get project details. Admins can read active or inactive projects. PMs/members can read assigned active projects only.                       |
 | PATCH  | `/projects/:id` | JWT  | Admin/PM | Update project. Admins can update name, color, and isActive on any project; PMs can update name and color on assigned active projects only. |
@@ -69,7 +69,7 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | Method | Path                                | Auth | Role  | Description                                       |
 | ------ | ----------------------------------- | ---- | ----- | ------------------------------------------------- |
 | GET    | `/projects/:id/assignments`         | JWT  | Admin | List user assignments for a project               |
-| POST   | `/projects/:id/assignments`         | JWT  | Admin | Assign a `pm` or `member` user to project         |
+| POST   | `/projects/:id/assignments`         | JWT  | Admin | Assign a non-admin (`pm` or `member`) user to project |
 | DELETE | `/projects/:id/assignments/:userId` | JWT  | Admin | Remove a `pm` or `member` assignment from project |
 
 Assignments control project visibility for non-admin users. Admins have implicit access to all projects and do not need assignment rows.
