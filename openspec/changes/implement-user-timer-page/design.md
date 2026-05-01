@@ -63,6 +63,14 @@ Affected app/package guidance:
 
    Rationale: Timer-page behavior combines async project/task loading, running-timer state, derived CTA mode, and manual-entry validation. To keep support cost down, the implementation must avoid duplicating fetch-boundary helpers that already exist elsewhere, must distinguish request failures from true empty data states, and should keep route-level UI composition separate from stateful orchestration when the page grows beyond a single responsibility.
 
+7. Keep reactive time state and composable ownership explicit.
+
+   Rationale: The running timer display depends on a ticking reactive source, so the rendered elapsed value must derive from the reactive state that actually changes every second. Likewise, the page should not introduce a second state representation by wrapping composable returns in `reactive(...)` only for template convenience, because that splits how maintainers and tests reason about the same feature state.
+
+8. Keep extracted transport helpers in a neutral shared namespace.
+
+   Rationale: If timer-page work extracts fetch-boundary logic out of existing clients, the resulting helper is not auth-specific and should live under a neutral shared browser/runtime path. This avoids misleading package ownership and prevents future non-auth consumers from accumulating under an unrelated namespace.
+
 ## Risks / Trade-offs
 
 - API errors can leave stale local UI state → Refetch current timer after successful start/stop/manual-entry actions and show toast errors for failed actions.
@@ -72,3 +80,5 @@ Affected app/package guidance:
 - A running timer may belong to a task different from the current selector → Render the running timer summary from `current.timeEntry` and make the CTA stop that running timer.
 - UI fetch failures can be mistaken for empty data if state is collapsed too early → Keep request-error state separate from empty collections and render the error state with priority over empty messaging.
 - Transport helpers can drift if timer-specific fetch logic is cloned from existing auth/current-user clients → Reuse or extract shared fetch-boundary helpers before adding another variant.
+- Timer UI can appear frozen if the elapsed display bypasses the reactive source updated by the interval → Make the rendered `HH:MM:SS` value depend directly on the ticking reactive state.
+- Feature state becomes harder to reason about if composable refs are re-wrapped into a second proxy shape at the page level → Keep one explicit state representation between composable, component, and tests.

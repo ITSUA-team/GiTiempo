@@ -49,6 +49,13 @@ The timer page MUST allow authenticated users to track time against visible work
 - **THEN** the singular timer CTA is labeled `Start`
 - **AND** when a timer is running, the singular timer CTA is labeled `Stop`
 
+#### Scenario: Running timer display continues to advance while active
+
+- **GIVEN** the timer page is showing a running timer
+- **WHEN** time passes on the client while the timer remains active
+- **THEN** the rendered `HH:MM:SS` display continues to advance from the running entry start time
+- **AND** the page does not require a manual refresh for elapsed time to update
+
 #### Scenario: Manual interval is submitted
 
 - **GIVEN** the user has selected a project and task
@@ -67,3 +74,9 @@ The timer page MUST allow authenticated users to track time against visible work
 
 - **WHEN** the timer page implementation is updated
 - **THEN** stateful behavior such as CTA label switching, project-to-task reset rules, and manual interval validation remains covered by focused page or composable tests
+
+#### Scenario: Timer page keeps a single feature-state representation
+
+- **WHEN** the timer page composes route-level UI with timer-page behavior
+- **THEN** the page keeps one explicit feature-state representation between the composable and the component surface
+- **AND** it does not introduce an additional proxy layer only to change template ergonomics
