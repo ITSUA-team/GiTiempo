@@ -282,6 +282,45 @@ describe('Time entries (e2e)', () => {
     expect(unassignedList.status).toBe(404);
   });
 
+  it('returns project total hours from completed entries only', async () => {
+    const created = await createManualEntry(memberToken, {
+      startedAt: '2026-05-01T10:00:00.000Z',
+      endedAt: '2026-05-01T11:00:00.000Z',
+    });
+    expect(created.status).toBe(201);
+
+    const running = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: platformTaskId });
+    expect(running.status).toBe(201);
+
+    const project = await request(app.getHttpServer())
+      .get(`/projects/${platformProjectId}`)
+      .set('Authorization', bearer(memberToken));
+    expect(project.status).toBe(200);
+    expect(project.body.totalHours).toBe(1);
+  });
+
+  it('returns current user project summary with calendar tracked hours', async () => {
+    const now = new Date();
+    const startedAt = new Date(now.getTime() - 1000);
+    const endedAt = new Date(now.getTime() + 1000);
+    const created = await createManualEntry(memberToken, {
+      startedAt: startedAt.toISOString(),
+      endedAt: endedAt.toISOString(),
+    });
+    expect(created.status).toBe(201);
+
+    const summary = await request(app.getHttpServer())
+      .get('/projects/my-summary')
+      .set('Authorization', bearer(memberToken));
+    expect(summary.status).toBe(200);
+    expect(summary.body.visibleProjects).toBeGreaterThanOrEqual(1);
+    expect(summary.body.trackedHoursWeek).toBeGreaterThan(0);
+    expect(summary.body.trackedHoursMonth).toBeGreaterThan(0);
+  });
+
   it('starts timer from GitHub issue data and creates provider refs', async () => {
     const suffix = randomUUID().slice(0, 8);
     const githubRepo = `gitiempo-test/repo-${suffix}`;
@@ -313,6 +352,14 @@ describe('Time entries (e2e)', () => {
       )
       .limit(1);
     expect(projectRef?.projectId).toBe(started.body.projectId);
+
+    const project = await request(app.getHttpServer())
+      .get(`/projects/${started.body.projectId}`)
+      .set('Authorization', bearer(otherMemberToken));
+    expect(project.status).toBe(200);
+    expect(project.body.source).toBe('github');
+    expect(project.body.visibility).toBe('private');
+    expect(project.body.totalHours).toBe(0);
 
     const [taskRef] = await db
       .select()

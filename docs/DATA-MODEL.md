@@ -142,7 +142,7 @@ Joins users to workspaces with a role. In single-tenant MVP, each user has exact
 
 ### Project (`projects`)
 
-Groups tasks within a workspace. Projects are provider-neutral core records: a project may be purely local, or it may be linked to one or more external providers through `project_external_refs`. GitHub is the MVP integration, not part of the core project schema.
+Groups tasks within a workspace. Projects are provider-neutral core records: a project may be purely local, or it may be linked to one or more external providers through `project_external_refs`.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -150,6 +150,7 @@ Groups tasks within a workspace. Projects are provider-neutral core records: a p
 | `workspace_id` | UUID | FK → `workspaces.id`, NOT NULL | |
 | `name` | VARCHAR(255) | NOT NULL | Project display name |
 | `color` | VARCHAR(7) | | Hex color code (e.g. `#FF5733`) |
+| `visibility` | VARCHAR(20) | NOT NULL, default `'private'` | `'public'` or `'private'` |
 | `is_active` | BOOLEAN | NOT NULL, default `true` | Soft-disable project |
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
@@ -157,10 +158,13 @@ Groups tasks within a workspace. Projects are provider-neutral core records: a p
 **Indexes:**
 - `projects_workspace_id_idx` on `workspace_id`
 - `projects_workspace_id_active_idx` on `(workspace_id, is_active)`
+- `projects_workspace_active_visibility_idx` on `(workspace_id, is_active, visibility)`
 
 **Notes:**
+- New projects are private by default.
 - Local/manual projects have no external reference rows.
 - Provider-specific identifiers, URLs, and sync metadata live in `project_external_refs`.
+- API `source` values are derived from `project_external_refs`; provider-specific source columns do not belong in `projects`.
 
 ---
 
@@ -196,7 +200,7 @@ Links a core project to an external provider object, such as a GitHub repository
 
 ### ProjectAssignment (`project_assignments`)
 
-Links workspace users to specific projects. Determines which active projects `pm` and `member` users can see and work with. Admins have implicit access to all projects and are not listed here.
+Links workspace users to specific projects. Assignments grant non-admin access to private projects and to any assigned active projects. Admins have implicit access to all projects and are not listed here.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -213,7 +217,9 @@ Links workspace users to specific projects. Determines which active projects `pm
 - `project_assignments_workspace_id_idx` on `workspace_id`
 
 **Notes:**
-- Assignments remain valid when a user changes between `pm` and `member`; the role controls allowed actions, while the assignment controls project visibility.
+- Active public projects are visible to non-admin users without assignment.
+- Private projects require assignment for `pm` and `member` users.
+- Assignments remain valid when a user changes between `pm` and `member`; the role controls allowed actions, while the assignment controls private-project access.
 - Admins manage assignments but do not need assignment rows for project access.
 
 ---

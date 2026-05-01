@@ -16,6 +16,7 @@ const projectRow = {
   workspaceId: 'workspace-1',
   name: 'Project',
   color: null,
+  visibility: 'private' as const,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),

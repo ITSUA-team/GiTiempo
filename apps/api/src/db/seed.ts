@@ -199,6 +199,7 @@ async function main(): Promise<void> {
           workspaceId: DEFAULT_WORKSPACE_ID,
           name: 'Internal Platform',
           color: '#2563EB',
+          visibility: 'private',
           isActive: true,
         },
         {
@@ -206,6 +207,7 @@ async function main(): Promise<void> {
           workspaceId: DEFAULT_WORKSPACE_ID,
           name: 'Demo Client',
           color: '#16A34A',
+          visibility: 'private',
           isActive: true,
         },
         {
@@ -213,6 +215,7 @@ async function main(): Promise<void> {
           workspaceId: DEFAULT_WORKSPACE_ID,
           name: 'Archived Initiative',
           color: '#64748B',
+          visibility: 'private',
           isActive: false,
         },
       ])
@@ -221,6 +224,7 @@ async function main(): Promise<void> {
         set: {
           name: sql`excluded.name`,
           color: sql`excluded.color`,
+          visibility: sql`excluded.visibility`,
           isActive: sql`excluded.is_active`,
           updatedAt: new Date(),
         },

@@ -6,12 +6,15 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import type {
   CreateProjectAssignmentInput,
   CreateProjectInput,
+  ManagementProjectSummaryResponse,
+  MyProjectSummaryResponse,
   ProjectAssignmentResponse,
   ProjectResponse,
+  ProjectSource,
   UpdateProjectInput,
 } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
@@ -19,11 +22,16 @@ import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
+import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projects } from '../schemas/projects.schema';
 
 export type ProjectRow = typeof projects.$inferSelect;
+type ProjectResponseRow = ProjectRow & {
+  source: ProjectSource;
+  totalHours: number | string | null;
+};
 type ProjectAssignmentRow = Omit<ProjectAssignmentResponse, 'assignedAt'> & {
   assignedAt: Date;
 };
@@ -43,28 +51,128 @@ export class ProjectsService {
 
     if (membership.role === 'admin') {
       const rows = await this.db
-        .select()
+        .select(this.projectResponseSelection())
         .from(projects)
         .where(eq(projects.workspaceId, user.workspaceId));
       return rows.map((row) => this.toProjectResponse(row));
     }
 
     const rows = await this.db
-      .select({ project: projects })
+      .select(this.projectResponseSelection())
       .from(projects)
-      .innerJoin(
+      .leftJoin(
         projectAssignments,
-        eq(projectAssignments.projectId, projects.id),
+        and(
+          eq(projectAssignments.projectId, projects.id),
+          eq(projectAssignments.userId, user.sub),
+        ),
       )
       .where(
         and(
           eq(projects.workspaceId, user.workspaceId),
           eq(projects.isActive, true),
-          eq(projectAssignments.userId, user.sub),
+          or(
+            eq(projects.visibility, 'public'),
+            eq(projectAssignments.userId, user.sub),
+          ),
         ),
       );
 
-    return rows.map((row) => this.toProjectResponse(row.project));
+    return rows.map((row) => this.toProjectResponse(row));
+  }
+
+  async getManagementSummary(
+    user: AuthUser,
+  ): Promise<ManagementProjectSummaryResponse> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+
+    const conditions: SQL[] = [
+      eq(projects.workspaceId, user.workspaceId),
+      eq(projects.isActive, true),
+    ];
+    if (membership.role !== 'admin') {
+      conditions.push(this.visibleNonAdminProjectCondition(user.sub));
+    }
+
+    const [row] = await this.db
+      .select({
+        activeProjects: sql<number>`COUNT(DISTINCT ${projects.id})`,
+        privateProjects: sql<number>`COUNT(DISTINCT ${projects.id}) FILTER (WHERE ${projects.visibility} = 'private')`,
+        publicProjects: sql<number>`COUNT(DISTINCT ${projects.id}) FILTER (WHERE ${projects.visibility} = 'public')`,
+      })
+      .from(projects)
+      .leftJoin(
+        projectAssignments,
+        and(
+          eq(projectAssignments.projectId, projects.id),
+          eq(projectAssignments.userId, user.sub),
+        ),
+      )
+      .where(and(...conditions));
+
+    return {
+      activeProjects: toNumber(row?.activeProjects),
+      privateProjects: toNumber(row?.privateProjects),
+      publicProjects: toNumber(row?.publicProjects),
+    };
+  }
+
+  async getMySummary(user: AuthUser): Promise<MyProjectSummaryResponse> {
+    const membership = await this.members.requireActiveMembership(
+      user.sub,
+      user.workspaceId,
+    );
+
+    const visibleConditions: SQL[] = [
+      eq(projects.workspaceId, user.workspaceId),
+      eq(projects.isActive, true),
+    ];
+    if (membership.role !== 'admin') {
+      visibleConditions.push(this.visibleNonAdminProjectCondition(user.sub));
+    }
+
+    const [visibleRow] = await this.db
+      .select({ value: sql<number>`COUNT(DISTINCT ${projects.id})` })
+      .from(projects)
+      .leftJoin(
+        projectAssignments,
+        and(
+          eq(projectAssignments.projectId, projects.id),
+          eq(projectAssignments.userId, user.sub),
+        ),
+      )
+      .where(and(...visibleConditions));
+
+    const now = new Date();
+    const weekStart = startOfIsoWeekUtc(now);
+    const monthStart = startOfMonthUtc(now);
+    const earliestStart =
+      weekStart.getTime() < monthStart.getTime() ? weekStart : monthStart;
+    const [hoursRow] = await this.db
+      .select({
+        trackedHoursWeek: sql<number>`COALESCE(SUM(CASE WHEN ${timeEntries.startedAt} >= ${weekStart} THEN ${timeEntries.durationSeconds} ELSE 0 END), 0)::double precision / 3600`,
+        trackedHoursMonth: sql<number>`COALESCE(SUM(CASE WHEN ${timeEntries.startedAt} >= ${monthStart} THEN ${timeEntries.durationSeconds} ELSE 0 END), 0)::double precision / 3600`,
+      })
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, user.workspaceId),
+          eq(timeEntries.userId, user.sub),
+          isNotNull(timeEntries.durationSeconds),
+          gte(timeEntries.startedAt, earliestStart),
+          lt(timeEntries.startedAt, now),
+        ),
+      );
+
+    return {
+      visibleProjects: toNumber(visibleRow?.value),
+      trackedHoursWeek: toNumber(hoursRow?.trackedHoursWeek),
+      trackedHoursMonth: toNumber(hoursRow?.trackedHoursMonth),
+    };
   }
 
   async createProject(
@@ -81,6 +189,7 @@ export class ProjectsService {
       workspaceId: user.workspaceId,
       name: input.name,
       color: input.color ?? null,
+      visibility: input.visibility ?? 'private',
     };
 
     if (membership.role === 'admin') {
@@ -89,7 +198,11 @@ export class ProjectsService {
         .values(createValues)
         .returning();
       if (!row) throw new Error('Failed to create project');
-      return this.toProjectResponse(row);
+      return this.toProjectResponse({
+        ...row,
+        source: 'manual',
+        totalHours: 0,
+      });
     }
 
     return this.db.transaction(async (tx) => {
@@ -103,7 +216,11 @@ export class ProjectsService {
         assignedBy: user.sub,
       });
 
-      return this.toProjectResponse(row);
+      return this.toProjectResponse({
+        ...row,
+        source: 'manual',
+        totalHours: 0,
+      });
     });
   }
 
@@ -111,7 +228,12 @@ export class ProjectsService {
     user: AuthUser,
     projectId: string,
   ): Promise<ProjectResponse> {
-    const row = await this.requireVisibleProject(user, projectId);
+    const project = await this.requireVisibleProject(user, projectId);
+    const row = await this.findProjectResponseInWorkspace(
+      user.workspaceId,
+      project.id,
+    );
+    if (!row) throw new NotFoundException('Project not found');
     return this.toProjectResponse(row);
   }
 
@@ -142,6 +264,9 @@ export class ProjectsService {
       .set({
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.color !== undefined ? { color: input.color } : {}),
+        ...(input.visibility !== undefined
+          ? { visibility: input.visibility }
+          : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
         updatedAt: new Date(),
       })
@@ -154,7 +279,12 @@ export class ProjectsService {
       .returning();
 
     if (!row) throw new NotFoundException('Project not found');
-    return this.toProjectResponse(row);
+    const response = await this.findProjectResponseInWorkspace(
+      user.workspaceId,
+      row.id,
+    );
+    if (!response) throw new NotFoundException('Project not found');
+    return this.toProjectResponse(response);
   }
 
   async listAssignments(
@@ -318,16 +448,19 @@ export class ProjectsService {
     const [row] = await this.db
       .select({ project: projects })
       .from(projects)
-      .innerJoin(
+      .leftJoin(
         projectAssignments,
-        eq(projectAssignments.projectId, projects.id),
+        and(
+          eq(projectAssignments.projectId, projects.id),
+          eq(projectAssignments.userId, user.sub),
+        ),
       )
       .where(
         and(
           eq(projects.id, projectId),
           eq(projects.workspaceId, user.workspaceId),
           eq(projects.isActive, true),
-          eq(projectAssignments.userId, user.sub),
+          this.visibleNonAdminProjectCondition(user.sub),
         ),
       )
       .limit(1);
@@ -364,12 +497,64 @@ export class ProjectsService {
     return row ?? null;
   }
 
-  private toProjectResponse(row: ProjectRow): ProjectResponse {
+  private async findProjectResponseInWorkspace(
+    workspaceId: string,
+    projectId: string,
+  ): Promise<ProjectResponseRow | null> {
+    const [row] = await this.db
+      .select(this.projectResponseSelection())
+      .from(projects)
+      .where(
+        and(eq(projects.id, projectId), eq(projects.workspaceId, workspaceId)),
+      )
+      .limit(1);
+    return row ?? null;
+  }
+
+  private visibleNonAdminProjectCondition(userId: string): SQL {
+    const condition = or(
+      eq(projects.visibility, 'public'),
+      eq(projectAssignments.userId, userId),
+    );
+    if (!condition) throw new Error('Failed to build project visibility scope');
+    return condition;
+  }
+
+  private projectResponseSelection() {
+    return {
+      id: projects.id,
+      workspaceId: projects.workspaceId,
+      name: projects.name,
+      color: projects.color,
+      visibility: projects.visibility,
+      source: sql<ProjectSource>`CASE WHEN EXISTS (
+        SELECT 1
+        FROM "project_external_refs"
+        WHERE "project_external_refs"."project_id" = "projects"."id"
+          AND "project_external_refs"."provider" = 'github'
+      ) THEN 'github' ELSE 'manual' END`,
+      totalHours: sql<number>`COALESCE((
+        SELECT SUM("time_entries"."duration_seconds")
+        FROM "time_entries"
+        INNER JOIN "tasks" ON "tasks"."id" = "time_entries"."task_id"
+        WHERE "tasks"."project_id" = "projects"."id"
+          AND "time_entries"."duration_seconds" IS NOT NULL
+      ), 0)::double precision / 3600`,
+      isActive: projects.isActive,
+      createdAt: projects.createdAt,
+      updatedAt: projects.updatedAt,
+    };
+  }
+
+  private toProjectResponse(row: ProjectResponseRow): ProjectResponse {
     return {
       id: row.id,
       workspaceId: row.workspaceId,
       name: row.name,
       color: row.color,
+      visibility: row.visibility,
+      source: row.source,
+      totalHours: toNumber(row.totalHours),
       isActive: row.isActive,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
@@ -381,4 +566,23 @@ export class ProjectsService {
   ): ProjectAssignmentResponse {
     return { ...row, assignedAt: row.assignedAt.toISOString() };
   }
+}
+
+function toNumber(value: number | string | null | undefined): number {
+  if (value === undefined || value === null) return 0;
+  return typeof value === 'number' ? value : Number(value);
+}
+
+function startOfIsoWeekUtc(now: Date): Date {
+  const start = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const day = start.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  start.setUTCDate(start.getUTCDate() + diff);
+  return start;
+}
+
+function startOfMonthUtc(now: Date): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
