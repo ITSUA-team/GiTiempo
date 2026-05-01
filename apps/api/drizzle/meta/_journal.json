@@ -43,6 +43,13 @@
       "when": 1777631582682,
       "tag": "0005_wide_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777653621743,
+      "tag": "0006_sparkling_living_tribunal",
+      "breakpoints": true
     }
   ]
 }

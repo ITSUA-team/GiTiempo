@@ -1583,6 +1583,93 @@
         ]
       }
     },
+    "/github/connection": {
+      "get": {
+        "operationId": "GithubController_connectionStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubConnectionStatusResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current GitHub connection status",
+        "tags": [
+          "github"
+        ]
+      },
+      "delete": {
+        "operationId": "GithubController_disconnect",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Disconnect GitHub account",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/auth-url": {
+      "get": {
+        "operationId": "GithubController_authUrl",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubAuthUrlResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create GitHub OAuth authorization URL",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/callback": {
+      "get": {
+        "operationId": "GithubController_callback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "GitHub OAuth callback",
+        "tags": [
+          "github"
+        ]
+      }
+    },
     "/commons/health/live": {
       "get": {
         "operationId": "CommonsController_live",
@@ -3002,6 +3089,89 @@
           }
         },
         "additionalProperties": false
+      },
+      "GithubConnectionStatusResponseDto": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "disconnected"
+                ]
+              },
+              "account": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "status",
+              "account"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "connected"
+                ]
+              },
+              "account": {
+                "type": "object",
+                "properties": {
+                  "githubUserId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "login": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "avatarUrl": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "connectedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "githubUserId",
+                  "login",
+                  "avatarUrl",
+                  "connectedAt",
+                  "updatedAt"
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "account"
+            ]
+          }
+        ]
+      },
+      "GithubAuthUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "authorizationUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "authorizationUrl"
+        ]
       }
     }
   }

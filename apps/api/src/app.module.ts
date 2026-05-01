@@ -20,6 +20,7 @@ import { InvitesModule } from './invites/invites.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TimeEntriesModule } from './time-entries/time-entries.module';
+import { GithubModule } from './github/github.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { TimeEntriesModule } from './time-entries/time-entries.module';
     ProjectsModule,
     TasksModule,
     TimeEntriesModule,
+    GithubModule,
     CommonsModule,
   ],
   controllers: [],
