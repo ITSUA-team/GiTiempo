@@ -61,8 +61,11 @@ Use this skill when:
 - Do not mark a frontend task complete when only transport/client tests exist for a change whose main risk is page or composable behavior. Stateful UI logic such as CTA mode switching, selection reset, derived status labels, and validation rules must have focused tests or remain explicitly incomplete.
 - When adding a new frontend fetch path, reuse the existing repository error-message shape (`message`, then `error`, then status fallback) rather than inventing a new parse order or response-handling branch.
 - New or changed frontend fetch-boundary helpers must have focused tests for request path, auth headers, payload shape, response parsing, and API error propagation. Composable or page tests do not replace boundary-level coverage.
+- For frontend API calls that load, mutate, or reconcile user-visible feature state, provide user-visible toast feedback for the outcome. Use success toasts for completed mutations and error toasts for failed reads or writes; inline empty/error UI can complement this but must not be the only feedback channel.
 - For time-based or event-driven UI state, ensure rendered output depends on the reactive source that is actually updated. Do not update a ticking ref, timer, or subscription state if the computed/template output bypasses that reactive value.
 - When a running or locked feature state invalidates upstream selectors or filters, enforce that invariant in both places: disable the UI control and block the underlying state mutation in the composable/store action. Do not rely on the template alone to protect feature invariants.
+- When the backend returns authoritative feature state such as a running timer, active assignment, or persisted selection owner, resync the dependent local selectors from that server state after initial load and after successful mutations. Do not leave stale local selection values pointing at an idle or superseded context.
+- When an API rejects a user action because it conflicts with current authoritative state, surface that exact failure to the user, keep the authoritative state rendered, and avoid clearing or mutating local form inputs as if the action had succeeded.
 
 ## Verification
 

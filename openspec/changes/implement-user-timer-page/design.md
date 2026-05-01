@@ -81,16 +81,37 @@ Affected app/package guidance:
 
    Rationale: The timer page may justify extracting shared fetch-boundary logic, but the extraction only reduces support cost if it replaces nearby duplicates and carries direct boundary tests. Adding a new helper while leaving old variants intact increases drift risk instead of reducing it.
 
+11. Show toast feedback for every timer-page API outcome.
+
+   Rationale: Timer-page actions are stateful and user-facing. If project/task/current-timer requests fail silently, or start/stop/manual-entry mutations complete without explicit feedback, users and support engineers cannot distinguish loading delay from rejected state. Inline empty/error panels help with page context, but toast feedback is still needed as the immediate action/result channel.
+
+   Alternative considered: Reserve toasts only for writes. Rejected because failed read requests on this page directly affect whether the selectors and running timer state can be trusted.
+
+12. Resync project and task selectors from the current active timer.
+
+   Rationale: When the backend returns a running timer, that response becomes the authoritative feature state. If selectors keep an older local project/task choice, the page shows conflicting contexts between the selectors and the running summary. Syncing selectors to the active entry removes that drift and makes the locked state understandable.
+
+   Alternative considered: Keep prior selector values and only change the summary card. Rejected because it preserves contradictory UI state on the same screen.
+
+13. Preserve manual-entry inputs on active-timer conflict failures.
+
+   Rationale: A manual-entry submission can be rejected because it overlaps or is otherwise interrupted by the current active timer entry. In that case the user needs the exact API error, the active timer context kept visible, and the entered values preserved so they can correct the interval instead of retyping it.
+
+   Alternative considered: Reset the form after any submit attempt and rely on generic error text. Rejected because it hides the real conflict source and discards the user's corrective context.
+
 ## Risks / Trade-offs
 
 - API errors can leave stale local UI state → Refetch current timer after successful start/stop/manual-entry actions and show toast errors for failed actions.
+- Missing per-request feedback can make timer actions look ignored or stuck → Show toast feedback for failed reads and for both success/failure of start, stop, and manual-entry mutations.
 - Client clock drift can affect displayed elapsed time → Treat the server `startedAt` as authoritative and recompute from it; the stored backend duration remains authoritative after stop.
 - Manual interval date/time composition can produce invalid ranges → Validate in the page before submit and rely on shared API validation as the final boundary.
 - Project/task lists may be empty for some users → Render disabled downstream controls and clear empty-state guidance rather than exposing an enabled CTA.
 - A running timer may belong to a task different from the current selector → Render the running timer summary from `current.timeEntry` and make the CTA stop that running timer.
+- Selector values can drift from the active entry after load or mutation refresh → Resync selected project/task from the authoritative current timer response whenever a running entry exists.
 - UI fetch failures can be mistaken for empty data if state is collapsed too early → Keep request-error state separate from empty collections and render the error state with priority over empty messaging.
 - Transport helpers can drift if timer-specific fetch logic is cloned from existing auth/current-user clients → Reuse or extract shared fetch-boundary helpers before adding another variant.
 - Timer UI can appear frozen if the elapsed display bypasses the reactive source updated by the interval → Make the rendered `HH:MM:SS` value depend directly on the ticking reactive state.
 - Feature state becomes harder to reason about if composable refs are re-wrapped into a second proxy shape at the page level → Keep one explicit state representation between composable, component, and tests.
 - Running timer selectors can drift away from the active entry if project/task remains editable during a running timer → Disable selector controls and reject project/task mutation in feature logic while the timer is active.
+- Manual-entry conflict failures can erase the user's corrective context → Preserve entered date/time values on conflict errors, render the active timer as authoritative, and show the exact API message in a toast.
 - Extracted fetch-boundary helpers can become a fourth local variant instead of a consolidation point → When introducing a shared helper, migrate sibling clients or keep the helper local until shared adoption is part of the same change, and cover the helper/client boundary with direct tests.

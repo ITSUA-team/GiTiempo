@@ -48,6 +48,8 @@ The timer page MUST allow authenticated users to track time against visible work
 - **WHEN** the running timer state is rendered
 - **THEN** the project selector is disabled
 - **AND** the task selector is disabled
+- **AND** the project selector value reflects the running timer's current project
+- **AND** the task selector value reflects the running timer's current task
 - **AND** the page does not allow project or task selection state to change until the running timer has been stopped
 
 #### Scenario: Timer CTA label follows running state
@@ -72,6 +74,28 @@ The timer page MUST allow authenticated users to track time against visible work
 - **THEN** the page creates a completed manual time entry for the selected task
 - **AND** the manual interval controls are ready for another entry after a successful submit
 
+#### Scenario: Manual interval conflict with current active timer is surfaced and preserved
+
+- **GIVEN** the user has a current active timer
+- **AND** the user submits a manual interval that the API rejects because it conflicts with that active timer
+- **WHEN** the manual-entry request fails
+- **THEN** the page shows an error toast with the API failure message
+- **AND** the page keeps the running timer state rendered from the current active entry
+- **AND** the page keeps the manual interval inputs available for correction instead of resetting them as if the request had succeeded
+
+#### Scenario: Timer page shows toast feedback for API outcomes
+
+- **WHEN** the page loads or mutates timer-page data through visible-project, task-list, current-timer, start-timer, stop-timer, or manual-entry API calls
+- **THEN** failed API calls show an error toast using the repository error-message order (`message`, then `error`, then status fallback)
+- **AND** successful start, stop, and manual-entry mutations show a success toast
+
+#### Scenario: Selector state resyncs from the current active timer
+
+- **GIVEN** the page loads or refreshes current timer state
+- **WHEN** the API returns a running timer
+- **THEN** the page updates the selected project and selected task to match the current active time entry
+- **AND** the running timer summary and selector values stay aligned to that authoritative server state
+
 #### Scenario: Timer page excludes external-provider-only behavior
 
 - **WHEN** the timer page renders
@@ -81,7 +105,7 @@ The timer page MUST allow authenticated users to track time against visible work
 #### Scenario: Stateful timer behavior remains verifiable
 
 - **WHEN** the timer page implementation is updated
-- **THEN** stateful behavior such as CTA label switching, project-to-task reset rules, running-timer selector locking, and manual interval validation remains covered by focused page or composable tests
+- **THEN** stateful behavior such as CTA label switching, project-to-task reset rules, running-timer selector locking, active-timer selector resync, manual interval validation, and active-timer conflict handling remains covered by focused page or composable tests
 
 #### Scenario: Timer page keeps a single feature-state representation
 
