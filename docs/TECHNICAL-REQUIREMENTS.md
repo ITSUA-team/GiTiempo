@@ -292,12 +292,14 @@ Only frontend applications should depend on this package.
 | Component        | Strategy                                                            |
 | ---------------- | ------------------------------------------------------------------- |
 | API              | Docker container, deployed via Docker Compose on VPS                |
-| User SPA         | Cloudflare Pages                                                    |
-| Admin SPA        | Cloudflare Pages                                                    |
+| User SPA         | Cloudflare Workers Static Assets                                    |
+| Admin SPA        | Cloudflare Workers Static Assets                                    |
 | Chrome Extension | Chrome Web Store (manual publish)                                   |
 | Database         | PostgreSQL on VPS (Docker Compose service)                          |
 | Firebase         | Firebase project (Auth service only, free tier)                     |
 | GitHub App       | Configured in GitHub Developer Settings, callback URL points to API |
+
+Deployment workflows are defined in [deployment.md](./deployment.md). Frontend hosting is recorded in [ADR 005](./adr/005-cloudflare-workers-static-assets.md), and API hosting is recorded in [ADR 006](./adr/006-api-vps-docker-compose.md).
 
 ---
 
@@ -327,11 +329,11 @@ Adapters MUST keep provider-specific identifiers, URLs, and raw metadata in `pro
 
 **Unit tests:** Vitest for all packages. Business logic, Zod schemas, utility functions.
 
-**Integration tests:** NestJS testing utilities + test database (PostgreSQL in Docker). Cover auth flows, RBAC guards, time entry CRUD, GitHub sync adapter.
+**Integration tests:** NestJS testing utilities + ephemeral PostgreSQL in Docker. Cover auth flows, RBAC guards, time entry CRUD, GitHub sync adapter. API integration/e2e tests must not use a developer local database, staging database, production database, or any shared persistent CI database.
 
 **E2E tests (deferred post-MVP):** Playwright for critical user flows (login, timer start/stop, report generation).
 
-**Convention:** Tests co-located with source files (`*.spec.ts`). CI runs `pnpm test` across all packages via Turborepo.
+**Convention:** Tests co-located with source files (`*.spec.ts`). CI runs lint, typecheck, unit tests, and API integration/e2e tests when backend or shared contracts change. The test isolation decision is recorded in [ADR 007](./adr/007-ci-ephemeral-postgres.md), and the automated test process is defined in [testing.md](./testing.md).
 
 ---
 
@@ -348,7 +350,7 @@ Adapters MUST keep provider-specific identifiers, URLs, and raw metadata in `pro
 - GitHub API call count and latency (counter/histogram)
 - Auth token refresh count (counter)
 
-**Health check:** `GET /api/health` — returns DB connectivity status, uptime. Used by Docker Compose health checks and external monitoring.
+**Health check:** `GET /commons/health/ready` — returns DB connectivity status. `GET /commons/health/live` is the liveness probe. Used by Docker Compose health checks and external monitoring.
 
 **Log collection:** JSON logs are written to stdout. In production, collected by any standard log aggregator (Loki, Fluentd, ELK) from Docker container stdout.
 
@@ -362,7 +364,11 @@ Adapters MUST keep provider-specific identifiers, URLs, and raw metadata in `pro
 
 ## 11. CI/CD Pipeline
 
-> TBD — will define GitHub Actions workflows, branch strategy, and deployment automation before first sprint.
+GitHub Actions is the CI/CD orchestrator. Workflows must support manual `workflow_dispatch` runs and automatic deployment from the `staging` branch.
+
+Frontend deploy workflows build and deploy `apps/user-web` and `apps/admin-web` independently to Cloudflare Workers Static Assets. API deploy workflows build a Docker image, validate it against an ephemeral PostgreSQL database, push it to a registry, and deploy it to the VPS through Docker Compose.
+
+See [deployment.md](./deployment.md) and [testing.md](./testing.md) for trigger rules, test gates, and release order.
 
 ---
 
