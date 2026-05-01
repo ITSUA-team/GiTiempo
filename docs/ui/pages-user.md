@@ -12,11 +12,11 @@
 
 ## Timer Page
 
-- Task selector: cascading selects for Organization -> Project/Repo -> Issue.
-- Manual task input fallback when GitHub is not connected.
+- Task selector: cascading selects for visible Project -> Task.
+- Selector options come from the current user's visible workspace projects and tasks only.
 - Start / Stop button: large CTA, full width on mobile, fixed width on desktop.
 - Timer display: centered `text-5xl font-semibold text-brand`, format `HH:MM:SS`.
-- Manual interval entry: collapsible `<Panel>` containing date/time controls.
+- Manual interval entry: panel containing date/time controls below the timer actions.
 
 ## Time Entries Page
 
