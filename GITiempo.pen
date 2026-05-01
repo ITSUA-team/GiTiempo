@@ -1277,7 +1277,7 @@
                   "type": "text",
                   "id": "pNWoV",
                   "fill": "$color-text-muted",
-                  "content": "Connected to GitHub",
+                  "content": "Workspace member",
                   "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "500"
@@ -1497,37 +1497,12 @@
                           "type": "text",
                           "id": "N11jC",
                           "fill": "$color-text-muted",
-                          "content": "Start tracking work from GitHub issues or enter a task manually.",
+                          "content": "Start tracking work from your visible projects and tasks or log a manual interval.",
                           "fontFamily": "Inter",
                           "fontSize": 14
                         }
                       ]
                     },
-                    {
-                      "type": "frame",
-                      "id": "a7BGG",
-                      "fill": "$color-surface",
-                      "cornerRadius": "$radius-sm",
-                      "stroke": {
-                        "thickness": 1,
-                        "fill": "$color-divider"
-                      },
-                      "padding": [
-                        10,
-                        16
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "b4C7A",
-                          "fill": "$color-text-dark",
-                          "content": "Manual Entry",
-                          "fontFamily": "Inter",
-                          "fontSize": 14,
-                          "fontWeight": "500"
-                        }
-                      ]
-                    }
                   ]
                 },
                 {
@@ -1543,7 +1518,7 @@
                       "id": "6Gbv3",
                       "name": "selector",
                       "width": 420,
-                      "height": "fill_container",
+                      "height": "fit_content",
                       "fill": "$color-surface",
                       "cornerRadius": "$radius-lg",
                       "effect": {
@@ -1571,53 +1546,6 @@
                         },
                         {
                           "type": "frame",
-                          "id": "aooVp",
-                          "name": "org",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 6,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "0fETP",
-                              "fill": "$color-text-dark",
-                              "content": "Organization",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "oTrmH",
-                              "width": "fill_container",
-                              "height": 38,
-                              "fill": "$color-surface",
-                              "cornerRadius": "$radius-sm",
-                              "stroke": {
-                                "thickness": 1,
-                                "fill": "$color-divider"
-                              },
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "2ocxO",
-                                  "fill": "$color-text-dark",
-                                  "content": "GiTiempo Org",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 14,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
                           "id": "Ilr4O",
                           "name": "repo",
                           "width": "fill_container",
@@ -1628,7 +1556,7 @@
                               "type": "text",
                               "id": "NoSqV",
                               "fill": "$color-text-dark",
-                              "content": "Project / Repo",
+                              "content": "Project",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "500"
@@ -1648,16 +1576,26 @@
                                 0,
                                 12
                               ],
+                              "justifyContent": "space_between",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "AXKnX",
                                   "fill": "$color-text-dark",
-                                  "content": "admin-web",
+                                  "content": "Project Orion",
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "s2kPq",
+                                  "fill": "$color-text-muted",
+                                  "content": "v",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
                                 }
                               ]
                             }
@@ -1675,7 +1613,7 @@
                               "type": "text",
                               "id": "dS4MA",
                               "fill": "$color-text-dark",
-                              "content": "Issue",
+                              "content": "Task",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "500"
@@ -1695,108 +1633,28 @@
                                 0,
                                 12
                               ],
+                              "justifyContent": "space_between",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "MLs56",
                                   "fill": "$color-text-dark",
-                                  "content": "#184 Improve reports filters",
+                                  "content": "Improve reports filters",
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "oHkq2",
-                          "name": "manual",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 6,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "VMCrK",
-                              "fill": "$color-text-dark",
-                              "content": "Manual task fallback",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "xYDEV",
-                              "width": "fill_container",
-                              "height": 76,
-                              "fill": "$color-surface",
-                              "cornerRadius": "$radius-sm",
-                              "stroke": {
-                                "thickness": 1,
-                                "fill": "$color-divider"
-                              },
-                              "padding": 12,
-                              "children": [
+                                },
                                 {
                                   "type": "text",
-                                  "id": "b0ET9",
+                                  "id": "r5DmL",
                                   "fill": "$color-text-muted",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "If GitHub is unavailable, describe the task here.",
+                                  "content": "v",
                                   "fontFamily": "Inter",
-                                  "fontSize": 13
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "yCr4w",
-                          "name": "actions",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 12,
-                          "padding": [
-                            12,
-                            0,
-                            0,
-                            0
-                          ],
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "cvbVe",
-                              "fill": "$color-brand",
-                              "cornerRadius": "$radius-sm",
-                              "padding": [
-                                12,
-                                16
-                              ],
-                              "justifyContent": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "pyNco",
-                                  "fill": "$color-surface",
-                                  "content": "Start Timer",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 16,
+                                  "fontSize": 13,
                                   "fontWeight": "600"
                                 }
                               ]
-                            },
-                            {
-                              "type": "text",
-                              "id": "WYeiN",
-                              "fill": "$color-text-muted",
-                              "content": "Manual interval entry expands below when needed.",
-                              "fontFamily": "Inter",
-                              "fontSize": 12
                             }
                           ]
                         }
@@ -1856,7 +1714,7 @@
                               "type": "text",
                               "id": "qrMBM",
                               "fill": "$color-text-dark",
-                              "content": "Project Orion / #184 Improve reports filters",
+                              "content": "Project Orion / Improve reports filters",
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "500"
@@ -1869,6 +1727,33 @@
                           "name": "focusActions",
                           "gap": 12,
                           "children": [
+                            {
+                              "type": "frame",
+                              "id": "xgYtN",
+                              "name": "startBtn",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$color-divider"
+                              },
+                              "padding": [
+                                12,
+                                20
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WDf8V",
+                                  "name": "startLabel",
+                                  "fill": "$color-text-dark",
+                                  "content": "Start Timer",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
                             {
                               "type": "frame",
                               "id": "e9R0p",
@@ -1890,31 +1775,6 @@
                                 }
                               ]
                             },
-                            {
-                              "type": "frame",
-                              "id": "VyzDR",
-                              "fill": "$color-surface",
-                              "cornerRadius": "$radius-sm",
-                              "stroke": {
-                                "thickness": 1,
-                                "fill": "$color-divider"
-                              },
-                              "padding": [
-                                12,
-                                20
-                              ],
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "2dBTi",
-                                  "fill": "$color-text-dark",
-                                  "content": "Pause",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 14,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
                           ]
                         },
                         {

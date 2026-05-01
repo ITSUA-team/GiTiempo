@@ -18,6 +18,7 @@
 - Shared Vue components that are reused by both web SPAs belong in `../../packages/web-shared`, while full route pages and app-specific shell/login composition stay app-local.
 - Vite alias `@` points to `./src`.
 - After the required UI docs, inspect the relevant approved design source. In this repo that usually means the active `.pen` file screen.
+- Current approved timer-page scope uses visible workspace `Project -> Task` selection only. Do not assume external-provider selector, manual freeform fallback, or pause/resume behavior unless the docs and design are updated together.
 - Desktop UI implementation is expected to be pixel-perfect to the approved design: match fonts, font sizes, spacing, sizing, radii, alignment, and component structure unless the user explicitly asks for a deviation.
 - If the docs and design conflict, the docs are the source of truth. Stop and ask only when the conflict is still ambiguous after following the docs.
 

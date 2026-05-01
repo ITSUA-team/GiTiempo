@@ -12,7 +12,7 @@ Build-ready engineering constraints derived from [PROPOSAL.md](./PROPOSAL.md).
 │   ├── api/              ← NestJS backend
 │   ├── user-web/         ← Vue 3 SPA for all users (timer, time entries, profile)
 │   ├── admin-web/        ← Vue 3 SPA for admins + PMs (reports, invoices, management)
-│   └── chrome-ext/       ← Chrome extension (timer on GitHub issue pages)
+│   └── chrome-ext/       ← Reserved placeholder for a future browser extension
 ├── packages/
 │   └── shared/           ← shared TypeScript types, constants, Zod schemas
 ├── turbo.json
@@ -206,7 +206,7 @@ The current web frontend baseline includes:
 **Pages:**
 
 - Dashboard — active timer, recent time entries
-- Timer — task selector (org → project/repo → issue), start/stop
+- Timer — task selector (visible project → task), start/stop
 - Time Entries — list, edit, delete own entries
 - Project View — visible project members' time entries (read-only)
 - Profile — display name, GitHub connection (connect/disconnect)

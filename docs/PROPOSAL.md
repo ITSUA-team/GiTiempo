@@ -44,7 +44,7 @@ Data is synced **on-demand**: when a user opens the task selector, the backend q
 
 **Project = GitHub Project or GitHub Repository.** A project in the application can map to either a GitHub Project (board that groups issues from multiple repos) or a GitHub Repository (issues within a single repo). The default is GitHub Project. Users choose the grouping mode when selecting or creating a project.
 
-Users select a task for time tracking through a cascading filter: **Organization → Project/Repo → Issue**.
+The current timer page implementation scope still uses visible workspace data for task selection: **Project → Task**.
 
 ### 2. Time Entry
 
@@ -59,7 +59,7 @@ Both modes produce a `TimeEntry` record linked to a task and the current user.
 
 When a task or project does not exist in an external provider (or the user has no connected integration), users can create local work records within the workspace. Admins and Project Managers can create projects; any active member with visibility to an active project can create tasks within that project. Manual tasks coexist with externally synced tasks in the same workspace.
 
-When creating a manual task, the user can optionally choose to also create it in a connected external provider, such as GitHub, if the integration supports task creation.
+Manual task creation for the current scope stays inside visible workspace projects.
 
 ### 4. Reports
 
@@ -158,7 +158,7 @@ Members track time through **two independent workflows**:
 ### Workflow A: Web Application
 
 1. Open the User SPA.
-2. Browse or search for a task via cascading filter: Organization → Project/Repo → Issue (if GitHub connected), or select a manual task.
+2. Browse and select a task through visible workspace projects and tasks.
 3. Start/stop the timer, or log a manual time interval.
 4. View and edit own time entries.
 
@@ -178,7 +178,7 @@ The application ships **two independent single-page applications**:
 
 | Frontend | Audience | Purpose |
 |---|---|---|
-| **User SPA** | All roles | Timer, time entry list, task selection, manual task creation, profile/GitHub connection |
+| **User SPA** | All roles | Timer, time entry list, project/task selection, manual task creation, profile/GitHub connection |
 | **Admin SPA** | Admins + PMs | Reports, invoices, team time review, project management. PMs see assigned projects only. |
 
 Both frontends communicate with the same backend API.
