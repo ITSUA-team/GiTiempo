@@ -30,6 +30,7 @@ const projectRow = {
   workspaceId: 'workspace-1',
   name: 'Project',
   color: null,
+  visibility: 'private' as const,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -122,5 +123,56 @@ describe('ProjectsService', () => {
       service.updateProject(pmUser, projectRow.id, { isActive: false }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it('allows admins to archive and unarchive with single-field updates', async () => {
+    const archivedRow = { ...projectRow, isActive: false };
+    const unarchivedRow = { ...projectRow, isActive: true };
+    const returning = vi
+      .fn()
+      .mockResolvedValueOnce([archivedRow])
+      .mockResolvedValueOnce([unarchivedRow]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const db = { update: vi.fn().mockReturnValue({ set }) };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+    Object.defineProperty(service, 'requireProjectInWorkspace', {
+      value: vi.fn().mockResolvedValue(projectRow),
+    });
+    Object.defineProperty(service, 'findProjectResponseInWorkspace', {
+      value: vi
+        .fn()
+        .mockResolvedValueOnce({
+          ...archivedRow,
+          source: 'manual',
+          totalHours: 0,
+        })
+        .mockResolvedValueOnce({
+          ...unarchivedRow,
+          source: 'manual',
+          totalHours: 0,
+        }),
+    });
+
+    const archived = await service.updateProject(adminUser, projectRow.id, {
+      isActive: false,
+    });
+    const unarchived = await service.updateProject(adminUser, projectRow.id, {
+      isActive: true,
+    });
+
+    expect(archived.isActive).toBe(false);
+    expect(unarchived.isActive).toBe(true);
+    expect(set).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ isActive: false }),
+    );
+    expect(set).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ isActive: true }),
+    );
   });
 });

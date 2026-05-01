@@ -25,6 +25,8 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { CreateProjectAssignmentDto } from '../dto/create-project-assignment.dto';
 import { CreateProjectDto } from '../dto/create-project.dto';
+import { ManagementProjectSummaryResponseDto } from '../dto/management-project-summary-response.dto';
+import { MyProjectSummaryResponseDto } from '../dto/my-project-summary-response.dto';
 import { ProjectAssignmentListResponseDto } from '../dto/project-assignment-list-response.dto';
 import { ProjectAssignmentResponseDto } from '../dto/project-assignment-response.dto';
 import { ProjectListResponseDto } from '../dto/project-list-response.dto';
@@ -45,6 +47,29 @@ export class ProjectsController {
   @ZodSerializerDto(ProjectListResponseDto)
   listProjects(@CurrentUser() user: AuthUser): Promise<ProjectResponseDto[]> {
     return this.projects.listProjects(user);
+  }
+
+  @Get('management-summary')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get management project summary' })
+  @ApiOkResponse({ type: ManagementProjectSummaryResponseDto })
+  @ApiForbiddenResponse({ description: 'Admin or PM role required' })
+  @ZodSerializerDto(ManagementProjectSummaryResponseDto)
+  getManagementSummary(
+    @CurrentUser() user: AuthUser,
+  ): Promise<ManagementProjectSummaryResponseDto> {
+    return this.projects.getManagementSummary(user);
+  }
+
+  @Get('my-summary')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get current user project summary' })
+  @ApiOkResponse({ type: MyProjectSummaryResponseDto })
+  @ZodSerializerDto(MyProjectSummaryResponseDto)
+  getMySummary(
+    @CurrentUser() user: AuthUser,
+  ): Promise<MyProjectSummaryResponseDto> {
+    return this.projects.getMySummary(user);
   }
 
   @Post()

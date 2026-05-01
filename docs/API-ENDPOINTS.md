@@ -55,12 +55,22 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 
 ## 5. Projects
 
-| Method | Path            | Auth | Role     | Description                                                                                                                                 |
-| ------ | --------------- | ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/projects`     | JWT  | Any      | List workspace projects. Admins: all projects. PMs/members: assigned active projects only.                                                  |
-| POST   | `/projects`     | JWT  | Admin/PM | Create a provider-neutral project. PM creators are automatically assigned to the created project.                                           |
-| GET    | `/projects/:id` | JWT  | Any      | Get project details. Admins can read active or inactive projects. PMs/members can read assigned active projects only.                       |
-| PATCH  | `/projects/:id` | JWT  | Admin/PM | Update project. Admins can update name, color, and isActive on any project; PMs can update name and color on assigned active projects only. |
+| Method | Path                           | Auth | Role     | Description                                                                                                                                      |
+| ------ | ------------------------------ | ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/projects`                    | JWT  | Any      | List visible workspace projects with `visibility`, derived `source`, and `totalHours` from completed time entries.                               |
+| POST   | `/projects`                    | JWT  | Admin/PM | Create a provider-neutral project. PM creators are automatically assigned to the created project.                                                 |
+| GET    | `/projects/management-summary` | JWT  | Admin/PM | Get management counts: `activeProjects`, `privateProjects`, and `publicProjects`.                                                                |
+| GET    | `/projects/my-summary`         | JWT  | Any      | Get personal summary: `visibleProjects`, `trackedHoursWeek`, and `trackedHoursMonth`.                                                            |
+| GET    | `/projects/:id`                | JWT  | Any      | Get project details when visible. Admins can read all workspace projects.                                                                        |
+| PATCH  | `/projects/:id`                | JWT  | Admin/PM | Update project. Admins can update metadata and `isActive`; PMs can update visible active project metadata except `isActive`. Members cannot edit. |
+
+`GET /projects` derives `source` as `manual | github` from `project_external_refs`; it is not stored on `projects`.
+
+Admins see all workspace projects. Non-admins see active public projects plus active assigned projects; private projects require assignment.
+
+**PATCH /projects/:id** may archive or unarchive with `{ isActive: true | false }`. Only admins can change active state.
+
+Summary tracked hours use completed entries, UTC ISO week windows, and UTC calendar month windows.
 
 ---
 
@@ -72,7 +82,7 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | POST   | `/projects/:id/assignments`         | JWT  | Admin | Assign a `pm` or `member` user to project         |
 | DELETE | `/projects/:id/assignments/:userId` | JWT  | Admin | Remove a `pm` or `member` assignment from project |
 
-Assignments control project visibility for non-admin users. Admins have implicit access to all projects and do not need assignment rows.
+Assignments grant non-admin access to private projects and to any assigned active projects. Admins have implicit access to all workspace projects and do not need assignment rows.
 
 ---
 
@@ -80,7 +90,7 @@ Assignments control project visibility for non-admin users. Admins have implicit
 
 | Method | Path                       | Auth | Role | Description                                                                                      |
 | ------ | -------------------------- | ---- | ---- | ------------------------------------------------------------------------------------------------ |
-| GET    | `/projects/:id/tasks`      | JWT  | Any  | List tasks for a visible project. Non-admin users need assignment to an active project.          |
+| GET    | `/projects/:id/tasks`      | JWT  | Any  | List tasks for a visible active project. Private projects require assignment for non-admin users. |
 | POST   | `/projects/:id/tasks`      | JWT  | Any  | Create a provider-neutral task in a visible active project.                                      |
 | GET    | `/tasks/:id`               | JWT  | Any  | Get task details when the user has visibility to the task's project.                             |
 | PATCH  | `/tasks/:id`               | JWT  | Any  | Update task (title, status, isActive) when the user has visibility to the task's active project. |
@@ -111,7 +121,7 @@ Assignments control project visibility for non-admin users. Admins have implicit
 
 | Method | Path                         | Auth | Role | Description                                                                                                                                               |
 | ------ | ---------------------------- | ---- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/projects/:id/time-entries` | JWT  | Any  | List all time entries for a project. Admins: all projects. PMs/members: assigned active projects only. Members remain read-only for other users' entries. |
+| GET    | `/projects/:id/time-entries` | JWT  | Any  | List all time entries for a visible project. Private projects require assignment for non-admin users. Members remain read-only for other users' entries. |
 
 ---
 

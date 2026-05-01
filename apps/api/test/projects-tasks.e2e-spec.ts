@@ -27,6 +27,7 @@ describe('Projects and tasks (e2e)', () => {
   let platformProjectId: string;
   let clientProjectId: string;
   let archivedProjectId: string;
+  let aliceUserId: string;
   let bobUserId: string;
 
   beforeAll(async () => {
@@ -64,6 +65,14 @@ describe('Projects and tasks (e2e)', () => {
     clientProjectId = clientProject.id;
     archivedProjectId = archivedProject.id;
 
+    const [alice] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.firebaseUid, 'seed-user-1'))
+      .limit(1);
+    if (!alice) throw new Error('Expected seeded Alice user');
+    aliceUserId = alice.id;
+
     const [bob] = await db
       .select({ id: users.id })
       .from(users)
@@ -96,6 +105,14 @@ describe('Projects and tasks (e2e)', () => {
         (project: { id: string }) => project.id === archivedProjectId,
       ),
     ).toBe(true);
+    const platform = adminRes.body.find(
+      (project: { id: string }) => project.id === platformProjectId,
+    );
+    expect(platform).toMatchObject({
+      visibility: 'private',
+      source: 'manual',
+    });
+    expect(typeof platform.totalHours).toBe('number');
 
     const memberRes = await request(app.getHttpServer())
       .get('/projects')
@@ -118,6 +135,9 @@ describe('Projects and tasks (e2e)', () => {
       .set('Authorization', bearer(pmToken))
       .send({ name: `PM Created ${randomUUID()}` });
     expect(createRes.status).toBe(201);
+    expect(createRes.body.visibility).toBe('private');
+    expect(createRes.body.source).toBe('manual');
+    expect(createRes.body.totalHours).toBe(0);
 
     const [assignment] = await db
       .select()
@@ -189,6 +209,28 @@ describe('Projects and tasks (e2e)', () => {
       .where(eq(projects.id, createRes.body.id))
       .limit(1);
     expect(project?.isActive).toBe(true);
+  });
+
+  it('allows admins to archive and unarchive projects through patch', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `Admin Archive ${randomUUID()}` });
+    expect(createRes.status).toBe(201);
+
+    const archiveRes = await request(app.getHttpServer())
+      .patch(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ isActive: false });
+    expect(archiveRes.status).toBe(200);
+    expect(archiveRes.body.isActive).toBe(false);
+
+    const unarchiveRes = await request(app.getHttpServer())
+      .patch(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ isActive: true });
+    expect(unarchiveRes.status).toBe(200);
+    expect(unarchiveRes.body.isActive).toBe(true);
   });
 
   it('allows assigned members to create and update tasks but not mutate projects', async () => {
@@ -263,5 +305,153 @@ describe('Projects and tasks (e2e)', () => {
       .get(`/tasks/${platformTask.id}`)
       .set('Authorization', bearer(otherMemberToken));
     expect(readTask.status).toBe(404);
+  });
+
+  it('allows unassigned members to work in active public projects', async () => {
+    const publicProject = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `Public Access ${randomUUID()}`, visibility: 'public' });
+    expect(publicProject.status).toBe(201);
+    expect(publicProject.body.visibility).toBe('public');
+
+    const memberList = await request(app.getHttpServer())
+      .get('/projects')
+      .set('Authorization', bearer(otherMemberToken));
+    expect(memberList.status).toBe(200);
+    expect(
+      memberList.body.map((project: { id: string }) => project.id),
+    ).toContain(publicProject.body.id);
+
+    const readProject = await request(app.getHttpServer())
+      .get(`/projects/${publicProject.body.id}`)
+      .set('Authorization', bearer(otherMemberToken));
+    expect(readProject.status).toBe(200);
+
+    const memberProjectMutation = await request(app.getHttpServer())
+      .patch(`/projects/${publicProject.body.id}`)
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ name: 'Still Forbidden' });
+    expect(memberProjectMutation.status).toBe(403);
+
+    const createdTask = await request(app.getHttpServer())
+      .post(`/projects/${publicProject.body.id}/tasks`)
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ title: `Public Task ${randomUUID()}` });
+    expect(createdTask.status).toBe(201);
+
+    const listedTasks = await request(app.getHttpServer())
+      .get(`/projects/${publicProject.body.id}/tasks`)
+      .set('Authorization', bearer(otherMemberToken));
+    expect(listedTasks.status).toBe(200);
+    expect(listedTasks.body.map((task: { id: string }) => task.id)).toContain(
+      createdTask.body.id,
+    );
+
+    const readTask = await request(app.getHttpServer())
+      .get(`/tasks/${createdTask.body.id}`)
+      .set('Authorization', bearer(otherMemberToken));
+    expect(readTask.status).toBe(200);
+    expect(readTask.body.id).toBe(createdTask.body.id);
+
+    const updatedTask = await request(app.getHttpServer())
+      .patch(`/tasks/${createdTask.body.id}`)
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ title: 'Public Task Updated' });
+    expect(updatedTask.status).toBe(200);
+
+    const manualEntry = await request(app.getHttpServer())
+      .post('/time-entries')
+      .set('Authorization', bearer(otherMemberToken))
+      .send({
+        taskId: createdTask.body.id,
+        startedAt: '2026-05-01T10:00:00.000Z',
+        endedAt: '2026-05-01T10:30:00.000Z',
+      });
+    expect(manualEntry.status).toBe(201);
+
+    const projectEntries = await request(app.getHttpServer())
+      .get(`/projects/${publicProject.body.id}/time-entries`)
+      .set('Authorization', bearer(otherMemberToken));
+    expect(projectEntries.status).toBe(200);
+    expect(
+      projectEntries.body.items.map((item: { id: string }) => item.id),
+    ).toContain(manualEntry.body.id);
+
+    const timer = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ taskId: createdTask.body.id });
+    expect(timer.status).toBe(201);
+
+    const projectWithHours = await request(app.getHttpServer())
+      .get(`/projects/${publicProject.body.id}`)
+      .set('Authorization', bearer(otherMemberToken));
+    expect(projectWithHours.status).toBe(200);
+    expect(projectWithHours.body.totalHours).toBe(0.5);
+
+    const stopped = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(otherMemberToken));
+    expect(stopped.status).toBe(200);
+  });
+
+  it('returns scoped management summaries with distinct public assignments', async () => {
+    const publicAssigned = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(pmToken))
+      .send({ name: `PM Public ${randomUUID()}`, visibility: 'public' });
+    expect(publicAssigned.status).toBe(201);
+
+    const adminSummary = await request(app.getHttpServer())
+      .get('/projects/management-summary')
+      .set('Authorization', bearer(adminToken));
+    expect(adminSummary.status).toBe(200);
+
+    const activeProjects = await db
+      .select({ id: projects.id, visibility: projects.visibility })
+      .from(projects)
+      .where(
+        and(eq(projects.workspaceId, workspaceId), eq(projects.isActive, true)),
+      );
+    expect(adminSummary.body).toEqual({
+      activeProjects: activeProjects.length,
+      privateProjects: activeProjects.filter(
+        (project) => project.visibility === 'private',
+      ).length,
+      publicProjects: activeProjects.filter(
+        (project) => project.visibility === 'public',
+      ).length,
+    });
+
+    const pmSummary = await request(app.getHttpServer())
+      .get('/projects/management-summary')
+      .set('Authorization', bearer(pmToken));
+    expect(pmSummary.status).toBe(200);
+
+    const assignments = await db
+      .select({ projectId: projectAssignments.projectId })
+      .from(projectAssignments)
+      .where(eq(projectAssignments.userId, aliceUserId));
+    const assignedIds = new Set(assignments.map((row) => row.projectId));
+    const pmVisibleProjects = activeProjects.filter(
+      (project) =>
+        project.visibility === 'public' || assignedIds.has(project.id),
+    );
+
+    expect(pmSummary.body).toEqual({
+      activeProjects: pmVisibleProjects.length,
+      privateProjects: pmVisibleProjects.filter(
+        (project) => project.visibility === 'private',
+      ).length,
+      publicProjects: pmVisibleProjects.filter(
+        (project) => project.visibility === 'public',
+      ).length,
+    });
+    expect(
+      pmVisibleProjects.filter(
+        (project) => project.id === publicAssigned.body.id,
+      ),
+    ).toHaveLength(1);
   });
 });
