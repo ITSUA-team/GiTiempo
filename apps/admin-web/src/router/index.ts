@@ -7,34 +7,36 @@ import {
   type RouteRecordRaw,
   type Router,
   type RouterHistory,
-} from "vue-router";
-import type { Pinia } from "pinia";
+} from 'vue-router';
+import type { Pinia } from 'pinia';
 
-import AdminAppShell from "@/components/layout/AdminAppShell.vue";
-import DashboardView from "@/views/DashboardView.vue";
-import InvoicesView from "@/views/InvoicesView.vue";
-import LoginView from "@/views/LoginView.vue";
-import MembersView from "@/views/MembersView.vue";
-import ProjectsView from "@/views/ProjectsView.vue";
-import ReportsView from "@/views/ReportsView.vue";
-import SettingsView from "@/views/SettingsView.vue";
-import { pinia } from "@/stores";
-import { useAuthStore } from "@/stores/auth";
+import AdminAppShell from '@/components/layout/AdminAppShell.vue';
+import AddProjectView from '@/views/AddProjectView.vue';
+import DashboardView from '@/views/DashboardView.vue';
+import InvoicesView from '@/views/InvoicesView.vue';
+import LoginView from '@/views/LoginView.vue';
+import MembersView from '@/views/MembersView.vue';
+import ProjectsView from '@/views/ProjectsView.vue';
+import ReportsView from '@/views/ReportsView.vue';
+import SettingsView from '@/views/SettingsView.vue';
+import { pinia } from '@/stores';
+import { useAuthStore } from '@/stores/auth';
 
 export const routeNames = {
-  dashboard: "admin-dashboard",
-  invoices: "admin-invoices",
-  login: "admin-login",
-  members: "admin-members",
-  projects: "admin-projects",
-  reports: "admin-reports",
-  settings: "admin-settings",
+  addProject: 'admin-add-project',
+  dashboard: 'admin-dashboard',
+  invoices: 'admin-invoices',
+  login: 'admin-login',
+  members: 'admin-members',
+  projects: 'admin-projects',
+  reports: 'admin-reports',
+  settings: 'admin-settings',
 } as const;
 
 function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
   const redirect = to.query.redirect;
 
-  return typeof redirect === "string" && redirect.startsWith("/")
+  return typeof redirect === 'string' && redirect.startsWith('/')
     ? redirect
     : null;
 }
@@ -47,7 +49,7 @@ function getDefaultAuthenticatedRoute(
 
 const routes: RouteRecordRaw[] = [
   {
-    path: "/login",
+    path: '/login',
     name: routeNames.login,
     component: LoginView,
     meta: {
@@ -55,35 +57,40 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: "/",
+    path: '/',
     component: AdminAppShell,
     meta: {
       requiresAuth: true,
     },
     children: [
-      { path: "", name: routeNames.dashboard, component: DashboardView },
+      { path: '', name: routeNames.dashboard, component: DashboardView },
       {
-        path: "reports",
+        path: 'reports',
         name: routeNames.reports,
         component: ReportsView,
       },
       {
-        path: "invoices",
+        path: 'invoices',
         name: routeNames.invoices,
         component: InvoicesView,
       },
       {
-        path: "members",
+        path: 'members',
         name: routeNames.members,
         component: MembersView,
       },
       {
-        path: "projects",
+        path: 'projects',
         name: routeNames.projects,
         component: ProjectsView,
       },
       {
-        path: "settings",
+        path: 'projects/add',
+        name: routeNames.addProject,
+        component: AddProjectView,
+      },
+      {
+        path: 'settings',
         name: routeNames.settings,
         component: SettingsView,
       },
@@ -92,7 +99,7 @@ const routes: RouteRecordRaw[] = [
 ];
 
 function createAppHistory(): RouterHistory {
-  return typeof window === "undefined"
+  return typeof window === 'undefined'
     ? createMemoryHistory()
     : createWebHistory();
 }

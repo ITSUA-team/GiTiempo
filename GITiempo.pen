@@ -1517,8 +1517,8 @@
                           "fontWeight": "normal"
                         }
                       ]
-                    },
-                  ]
+                    }
+                   ]
                 },
                 {
                   "type": "frame",
@@ -1834,10 +1834,10 @@
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "600"
-                                }
-                              ]
-                            },
-                          ]
+                                 }
+                               ]
+                             }
+                           ]
                         },
                         {
                           "type": "frame",

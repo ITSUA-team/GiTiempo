@@ -9,7 +9,10 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "lint": "turbo run lint",
-    "openapi:export": "turbo run openapi:export"
+    "openapi:export": "turbo run openapi:export",
+    "format": "prettier --write '**/*.{ts,tsx,vue,js,jsx,json,md}'",
+    "format:check": "prettier --check '**/*.{ts,tsx,vue,js,jsx,json,md}'",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
@@ -22,7 +25,10 @@
     "eslint-plugin-tailwindcss": "^3.18.3",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
     "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.5.12",
     "tailwindcss": "^4.2.2",
     "turbo": "^2.5.0",
     "typescript": "^5.8.3",
