@@ -3,14 +3,14 @@ import { z } from "zod";
 export const workspaceRoleSchema = z.enum(["admin", "pm", "member"]);
 
 export const workspaceMemberResponseSchema = z.object({
-  id: z.string().uuid(),
-  workspaceId: z.string().uuid(),
-  userId: z.string().uuid(),
-  email: z.string().email(),
+  id: z.uuid(),
+  workspaceId: z.uuid(),
+  userId: z.uuid(),
+  email: z.email(),
   displayName: z.string().nullable(),
   avatarUrl: z.string().nullable(),
   role: workspaceRoleSchema,
-  joinedAt: z.string().datetime(),
+  joinedAt: z.iso.datetime(),
 });
 
 export const workspaceMemberListResponseSchema = z.array(

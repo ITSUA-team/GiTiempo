@@ -8,13 +8,13 @@ import { workspaceRoleSchema } from "./workspace-members.js";
  * It is an internal identifier from the auth provider.
  */
 export const userResponseSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
+  id: z.uuid(),
+  email: z.email(),
   displayName: z.string().nullable(),
   avatarUrl: z.string().nullable(),
   role: workspaceRoleSchema,
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 /**
@@ -26,7 +26,7 @@ export const userResponseSchema = z.object({
 export const updateUserSchema = z
   .object({
     displayName: z.string().min(1).max(255).optional(),
-    avatarUrl: z.string().url().max(2048).nullable().optional(),
+    avatarUrl: z.url().max(2048).nullable().optional(),
   })
   .refine(
     (data) =>
