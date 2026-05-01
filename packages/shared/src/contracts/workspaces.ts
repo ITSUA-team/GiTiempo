@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const workspaceResponseSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 export const updateWorkspaceSchema = z
@@ -18,12 +18,12 @@ export const updateWorkspaceSchema = z
   });
 
 export const workspaceSettingsResponseSchema = z.object({
-  id: z.string().uuid(),
-  workspaceId: z.string().uuid(),
+  id: z.uuid(),
+  workspaceId: z.uuid(),
   currency: z.string().length(3),
   defaultHourlyRate: z.number().nonnegative().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 export const updateWorkspaceSettingsSchema = z

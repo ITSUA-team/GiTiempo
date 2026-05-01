@@ -5,16 +5,16 @@ export const projectVisibilitySchema = z.enum(["public", "private"]);
 export const projectSourceSchema = z.enum(["manual", "github"]);
 
 export const projectResponseSchema = z.object({
-  id: z.string().uuid(),
-  workspaceId: z.string().uuid(),
+  id: z.uuid(),
+  workspaceId: z.uuid(),
   name: z.string(),
   color: z.string().nullable(),
   visibility: projectVisibilitySchema,
   source: projectSourceSchema,
   totalHours: z.number().min(0),
   isActive: z.boolean(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 export const projectListResponseSchema = z.array(projectResponseSchema);
@@ -68,16 +68,16 @@ export const updateProjectSchema = z
   );
 
 export const projectAssignmentResponseSchema = z.object({
-  id: z.string().uuid(),
-  workspaceId: z.string().uuid(),
-  projectId: z.string().uuid(),
-  userId: z.string().uuid(),
-  email: z.string().email(),
+  id: z.uuid(),
+  workspaceId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
+  email: z.email(),
   displayName: z.string().nullable(),
   avatarUrl: z.string().nullable(),
   role: workspaceRoleSchema,
-  assignedBy: z.string().uuid(),
-  assignedAt: z.string().datetime(),
+  assignedBy: z.uuid(),
+  assignedAt: z.iso.datetime(),
 });
 
 export const projectAssignmentListResponseSchema = z.array(
@@ -86,7 +86,7 @@ export const projectAssignmentListResponseSchema = z.array(
 
 export const createProjectAssignmentSchema = z
   .object({
-    userId: z.string().uuid(),
+    userId: z.uuid(),
   })
   .strict();
 

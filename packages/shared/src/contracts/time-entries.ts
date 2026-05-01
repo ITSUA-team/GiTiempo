@@ -2,31 +2,31 @@ import { z } from "zod";
 
 export const timeEntrySourceSchema = z.enum(["web", "extension", "manual"]);
 
-const dateTimeSchema = z.string().datetime();
+const dateTimeSchema = z.iso.datetime();
 
 const timeEntryProjectSummarySchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
 });
 
 const timeEntryTaskSummarySchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   title: z.string(),
 });
 
 const timeEntryUserSummarySchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
+  id: z.uuid(),
+  email: z.email(),
   displayName: z.string().nullable(),
   avatarUrl: z.string().nullable(),
 });
 
 export const timeEntryResponseSchema = z.object({
-  id: z.string().uuid(),
-  workspaceId: z.string().uuid(),
-  taskId: z.string().uuid(),
-  projectId: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.uuid(),
+  workspaceId: z.uuid(),
+  taskId: z.uuid(),
+  projectId: z.uuid(),
+  userId: z.uuid(),
   startedAt: dateTimeSchema,
   endedAt: dateTimeSchema.nullable(),
   durationSeconds: z.number().int().positive().nullable(),
@@ -62,8 +62,8 @@ export const timeEntryListQuerySchema = z
     limit: z.coerce.number().int().min(1).max(100).default(20),
     dateFrom: dateTimeSchema.optional(),
     dateTo: dateTimeSchema.optional(),
-    projectId: z.string().uuid().optional(),
-    taskId: z.string().uuid().optional(),
+    projectId: z.uuid().optional(),
+    taskId: z.uuid().optional(),
   })
   .strict()
   .refine(
@@ -79,7 +79,7 @@ export const timeEntryListQuerySchema = z
 
 export const createManualTimeEntrySchema = z
   .object({
-    taskId: z.string().uuid(),
+    taskId: z.uuid(),
     startedAt: dateTimeSchema,
     endedAt: dateTimeSchema,
     description: z.string().max(2000).nullable().optional(),
@@ -126,7 +126,7 @@ export const updateTimeEntrySchema = z
 
 export const startTimerSchema = z
   .object({
-    taskId: z.string().uuid(),
+    taskId: z.uuid(),
   })
   .strict();
 

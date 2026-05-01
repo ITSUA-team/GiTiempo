@@ -3,14 +3,14 @@ import { z } from "zod";
 export const taskStatusSchema = z.enum(["open", "closed"]);
 
 export const taskResponseSchema = z.object({
-  id: z.string().uuid(),
-  workspaceId: z.string().uuid(),
-  projectId: z.string().uuid(),
+  id: z.uuid(),
+  workspaceId: z.uuid(),
+  projectId: z.uuid(),
   title: z.string(),
   status: taskStatusSchema,
   isActive: z.boolean(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 export const taskListResponseSchema = z.array(taskResponseSchema);
