@@ -127,7 +127,7 @@ A Chrome extension adds **Start/Stop Timer** and other controls directly onto Gi
 - Accesses admin frontend
 - Full visibility across all projects
 - Manages invites and user roles
-- Assigns Project Managers and members to projects
+- Assigns non-admin workspace users to projects
 - Manages workspace settings and GitHub connection
 - Manages app settings
 

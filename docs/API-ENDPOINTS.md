@@ -72,6 +72,7 @@ Admins see all workspace projects. Non-admins see active public projects plus ac
 
 Summary tracked hours use completed entries, UTC ISO week windows, and UTC calendar month windows.
 
+
 ---
 
 ## 6. Project Assignments
@@ -79,7 +80,7 @@ Summary tracked hours use completed entries, UTC ISO week windows, and UTC calen
 | Method | Path                                | Auth | Role  | Description                                       |
 | ------ | ----------------------------------- | ---- | ----- | ------------------------------------------------- |
 | GET    | `/projects/:id/assignments`         | JWT  | Admin | List user assignments for a project               |
-| POST   | `/projects/:id/assignments`         | JWT  | Admin | Assign a `pm` or `member` user to project         |
+| POST   | `/projects/:id/assignments`         | JWT  | Admin | Assign a non-admin (`pm` or `member`) user to project |
 | DELETE | `/projects/:id/assignments/:userId` | JWT  | Admin | Remove a `pm` or `member` assignment from project |
 
 Assignments grant non-admin access to private projects and to any assigned active projects. Admins have implicit access to all workspace projects and do not need assignment rows.

@@ -76,5 +76,13 @@ Read this file first. Load only the linked section files needed for the task.
 ## Agent Guidance
 
 - For any implementation task, read only `INDEX.md` plus the smallest relevant section file set.
+- Task routing:
+- shell, sidebar, top bar, breakpoints, or page header work: `layout.md`
+- shared component styling, forms, tables, empty/loading/error states, or token usage: `components.md`
+- user-facing page structure or page-specific UI: `pages-user.md`
+- admin-facing page structure or page-specific UI: `pages-admin.md`
+- dialogs, toasts, selectors, pickers, and confirm flows: `patterns.md`
+- accessibility-sensitive UI behavior: `accessibility.md`
+- When working in `packages/web-shared`, also read the package `AGENTS.md` file and each app `AGENTS.md` file for the apps that render the shared component.
 - Prefer copying examples from `setup.md` and `patterns.md` over re-deriving APIs from memory.
 - If the task touches PrimeVue props or theming, confirm against current PrimeVue docs before coding.
