@@ -33,8 +33,8 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | Method | Path                 | Auth | Role | Description                                                                                                                                                                                             |
 | ------ | -------------------- | ---- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/github/connection` | JWT  | Any  | Get current GitHub connection status                                                                                                                                                                    |
-| GET    | `/github/auth-url`   | JWT  | Any  | Get GitHub OAuth authorization URL (includes signed `state` param with userId)                                                                                                                          |
-| GET    | `/github/callback`   | None | —    | GitHub OAuth callback (browser redirect from GitHub). Validates signed `state` param to identify user, exchanges `code` for GitHub tokens, stores in GitHubConnection. Redirects user back to frontend. |
+| GET    | `/github/auth-url`   | JWT  | Any  | Get GitHub OAuth authorization URL (includes an opaque state id backed by server-side state and PKCE)                                                                                                    |
+| GET    | `/github/callback`   | None | —    | GitHub OAuth callback (browser redirect from GitHub). Validates the opaque server-side state id, consumes it once, exchanges `code` with PKCE, stores GitHubConnection, and redirects user to `USER_SPA_URL/profile`. |
 | DELETE | `/github/connection` | JWT  | Any  | Disconnect GitHub account                                                                                                                                                                               |
 
 ---

@@ -98,22 +98,26 @@ User → clicks "Connect GitHub" in profile settings
                                ↓
                            Frontend calls GET /github/auth-url (with JWT)
                                ↓
-                          Backend generates signed `state` param (JWT containing userId + nonce)
-                          and returns GitHub OAuth authorization URL with state
+                           Backend creates an unguessable opaque state id backed by
+                           github_oauth_states with user binding, PKCE verifier,
+                           expiry, and unconsumed status
+                           Backend returns GitHub OAuth authorization URL with state id
+                           and PKCE challenge
                                ↓
                           Browser navigates to GitHub → user authorizes the app
                                ↓
                            GitHub redirects to GET /github/callback?code=...&state=...
                           (browser redirect — no Authorization header)
                                ↓
-                          Backend validates `state` signature to identify the user
+                           Backend validates the opaque state id against github_oauth_states,
+                           checks expiry, consumes it once, and identifies the bound user
                           Backend exchanges `code` for GitHub user access token + refresh token
                           Backend stores encrypted tokens in GitHubConnection
                                ↓
-                          Backend redirects user back to frontend profile page
+                           Backend redirects user to USER_SPA_URL/profile
 ```
 
-**Note:** The callback endpoint is unauthenticated (browser redirect from GitHub). User identification relies on the cryptographically signed `state` parameter, not on the JWT.
+**Note:** The callback endpoint is unauthenticated (browser redirect from GitHub). User identification relies on the validated server-side OAuth state row, not on the GiTiempo JWT or a self-contained signed state JWT.
 
 **Token lifecycle (per GitHub docs):**
 
