@@ -20,11 +20,16 @@
 
 ## Time Entries Page
 
-- Filter bar: date range, project filter, search field.
+- Filter bar: date range, single project filter, search field.
+- Search placeholder copy: `Search tasks`.
 - Entries grouped by day.
 - Entry row includes task, project, time range, duration, edit, delete.
 - Running entry highlighted with `bg-accent-tint`.
 - Inline edit opens within the row, not a modal.
+- Inline edit shows task as read-only text and only edits the time interval fields in place.
+- Delete uses the shared confirmation dialog pattern before removing an entry.
+- Pagination uses PrimeVue `<Paginator>` below the grouped entry sections.
+- Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 
 ## Project View Page
 

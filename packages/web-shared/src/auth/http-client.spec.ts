@@ -117,7 +117,9 @@ describe("createCurrentUserClient", () => {
 
     expect(user.email).toBe("alexey@example.com");
     expect(fetchFn).toHaveBeenCalledWith("https://api.example.test/users/me", {
+      body: undefined,
       headers: { Authorization: "Bearer access-token" },
+      method: "GET",
     });
   });
 

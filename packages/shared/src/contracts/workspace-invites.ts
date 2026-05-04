@@ -8,14 +8,14 @@ export const workspaceInviteStatusSchema = z.enum([
 ]);
 
 export const workspaceInviteResponseSchema = z.object({
-  id: z.string().uuid(),
-  workspaceId: z.string().uuid(),
-  email: z.string().email(),
-  invitedBy: z.string().uuid(),
+  id: z.uuid(),
+  workspaceId: z.uuid(),
+  email: z.email(),
+  invitedBy: z.uuid(),
   role: workspaceRoleSchema,
   status: workspaceInviteStatusSchema,
-  expiresAt: z.string().datetime(),
-  createdAt: z.string().datetime(),
+  expiresAt: z.iso.datetime(),
+  createdAt: z.iso.datetime(),
 });
 
 export const workspaceInviteListResponseSchema = z.array(
@@ -24,7 +24,7 @@ export const workspaceInviteListResponseSchema = z.array(
 
 export const createWorkspaceInviteSchema = z
   .object({
-    email: z.string().email(),
+    email: z.email(),
     role: workspaceRoleSchema,
   })
   .strict();

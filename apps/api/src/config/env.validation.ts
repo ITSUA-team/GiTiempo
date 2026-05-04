@@ -11,6 +11,10 @@ const optionalNonEmptyString = z.preprocess(
   (val) => (val === '' ? undefined : val),
   z.string().min(1).optional(),
 );
+const optionalUrl = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().url().optional(),
+);
 
 export const envSchema = z
   .object({
@@ -67,7 +71,17 @@ export const envSchema = z
     JWT_AUDIENCE: z.string().min(1).default('gitiempo-clients'),
 
     // --- Application URLs ---
+    APP_URL: optionalUrl.default('http://localhost:3000'),
     USER_SPA_URL: z.string().url().default('http://localhost:5173'),
+    ADMIN_SPA_URL: optionalUrl.default('http://localhost:5174'),
+
+    // --- GitHub App ---
+    GITHUB_APP_ID: optionalNonEmptyString,
+    GITHUB_APP_CLIENT_ID: optionalNonEmptyString,
+    GITHUB_APP_CLIENT_SECRET: optionalNonEmptyString,
+
+    // --- Token encryption ---
+    ENCRYPTION_KEY: optionalNonEmptyString,
 
     // --- Invite email delivery ---
     SMTP_HOST: optionalNonEmptyString,
@@ -111,6 +125,37 @@ export const envSchema = z
         message:
           'SMTP_HOST is required when INVITES_EMAIL_CONSOLE_FALLBACK=false',
       });
+    }
+
+    if (env.NODE_ENV === 'production') {
+      const requiredGithub: Array<keyof typeof env> = [
+        'GITHUB_APP_ID',
+        'GITHUB_APP_CLIENT_ID',
+        'GITHUB_APP_CLIENT_SECRET',
+        'ENCRYPTION_KEY',
+        'APP_URL',
+        'USER_SPA_URL',
+      ];
+      for (const key of requiredGithub) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} is required when NODE_ENV=production`,
+          });
+        }
+      }
+
+      if (
+        env.ENCRYPTION_KEY &&
+        Buffer.from(env.ENCRYPTION_KEY, 'base64').length !== 32
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['ENCRYPTION_KEY'],
+          message: 'ENCRYPTION_KEY must be a base64-encoded 32-byte key',
+        });
+      }
     }
   });
 

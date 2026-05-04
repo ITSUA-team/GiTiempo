@@ -80,21 +80,28 @@ Use `<DatePicker>`.
 
 Use sequential PrimeVue `<Select>` controls.
 
-- Organization -> Project/Repo -> Issue.
+- Project -> Task.
 - Enable `filter` on each select.
 - Disable each level until the previous one has a value.
 - Use `:loading` while downstream options are fetched.
 
 ```vue
-<Select v-model="selectedOrg" :options="orgs" optionLabel="name" placeholder="Organization" filter class="w-full" />
 <Select
   v-model="selectedProject"
   :options="projects"
   optionLabel="name"
-  placeholder="Project / Repo"
+  placeholder="Project"
   filter
-  :disabled="!selectedOrg"
-  :loading="loadingProjects"
+  class="w-full"
+/>
+<Select
+  v-model="selectedTask"
+  :options="tasks"
+  optionLabel="title"
+  placeholder="Task"
+  filter
+  :disabled="!selectedProject"
+  :loading="loadingTasks"
   class="w-full"
 />
 ```
@@ -121,3 +128,21 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 - Default duration format: `Xh Ym`.
 - Running timer format: `HH:MM:SS`.
 - Never show raw seconds outside the running timer.
+
+## Pagination
+
+Use PrimeVue `<Paginator>`.
+
+- Place it below the primary list or grouped results region.
+- Time Entries page uses a compact layout with previous/next buttons, page links, and a current-page report.
+- Keep the current-page report in muted body text.
+- Use the active page as the primary brand-filled state.
+
+```vue
+<Paginator
+  :rows="10"
+  :totalRecords="120"
+  template="PrevPageLink PageLinks NextPageLink CurrentPageReport"
+  currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
+/>
+```

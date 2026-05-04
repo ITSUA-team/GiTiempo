@@ -82,7 +82,7 @@ Run via turbo from repo root (`pnpm <script>`) or directly (`pnpm --filter @giti
 | `test`              | Vitest unit tests (`src/**/*.spec.ts`)             |
 | `test:watch`        | Vitest in watch mode                               |
 | `test:cov`          | Unit tests with coverage                           |
-| `test:e2e`          | Vitest e2e tests against the local Postgres       |
+| `test:e2e`          | Vitest e2e tests against a prepared Postgres      |
 | `db:generate`       | Drizzle: generate SQL migration from schema diff   |
 | `db:migrate`        | Drizzle: apply pending migrations                  |
 | `db:check`          | Drizzle: validate migration history                |
@@ -152,12 +152,11 @@ test/
 ## Tests
 
 - **Unit**: `pnpm test` or `pnpm --filter @gitiempo/api test` — no DB required.
-- **E2E**: `pnpm test:e2e` or `pnpm --filter @gitiempo/api test:e2e` — requires:
-  - a reachable Postgres (URL from `apps/api/.env`)
-  - migrations applied (`db:migrate`)
-  - seed loaded (`db:seed`)
+- **E2E**: `pnpm test:e2e` or `pnpm --filter @gitiempo/api test:e2e` — requires a reachable Postgres, applied migrations, and deterministic seed data.
 
-The e2e script uses Node's native `--env-file=.env` flag.
+Automated e2e runs must use an isolated ephemeral PostgreSQL database provisioned by the test runner or GitHub Actions. They must not use a developer local database, staging database, production database, or shared persistent CI database. See `../../docs/testing.md`.
+
+The current direct e2e script uses Node's native `--env-file=.env` flag and is a local fallback until the isolated Docker test runner is added.
 
 ## API contract for the frontend
 

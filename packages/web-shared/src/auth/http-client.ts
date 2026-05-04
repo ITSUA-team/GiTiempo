@@ -4,13 +4,13 @@ import {
   tokenPairResponseSchema,
   type TokenPairResponse,
 } from "@gitiempo/shared";
-import type { ZodType } from "zod";
+import {
+  getRequestUrl,
+  getResponseErrorMessage,
+  requestJson,
+} from "../http";
 
 /* eslint-disable no-unused-vars */
-
-interface PostJsonInit {
-  headers?: Record<string, string>;
-}
 
 interface AuthHttpClientOptions {
   apiBaseUrl?: string;
@@ -25,67 +25,20 @@ export interface AuthHttpClient {
 
 /* eslint-enable no-unused-vars */
 
-function getApiBaseUrl(apiBaseUrl: string | undefined): string {
-  return apiBaseUrl?.replace(/\/$/, "") ?? "";
-}
-
-function getRequestUrl(apiBaseUrl: string | undefined, path: string): string {
-  return `${getApiBaseUrl(apiBaseUrl)}${path}`;
-}
-
-async function getErrorMessage(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as {
-      error?: string;
-      message?: string;
-    };
-
-    return (
-      body.message ?? body.error ?? `Request failed with ${response.status}`
-    );
-  } catch {
-    return `Request failed with ${response.status}`;
-  }
-}
-
-async function postJson<TBody, TResponse>(
-  fetchFn: typeof fetch,
-  apiBaseUrl: string | undefined,
-  path: string,
-  body: TBody,
-  responseSchema: ZodType<TResponse>,
-  init?: PostJsonInit,
-): Promise<TResponse> {
-  const response = await fetchFn(getRequestUrl(apiBaseUrl, path), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    body: JSON.stringify(body),
-    ...init,
-  });
-
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
-  }
-
-  return responseSchema.parse(await response.json());
-}
-
 export function createAuthHttpClient({
   apiBaseUrl,
   fetchFn = fetch,
 }: AuthHttpClientOptions = {}): AuthHttpClient {
   return {
     loginWithFirebaseToken(firebaseIdToken) {
-      return postJson(
-        fetchFn,
+      return requestJson({
         apiBaseUrl,
-        "/auth/login",
-        loginRequestSchema.parse({ firebaseIdToken }),
-        tokenPairResponseSchema,
-      );
+        body: loginRequestSchema.parse({ firebaseIdToken }),
+        fetchFn,
+        method: "POST",
+        path: "/auth/login",
+        responseSchema: tokenPairResponseSchema,
+      });
     },
     async logoutAuthSession(accessToken, refreshToken) {
       const response = await fetchFn(getRequestUrl(apiBaseUrl, "/auth/logout"), {
@@ -98,17 +51,18 @@ export function createAuthHttpClient({
       });
 
       if (!response.ok) {
-        throw new Error(await getErrorMessage(response));
+        throw new Error(await getResponseErrorMessage(response));
       }
     },
     refreshAuthSession(refreshToken) {
-      return postJson(
-        fetchFn,
+      return requestJson({
         apiBaseUrl,
-        "/auth/refresh",
-        refreshRequestSchema.parse({ refreshToken }),
-        tokenPairResponseSchema,
-      );
+        body: refreshRequestSchema.parse({ refreshToken }),
+        fetchFn,
+        method: "POST",
+        path: "/auth/refresh",
+        responseSchema: tokenPairResponseSchema,
+      });
     },
   };
 }
