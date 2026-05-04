@@ -77,6 +77,34 @@ const SEED_USERS: SeedUser[] = [
     avatarUrl: null,
     role: 'member',
   },
+  {
+    firebaseUid: 'seed-user-4',
+    email: 'david@gitiempo.dev',
+    displayName: 'David (seed)',
+    avatarUrl: 'https://i.pravatar.cc/150?u=david',
+    role: 'member',
+  },
+  {
+    firebaseUid: 'seed-user-5',
+    email: 'eva@gitiempo.dev',
+    displayName: 'Eva (seed)',
+    avatarUrl: 'https://i.pravatar.cc/150?u=eva',
+    role: 'pm',
+  },
+  {
+    firebaseUid: 'seed-user-6',
+    email: 'frank@gitiempo.dev',
+    displayName: 'Frank (seed)',
+    avatarUrl: 'https://i.pravatar.cc/150?u=frank',
+    role: 'member',
+  },
+  {
+    firebaseUid: 'seed-user-7',
+    email: 'grace@gitiempo.dev',
+    displayName: 'Grace (seed)',
+    avatarUrl: 'https://i.pravatar.cc/150?u=grace',
+    role: 'member',
+  },
 ];
 
 async function main(): Promise<void> {

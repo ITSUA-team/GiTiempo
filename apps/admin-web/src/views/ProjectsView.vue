@@ -2,16 +2,11 @@
   import { computed, onMounted, ref, shallowRef } from 'vue';
   import { useRouter } from 'vue-router';
   import { useToast } from 'primevue/usetoast';
-  import { useConfirm } from 'primevue/useconfirm';
   import Button from 'primevue/button';
-  import DataTable from 'primevue/datatable';
-  import Column from 'primevue/column';
-  import Dialog from 'primevue/dialog';
   import Select from 'primevue/select';
   import MultiSelect from 'primevue/multiselect';
-  import Avatar from 'primevue/avatar';
-  import Tag from 'primevue/tag';
   import ProgressSpinner from 'primevue/progressspinner';
+  import { AppFormField } from '@gitiempo/web-shared';
   import { useAuthStore } from '@/stores/auth';
   import {
     createProjectsClient,
@@ -27,7 +22,6 @@
   import { routeNames } from '@/router';
 
   const toast = useToast();
-  const confirm = useConfirm();
   const router = useRouter();
   const authStore = useAuthStore();
 
@@ -35,7 +29,6 @@
   const projectsClient: ProjectsClient = createProjectsClient({ apiBaseUrl });
   const membersClient: MembersClient = createMembersClient({ apiBaseUrl });
 
-  // Types
   interface ProjectWithAssignments extends ProjectResponse {
     assignedMembers: ProjectAssignmentResponse[];
   }
@@ -45,12 +38,36 @@
   const members = shallowRef<WorkspaceMemberResponse[]>([]);
   const loading = ref(true);
   const selectedMemberFilter = ref<string | null>(null);
-  const showSettingsDialog = ref(false);
-  const editingProject = shallowRef<ProjectWithAssignments | null>(null);
-  const editingMembers = ref<string[]>([]);
-  const editingVisibility = ref<'public' | 'private' | null>(null);
 
-  // Computed
+  // Inline edit state
+  const expandedProjectId = ref<string | null>(null);
+  const editingMembers = ref<string[]>([]);
+  const editingVisibility = ref<'public' | 'private'>('private');
+  const savingProjectId = ref<string | null>(null);
+
+  // Only pm/member roles can be assigned — admins have implicit access
+  const assignableMembers = computed(() =>
+    members.value
+      .filter((m) => m.role !== 'admin')
+      .map((m) => ({ ...m, label: m.displayName ?? m.email })),
+  );
+
+  // Stats — design shows only active projects count
+  const activeProjects = computed(
+    () => projects.value.filter((p) => p.isActive).length,
+  );
+  const privateProjects = computed(
+    () =>
+      projects.value.filter((p) => p.isActive && p.visibility === 'private')
+        .length,
+  );
+  const publicProjects = computed(
+    () =>
+      projects.value.filter((p) => p.isActive && p.visibility === 'public')
+        .length,
+  );
+
+  // Table shows all projects; archived shown with muted styling
   const filteredProjects = computed(() => {
     if (!selectedMemberFilter.value) return projects.value;
     return projects.value.filter((p) =>
@@ -58,16 +75,24 @@
     );
   });
 
-  // Load data
+  const memberFilterOptions = computed(() => [
+    { id: null, label: 'All members' },
+    ...members.value.map((m) => ({
+      id: m.userId,
+      label: m.displayName ? `${m.displayName} (${m.role})` : m.email,
+    })),
+  ]);
+
   async function loadData() {
     if (!authStore.accessToken) return;
-    const accessToken = authStore.accessToken; // Narrow type for TypeScript
+    const accessToken = authStore.accessToken;
     try {
       loading.value = true;
-      const projectsData = await projectsClient.listProjects(accessToken);
-      const membersData = await membersClient.listMembers(accessToken);
+      const [projectsData, membersData] = await Promise.all([
+        projectsClient.listProjects(accessToken),
+        membersClient.listMembers(accessToken),
+      ]);
 
-      // Fetch assignments for each project
       const projectsWithAssignments = await Promise.all(
         projectsData.map(async (project) => {
           try {
@@ -80,7 +105,6 @@
               assignedMembers: assignments,
             } as ProjectWithAssignments;
           } catch {
-            // If assignments fetch fails, assume no assignments
             return {
               ...project,
               assignedMembers: [],
@@ -102,29 +126,68 @@
     }
   }
 
-  // Create project
-  async function openCreateDialog() {
-    await router.push({ name: routeNames.addProject });
+  function openCreateProject() {
+    router.push({ name: routeNames.addProject });
   }
 
-  // Edit project
-  function openSettingsDialog(project: ProjectWithAssignments) {
-    editingProject.value = project;
+  function openSettings(project: ProjectWithAssignments) {
+    if (expandedProjectId.value === project.id) {
+      expandedProjectId.value = null;
+      return;
+    }
+    expandedProjectId.value = project.id;
     editingMembers.value = project.assignedMembers.map((m) => m.userId);
     editingVisibility.value = project.visibility;
-    showSettingsDialog.value = true;
   }
 
-  async function saveSettings() {
-    if (!editingProject.value || !authStore.accessToken) return;
+  function cancelSettings() {
+    expandedProjectId.value = null;
+  }
+
+  async function saveSettings(project: ProjectWithAssignments) {
+    if (!authStore.accessToken) return;
+    const accessToken = authStore.accessToken;
+    savingProjectId.value = project.id;
     try {
-      // TODO: Implement save logic
+      if (editingVisibility.value !== project.visibility) {
+        await projectsClient.updateProject(
+          project.id,
+          { visibility: editingVisibility.value },
+          accessToken,
+        );
+      }
+
+      const currentIds = new Set(project.assignedMembers.map((m) => m.userId));
+      const newIds = new Set(editingMembers.value);
+      const toAdd = editingMembers.value.filter((id) => !currentIds.has(id));
+      const toRemove = project.assignedMembers
+        .filter((m) => !newIds.has(m.userId))
+        .map((m) => m.userId);
+
+      await Promise.all([
+        ...toAdd.map((userId) =>
+          projectsClient.assignUserToProject(
+            project.id,
+            { userId },
+            accessToken,
+          ),
+        ),
+        ...toRemove.map((userId) =>
+          projectsClient.removeProjectAssignment(
+            project.id,
+            userId,
+            accessToken,
+          ),
+        ),
+      ]);
+
       toast.add({
         severity: 'success',
         summary: 'Saved',
         detail: 'Project settings updated',
+        life: 3000,
       });
-      showSettingsDialog.value = false;
+      expandedProjectId.value = null;
       await loadData();
     } catch (error) {
       toast.add({
@@ -133,46 +196,64 @@
         detail:
           error instanceof Error ? error.message : 'Failed to save settings',
       });
+    } finally {
+      savingProjectId.value = null;
     }
   }
 
-  // Delete project
-  function deleteProject(project: ProjectWithAssignments) {
-    confirm.require({
-      message: `Delete project "${project.name}"? This action cannot be undone.`,
-      header: 'Delete project?',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
-      acceptProps: { severity: 'danger' },
-      accept: async () => {
-        // TODO: Implement delete logic
-        try {
-          toast.add({
-            severity: 'success',
-            summary: 'Deleted',
-            detail: `Project "${project.name}" deleted`,
-          });
-          await loadData();
-        } catch (error) {
-          toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail:
-              error instanceof Error
-                ? error.message
-                : 'Failed to delete project',
-          });
-        }
-      },
-    });
+  async function archiveProject(project: ProjectWithAssignments) {
+    if (!authStore.accessToken) return;
+    const accessToken = authStore.accessToken;
+    try {
+      await projectsClient.updateProject(
+        project.id,
+        { isActive: false },
+        accessToken,
+      );
+      toast.add({
+        severity: 'success',
+        summary: 'Archived',
+        detail: `Project "${project.name}" archived`,
+        life: 3000,
+      });
+      expandedProjectId.value = null;
+      await loadData();
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail:
+          error instanceof Error ? error.message : 'Failed to archive project',
+      });
+    }
   }
 
-  // Get display name for member
-  function getMemberDisplayName(member: WorkspaceMemberResponse): string {
-    return member.displayName ?? member.email;
+  async function unarchiveProject(project: ProjectWithAssignments) {
+    if (!authStore.accessToken) return;
+    const accessToken = authStore.accessToken;
+    try {
+      await projectsClient.updateProject(
+        project.id,
+        { isActive: true },
+        accessToken,
+      );
+      toast.add({
+        severity: 'success',
+        summary: 'Restored',
+        detail: `Project "${project.name}" restored`,
+        life: 3000,
+      });
+      expandedProjectId.value = null;
+      await loadData();
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail:
+          error instanceof Error ? error.message : 'Failed to restore project',
+      });
+    }
   }
-
-  // Format hours
   function formatHours(hours: number): string {
     if (hours === 0) return '0h';
     const h = Math.floor(hours);
@@ -180,11 +261,15 @@
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
-  // Get source badge
-  function getSourceBadge(source: string): { severity: string; text: string } {
-    return source === 'github'
-      ? { severity: 'info', text: 'GitHub' }
-      : { severity: 'secondary', text: 'Manual' };
+  function formatSource(source: string): string {
+    return source === 'github' ? 'GitHub Repo' : 'Manual';
+  }
+
+  function formatMembersCount(
+    assignments: ProjectAssignmentResponse[],
+  ): string {
+    if (!assignments.length) return '—';
+    return `${assignments.length} member${assignments.length !== 1 ? 's' : ''}`;
   }
 
   onMounted(() => loadData());
@@ -192,192 +277,307 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Header -->
+    <!-- Page Header -->
     <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-text-dark text-2xl font-semibold">Projects</h1>
+      <div class="flex flex-col gap-1.5">
+        <h1 class="text-text-dark text-[28px] font-semibold leading-none">
+          Projects
+        </h1>
         <p class="text-text-muted text-sm">
-          Manage workspace projects and member assignments
+          Manage project visibility, member assignments, and manual project
+          creation.
         </p>
       </div>
-      <Button label="Create Project" @click="openCreateDialog" />
+      <Button
+        label="New Project"
+        class="!px-4 !py-[10px] !text-[14px] !font-semibold"
+        @click="openCreateProject"
+      />
     </div>
 
-    <!-- Filter and List -->
-    <div class="bg-surface shadow-card rounded-lg p-4">
-      <div class="mb-4">
-        <label for="memberFilter" class="text-text-dark text-[13px] font-medium"
-          >Assigned Member</label
+    <!-- Loading -->
+    <div v-if="loading" class="flex justify-center py-16">
+      <ProgressSpinner stroke-width="3" style="width: 40px; height: 40px" />
+    </div>
+
+    <template v-else>
+      <!-- 3 Stat Cards -->
+      <div class="grid grid-cols-3 gap-4">
+        <div
+          class="bg-surface shadow-card flex h-24 flex-col gap-2 rounded-lg p-4"
         >
-        <Select
-          id="memberFilter"
-          v-model="selectedMemberFilter"
-          :options="[
-            { userId: null, displayName: 'All members', email: '' },
-            ...members.map((m) => ({
-              userId: m.id,
-              displayName: getMemberDisplayName(m),
-              email: m.email,
-            })),
-          ]"
-          option-label="displayName"
-          option-value="userId"
-          placeholder="All members"
-          class="w-full"
-        />
+          <span class="text-text-muted text-[13px] font-medium">
+            Active Projects
+          </span>
+          <span class="text-text-dark text-[28px] font-semibold leading-none">
+            {{ activeProjects }}
+          </span>
+        </div>
+        <div
+          class="bg-surface shadow-card flex h-24 flex-col gap-2 rounded-lg p-4"
+        >
+          <span class="text-text-muted text-[13px] font-medium">Private</span>
+          <span class="text-text-dark text-[28px] font-semibold leading-none">
+            {{ privateProjects }}
+          </span>
+        </div>
+        <div
+          class="bg-surface shadow-card flex h-24 flex-col gap-2 rounded-lg p-4"
+        >
+          <span class="text-text-muted text-[13px] font-medium">Public</span>
+          <span class="text-text-dark text-[28px] font-semibold leading-none">
+            {{ publicProjects }}
+          </span>
+        </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="flex justify-center py-8">
-        <ProgressSpinner stroke-width="3" style="width: 40px; height: 40px" />
-      </div>
-
-      <!-- Projects Table -->
-      <DataTable
-        v-else
-        :value="filteredProjects"
-        striped-rows
-        responsive-layout="scroll"
-        :pt="{
-          headerCell:
-            'bg-app-bg text-[13px] font-medium uppercase tracking-wide text-text-dark',
-          bodyRow: 'border-b border-divider h-12 hover:bg-app-bg',
-          bodyCell: 'text-sm',
-        }"
-      >
-        <Column field="name" header="Project" />
-        <Column field="source" header="Source">
-          <template #body="{ data }">
-            <Tag
-              :severity="getSourceBadge(data.source).severity"
-              :value="getSourceBadge(data.source).text"
-            />
-          </template>
-        </Column>
-        <Column header="Members">
-          <template #body="{ data }">
-            <div class="flex gap-1">
-              <Avatar
-                v-for="assignment in data.assignedMembers"
-                :key="assignment.userId"
-                :image="assignment.avatarUrl ?? undefined"
-                :label="
-                  !assignment.avatarUrl
-                    ? (assignment.displayName?.charAt(0).toUpperCase() ?? '?')
-                    : undefined
-                "
-                shape="circle"
-                class="size-8"
-                :title="assignment.displayName ?? assignment.email"
-                :pt="{
-                  root: 'bg-accent-tint text-brand text-[13px] font-semibold',
-                }"
+      <!-- Projects Card -->
+      <div class="bg-surface shadow-card flex flex-col gap-4 rounded-lg p-5">
+        <!-- Card Header: title left, checkbox + filter right -->
+        <div class="flex items-end justify-between">
+          <h2 class="text-text-dark text-lg font-semibold">Projects Table</h2>
+          <div class="flex items-end gap-4">
+            <div class="flex flex-col gap-1.5">
+              <span class="text-text-muted text-xs font-medium">
+                Assigned member
+              </span>
+              <Select
+                v-model="selectedMemberFilter"
+                :options="memberFilterOptions"
+                option-label="label"
+                option-value="id"
+                placeholder="All members"
+                class="w-[260px]"
               />
-              <span v-if="!data.assignedMembers?.length" class="text-text-muted"
-                >None</span
-              >
             </div>
-          </template>
-        </Column>
-        <Column
-          field="totalHours"
-          header="Total Hours"
-          header-class="text-right"
-          body-class="text-right"
-        >
-          <template #body="{ data }">
-            {{ formatHours(data.totalHours) }}
-          </template>
-        </Column>
-        <Column field="visibility" header="Visibility">
-          <template #body="{ data }">
-            <Tag
-              :severity="data.visibility === 'public' ? 'info' : 'secondary'"
-              :value="data.visibility === 'public' ? 'Public' : 'Private'"
-            />
-          </template>
-        </Column>
-        <Column header="Actions" body-class="text-right">
-          <template #body="{ data }">
-            <Button
-              icon="pi pi-pencil"
-              variant="text"
-              severity="secondary"
-              rounded
-              :title="`Edit ${data.name}`"
-              @click="openSettingsDialog(data)"
-            />
-            <Button
-              icon="pi pi-trash"
-              variant="text"
-              severity="danger"
-              rounded
-              :title="`Delete ${data.name}`"
-              @click="deleteProject(data)"
-            />
-          </template>
-        </Column>
-      </DataTable>
-    </div>
-
-    <!-- Settings Dialog -->
-    <Dialog
-      v-model:visible="showSettingsDialog"
-      modal
-      header="Edit Project"
-      :style="{ width: '480px' }"
-      @hide="() => (showSettingsDialog = false)"
-    >
-      <template #default>
-        <div v-if="editingProject" class="flex flex-col gap-4">
-          <div class="flex flex-col gap-1">
-            <label
-              for="settingsVisibility"
-              class="text-text-dark text-[13px] font-medium"
-              >Visibility</label
-            >
-            <Select
-              id="settingsVisibility"
-              v-model="editingVisibility"
-              :options="[
-                { value: 'public', label: 'Public' },
-                { value: 'private', label: 'Private' },
-              ]"
-              option-label="label"
-              option-value="value"
-              class="w-full"
-            />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <label
-              for="settingsMembers"
-              class="text-text-dark text-[13px] font-medium"
-              >Assigned Members</label
-            >
-            <MultiSelect
-              id="settingsMembers"
-              v-model="editingMembers"
-              :options="members"
-              option-label="displayName"
-              option-value="id"
-              placeholder="Select members"
-              filter
-              display="chip"
-              class="w-full"
-            />
           </div>
         </div>
-      </template>
-      <template #footer>
-        <Button
-          label="Cancel"
-          severity="secondary"
-          variant="text"
-          @click="showSettingsDialog = false"
-        />
-        <Button label="Save" @click="saveSettings" />
-      </template>
-    </Dialog>
+
+        <!-- Table -->
+        <div class="border-divider overflow-hidden rounded-sm border">
+          <!-- Header Row — bg-app-bg, h-44px -->
+          <div class="bg-app-bg flex h-11 w-full items-center">
+            <div class="min-w-0 flex-1 px-3">
+              <span class="text-text-dark text-[13px] font-semibold">
+                Project
+              </span>
+            </div>
+            <div class="min-w-[100px] shrink px-3">
+              <span class="text-text-dark text-[13px] font-semibold">
+                Source
+              </span>
+            </div>
+            <div class="min-w-[120px] shrink px-3">
+              <span class="text-text-dark text-[13px] font-semibold">
+                Assigned members
+              </span>
+            </div>
+            <div class="min-w-[80px] shrink px-3">
+              <span class="text-text-dark text-[13px] font-semibold">
+                Hours
+              </span>
+            </div>
+            <div class="min-w-[90px] shrink px-3">
+              <span class="text-text-dark text-[13px] font-semibold">
+                Visibility
+              </span>
+            </div>
+            <div class="min-w-[130px] shrink px-3 text-right">
+              <span class="text-text-dark text-[13px] font-semibold">
+                Actions
+              </span>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div
+            v-if="!filteredProjects.length"
+            class="border-divider text-text-muted flex items-center justify-center border-t py-10 text-sm"
+          >
+            No projects found.
+          </div>
+
+          <!-- Project Rows -->
+          <template
+            v-for="(project, index) in filteredProjects"
+            :key="project.id"
+          >
+            <!-- Data Row — h-56px, border-top on all but first -->
+            <div
+              class="flex h-14 w-full items-center"
+              :class="{ 'border-divider border-t': index > 0 }"
+            >
+              <!-- Project name + Archived badge -->
+              <div class="flex min-w-0 flex-1 items-center gap-2 px-3">
+                <span
+                  class="truncate text-sm font-semibold"
+                  :class="
+                    project.isActive ? 'text-text-dark' : 'text-text-muted'
+                  "
+                >
+                  {{ project.name }}
+                </span>
+                <span
+                  v-if="!project.isActive"
+                  class="bg-app-bg text-text-muted shrink-0 rounded-sm px-2 py-[4px] text-xs font-semibold"
+                >
+                  Archived
+                </span>
+              </div>
+
+              <!-- Source -->
+              <div class="min-w-[100px] shrink px-3">
+                <span
+                  class="truncate text-[13px]"
+                  :class="
+                    project.isActive
+                      ? 'text-text-muted'
+                      : 'text-text-muted opacity-50'
+                  "
+                >
+                  {{ formatSource(project.source) }}
+                </span>
+              </div>
+
+              <!-- Assigned members count -->
+              <div class="min-w-[120px] shrink px-3">
+                <span
+                  class="truncate text-[13px]"
+                  :class="
+                    project.isActive
+                      ? 'text-text-muted'
+                      : 'text-text-muted opacity-50'
+                  "
+                >
+                  {{ formatMembersCount(project.assignedMembers) }}
+                </span>
+              </div>
+
+              <!-- Hours -->
+              <div class="min-w-[80px] shrink px-3">
+                <span
+                  class="text-[13px] font-semibold"
+                  :class="
+                    project.isActive ? 'text-text-dark' : 'text-text-muted'
+                  "
+                >
+                  {{ formatHours(project.totalHours) }}
+                </span>
+              </div>
+
+              <!-- Visibility badge -->
+              <div class="min-w-[90px] shrink px-3">
+                <span
+                  v-if="project.visibility === 'public'"
+                  class="bg-accent-tint text-brand rounded-sm px-2 py-[4px] text-xs font-semibold"
+                  :class="{ 'opacity-50': !project.isActive }"
+                >
+                  Public
+                </span>
+                <span
+                  v-else
+                  class="bg-status-warn-bg text-status-warn-text rounded-sm px-2 py-[4px] text-xs font-semibold"
+                  :class="{ 'opacity-50': !project.isActive }"
+                >
+                  Private
+                </span>
+              </div>
+
+              <!-- Actions -->
+              <div
+                class="flex min-w-[130px] shrink items-center justify-end gap-2 px-3"
+              >
+                <button
+                  class="text-brand cursor-pointer rounded px-[6px] py-[4px] text-[13px] font-semibold hover:opacity-75"
+                  @click="openSettings(project)"
+                >
+                  Edit
+                </button>
+                <button
+                  v-if="project.isActive"
+                  class="text-destructive cursor-pointer rounded px-[6px] py-[4px] text-[13px] font-semibold hover:opacity-75"
+                  @click="archiveProject(project)"
+                >
+                  Archive
+                </button>
+                <button
+                  v-else
+                  class="text-brand cursor-pointer rounded px-[6px] py-[4px] text-[13px] font-semibold hover:opacity-75"
+                  @click="unarchiveProject(project)"
+                >
+                  Unarchive
+                </button>
+              </div>
+            </div>
+
+            <!-- Inline Project Settings Row -->
+            <div
+              v-if="expandedProjectId === project.id"
+              class="bg-app-bg border-divider flex flex-col gap-[10px] border-t p-4"
+            >
+              <span class="text-text-dark text-[13px] font-semibold">
+                Project settings
+              </span>
+              <div class="flex items-end gap-[10px]">
+                <!-- Members MultiSelect: fills remaining space -->
+                <AppFormField
+                  label="Select members"
+                  size="sm"
+                  class="min-w-0 flex-1"
+                >
+                  <MultiSelect
+                    v-model="editingMembers"
+                    :options="assignableMembers"
+                    option-label="label"
+                    option-value="userId"
+                    placeholder="Select members"
+                    filter
+                    display="chip"
+                    class="w-full"
+                  />
+                </AppFormField>
+
+                <!-- Visibility Select -->
+                <AppFormField
+                  label="Visibility"
+                  size="sm"
+                  class="min-w-[150px] shrink"
+                >
+                  <Select
+                    v-model="editingVisibility"
+                    :options="[
+                      { value: 'public', label: 'Public' },
+                      { value: 'private', label: 'Private' },
+                    ]"
+                    option-label="label"
+                    option-value="value"
+                    class="w-full"
+                  />
+                </AppFormField>
+
+                <!-- Cancel -->
+                <button
+                  class="border-divider bg-surface text-text-dark cursor-pointer rounded-[6px] border px-[14px] py-[8px] text-[13px] font-medium hover:opacity-75 disabled:opacity-50"
+                  :disabled="savingProjectId === project.id"
+                  @click="cancelSettings"
+                >
+                  Cancel
+                </button>
+
+                <!-- Save -->
+                <button
+                  class="bg-brand text-surface cursor-pointer rounded-[6px] px-[14px] py-[8px] text-[13px] font-semibold hover:opacity-75 disabled:opacity-50"
+                  :disabled="savingProjectId === project.id"
+                  @click="saveSettings(project)"
+                >
+                  <span v-if="savingProjectId === project.id">Saving…</span>
+                  <span v-else>Save</span>
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
   </div>
 </template>

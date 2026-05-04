@@ -526,7 +526,7 @@ export class ProjectsService {
       workspaceId: projects.workspaceId,
       name: projects.name,
       color: projects.color,
-      visibility: sql<ProjectVisibility>`'private'::varchar`,
+      visibility: projects.visibility,
       source: sql<ProjectSource>`CASE WHEN EXISTS (
         SELECT 1
         FROM "project_external_refs"
