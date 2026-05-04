@@ -1489,6 +1489,7 @@
                   "id": "UALaJ",
                   "name": "header",
                   "width": "fill_container",
+                  "justifyContent": "space_between",
                   "alignItems": "center",
                   "children": [
                     {
@@ -1517,7 +1518,7 @@
                         }
                       ]
                     }
-                  ]
+                   ]
                 },
                 {
                   "type": "frame",
@@ -1532,6 +1533,7 @@
                       "id": "6Gbv3",
                       "name": "selector",
                       "width": 420,
+                      "height": "fit_content",
                       "fill": "$color-surface",
                       "cornerRadius": "$radius-lg",
                       "effect": {
@@ -1552,7 +1554,7 @@
                           "type": "text",
                           "id": "bbpY9",
                           "fill": "$color-text-dark",
-                          "content": "Task Selection",
+                          "content": "Task Selector",
                           "fontFamily": "Inter",
                           "fontSize": 18,
                           "fontWeight": "600"
@@ -1589,6 +1591,7 @@
                                 0,
                                 12
                               ],
+                              "justifyContent": "space_between",
                               "alignItems": "center",
                               "children": [
                                 {
@@ -1599,6 +1602,15 @@
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "s2kPq",
+                                  "fill": "$color-text-muted",
+                                  "content": "v",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
                                 }
                               ]
                             }
@@ -1636,6 +1648,7 @@
                                 0,
                                 12
                               ],
+                              "justifyContent": "space_between",
                               "alignItems": "center",
                               "children": [
                                 {
@@ -1646,8 +1659,64 @@
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "r5DmL",
+                                  "fill": "$color-text-muted",
+                                  "content": "v",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
                                 }
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yCr4w",
+                          "name": "actions",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": [
+                            12,
+                            0,
+                            0,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "cvbVe",
+                              "fill": "$color-brand",
+                              "cornerRadius": "$radius-sm",
+                              "padding": [
+                                12,
+                                16
+                              ],
+                              "justifyContent": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pyNco",
+                                  "fill": "$color-surface",
+                                  "content": "Start Timer",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "WYeiN",
+                              "fill": "$color-text-muted",
+                              "content": "Manual interval entry expands below when needed.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -1719,34 +1788,56 @@
                           "id": "Bo9AL",
                           "name": "focusActions",
                           "gap": 12,
-                          "justifyContent": "center",
-                          "alignItems": "center",
                           "children": [
                             {
                               "type": "frame",
+                              "id": "xgYtN",
+                              "name": "startBtn",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$color-divider"
+                              },
+                              "padding": [
+                                12,
+                                20
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WDf8V",
+                                  "name": "startLabel",
+                                  "fill": "$color-text-dark",
+                                  "content": "Start Timer",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "e9R0p",
-                              "name": "ctaBtn",
-                              "width": 180,
                               "fill": "$color-brand",
                               "cornerRadius": "$radius-sm",
                               "padding": [
-                                14,
-                                24
+                                12,
+                                20
                               ],
-                              "justifyContent": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "pjEmn",
                                   "fill": "$color-surface",
-                                  "content": "Start / Stop",
+                                  "content": "Stop",
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "600"
-                                }
-                              ]
-                            }
-                          ]
+                                 }
+                               ]
+                             }
+                           ]
                         },
                         {
                           "type": "frame",
@@ -3530,6 +3621,27 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EyTSg",
+                      "fill": "$color-brand",
+                      "cornerRadius": "$radius-sm",
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "e4cYr",
+                          "fill": "$color-surface",
+                          "content": "New Entry",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -3673,7 +3785,7 @@
                               "type": "text",
                               "id": "hl0Vs",
                               "fill": "$color-text-muted",
-                              "content": "Search tasks",
+                              "content": "Search tasks or repos",
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "normal"
@@ -4062,13 +4174,32 @@
                                           "fontWeight": "500"
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "TkXFb",
-                                          "fill": "#1A1A1A",
-                                          "content": "Improve reports filters",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 14,
-                                          "fontWeight": "500"
+                                          "type": "frame",
+                                          "id": "1rSRo",
+                                          "width": "fill_container",
+                                          "height": 38,
+                                          "fill": "$color-surface",
+                                          "cornerRadius": "$radius-sm",
+                                          "stroke": {
+                                            "thickness": 1,
+                                            "fill": "$color-divider"
+                                          },
+                                          "padding": [
+                                            0,
+                                            12
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "TnJXX",
+                                              "fill": "$color-text-dark",
+                                              "content": "Improve reports filters",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 14,
+                                              "fontWeight": "500"
+                                            }
+                                          ]
                                         }
                                       ]
                                     },
@@ -4757,176 +4888,6 @@
                                   ]
                                 }
                               ]
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "T1Mtx",
-                  "name": "pagination",
-                  "width": "fill_container",
-                  "fill": "#FFFFFF",
-                  "cornerRadius": 10,
-                  "stroke": {
-                    "thickness": 1,
-                    "fill": "#EEEEEE"
-                  },
-                  "padding": [
-                    12,
-                    16
-                  ],
-                  "justifyContent": "space_between",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "J5NKj",
-                      "name": "report",
-                      "fill": "#666666",
-                      "content": "Showing 1 to 4 of 24",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "normal"
-                    },
-                    {
-                      "type": "frame",
-                      "id": "pCwaE",
-                      "name": "paginationControls",
-                      "gap": 8,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "zA4CG",
-                          "name": "prevButton",
-                          "width": 36,
-                          "height": 36,
-                          "fill": "#FFFFFF",
-                          "cornerRadius": 6,
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "#EEEEEE"
-                          },
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "oGu47",
-                              "name": "prevLabel",
-                              "fill": "#666666",
-                              "content": "<",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "600"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "AwkYZ",
-                          "name": "page1",
-                          "width": 36,
-                          "height": 36,
-                          "fill": "#5D2B85",
-                          "cornerRadius": 6,
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "U2oIu",
-                              "name": "page1Label",
-                              "fill": "#FFFFFF",
-                              "content": "1",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "600"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "kJEGh",
-                          "name": "page2",
-                          "width": 36,
-                          "height": 36,
-                          "fill": "#FFFFFF",
-                          "cornerRadius": 6,
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "#EEEEEE"
-                          },
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "R9qyq",
-                              "name": "page2Label",
-                              "fill": "#1A1A1A",
-                              "content": "2",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "B27vg8",
-                          "name": "page3",
-                          "width": 36,
-                          "height": 36,
-                          "fill": "#FFFFFF",
-                          "cornerRadius": 6,
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "#EEEEEE"
-                          },
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "gxOYv",
-                              "name": "page3Label",
-                              "fill": "#1A1A1A",
-                              "content": "3",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "NhjGl",
-                          "name": "nextButton",
-                          "width": 36,
-                          "height": 36,
-                          "fill": "#FFFFFF",
-                          "cornerRadius": 6,
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "#EEEEEE"
-                          },
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "vtkBj",
-                              "name": "nextLabel",
-                              "fill": "#666666",
-                              "content": ">",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "600"
                             }
                           ]
                         }
@@ -16271,42 +16232,3 @@
     }
   }
 }
-
-
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "primevue": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "-p",
-        "@modelcontextprotocol/sdk@1.25.2",
-        "-p",
-        "@primevue/mcp@4.5.4",
-        "primevue-mcp"
-      ]
-    }
-  }
-}
-
-
-VITE_API_BASE_URL=http://localhost:3000
-VITE_FIREBASE_API_KEY=AIzaSyAX_r9DyR5URWFCU2_iEnsnw1eF2Ya4Ah4
-VITE_FIREBASE_APP_ID=1:485920629001:web:db3531405cbc74349673d8
-VITE_FIREBASE_AUTH_DOMAIN=test-development-2421.firebaseapp.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=485920629001
-VITE_FIREBASE_PROJECT_ID=test-development-2421
-VITE_FIREBASE_STORAGE_BUCKET=test-development-2421.firebasestorage.app
-VITE_USER_APP_URL=http://localhost:5173/login
-
-
-
-VITE_API_BASE_URL=http://localhost:3000
-VITE_FIREBASE_API_KEY=AIzaSyAX_r9DyR5URWFCU2_iEnsnw1eF2Ya4Ah4
-VITE_FIREBASE_APP_ID=1:485920629001:web:db3531405cbc74349673d8
-VITE_FIREBASE_AUTH_DOMAIN=test-development-2421.firebaseapp.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=485920629001
-VITE_FIREBASE_PROJECT_ID=test-development-2421
-VITE_FIREBASE_STORAGE_BUCKET=test-development-2421.firebasestorage.app

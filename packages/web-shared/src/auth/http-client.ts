@@ -3,12 +3,9 @@ import {
   refreshRequestSchema,
   tokenPairResponseSchema,
   type TokenPairResponse,
-} from "@gitiempo/shared";
-import {
-  getRequestUrl,
-  getResponseErrorMessage,
-  requestJson,
-} from "../http";
+} from '@gitiempo/shared';
+import { getRequestUrl, getResponseErrorMessage } from '../http';
+import { requestJson } from '@gitiempo/web-shared/http';
 
 /* eslint-disable no-unused-vars */
 
@@ -35,20 +32,23 @@ export function createAuthHttpClient({
         apiBaseUrl,
         body: loginRequestSchema.parse({ firebaseIdToken }),
         fetchFn,
-        method: "POST",
-        path: "/auth/login",
+        method: 'POST',
+        path: '/auth/login',
         responseSchema: tokenPairResponseSchema,
       });
     },
     async logoutAuthSession(accessToken, refreshToken) {
-      const response = await fetchFn(getRequestUrl(apiBaseUrl, "/auth/logout"), {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
+      const response = await fetchFn(
+        getRequestUrl(apiBaseUrl, '/auth/logout'),
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ refreshToken }),
         },
-        body: JSON.stringify({ refreshToken }),
-      });
+      );
 
       if (!response.ok) {
         throw new Error(await getResponseErrorMessage(response));
@@ -59,8 +59,8 @@ export function createAuthHttpClient({
         apiBaseUrl,
         body: refreshRequestSchema.parse({ refreshToken }),
         fetchFn,
-        method: "POST",
-        path: "/auth/refresh",
+        method: 'POST',
+        path: '/auth/refresh',
         responseSchema: tokenPairResponseSchema,
       });
     },

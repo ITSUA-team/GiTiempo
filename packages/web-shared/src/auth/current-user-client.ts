@@ -1,5 +1,5 @@
-import { userResponseSchema, type UserResponse } from "@gitiempo/shared";
-import { requestJson } from "../http";
+import { userResponseSchema, type UserResponse } from '@gitiempo/shared';
+import { requestJson } from '@gitiempo/web-shared/http';
 
 /* eslint-disable no-unused-vars */
 
@@ -24,7 +24,7 @@ export function createCurrentUserClient({
         accessToken,
         apiBaseUrl,
         fetchFn,
-        path: "/users/me",
+        path: '/users/me',
         responseSchema: userResponseSchema,
       });
     },

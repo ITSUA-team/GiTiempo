@@ -33,7 +33,7 @@
 - Projects list card includes an Assigned member PrimeVue `<Select>` below the list heading with `All members` default. Option labels use `Display Name (role)`.
 - Project list table includes project name, source, assigned members, total hours, visibility, actions.
 - Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<Select>`, followed by `Cancel` and `Save` actions.
-- Manual project creation uses a dialog.
+- Manual project creation uses a dedicated route (`AddProjectView`).
 
 ## Settings Page
 
