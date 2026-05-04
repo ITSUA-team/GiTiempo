@@ -80,21 +80,28 @@ Use `<DatePicker>`.
 
 Use sequential PrimeVue `<Select>` controls.
 
-- Organization -> Project/Repo -> Issue.
+- Project -> Task.
 - Enable `filter` on each select.
 - Disable each level until the previous one has a value.
 - Use `:loading` while downstream options are fetched.
 
 ```vue
-<Select v-model="selectedOrg" :options="orgs" optionLabel="name" placeholder="Organization" filter class="w-full" />
 <Select
   v-model="selectedProject"
   :options="projects"
   optionLabel="name"
-  placeholder="Project / Repo"
+  placeholder="Project"
   filter
-  :disabled="!selectedOrg"
-  :loading="loadingProjects"
+  class="w-full"
+/>
+<Select
+  v-model="selectedTask"
+  :options="tasks"
+  optionLabel="title"
+  placeholder="Task"
+  filter
+  :disabled="!selectedProject"
+  :loading="loadingTasks"
   class="w-full"
 />
 ```

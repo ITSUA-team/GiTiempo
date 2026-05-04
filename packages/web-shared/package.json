@@ -16,6 +16,10 @@
       "types": "./src/components/index.ts",
       "default": "./src/components/index.ts"
     },
+    "./http": {
+      "types": "./src/http.ts",
+      "default": "./src/http.ts"
+    },
     "./session-storage": {
       "types": "./src/session-storage.ts",
       "default": "./src/session-storage.ts"
