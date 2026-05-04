@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, shallowRef } from 'vue';
+  import { computed, nextTick, onMounted, ref, shallowRef } from 'vue';
   import { useRouter } from 'vue-router';
   import { useToast } from 'primevue/usetoast';
   import Button from 'primevue/button';
@@ -33,6 +33,7 @@
   const loading = ref(true);
   const selectedMemberFilter = ref<string | null>(null);
   const savingProjectId = ref<string | null>(null);
+  const closedProjectId = ref<string | null>(null);
 
   // Only pm/member roles can be assigned — admins have implicit access
   const assignableMembers = computed(() =>
@@ -115,6 +116,46 @@
     }
   }
 
+  async function refreshData() {
+    if (!authStore.accessToken) return;
+    const accessToken = authStore.accessToken;
+    try {
+      const [projectsData, membersData] = await Promise.all([
+        projectsClient.listProjects(accessToken),
+        membersClient.listMembers(accessToken),
+      ]);
+
+      const projectsWithAssignments = await Promise.all(
+        projectsData.map(async (project) => {
+          try {
+            const assignments = await projectsClient.listProjectAssignments(
+              project.id,
+              accessToken,
+            );
+            return {
+              ...project,
+              assignedMembers: assignments,
+            } as ProjectWithAssignments;
+          } catch {
+            return {
+              ...project,
+              assignedMembers: [],
+            } as ProjectWithAssignments;
+          }
+        }),
+      );
+
+      projects.value = projectsWithAssignments;
+      members.value = membersData;
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: error instanceof Error ? error.message : 'Failed to load data',
+      });
+    }
+  }
+
   function openCreateProject() {
     router.push({ name: routeNames.addProject });
   }
@@ -166,7 +207,10 @@
         detail: 'Project settings updated',
         life: 3000,
       });
-      await loadData();
+      closedProjectId.value = project.id;
+      await nextTick();
+      closedProjectId.value = null;
+      await refreshData();
     } catch (error) {
       toast.add({
         severity: 'error',
@@ -194,7 +238,7 @@
         detail: `Project "${project.name}" archived`,
         life: 3000,
       });
-      await loadData();
+      await refreshData();
     } catch (error) {
       toast.add({
         severity: 'error',
@@ -220,7 +264,7 @@
         detail: `Project "${project.name}" restored`,
         life: 3000,
       });
-      await loadData();
+      await refreshData();
     } catch (error) {
       toast.add({
         severity: 'error',
@@ -266,6 +310,7 @@
         :assignable-members="assignableMembers"
         :member-filter-options="memberFilterOptions"
         :saving-project-id="savingProjectId"
+        :closed-project-id="closedProjectId"
         @save="handleSave"
         @archive="handleArchive"
         @unarchive="handleUnarchive"

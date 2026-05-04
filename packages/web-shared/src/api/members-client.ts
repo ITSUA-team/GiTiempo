@@ -2,7 +2,7 @@ import {
   workspaceMemberListResponseSchema,
   type WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
-import { getJson } from './http-helpers';
+import { requestJson } from '../http';
 
 /* eslint-disable no-unused-vars */
 
@@ -21,19 +21,15 @@ export function createMembersClient({
   apiBaseUrl,
   fetchFn = fetch,
 }: MembersClientOptions = {}): MembersClient {
-  const authHeaders = (accessToken: string) => ({
-    Authorization: `Bearer ${accessToken}`,
-  });
-
   return {
     async listMembers(accessToken) {
-      return getJson(
+      return requestJson({
         fetchFn,
         apiBaseUrl,
-        '/members',
-        workspaceMemberListResponseSchema,
-        { headers: authHeaders(accessToken) },
-      );
+        path: '/members',
+        responseSchema: workspaceMemberListResponseSchema,
+        accessToken,
+      });
     },
   };
 }

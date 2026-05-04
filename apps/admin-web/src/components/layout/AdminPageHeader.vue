@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import Button from 'primevue/button';
+
   withDefaults(
     defineProps<{
       title: string;
@@ -19,13 +21,14 @@
 <template>
   <div class="flex flex-col gap-1.5">
     <!-- Optional back link -->
-    <button
+    <Button
       v-if="backLabel"
-      class="text-brand mb-2 w-fit text-[13px] font-semibold hover:opacity-75"
+      variant="text"
+      severity="secondary"
+      :label="`← ${backLabel}`"
+      class="mb-2 !w-fit !text-[13px] !font-semibold"
       @click="emit('back')"
-    >
-      ← {{ backLabel }}
-    </button>
+    />
 
     <!-- Title row: h1 + subtitle left, optional action slot right -->
     <div class="flex items-center justify-between">

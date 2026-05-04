@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, ref } from 'vue';
+  import Button from 'primevue/button';
   import { AppInput, AppSelect, AppFormField } from '@gitiempo/web-shared';
 
   export interface PmOption {
@@ -105,22 +106,19 @@
 
       <!-- Actions -->
       <div class="flex items-center justify-end gap-[10px] pt-1">
-        <button
+        <Button
           type="button"
-          class="border-divider bg-surface text-text-dark cursor-pointer rounded-[6px] border px-[14px] py-[8px] text-[13px] font-medium hover:opacity-75 disabled:opacity-50"
+          variant="outlined"
+          severity="secondary"
+          label="Back"
           :disabled="isSubmitting"
           @click="emit('cancel')"
-        >
-          Back
-        </button>
-        <button
+        />
+        <Button
           type="submit"
-          class="bg-brand text-surface cursor-pointer rounded-[6px] px-[14px] py-[8px] text-[13px] font-semibold hover:opacity-75 disabled:opacity-50"
+          :label="isSubmitting ? 'Creating…' : 'Create project'"
           :disabled="!canSubmit"
-        >
-          <span v-if="isSubmitting">Creating…</span>
-          <span v-else>Create project</span>
-        </button>
+        />
       </div>
     </form>
   </div>

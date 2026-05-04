@@ -1,3 +1,5 @@
+import { formatHours } from '@gitiempo/web-shared';
+
 export function useProjectFormatters() {
   function formatTime(date: string): string {
     return new Date(date).toLocaleTimeString('en-US', {
@@ -19,13 +21,6 @@ export function useProjectFormatters() {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
-  }
-
-  function formatHours(hours: number): string {
-    if (hours === 0) return '0h';
-    const h = Math.floor(hours);
-    const m = Math.round((hours % 1) * 60);
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
   return { formatTime, formatDate, formatDuration, formatHours };

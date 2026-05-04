@@ -15,7 +15,7 @@ import {
   type CreateProjectAssignmentInput,
 } from '@gitiempo/shared';
 import { z } from 'zod';
-import { getJson, postJson, patchJson, deleteJson } from './http-helpers';
+import { requestJson } from '../http';
 
 /* eslint-disable no-unused-vars */
 
@@ -60,82 +60,82 @@ export function createProjectsClient({
   apiBaseUrl,
   fetchFn = fetch,
 }: ProjectsClientOptions = {}): ProjectsClient {
-  const authHeaders = (accessToken: string) => ({
-    Authorization: `Bearer ${accessToken}`,
-  });
-
   return {
     async listProjects(accessToken) {
-      return getJson(
+      return requestJson({
         fetchFn,
         apiBaseUrl,
-        '/projects',
-        projectListResponseSchema,
-        { headers: authHeaders(accessToken) },
-      );
+        path: '/projects',
+        responseSchema: projectListResponseSchema,
+        accessToken,
+      });
     },
 
     async getProject(projectId, accessToken) {
-      return getJson(
+      return requestJson({
         fetchFn,
         apiBaseUrl,
-        `/projects/${projectId}`,
-        projectResponseSchema,
-        { headers: authHeaders(accessToken) },
-      );
+        path: `/projects/${projectId}`,
+        responseSchema: projectResponseSchema,
+        accessToken,
+      });
     },
 
     async createProject(input, accessToken) {
-      return postJson(
+      return requestJson({
         fetchFn,
         apiBaseUrl,
-        '/projects',
-        createProjectSchema.parse(input),
-        projectResponseSchema,
-        { headers: authHeaders(accessToken) },
-      );
+        method: 'POST',
+        path: '/projects',
+        body: createProjectSchema.parse(input),
+        responseSchema: projectResponseSchema,
+        accessToken,
+      });
     },
 
     async updateProject(projectId, input, accessToken) {
-      return patchJson(
+      return requestJson({
         fetchFn,
         apiBaseUrl,
-        `/projects/${projectId}`,
-        updateProjectSchema.parse(input),
-        projectResponseSchema,
-        { headers: authHeaders(accessToken) },
-      );
+        method: 'PATCH',
+        path: `/projects/${projectId}`,
+        body: updateProjectSchema.parse(input),
+        responseSchema: projectResponseSchema,
+        accessToken,
+      });
     },
 
     async listProjectAssignments(projectId, accessToken) {
-      return getJson(
+      return requestJson({
         fetchFn,
         apiBaseUrl,
-        `/projects/${projectId}/assignments`,
-        projectAssignmentListResponseSchema,
-        { headers: authHeaders(accessToken) },
-      );
+        path: `/projects/${projectId}/assignments`,
+        responseSchema: projectAssignmentListResponseSchema,
+        accessToken,
+      });
     },
 
     async assignUserToProject(projectId, input, accessToken) {
-      return postJson(
+      return requestJson({
         fetchFn,
         apiBaseUrl,
-        `/projects/${projectId}/assignments`,
-        createProjectAssignmentSchema.parse(input),
-        projectAssignmentResponseSchema,
-        { headers: authHeaders(accessToken) },
-      );
+        method: 'POST',
+        path: `/projects/${projectId}/assignments`,
+        body: createProjectAssignmentSchema.parse(input),
+        responseSchema: projectAssignmentResponseSchema,
+        accessToken,
+      });
     },
 
     async removeProjectAssignment(projectId, userId, accessToken) {
-      await deleteJson(
+      await requestJson({
         fetchFn,
         apiBaseUrl,
-        `/projects/${projectId}/assignments/${userId}`,
-        emptyObjectSchema,
-        { headers: authHeaders(accessToken) },
-      );
+        method: 'DELETE',
+        path: `/projects/${projectId}/assignments/${userId}`,
+        responseSchema: emptyObjectSchema,
+        accessToken,
+      });
     },
   };
 }

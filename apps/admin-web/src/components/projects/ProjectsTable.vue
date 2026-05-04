@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import { ref } from 'vue';
+  import { ref, watch } from 'vue';
+  import Button from 'primevue/button';
   import Select from 'primevue/select';
   import MultiSelect from 'primevue/multiselect';
-  import { AppFormField } from '@gitiempo/web-shared';
+  import { AppFormField, formatHours } from '@gitiempo/web-shared';
   import type {
     ProjectResponse,
     WorkspaceMemberResponse,
@@ -17,11 +18,12 @@
     label: string;
   }
 
-  defineProps<{
+  const props = defineProps<{
     projects: ProjectWithAssignments[];
     assignableMembers: AssignableMember[];
     memberFilterOptions: { id: string | null; label: string }[];
     savingProjectId: string | null;
+    closedProjectId?: string | null;
   }>();
 
   const emit = defineEmits<{
@@ -42,6 +44,15 @@
   const editingMembers = ref<string[]>([]);
   const editingVisibility = ref<'public' | 'private'>('private');
 
+  watch(
+    () => props.closedProjectId,
+    (id) => {
+      if (id && id === expandedProjectId.value) {
+        expandedProjectId.value = null;
+      }
+    },
+  );
+
   function openSettings(project: ProjectWithAssignments) {
     if (expandedProjectId.value === project.id) {
       expandedProjectId.value = null;
@@ -58,14 +69,6 @@
 
   function saveSettings(project: ProjectWithAssignments) {
     emit('save', project, editingMembers.value, editingVisibility.value);
-    expandedProjectId.value = null;
-  }
-
-  function formatHours(hours: number): string {
-    if (hours === 0) return '0h';
-    const h = Math.floor(hours);
-    const m = Math.round((hours % 1) * 60);
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
   function formatSource(source: string): string {
@@ -221,26 +224,27 @@
           <div
             class="flex min-w-[130px] shrink items-center justify-end gap-2 px-3"
           >
-            <button
-              class="text-brand cursor-pointer rounded px-[6px] py-[4px] text-[13px] font-semibold hover:opacity-75"
+            <Button
+              variant="text"
+              size="small"
+              label="Edit"
               @click="openSettings(project)"
-            >
-              Edit
-            </button>
-            <button
+            />
+            <Button
               v-if="project.isActive"
-              class="text-destructive cursor-pointer rounded px-[6px] py-[4px] text-[13px] font-semibold hover:opacity-75"
+              variant="text"
+              severity="danger"
+              size="small"
+              label="Archive"
               @click="emit('archive', project)"
-            >
-              Archive
-            </button>
-            <button
+            />
+            <Button
               v-else
-              class="text-brand cursor-pointer rounded px-[6px] py-[4px] text-[13px] font-semibold hover:opacity-75"
+              variant="text"
+              size="small"
+              label="Unarchive"
               @click="emit('unarchive', project)"
-            >
-              Unarchive
-            </button>
+            />
           </div>
         </div>
 
@@ -290,23 +294,20 @@
             </AppFormField>
 
             <!-- Cancel -->
-            <button
-              class="border-divider bg-surface text-text-dark cursor-pointer rounded-[6px] border px-[14px] py-[8px] text-[13px] font-medium hover:opacity-75 disabled:opacity-50"
+            <Button
+              variant="outlined"
+              severity="secondary"
+              label="Cancel"
               :disabled="savingProjectId === project.id"
               @click="cancelSettings"
-            >
-              Cancel
-            </button>
+            />
 
             <!-- Save -->
-            <button
-              class="bg-brand text-surface cursor-pointer rounded-[6px] px-[14px] py-[8px] text-[13px] font-semibold hover:opacity-75 disabled:opacity-50"
+            <Button
+              :label="savingProjectId === project.id ? 'Saving…' : 'Save'"
               :disabled="savingProjectId === project.id"
               @click="saveSettings(project)"
-            >
-              <span v-if="savingProjectId === project.id">Saving…</span>
-              <span v-else>Save</span>
-            </button>
+            />
           </div>
         </div>
       </template>
