@@ -40,7 +40,12 @@
 ## Profile Page
 
 - Editable display name.
-- GitHub connection card with connected/disconnected states.
+- GitHub connection card fields must reflect the current API contract only: `login`, `avatarUrl`, `connectedAt`, and `updatedAt`.
+- GitHub connection card required states: loading, request-error, disconnected, connected, and redirecting/connecting.
+- Connected state actions: `Reconnect` and `Disconnect`.
+- Disconnected state primary action: `Connect GitHub`.
+- Disconnect uses the shared PrimeVue `<ConfirmDialog>` confirmation pattern before removing the connection.
+- GitHub OAuth callback outcomes after redirect back to `/profile` are surfaced with toast notifications only; do not render inline success or error banners for callback results.
 - Sign out action at the bottom using a ghost/destructive treatment.
 
 ## Cross-App Navigation
