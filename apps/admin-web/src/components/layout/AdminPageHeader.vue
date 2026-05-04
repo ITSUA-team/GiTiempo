@@ -24,9 +24,10 @@
     <Button
       v-if="backLabel"
       variant="text"
-      severity="secondary"
+      severity="primary"
       :label="`← ${backLabel}`"
-      class="mb-2 !w-fit !text-[13px] !font-semibold"
+      class="mb-2 w-fit"
+      pt:label:class="font-bold text-[#5d2b85] text-[13px]"
       @click="emit('back')"
     />
 
