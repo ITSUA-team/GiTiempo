@@ -52,13 +52,17 @@ The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first
 
    Rationale: the backend returns a full provider authorization URL and the flow intentionally leaves the SPA. The connecting state should be rendered while the request is in flight and before navigation occurs.
 
+   Connecting-state action constraint: the connecting state does not introduce a `Cancel` action. The request is expected to resolve quickly into browser navigation or an error that returns the card to a retryable state, so an extra transient cancel CTA would be an undocumented one-off action.
+
    Alternative considered: Vue Router navigation. That is not appropriate for an external GitHub URL.
 
 5. Treat callback query outcomes as transient toast-only feedback.
 
-   Rationale: docs require callback outcomes after redirect back to `/profile` to use toast notifications only and avoid inline success/error banners. After showing the toast, the page should remove the callback query parameters with router replacement so reloads do not repeat the toast.
+    Rationale: docs require callback outcomes after redirect back to `/profile` to use toast notifications only and avoid inline success/error banners. After showing the toast, the page should remove the callback query parameters with router replacement so reloads do not repeat the toast.
 
-   Alternative considered: show an inline banner in the GitHub card. That conflicts with the docs and approved design.
+    Callback contract: the frontend must treat `github` as the callback outcome key. Supported values are `connected` and `error`. When `github=error`, the backend also supplies a safe `code` query key whose value is a safe error enum such as `invalid_state`, `github_exchange_failed`, or `github_config`. Unknown `github` or `code` values must be treated as unsupported callback outcomes, ignored for toast purposes, and still cleaned from the URL only if they match the recognized contract shape.
+
+    Alternative considered: show an inline banner in the GitHub card. That conflicts with the docs and approved design.
 
 6. Confirm disconnect through PrimeVue `ConfirmDialog` before calling `DELETE /github/connection`.
 

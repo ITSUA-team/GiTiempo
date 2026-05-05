@@ -70,7 +70,6 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **WHEN** the Profile page renders the GitHub connection card
 - **THEN** the card renders the disconnected state
 - **AND** the primary available action is `Connect GitHub`
-- **AND** any optional secondary action such as `Refresh status` remains visually secondary to `Connect GitHub`
 - **AND** the card does not render connected account metadata fields
 
 #### Scenario: Profile GitHub request error stays distinct
@@ -97,6 +96,7 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **THEN** the page asks for confirmation using the standard PrimeVue confirmation dialog pattern
 - **AND** accepting the confirmation calls the GitHub disconnect API
 - **AND** successful disconnect updates or refreshes the card to the disconnected state
+- **AND** successful disconnect shows a success toast notification
 - **AND** failed disconnect keeps the previous connection state and shows an error toast
 
 #### Scenario: Profile GitHub connect request fails before redirect
@@ -107,17 +107,33 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** the card exits the redirecting/connecting state
 - **AND** the page leaves the user in a retryable state instead of navigating away
 
+#### Scenario: Profile connecting state does not add a transient cancel action
+
+- **GIVEN** the Profile page is rendering the redirecting/connecting state after a GitHub auth-url request starts
+- **WHEN** the connection request is still pending
+- **THEN** the page does not introduce a separate `Cancel` action for that transient state
+- **AND** the state resolves by either navigating to the returned authorization URL or returning to a retryable state after a request failure
+
 #### Scenario: Profile handles GitHub callback query outcome
 
-- **GIVEN** GitHub redirects the user back to `/profile` with a safe callback outcome query
+- **GIVEN** GitHub redirects the user back to `/profile` with a safe callback outcome query using `github` as the outcome key
+- **AND** the supported callback outcome values for `github` are `connected` and `error`
+- **AND** when `github=error`, the callback also includes a safe `code` query key whose value is a backend-defined safe error enum
 - **WHEN** the Profile page initializes
 - **THEN** the page surfaces the outcome with a standard PrimeVue toast notification only
 - **AND** the page does not render an inline success or error banner for the callback outcome
 - **AND** the handled callback query parameters are removed from the URL without adding another history entry
 
+#### Scenario: Profile handles supported callback success value
+
+- **GIVEN** GitHub redirects the user back to `/profile` with `github=connected`
+- **WHEN** the Profile page initializes
+- **THEN** the page treats the callback as a supported success outcome
+- **AND** the page shows the callback success through a toast notification only
+
 #### Scenario: Profile callback success can still fall back to request-error state
 
-- **GIVEN** GitHub redirects the user back to `/profile` with a safe success callback outcome query
+- **GIVEN** GitHub redirects the user back to `/profile` with `github=connected`
 - **AND** the follow-up `GET /github/connection` request fails
 - **WHEN** the Profile page initializes
 - **THEN** the page still surfaces the callback success with a toast notification
@@ -126,11 +142,19 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 
 #### Scenario: Profile handles GitHub callback error outcome
 
-- **GIVEN** GitHub redirects the user back to `/profile` with a safe callback error query
+- **GIVEN** GitHub redirects the user back to `/profile` with `github=error`
+- **AND** the callback includes a safe `code` query value such as `invalid_state`, `github_exchange_failed`, or `github_config`
 - **WHEN** the Profile page initializes
 - **THEN** the page surfaces the error with a standard PrimeVue error toast notification only
 - **AND** the page does not render an inline error banner for the callback outcome
 - **AND** the handled callback query parameters are removed from the URL without adding another history entry
+
+#### Scenario: Profile ignores unsupported callback query values
+
+- **GIVEN** the Profile page initializes with callback-like query parameters that do not match the supported `github` values or expected `code` pairing
+- **WHEN** the page evaluates the route query
+- **THEN** the page does not show a callback toast for the unsupported values
+- **AND** the page does not treat the unsupported values as a successful or failed GitHub callback outcome
 
 #### Scenario: Profile feature boundaries stay scoped
 

@@ -44,4 +44,4 @@
 - [x] 5.1 Prevent unsaved Profile display-name input from being overwritten by unrelated `authStore.profile` refreshes while the form is dirty.
 - [x] 5.2 Extract the repeated user-web surface card shell DOM into a small app-local reusable wrapper instead of leaving new one-off `border-divider bg-surface shadow-card rounded-lg border ...` sections inline.
 - [x] 5.3 Render the connected GitHub account metadata rows with a semantic label/value structure (for example `<dl>/<dt>/<dd>`) while preserving the approved visual layout.
-- [x] 5.4 Either document the connecting-state `Cancel` action in the active spec/design artifacts and tests or remove it so the Profile GitHub DOM does not ship an undocumented one-off action.
+- [x] 5.4 Do not ship an undocumented connecting-state `Cancel` action in the Profile GitHub DOM.
