@@ -10,9 +10,8 @@
   } from '@gitiempo/web-shared';
   import type { WorkspaceMemberResponse } from '@gitiempo/shared';
   import { useAuthStore } from '@/stores/auth';
-  import AddProjectForm, {
-    type AddProjectFormValues,
-  } from '@/components/projects/AddProjectForm.vue';
+  import AddProjectForm from '@/components/projects/AddProjectForm.vue';
+  import type { AddProjectFormValues } from '@/validation/projects';
   import { ProjectPageHeader } from '@gitiempo/web-shared';
   import ProjectSourceCard from '@/components/projects/ProjectSourceCard.vue';
 

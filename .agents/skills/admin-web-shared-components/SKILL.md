@@ -249,6 +249,145 @@ Apply this priority order when choosing how to render a form field in `apps/admi
 
 ---
 
+## Forms with Zod Validation
+
+Use `@primevue/forms` with `zodResolver` for all forms in `apps/admin-web`, `apps/user-web`, and `packages/web-shared`. This is the established project pattern — do not use manual resolver functions when a Zod schema can describe the same rules.
+
+Canonical examples:
+
+- `packages/web-shared/src/validation/auth.ts` + `AuthSignInForm.vue`
+- `apps/admin-web/src/validation/projects.ts` + `AddProjectForm.vue`
+
+### Schema placement
+
+| Schema owner                     | Location                                             |
+| -------------------------------- | ---------------------------------------------------- |
+| App-local form (single SPA)      | `apps/<app>/src/validation/<feature>.ts`             |
+| Shared component in `web-shared` | `packages/web-shared/src/validation/<feature>.ts`    |
+| Contract shared with backend     | `packages/shared/src/contracts/` (backend-safe only) |
+
+Never put browser-only schemas (e.g. UI-only fields, frontend-only enum values) in `packages/shared`.
+
+### Type derivation
+
+Always infer the form value type from the schema. Never write a parallel `interface` manually:
+
+```ts
+// ❌ manual interface — gets out of sync with schema
+export interface AddProjectFormValues {
+  name: string;
+  visibility: 'public' | 'private';
+}
+
+// ✅ inferred — always in sync
+export const addProjectSchema = z.object({
+  name: z.string().trim().min(1, 'Project name is required'),
+  visibility: z.enum(['public', 'private']),
+  pmUserId: z.string().nullable(),
+});
+export type AddProjectFormValues = z.infer<typeof addProjectSchema>;
+```
+
+Import the type from the `validation/` file — not from the component file.
+
+### Wiring pattern
+
+```ts
+import { Form, FormField } from '@primevue/forms';
+import { zodResolver } from '@primevue/forms/resolvers/zod';
+import { mySchema, type MyFormValues } from '@/validation/my-feature';
+
+const resolver = zodResolver(mySchema);
+
+// Use inline annotation — avoid importing FormSubmitEvent (see gotchas)
+function handleSubmit(event: {
+  valid: boolean;
+  values: Record<string, unknown>;
+}) {
+  if (!event.valid) return;
+  const result = mySchema.safeParse(event.values);
+  if (result.success) emit('submit', result.data);
+}
+```
+
+```vue
+<Form
+  v-slot="$form"
+  :initial-values="initialValues"
+  :resolver="resolver"
+  @submit="handleSubmit"
+>
+  <!-- text input: FormField + InputText + v-bind="$field.props" -->
+  <FormField v-slot="$field" name="name" class="flex flex-col gap-1.5">
+    <label for="name" class="text-text-dark text-[13px] font-medium">Project name</label>
+    <InputText id="name" :invalid="$field?.invalid" v-bind="$field.props" />
+    <Message v-if="$field?.invalid" severity="error" size="small" variant="simple">
+      {{ $field.error?.message }}
+    </Message>
+  </FormField>
+
+  <!-- dropdown: AppFormField wraps FormField wraps AppSelect -->
+  <AppFormField label="Visibility" size="sm">
+    <FormField v-slot="$field" name="visibility" :initial-value="initialValues.visibility">
+      <AppSelect
+        :options="visibilityOptions"
+        option-label="label"
+        option-value="value"
+        v-bind="$field.props"
+      />
+    </FormField>
+  </AppFormField>
+
+  <Button type="submit" label="Submit" :disabled="!$form.valid" />
+</Form>
+```
+
+### Gotchas
+
+**`event.values` vs `event.states`**
+
+`event.values` is populated **only when `zodResolver` is used** — the resolver parses the raw form state and returns a `values` object. Without `zodResolver` (e.g. a manual resolver that returns only `{ errors }`), `event.values` is `undefined` and you must read from `event.states.fieldName.value` instead.
+
+```ts
+// ❌ wrong when using zodResolver — values is populated, states is redundant
+name: states.name?.value as string;
+
+// ✅ correct when using zodResolver
+const result = mySchema.safeParse(event.values);
+```
+
+**Do not import `FormSubmitEvent` from `@primevue/forms/form`**
+
+The published type has a `value` field (singular) in some versions, but the actual runtime event carries `values` (plural). Use an inline annotation instead to avoid the confusion:
+
+```ts
+// ❌ may resolve to the wrong field name depending on package version
+import type { FormSubmitEvent } from '@primevue/forms/form';
+
+// ✅ explicit, version-safe
+function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }) { ... }
+```
+
+**`AppSelect` + `FormField`: use `v-bind="$field.props"`, not `name`**
+
+`AppSelect` uses `inheritAttrs: false` and forwards `$attrs` to the underlying PrimeVue `Select`. A bare `name` attribute flows through as an HTML attribute but does **not** register the field with the `@primevue/forms` form system. Only `v-bind="$field.props"` from a `FormField` slot triggers registration:
+
+```vue
+<!-- ❌ name attribute alone does not register the field -->
+<AppFormField label="Visibility" size="sm">
+  <AppSelect name="visibility" ... />
+</AppFormField>
+
+<!-- ✅ FormField registers the field; $field.props wires value tracking -->
+<AppFormField label="Visibility" size="sm">
+  <FormField v-slot="$field" name="visibility" :initial-value="initialValues.visibility">
+    <AppSelect v-bind="$field.props" ... />
+  </FormField>
+</AppFormField>
+```
+
+---
+
 ### `ProjectPageHeader`
 
 A shared page-level heading component used across both SPAs. Renders a title, optional subtitle, optional back button, and an action slot on the right side of the title row.

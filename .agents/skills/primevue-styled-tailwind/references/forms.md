@@ -20,7 +20,7 @@ npm install @primevue/forms
 
 ```vue
 <script setup>
-import { Form } from '@primevue/forms';
+  import { Form } from '@primevue/forms';
 </script>
 ```
 
@@ -30,44 +30,55 @@ All PrimeVue form components integrate seamlessly. Use `name` property instead o
 
 ```vue
 <script setup>
-const initialValues = ref({ username: '', password: '' });
+  const initialValues = ref({ username: '', password: '' });
 
-const resolver = ({ values }) => {
+  const resolver = ({ values }) => {
     const errors = {};
     if (!values.username) {
-        errors.username = [{ message: 'Username is required' }];
+      errors.username = [{ message: 'Username is required' }];
     }
     return { errors };
-};
+  };
 
-const onFormSubmit = ({ valid }) => {
+  const onFormSubmit = ({ valid }) => {
     if (valid) {
-        // process form
+      // process form
     }
-};
+  };
 </script>
 
 <template>
-    <Form v-slot="$form" :initialValues :resolver @submit="onFormSubmit" class="flex flex-col gap-4">
-        <div class="flex flex-col gap-1">
-            <InputText name="username" type="text" placeholder="Username" fluid />
-            <Message v-if="$form.username?.invalid" severity="error" size="small" variant="simple">
-                {{ $form.username.error?.message }}
-            </Message>
-        </div>
-        <Button type="submit" severity="secondary" label="Submit" />
-    </Form>
+  <Form
+    v-slot="$form"
+    :initialValues
+    :resolver
+    @submit="onFormSubmit"
+    class="flex flex-col gap-4"
+  >
+    <div class="flex flex-col gap-1">
+      <InputText name="username" type="text" placeholder="Username" fluid />
+      <Message
+        v-if="$form.username?.invalid"
+        severity="error"
+        size="small"
+        variant="simple"
+      >
+        {{ $form.username.error?.message }}
+      </Message>
+    </div>
+    <Button type="submit" severity="secondary" label="Submit" />
+  </Form>
 </template>
 ```
 
 Form component provides four key properties:
 
-| Property | Description |
-|----------|-------------|
+| Property         | Description                                   |
+| ---------------- | --------------------------------------------- |
 | `v-slot="$form"` | Exposes the `$form` object for state tracking |
-| `initialValues` | Default values to initiate the form |
-| `resolver` | Validation handler |
-| `@submit` | Event handler on form submission |
+| `initialValues`  | Default values to initiate the form           |
+| `resolver`       | Validation handler                            |
+| `@submit`        | Event handler on form submission              |
 
 ## Form State
 
@@ -87,14 +98,14 @@ The `$form` object tracks state management. Each field is linked via the `name` 
 
 ```js
 const resolver = ({ values }) => {
-    const errors = {};
-    if (!values.username) {
-        errors.username = [{ message: 'Username is required' }];
-    }
-    if (!values.password || values.password.length < 6) {
-        errors.password = [{ message: 'Password must be at least 6 characters' }];
-    }
-    return { errors };
+  const errors = {};
+  if (!values.username) {
+    errors.username = [{ message: 'Username is required' }];
+  }
+  if (!values.password || values.password.length < 6) {
+    errors.password = [{ message: 'Password must be at least 6 characters' }];
+  }
+  return { errors };
 };
 ```
 
@@ -117,8 +128,8 @@ import { z } from 'zod';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 
 const schema = z.object({
-    username: z.string().min(1, 'Username is required'),
-    password: z.string().min(6, 'Password must be at least 6 characters')
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 const resolver = zodResolver(schema);
@@ -128,22 +139,22 @@ const resolver = zodResolver(schema);
 
 Control when validation runs at form level or per field:
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `validateOnValueUpdate` | Validate on input change | `true` |
-| `validateOnBlur` | Validate on blur | `false` |
-| `validateOnMount` | Validate on form mount | `false` |
-| `validateOnSubmit` | Validate on submit | `true` |
+| Option                  | Description              | Default |
+| ----------------------- | ------------------------ | ------- |
+| `validateOnValueUpdate` | Validate on input change | `true`  |
+| `validateOnBlur`        | Validate on blur         | `false` |
+| `validateOnMount`       | Validate on form mount   | `false` |
+| `validateOnSubmit`      | Validate on submit       | `true`  |
 
 ```vue
 <Form
-    v-slot="$form"
-    :initialValues
-    :resolver
-    :validateOnValueUpdate="false"
-    :validateOnBlur="true"
-    :validateOnMount="['firstName']"
-    @submit="onFormSubmit"
+  v-slot="$form"
+  :initialValues
+  :resolver
+  :validateOnValueUpdate="false"
+  :validateOnBlur="true"
+  :validateOnMount="['firstName']"
+  @submit="onFormSubmit"
 >
     <InputText name="username" />
     <InputText name="firstName" :formControl="{ validateOnValueUpdate: true }" />
@@ -156,7 +167,7 @@ Control when validation runs at form level or per field:
 
 ```vue
 <script setup>
-import { FormField } from '@primevue/forms';
+  import { FormField } from '@primevue/forms';
 </script>
 ```
 
@@ -227,9 +238,9 @@ FormField renders as `<div>` by default. Change with `as` or `asChild`:
 The submit callback receives form validity, errors, and current state:
 
 ```js
-const onFormSubmit = ({ valid, errors, states, reset, value }) => {
-    if (valid) {
-        console.log('Form values:', value);
-    }
+const onFormSubmit = ({ valid, errors, states, reset, values }) => {
+  if (valid) {
+    console.log('Form values:', values);
+  }
 };
 ```

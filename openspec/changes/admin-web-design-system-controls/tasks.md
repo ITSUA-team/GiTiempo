@@ -117,6 +117,92 @@ pnpm --filter admin-web typecheck`
       — no errors
 - [x] 9.3 Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck`
       — no errors
-- [ ] 9.4 Run `pnpm --filter admin-web build` — zero errors
+- [x] 9.4 Run `pnpm --filter admin-web build` — zero errors
 - [ ] 9.5 Open `pencil.mcp` — fetch all frames from step 4.1 and step 7.1;
       compare side-by-side with browser — pixel-accurate to design
+
+## 10. Agent knowledge updates (harvested from implementation)
+
+Two patterns proven in this change warrant durable guidance.
+
+### 10.1 Fix `value` → `values` typo in global forms reference
+
+- [x] 10.1 Edit `.agents/skills/primevue-styled-tailwind/references/forms.md`
+      line 230: change `{ valid, errors, states, reset, value }` to
+      `{ valid, errors, states, reset, values }` — the field is `values`,
+      not `value`; both working implementations (`AuthSignInForm.vue` and
+      `AddProjectForm.vue`) confirm this, and the `FormSubmitEvent` type
+      in `@primevue/forms/form/index.d.ts` also declares `values`
+
+### 10.2 Add Zod form validation section to shared-components skill
+
+Canonical examples (do not change these files — read them):
+
+- `packages/web-shared/src/validation/auth.ts`
+- `packages/web-shared/src/components/AuthSignInForm.vue`
+- `apps/admin-web/src/validation/projects.ts`
+- `apps/admin-web/src/components/projects/AddProjectForm.vue`
+
+- [x] 10.2 Add a new section **"Forms with Zod Validation"** to
+      `.agents/skills/admin-web-shared-components/SKILL.md` immediately
+      after the existing "Form Field Priority Order" section. The section
+      must cover:
+
+  **Schema placement rules**
+  - App-local schemas → `apps/<app>/src/validation/<feature>.ts`
+  - Schemas for `packages/web-shared` components → `packages/web-shared/src/validation/`
+  - Schemas shared between frontend and backend → `packages/shared/src/contracts/`
+    (backend-safe only; never put browser-only schemas there)
+
+  **Type derivation rule**
+  - Always export the form value type as `z.infer<typeof schema>` — never
+    declare the interface manually alongside a Zod schema
+
+  **Wiring pattern** (show full TypeScript snippet matching `AddProjectForm.vue`)
+
+  ```ts
+  import { zodResolver } from '@primevue/forms/resolvers/zod';
+  import { mySchema, type MyFormValues } from '@/validation/my-feature';
+
+  const resolver = zodResolver(mySchema);
+
+  function handleSubmit(event: {
+    valid: boolean;
+    values: Record<string, unknown>;
+  }) {
+    if (!event.valid) return;
+    const result = mySchema.safeParse(event.values);
+    if (result.success) emit('submit', result.data);
+  }
+  ```
+
+  **Gotchas block** (required — this caused a runtime crash)
+  - `event.values` is populated only when `zodResolver` is used; without it
+    `event.values` is `undefined` and values must be read from `states`
+  - Do NOT use `FormSubmitEvent` from `@primevue/forms/form` as the handler
+    parameter type — use an inline annotation to avoid confusion with the
+    stale `value` field that appears in older type definitions
+  - `AppSelect` forwards `$attrs`, so `v-bind="$field.props"` on `AppSelect`
+    registers the field with the form; a bare `name` attribute does not
+
+  **Anti-pattern block**
+
+  ```ts
+  // ❌ reading from states when zodResolver is present
+  name: states.name?.value as string;
+
+  // ✅ correct
+  const result = mySchema.safeParse(event.values);
+
+  // ❌ manual interface next to a schema
+  export interface MyFormValues {
+    name: string;
+  }
+
+  // ✅ correct
+  export type MyFormValues = z.infer<typeof mySchema>;
+  ```
+
+- [x] 10.3 Run `pnpm --filter admin-web typecheck && pnpm --filter user-web typecheck`
+      after both edits — no errors expected (skill files are markdown,
+      typecheck confirms no collateral damage to imported files)

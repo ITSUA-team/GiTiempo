@@ -1,20 +1,18 @@
 <script setup lang="ts">
   import { Form, FormField } from '@primevue/forms';
-  import type { FormSubmitEvent } from '@primevue/forms/form';
+  import { zodResolver } from '@primevue/forms/resolvers/zod';
   import Button from 'primevue/button';
   import InputText from 'primevue/inputtext';
   import Message from 'primevue/message';
   import { AppSelect, AppFormField } from '@gitiempo/web-shared';
+  import {
+    addProjectSchema,
+    type AddProjectFormValues,
+  } from '@/validation/projects';
 
   export interface PmOption {
     userId: string;
     label: string;
-  }
-
-  export interface AddProjectFormValues {
-    name: string;
-    visibility: 'public' | 'private';
-    pmUserId: string | null;
   }
 
   defineProps<{
@@ -39,24 +37,17 @@
     { label: 'Private', value: 'private' },
   ];
 
-  function resolver({ values }: { values: Record<string, unknown> }) {
-    const errors: Record<string, { message: string }[]> = {};
-    const name = (values.name as string | undefined)?.trim() ?? '';
-    if (!name) {
-      errors.name = [{ message: 'Project name is required' }];
-    }
-    return { errors };
-  }
+  const resolver = zodResolver(addProjectSchema);
 
-  function handleSubmit({ valid, states }: FormSubmitEvent) {
-    if (!valid) return;
-    emit('submit', {
-      name: (states.name?.value as string | undefined) ?? '',
-      visibility:
-        (states.visibility?.value as 'public' | 'private' | undefined) ??
-        'private',
-      pmUserId: (states.pmUserId?.value as string | null | undefined) ?? null,
-    });
+  function handleSubmit(event: {
+    valid: boolean;
+    values: Record<string, unknown>;
+  }) {
+    if (!event.valid) return;
+    const result = addProjectSchema.safeParse(event.values);
+    if (result.success) {
+      emit('submit', result.data);
+    }
   }
 </script>
 
