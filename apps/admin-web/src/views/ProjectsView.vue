@@ -10,14 +10,14 @@
     createMembersClient,
     type ProjectsClient,
     type MembersClient,
+    ProjectPageHeader,
+    type StatCard,
   } from '@gitiempo/web-shared';
   import type { WorkspaceMemberResponse } from '@gitiempo/shared';
   import { routeNames } from '@/router';
-  import ProjectStatsCards from '@/components/projects/ProjectStatsCards.vue';
   import ProjectsTable, {
     type ProjectWithAssignments,
   } from '@/components/projects/ProjectsTable.vue';
-  import AdminPageHeader from '@/components/layout/AdminPageHeader.vue';
 
   const toast = useToast();
   const router = useRouter();
@@ -56,6 +56,12 @@
       projects.value.filter((p) => p.isActive && p.visibility === 'public')
         .length,
   );
+
+  const statsCards = computed<StatCard[]>(() => [
+    { label: 'Active Projects', value: activeProjects.value },
+    { label: 'Private', value: privateProjects.value },
+    { label: 'Public', value: publicProjects.value },
+  ]);
 
   // Table shows all projects; archived shown with muted styling
   const filteredProjects = computed(() => {
@@ -281,16 +287,17 @@
 <template>
   <div class="flex flex-col gap-6">
     <!-- Page Header -->
-    <AdminPageHeader
+    <ProjectPageHeader
       title="Projects"
       subtitle="Manage project visibility, member assignments, and manual project creation."
+      :cards="loading ? undefined : statsCards"
     >
       <Button
         label="New Project"
         class="!px-4 !py-[10px] !text-[14px] !font-semibold"
         @click="openCreateProject"
       />
-    </AdminPageHeader>
+    </ProjectPageHeader>
 
     <!-- Loading -->
     <div v-if="loading" class="flex justify-center py-16">
@@ -298,12 +305,6 @@
     </div>
 
     <template v-else>
-      <ProjectStatsCards
-        :active-projects="activeProjects"
-        :private-projects="privateProjects"
-        :public-projects="publicProjects"
-      />
-
       <ProjectsTable
         v-model:member-filter="selectedMemberFilter"
         :projects="filteredProjects"

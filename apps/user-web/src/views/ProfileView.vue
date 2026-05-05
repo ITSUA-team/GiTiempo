@@ -1,32 +1,30 @@
 <script setup lang="ts">
-import Avatar from "primevue/avatar";
-import Button from "primevue/button";
-import InputText from "primevue/inputtext";
-import Tag from "primevue/tag";
-import { useRouter } from "vue-router";
+  import { ProjectPageHeader } from '@gitiempo/web-shared';
+  import Avatar from 'primevue/avatar';
+  import Button from 'primevue/button';
+  import InputText from 'primevue/inputtext';
+  import Tag from 'primevue/tag';
+  import { useRouter } from 'vue-router';
 
-import { routeNames } from "@/router";
-import { useAuthStore } from "@/stores/auth";
+  import { routeNames } from '@/router';
+  import { useAuthStore } from '@/stores/auth';
 
-const authStore = useAuthStore();
-const router = useRouter();
+  const authStore = useAuthStore();
+  const router = useRouter();
 
-async function handleSignOut(): Promise<void> {
-  await authStore.logout();
-  await router.replace({ name: routeNames.login });
-}
+  async function handleSignOut(): Promise<void> {
+    await authStore.logout();
+    await router.replace({ name: routeNames.login });
+  }
 </script>
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <header class="flex flex-col gap-1.5">
-      <h1 class="text-text-dark text-2xl font-semibold">
-        Profile
-      </h1>
-      <p class="text-text-muted text-sm">
-        Manage your personal settings and session access.
-      </p>
-    </header>
+    <ProjectPageHeader
+      title="Profile"
+      subtitle="Manage your personal settings and session access."
+      title-size="lg"
+    />
 
     <div class="flex max-w-[620px] flex-col gap-6">
       <section
@@ -46,9 +44,7 @@ async function handleSignOut(): Promise<void> {
               <p class="text-text-dark text-sm font-semibold">
                 {{ authStore.displayName }}
               </p>
-              <p class="text-text-muted text-xs">
-                Workspace member
-              </p>
+              <p class="text-text-muted text-xs">Workspace member</p>
             </div>
           </div>
 

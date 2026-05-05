@@ -112,23 +112,23 @@
         <div class="min-w-0 flex-1 px-3">
           <span class="text-text-dark text-[13px] font-semibold">Project</span>
         </div>
-        <div class="min-w-[100px] shrink px-3">
+        <div class="w-[140px] shrink-0 px-3">
           <span class="text-text-dark text-[13px] font-semibold">Source</span>
         </div>
-        <div class="min-w-[120px] shrink px-3">
+        <div class="w-[220px] shrink-0 px-3">
           <span class="text-text-dark text-[13px] font-semibold"
             >Assigned members</span
           >
         </div>
-        <div class="min-w-[80px] shrink px-3">
+        <div class="w-[120px] shrink-0 px-3">
           <span class="text-text-dark text-[13px] font-semibold">Hours</span>
         </div>
-        <div class="min-w-[90px] shrink px-3">
+        <div class="w-[120px] shrink-0 px-3">
           <span class="text-text-dark text-[13px] font-semibold"
             >Visibility</span
           >
         </div>
-        <div class="min-w-[130px] shrink px-3 text-right">
+        <div class="w-[150px] shrink-0 px-3 text-right">
           <span class="text-text-dark text-[13px] font-semibold">Actions</span>
         </div>
       </div>
@@ -165,7 +165,7 @@
           </div>
 
           <!-- Source -->
-          <div class="min-w-[100px] shrink px-3">
+          <div class="w-[140px] shrink-0 px-3">
             <span
               class="truncate text-[13px]"
               :class="
@@ -179,7 +179,7 @@
           </div>
 
           <!-- Assigned members count -->
-          <div class="min-w-[120px] shrink px-3">
+          <div class="w-[220px] shrink-0 px-3">
             <span
               class="truncate text-[13px]"
               :class="
@@ -193,7 +193,7 @@
           </div>
 
           <!-- Hours -->
-          <div class="min-w-[80px] shrink px-3">
+          <div class="w-[120px] shrink-0 px-3">
             <span
               class="text-[13px] font-semibold"
               :class="project.isActive ? 'text-text-dark' : 'text-text-muted'"
@@ -203,7 +203,7 @@
           </div>
 
           <!-- Visibility badge -->
-          <div class="min-w-[90px] shrink px-3">
+          <div class="w-[120px] shrink-0 px-3">
             <span
               v-if="project.visibility === 'public'"
               class="bg-accent-tint text-brand rounded-sm px-2 py-[4px] text-xs font-semibold"
@@ -222,7 +222,7 @@
 
           <!-- Actions -->
           <div
-            class="flex min-w-[130px] shrink items-center justify-end gap-2 px-3"
+            class="flex w-[150px] shrink-0 items-center justify-end gap-2 px-3"
           >
             <Button
               variant="text"

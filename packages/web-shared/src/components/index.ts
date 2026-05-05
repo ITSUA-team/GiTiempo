@@ -1,4 +1,6 @@
 export { default as AppFormField } from './AppFormField.vue';
+export { default as ProjectPageHeader } from './ProjectPageHeader.vue';
+export type { StatCard } from './ProjectPageHeader.vue';
 export { default as AppInput } from './AppInput.vue';
 export { default as AppSelect } from './AppSelect.vue';
 export { default as AuthSignInForm } from './AuthSignInForm.vue';

@@ -13,7 +13,7 @@
   import AddProjectForm, {
     type AddProjectFormValues,
   } from '@/components/projects/AddProjectForm.vue';
-  import AdminPageHeader from '@/components/layout/AdminPageHeader.vue';
+  import { ProjectPageHeader } from '@gitiempo/web-shared';
   import ProjectSourceCard from '@/components/projects/ProjectSourceCard.vue';
 
   const router = useRouter();
@@ -127,7 +127,7 @@
 <template>
   <div class="flex flex-col gap-5">
     <!-- Page header with back link -->
-    <AdminPageHeader
+    <ProjectPageHeader
       title="Add Project"
       subtitle="Create a project manually now, with the flexibility to add workspace imports alongside it."
       back-label="Back to projects"
