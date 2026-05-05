@@ -1,27 +1,36 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { RouterView, useRoute } from "vue-router";
-import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
-import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
+  import { computed } from 'vue';
+  import { RouterView, useRoute } from 'vue-router';
+  import { WorkspaceHeader, WorkspaceNavigation } from '@gitiempo/web-shared';
+  import { getCounterpartWorkspaceHref } from '@gitiempo/web-shared/workspace-link';
 
-import { routeNames } from "@/router";
-import { useAuthStore } from "@/stores/auth";
+  import { routeNames } from '@/router';
+  import { useAuthStore } from '@/stores/auth';
 
-const route = useRoute();
-const authStore = useAuthStore();
-const userWorkspaceHref = getCounterpartWorkspaceHref({
-  configuredUrl: import.meta.env.VITE_USER_APP_URL,
-  fallbackPath: "/login",
-});
+  const route = useRoute();
+  const authStore = useAuthStore();
+  const userWorkspaceHref = getCounterpartWorkspaceHref({
+    configuredUrl: import.meta.env.VITE_USER_APP_URL,
+    fallbackPath: '/login',
+  });
 
-const navItems = computed(() => [
-  { label: "Dashboard", name: routeNames.dashboard },
-  { label: "Reports", name: routeNames.reports },
-  { label: "Invoices", name: routeNames.invoices },
-  { label: "Members", name: routeNames.members },
-  { label: "Projects", name: routeNames.projects },
-  { label: "Settings", name: routeNames.settings },
-]);
+  const activeNavName = computed(() => {
+    const name = route.name?.toString();
+    // Map child routes to their parent nav item so the sidebar stays highlighted.
+    const childToNav: Record<string, string> = {
+      [routeNames.addProject]: routeNames.projects,
+    };
+    return name ? (childToNav[name] ?? name) : undefined;
+  });
+
+  const navItems = computed(() => [
+    { label: 'Dashboard', name: routeNames.dashboard },
+    { label: 'Reports', name: routeNames.reports },
+    { label: 'Invoices', name: routeNames.invoices },
+    { label: 'Members', name: routeNames.members },
+    { label: 'Projects', name: routeNames.projects },
+    { label: 'Settings', name: routeNames.settings },
+  ]);
 </script>
 
 <template>
@@ -35,10 +44,7 @@ const navItems = computed(() => [
     />
 
     <div class="flex min-h-[calc(100vh-4rem)]">
-      <WorkspaceNavigation
-        :active-name="route.name?.toString()"
-        :items="navItems"
-      />
+      <WorkspaceNavigation :active-name="activeNavName" :items="navItems" />
 
       <main class="flex-1 p-4 sm:p-6">
         <RouterView />

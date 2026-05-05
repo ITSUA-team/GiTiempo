@@ -88,20 +88,16 @@
     <!-- Card Header: title left, filter right -->
     <div class="flex items-end justify-between">
       <h2 class="text-text-dark text-lg font-semibold">Projects Table</h2>
-      <div class="flex items-end gap-4">
-        <div class="flex flex-col gap-1.5">
-          <span class="text-text-muted text-xs font-medium"
-            >Assigned member</span
-          >
-          <Select
-            v-model="selectedMemberFilter"
-            :options="memberFilterOptions"
-            option-label="label"
-            option-value="id"
-            placeholder="All members"
-            class="w-[260px]"
-          />
-        </div>
+      <div class="flex flex-col gap-1.5">
+        <span class="text-text-muted text-xs font-medium">Assigned member</span>
+        <Select
+          v-model="selectedMemberFilter"
+          :options="memberFilterOptions"
+          option-label="label"
+          option-value="id"
+          placeholder="All members"
+          class="w-[260px]"
+        />
       </div>
     </div>
 

@@ -1,7 +1,10 @@
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
+  import { Form, FormField } from '@primevue/forms';
+  import type { FormSubmitEvent } from '@primevue/forms/form';
   import Button from 'primevue/button';
-  import { AppInput, AppSelect, AppFormField } from '@gitiempo/web-shared';
+  import InputText from 'primevue/inputtext';
+  import Message from 'primevue/message';
+  import { AppSelect, AppFormField } from '@gitiempo/web-shared';
 
   export interface PmOption {
     userId: string;
@@ -14,7 +17,7 @@
     pmUserId: string | null;
   }
 
-  const props = defineProps<{
+  defineProps<{
     pmOptions: PmOption[];
     membersLoading: boolean;
     isSubmitting: boolean;
@@ -25,24 +28,34 @@
     cancel: [];
   }>();
 
-  const projectName = ref('');
-  const projectVisibility = ref<'public' | 'private'>('private');
-  const selectedPmUserId = ref<string | null>(null);
+  const initialValues: AddProjectFormValues = {
+    name: '',
+    visibility: 'private',
+    pmUserId: null,
+  };
 
   const visibilityOptions = [
     { label: 'Public', value: 'public' },
     { label: 'Private', value: 'private' },
   ];
 
-  const canSubmit = computed(
-    () => projectName.value.trim().length > 0 && !props.isSubmitting,
-  );
+  function resolver({ values }: { values: Record<string, unknown> }) {
+    const errors: Record<string, { message: string }[]> = {};
+    const name = (values.name as string | undefined)?.trim() ?? '';
+    if (!name) {
+      errors.name = [{ message: 'Project name is required' }];
+    }
+    return { errors };
+  }
 
-  function handleSubmit() {
+  function handleSubmit({ valid, states }: FormSubmitEvent) {
+    if (!valid) return;
     emit('submit', {
-      name: projectName.value,
-      visibility: projectVisibility.value,
-      pmUserId: selectedPmUserId.value,
+      name: (states.name?.value as string | undefined) ?? '',
+      visibility:
+        (states.visibility?.value as 'public' | 'private' | undefined) ??
+        'private',
+      pmUserId: (states.pmUserId?.value as string | null | undefined) ?? null,
     });
   }
 </script>
@@ -53,16 +66,46 @@
       Add Project Manually
     </h2>
 
-    <form class="flex flex-col gap-[10px]" @submit.prevent="handleSubmit">
+    <Form
+      v-slot="$form"
+      :initial-values="initialValues"
+      :resolver="resolver"
+      class="flex flex-col gap-[10px]"
+      @submit="handleSubmit"
+    >
       <!-- Project name -->
-      <AppInput
-        id="project-name"
-        v-model="projectName"
-        label="Project name"
-        placeholder="Enter project name"
-        :maxlength="255"
-        :disabled="isSubmitting"
-      />
+      <FormField v-slot="$field" name="name" class="flex flex-col gap-1.5">
+        <label
+          for="project-name"
+          class="text-text-dark text-[13px] font-medium"
+        >
+          Project name
+        </label>
+        <InputText
+          id="project-name"
+          name="name"
+          placeholder="Enter project name"
+          :maxlength="255"
+          :disabled="isSubmitting"
+          :invalid="$field?.invalid"
+          class="w-full"
+          :pt="{
+            root: {
+              class:
+                '!h-[34px] !px-3 !rounded-[6px] !border !border-divider text-[14px] font-medium',
+            },
+          }"
+          v-bind="$field.props"
+        />
+        <Message
+          v-if="$field?.invalid"
+          severity="error"
+          size="small"
+          variant="simple"
+        >
+          {{ $field.error?.message }}
+        </Message>
+      </FormField>
 
       <!-- Source + Project manager row -->
       <div class="flex gap-3">
@@ -81,27 +124,39 @@
           size="sm"
           class="w-[160px] shrink-0"
         >
-          <AppSelect
-            v-model="selectedPmUserId"
-            :options="pmOptions"
-            option-label="label"
-            option-value="userId"
-            placeholder="Select PM"
-            empty-message="No PMs available"
-            :disabled="isSubmitting || membersLoading"
-          />
+          <FormField
+            v-slot="$field"
+            name="pmUserId"
+            :initial-value="initialValues.pmUserId"
+          >
+            <AppSelect
+              :options="pmOptions"
+              option-label="label"
+              option-value="userId"
+              placeholder="Select PM"
+              empty-message="No PMs available"
+              :disabled="isSubmitting || membersLoading"
+              v-bind="$field.props"
+            />
+          </FormField>
         </AppFormField>
       </div>
 
       <!-- Visibility -->
       <AppFormField label="Visibility" size="sm">
-        <AppSelect
-          v-model="projectVisibility"
-          :options="visibilityOptions"
-          option-label="label"
-          option-value="value"
-          :disabled="isSubmitting"
-        />
+        <FormField
+          v-slot="$field"
+          name="visibility"
+          :initial-value="initialValues.visibility"
+        >
+          <AppSelect
+            :options="visibilityOptions"
+            option-label="label"
+            option-value="value"
+            :disabled="isSubmitting"
+            v-bind="$field.props"
+          />
+        </FormField>
       </AppFormField>
 
       <!-- Actions -->
@@ -117,9 +172,9 @@
         <Button
           type="submit"
           :label="isSubmitting ? 'Creating…' : 'Create project'"
-          :disabled="!canSubmit"
+          :disabled="!$form.valid || isSubmitting"
         />
       </div>
-    </form>
+    </Form>
   </div>
 </template>
