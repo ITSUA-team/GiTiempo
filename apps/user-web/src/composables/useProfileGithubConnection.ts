@@ -61,6 +61,7 @@ const callbackErrorMessages: Record<string, string> = {
   invalid_callback: "GitHub returned an incomplete callback response.",
   invalid_state: "The GitHub callback could not be validated. Start the connection again.",
 };
+const genericCallbackErrorMessage = "GitHub could not complete the connection flow.";
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
@@ -88,7 +89,7 @@ function getCallbackToast(route: Pick<RouteLocationNormalizedLoaded, "query">): 
     const detail =
       typeof code === "string" && code in callbackErrorMessages
         ? callbackErrorMessages[code]
-        : "GitHub could not complete the connection flow.";
+        : genericCallbackErrorMessage;
 
     return {
       detail,
@@ -220,12 +221,11 @@ export function useProfileGithubConnection(
 
     try {
       await client.disconnect(requireAccessToken());
-      connection.value = { account: null, status: "disconnected" };
-      requestErrorMessage.value = null;
       showSuccessToast(
         "GitHub disconnected",
         "Your GitHub account has been disconnected.",
       );
+      await refreshConnectionStatus();
     } catch (error) {
       showErrorToast("Could not disconnect GitHub", getErrorMessage(error));
     } finally {

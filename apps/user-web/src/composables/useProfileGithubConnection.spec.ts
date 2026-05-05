@@ -196,6 +196,23 @@ describe("useProfileGithubConnection", () => {
     );
   });
 
+  it("falls back to a generic error toast for unknown callback codes", async () => {
+    const { router, toast } = mountProfileGithub({
+      query: { code: "unexpected_code", github: "error", redirect: "/timer" },
+    });
+
+    await flushPromises();
+
+    expect(router.replace).toHaveBeenCalledWith({ query: { redirect: "/timer" } });
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "GitHub could not complete the connection flow.",
+        severity: "error",
+        summary: "GitHub connection failed",
+      }),
+    );
+  });
+
   it("requests the GitHub auth URL and navigates away on connect", async () => {
     const { client, locationAssign, profileGithub } = mountProfileGithub();
 
@@ -231,7 +248,7 @@ describe("useProfileGithubConnection", () => {
     );
   });
 
-  it("disconnects GitHub after confirmation and updates the surface", async () => {
+  it("disconnects GitHub after confirmation and refetches the authoritative state", async () => {
     const client = createClientMock();
     client.getConnectionStatus.mockResolvedValueOnce(createConnectedStatus());
 
@@ -246,6 +263,7 @@ describe("useProfileGithubConnection", () => {
     await confirmOptions.accept();
 
     expect(client.disconnect).toHaveBeenCalledWith("access-token");
+    expect(client.getConnectionStatus).toHaveBeenCalledTimes(2);
     expect(profileGithub.state.value).toBe("disconnected");
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -9,7 +9,7 @@ The user Profile page currently renders a static GitHub connection card that doe
 - Render the documented states only: loading, request-error, disconnected, connected, and redirecting/connecting.
 - Show connected account fields from the current API contract only: `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt`.
 - Omit the avatar row when `avatarUrl` is `null`.
-- Surface callback outcomes and API failures through standard PrimeVue toast notifications, without inline callback banners.
+- Surface callback outcomes and API failures through standard PrimeVue toast notifications, without inline callback banners. Treat any `github=error` callback as an error-toast outcome, with nicer copy only for known safe `code` values.
 - Use standard PrimeVue `ConfirmDialog` for disconnect confirmation and existing design-token/PrimeVue component conventions.
 - Implement the Profile page display-name surface with the existing `PATCH /users/me` capability while keeping it aligned with the approved design.
 

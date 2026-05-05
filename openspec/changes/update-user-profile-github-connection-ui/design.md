@@ -60,13 +60,13 @@ The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first
 
     Rationale: docs require callback outcomes after redirect back to `/profile` to use toast notifications only and avoid inline success/error banners. After showing the toast, the page should remove the callback query parameters with router replacement so reloads do not repeat the toast.
 
-    Callback contract: the frontend must treat `github` as the callback outcome key. Supported values are `connected` and `error`. When `github=error`, the backend also supplies a safe `code` query key whose value is a safe error enum such as `invalid_state`, `github_exchange_failed`, or `github_config`. Unknown `github` or `code` values must be treated as unsupported callback outcomes, ignored for toast purposes, and still cleaned from the URL only if they match the recognized contract shape.
+    Callback contract: the frontend must treat `github` as the callback outcome key. Supported values are `connected` and `error`. When `github=error`, the page must always treat the callback as an error-toast outcome. If the backend also supplies a safe `code` query key and that value is a known safe enum such as `invalid_state`, `github_exchange_failed`, or `github_config`, the page may show nicer copy for that known code. Unknown `code` values must still produce a generic GitHub error toast rather than being ignored. Unknown `github` values remain unsupported callback outcomes and should not trigger callback toasts.
 
     Alternative considered: show an inline banner in the GitHub card. That conflicts with the docs and approved design.
 
 6. Confirm disconnect through PrimeVue `ConfirmDialog` before calling `DELETE /github/connection`.
 
-   Rationale: disconnect is destructive and docs require the shared confirmation pattern. On success, refresh or locally transition the card to disconnected and show a success toast; on failure, keep the previous state and show an error toast.
+   Rationale: disconnect is destructive and docs require the shared confirmation pattern. On success, show a success toast and then refresh `GET /github/connection` so the card settles from authoritative server state; on failure, keep the previous state and show an error toast.
 
    Alternative considered: inline confirmation inside the card. That would introduce a custom pattern outside the docs.
 
@@ -86,4 +86,10 @@ The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first
 - OAuth redirect succeeds but profile refresh fails -> show callback toast, then independently show request-error state for the connection fetch.
 - Query toast repeats on page reload -> remove handled query parameters via router replacement after showing the callback toast.
 - `avatarUrl` is `null` -> omit the avatar row entirely so UI does not imply a placeholder source that the API did not provide.
-- User disconnects while another tab reconnects -> rely on refreshed `GET /github/connection` after mutations to render the authoritative server state.
+- User disconnects while another tab reconnects -> rely on refreshed `GET /github/connection` after successful disconnect to render the authoritative server state.
+
+## Design Parity Review
+
+- Reviewed against the approved `Profile` screen in `GITiempo.pen`.
+- Expected route structure is present in implementation: shared page header, identity card, distinct GitHub connection states, and sign-out action.
+- No PrimeVue-only implementation compromises were identified for this change.

@@ -15,9 +15,9 @@
 
 - [x] 2.1 Add a focused composable or feature surface for Profile GitHub connection state using the auth store access token.
 - [x] 2.2 Implement loading, request-error, disconnected, connected, and redirecting/connecting states without collapsing request failures into disconnected.
-- [x] 2.3 Handle `/profile` GitHub callback query outcomes with standard PrimeVue toast notifications and remove handled query parameters with router replacement.
+- [x] 2.3 Handle `/profile` GitHub callback query outcomes with standard PrimeVue toast notifications and remove handled query parameters with router replacement; treat any `github=error` callback as an error-toast outcome, with nicer copy only for known safe `code` values.
 - [x] 2.4 Implement connect/reconnect by requesting the authorization URL, rendering connecting state while pending, and navigating to the returned URL on success.
-- [x] 2.5 Implement disconnect with standard PrimeVue confirmation, API mutation, success/error toast feedback, and authoritative status refresh or state update.
+- [x] 2.5 Implement disconnect with standard PrimeVue confirmation, API mutation, success/error toast feedback, and an authoritative `GET /github/connection` refetch after successful disconnect.
 
 ## 3. Profile View UI
 
@@ -38,6 +38,7 @@
 - [x] 4.4 Run `pnpm --filter user-web typecheck` and fix any type errors.
 - [x] 4.5 Because this change extends `packages/web-shared` auth/runtime helpers, run `pnpm --filter admin-web lint` and `pnpm --filter admin-web typecheck` too.
 - [x] 4.6 Because this change touches shared auth/runtime behavior used by both SPAs, run `pnpm --filter user-web test` and `pnpm --filter admin-web test` before marking the change complete.
+- [x] 4.7 Perform a final `.pen` design parity review for the Profile route and document any PrimeVue-only implementation compromises before marking the change complete.
 
 ## 5. Frontend DOM Follow-up
 

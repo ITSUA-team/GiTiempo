@@ -95,7 +95,8 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **WHEN** the user activates `Disconnect`
 - **THEN** the page asks for confirmation using the standard PrimeVue confirmation dialog pattern
 - **AND** accepting the confirmation calls the GitHub disconnect API
-- **AND** successful disconnect updates or refreshes the card to the disconnected state
+- **AND** successful disconnect refetches `GET /github/connection` before settling the card state
+- **AND** the refreshed card settles to the disconnected state
 - **AND** successful disconnect shows a success toast notification
 - **AND** failed disconnect keeps the previous connection state and shows an error toast
 
@@ -143,11 +144,19 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 #### Scenario: Profile handles GitHub callback error outcome
 
 - **GIVEN** GitHub redirects the user back to `/profile` with `github=error`
-- **AND** the callback includes a safe `code` query value such as `invalid_state`, `github_exchange_failed`, or `github_config`
+- **AND** the callback may include a safe `code` query value such as `invalid_state`, `github_exchange_failed`, or `github_config`
 - **WHEN** the Profile page initializes
 - **THEN** the page surfaces the error with a standard PrimeVue error toast notification only
 - **AND** the page does not render an inline error banner for the callback outcome
 - **AND** the handled callback query parameters are removed from the URL without adding another history entry
+
+#### Scenario: Profile uses generic error toast for unknown callback code
+
+- **GIVEN** GitHub redirects the user back to `/profile` with `github=error`
+- **AND** the callback includes an unknown safe `code` value or omits `code`
+- **WHEN** the Profile page initializes
+- **THEN** the page still surfaces the callback as a standard PrimeVue error toast notification
+- **AND** the page may fall back to generic GitHub connection failure copy instead of code-specific wording
 
 #### Scenario: Profile ignores unsupported callback query values
 
