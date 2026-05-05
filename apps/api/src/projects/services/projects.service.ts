@@ -31,6 +31,7 @@ export type ProjectRow = typeof projects.$inferSelect;
 type ProjectResponseRow = ProjectRow & {
   source: ProjectSource;
   totalHours: number | string | null;
+  memberCount: number | string | null;
 };
 type ProjectAssignmentRow = Omit<ProjectAssignmentResponse, 'assignedAt'> & {
   assignedAt: Date;
@@ -202,6 +203,7 @@ export class ProjectsService {
         ...row,
         source: 'manual',
         totalHours: 0,
+        memberCount: 0,
       });
     }
 
@@ -220,6 +222,7 @@ export class ProjectsService {
         ...row,
         source: 'manual',
         totalHours: 0,
+        memberCount: 1,
       });
     });
   }
@@ -540,6 +543,11 @@ export class ProjectsService {
         WHERE "tasks"."project_id" = "projects"."id"
           AND "time_entries"."duration_seconds" IS NOT NULL
       ), 0)::double precision / 3600`,
+      memberCount: sql<number>`(
+        SELECT COUNT(*)
+        FROM "project_assignments"
+        WHERE "project_assignments"."project_id" = "projects"."id"
+      )`,
       isActive: projects.isActive,
       createdAt: projects.createdAt,
       updatedAt: projects.updatedAt,
@@ -555,6 +563,7 @@ export class ProjectsService {
       visibility: row.visibility,
       source: row.source,
       totalHours: toNumber(row.totalHours),
+      memberCount: toNumber(row.memberCount),
       isActive: row.isActive,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),

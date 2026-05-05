@@ -3,6 +3,7 @@
   import Button from 'primevue/button';
   import Select from 'primevue/select';
   import MultiSelect from 'primevue/multiselect';
+  import ProgressSpinner from 'primevue/progressspinner';
   import { AppFormField, formatHours } from '@gitiempo/web-shared';
   import type {
     ProjectResponse,
@@ -24,6 +25,7 @@
     memberFilterOptions: { id: string | null; label: string }[];
     savingProjectId: string | null;
     closedProjectId?: string | null;
+    loadingEditProjectId?: string | null;
   }>();
 
   const emit = defineEmits<{
@@ -34,6 +36,7 @@
       members: string[],
       visibility: 'public' | 'private',
     ];
+    openEdit: [projectId: string];
   }>();
 
   const selectedMemberFilter = defineModel<string | null>('memberFilter', {
@@ -58,10 +61,23 @@
       expandedProjectId.value = null;
       return;
     }
+    emit('openEdit', project.id);
     expandedProjectId.value = project.id;
     editingMembers.value = project.assignedMembers.map((m) => m.userId);
     editingVisibility.value = project.visibility;
   }
+
+  // When assignments load in after the panel is already open, sync editingMembers
+  watch(
+    () =>
+      props.projects.find((p) => p.id === expandedProjectId.value)
+        ?.assignedMembers,
+    (members) => {
+      if (members && expandedProjectId.value) {
+        editingMembers.value = members.map((m) => m.userId);
+      }
+    },
+  );
 
   function cancelSettings() {
     expandedProjectId.value = null;
@@ -75,11 +91,14 @@
     return source === 'github' ? 'GitHub Repo' : 'Manual';
   }
 
-  function formatMembersCount(
-    assignments: ProjectAssignmentResponse[],
-  ): string {
-    if (!assignments.length) return '—';
-    return `${assignments.length} member${assignments.length !== 1 ? 's' : ''}`;
+  function formatMembersCount(project: ProjectWithAssignments): string {
+    // After edit, use the live assignedMembers length; otherwise fall back to API-provided count
+    const count =
+      project.assignedMembers.length > 0
+        ? project.assignedMembers.length
+        : project.memberCount;
+    if (!count) return '—';
+    return `${count} member${count !== 1 ? 's' : ''}`;
   }
 </script>
 
@@ -184,7 +203,7 @@
                   : 'text-text-muted opacity-50'
               "
             >
-              {{ formatMembersCount(project.assignedMembers) }}
+              {{ formatMembersCount(project) }}
             </span>
           </div>
 
@@ -252,7 +271,20 @@
           <span class="text-text-dark text-[13px] font-semibold"
             >Project settings</span
           >
-          <div class="flex items-end gap-[10px]">
+
+          <!-- Loading assignments -->
+          <div
+            v-if="loadingEditProjectId === project.id"
+            class="text-text-muted flex items-center gap-2 py-2 text-[13px]"
+          >
+            <ProgressSpinner
+              stroke-width="4"
+              style="width: 16px; height: 16px"
+            />
+            <span>Loading members…</span>
+          </div>
+
+          <div v-else class="flex items-end gap-[10px]">
             <!-- Members MultiSelect -->
             <AppFormField
               label="Select members"

@@ -13,7 +13,10 @@
     PageHeader,
     type StatCard,
   } from '@gitiempo/web-shared';
-  import type { WorkspaceMemberResponse } from '@gitiempo/shared';
+  import type {
+    WorkspaceMemberResponse,
+    ProjectAssignmentResponse,
+  } from '@gitiempo/shared';
   import { routeNames } from '@/router';
   import ProjectsTable, {
     type ProjectWithAssignments,
@@ -34,6 +37,10 @@
   const selectedMemberFilter = ref<string | null>(null);
   const savingProjectId = ref<string | null>(null);
   const closedProjectId = ref<string | null>(null);
+  const loadingEditProjectId = ref<string | null>(null);
+  const editProjectAssignments = ref<
+    Record<string, ProjectAssignmentResponse[]>
+  >({});
 
   // Only pm/member roles can be assigned — admins have implicit access
   const assignableMembers = computed(() =>
@@ -88,28 +95,10 @@
         projectsClient.listProjects(accessToken),
         membersClient.listMembers(accessToken),
       ]);
-
-      const projectsWithAssignments = await Promise.all(
-        projectsData.map(async (project) => {
-          try {
-            const assignments = await projectsClient.listProjectAssignments(
-              project.id,
-              accessToken,
-            );
-            return {
-              ...project,
-              assignedMembers: assignments,
-            } as ProjectWithAssignments;
-          } catch {
-            return {
-              ...project,
-              assignedMembers: [],
-            } as ProjectWithAssignments;
-          }
-        }),
-      );
-
-      projects.value = projectsWithAssignments;
+      projects.value = projectsData.map((p) => ({
+        ...p,
+        assignedMembers: editProjectAssignments.value[p.id] ?? [],
+      }));
       members.value = membersData;
     } catch (error) {
       toast.add({
@@ -130,28 +119,10 @@
         projectsClient.listProjects(accessToken),
         membersClient.listMembers(accessToken),
       ]);
-
-      const projectsWithAssignments = await Promise.all(
-        projectsData.map(async (project) => {
-          try {
-            const assignments = await projectsClient.listProjectAssignments(
-              project.id,
-              accessToken,
-            );
-            return {
-              ...project,
-              assignedMembers: assignments,
-            } as ProjectWithAssignments;
-          } catch {
-            return {
-              ...project,
-              assignedMembers: [],
-            } as ProjectWithAssignments;
-          }
-        }),
-      );
-
-      projects.value = projectsWithAssignments;
+      projects.value = projectsData.map((p) => ({
+        ...p,
+        assignedMembers: editProjectAssignments.value[p.id] ?? [],
+      }));
       members.value = membersData;
     } catch (error) {
       toast.add({
@@ -164,6 +135,31 @@
 
   function openCreateProject() {
     router.push({ name: routeNames.addProject });
+  }
+
+  async function handleOpenEdit(projectId: string) {
+    if (!authStore.accessToken) return;
+    // Already cached — no fetch needed
+    if (editProjectAssignments.value[projectId]) return;
+    loadingEditProjectId.value = projectId;
+    try {
+      const assignments = await projectsClient.listProjectAssignments(
+        projectId,
+        authStore.accessToken,
+      );
+      editProjectAssignments.value = {
+        ...editProjectAssignments.value,
+        [projectId]: assignments,
+      };
+      // Patch the project row so the table sees the assignments immediately
+      projects.value = projects.value.map((p) =>
+        p.id === projectId ? { ...p, assignedMembers: assignments } : p,
+      );
+    } catch {
+      // Non-fatal — edit panel still opens with empty members
+    } finally {
+      loadingEditProjectId.value = null;
+    }
   }
 
   async function handleSave(
@@ -214,6 +210,12 @@
         life: 3000,
       });
       closedProjectId.value = project.id;
+      // Invalidate cached assignments so next edit fetches fresh data
+      editProjectAssignments.value = Object.fromEntries(
+        Object.entries(editProjectAssignments.value).filter(
+          ([k]) => k !== project.id,
+        ),
+      );
       await nextTick();
       closedProjectId.value = null;
       await refreshData();
@@ -312,6 +314,8 @@
         :member-filter-options="memberFilterOptions"
         :saving-project-id="savingProjectId"
         :closed-project-id="closedProjectId"
+        :loading-edit-project-id="loadingEditProjectId"
+        @open-edit="handleOpenEdit"
         @save="handleSave"
         @archive="handleArchive"
         @unarchive="handleUnarchive"

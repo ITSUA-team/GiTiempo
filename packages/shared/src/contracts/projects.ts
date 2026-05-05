@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { workspaceRoleSchema } from "./workspace-members.js";
+import { z } from 'zod';
+import { workspaceRoleSchema } from './workspace-members.js';
 
-export const projectVisibilitySchema = z.enum(["public", "private"]);
-export const projectSourceSchema = z.enum(["manual", "github"]);
+export const projectVisibilitySchema = z.enum(['public', 'private']);
+export const projectSourceSchema = z.enum(['manual', 'github']);
 
 export const projectResponseSchema = z.object({
   id: z.uuid(),
@@ -12,6 +12,7 @@ export const projectResponseSchema = z.object({
   visibility: projectVisibilitySchema,
   source: projectSourceSchema,
   totalHours: z.number().min(0),
+  memberCount: z.number().int().min(0),
   isActive: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -62,7 +63,7 @@ export const updateProjectSchema = z
       data.visibility !== undefined ||
       data.isActive !== undefined,
     {
-      message: "At least one field must be provided",
+      message: 'At least one field must be provided',
       path: [],
     },
   );
@@ -91,9 +92,7 @@ export const createProjectAssignmentSchema = z
   .strict();
 
 export type ProjectResponse = z.infer<typeof projectResponseSchema>;
-export type ProjectListResponse = z.infer<
-  typeof projectListResponseSchema
->;
+export type ProjectListResponse = z.infer<typeof projectListResponseSchema>;
 export type ProjectVisibility = z.infer<typeof projectVisibilitySchema>;
 export type ProjectSource = z.infer<typeof projectSourceSchema>;
 export type ManagementProjectSummaryResponse = z.infer<
