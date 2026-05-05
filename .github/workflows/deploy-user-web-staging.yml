@@ -1,0 +1,29 @@
+name: Deploy user-web staging
+
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - apps/user-web/**
+      - packages/shared/**
+      - packages/web-config/**
+      - packages/web-shared/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - .github/workflows/deploy-frontend-staging-reusable.yml
+      - .github/workflows/deploy-user-web-staging.yml
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-frontend-staging-reusable.yml
+    secrets: inherit
+    with:
+      app_name: user-web
+      app_path: apps/user-web
+      package_name: user-web
