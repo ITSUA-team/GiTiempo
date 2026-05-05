@@ -14,6 +14,7 @@
 - Shared counterpart-workspace link helpers.
 - Browser-only shared Zod schemas.
 - Small PrimeVue-based Vue components with stable props/emits contracts and at least two real SPA call sites.
+- Small PrimeVue-based Vue components that are already defined by docs as shared cross-page or cross-app patterns, even if only one implementation exists today.
 
 ## What Stays App-Local
 
@@ -29,6 +30,7 @@
 - Keep `@gitiempo/web-config` focused on shared PrimeVue preset, tokens, and frontend bootstrap/theme wiring.
 - Do not move browser/runtime frontend helpers into `@gitiempo/shared` or `@gitiempo/web-config`.
 - Prefer extracting the smallest proven-identical leaf instead of forcing full-page or full-store sharing.
+- A component MAY be extracted before two live call sites exist when docs already define it as a shared standard pattern, its contract is small and stable, and the extraction clearly prevents likely duplication.
 
 ## Auth And Router Regression Coverage
 

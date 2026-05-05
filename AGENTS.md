@@ -32,11 +32,14 @@
 - For any UI implementation or refactor in `apps/user-web`, `apps/admin-web`, `packages/web-config`, or shared Vue UI in `packages/web-shared`, load the `gitiempo-frontend-rules` skill first.
 - UI behavior and styling rules live in `docs/ui/*` and the nearest app `AGENTS.md`; do not duplicate or invent parallel frontend conventions elsewhere.
 - For any frontend UI task, read `docs/ui/INDEX.md` first, then only the smallest relevant `docs/ui/*` section files before reading or editing implementation files.
+- For any frontend UI task, inspect the approved `.pen` screen before implementation and treat it as a parity checklist, not just a rough reference.
 - `packages/web-config` is for shared PrimeVue preset, design tokens, and frontend bootstrap/theme wiring.
 - `packages/web-shared` is for shared browser/runtime helpers, browser-only form schemas, and reusable Vue components used by both SPAs.
 - Keep `@gitiempo/shared` backend-safe and contract-focused. Do not move browser/runtime frontend helpers there.
 - Extract shared frontend code only when the behavior is already proven identical across `apps/user-web` and `apps/admin-web`.
+- PrimeVue-only conflicts are the only acceptable reason to deviate from an approved design, and those compromises must be documented explicitly in the final review.
 - Good extraction candidates are small leaves such as auth HTTP helpers, current-user clients, refresh-token storage helpers, counterpart-workspace link helpers, and small PrimeVue-based UI blocks with stable props/emits.
+- Also treat doc-defined repeated UI patterns such as page headers, card shells, section headers, loading blocks, and empty/error states as proactive extraction candidates even before multiple copies accumulate.
 - Keep `stores/auth.ts`, `router/index.ts`, route maps, route-level views, and product-specific shell or login composition app-local unless there are two stable call sites and a smaller shared abstraction is clearly justified.
 - If a task changes `packages/web-config` or `packages/web-shared`, verify both web apps.
 - If a task changes shared auth/session/router leaves, run both frontend test suites in addition to lint and typecheck.

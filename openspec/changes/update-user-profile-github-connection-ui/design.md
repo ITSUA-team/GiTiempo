@@ -31,11 +31,15 @@ The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first
 
    Alternative considered: put the client in `packages/web-shared`. That is premature until admin-web has the same stable GitHub connection use case.
 
+   Boundary constraint: this client owns GitHub connection endpoints only. Current-user identity reads and writes should continue to use the existing current-user/auth boundary instead of introducing a second overlapping `/users/me` client surface inside the Profile feature.
+
 2. Keep profile GitHub orchestration out of a large route-view template.
 
    Rationale: `ProfileView.vue` already contains profile identity, GitHub connection, and sign-out sections. API state, callback query handling, confirmation, toasts, and redirect behavior would make the route view too stateful if implemented inline. A focused composable and/or small Profile GitHub component keeps state transitions testable.
 
    Alternative considered: implement all behavior directly in `ProfileView.vue`. That would be smaller initially but creates a mixed orchestration/UI component and makes focused testing harder.
+
+   Boundary constraint: the GitHub connection flow and the editable profile-identity form are separate feature surfaces. Future updates should avoid combining them in one broad composable unless they share the same endpoint/state lifecycle for a concrete reason.
 
 3. Use `window.location.assign(authorizationUrl)` for GitHub OAuth navigation after `GET /github/auth-url` succeeds.
 

@@ -68,6 +68,14 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** successful disconnect updates or refreshes the card to the disconnected state
 - **AND** failed disconnect keeps the previous connection state and shows an error toast
 
+#### Scenario: Profile GitHub connect request fails before redirect
+
+- **GIVEN** the Profile page renders a disconnected or reconnectable GitHub connection card
+- **WHEN** the GitHub authorization URL request fails
+- **THEN** the page shows an error toast using the repository error-message order
+- **AND** the card exits the redirecting/connecting state
+- **AND** the page leaves the user in a retryable state instead of navigating away
+
 #### Scenario: Profile handles GitHub callback query outcome
 
 - **GIVEN** GitHub redirects the user back to `/profile` with a safe callback outcome query
@@ -76,9 +84,25 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** the page does not render an inline success or error banner for the callback outcome
 - **AND** the handled callback query parameters are removed from the URL without adding another history entry
 
+#### Scenario: Profile handles GitHub callback error outcome
+
+- **GIVEN** GitHub redirects the user back to `/profile` with a safe callback error query
+- **WHEN** the Profile page initializes
+- **THEN** the page surfaces the error with a standard PrimeVue error toast notification only
+- **AND** the page does not render an inline error banner for the callback outcome
+- **AND** the handled callback query parameters are removed from the URL without adding another history entry
+
+#### Scenario: Profile feature boundaries stay scoped
+
+- **WHEN** the Profile page implementation is updated
+- **THEN** GitHub connection state and actions remain scoped to the GitHub connection feature surface
+- **AND** editable current-user identity behavior remains scoped to the current-user identity surface
+- **AND** the page does not introduce a second overlapping `/users/me` client boundary when an existing current-user client already owns that endpoint family
+- **AND** unrelated Profile sections are not merged into a single broad composable without a concrete shared state or lifecycle requirement
+
 #### Scenario: Profile GitHub states remain verifiable
 
 - **WHEN** the Profile GitHub connection UI is implemented or updated
 - **THEN** fetch-boundary behavior is covered for request paths, auth headers, response parsing, and API error propagation
-- **AND** page or composable tests cover loading, request-error, disconnected, connected, redirecting/connecting, callback toast, and disconnect confirmation behavior
+- **AND** page or composable tests cover loading, request-error, disconnected, connected, redirecting/connecting, callback success toast, callback error toast, connect failure, disconnect success, and disconnect failure behavior
 - **AND** frontend lint and typecheck pass for user-web

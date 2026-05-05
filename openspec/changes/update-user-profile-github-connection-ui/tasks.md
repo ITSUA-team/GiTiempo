@@ -23,6 +23,6 @@
 ## 4. Tests And Verification
 
 - [ ] 4.1 Add focused tests for Profile GitHub state transitions: loading, request-error, disconnected, connected, and redirecting/connecting.
-- [ ] 4.2 Add tests for connect/reconnect, disconnect confirmation, callback toast handling, query cleanup, and null-avatar row omission.
+- [ ] 4.2 Add tests for connect/reconnect success and failure, disconnect confirmation success and failure, callback success/error toast handling, query cleanup, and null-avatar row omission.
 - [ ] 4.3 Run `pnpm --filter user-web lint` and fix any newly introduced warnings.
 - [ ] 4.4 Run `pnpm --filter user-web typecheck` and fix any type errors.
