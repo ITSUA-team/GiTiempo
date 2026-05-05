@@ -46,12 +46,16 @@
   const expandedProjectId = ref<string | null>(null);
   const editingMembers = ref<string[]>([]);
   const editingVisibility = ref<'public' | 'private'>('private');
+  // True while we're waiting for the lazy assignment fetch to come back.
+  // Only during this window do we auto-sync editingMembers from the prop.
+  const waitingForAssignments = ref(false);
 
   watch(
     () => props.closedProjectId,
     (id) => {
       if (id && id === expandedProjectId.value) {
         expandedProjectId.value = null;
+        waitingForAssignments.value = false;
       }
     },
   );
@@ -59,22 +63,29 @@
   function openSettings(project: ProjectWithAssignments) {
     if (expandedProjectId.value === project.id) {
       expandedProjectId.value = null;
+      waitingForAssignments.value = false;
       return;
     }
     emit('openEdit', project.id);
     expandedProjectId.value = project.id;
     editingMembers.value = project.assignedMembers.map((m) => m.userId);
     editingVisibility.value = project.visibility;
+    // If assignments haven't loaded yet (empty), mark that we're waiting
+    // so the watch below can populate editingMembers once they arrive.
+    waitingForAssignments.value = project.assignedMembers.length === 0;
   }
 
-  // When assignments load in after the panel is already open, sync editingMembers
+  // One-shot sync: only fires while waitingForAssignments is true (i.e. the
+  // panel just opened and the lazy fetch hadn't returned yet). Once we have
+  // data we stop watching so user edits are never overwritten.
   watch(
     () =>
       props.projects.find((p) => p.id === expandedProjectId.value)
         ?.assignedMembers,
     (members) => {
-      if (members && expandedProjectId.value) {
+      if (waitingForAssignments.value && members && members.length > 0) {
         editingMembers.value = members.map((m) => m.userId);
+        waitingForAssignments.value = false;
       }
     },
   );

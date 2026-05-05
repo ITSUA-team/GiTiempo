@@ -1,4 +1,4 @@
-import type { ZodType } from "zod";
+import type { ZodType } from 'zod';
 
 interface RequestJsonOptions<TResponse> {
   accessToken?: string;
@@ -12,10 +12,13 @@ interface RequestJsonOptions<TResponse> {
 }
 
 export function getApiBaseUrl(apiBaseUrl: string | undefined): string {
-  return apiBaseUrl?.replace(/\/$/, "") ?? "";
+  return apiBaseUrl?.replace(/\/$/, '') ?? '';
 }
 
-export function getRequestUrl(apiBaseUrl: string | undefined, path: string): string {
+export function getRequestUrl(
+  apiBaseUrl: string | undefined,
+  path: string,
+): string {
   return `${getApiBaseUrl(apiBaseUrl)}${path}`;
 }
 
@@ -36,13 +39,23 @@ export async function getResponseErrorMessage(
   }
 }
 
+export class HttpError extends Error {
+  public readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'HttpError';
+    this.status = status;
+  }
+}
+
 export async function requestJson<TResponse>({
   accessToken,
   apiBaseUrl,
   body,
   fetchFn = fetch,
   headers,
-  method = "GET",
+  method = 'GET',
   path,
   responseSchema,
 }: RequestJsonOptions<TResponse>): Promise<TResponse> {
@@ -59,7 +72,7 @@ export async function requestJson<TResponse>({
     headers:
       body !== undefined
         ? {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
             ...requestHeaders,
           }
         : requestHeaders,
@@ -67,7 +80,15 @@ export async function requestJson<TResponse>({
   });
 
   if (!response.ok) {
-    throw new Error(await getResponseErrorMessage(response));
+    throw new HttpError(
+      await getResponseErrorMessage(response),
+      response.status,
+    );
+  }
+
+  // 204 No Content and 205 Reset Content carry no body — skip parsing.
+  if (response.status === 204 || response.status === 205) {
+    return responseSchema.parse({});
   }
 
   return responseSchema.parse(await response.json());

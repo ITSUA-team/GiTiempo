@@ -37,6 +37,7 @@
   const selectedMemberFilter = ref<string | null>(null);
   const savingProjectId = ref<string | null>(null);
   const closedProjectId = ref<string | null>(null);
+  const lastEditedProjectId = ref<string | null>(null);
   const loadingEditProjectId = ref<string | null>(null);
   const editProjectAssignments = ref<
     Record<string, ProjectAssignmentResponse[]>
@@ -70,12 +71,26 @@
     { label: 'Public', value: publicProjects.value },
   ]);
 
-  // Table shows all projects; archived shown with muted styling
+  // Table shows all projects; active first, archived at the bottom.
+  // Within the active group the last-edited project is pinned to the top.
   const filteredProjects = computed(() => {
-    if (!selectedMemberFilter.value) return projects.value;
-    return projects.value.filter((p) =>
-      p.assignedMembers.some((m) => m.userId === selectedMemberFilter.value),
-    );
+    const list = selectedMemberFilter.value
+      ? projects.value.filter((p) =>
+          p.assignedMembers.some(
+            (m) => m.userId === selectedMemberFilter.value,
+          ),
+        )
+      : projects.value;
+    const pinned = lastEditedProjectId.value;
+    return [...list].sort((a, b) => {
+      if (a.isActive !== b.isActive)
+        return Number(b.isActive) - Number(a.isActive);
+      if (pinned) {
+        if (a.id === pinned) return -1;
+        if (b.id === pinned) return 1;
+      }
+      return 0;
+    });
   });
 
   const memberFilterOptions = computed(() => [
@@ -179,10 +194,15 @@
         );
       }
 
-      const currentIds = new Set(project.assignedMembers.map((m) => m.userId));
+      // Use the live cache as the diff baseline — project.assignedMembers is
+      // the object at the time the user clicked Save and may be stale if the
+      // panel was open across a previous save.
+      const cachedAssignments =
+        editProjectAssignments.value[project.id] ?? project.assignedMembers;
+      const currentIds = new Set(cachedAssignments.map((m) => m.userId));
       const newIds = new Set(newMembers);
       const toAdd = newMembers.filter((id) => !currentIds.has(id));
-      const toRemove = project.assignedMembers
+      const toRemove = cachedAssignments
         .filter((m) => !newIds.has(m.userId))
         .map((m) => m.userId);
 
@@ -203,6 +223,21 @@
         ),
       ]);
 
+      // Optimistically update the cache with the intended new state so any
+      // further save before the re-fetch completes diffs against truth.
+      const optimisticAssignments = cachedAssignments.filter((m) =>
+        newIds.has(m.userId),
+      );
+      editProjectAssignments.value = {
+        ...editProjectAssignments.value,
+        [project.id]: optimisticAssignments,
+      };
+      projects.value = projects.value.map((p) =>
+        p.id === project.id
+          ? { ...p, assignedMembers: optimisticAssignments }
+          : p,
+      );
+
       toast.add({
         severity: 'success',
         summary: 'Saved',
@@ -210,12 +245,28 @@
         life: 3000,
       });
       closedProjectId.value = project.id;
-      // Invalidate cached assignments so next edit fetches fresh data
-      editProjectAssignments.value = Object.fromEntries(
-        Object.entries(editProjectAssignments.value).filter(
-          ([k]) => k !== project.id,
-        ),
-      );
+      lastEditedProjectId.value = project.id;
+
+      // Re-fetch the fresh assignment list and update the cache so refreshData
+      // maps the correct assignedMembers onto the row immediately.
+      try {
+        const freshAssignments = await projectsClient.listProjectAssignments(
+          project.id,
+          accessToken,
+        );
+        editProjectAssignments.value = {
+          ...editProjectAssignments.value,
+          [project.id]: freshAssignments,
+        };
+      } catch {
+        // Non-fatal: clear the cache entry so the next edit re-fetches
+        editProjectAssignments.value = Object.fromEntries(
+          Object.entries(editProjectAssignments.value).filter(
+            ([k]) => k !== project.id,
+          ),
+        );
+      }
+
       await nextTick();
       closedProjectId.value = null;
       await refreshData();

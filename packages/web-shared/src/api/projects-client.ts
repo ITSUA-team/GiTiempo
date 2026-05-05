@@ -15,7 +15,7 @@ import {
   type CreateProjectAssignmentInput,
 } from '@gitiempo/shared';
 import { z } from 'zod';
-import { requestJson } from '../http';
+import { HttpError, requestJson } from '../http';
 
 /* eslint-disable no-unused-vars */
 
@@ -128,14 +128,20 @@ export function createProjectsClient({
     },
 
     async removeProjectAssignment(projectId, userId, accessToken) {
-      await requestJson({
-        fetchFn,
-        apiBaseUrl,
-        method: 'DELETE',
-        path: `/projects/${projectId}/assignments/${userId}`,
-        responseSchema: emptyObjectSchema,
-        accessToken,
-      });
+      try {
+        await requestJson({
+          fetchFn,
+          apiBaseUrl,
+          method: 'DELETE',
+          path: `/projects/${projectId}/assignments/${userId}`,
+          responseSchema: emptyObjectSchema,
+          accessToken,
+        });
+      } catch (err) {
+        // Treat 404 as success — assignment is already gone (idempotent).
+        if (err instanceof HttpError && err.status === 404) return;
+        throw err;
+      }
     },
   };
 }
