@@ -47,6 +47,8 @@ Use `<ConfirmDialog>` and `useConfirm()`.
 - Title uses `text-lg font-semibold`.
 - Body uses `text-sm text-text-muted`.
 - Footer order: cancel then destructive accept on the right.
+- Keep the `<ConfirmDialog>` host at the route, page-shell, or app-shell level. Do not hide global confirmation hosts inside leaf presentational components such as cards, rows, or fields just because only one local action currently needs confirmation.
+- Leaf components may emit events or call composables that use `useConfirm()`, but the rendered confirm host should stay with the surface that owns page-level infrastructure.
 
 ```typescript
 const confirm = useConfirm()

@@ -95,6 +95,7 @@ Use this skill when:
 - Do not treat disabled placeholder controls as satisfying a documented interactive surface. If docs, spec, or tasks say a surface is editable, saveable, confirmable, or otherwise interactive, the shipped UI must perform that behavior or the task must remain explicitly incomplete.
 - When a feature has documented loading, empty, request-error, connected/disconnected, or redirecting states, tests should exercise each user-visible state explicitly instead of inferring coverage from internal refs or a single happy-path flow.
 - Destructive actions that require confirmation must have tests for both accepted-success and accepted-failure paths. If cancellation keeps default PrimeVue behavior and no app logic runs on cancel, a dedicated cancel-path test is optional.
+- Do not mount global PrimeVue service hosts such as `<ConfirmDialog>` or `<Toast>` inside leaf presentational components. Keep those hosts at the route, page-shell, layout, or app-shell level unless the component is itself the explicit overlay owner.
 - Query-driven toast flows such as OAuth callbacks, invite accepts, or magic-link results must test both success and error query variants plus URL cleanup after handling.
 - Do not stop at docs compliance if the implementation still differs from the approved `.pen` design. Check both every time.
 - If docs and design conflict, docs are the source of truth. If PrimeVue prevents an exact match, keep the docs-compliant behavior and document the PrimeVue-specific compromise.
@@ -115,3 +116,5 @@ Use this skill when:
 - `pnpm --filter user-web lint && pnpm --filter user-web typecheck`
 - `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`
 - If shared frontend code changes, run both app verifications.
+- If a spec-driven frontend change touches shared auth/session/runtime leaves, require `pnpm --filter user-web test` and `pnpm --filter admin-web test` before marking the task complete.
+- If an OpenSpec or task checklist covers a change that touches shared frontend or shared auth/runtime code, the checklist must explicitly include the cross-app verification scope instead of implying single-app verification.
