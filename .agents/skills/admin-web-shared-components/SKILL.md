@@ -388,7 +388,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
 
 ---
 
-### `ProjectPageHeader`
+### `PageHeader`
 
 A shared page-level heading component used across both SPAs. Renders a title, optional subtitle, optional back button, and an action slot on the right side of the title row.
 
@@ -400,7 +400,7 @@ A shared page-level heading component used across both SPAs. Renders a title, op
 **Import**
 
 ```ts
-import { ProjectPageHeader } from '@gitiempo/web-shared';
+import { PageHeader } from '@gitiempo/web-shared';
 ```
 
 **Props**
@@ -419,18 +419,18 @@ import { ProjectPageHeader } from '@gitiempo/web-shared';
 **Usage — admin-web (xl title, action slot)**
 
 ```vue
-<ProjectPageHeader
+<PageHeader
   title="Projects"
   subtitle="Manage project visibility, member assignments, and manual project creation."
 >
   <Button label="New Project" @click="openCreateProject" />
-</ProjectPageHeader>
+</PageHeader>
 ```
 
 **Usage — admin-web (xl title, back button)**
 
 ```vue
-<ProjectPageHeader
+<PageHeader
   title="Add Project"
   subtitle="Create a project manually now, with the flexibility to add workspace imports alongside it."
   back-label="Back to projects"
@@ -441,20 +441,20 @@ import { ProjectPageHeader } from '@gitiempo/web-shared';
 **Usage — user-web (lg title)**
 
 ```vue
-<ProjectPageHeader
+<PageHeader
   title="Timer"
   subtitle="Start tracking work from your visible projects and tasks or log a manual interval."
   title-size="lg"
 />
 ```
 
-**When to use `ProjectPageHeader`**
+**When to use `PageHeader`**
 
 - Any page that has a top-level `<h1>` + optional subtitle pattern
 - Always prefer this over inlining `<header class="flex flex-col gap-1.5"><h1 ...>`
 - Use `title-size="lg"` for user-web pages, `title-size="xl"` (or omit) for admin-web pages
 
-**When NOT to use `ProjectPageHeader`**
+**When NOT to use `PageHeader`**
 
 - Section headings inside a page (e.g. `<h2>`) — those are local markup
 - Modal or drawer headers — use PrimeVue `Dialog` / `Drawer` title slot

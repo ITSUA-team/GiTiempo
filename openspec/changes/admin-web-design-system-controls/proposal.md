@@ -10,7 +10,7 @@ same `stroke:$color-divider`, same `padding:[0,12]`.
 
 `AdminPageHeader` is duplicated across `admin-web` and `user-web` — both apps
 implement the same title + subtitle + optional back button + optional action
-slot pattern independently. A single shared `ProjectPageHeader` component in
+slot pattern independently. A single shared `PageHeader` component in
 `@gitiempo/web-shared` eliminates the duplication.
 
 `AddProjectForm` uses raw HTML `<label>` tags, manual flex wiring, and raw
@@ -25,7 +25,7 @@ PrimeVue `Select` — inconsistent with the shared form primitives
   applies the same PT overrides (`h-[34px]`, `px-3`, `rounded-[6px]`,
   `border-divider`) plus forwards all standard `Select` props via
   `v-bind="$attrs"`.
-- Add `ProjectPageHeader.vue` to `packages/web-shared` — a shared page-level
+- Add `PageHeader.vue` to `packages/web-shared` — a shared page-level
   header component with props `title`, `subtitle?`, `backLabel?`,
   `titleSize?: 'lg'|'xl'`, emit `back`, and a default slot for action buttons.
   Replaces `AdminPageHeader` in `admin-web` and inline `<header>` blocks in
@@ -37,7 +37,7 @@ PrimeVue `Select` — inconsistent with the shared form primitives
 - Update `AddProjectView.vue` — replace raw `<Select>` with `<AppSelect>`,
   wrap Source + Project manager read-only fields with `<AppFormField>`.
 - Update `.agents/skills/admin-web-shared-components/SKILL.md` — document
-  `AppSelect`, `ProjectPageHeader`, form field priority order, anti-pattern
+  `AppSelect`, `PageHeader`, form field priority order, anti-pattern
   block, and the rule: before creating any shared component scan ALL frames
   in `pencil.mcp` for repeated visual patterns first.
 
@@ -48,7 +48,7 @@ PrimeVue `Select` — inconsistent with the shared form primitives
 - `shared-app-select`: A shared `AppSelect` component that wraps PrimeVue
   `Select` with enforced design-spec dimensions (`height:34`, `radius:6px`,
   `border:$color-divider`, `padding:[0,12]`) matching `AppInput`.
-- `shared-project-page-header`: A shared `ProjectPageHeader` component used
+- `shared-project-page-header`: A shared `PageHeader` component used
   on all project-related pages in both `admin-web` and `user-web` — renders
   title, optional subtitle, optional back button, and an action slot.
 
@@ -56,7 +56,7 @@ PrimeVue `Select` — inconsistent with the shared form primitives
 
 - `shared-app-input`: `AppInput` must enforce height/padding via PrimeVue PT,
   not just `style` attributes.
-- `components`: Add `AppSelect` and `ProjectPageHeader` to the catalog of
+- `components`: Add `AppSelect` and `PageHeader` to the catalog of
   shared primitives.
 - `add-project-form`: `AddProjectForm` rewritten to use PrimeVue form
   primitives exclusively — `AppInput`, `AppSelect`, `AppFormField`, `Button`.
@@ -66,18 +66,18 @@ PrimeVue `Select` — inconsistent with the shared form primitives
 - `packages/web-shared/src/components/AppInput.vue` — PT override for
   height + padding
 - `packages/web-shared/src/components/AppSelect.vue` — new file
-- `packages/web-shared/src/components/ProjectPageHeader.vue` — new file
+- `packages/web-shared/src/components/PageHeader.vue` — new file
 - `packages/web-shared/src/components/index.ts` — export `AppSelect`,
-  `ProjectPageHeader`
+  `PageHeader`
 - `apps/admin-web/src/components/projects/AddProjectForm.vue` — rewritten
   with PrimeVue primitives
 - `apps/admin-web/src/components/layout/AdminPageHeader.vue` — deleted
-- `apps/admin-web/src/views/ProjectsView.vue` — import `ProjectPageHeader`
+- `apps/admin-web/src/views/ProjectsView.vue` — import `PageHeader`
   from `@gitiempo/web-shared`
 - `apps/admin-web/src/views/AddProjectView.vue` — import
-  `ProjectPageHeader`, use `AppSelect` for Visibility, `AppFormField` for
+  `PageHeader`, use `AppSelect` for Visibility, `AppFormField` for
   Source/PM
 - `apps/user-web` — all views with inline `<header>` pattern replaced with
-  `ProjectPageHeader`
+  `PageHeader`
 - `.agents/skills/admin-web-shared-components/SKILL.md` — document
-  `AppSelect`, `ProjectPageHeader`, form field rules
+  `AppSelect`, `PageHeader`, form field rules

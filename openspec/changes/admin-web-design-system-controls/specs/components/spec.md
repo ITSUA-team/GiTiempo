@@ -14,31 +14,31 @@ raw PrimeVue `Select` directly, to ensure consistent dimensions with
 - **AND** the rendered select has the same height as the Project name
   `AppInput` field
 
-### Requirement: ProjectPageHeader As Standard Page Header Primitive
+### Requirement: PageHeader As Standard Page Header Primitive
 
-Both `admin-web` and `user-web` MUST use `ProjectPageHeader` from
+Both `admin-web` and `user-web` MUST use `PageHeader` from
 `@gitiempo/web-shared` for project-related page headers rather than using
 `AdminPageHeader` or inline `<header>` blocks.
 
-#### Scenario: Projects list page uses ProjectPageHeader
+#### Scenario: Projects list page uses PageHeader
 
 - **WHEN** `ProjectsView` renders
-- **THEN** it uses `<ProjectPageHeader>` with `titleSize="xl"`
+- **THEN** it uses `<PageHeader>` with `titleSize="xl"`
 - **AND** the title, subtitle, and action slot render identically to the
   design in `pencil.mcp`
 
-#### Scenario: Add Project page uses ProjectPageHeader with back button
+#### Scenario: Add Project page uses PageHeader with back button
 
 - **WHEN** `AddProjectView` renders
-- **THEN** it uses `<ProjectPageHeader>` with `back-label` prop set
+- **THEN** it uses `<PageHeader>` with `back-label` prop set
 - **AND** clicking the back button emits `back` and navigates to projects
   list
 
-#### Scenario: User-web project pages use ProjectPageHeader
+#### Scenario: User-web project pages use PageHeader
 
 - **WHEN** any user-web view that previously used an inline `<header>`
   block renders
-- **THEN** it uses `<ProjectPageHeader>` with `titleSize="lg"`
+- **THEN** it uses `<PageHeader>` with `titleSize="lg"`
 - **AND** the rendered output is pixel-accurate to the design in
   `pencil.mcp`
 
@@ -69,9 +69,9 @@ Before defining the props interface of any new shared component, ALL frames
 in `pencil.mcp` MUST be scanned to find every screen that uses the visual
 pattern — the props interface must cover all real usages found.
 
-#### Scenario: ProjectPageHeader props validated against all frames
+#### Scenario: PageHeader props validated against all frames
 
-- **WHEN** `ProjectPageHeader` props are defined
+- **WHEN** `PageHeader` props are defined
 - **THEN** every frame in `pencil.mcp` that contains a page header pattern
   has been scanned
 - **AND** the `titleSize`, `subtitle`, `backLabel`, and slot API covers

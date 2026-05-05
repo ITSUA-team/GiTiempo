@@ -12,7 +12,7 @@
   import { useAuthStore } from '@/stores/auth';
   import AddProjectForm from '@/components/projects/AddProjectForm.vue';
   import type { AddProjectFormValues } from '@/validation/projects';
-  import { ProjectPageHeader } from '@gitiempo/web-shared';
+  import { PageHeader } from '@gitiempo/web-shared';
   import ProjectSourceCard from '@/components/projects/ProjectSourceCard.vue';
 
   const router = useRouter();
@@ -126,7 +126,7 @@
 <template>
   <div class="flex flex-col gap-5">
     <!-- Page header with back link -->
-    <ProjectPageHeader
+    <PageHeader
       title="Add Project"
       subtitle="Create a project manually now, with the flexibility to add workspace imports alongside it."
       back-label="Back to projects"

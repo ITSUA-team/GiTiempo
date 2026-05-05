@@ -10,7 +10,7 @@
     createMembersClient,
     type ProjectsClient,
     type MembersClient,
-    ProjectPageHeader,
+    PageHeader,
     type StatCard,
   } from '@gitiempo/web-shared';
   import type { WorkspaceMemberResponse } from '@gitiempo/shared';
@@ -287,7 +287,7 @@
 <template>
   <div class="flex flex-col gap-6">
     <!-- Page Header -->
-    <ProjectPageHeader
+    <PageHeader
       title="Projects"
       subtitle="Manage project visibility, member assignments, and manual project creation."
       :cards="loading ? undefined : statsCards"
@@ -297,7 +297,7 @@
         class="!px-4 !py-[10px] !text-[14px] !font-semibold"
         @click="openCreateProject"
       />
-    </ProjectPageHeader>
+    </PageHeader>
 
     <!-- Loading -->
     <div v-if="loading" class="flex justify-center py-16">

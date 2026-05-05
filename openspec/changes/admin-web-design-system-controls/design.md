@@ -22,7 +22,7 @@ correct mechanism.
 `AdminPageHeader` in `admin-web` and the inline `<header>` blocks in
 `user-web` implement the same visual pattern: a page title, optional
 subtitle, optional back button, and an optional action slot on the right.
-Before defining the `ProjectPageHeader` API, all frames in `pencil.mcp`
+Before defining the `PageHeader` API, all frames in `pencil.mcp`
 must be scanned to find every screen that uses this pattern and confirm the
 props interface covers all real usages.
 
@@ -38,7 +38,7 @@ design-system enforcement that `AppFormField` and `AppSelect` provide.
 - `AppInput` uses PT to enforce `h-[34px] px-3` on the InputText root
 - `AppSelect` wraps `Select` with PT overrides for height, padding, radius,
   border — visually identical to `AppInput`
-- `ProjectPageHeader` is a single shared component used on every
+- `PageHeader` is a single shared component used on every
   project-related page in both apps — no more `AdminPageHeader` or inline
   header blocks
 - `AddProjectForm` uses only PrimeVue primitives via `AppInput`,
@@ -82,12 +82,12 @@ state, no `v-model`. A dedicated component would be over-engineering.
 `AppFormField` provides the label; a styled `div` provides the display
 value.
 
-### Decision: `ProjectPageHeader` lives in `packages/web-shared`
+### Decision: `PageHeader` lives in `packages/web-shared`
 
 The component is used on project-related pages in both `admin-web` and
 `user-web`. Placing it in `web-shared` removes the duplication and makes
 it available to any future app in the monorepo. The component name
-`ProjectPageHeader` (not `PageHeader`) signals its domain scope.
+`PageHeader` (not `PageHeader`) signals its domain scope.
 
 ### Decision: Scan `pencil.mcp` before defining any shared component API
 
@@ -101,7 +101,7 @@ prop-interface mismatches discovered late in review.
   future → Low risk: this project uses styled mode only.
 - [Risk] `AppSelect`'s PT may need to target different internal element
   names in future PrimeVue versions → Mitigation: document in skill file.
-- [Risk] `ProjectPageHeader` `titleSize` prop may not cover all design
+- [Risk] `PageHeader` `titleSize` prop may not cover all design
   variants → Mitigation: step 4.1 in tasks requires full frame scan in
   `pencil.mcp` before implementation.
 
@@ -110,8 +110,8 @@ prop-interface mismatches discovered late in review.
 1. Sync design tokens from `pencil.mcp`
 2. Fix `AppInput.vue` PT
 3. Create `AppSelect.vue`, export from `index.ts`
-4. Scan `pencil.mcp` for all `ProjectPageHeader` usages
-5. Create `ProjectPageHeader.vue`, export from `index.ts`
+4. Scan `pencil.mcp` for all `PageHeader` usages
+5. Create `PageHeader.vue`, export from `index.ts`
 6. Replace `AdminPageHeader` and inline header blocks in both apps
 7. Delete `AdminPageHeader.vue`
 8. Rewrite `AddProjectForm.vue` with PrimeVue primitives

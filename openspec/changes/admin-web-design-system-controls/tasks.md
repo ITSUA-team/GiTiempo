@@ -51,12 +51,12 @@
       **verify against all frames found in step 4.1**
 - [x] 4.6 Render subtitle `text-text-muted text-sm` when present —
       **verify against all frames found in step 4.1**
-- [x] 4.7 Export `ProjectPageHeader` from
+- [x] 4.7 Export `PageHeader` from
       `packages/web-shared/src/components/index.ts`
 - [x] 4.8 Replace `AdminPageHeader` in every file from step 1.1 with
-      `import { ProjectPageHeader } from '@gitiempo/web-shared'`
+      `import { PageHeader } from '@gitiempo/web-shared'`
 - [x] 4.9 Replace inline `<header>` blocks from step 1.2 with
-      `<ProjectPageHeader />`
+      `<PageHeader />`
 - [x] 4.10 Delete `apps/admin-web/src/components/layout/AdminPageHeader.vue`
 - [x] 4.11 Run `pnpm --filter admin-web typecheck` — no errors
 - [x] 4.12 Run `pnpm --filter user-web typecheck` — no errors
@@ -101,7 +101,7 @@ pnpm --filter admin-web typecheck`
 
 ## 8. Update skill file
 
-- [x] 8.1 Add `ProjectPageHeader` live documentation to
+- [x] 8.1 Add `PageHeader` live documentation to
       `.agents/skills/admin-web-shared-components/SKILL.md` —
       props table, import, usage examples, when-to-use/not-use;
       **rule: before creating any new shared component — scan ALL frames

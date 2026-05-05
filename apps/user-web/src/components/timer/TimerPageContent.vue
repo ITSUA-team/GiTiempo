@@ -4,7 +4,7 @@
   import DatePicker from 'primevue/datepicker';
   import ProgressSpinner from 'primevue/progressspinner';
   import Select from 'primevue/select';
-  import { ProjectPageHeader } from '@gitiempo/web-shared';
+  import { PageHeader } from '@gitiempo/web-shared';
 
   import { useTimerPage } from '@/composables/useTimerPage';
 
@@ -59,7 +59,7 @@
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <ProjectPageHeader
+    <PageHeader
       title="Timer"
       subtitle="Start tracking work from your visible projects and tasks or log a manual interval."
       title-size="lg"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ProjectPageHeader } from '@gitiempo/web-shared';
+  import { PageHeader } from '@gitiempo/web-shared';
   import Avatar from 'primevue/avatar';
   import Button from 'primevue/button';
   import InputText from 'primevue/inputtext';
@@ -20,7 +20,7 @@
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <ProjectPageHeader
+    <PageHeader
       title="Profile"
       subtitle="Manage your personal settings and session access."
       title-size="lg"
