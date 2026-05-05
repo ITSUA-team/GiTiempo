@@ -39,7 +39,10 @@
 
 ## Profile Page
 
-- Editable display name.
+- Editable display name backed by `PATCH /users/me`.
+- Display-name input is enabled and prefilled from the current user profile.
+- `Save changes` persists the latest valid display name and `Cancel` restores the latest persisted value.
+- A disabled placeholder row does not satisfy the editable display-name requirement.
 - GitHub connection card fields must reflect the current API contract only: `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt`.
 - GitHub connection card required states: loading, request-error, disconnected, connected, and redirecting/connecting.
 - Connected state actions: `Reconnect` and `Disconnect`.

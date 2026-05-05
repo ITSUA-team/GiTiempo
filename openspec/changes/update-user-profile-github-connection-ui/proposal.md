@@ -11,7 +11,7 @@ The user Profile page currently renders a static GitHub connection card that doe
 - Omit the avatar row when `avatarUrl` is `null`.
 - Surface callback outcomes and API failures through standard PrimeVue toast notifications, without inline callback banners.
 - Use standard PrimeVue `ConfirmDialog` for disconnect confirmation and existing design-token/PrimeVue component conventions.
-- Keep the Profile page display-name surface aligned with the approved design and existing `PATCH /users/me` capability if implementation scope includes editable profile details.
+- Implement the Profile page display-name surface with the existing `PATCH /users/me` capability while keeping it aligned with the approved design.
 
 ## Capabilities
 

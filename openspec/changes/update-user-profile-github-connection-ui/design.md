@@ -9,6 +9,7 @@ The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first
 **Goals:**
 
 - Render the Profile GitHub connection card from the implemented API and shared Zod response schema.
+- Render the Profile display-name surface as a real editable form backed by the existing `PATCH /users/me` API.
 - Cover only the documented page states: loading, request-error, disconnected, connected, and redirecting/connecting.
 - Display connected account data using the current API contract fields only.
 - Omit the avatar row when `avatarUrl` is `null`.
@@ -39,21 +40,27 @@ The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first
 
    Alternative considered: implement all behavior directly in `ProfileView.vue`. That would be smaller initially but creates a mixed orchestration/UI component and makes focused testing harder.
 
-   Boundary constraint: the GitHub connection flow and the editable profile-identity form are separate feature surfaces. Future updates should avoid combining them in one broad composable unless they share the same endpoint/state lifecycle for a concrete reason.
+    Boundary constraint: the GitHub connection flow and the editable profile-identity form are separate feature surfaces. Future updates should avoid combining them in one broad composable unless they share the same endpoint/state lifecycle for a concrete reason.
 
-3. Use `window.location.assign(authorizationUrl)` for GitHub OAuth navigation after `GET /github/auth-url` succeeds.
+3. Treat the editable display-name surface as shipped behavior, not a static design placeholder.
+
+   Rationale: the approved `.pen` design includes Save and Cancel controls, but the source of truth for this change requires an actual editable Profile identity surface. A disabled input or permanently disabled action row does not satisfy the spec and must remain incomplete in tasks until `PATCH /users/me` behavior ships.
+
+   Boundary constraint: if the identity form is left read-only in any intermediate step, the change artifacts must keep the relevant tasks unchecked and must not describe the surface as implemented.
+
+4. Use `window.location.assign(authorizationUrl)` for GitHub OAuth navigation after `GET /github/auth-url` succeeds.
 
    Rationale: the backend returns a full provider authorization URL and the flow intentionally leaves the SPA. The connecting state should be rendered while the request is in flight and before navigation occurs.
 
    Alternative considered: Vue Router navigation. That is not appropriate for an external GitHub URL.
 
-4. Treat callback query outcomes as transient toast-only feedback.
+5. Treat callback query outcomes as transient toast-only feedback.
 
    Rationale: docs require callback outcomes after redirect back to `/profile` to use toast notifications only and avoid inline success/error banners. After showing the toast, the page should remove the callback query parameters with router replacement so reloads do not repeat the toast.
 
    Alternative considered: show an inline banner in the GitHub card. That conflicts with the docs and approved design.
 
-5. Confirm disconnect through PrimeVue `ConfirmDialog` before calling `DELETE /github/connection`.
+6. Confirm disconnect through PrimeVue `ConfirmDialog` before calling `DELETE /github/connection`.
 
    Rationale: disconnect is destructive and docs require the shared confirmation pattern. On success, refresh or locally transition the card to disconnected and show a success toast; on failure, keep the previous state and show an error toast.
 

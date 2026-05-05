@@ -73,6 +73,7 @@ Use this skill when:
 - If the same UI block already exists in two stable call sites, extract or reuse it instead of duplicating it.
 - If docs define a pattern as shared across pages or apps, treat it as an extraction candidate even if only one concrete implementation currently exists.
 - Prefer extracting the smallest stable leaf. Example: a shared page header component is a good candidate before extracting an entire route section.
+- When a single component renders multiple documented states of the same surface, do not duplicate the same card chrome, heading block, and action-row skeleton across many `v-if` branches unless the structure is materially different. Prefer a small local primitive or state-config-driven render shape so copy-paste drift cannot accumulate.
 
 ## Critical Rules
 
@@ -85,16 +86,20 @@ Use this skill when:
 - Do not wrap a composable result in `reactive(...)` only to change template ergonomics. Pick one state representation per feature surface and keep it consistent between component code, tests, and template usage.
 - Empty state and error state are separate product states. Never render "no data" messaging after a failed fetch just because the local collection is empty; persist and render request errors distinctly.
 - Do not mark a frontend task complete when only transport/client tests exist for a change whose main risk is page or composable behavior. Stateful UI logic such as CTA mode switching, selection reset, derived status labels, and validation rules must have focused tests or remain explicitly incomplete.
+- When a route view assembles multiple tested leaves such as a form surface, a stateful composable, and a destructive action, add at least one focused view-level or feature-integration test for the assembled user-visible behavior. Boundary tests and composable tests alone are not enough to prove route wiring.
 - For async UI state machines, tests must cover not only the steady states but also the transition failures that return the user to a retryable state, especially for connect, reconnect, save, and destructive actions.
 - When adding a new frontend fetch path, reuse the existing repository error-message shape (`message`, then `error`, then status fallback) rather than inventing a new parse order or response-handling branch.
 - New or changed frontend fetch-boundary helpers must have focused tests for request path, auth headers, payload shape, response parsing, and API error propagation. Composable or page tests do not replace boundary-level coverage.
+- If a backend endpoint is documented or implemented as no-content, use a no-content response shape in boundary tests instead of a convenience JSON body so mocks keep the real contract visible.
 - For frontend API calls that load, mutate, or reconcile user-visible feature state, provide user-visible toast feedback for the outcome. Use success toasts for completed mutations and error toasts for failed reads or writes; inline empty/error UI can complement this but must not be the only feedback channel.
+- Do not treat disabled placeholder controls as satisfying a documented interactive surface. If docs, spec, or tasks say a surface is editable, saveable, confirmable, or otherwise interactive, the shipped UI must perform that behavior or the task must remain explicitly incomplete.
 - When a feature has documented loading, empty, request-error, connected/disconnected, or redirecting states, tests should exercise each user-visible state explicitly instead of inferring coverage from internal refs or a single happy-path flow.
 - Destructive actions that require confirmation must have tests for both accepted-success and accepted-failure paths. If cancellation keeps default PrimeVue behavior and no app logic runs on cancel, a dedicated cancel-path test is optional.
 - Query-driven toast flows such as OAuth callbacks, invite accepts, or magic-link results must test both success and error query variants plus URL cleanup after handling.
 - Do not stop at docs compliance if the implementation still differs from the approved `.pen` design. Check both every time.
 - If docs and design conflict, docs are the source of truth. If PrimeVue prevents an exact match, keep the docs-compliant behavior and document the PrimeVue-specific compromise.
 - Shared extraction is not limited to code that is already duplicated. When docs define a repeated standard pattern and the component contract is already small and stable, extract it proactively instead of waiting for a third copy.
+- When docs or specs define one action as primary and another as refresh, retry, or other supporting behavior, preserve that hierarchy in the rendered button variants. Do not ship equal-weight CTA rows that make the required primary action ambiguous.
 - Do not export low-level shared transport primitives such as generic JSON request helpers from a root package barrel unless they are intentionally part of the public package contract. Prefer domain clients or a narrow explicit subpath so future features do not bypass app-local/client ownership boundaries.
 - For time-based or event-driven UI state, ensure rendered output depends on the reactive source that is actually updated. Do not update a ticking ref, timer, or subscription state if the computed/template output bypasses that reactive value.
 - When a running or locked feature state invalidates upstream selectors or filters, enforce that invariant in both places: disable the UI control and block the underlying state mutation in the composable/store action. Do not rely on the template alone to protect feature invariants.
@@ -103,6 +108,7 @@ Use this skill when:
 - Keep error state scoped to the UI/action that produced it. Do not copy one failure into multiple unrelated page-level error refs or render duplicate inline error blocks for the same failed API action; use one local inline state plus toast feedback.
 - New Vue UI files should not add fresh lint warning debt. If lint reports auto-fixable class ordering, attribute ordering, or formatting warnings for newly added/rewritten Vue markup, fix them before marking the task complete.
 - Do not mark a UI task complete unless design parity review, PrimeVue exception review, and reusable-pattern review have all been completed in addition to the usual verification.
+- Do not mark a spec-driven frontend change complete when any behavior required by the active spec remains a static or disabled placeholder. Narrow the spec/task first or keep the task unchecked until the behavior ships.
 
 ## Verification
 
