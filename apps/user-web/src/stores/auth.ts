@@ -1,6 +1,10 @@
 import { defineStore } from "pinia";
 import { computed, shallowRef } from "vue";
-import type { TokenPairResponse, UserResponse } from "@gitiempo/shared";
+import type {
+  TokenPairResponse,
+  UpdateUserInput,
+  UserResponse,
+} from "@gitiempo/shared";
 import {
   clearRefreshToken,
   getRefreshToken,
@@ -167,6 +171,21 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function updateProfile(input: UpdateUserInput): Promise<UserResponse> {
+    if (!accessToken.value) {
+      throw new Error("Your session has expired. Please sign in again.");
+    }
+
+    const nextProfile = await getAuthRuntime().updateCurrentUser(
+      accessToken.value,
+      input,
+    );
+
+    profile.value = nextProfile;
+
+    return nextProfile;
+  }
+
   return {
     accessToken,
     bootstrapComplete,
@@ -179,6 +198,7 @@ export const useAuthStore = defineStore("auth", () => {
     loginWithGoogle,
     logout,
     profile,
+    updateProfile,
     userInitials,
     workspaceName,
   };

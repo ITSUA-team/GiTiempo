@@ -41,6 +41,11 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
     signOutIdentityProvider: async () => undefined,
+    updateCurrentUser: async (_accessToken, input) => ({
+      ...currentUser,
+      ...input,
+      updatedAt: "2026-01-02T00:00:00.000Z",
+    }),
     ...overrides,
   };
 }
@@ -250,5 +255,26 @@ describe("useAuthStore", () => {
     expect(authStore.profile).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
+  });
+
+  it("updates the current user profile from the shared runtime boundary", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+
+    const authStore = useAuthStore();
+    authStore.accessToken = "current-access-token";
+    authStore.profile = {
+      avatarUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Alexey Tsukanov",
+      email: "alexey@example.com",
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      role: "member",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await authStore.updateProfile({ displayName: "Alexey Updated" });
+
+    expect(authStore.profile?.displayName).toBe("Alexey Updated");
+    expect(authStore.displayName).toBe("Alexey Updated");
   });
 });

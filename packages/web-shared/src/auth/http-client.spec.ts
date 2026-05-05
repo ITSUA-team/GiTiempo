@@ -133,4 +133,44 @@ describe("createCurrentUserClient", () => {
       "Unauthorized",
     );
   });
+
+  it("patches the current user with validated payload and parses the response", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        avatarUrl: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        displayName: "Alexey Updated",
+        email: "alexey@example.com",
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        role: "member",
+        updatedAt: "2026-01-02T00:00:00.000Z",
+      }),
+    );
+    const client = createCurrentUserClient({ fetchFn });
+
+    const user = await client.updateCurrentUser("access-token", {
+      displayName: "Alexey Updated",
+    });
+
+    expect(user.displayName).toBe("Alexey Updated");
+    expect(fetchFn).toHaveBeenCalledWith("/users/me", {
+      body: JSON.stringify({ displayName: "Alexey Updated" }),
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
+    });
+  });
+
+  it("throws API messages for current-user updates", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({ message: "Display name is invalid" }, { status: 400 }),
+    );
+    const client = createCurrentUserClient({ fetchFn });
+
+    await expect(
+      client.updateCurrentUser("access-token", { displayName: "Alexey Updated" }),
+    ).rejects.toThrow("Display name is invalid");
+  });
 });
