@@ -25,6 +25,8 @@
 - [ ] 3.2 Render connected account fields as `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt` only.
 - [ ] 3.3 Omit the avatar row entirely when `avatarUrl` is `null`; do not render initials or a custom placeholder for the GitHub avatar.
 - [ ] 3.4 Use PrimeVue `Tag`, `Avatar`, `Skeleton`, `Button`, `ConfirmDialog`, and existing toast service patterns instead of custom equivalents.
+- [ ] 3.4A Keep the rendered `<ConfirmDialog>` host at the route, page-shell, or app-shell level instead of inside the GitHub card component.
+- [ ] 3.4B Reuse the documented/app-local page-header pattern for the Profile route instead of introducing another one-off title/subtitle block.
 - [ ] 3.5 Implement the editable display-name form with enabled input, dirty-state Save/Cancel behavior, and `PATCH /users/me` integration while preserving existing auth behavior.
 
 ## 4. Tests And Verification
@@ -34,3 +36,5 @@
 - [ ] 4.2C Add at least one focused Profile view or feature-integration test that proves route-view wiring for the assembled identity surface, GitHub connection surface, and sign-out action.
 - [ ] 4.3 Run `pnpm --filter user-web lint` and fix any newly introduced warnings.
 - [ ] 4.4 Run `pnpm --filter user-web typecheck` and fix any type errors.
+- [ ] 4.5 Because this change extends `packages/web-shared` auth/runtime helpers, run `pnpm --filter admin-web lint` and `pnpm --filter admin-web typecheck` too.
+- [ ] 4.6 Because this change touches shared auth/runtime behavior used by both SPAs, run `pnpm --filter user-web test` and `pnpm --filter admin-web test` before marking the change complete.

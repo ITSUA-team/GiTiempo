@@ -140,6 +140,19 @@ The profile page MUST expose editable profile information, API-backed GitHub con
 - **AND** the page does not introduce a second overlapping `/users/me` client boundary when an existing current-user client already owns that endpoint family
 - **AND** unrelated Profile sections are not merged into a single broad composable without a concrete shared state or lifecycle requirement
 
+#### Scenario: Profile destructive confirmation host stays page-scoped
+
+- **WHEN** the Profile page renders GitHub disconnect confirmation behavior
+- **THEN** the page uses the standard PrimeVue confirmation dialog pattern
+- **AND** the rendered `<ConfirmDialog>` host stays at the route, page-shell, or app-shell level
+- **AND** the implementation does not hide the confirmation host inside a leaf presentational card or field component
+
+#### Scenario: Profile route header follows the documented shared pattern
+
+- **WHEN** the Profile route renders its page title and subtitle
+- **THEN** it follows the documented page-header structure for user-web route views
+- **AND** the implementation reuses an existing app-local/shared header owner when that pattern already exists in the app instead of introducing a new one-off header markup variant
+
 #### Scenario: Profile route view wiring remains verifiable
 
 - **WHEN** the Profile page composes the identity surface, GitHub connection surface, and sign-out action

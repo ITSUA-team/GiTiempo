@@ -2,7 +2,7 @@
 
 The user-web Profile page currently contains static GitHub connection markup that does not call `GET /github/connection`, does not use the implemented `GET /github/auth-url` and `DELETE /github/connection` actions, and does not match the approved Profile design in `GITiempo.pen`. The backend and shared contract already expose the needed GitHub connection status shape, so this change is frontend implementation work scoped to `apps/user-web` plus focused app-local tests.
 
-The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first, match the approved `.pen` design, keep route views from becoming mixed orchestration/UI components, and verify with `pnpm --filter user-web lint && pnpm --filter user-web typecheck`. The page uses PrimeVue v4 and Tailwind token utilities, and standard dialog/toast behavior comes from the already-installed PrimeVue `ConfirmationService` and `ToastService`.
+The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first, match the approved `.pen` design, keep route views from becoming mixed orchestration/UI components, and verify with `pnpm --filter user-web lint && pnpm --filter user-web typecheck`. Because this change also extends `packages/web-shared` auth/runtime helpers used by both SPAs, completion must additionally include matching `admin-web` verification and both app test suites. The page uses PrimeVue v4 and Tailwind token utilities, and standard dialog/toast behavior comes from the already-installed PrimeVue `ConfirmationService` and `ToastService`.
 
 ## Goals / Non-Goals
 
@@ -65,6 +65,16 @@ The applicable app rules are in `apps/user-web/AGENTS.md`: use the UI docs first
    Rationale: disconnect is destructive and docs require the shared confirmation pattern. On success, refresh or locally transition the card to disconnected and show a success toast; on failure, keep the previous state and show an error toast.
 
    Alternative considered: inline confirmation inside the card. That would introduce a custom pattern outside the docs.
+
+   Boundary constraint: the card may trigger confirmation through emits or a composable, but the shared PrimeVue host surface for `<ConfirmDialog>` should stay page- or app-scoped rather than being hidden inside a leaf presentational card.
+
+7. Reuse the documented page-header structure instead of introducing another route-local variant.
+
+   Rationale: the user-web docs already define a stable page-header DOM pattern for route views. Leaving each screen to rebuild that header ad hoc creates agent-introduced one-off markup and makes future design parity reviews noisier.
+
+   Alternative considered: keep the Profile header inline because the markup is small. That is acceptable for a single throwaway surface, but this app already has multiple route views with the same title/subtitle block.
+
+   Boundary constraint: reuse can stay app-local. This change does not require cross-app extraction, but it should not add a fresh route-local header variant when the same app already renders the documented pattern elsewhere.
 
 ## Risks / Trade-offs
 
