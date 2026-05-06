@@ -6025,12 +6025,12 @@
     {
       "type": "frame",
       "id": "oqc9P",
-      "x": 7000,
-      "y": 0,
+      "x": 7038,
+      "y": -997,
       "name": "Profile",
       "clip": true,
       "width": 1280,
-      "height": 900,
+      "height": 1897,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -6147,6 +6147,35 @@
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xMcLn",
+                  "name": "adminLink",
+                  "height": 32,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 6,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#EEEEEE"
+                  },
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "t63C9k",
+                      "name": "adminLabel",
+                      "fill": "#5D2B85",
+                      "content": "Admin workspace",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
                     }
                   ]
                 }
@@ -6659,7 +6688,7 @@
                     },
                     {
                       "type": "frame",
-                      "id": "KcdzJ",
+                      "id": "aMhnx",
                       "name": "githubMeta",
                       "width": "fill_container",
                       "layout": "vertical",
@@ -6667,24 +6696,51 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "KLTq4",
-                          "name": "meta1",
+                          "id": "DQXZs",
+                          "name": "meta0",
                           "width": "fill_container",
                           "justifyContent": "space_between",
                           "children": [
                             {
                               "type": "text",
-                              "id": "8C1u7",
-                              "fill": "$color-text-muted",
-                              "content": "Connected account",
+                              "id": "tFW4Y",
+                              "fill": "#666666",
+                              "content": "GitHub user ID",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "500"
                             },
                             {
                               "type": "text",
-                              "id": "qUHdt",
-                              "fill": "$color-text-dark",
+                              "id": "uvG9H",
+                              "fill": "#1A1A1A",
+                              "content": "123456",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rBTNg",
+                          "name": "meta1",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "k8oxGL",
+                              "fill": "#666666",
+                              "content": "Login",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "m54M6",
+                              "fill": "#1A1A1A",
                               "content": "alexeytsukanov",
                               "fontFamily": "Inter",
                               "fontSize": 13,
@@ -6694,25 +6750,89 @@
                         },
                         {
                           "type": "frame",
-                          "id": "rroIv",
+                          "id": "VW254",
                           "name": "meta2",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "jDJCs",
+                              "fill": "#666666",
+                              "content": "Avatar",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "f54mjl",
+                              "name": "githubAvatar",
+                              "width": 40,
+                              "height": 40,
+                              "fill": {
+                                "type": "image",
+                                "enabled": true,
+                                "url": "https://avatars.githubusercontent.com/u/123456?v=4",
+                                "mode": "fill"
+                              },
+                              "cornerRadius": 20,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "#EEEEEE"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "NKjMf",
+                          "name": "meta3",
                           "width": "fill_container",
                           "justifyContent": "space_between",
                           "children": [
                             {
                               "type": "text",
-                              "id": "MBBwv",
-                              "fill": "$color-text-muted",
-                              "content": "Scopes",
+                              "id": "qil4A",
+                              "fill": "#666666",
+                              "content": "Connected at",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "500"
                             },
                             {
                               "type": "text",
-                              "id": "ZAb6d",
-                              "fill": "$color-text-dark",
-                              "content": "Organizations, repositories, issues",
+                              "id": "ZPpTa",
+                              "fill": "#1A1A1A",
+                              "content": "2026-05-01T10:15:00.000Z",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "reAbi",
+                          "name": "meta4",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Yqj3u",
+                              "fill": "#666666",
+                              "content": "Updated at",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "b8bhe",
+                              "fill": "#1A1A1A",
+                              "content": "2026-05-04T08:45:00.000Z",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "600"
@@ -6818,6 +6938,574 @@
                           "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "D4yZ9S",
+                  "name": "githubCardDisconnected",
+                  "width": 620,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-lg",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000014",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 3
+                  },
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "MeRto",
+                      "name": "githubHead",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "B6tBh",
+                          "name": "githubText",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uLRmW",
+                              "fill": "$color-text-dark",
+                              "content": "GitHub Connection",
+                              "fontFamily": "Inter",
+                              "fontSize": 18,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Y0Pze",
+                              "fill": "$color-text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": 420,
+                              "content": "Connect your GitHub account to start timers from organizations, repositories, and issues.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lXlwK",
+                          "name": "status",
+                          "fill": "#F4F4F5",
+                          "cornerRadius": "$radius-sm",
+                          "padding": [
+                            6,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wQw1w",
+                              "fill": "#666666",
+                              "content": "Disconnected",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O9djob",
+                      "name": "githubMeta",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "X40Pd",
+                          "fill": "#666666",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Connect GitHub to enable provider-backed timer sync.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JmD3z",
+                      "name": "githubActions",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pjbFd",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "$color-divider"
+                          },
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "pP5qf",
+                              "fill": "$color-text-dark",
+                              "content": "Refresh status",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "M44HEg",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "#5D2B85"
+                          },
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "OQusc",
+                              "fill": "#5D2B85",
+                              "content": "Connect GitHub",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a3siuu",
+                  "name": "githubCardConnecting",
+                  "width": 620,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-lg",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000014",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 3
+                  },
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "W80njd",
+                      "name": "githubHead",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N6uqbc",
+                          "name": "githubText",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "f85Og",
+                              "fill": "$color-text-dark",
+                              "content": "GitHub Connection",
+                              "fontFamily": "Inter",
+                              "fontSize": 18,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "VT3nY",
+                              "fill": "$color-text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": 420,
+                              "content": "The app is preparing your GitHub authorization flow and redirecting you to GitHub.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ziTGq",
+                          "name": "status",
+                          "fill": "#FFF3E0",
+                          "cornerRadius": "$radius-sm",
+                          "padding": [
+                            6,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "aNofx",
+                              "fill": "#B26A00",
+                              "content": "Connecting",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "R9Lzm",
+                      "name": "githubMeta",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XTKpS",
+                          "fill": "#666666",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Redirecting you to GitHub for approval.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TUjq2",
+                      "name": "githubActions",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "vOAX5",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "$color-divider"
+                          },
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "UBFAz",
+                              "fill": "$color-text-dark",
+                              "content": "Cancel",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "X7YUdt",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "#EEEEEE"
+                          },
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "jX7Yl",
+                              "fill": "#666666",
+                              "content": "Connecting...",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "t5Ydm",
+                  "name": "githubCardError",
+                  "width": 620,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-lg",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000014",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 3
+                  },
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VEY4M",
+                      "name": "githubHead",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "b017Ab",
+                          "name": "githubText",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Pu8Mk",
+                              "fill": "$color-text-dark",
+                              "content": "GitHub Connection",
+                              "fontFamily": "Inter",
+                              "fontSize": 18,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Hb9LE",
+                              "fill": "$color-text-muted",
+                              "textGrowth": "fixed-width",
+                              "width": 420,
+                              "content": "The last GitHub request failed. Retry the action or reconnect your account.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "yAi7w",
+                          "name": "status",
+                          "fill": "#FDECEC",
+                          "cornerRadius": "$radius-sm",
+                          "padding": [
+                            6,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "A18ss",
+                              "fill": "#D32F2F",
+                              "content": "Error",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HjZkf",
+                      "name": "githubMeta",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "NoxlT",
+                          "fill": "#666666",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Retry the request or start a fresh connection flow.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uA0p9",
+                      "name": "githubActions",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "RJ7K8",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "$color-divider"
+                          },
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "B2FA8w",
+                              "fill": "$color-text-dark",
+                              "content": "Retry",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "f1a8R",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-sm",
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "#5D2B85"
+                          },
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "yHoaK",
+                              "fill": "#5D2B85",
+                              "content": "Connect GitHub",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "k9A8h",
+                  "name": "githubCardLoading",
+                  "width": 620,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-lg",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000014",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 3
+                  },
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "I3NDKe",
+                      "name": "pat2t",
+                      "fill": "$color-text-dark",
+                      "content": "GitHub Connection",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hRpW4",
+                      "name": "githubLoadingBody",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hEUoU",
+                          "name": "pat2a",
+                          "width": "fill_container",
+                          "height": 18,
+                          "fill": "$color-app-bg",
+                          "cornerRadius": 6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ZRp5T",
+                          "name": "pat2b",
+                          "width": 300,
+                          "height": 40,
+                          "fill": "$color-app-bg",
+                          "cornerRadius": 20
+                        },
+                        {
+                          "type": "frame",
+                          "id": "U2PQn",
+                          "name": "pat2c",
+                          "width": "fill_container",
+                          "height": 72,
+                          "fill": "$color-app-bg",
+                          "cornerRadius": 8
+                        },
+                        {
+                          "type": "frame",
+                          "id": "m5m20q",
+                          "name": "pat2d",
+                          "width": "fill_container",
+                          "height": 40,
+                          "fill": "$color-app-bg",
+                          "cornerRadius": 6
                         }
                       ]
                     }

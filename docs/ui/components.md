@@ -79,6 +79,8 @@ Use PrimeVue `<Button>`. Do not recreate app buttons with raw HTML unless the su
 - Heights: `h-8`, `h-9`, `h-10` depending on density.
 - Minimum touch target: 44x44px via padding.
 - Loading state: use `<Button loading>`.
+- When one action is documented as primary and another is support or retry behavior, keep the primary action visually dominant. Do not render primary and secondary actions with the same variant weight.
+- In action rows that mix a main CTA with refresh, retry, or cancel helpers, use the documented primary CTA as the default filled button and keep helpers secondary, ghost, or outlined unless the spec says otherwise.
 
 ### Form Inputs
 
