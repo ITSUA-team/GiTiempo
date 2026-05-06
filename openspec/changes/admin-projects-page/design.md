@@ -77,8 +77,8 @@ Page structure (matches design node tree exactly):
 | Stat value | `text-[28px] font-semibold text-text-dark` |
 | Projects card | `rounded-[10px] shadow-card bg-surface p-5 flex flex-col gap-4` — **cornerRadius 10px** |
 | Table heading | `text-lg font-semibold text-text-dark` (18px/600) |
-| Filter label | `text-xs font-medium text-text-muted` (12px) |
-| Filter dropdown | `h-[38px] w-[260px] rounded-sm` |
+| Filter label | `text-xs font-medium text-text-muted` (12px/500) — gap between label and input is `gap-[6px]` |
+| Filter dropdown | `h-[38px] w-[260px] rounded-[6px]` — design: cornerRadius 6, **not** `rounded-sm` (4px) |
 | Table header row | `bg-app-bg h-[44px]`, cells `text-[13px] font-semibold text-text-dark px-3` |
 | Table body row | `h-[56px] border-t border-divider` |
 | Project name cell | `text-sm font-semibold text-text-dark` (14px/600) |
@@ -93,10 +93,16 @@ Page structure (matches design node tree exactly):
 Project settings inline expansion (appears below the expanded row):
 - Root: `bg-app-bg border-t border-divider p-4 flex items-end gap-[10px]`
 - Panel label: `text-[13px] font-semibold text-text-dark`
-- `<MultiSelect>` for members: `flex-1 h-[38px] rounded-sm`
-- `<Select>` for visibility: `w-[180px] h-[38px] rounded-sm`
-- Cancel button: `severity="secondary" variant="outlined" rounded-sm h-[34px]`
-- Save button: `bg-brand text-surface rounded-sm h-[34px]`
+- `<MultiSelect>` for members: `flex-1 h-[38px] rounded-[6px]` — design cornerRadius 6; **filter out admin-role members** from options (API returns 422 "Admins do not need project assignments" if an admin is submitted)
+- `<Select>` for visibility: `w-[180px] h-[38px] rounded-[6px]`
+- Cancel button: `severity="secondary" variant="outlined" rounded-[6px] h-[34px]`
+- Save button: `bg-brand text-surface rounded-[6px] h-[34px]`
+
+**D9 — Admin members excluded from assignment MultiSelect**
+The API enforces that admins cannot be assigned to projects (returns 422 "Admins do not need project assignments"). The `<MultiSelect>` in the inline settings expansion panel must filter `members.value` to exclude any member with `role === 'admin'` before building `memberSelectOptions`. The assigned-member filter `<Select>` above the table should also exclude admins for consistency.
+
+**D10 — "New Project" button height**
+The design shows the button height is determined by `padding: [10, 16]` (top/bottom 10px + font 14px line-height ≈ 20px = 40px total box) and `cornerRadius: 6`. PrimeVue `<Button>` adds its own internal padding that conflicts with Tailwind padding utilities applied via `class`. To get exact 38px height (matching filter inputs and the `h-[38px]` pattern used elsewhere), use `:pt="{ root: 'h-[38px] px-4 rounded-[6px]' }"` to override PrimeVue's internal padding via the `pt` prop rather than `class`.
 
 **Identified pixel mismatches in current implementation (to fix in Group 13):**
 1. Stat card `rounded-lg` (8px) → must be `rounded-[10px]` (design: cornerRadius 10)

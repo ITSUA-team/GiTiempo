@@ -116,3 +116,15 @@
 - [x] 14.1 Fix `fetchProjectSummary` in `apps/admin-web/src/services/projects.ts`: change path from `/projects/summary` → `/projects/management-summary` (actual route: `@Get('management-summary')` on `@Controller('projects')`)
 - [x] 14.2 Fix `fetchMembers` in `apps/admin-web/src/services/members.ts`: change path from `/workspace/members` → `/members` (actual route: `@Get()` on `@Controller('members')`)
 - [x] 14.3 Run `pnpm --filter admin-web typecheck` — confirm still clean after path fixes
+
+## 15. Admin Filter, Button Height, and Select Radius Fixes
+
+- [ ] 15.1 In `ProjectsView.vue`, add `nonAdminMembers` computed that filters `members.value` to exclude `role === 'admin'`
+- [ ] 15.2 Replace `memberSelectOptions` computed to use `nonAdminMembers` instead of `members.value` — admins must not appear in the inline settings `<MultiSelect>` (API returns 422 for admin assignments)
+- [ ] 15.3 Replace `memberOptions` computed (filter `<Select>` above table) to also use `nonAdminMembers` for consistency — admins cannot be assigned so filtering by them would always return no results
+- [ ] 15.4 Fix filter `<Select>` radius in `ProjectsView.vue`: change `rounded-sm` → `rounded-[6px]` (design: filterInput cornerRadius 6)
+- [ ] 15.5 Fix "New Project" button height in `ProjectsView.vue`: PrimeVue `<Button>` ignores Tailwind padding via `class`; switch to `:pt="{ root: 'h-[38px] px-4 rounded-[6px] bg-brand text-surface text-sm font-semibold' }"` and remove the conflicting `class` padding/height attributes — target rendered height is 38px matching the design
+- [ ] 15.6 Fix inline expansion `<MultiSelect>` radius: change `rounded-sm` → `rounded-[6px]`
+- [ ] 15.7 Fix inline expansion visibility `<Select>` radius: change `rounded-sm` → `rounded-[6px]`
+- [ ] 15.8 Run `pnpm --filter admin-web lint` — fix all issues
+- [ ] 15.9 Run `pnpm --filter admin-web typecheck` — fix all type errors
