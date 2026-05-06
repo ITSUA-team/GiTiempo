@@ -84,6 +84,7 @@ const emit = defineEmits<{
         severity="secondary"
         variant="outlined"
         label="Cancel"
+        :disabled="loadingMembers"
         :pt="{
           root: 'py-2 px-[14px] rounded-[6px] text-[13px] font-medium',
         }"
@@ -93,6 +94,7 @@ const emit = defineEmits<{
       <!-- Save -->
       <Button
         label="Save"
+        :disabled="loadingMembers"
         :pt="{
           root: 'py-2 px-[14px] rounded-[6px] bg-brand text-surface text-[13px] font-semibold',
         }"
