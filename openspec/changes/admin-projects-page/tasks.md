@@ -119,12 +119,172 @@
 
 ## 15. Admin Filter, Button Height, and Select Radius Fixes
 
-- [ ] 15.1 In `ProjectsView.vue`, add `nonAdminMembers` computed that filters `members.value` to exclude `role === 'admin'`
-- [ ] 15.2 Replace `memberSelectOptions` computed to use `nonAdminMembers` instead of `members.value` — admins must not appear in the inline settings `<MultiSelect>` (API returns 422 for admin assignments)
-- [ ] 15.3 Replace `memberOptions` computed (filter `<Select>` above table) to also use `nonAdminMembers` for consistency — admins cannot be assigned so filtering by them would always return no results
-- [ ] 15.4 Fix filter `<Select>` radius in `ProjectsView.vue`: change `rounded-sm` → `rounded-[6px]` (design: filterInput cornerRadius 6)
-- [ ] 15.5 Fix "New Project" button height in `ProjectsView.vue`: PrimeVue `<Button>` ignores Tailwind padding via `class`; switch to `:pt="{ root: 'h-[38px] px-4 rounded-[6px] bg-brand text-surface text-sm font-semibold' }"` and remove the conflicting `class` padding/height attributes — target rendered height is 38px matching the design
-- [ ] 15.6 Fix inline expansion `<MultiSelect>` radius: change `rounded-sm` → `rounded-[6px]`
-- [ ] 15.7 Fix inline expansion visibility `<Select>` radius: change `rounded-sm` → `rounded-[6px]`
-- [ ] 15.8 Run `pnpm --filter admin-web lint` — fix all issues
-- [ ] 15.9 Run `pnpm --filter admin-web typecheck` — fix all type errors
+- [x] 15.1 In `ProjectsView.vue`, add `nonAdminMembers` computed that filters `members.value` to exclude `role === 'admin'`
+- [x] 15.2 Replace `memberSelectOptions` computed to use `nonAdminMembers` instead of `members.value` — admins must not appear in the inline settings `<MultiSelect>` (API returns 422 for admin assignments)
+- [x] 15.3 Replace `memberOptions` computed (filter `<Select>` above table) to also use `nonAdminMembers` for consistency — admins cannot be assigned so filtering by them would always return no results
+- [x] 15.4 Fix filter `<Select>` radius in `ProjectsView.vue`: change `rounded-sm` → `rounded-[6px]` (design: filterInput cornerRadius 6)
+- [x] 15.5 Fix "New Project" button height in `ProjectsView.vue`: PrimeVue `<Button>` ignores Tailwind padding via `class`; switch to `:pt="{ root: 'h-[38px] px-4 rounded-[6px] bg-brand text-surface text-sm font-semibold' }"` and remove the conflicting `class` padding/height attributes — target rendered height is 38px matching the design
+- [x] 15.6 Fix inline expansion `<MultiSelect>` radius: change `rounded-sm` → `rounded-[6px]`
+- [x] 15.7 Fix inline expansion visibility `<Select>` radius: change `rounded-sm` → `rounded-[6px]`
+- [x] 15.8 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 15.9 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 16. Edit Form Design Fix and Post-Save/Archive Reactivity
+
+- [x] 16.1 Fix expansion panel layout in `ProjectsView.vue` to match design node `UD9Ym`: change outer `<div>` from a single horizontal `flex items-end` row to `flex flex-col gap-[10px]` (design: `layout:vertical, gap:10`); keep `bg-app-bg border-t border-divider p-4`
+- [x] 16.2 Move the "Project settings" `<p>` title to be the first child of the new vertical outer div — it is a standalone heading above the controls row, not a sibling inside the controls row
+- [x] 16.3 Wrap all four controls (MultiSelect, visibility Select, Cancel, Save) in an inner `<div class="flex items-end gap-[10px]">` — this is the `settingsRow` from the design (`layout:horizontal, alignItems:end, gap:10`)
+- [x] 16.4 Change `assignments` state from `reactive(new Map<string, ProjectAssignmentListResponse>())` to `ref<Record<string, ProjectAssignmentListResponse>>({})` so template reads on `assignments.value[id]` are properly tracked by Vue's reactivity system
+- [x] 16.5 Update `loadAll()`: replace `assignments.clear()` + `assignments.set(id, a)` loop with a single `assignments.value = fresh` assignment where `fresh` is built as a plain `Record` object
+- [x] 16.6 Update `filteredProjects` computed: replace `assignments.get(p.id)` with `assignments.value[p.id]`
+- [x] 16.7 Update the "Assigned members" column body template: replace `assignments.get(data.id)` with `assignments[data.id]` (no `.value` — vue-tsc auto-unwraps refs in templates)
+- [x] 16.8 Update `watch(expandedRows)` pre-population: replace `assignments.get(projectId)` with `assignments.value[projectId]`
+- [x] 16.9 Update `saveRow()`: replace `assignments.set(projectId, fresh)` with `assignments.value = { ...assignments.value, [projectId]: fresh }` so the ref change triggers reactivity
+- [x] 16.10 Fix `collapseRow()`: after removing the key from `expandedRows`, also `delete editMembers[projectId]` and `delete editVisibility[projectId]` — this ensures the `watch(expandedRows)` re-initializes both fields from the latest `assignments` data the next time the row is expanded, instead of reusing stale pre-save draft values
+- [x] 16.11 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 16.12 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 17. Decompose ProjectsView into Focused Components
+
+All new components are admin-web–local and go in `apps/admin-web/src/components/projects/`.
+Prefer PrimeVue components (`Tag`, `Button`, `MultiSelect`, `Select`, `InputText`, `Dialog`) over raw HTML elements wherever PrimeVue has an equivalent.
+
+### 17.1 — ProjectVisibilityBadge
+
+- [x] 17.1.1 Create `apps/admin-web/src/components/projects/ProjectVisibilityBadge.vue`
+- [x] 17.1.2 Define props: `visibility: 'public' | 'private'`
+- [x] 17.1.3 Render a PrimeVue `<Tag>` with `:value="visibility === 'public' ? 'Public' : 'Private'"` and `:pt` overrides to match design tokens — Public: `bg-accent-tint text-brand`; Private: `bg-status-warn-bg text-status-warn-text`; both: `rounded-sm px-2 py-1 text-xs font-semibold` (no raw `<span>`)
+
+### 17.2 — ProjectSettingsPanel
+
+- [x] 17.2.1 Create `apps/admin-web/src/components/projects/ProjectSettingsPanel.vue`
+- [x] 17.2.2 Define props: `modelMembers: string[]`, `modelVisibility: string`, `memberOptions: { label: string; value: string }[]`, `visibilityOptions: { label: string; value: string }[]`, `saving: boolean`
+- [x] 17.2.3 Define emits: `update:modelMembers`, `update:modelVisibility`, `save`, `cancel`
+- [x] 17.2.4 Implement template matching design node `UD9Ym` exactly: outer `<div class="bg-app-bg border-t border-divider flex flex-col gap-[10px] p-4">`, title `<p class="text-text-dark text-[13px] font-semibold">Project settings</p>`, inner controls row `<div class="flex items-end gap-[10px]">`
+- [x] 17.2.5 In the controls row: `<MultiSelect>` (flex-1) for members with `v-model` bound to `modelMembers` via `defineModel` or emits; `<Select>` (w-[180px]) for visibility; `<Button severity="secondary" variant="outlined" label="Cancel">` emitting `cancel`; `<Button label="Save" :loading="saving">` emitting `save`
+- [x] 17.2.6 Use `v-model:modelMembers` and `v-model:modelVisibility` two-way binding pattern with `defineModel` (Vue 3.4+) or explicit prop + emit
+
+### 17.3 — NewProjectDialog
+
+- [x] 17.3.1 Create `apps/admin-web/src/components/projects/NewProjectDialog.vue`
+- [x] 17.3.2 Define props: `visible: boolean`, `saving: boolean`, `visibilityOptions: { label: string; value: string }[]`; emit: `update:visible`, `submit: (payload: { name: string; visibility: 'public' | 'private' }) => void`
+- [x] 17.3.3 Manage internal `name` and `visibility` refs; reset both when `visible` prop transitions to `true` (use `watch`)
+- [x] 17.3.4 Implement validation: `nameError` ref set to `'Project name is required.'` when name is empty on submit; cleared on each submit attempt
+- [x] 17.3.5 Implement template: PrimeVue `<Dialog v-model:visible="..." header="New Project" modal class="w-[480px]">` — name field using `<InputText>` with `:invalid` binding and `<small>` error; visibility field using `<Select>`; footer slot with Cancel and Create `<Button>` components — no raw `<input>` or `<select>` elements
+
+### 17.4 — ProjectsTable
+
+- [x] 17.4.1 Create `apps/admin-web/src/components/projects/ProjectsTable.vue`
+- [x] 17.4.2 Define props: `projects: ProjectListResponse`, `assignments: Record<string, ProjectAssignmentListResponse>`, `memberOptions: { label: string | null; value: string | null }[]`, `memberSelectOptions: { label: string; value: string }[]`, `visibilityOptions: { label: string; value: string }[]`, `assignmentsLoading: boolean`, `expandedRows: Record<string, boolean>`, `editMembers: Record<string, string[]>`, `editVisibility: Record<string, string>`, `savingRows: Record<string, boolean>`, `filterMemberId: string | null`
+- [x] 17.4.3 Define emits: `update:expandedRows`, `update:filterMemberId`, `update:editMembers`, `update:editVisibility`, `toggleRow: (id: string) => void`, `archiveProject: (id: string) => void`, `saveRow: (id: string) => void`, `collapseRow: (id: string) => void`
+- [x] 17.4.4 Move the table header row (title + filter `<Select>`), the full `<DataTable>` with all `<Column>` definitions, and the `#expansion` template slot into this component; use `<ProjectVisibilityBadge>` in the Visibility column; use `<ProjectSettingsPanel>` in the `#expansion` slot
+- [x] 17.4.5 Use `<Skeleton>` from PrimeVue (already imported) for the loading state in the Project name and Assigned members columns while `assignmentsLoading` is true
+
+### 17.5 — Refactor ProjectsView
+
+- [x] 17.5.1 Remove all markup from `ProjectsView.vue` that is now covered by child components; import and use `ProjectsTable`, `NewProjectDialog` in the template
+- [x] 17.5.2 Keep only orchestration concerns in `ProjectsView.vue`: state declarations, `loadAll`, `onMounted`, computed (`summaryStats`, `nonAdminMembers`, `memberOptions`, `memberSelectOptions`, `filteredProjects`, `visibilityOptions`), `expandedRows` watch, `toggleRow`, `collapseRow`, `saveRow`, `archiveProject`, `submitNewProject`
+- [x] 17.5.3 The final `ProjectsView.vue` template must contain only: the loading spinner, `<PageHeader>` with New Project button, the projects card `<div>` containing `<ProjectsTable>`, and `<NewProjectDialog>` — no inline `<DataTable>`, `<Column>`, `<Dialog>`, `<MultiSelect>`, or `<Select>` markup
+
+### 17.6 — Quality
+
+- [x] 17.6.1 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 17.6.2 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 18. Edit Form Pixel-Perfect Fix
+
+Design source of truth: node `UD9Ym` (`projectSettings`) in `GITiempo.pen`.
+
+### 18.1 — Background color
+
+- [x] 18.1 Fix `ProjectSettingsPanel.vue` root `<div>` background: change `bg-app-bg` → `bg-[#F4F4F5]` — design node `UD9Ym` has `fill: #F4F4F5` (light grey), not the app background white. No token maps to this value; use the raw Tailwind arbitrary value.
+
+### 18.2 — Expansion cell padding
+
+- [x] 18.2 In `ProjectsTable.vue`, add `expansionCell: 'p-0'` to the DataTable `:pt` object alongside the existing `bodyCell: 'px-3'` — PrimeVue applies `bodyCell` pt to the `<td>` that wraps the `#expansion` slot, adding unwanted `px-3` horizontal padding that pushes the panel away from the table edges. `expansionCell: 'p-0'` overrides this so `ProjectSettingsPanel` fills edge-to-edge as designed.
+
+### 18.3 — Button sizing via `:pt`
+
+- [x] 18.3 Fix Cancel button in `ProjectSettingsPanel.vue`: replace `class="h-[34px] rounded-[6px]"` with `:pt="{ root: 'py-2 px-[14px] rounded-[6px] text-[13px] font-medium' }"` — design node `xMII9` (`cancelBtn`) has `padding: [8, 14]` (py=8px, px=14px) and `fontSize: 13, fontWeight: 500`; PrimeVue `<Button>` ignores `class` height/padding so `:pt` is required
+- [x] 18.4 Fix Save button in `ProjectSettingsPanel.vue`: replace `class="bg-brand text-surface h-[34px] rounded-[6px]"` with `:pt="{ root: 'py-2 px-[14px] rounded-[6px] bg-brand text-surface text-[13px] font-semibold' }"` — design node `Fq21c` (`saveBtn`) has `padding: [8, 14]`, `fill: #5D2B85`, `fontSize: 13, fontWeight: 600`
+
+### 18.5 — Verify with Pencil MCP
+
+- [x] 18.5 After completing 18.1–18.4, take a screenshot of design node `UD9Ym` using Pencil MCP and compare it against the rendered component visually — confirm background is grey `#F4F4F5`, panel fills full table width with no side padding gaps, and button sizes match the design
+- [x] 18.6 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 18.7 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 19. Edit Form Expansion Cell & Background Corrections
+
+Two bugs introduced by Group 18 need fixing.
+
+### 19.1 — Wrong PT key for expansion cell
+
+- [x] 19.1 In `ProjectsTable.vue`, replace the incorrect `expansionCell: 'p-0'` key in the DataTable `:pt` object with `rowExpansionCell: 'p-0'` — the correct PrimeVue DataTable PT key for the `<td>` that wraps the `#expansion` slot is `rowExpansionCell`, not `expansionCell`. The wrong key has no effect, so the expansion `<td>` still inherits default PrimeVue padding, causing the `ProjectSettingsPanel` to be inset from the table edges.
+
+### 19.2 — Wrong background color
+
+- [x] 19.2 In `ProjectSettingsPanel.vue`, revert the root `<div>` background from `bg-[#F4F4F5]` back to `bg-app-bg` — design node `UD9Ym` has `fill: "$color-app-bg"` (not `#F4F4F5`); the `$color-app-bg` token maps to `bg-app-bg` utility. The hardcoded hex introduced in task 18.1 was incorrect.
+
+### 19.3 — Quality
+
+- [x] 19.3 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 19.4 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 20. Re-render Project Rows After Save
+
+After `saveRow` completes, the "Assigned members" count and visibility badge in the table do not update until the user reloads the page.
+
+### Root cause
+
+`saveRow` in `ProjectsView.vue` already refreshes `assignments.value` (spread-replace) and patches `projects.value[idx]` (index mutation). The spread-replace on `assignments` correctly triggers Vue reactivity and the prop change propagates to `ProjectsTable`. However PrimeVue DataTable caches row slot renders keyed by `data-key="id"` — when the row object identity does not change (index mutation preserves the same array reference and same row object reference after `projects.value[idx] = { ...projects.value[idx] }`) DataTable does not re-render the body cells for that row.
+
+### Fix
+
+- [x] 20.1 In `ProjectsView.vue` `saveRow`, after patching `projects.value[idx]`, replace the whole `projects` array with a new array so DataTable sees a changed prop and re-renders all rows: change `projects.value[idx] = { ...projects.value[idx], visibility: ... }` to a `projects.value = projects.value.map(...)` immutable replacement — this guarantees both the row object reference and the array reference change, forcing DataTable body cell slots to re-evaluate with the updated `assignments` and `visibility`.
+
+  Replace the current block:
+  ```ts
+  const idx = projects.value.findIndex((p) => p.id === projectId);
+  if (idx !== -1) {
+    projects.value[idx] = {
+      ...projects.value[idx],
+      visibility: editVisibility[projectId] as 'public' | 'private',
+    };
+  }
+  ```
+  With:
+  ```ts
+  projects.value = projects.value.map((p) =>
+    p.id === projectId
+      ? { ...p, visibility: editVisibility[projectId] as 'public' | 'private' }
+      : p,
+  );
+  ```
+
+- [x] 20.2 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 20.3 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 21. Re-render Fix (Correct Approach) + Filter Default
+
+### 21.1 — Re-render after save via full reload
+
+The `projects.value = projects.value.map(...)` approach introduced in task 20.1 still does not force PrimeVue DataTable to re-render body cell slots because DataTable compares row identity by `data-key` — replacing the array reference is not sufficient when the key values are unchanged. The correct and reliable approach is to call `loadAll()` after a successful save, exactly as `archiveProject` already does. This refreshes `projects`, `assignments`, and `summary` from the server in one shot and guarantees the table reflects the latest state.
+
+- [x] 21.1 In `ProjectsView.vue` `saveRow`, replace the manual local state patches and `fetchProjectAssignments` re-fetch with a single `await loadAll()` call after all API mutations succeed. Remove:
+  - `const fresh = await fetchProjectAssignments(token, projectId)`
+  - `assignments.value = { ...assignments.value, [projectId]: fresh }`
+  - `projects.value = projects.value.map(...)`
+
+  The `saveRow` success path should be: await all mutations → `await loadAll()` → `collapseRow(projectId)` → show success toast.
+
+### 21.2 — "All members" as default selected value in filter Select
+
+The filter `<Select>` above the table has `{ label: 'All members', value: null }` as the first option but `filterMemberId` is initialised to `null` without explicitly binding a `placeholder` — PrimeVue `<Select>` shows an empty placeholder when the value is `null` unless a `placeholder` prop is set or the option with `value: null` is treated as a real selectable option. The user sees a blank filter instead of "All members" on first load.
+
+- [x] 21.2 In `ProjectsView.vue`, change `filterMemberId` initial value from `null` to the string sentinel `'all'`; update `memberOptions` computed to use `{ label: 'All members', value: 'all' }` as the first option; update `filteredProjects` computed to treat `filterMemberId.value === 'all'` (instead of `!filterMemberId.value`) as "show all". This avoids the `null`-vs-placeholder ambiguity in PrimeVue `<Select>` and makes "All members" appear selected by default. Also update the `filterMemberId` prop type in `ProjectsTable.vue` from `string | null` to `string` accordingly.
+
+### 21.3 — Quality
+
+- [x] 21.3 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 21.4 Run `pnpm --filter admin-web typecheck` — fix all type errors
