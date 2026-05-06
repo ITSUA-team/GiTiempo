@@ -162,7 +162,7 @@ async function handleSaveProfile(): Promise<void> {
             <InputText
               data-testid="profile-email-input"
               input-id="profile-email"
-              :model-value="authStore.profile?.email ?? 'alexey@example.com'"
+              :model-value="authStore.profile?.email ?? ''"
               disabled
               class="h-[42px] w-full"
               :pt="{

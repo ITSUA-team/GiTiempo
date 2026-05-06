@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Skeleton from "primevue/skeleton";
@@ -20,6 +21,42 @@ const emit = defineEmits<{
   disconnect: [];
   refresh: [];
 }>();
+
+const statusTagConfig = computed(() => {
+  switch (props.status) {
+    case "connected":
+      return {
+        ptRoot:
+          "rounded-sm bg-status-active-bg px-2 py-1 text-[10px] font-semibold text-status-active-text",
+        severity: "success" as const,
+        value: "Connected",
+      };
+
+    case "connecting":
+      return {
+        ptRoot: "rounded-sm px-2 py-1 text-[10px] font-semibold",
+        severity: "warn" as const,
+        value: "Connecting",
+      };
+
+    case "request-error":
+      return {
+        ptRoot: "rounded-sm px-2 py-1 text-[10px] font-semibold",
+        severity: "danger" as const,
+        value: "Error",
+      };
+
+    case "disconnected":
+      return {
+        ptRoot: "rounded-sm px-2 py-1 text-[10px] font-semibold",
+        severity: "secondary" as const,
+        value: "Disconnected",
+      };
+
+    default:
+      return null;
+  }
+});
 </script>
 
 <template>
@@ -36,34 +73,11 @@ const emit = defineEmits<{
       </div>
 
       <Tag
-        v-if="props.status !== 'loading'"
-        :severity="
-          props.status === 'connected'
-            ? 'success'
-            : props.status === 'connecting'
-              ? 'warn'
-              : props.status === 'request-error'
-                ? 'danger'
-                : 'secondary'
-        "
-        :value="
-          props.status === 'connected'
-            ? 'Connected'
-            : props.status === 'connecting'
-              ? 'Connecting'
-              : props.status === 'request-error'
-                ? 'Error'
-                : 'Disconnected'
-        "
+        v-if="statusTagConfig"
+        :severity="statusTagConfig.severity"
+        :value="statusTagConfig.value"
         :pt="{
-          root:
-            props.status === 'connected'
-              ? 'rounded-sm bg-status-active-bg px-2 py-1 text-[10px] font-semibold text-status-active-text'
-              : props.status === 'connecting'
-                ? 'rounded-sm px-2 py-1 text-[10px] font-semibold'
-                : props.status === 'request-error'
-                  ? 'rounded-sm px-2 py-1 text-[10px] font-semibold'
-                  : 'rounded-sm px-2 py-1 text-[10px] font-semibold',
+          root: statusTagConfig.ptRoot,
           label: 'leading-none',
         }"
       />
