@@ -1,0 +1,239 @@
+name: Deploy API
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub Environment and VPS target.
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      run_migrations:
+        description: Run the one-shot migration service before API rollout.
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      ref:
+        description: Optional branch, tag, or SHA to deploy.
+        required: false
+        type: string
+      image_tag:
+        description: Optional prebuilt API image tag/digest for this repo's GHCR API image.
+        required: false
+        type: string
+  push:
+    branches:
+      - staging
+    paths:
+      - apps/api/**
+      - packages/shared/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - .dockerignore
+      - apps/api/Dockerfile
+      - apps/api/compose.e2e.yml
+      - apps/api/compose.smoke.yml
+      - deploy/api/**
+      - scripts/api-e2e-docker.sh
+      - scripts/api-smoke-docker.sh
+      - .github/workflows/deploy-api.yml
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy:
+    name: Deploy API
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+    concurrency:
+      group: api-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+      cancel-in-progress: false
+    env:
+      CI: true
+      DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+      RUN_MIGRATIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_migrations || 'true' }}
+      PREBUILT_IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || '' }}
+      PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
+      API_DEPLOY_PATH: ${{ vars.API_DEPLOY_PATH }}
+      VPS_HOST: ${{ vars.VPS_HOST }}
+      VPS_USER: ${{ vars.VPS_USER }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+
+      - name: Set up pnpm
+        if: env.PREBUILT_IMAGE_TAG == ''
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+          run_install: false
+
+      - name: Set up Node.js
+        if: env.PREBUILT_IMAGE_TAG == ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        if: env.PREBUILT_IMAGE_TAG == ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint API
+        if: env.PREBUILT_IMAGE_TAG == ''
+        run: pnpm exec turbo run lint --filter=@gitiempo/api
+
+      - name: Typecheck API
+        if: env.PREBUILT_IMAGE_TAG == ''
+        run: pnpm exec turbo run typecheck --filter=@gitiempo/api
+
+      - name: Test API
+        if: env.PREBUILT_IMAGE_TAG == ''
+        run: pnpm exec turbo run test --filter=@gitiempo/api
+
+      - name: Run Docker-backed API e2e
+        if: env.PREBUILT_IMAGE_TAG == ''
+        run: pnpm api:e2e:docker
+
+      - name: Compute image metadata
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_repo="ghcr.io/${GITHUB_REPOSITORY}/api"
+          image_repo="$(printf '%s' "$image_repo" | tr '[:upper:]' '[:lower:]')"
+          tag_pattern='[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}'
+          digest_pattern='sha256:[a-f0-9]{64}'
+          repo_tag_prefix="${image_repo}:"
+          repo_digest_prefix="${image_repo}@"
+
+          if [ -n "$PREBUILT_IMAGE_TAG" ]; then
+            if [[ "$PREBUILT_IMAGE_TAG" =~ ^${tag_pattern}$ ]]; then
+              image="$image_repo:$PREBUILT_IMAGE_TAG"
+            elif [[ "$PREBUILT_IMAGE_TAG" == "$repo_tag_prefix"* ]]; then
+              tag="${PREBUILT_IMAGE_TAG#"$repo_tag_prefix"}"
+              if [[ ! "$tag" =~ ^${tag_pattern}$ ]]; then
+                printf '::error::Invalid prebuilt API image tag: %s\n' "$tag"
+                exit 1
+              fi
+              image="$PREBUILT_IMAGE_TAG"
+            elif [[ "$PREBUILT_IMAGE_TAG" == "$repo_digest_prefix"* ]]; then
+              digest="${PREBUILT_IMAGE_TAG#"$repo_digest_prefix"}"
+              if [[ ! "$digest" =~ ^${digest_pattern}$ ]]; then
+                printf '::error::Invalid prebuilt API image digest: %s\n' "$digest"
+                exit 1
+              fi
+              image="$PREBUILT_IMAGE_TAG"
+            else
+              printf '::error::Prebuilt image must be a tag for %s\n' "$image_repo"
+              exit 1
+            fi
+          else
+            short_sha="${GITHUB_SHA::12}"
+            image="$image_repo:${DEPLOY_ENV}-${short_sha}"
+          fi
+
+          printf 'image_repo=%s\n' "$image_repo" >> "$GITHUB_OUTPUT"
+          printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        run: printf '%s' "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build API image
+        if: env.PREBUILT_IMAGE_TAG == ''
+        run: docker build -f apps/api/Dockerfile -t "${{ steps.image.outputs.image }}" .
+
+      - name: Smoke API image
+        env:
+          API_IMAGE: ${{ steps.image.outputs.image }}
+        run: ./scripts/api-smoke-docker.sh
+
+      - name: Push API image
+        if: env.PREBUILT_IMAGE_TAG == ''
+        run: docker push "${{ steps.image.outputs.image }}"
+
+      - name: Validate deploy environment
+        shell: bash
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          require_env() {
+            local name="$1"
+            if [[ -z "${!name:-}" ]]; then
+              printf '::error::%s is required\n' "$name"
+              exit 1
+            fi
+          }
+
+          require_env PUBLIC_API_URL
+          require_env API_DEPLOY_PATH
+          require_env VPS_HOST
+          require_env VPS_USER
+          require_env VPS_SSH_KEY
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/gitiempo_api_deploy
+          chmod 600 ~/.ssh/gitiempo_api_deploy
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload deploy files
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" "mkdir -p '$API_DEPLOY_PATH'"
+          scp -i ~/.ssh/gitiempo_api_deploy deploy/api/compose.yml deploy/api/.env.example deploy/api/nginx.staging.example.conf "$VPS_USER@$VPS_HOST:$API_DEPLOY_PATH/"
+
+      - name: Pull and restart API on VPS
+        shell: bash
+        env:
+          DEPLOY_IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          set -euo pipefail
+
+          ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
+            "cd '$API_DEPLOY_PATH' && API_IMAGE='$DEPLOY_IMAGE' docker compose pull postgres api migrate"
+
+          ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
+            "cd '$API_DEPLOY_PATH' && API_IMAGE='$DEPLOY_IMAGE' docker compose up -d postgres"
+
+          if [ "$RUN_MIGRATIONS" = "true" ]; then
+            ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
+              "cd '$API_DEPLOY_PATH' && API_IMAGE='$DEPLOY_IMAGE' docker compose run --rm migrate"
+          fi
+
+          ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
+            "cd '$API_DEPLOY_PATH' && API_IMAGE='$DEPLOY_IMAGE' docker compose up -d --force-recreate api"
+
+      - name: Check public API readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if curl -fsS "$PUBLIC_API_URL/commons/health/ready"; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          exit 1

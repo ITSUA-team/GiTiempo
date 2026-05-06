@@ -21,7 +21,7 @@ Time-tracking application for teams working with GitHub Issues and Projects.
 
 ## Prerequisites
 
-- Node.js 22+
+- Node.js 24 LTS
 - pnpm 10+ (managed via corepack)
 
 ```bash
@@ -204,6 +204,9 @@ Required staging values:
 |---|---|---|
 | `CLOUDFLARE_ACCOUNT_ID` | environment variable | Cloudflare account that owns the Workers and `itsua.dev` zone |
 | `CLOUDFLARE_API_TOKEN` | environment secret | Must allow Workers deploys and custom-domain/route updates for `itsua.dev` |
+| `VITE_API_BASE_URL` | environment variable | `https://gitiempo-api.itsua.dev` |
+| `VITE_ADMIN_APP_URL` | environment variable | `https://gitiempo-admin.itsua.dev` |
+| `VITE_USER_APP_URL` | environment variable | `https://gitiempo.itsua.dev` |
 | `VITE_FIREBASE_API_KEY` | environment variable | Firebase client config used at Vite build time |
 | `VITE_FIREBASE_APP_ID` | environment variable | Firebase client config used at Vite build time |
 | `VITE_FIREBASE_AUTH_DOMAIN` | environment variable | Firebase client config used at Vite build time |
@@ -211,11 +214,7 @@ Required staging values:
 | `VITE_FIREBASE_PROJECT_ID` | environment variable | Firebase client config used at Vite build time |
 | `VITE_FIREBASE_STORAGE_BUCKET` | environment variable | Firebase client config used at Vite build time |
 
-The workflow sets these staging URLs during the build:
-
-- `VITE_API_BASE_URL=https://gitiempo.itsua.dev`
-- `VITE_ADMIN_APP_URL=https://gitiempo-admin.itsua.dev`
-- `VITE_USER_APP_URL=https://gitiempo.itsua.dev`
+The shared staging GitHub Environment example is `deploy/github-environment.staging.example.env`.
 
 Firebase Auth must authorize both staging domains before login can work end-to-end:
 
@@ -230,6 +229,32 @@ Automatic deploys run from the `staging` branch:
 Manual deploys use the `Deploy frontend staging` workflow with `target=user-web`, `target=admin-web`, or `target=both`. The optional `ref` input deploys a branch, tag, or SHA.
 
 Implementation safety rule: do not run a live `wrangler deploy` while adding or validating deploy infrastructure. The first live staging deploy is a separate operator action after the GitHub Environment, Firebase authorized domains, and Cloudflare token permissions are ready.
+
+### API Staging Deploys
+
+The staging API deploy publishes `@gitiempo/api` as a Docker image to GHCR and rolls it out on the VPS with Docker Compose.
+
+Staging API URL: `https://gitiempo-api.itsua.dev`.
+
+Required GitHub Environment: `staging`.
+
+Required staging values:
+
+| Name | Type | Notes |
+|---|---|---|
+| `PUBLIC_API_URL` | environment variable | `https://gitiempo-api.itsua.dev`; used for public readiness checks |
+| `API_DEPLOY_PATH` | environment variable | VPS deploy directory; staging currently uses `/root/gitiempo` |
+| `VPS_HOST` | environment variable | VPS SSH host |
+| `VPS_USER` | environment variable | VPS SSH user |
+| `VPS_SSH_KEY` | environment secret | SSH private key for deploy; scoped only to SSH-related workflow steps |
+
+Manual deploys use the `Deploy API` workflow. Its optional `image_tag` input accepts only tags or digests for this repository's `ghcr.io/<owner>/<repo>/api` image, and every selected image is smoke-tested before SSH rollout. Automatic staging deploys run from the `staging` branch when API deployment paths change.
+
+The VPS must already be logged into GHCR with read access to the API package, unless the package is public. The workflow does not pass GitHub registry tokens to the VPS.
+
+The optional nginx baseline for the staging API is `deploy/api/nginx.staging.example.conf`. It includes port 80 to 443 redirect, TLS certificate placeholders, reverse proxy headers, websocket upgrade headers, request limits, timeouts, and common API security headers. It is not the full production readiness checklist: DNS, certificate renewal, firewall rules, real client IP handling behind any CDN, monitoring, backups, and rollback operations remain environment setup tasks.
+
+The VPS runtime `.env` is based on `deploy/api/.env.example` and must stay uncommitted. It is passed to the `api` and `migrate` Compose services; `POSTGRES_*` initializes the database container on first start, while `DATABASE_URL` connects API/migrations to that same database. `APP_URL` is the backend's public callback base URL, and `PUBLIC_API_URL` remains a GitHub Environment value for deploy readiness checks. The shared staging GitHub Environment example is `deploy/github-environment.staging.example.env`. Full deployment details are in [docs/deployment.md](docs/deployment.md).
 
 ## Tech Stack
 

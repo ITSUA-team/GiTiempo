@@ -28,7 +28,8 @@ The VPS Compose stack owns the production runtime services:
 - `api`
 - `postgres`
 - an explicit one-shot migration step
-- reverse proxy/TLS routing if not provided externally
+
+Ingress and TLS are external to this portable Compose stack. Staging can use the existing VPS nginx to terminate HTTPS for `gitiempo-api.itsua.dev` and proxy to the configured localhost API port, while production can use nginx, Caddy, Traefik, Cloudflare Tunnel, or managed load balancing without changing the API image.
 
 PostgreSQL must run on an internal Docker network and must not expose its port to the public internet.
 
@@ -49,3 +50,6 @@ Running the compiled API directly with systemd is simple, but it makes dependenc
 - Migrations are explicit release steps, not hidden application startup behavior.
 - Production rollback can redeploy a previous image, but database rollback still requires an explicit migration plan.
 - The same image can be smoke-tested before deployment and then run on the VPS.
+- The API image is published to GHCR.
+- VPS deploy path, public API URL, and SSH target are GitHub Environment settings.
+- The Compose stack binds the API to localhost by default; public routing is provided by external ingress.

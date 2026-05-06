@@ -9,8 +9,8 @@ This document defines the target automated testing model for GI Tiempo. Test inf
 | Lint | `pnpm lint` | No | PR, staging branch, deploy workflows |
 | Typecheck | `pnpm typecheck` | No | PR, staging branch, deploy workflows |
 | Unit tests | `pnpm test` | No | PR, staging branch, deploy workflows |
-| API integration/e2e | `pnpm test:e2e` through an isolated runner | Ephemeral PostgreSQL | API/shared PRs and API deploy workflow |
-| API container smoke | Deployment workflow command | Ephemeral PostgreSQL | Before pushing or deploying API image |
+| API integration/e2e | `pnpm api:e2e:docker` | Ephemeral PostgreSQL | API/shared PRs and API deploy workflow |
+| API container smoke | `pnpm api:smoke:docker` | Ephemeral PostgreSQL | Before pushing or deploying a selected API image |
 | Browser e2e | Playwright command once added | Staging environment | Deferred post-MVP |
 
 ## API Integration/E2E Database
@@ -24,7 +24,7 @@ API integration/e2e tests must not use:
 
 Each automated run must create an isolated PostgreSQL database, apply migrations, load deterministic seed data, run tests, and destroy the database state.
 
-The preferred implementation is Docker Compose with an ephemeral `postgres:16` service and a test runner service. A GitHub Actions service container is also acceptable if it follows the same isolation rules.
+The implemented runner uses Docker Compose with an ephemeral `postgres:16` service and a test runner service. A GitHub Actions service container is also acceptable for future workflows if it follows the same isolation rules.
 
 Required flow:
 
@@ -49,6 +49,21 @@ pnpm typecheck
 pnpm test
 ```
 
+
+Run API e2e through the isolated Docker runner:
+
+```bash
+pnpm api:e2e:docker
+```
+
+Run the API image smoke check after building an image tagged as `gitiempo-api:local` or by setting `API_IMAGE`:
+
+```bash
+pnpm api:smoke:docker
+```
+
+Both commands use ephemeral PostgreSQL and must not rely on `apps/api/.env`, a developer local database, staging database, production database, or any shared persistent CI database.
+
 When a frontend change touches shared frontend packages or shared auth/session/runtime helpers, targeted checks must cover every affected SPA, not only the app where the feature UI was edited.
 
 - `packages/web-shared` or `packages/web-config` changes require `user-web` and `admin-web` lint/typecheck.
@@ -68,9 +83,9 @@ The `staging` branch workflows should repeat the checks required for deployment.
 
 ## Deployment Checks
 
-The API deploy workflow must run API integration/e2e tests before building and deploying the production image.
+When the API deploy workflow builds a new image, it must run API integration/e2e tests before the image build and rollout. Manual prebuilt image deploys rely on prior image provenance and still run the container smoke check before rollout.
 
-The API deploy workflow must also run a container smoke test against the built Docker image and an ephemeral PostgreSQL database. This verifies that the image can boot, connect to the database, and pass `GET /commons/health/ready` before it is rolled out to the VPS.
+The API deploy workflow must also run `scripts/api-smoke-docker.sh` against the selected Docker image and an ephemeral PostgreSQL database. This applies to both newly built images and prebuilt rollback tags, verifying that the image can boot, connect to the database, and pass `GET /commons/health/ready` before it is rolled out to the VPS.
 
 After production deployment, only non-destructive checks are allowed:
 

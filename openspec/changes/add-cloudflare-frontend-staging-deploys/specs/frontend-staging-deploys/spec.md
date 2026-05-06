@@ -23,18 +23,18 @@ Each staging frontend Worker MUST serve the Vite build output with single-page a
 - **AND** the frontend router handles the requested path in the browser
 
 ### Requirement: Build-Time Staging Configuration
-Frontend staging deploys MUST inject environment-specific `VITE_*` values at build time through the staging GitHub Environment or workflow variables, not through committed `.env` files.
+Frontend staging deploys MUST inject environment-specific `VITE_*` values at build time through the staging GitHub Environment, not through committed `.env` files.
 
 #### Scenario: User web staging build receives required values
 - **WHEN** the user-web staging deploy workflow builds the app
-- **THEN** the build receives `VITE_API_BASE_URL` with value `https://gitiempo.itsua.dev`
-- **AND** the build receives `VITE_ADMIN_APP_URL` with value `https://gitiempo-admin.itsua.dev`
+- **THEN** the build receives `VITE_API_BASE_URL` from the staging GitHub Environment with value `https://gitiempo-api.itsua.dev`
+- **AND** the build receives `VITE_ADMIN_APP_URL` from the staging GitHub Environment with value `https://gitiempo-admin.itsua.dev`
 - **AND** the build receives the Firebase client configuration values required by the app
 
 #### Scenario: Admin web staging build receives required values
 - **WHEN** the admin-web staging deploy workflow builds the app
-- **THEN** the build receives `VITE_API_BASE_URL` with value `https://gitiempo.itsua.dev`
-- **AND** the build receives `VITE_USER_APP_URL` with value `https://gitiempo.itsua.dev`
+- **THEN** the build receives `VITE_API_BASE_URL` from the staging GitHub Environment with value `https://gitiempo-api.itsua.dev`
+- **AND** the build receives `VITE_USER_APP_URL` from the staging GitHub Environment with value `https://gitiempo.itsua.dev`
 - **AND** the build receives the Firebase client configuration values required by the app
 
 ### Requirement: Staging Deploy Gates
@@ -78,4 +78,4 @@ The repository MUST document the staging frontend deploy process in a short READ
 
 #### Scenario: Operator reads deployment guide
 - **WHEN** an operator needs to deploy frontend staging
-- **THEN** `README.md` explains the staging hostnames, required GitHub Environment values, automatic trigger behavior, manual dispatch behavior, and the rule that implementation work must not run a live deploy
+- **THEN** `README.md` explains the staging hostnames, required GitHub Environment values, the shared `deploy/github-environment.staging.example.env` example, automatic trigger behavior, manual dispatch behavior, and the rule that implementation work must not run a live deploy
