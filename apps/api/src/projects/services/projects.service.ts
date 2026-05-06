@@ -17,6 +17,7 @@ import type {
   ProjectSource,
   UpdateProjectInput,
 } from '@gitiempo/shared';
+import { projectMemberSchema } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
@@ -31,7 +32,7 @@ export type ProjectRow = typeof projects.$inferSelect;
 type ProjectResponseRow = ProjectRow & {
   source: ProjectSource;
   totalHours: number | string | null;
-  memberCount?: number | string | null;
+  members?: unknown;
 };
 type ProjectAssignmentRow = Omit<ProjectAssignmentResponse, 'assignedAt'> & {
   assignedAt: Date;
@@ -548,14 +549,22 @@ export class ProjectsService {
         WHERE "tasks"."project_id" = "projects"."id"
           AND "time_entries"."duration_seconds" IS NOT NULL
       ), 0)::double precision / 3600`,
-      memberCount: sql<number>`(
-        SELECT COUNT(*)
+      members: sql<unknown>`COALESCE((
+        SELECT json_agg(json_build_object(
+          'userId', "project_assignments"."user_id",
+          'displayName', "users"."display_name",
+          'email', "users"."email",
+          'avatarUrl', "users"."avatar_url",
+          'role', "workspace_members"."role"
+        ))
         FROM "project_assignments"
         INNER JOIN "workspace_members"
           ON "workspace_members"."workspace_id" = "project_assignments"."workspace_id"
           AND "workspace_members"."user_id" = "project_assignments"."user_id"
+        INNER JOIN "users"
+          ON "users"."id" = "project_assignments"."user_id"
         WHERE "project_assignments"."project_id" = "projects"."id"
-      )`,
+      ), '[]'::json)`,
       isActive: projects.isActive,
       createdAt: projects.createdAt,
       updatedAt: projects.updatedAt,
@@ -571,7 +580,9 @@ export class ProjectsService {
       visibility: row.visibility,
       source: row.source,
       totalHours: toNumber(row.totalHours),
-      memberCount: toNumber(row.memberCount ?? 0),
+      members: projectMemberSchema
+        .array()
+        .parse(Array.isArray(row.members) ? row.members : []),
       isActive: row.isActive,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
