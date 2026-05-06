@@ -70,5 +70,9 @@ export async function requestJson<TResponse>({
     throw new Error(await getResponseErrorMessage(response));
   }
 
+  if (response.status === 204) {
+    return undefined as TResponse;
+  }
+
   return responseSchema.parse(await response.json());
 }

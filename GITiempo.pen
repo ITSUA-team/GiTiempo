@@ -11222,6 +11222,186 @@
                               ]
                             }
                           ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "o0rvG",
+                          "name": "row3",
+                          "width": "fill_container",
+                          "height": 56,
+                          "stroke": {
+                            "thickness": {
+                              "top": 1
+                            },
+                            "fill": "$color-divider"
+                          },
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "MOuz0",
+                              "name": "r3c1",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "i4QMbu",
+                                  "fill": "$color-text-muted",
+                                  "content": "Internal Tools",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "r5Ak4u",
+                              "name": "r3c2",
+                              "width": 140,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "N8qFt",
+                                  "fill": "$color-text-muted",
+                                  "content": "GitHub Repo",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "hCjxv",
+                              "name": "r3c3",
+                              "width": 220,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "gJB8v",
+                                  "fill": "$color-text-muted",
+                                  "content": "4 members",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "im304",
+                              "name": "r3c4",
+                              "width": 120,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "xIS0J",
+                                  "fill": "$color-text-muted",
+                                  "content": "120h",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xNzoG",
+                              "name": "r3c5",
+                              "width": 120,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "KonUe",
+                                  "name": "vis3",
+                                  "fill": "$color-app-bg",
+                                  "cornerRadius": "$radius-sm",
+                                  "padding": [
+                                    4,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "zY4qm",
+                                      "fill": "$color-text-muted",
+                                      "content": "Public",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ehje7",
+                              "name": "r3c6",
+                              "width": 150,
+                              "height": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "fyA7k",
+                                  "name": "unarchiveBtn",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    4,
+                                    6
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ztNH7",
+                                      "fill": "$color-text-muted",
+                                      "content": "Unarchive",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
                         }
                       ]
                     }

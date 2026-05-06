@@ -1,11 +1,13 @@
 import {
   managementProjectSummaryResponseSchema,
   projectAssignmentListResponseSchema,
+  projectAssignmentResponseSchema,
   projectListResponseSchema,
   projectResponseSchema,
   type CreateProjectInput,
   type ManagementProjectSummaryResponse,
   type ProjectAssignmentListResponse,
+  type ProjectAssignmentResponse,
   type ProjectListResponse,
   type ProjectResponse,
   type UpdateProjectInput,
@@ -62,6 +64,20 @@ export async function createProject(
   });
 }
 
+export async function unarchiveProject(
+  accessToken: string,
+  projectId: string,
+): Promise<ProjectResponse> {
+  return requestJson({
+    accessToken,
+    apiBaseUrl: BASE,
+    body: { isActive: true },
+    method: "PATCH",
+    path: `/projects/${projectId}`,
+    responseSchema: projectResponseSchema,
+  });
+}
+
 export async function updateProject(
   accessToken: string,
   projectId: string,
@@ -81,27 +97,27 @@ export async function assignMember(
   accessToken: string,
   projectId: string,
   userId: string,
-): Promise<void> {
-  await requestJson({
+): Promise<ProjectAssignmentResponse> {
+  return requestJson({
     accessToken,
     apiBaseUrl: BASE,
     body: { userId },
     method: "POST",
     path: `/projects/${projectId}/assignments`,
-    responseSchema: projectAssignmentListResponseSchema,
+    responseSchema: projectAssignmentResponseSchema,
   });
 }
 
 export async function removeAssignment(
   accessToken: string,
   projectId: string,
-  assignmentId: string,
+  userId: string,
 ): Promise<void> {
   await requestJson({
     accessToken,
     apiBaseUrl: BASE,
     method: "DELETE",
-    path: `/projects/${projectId}/assignments/${assignmentId}`,
+    path: `/projects/${projectId}/assignments/${userId}`,
     responseSchema: projectAssignmentListResponseSchema,
   });
 }

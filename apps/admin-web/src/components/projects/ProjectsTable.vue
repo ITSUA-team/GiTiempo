@@ -32,6 +32,7 @@ const emit = defineEmits<{
     'update:editVisibility': [id: string, value: string];
     'toggleRow': [id: string];
     'archiveProject': [id: string];
+    'unarchiveProject': [id: string];
     'saveRow': [id: string];
     'collapseRow': [id: string];
 }>();
@@ -92,7 +93,8 @@ const emit = defineEmits<{
           </span>
           <span
             v-else
-            class="text-text-dark text-sm font-semibold"
+            class="text-sm font-semibold"
+            :class="data.isActive ? 'text-text-dark' : 'text-text-muted'"
           >{{ data.name }}</span>
         </template>
       </Column>
@@ -133,7 +135,10 @@ const emit = defineEmits<{
         style="width: 120px"
       >
         <template #body="{ data }">
-          <span class="text-text-dark text-[13px] font-semibold">
+          <span
+            class="text-[13px] font-semibold"
+            :class="data.isActive ? 'text-text-dark' : 'text-text-muted'"
+          >
             {{ data.totalHours }}h
           </span>
         </template>
@@ -156,17 +161,26 @@ const emit = defineEmits<{
       >
         <template #body="{ data }">
           <div class="flex items-center justify-end gap-2">
+            <template v-if="data.isActive">
+              <Button
+                variant="text"
+                label="Edit"
+                class="text-brand p-1 text-[13px] font-semibold"
+                @click="emit('toggleRow', data.id)"
+              />
+              <Button
+                variant="text"
+                label="Archive"
+                class="text-destructive p-1 text-[13px] font-semibold"
+                @click="emit('archiveProject', data.id)"
+              />
+            </template>
             <Button
+              v-else
               variant="text"
-              label="Edit"
-              class="text-brand p-1 text-[13px] font-semibold"
-              @click="emit('toggleRow', data.id)"
-            />
-            <Button
-              variant="text"
-              label="Archive"
-              class="text-destructive p-1 text-[13px] font-semibold"
-              @click="emit('archiveProject', data.id)"
+              label="Unarchive"
+              class="text-text-muted p-1 text-[13px] font-semibold"
+              @click="emit('unarchiveProject', data.id)"
             />
           </div>
         </template>

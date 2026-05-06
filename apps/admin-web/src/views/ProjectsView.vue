@@ -21,6 +21,7 @@ import {
     fetchProjectSummary,
     fetchProjects,
     removeAssignment,
+    unarchiveProject as unarchiveProjectService,
     updateProject,
 } from '@/services/projects';
 import { fetchMembers } from '@/services/members';
@@ -137,15 +138,20 @@ const memberOptions = computed(() => [
     })),
 ]);
 
-const filteredProjects = computed(() =>
-    projects.value.filter(
+const filteredProjects = computed(() => {
+    const filtered = projects.value.filter(
         (p) =>
             filterMemberId.value === 'all' ||
             (assignments.value[p.id] ?? []).some(
                 (a) => a.userId === filterMemberId.value,
             ),
-    ),
-);
+    );
+    // Active projects first, archived at the bottom
+    return [...filtered].sort((a, b) => {
+        if (a.isActive === b.isActive) return 0;
+        return a.isActive ? -1 : 1;
+    });
+});
 
 // ─── Visibility options ───────────────────────────────────────────────────────
 const visibilityOptions = [
@@ -226,35 +232,39 @@ async function saveRow(projectId: string): Promise<void> {
     if (!token) return;
     savingRows[projectId] = true;
     try {
-        const original = (assignments.value[projectId] ?? []).map(
-            (a) => a.userId,
-        );
+        const original = assignments.value[projectId] ?? [];
+        const originalUserIds = original.map((a) => a.userId);
         const current = editMembers[projectId] ?? [];
-        const toAdd = current.filter((uid) => !original.includes(uid));
-        const toRemove = (assignments.value[projectId] ?? []).filter(
-            (a) => !current.includes(a.userId),
-        );
+        const toAdd = current.filter((uid) => !originalUserIds.includes(uid));
+        const toRemove = original.filter((a) => !current.includes(a.userId));
 
-        await Promise.all([
-            ...toAdd.map((uid) => assignMember(token, projectId, uid)),
-            ...toRemove.map((a) => removeAssignment(token, projectId, a.id)),
+        const [newAssignments] = await Promise.all([
+            toAdd.length > 0
+                ? Promise.all(toAdd.map((uid) => assignMember(token, projectId, uid)))
+                : Promise.resolve([]),
+            ...toRemove.map((a) => removeAssignment(token, projectId, a.userId)),
         ]);
 
+        const newVisibility = editVisibility[projectId] as 'public' | 'private';
         const proj = projects.value.find((p) => p.id === projectId);
-        if (proj && editVisibility[projectId] !== proj.visibility) {
-            await updateProject(token, projectId, {
-                visibility: editVisibility[projectId] as 'public' | 'private',
-            });
+        if (proj && newVisibility !== proj.visibility) {
+            await updateProject(token, projectId, { visibility: newVisibility });
         }
 
-        await loadAll();
+        // Update assignments: keep survivors + add newly returned assignment objects
+        const survivors = original.filter((a) => current.includes(a.userId));
+        assignments.value = {
+            ...assignments.value,
+            [projectId]: [...survivors, ...(newAssignments as typeof original)],
+        };
+
+        // Update visibility in projects list
+        projects.value = projects.value.map((p) =>
+            p.id === projectId ? { ...p, visibility: newVisibility } : p,
+        );
 
         collapseRow(projectId);
-        toast.add({
-            severity: 'success',
-            summary: 'Project updated',
-            life: 3000,
-        });
+        toast.add({ severity: 'success', summary: 'Project updated', life: 3000 });
     } catch (err) {
         toast.add({
             severity: 'error',
@@ -273,16 +283,34 @@ async function archiveProject(projectId: string): Promise<void> {
     if (!token) return;
     try {
         await updateProject(token, projectId, { isActive: false });
-        await loadAll();
-        toast.add({
-            severity: 'success',
-            summary: 'Project archived',
-            life: 3000,
-        });
+        projects.value = projects.value.filter((p) => p.id !== projectId);
+        const updated = { ...assignments.value };
+        delete updated[projectId];
+        assignments.value = updated;
+        toast.add({ severity: 'success', summary: 'Project archived', life: 3000 });
     } catch (err) {
         toast.add({
             severity: 'error',
             summary: 'Failed to archive project',
+            detail: String(err),
+            life: 4000,
+        });
+    }
+}
+
+async function unarchiveProject(projectId: string): Promise<void> {
+    const token = accessToken.value;
+    if (!token) return;
+    try {
+        await unarchiveProjectService(token, projectId);
+        projects.value = projects.value.map((p) =>
+            p.id === projectId ? { ...p, isActive: true } : p,
+        );
+        toast.add({ severity: 'success', summary: 'Project unarchived', life: 3000 });
+    } catch (err) {
+        toast.add({
+            severity: 'error',
+            summary: 'Failed to unarchive project',
             detail: String(err),
             life: 4000,
         });
@@ -346,6 +374,7 @@ function onUpdateEditVisibility(id: string, value: string): void {
         @update:edit-visibility="onUpdateEditVisibility"
         @toggle-row="toggleRow"
         @archive-project="archiveProject"
+        @unarchive-project="unarchiveProject"
         @save-row="saveRow"
         @collapse-row="collapseRow"
       />

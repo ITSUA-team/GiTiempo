@@ -243,24 +243,32 @@ After `saveRow` completes, the "Assigned members" count and visibility badge in 
 
 - [x] 20.1 In `ProjectsView.vue` `saveRow`, after patching `projects.value[idx]`, replace the whole `projects` array with a new array so DataTable sees a changed prop and re-renders all rows: change `projects.value[idx] = { ...projects.value[idx], visibility: ... }` to a `projects.value = projects.value.map(...)` immutable replacement — this guarantees both the row object reference and the array reference change, forcing DataTable body cell slots to re-evaluate with the updated `assignments` and `visibility`.
 
-  Replace the current block:
-  ```ts
-  const idx = projects.value.findIndex((p) => p.id === projectId);
-  if (idx !== -1) {
-    projects.value[idx] = {
-      ...projects.value[idx],
-      visibility: editVisibility[projectId] as 'public' | 'private',
-    };
-  }
-  ```
-  With:
-  ```ts
-  projects.value = projects.value.map((p) =>
-    p.id === projectId
-      ? { ...p, visibility: editVisibility[projectId] as 'public' | 'private' }
-      : p,
-  );
-  ```
+    Replace the current block:
+
+    ```ts
+    const idx = projects.value.findIndex((p) => p.id === projectId);
+    if (idx !== -1) {
+    	projects.value[idx] = {
+    		...projects.value[idx],
+    		visibility: editVisibility[projectId] as 'public' | 'private',
+    	};
+    }
+    ```
+
+    With:
+
+    ```ts
+    projects.value = projects.value.map((p) =>
+    	p.id === projectId
+    		? {
+    				...p,
+    				visibility: editVisibility[projectId] as
+    					| 'public'
+    					| 'private',
+    			}
+    		: p,
+    );
+    ```
 
 - [x] 20.2 Run `pnpm --filter admin-web lint` — fix all issues
 - [x] 20.3 Run `pnpm --filter admin-web typecheck` — fix all type errors
@@ -272,11 +280,11 @@ After `saveRow` completes, the "Assigned members" count and visibility badge in 
 The `projects.value = projects.value.map(...)` approach introduced in task 20.1 still does not force PrimeVue DataTable to re-render body cell slots because DataTable compares row identity by `data-key` — replacing the array reference is not sufficient when the key values are unchanged. The correct and reliable approach is to call `loadAll()` after a successful save, exactly as `archiveProject` already does. This refreshes `projects`, `assignments`, and `summary` from the server in one shot and guarantees the table reflects the latest state.
 
 - [x] 21.1 In `ProjectsView.vue` `saveRow`, replace the manual local state patches and `fetchProjectAssignments` re-fetch with a single `await loadAll()` call after all API mutations succeed. Remove:
-  - `const fresh = await fetchProjectAssignments(token, projectId)`
-  - `assignments.value = { ...assignments.value, [projectId]: fresh }`
-  - `projects.value = projects.value.map(...)`
+    - `const fresh = await fetchProjectAssignments(token, projectId)`
+    - `assignments.value = { ...assignments.value, [projectId]: fresh }`
+    - `projects.value = projects.value.map(...)`
 
-  The `saveRow` success path should be: await all mutations → `await loadAll()` → `collapseRow(projectId)` → show success toast.
+    The `saveRow` success path should be: await all mutations → `await loadAll()` → `collapseRow(projectId)` → show success toast.
 
 ### 21.2 — "All members" as default selected value in filter Select
 
@@ -288,3 +296,98 @@ The filter `<Select>` above the table has `{ label: 'All members', value: null }
 
 - [x] 21.3 Run `pnpm --filter admin-web lint` — fix all issues
 - [x] 21.4 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 22. Fix removeAssignment 404 — Wrong URL Segment
+
+`DELETE /projects/:id/assignments/:userId` returns 404 for every removal because the frontend was sending the assignment record's own UUID (`a.id`) instead of the member's `userId` (`a.userId`). The API route param is named `:userId`, not `:assignmentId`.
+
+- [x] 22.1 In `apps/admin-web/src/services/projects.ts`, rename the `removeAssignment` third parameter from `assignmentId` to `userId` — the DELETE path is `/projects/${projectId}/assignments/${userId}`. The parameter name was misleading and caused the wrong value to be passed at the call site.
+- [x] 22.2 In `ProjectsView.vue` `saveRow`, change `removeAssignment(token, projectId, a.id)` → `removeAssignment(token, projectId, a.userId)` — `a` is a `ProjectAssignmentResponse`; `a.id` is the assignment record UUID (not a valid route segment); `a.userId` is what the API route expects.
+- [x] 22.3 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 22.4 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 23. Fix requestJson Crashing on 204 No Content
+
+`removeAssignment` calls `DELETE /projects/:id/assignments/:userId` which returns **204 No Content**. `requestJson` in `packages/web-shared/src/http.ts` unconditionally calls `response.json()` on every successful response — on a 204 this throws a JSON parse error, causing `Promise.all` in `saveRow` to reject even when the DELETE succeeded on the server. The catch block fires, `loadAll()` is never reached, and the table never re-renders.
+
+- [x] 23.1 In `packages/web-shared/src/http.ts`, add a 204 early-return guard before `response.json()`: if `response.status === 204` return `undefined as TResponse` immediately. This makes all void-returning DELETE (and similar) endpoints work correctly without requiring schema changes or callers to be updated.
+- [x] 23.2 Run `pnpm --filter @gitiempo/web-shared typecheck` — fix all type errors
+- [x] 23.3 Run `pnpm --filter admin-web typecheck` — confirm still clean
+- [x] 23.4 Run `pnpm --filter user-web typecheck` — confirm still clean
+
+## 24. saveRow — Local State Update Instead of Full Reload
+
+`loadAll()` after save re-fetches all projects, all members, and all assignments for every project, triggering `assignmentsLoading = true` which causes a skeleton flash across the whole table and introduces unnecessary network round-trips and race conditions.
+
+- [x] 24.1 In `ProjectsView.vue` `saveRow`, replace `await loadAll()` with direct local state mutations: after all API mutations succeed, update `assignments.value[projectId]` by computing survivors (original assignments whose userId is still in `current`) plus the new `ProjectAssignmentResponse` objects returned by `assignMember`; update `projects.value` with an immutable map replacing the row's `visibility`. No network calls beyond the mutations themselves.
+- [x] 24.2 In `apps/admin-web/src/services/projects.ts`, change `assignMember` return type from `Promise<void>` to `Promise<ProjectAssignmentResponse>` and update `responseSchema` from `projectAssignmentListResponseSchema` → `projectAssignmentResponseSchema` so the returned assignment object is available for local state update.
+- [x] 24.3 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 24.4 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 25. Archive — Local State Update + Confirmation Dialog
+
+Design source: nodes `GTo7E` / `rxeEZ` (actions column, `Admin Projects` screen `6iAjf`). The Archive button is `text-destructive, fontSize:13, fontWeight:600, padding:[4,6], cornerRadius:4`.
+
+### 25.1 — Remove full reload, update local state directly
+
+`archiveProject` currently calls `loadAll()` on success, triggering a full-page spinner and re-fetching all data. The correct approach is to remove the archived project from `projects.value` and `assignments.value` in local state directly — the same pattern as `saveRow`.
+
+- [x] 25.1 In `ProjectsView.vue` `archiveProject`, replace `await loadAll()` with local state mutations: `projects.value = projects.value.filter(p => p.id !== projectId)` and remove the key from `assignments.value` via copy+delete — this removes the archived project from the table immediately without any network round-trip or spinner flash.
+- [x] 25.2 In `ProjectsView.vue`, import `useConfirm` from `primevue/useconfirm` and call `const confirm = useConfirm()`. Wrap the archive API call in a `confirm.require({ ... })` call: `message: 'Archive this project? It will no longer appear in the projects list.'`, `header: 'Archive Project'`, `icon: 'pi pi-exclamation-triangle'`, `rejectLabel: 'Cancel'`, `acceptLabel: 'Archive'`, `acceptClass: 'text-destructive'`, `accept: async () => { /* existing archive logic */ }`.
+
+### 25.3 — Quality
+
+- [x] 25.4 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 25.5 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 26. Archive — Remove Confirmation Dialog
+
+Design shows a plain "Archive" button with no confirmation step. Remove `confirm.require` wrapper, `useConfirm`, `ConfirmDialog` import, and `<ConfirmDialog />` from template.
+
+- [x] 26.1 In `ProjectsView.vue`, revert `archiveProject` to a plain `async function`: remove `confirm.require(...)` wrapper, move the API call + local state mutations + toasts directly into the function body. Remove `import ConfirmDialog`, `import { useConfirm }`, `const confirm = useConfirm()`, and `<ConfirmDialog />` from template.
+- [x] 26.2 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 26.3 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+## 27. Archive / Unarchive — Full Implementation
+
+Design source: node `6iAjf` (`Admin Projects` screen). Row3 (`o0rvG`) shows the archived project state: all text in `$color-text-muted`, no Edit button, single "Unarchive" action in `$color-text-muted`. Active rows keep Edit + Archive as before.
+
+### 27.1 — API: unarchive endpoint
+
+- [x] 27.1 Add `unarchiveProject(accessToken, projectId): Promise<ProjectResponse>` to `apps/admin-web/src/services/projects.ts` — `PATCH /projects/:id` with body `{ isActive: true }`, `responseSchema: projectResponseSchema`. Reuses the existing `updateProject` helper internally or follows the same pattern.
+
+### 27.2 — ProjectsTable: conditionally show Edit / Archive / Unarchive
+
+The Actions column must render differently based on `data.isActive`:
+- **Active** (`isActive: true`): Edit button (`text-brand`) + Archive button (`text-destructive`) — current behavior
+- **Archived** (`isActive: false`): no Edit button, only Unarchive button (`text-text-muted`)
+
+- [x] 27.2 In `ProjectsTable.vue` Actions column body template, wrap Edit + Archive in `v-if="data.isActive"` and add a separate `v-else` block rendering only a single "Unarchive" `<Button variant="text">` with `class="text-text-muted p-1 text-[13px] font-semibold"` emitting a new `unarchiveProject` event.
+- [x] 27.3 In `ProjectsTable.vue` `defineEmits`, add `'unarchiveProject': [id: string]`.
+- [x] 27.4 In `ProjectsTable.vue` Project name column body template, add `:class="{ 'text-text-muted': !data.isActive }"` to the name `<span>` so archived project names render muted (design: node `i4QMbu` uses `$color-text-muted`).
+
+### 27.3 — ProjectsView: unarchiveProject handler
+
+- [x] 27.5 In `ProjectsView.vue`, import `unarchiveProject` from `@/services/projects`.
+- [x] 27.6 In `ProjectsView.vue`, implement `async function unarchiveProject(projectId: string)`: call `unarchiveProjectService(token, projectId)`; on success update `projects.value` with an immutable map setting `isActive: true` for that row; show success toast `'Project unarchived'`; on error show error toast. No full reload.
+- [x] 27.7 In `ProjectsView.vue` template, bind `@unarchive-project="unarchiveProject"` on `<ProjectsTable>`.
+
+### 27.4 — Show archived projects in the list
+
+The API `GET /projects` currently filters `isActive: true` server-side — archived projects are never returned. The frontend cannot unarchive what it cannot see. Two options: (a) add a toggle to show/hide archived projects fetching from a separate endpoint, or (b) always include inactive projects in the fetch and visually separate them.
+
+Check whether the API supports fetching inactive projects before implementing:
+
+- [x] 27.8 Inspect `GET /projects` in `apps/api/src/projects/controllers/projects.controller.ts` and `apps/api/src/projects/services/projects.service.ts` to determine if there is a query param (e.g., `includeInactive`, `isActive`) that returns inactive projects. **Finding: no such param exists. `listProjects` hardcodes `eq(projects.isActive, true)` with no override. The admin management list also has no inactive support. A backend change is required.**
+- [x] 27.9 ~~If the API supports an `includeInactive` / `showArchived` param~~ — NOT APPLICABLE, API does not support this.
+- [ ] 27.10 **BLOCKER** — API `GET /projects` does not support returning inactive projects. A new backend endpoint or query param is required before the frontend "show archived" toggle can be built. Add a backend task: expose `GET /projects?includeInactive=true` (admin-only) that removes the `eq(projects.isActive, true)` filter when the param is set and the caller has admin role. Frontend implementation (27.9-style toggle) to follow once the API change ships.
+
+### 27.5 — Quality
+
+- [x] 27.11 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 27.12 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+### 27.5 — Quality
+
+- [x] 27.11 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 27.12 Run `pnpm --filter admin-web typecheck` — fix all type errors
