@@ -138,6 +138,8 @@ describe('Projects and tasks (e2e)', () => {
     expect(createRes.body.visibility).toBe('private');
     expect(createRes.body.source).toBe('manual');
     expect(createRes.body.totalHours).toBe(0);
+    // PM is auto-assigned, so the create response must reflect that immediately
+    expect(createRes.body.memberCount).toBe(1);
 
     const [assignment] = await db
       .select()
@@ -146,6 +148,15 @@ describe('Projects and tasks (e2e)', () => {
       .limit(1);
     expect(assignment?.userId).toBeTruthy();
     expect(assignment?.assignedBy).toBe(assignment?.userId);
+  });
+
+  it('admin createProject returns memberCount 0 (no assignments)', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `Admin Created ${randomUUID()}` });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.memberCount).toBe(0);
   });
 
   it('allows admin assignment management for PMs and members', async () => {
@@ -453,5 +464,96 @@ describe('Projects and tasks (e2e)', () => {
         (project) => project.id === publicAssigned.body.id,
       ),
     ).toHaveLength(1);
+  });
+
+  describe('memberCount field', () => {
+    let platformMemberCount: number;
+    let clientMemberCount: number;
+    let archivedMemberCount: number;
+
+    beforeAll(async () => {
+      // Query actual assignment counts from DB so tests are resilient to
+      // other tests adding/removing assignments in the same suite run.
+      const countRows = await db
+        .select({
+          projectId: projectAssignments.projectId,
+        })
+        .from(projectAssignments)
+        .where(and(eq(projectAssignments.workspaceId, workspaceId)));
+      platformMemberCount = countRows.filter(
+        (r) => r.projectId === platformProjectId,
+      ).length;
+      clientMemberCount = countRows.filter(
+        (r) => r.projectId === clientProjectId,
+      ).length;
+      archivedMemberCount = countRows.filter(
+        (r) => r.projectId === archivedProjectId,
+      ).length;
+    });
+
+    it('list projects returns correct memberCount for each project', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/projects')
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+
+      const platform = res.body.find(
+        (p: { id: string }) => p.id === platformProjectId,
+      );
+      const client = res.body.find(
+        (p: { id: string }) => p.id === clientProjectId,
+      );
+      const archived = res.body.find(
+        (p: { id: string }) => p.id === archivedProjectId,
+      );
+
+      expect(platform).toBeDefined();
+      expect(typeof platform.memberCount).toBe('number');
+      expect(platform.memberCount).toBe(platformMemberCount);
+
+      expect(client).toBeDefined();
+      expect(client.memberCount).toBe(clientMemberCount);
+
+      expect(archived).toBeDefined();
+      expect(archived.memberCount).toBe(archivedMemberCount);
+    });
+
+    it('single-project GET returns correct memberCount', async () => {
+      const platformRes = await request(app.getHttpServer())
+        .get(`/projects/${platformProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(platformRes.status).toBe(200);
+      expect(platformRes.body.memberCount).toBe(platformMemberCount);
+
+      const clientRes = await request(app.getHttpServer())
+        .get(`/projects/${clientProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(clientRes.status).toBe(200);
+      expect(clientRes.body.memberCount).toBe(clientMemberCount);
+
+      const archivedRes = await request(app.getHttpServer())
+        .get(`/projects/${archivedProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(archivedRes.status).toBe(200);
+      expect(archivedRes.body.memberCount).toBe(archivedMemberCount);
+    });
+
+    it('memberCount is consistent between list and single-project endpoints', async () => {
+      const listRes = await request(app.getHttpServer())
+        .get('/projects')
+        .set('Authorization', bearer(adminToken));
+      expect(listRes.status).toBe(200);
+
+      const platformFromList = listRes.body.find(
+        (p: { id: string }) => p.id === platformProjectId,
+      );
+
+      const getRes = await request(app.getHttpServer())
+        .get(`/projects/${platformProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(getRes.status).toBe(200);
+
+      expect(platformFromList.memberCount).toBe(getRes.body.memberCount);
+    });
   });
 });

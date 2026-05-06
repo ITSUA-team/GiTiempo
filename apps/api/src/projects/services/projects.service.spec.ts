@@ -36,6 +36,13 @@ const projectRow = {
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
 
+const projectResponseRow = {
+  ...projectRow,
+  source: 'manual' as const,
+  totalHours: 0,
+  memberCount: 1,
+};
+
 function selectRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
@@ -61,7 +68,10 @@ describe('ProjectsService', () => {
         throw new Error('Unexpected insert table');
       }),
     };
-    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
+      select: vi.fn().mockReturnValue(selectRows([projectResponseRow])),
+    };
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'pm' }),
     };
@@ -70,6 +80,7 @@ describe('ProjectsService', () => {
     const result = await service.createProject(pmUser, { name: 'Project' });
 
     expect(result.id).toBe(projectRow.id);
+    expect(result.memberCount).toBe(1);
     expect(assignmentValues).toHaveBeenCalledWith({
       workspaceId: pmUser.workspaceId,
       projectId: projectRow.id,
