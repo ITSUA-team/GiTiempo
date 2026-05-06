@@ -203,7 +203,7 @@ Required staging values:
 | Name | Type | Notes |
 |---|---|---|
 | `CLOUDFLARE_ACCOUNT_ID` | environment variable | Cloudflare account that owns the Workers and `itsua.dev` zone |
-| `CLOUDFLARE_API_TOKEN` | environment secret | Must allow Workers deploys and custom-domain/route updates for `itsua.dev` |
+| `CLOUDFLARE_API_TOKEN` | environment secret | Cloudflare API token for Workers deploys and custom-domain/route updates |
 | `VITE_API_BASE_URL` | environment variable | `https://gitiempo-api.itsua.dev` |
 | `VITE_ADMIN_APP_URL` | environment variable | `https://gitiempo-admin.itsua.dev` |
 | `VITE_USER_APP_URL` | environment variable | `https://gitiempo.itsua.dev` |
@@ -226,7 +226,7 @@ Automatic deploys run from the `staging` branch:
 - `deploy-user-web-staging.yml` runs when `apps/user-web` or shared frontend paths change.
 - `deploy-admin-web-staging.yml` runs when `apps/admin-web` or shared frontend paths change.
 
-Manual deploys use the `Deploy frontend staging` workflow with `target=user-web`, `target=admin-web`, or `target=both`. The optional `ref` input deploys a branch, tag, or SHA.
+Manual deploy without merging to `staging`: Actions -> `Deploy frontend staging` -> `Run workflow`, set `target=user-web|admin-web|both` and `ref=<branch|tag|SHA>`.
 
 Implementation safety rule: do not run a live `wrangler deploy` while adding or validating deploy infrastructure. The first live staging deploy is a separate operator action after the GitHub Environment, Firebase authorized domains, and Cloudflare token permissions are ready.
 
@@ -248,7 +248,9 @@ Required staging values:
 | `VPS_USER` | environment variable | VPS SSH user |
 | `VPS_SSH_KEY` | environment secret | SSH private key for deploy; scoped only to SSH-related workflow steps |
 
-Manual deploys use the `Deploy API` workflow. Its optional `image_tag` input accepts only tags or digests for this repository's `ghcr.io/<owner>/<repo>/api` image, and every selected image is smoke-tested before SSH rollout. Automatic staging deploys run from the `staging` branch when API deployment paths change.
+Manual deploy without merging to `staging`: Actions -> `Deploy API` -> `Run workflow`, set `environment=staging`, `run_migrations=true`, `ref=<branch|tag|SHA>`, and leave `image_tag` empty to build a fresh image.
+
+`image_tag` is only for rollback/prebuilt deploys and accepts this repository's GHCR API image tags or digests. Automatic staging deploys run from the `staging` branch when API deployment paths change.
 
 The VPS must already be logged into GHCR with read access to the API package, unless the package is public. The workflow does not pass GitHub registry tokens to the VPS.
 
