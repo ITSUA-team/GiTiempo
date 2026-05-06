@@ -1,24 +1,19 @@
 <script setup lang="ts">
 import {
-    type ManagementProjectSummaryResponse,
     type ProjectAssignmentListResponse,
     type ProjectListResponse,
     type WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import { PageHeader, type StatItem } from '@gitiempo/web-shared/components';
 import { storeToRefs } from 'pinia';
-import Button from 'primevue/button';
 import ProgressSpinner from 'primevue/progressspinner';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import NewProjectDialog from '@/components/projects/NewProjectDialog.vue';
 import ProjectsTable from '@/components/projects/ProjectsTable.vue';
 import { useAuthStore } from '@/stores/auth';
 import {
     assignMember,
-    createProject,
     fetchProjectAssignments,
-    fetchProjectSummary,
     fetchProjects,
     removeAssignment,
     unarchiveProject as unarchiveProjectService,
@@ -35,7 +30,6 @@ const toast = useToast();
 const loading = ref(true);
 const assignmentsLoading = ref(false);
 const projects = ref<ProjectListResponse>([]);
-const summary = ref<ManagementProjectSummaryResponse | null>(null);
 const members = ref<WorkspaceMemberListResponse>([]);
 const assignments = ref<Record<string, ProjectAssignmentListResponse>>({});
 
@@ -46,17 +40,8 @@ async function loadAll(): Promise<void> {
 
     try {
         loading.value = true;
-        const [fetchedSummary, fetchedProjects, fetchedMembers] =
+        const [fetchedProjects, fetchedMembers] =
             await Promise.all([
-                fetchProjectSummary(token).catch((err: unknown) => {
-                    toast.add({
-                        severity: 'error',
-                        summary: 'Failed to load summary',
-                        detail: String(err),
-                        life: 4000,
-                    });
-                    return null;
-                }),
                 fetchProjects(token).catch((err: unknown) => {
                     toast.add({
                         severity: 'error',
@@ -77,7 +62,6 @@ async function loadAll(): Promise<void> {
                 }),
             ]);
 
-        summary.value = fetchedSummary;
         projects.value = fetchedProjects;
         members.value = fetchedMembers;
     } finally {
@@ -87,11 +71,9 @@ async function loadAll(): Promise<void> {
     // Fan-out assignments fetch
     assignmentsLoading.value = true;
     try {
-        const token2 = accessToken.value;
-        if (!token2) return;
         const results = await Promise.all(
             projects.value.map((p) =>
-                fetchProjectAssignments(token2, p.id)
+                fetchProjectAssignments(token, p.id)
                     .then((a) => ({ id: p.id, a }))
                     .catch(() => ({
                         id: p.id,
@@ -165,37 +147,10 @@ const visibilityOptions = [
     { label: 'Private', value: 'private' },
 ];
 
-// ─── New Project dialog ───────────────────────────────────────────────────────
-const newProjectVisible = ref(false);
-const newProjectSaving = ref(false);
-
-async function submitNewProject(payload: {
-    name: string;
-    visibility: 'public' | 'private';
-}): Promise<void> {
-    const token = accessToken.value;
-    if (!token) return;
-    newProjectSaving.value = true;
-    try {
-        await createProject(token, payload);
-        newProjectVisible.value = false;
-        await loadAll();
-    } catch (err) {
-        toast.add({
-            severity: 'error',
-            summary: 'Failed to create project',
-            detail: String(err),
-            life: 4000,
-        });
-    } finally {
-        newProjectSaving.value = false;
-    }
-}
-
 // ─── Expanded rows ────────────────────────────────────────────────────────────
 const expandedRows = ref<Record<string, boolean>>({});
 const editMembers = reactive<Record<string, string[]>>({});
-const editVisibility = reactive<Record<string, string>>({});
+const editVisibility = reactive<Record<string, 'public' | 'private'>>({});
 const savingRows = reactive<Record<string, boolean>>({});
 
 watch(expandedRows, (next) => {
@@ -205,12 +160,14 @@ watch(expandedRows, (next) => {
                 (a) => a.userId,
             );
             const proj = projects.value.find((p) => p.id === projectId);
-            editVisibility[projectId] = proj?.visibility ?? 'public';
+            editVisibility[projectId] = (proj?.visibility ?? 'public') as 'public' | 'private';
         }
     }
 });
 
 function toggleRow(projectId: string): void {
+    const proj = projects.value.find((p) => p.id === projectId);
+    if (!proj?.isActive) return;
     if (expandedRows.value[projectId]) {
         collapseRow(projectId);
     } else {
@@ -289,10 +246,9 @@ async function archiveProject(projectId: string): Promise<void> {
     if (!token) return;
     try {
         await updateProject(token, projectId, { isActive: false });
-        projects.value = projects.value.filter((p) => p.id !== projectId);
-        const updated = { ...assignments.value };
-        delete updated[projectId];
-        assignments.value = updated;
+        projects.value = projects.value.map((p) =>
+            p.id === projectId ? { ...p, isActive: false } : p,
+        );
         toast.add({ severity: 'success', summary: 'Project archived', life: 3000 });
     } catch (err) {
         toast.add({
@@ -327,7 +283,7 @@ function onUpdateEditMembers(id: string, value: string[]): void {
     editMembers[id] = value;
 }
 
-function onUpdateEditVisibility(id: string, value: string): void {
+function onUpdateEditVisibility(id: string, value: 'public' | 'private'): void {
     editVisibility[id] = value;
 }
 </script>
@@ -349,17 +305,9 @@ function onUpdateEditVisibility(id: string, value: string): void {
       <!-- Page header with stat cards -->
       <PageHeader
         title="Projects"
-        description="Manage project visibility, member assignments, and manual project creation."
+        description="Manage project visibility and member assignments."
         :stats="summaryStats"
-      >
-        <Button
-          label="New Project"
-          :pt="{
-            root: 'h-[38px] px-4 rounded-[6px] bg-brand text-surface text-sm font-semibold',
-          }"
-          @click="newProjectVisible = true"
-        />
-      </PageHeader>
+      />
 
       <!-- Projects table card -->
       <ProjectsTable
@@ -385,13 +333,5 @@ function onUpdateEditVisibility(id: string, value: string): void {
         @collapse-row="collapseRow"
       />
     </template>
-
-    <!-- New Project dialog -->
-    <NewProjectDialog
-      v-model:visible="newProjectVisible"
-      :saving="newProjectSaving"
-      :visibility-options="visibilityOptions"
-      @submit="submitNewProject"
-    />
   </div>
 </template>

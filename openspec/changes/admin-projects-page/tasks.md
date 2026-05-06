@@ -380,7 +380,7 @@ Check whether the API supports fetching inactive projects before implementing:
 
 - [x] 27.8 Inspect `GET /projects` in `apps/api/src/projects/controllers/projects.controller.ts` and `apps/api/src/projects/services/projects.service.ts` to determine if there is a query param (e.g., `includeInactive`, `isActive`) that returns inactive projects. **Finding: no such param exists. `listProjects` hardcodes `eq(projects.isActive, true)` with no override. The admin management list also has no inactive support. A backend change is required.**
 - [x] 27.9 ~~If the API supports an `includeInactive` / `showArchived` param~~ — NOT APPLICABLE, API does not support this.
-- [x] 27.10 **BLOCKER** — API `GET /projects` does not support returning inactive projects.
+- [x] 27.10 **CORRECTED** — API `GET /projects` does NOT filter by `isActive` for admin-role callers. The `listProjects` service skips the `isActive` filter for admins (`WHERE workspaceId = ?` only), so admins already receive all projects including archived ones on page load. The blocker does not exist; the Unarchive button is fully functional after a page reload.
 
 ### 27.5 — Quality
 
@@ -407,3 +407,55 @@ Instead of relying on the stale `summary` API response, derive the stat counts d
 
 - [x] 28.2 Run `pnpm --filter admin-web lint` — fix all issues
 - [x] 28.3 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+---
+
+## Group 29 — Review findings & scope cleanup
+
+### 29.1 — P0: removeAssignment spurious responseSchema
+
+- [x] 29.1 In `apps/admin-web/src/services/projects.ts`, remove `responseSchema` from `removeAssignment`. Made `responseSchema` optional in `packages/web-shared/src/http.ts` (`responseSchema?: ZodType<TResponse>`) to support void/204 endpoints cleanly.
+
+### 29.2 — P0: submitNewProject calls loadAll() — replace with local state update
+
+- [x] 29.2 In `ProjectsView.vue`, replace `await loadAll()` inside `submitNewProject` with a local state update.
+- [x] 29.3 In `ProjectsView.vue`, remove: `summary` ref, `fetchProjectSummary` import and call, `ManagementProjectSummaryResponse` import, `token2` double-read in `loadAll`. Simplify `Promise.all` to only fetch projects and members.
+- [x] 29.4 Update task 27.10 comment: admin `listProjects` does not filter by `isActive` — blocker does not exist.
+- [x] 29.5 In `ProjectsView.vue`, guard `toggleRow` against archived rows.
+- [x] 29.6 In `ProjectsView.vue`, remove double `accessToken.value` read — reuse `token` in assignments fan-out.
+- [x] 29.7 In `ProjectsTable.vue`, remove `<h2>Projects Table</h2>` heading and wrapper div.
+- [x] 29.8 In `ProjectSettingsPanel.vue`, narrow `modelVisibility` prop and emit type to `'public' | 'private'`. Update `ProjectsTable.vue` prop/emit types to match.
+- [x] 29.9 Delete `NewProjectDialog.vue`. Remove all related state, handlers, imports, and template from `ProjectsView.vue`.
+- [x] 29.10 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 29.11 Run `pnpm --filter admin-web typecheck` — fix all type errors
+
+---
+
+## Group 30 — Final cleanup from quality review
+
+### 30.1 — P0: Remove dead exports from services/projects.ts
+
+- [x] 30.1 In `apps/admin-web/src/services/projects.ts`, delete `fetchProjectSummary` and `createProject` and all imports that became unused: `managementProjectSummaryResponseSchema`, `ManagementProjectSummaryResponse`, `CreateProjectInput`.
+- [x] 30.2 In `packages/web-shared/src/http.ts`, replace `responseSchema!.parse(...)` with an explicit guard: `if (response.status === 204 || !responseSchema) return undefined as TResponse; return responseSchema.parse(...)`.
+- [x] 30.3 In `ProjectsView.vue`, change `archiveProject` to mark row archived in-place: replace `.filter` with `.map(p => p.id === projectId ? { ...p, isActive: false } : p)`. Remove assignments cleanup — entry is retained so member count and unarchive work correctly.
+- [x] 30.4 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 30.5 Run `pnpm --filter admin-web typecheck` — fix all type errors
+- [x] 30.6 Run `pnpm --filter user-web typecheck` — confirm still clean (web-shared changed)
+
+## Group 31 — Fix stale description text in PageHeader
+
+`ProjectsView.vue` passes `description="Manage project visibility, member assignments, and manual project creation."` to `<PageHeader>`. The "manual project creation" reference is stale — `NewProjectDialog` was removed in task 29.9. Users see UI text that promises a feature that does not exist.
+
+- [x] 31.1 In `apps/admin-web/src/views/ProjectsView.vue`, update the `description` prop on `<PageHeader>` from `"Manage project visibility, member assignments, and manual project creation."` to `"Manage project visibility and member assignments."`
+- [x] 31.2 Run `pnpm --filter admin-web lint` — confirm clean
+- [x] 31.3 Run `pnpm --filter admin-web typecheck` — confirm clean
+
+## Group 32 — DOM review findings
+
+Review identified: P0 heading removal without design justification, P1 wrong Skeleton scope, P2 label accessibility, P2 stale filter wrapper.
+
+- [x] 32.1 In `ProjectsTable.vue`, restore `<h2 class="text-lg font-semibold text-text-dark">Projects Table</h2>` inside a `flex items-center justify-between` wrapper with the filter block on the right — matches design node `z95IMO` / `Q6SgU` (fontSize 18, fontWeight 600, $color-text-dark, justifyContent space_between)
+- [x] 32.2 In `ProjectsTable.vue`, remove `v-if="assignmentsLoading"` / `<Skeleton>` from the Project name column body template — `data.name` is available immediately after phase-1 load and does not depend on assignments
+- [x] 32.3 In `ProjectSettingsPanel.vue`, add `for="settings-members"` to the members `<label>` and `input-id="settings-members"` to `<MultiSelect>`; add `for="settings-visibility"` to the visibility `<label>` and `input-id="settings-visibility"` to `<Select>` — connects labels to controls for screen-reader support
+- [x] 32.4 Run `pnpm --filter admin-web lint` — confirm clean
+- [x] 32.5 Run `pnpm --filter admin-web typecheck` — confirm clean

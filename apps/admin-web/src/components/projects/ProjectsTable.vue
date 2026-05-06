@@ -20,7 +20,7 @@ defineProps<{
     assignmentsLoading: boolean;
     expandedRows: Record<string, boolean>;
     editMembers: Record<string, string[]>;
-    editVisibility: Record<string, string>;
+    editVisibility: Record<string, 'public' | 'private'>;
     savingRows: Record<string, boolean>;
     filterMemberId: string;
 }>();
@@ -29,7 +29,7 @@ const emit = defineEmits<{
     'update:expandedRows': [value: Record<string, boolean>];
     'update:filterMemberId': [value: string];
     'update:editMembers': [id: string, value: string[]];
-    'update:editVisibility': [id: string, value: string];
+    'update:editVisibility': [id: string, value: 'public' | 'private'];
     'toggleRow': [id: string];
     'archiveProject': [id: string];
     'unarchiveProject': [id: string];
@@ -40,13 +40,11 @@ const emit = defineEmits<{
 
 <template>
   <div class="shadow-card bg-surface flex flex-col gap-4 rounded-[10px] p-5">
-    <!-- Table header row -->
+    <!-- Table header row: heading + member filter -->
     <div class="flex items-center justify-between">
       <h2 class="text-text-dark text-lg font-semibold">
         Projects Table
       </h2>
-
-      <!-- Assigned member filter -->
       <div class="flex flex-col gap-1.5">
         <p class="text-text-muted text-xs font-medium">
           Assigned member
@@ -88,11 +86,7 @@ const emit = defineEmits<{
         header="Project"
       >
         <template #body="{ data }">
-          <span v-if="assignmentsLoading">
-            <Skeleton height="1rem" />
-          </span>
           <span
-            v-else
             class="text-sm font-semibold"
             :class="data.isActive ? 'text-text-dark' : 'text-text-muted'"
           >{{ data.name }}</span>

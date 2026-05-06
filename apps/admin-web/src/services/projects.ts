@@ -1,11 +1,8 @@
 import {
-  managementProjectSummaryResponseSchema,
   projectAssignmentListResponseSchema,
   projectAssignmentResponseSchema,
   projectListResponseSchema,
   projectResponseSchema,
-  type CreateProjectInput,
-  type ManagementProjectSummaryResponse,
   type ProjectAssignmentListResponse,
   type ProjectAssignmentResponse,
   type ProjectListResponse,
@@ -27,17 +24,6 @@ export async function fetchProjects(
   });
 }
 
-export async function fetchProjectSummary(
-  accessToken: string,
-): Promise<ManagementProjectSummaryResponse> {
-  return requestJson({
-    accessToken,
-    apiBaseUrl: BASE,
-    path: "/projects/management-summary",
-    responseSchema: managementProjectSummaryResponseSchema,
-  });
-}
-
 export async function fetchProjectAssignments(
   accessToken: string,
   projectId: string,
@@ -47,20 +33,6 @@ export async function fetchProjectAssignments(
     apiBaseUrl: BASE,
     path: `/projects/${projectId}/assignments`,
     responseSchema: projectAssignmentListResponseSchema,
-  });
-}
-
-export async function createProject(
-  accessToken: string,
-  body: CreateProjectInput,
-): Promise<ProjectResponse> {
-  return requestJson({
-    accessToken,
-    apiBaseUrl: BASE,
-    body,
-    method: "POST",
-    path: "/projects",
-    responseSchema: projectResponseSchema,
   });
 }
 
@@ -118,6 +90,5 @@ export async function removeAssignment(
     apiBaseUrl: BASE,
     method: "DELETE",
     path: `/projects/${projectId}/assignments/${userId}`,
-    responseSchema: projectAssignmentListResponseSchema,
   });
 }

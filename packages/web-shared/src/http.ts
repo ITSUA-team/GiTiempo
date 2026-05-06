@@ -8,7 +8,7 @@ interface RequestJsonOptions<TResponse> {
   headers?: Record<string, string>;
   method?: string;
   path: string;
-  responseSchema: ZodType<TResponse>;
+  responseSchema?: ZodType<TResponse>;
 }
 
 export function getApiBaseUrl(apiBaseUrl: string | undefined): string {
@@ -70,7 +70,7 @@ export async function requestJson<TResponse>({
     throw new Error(await getResponseErrorMessage(response));
   }
 
-  if (response.status === 204) {
+  if (response.status === 204 || !responseSchema) {
     return undefined as TResponse;
   }
 
