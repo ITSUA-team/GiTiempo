@@ -4,6 +4,14 @@ import { workspaceRoleSchema } from "./workspace-members.js";
 export const projectVisibilitySchema = z.enum(["public", "private"]);
 export const projectSourceSchema = z.enum(["manual", "github"]);
 
+export const projectMemberSchema = z.object({
+  userId: z.uuid(),
+  displayName: z.string().nullable(),
+  email: z.email(),
+  avatarUrl: z.string().nullable(),
+  role: workspaceRoleSchema,
+});
+
 export const projectResponseSchema = z.object({
   id: z.uuid(),
   workspaceId: z.uuid(),
@@ -12,7 +20,7 @@ export const projectResponseSchema = z.object({
   visibility: projectVisibilitySchema,
   source: projectSourceSchema,
   totalHours: z.number().min(0),
-  memberCount: z.number().int().min(0),
+  members: z.array(projectMemberSchema),
   isActive: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -91,6 +99,7 @@ export const createProjectAssignmentSchema = z
   })
   .strict();
 
+export type ProjectMember = z.infer<typeof projectMemberSchema>;
 export type ProjectResponse = z.infer<typeof projectResponseSchema>;
 export type ProjectListResponse = z.infer<
   typeof projectListResponseSchema

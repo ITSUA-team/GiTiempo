@@ -40,7 +40,15 @@ const projectResponseRow = {
   ...projectRow,
   source: 'manual' as const,
   totalHours: 0,
-  memberCount: 1,
+  members: [
+    {
+      userId: '00000000-0000-4000-8000-000000000001',
+      displayName: 'User One',
+      email: 'user1@example.com',
+      avatarUrl: null,
+      role: 'pm' as const,
+    },
+  ],
 };
 
 function selectRows(rows: unknown[]) {
@@ -80,7 +88,10 @@ describe('ProjectsService', () => {
     const result = await service.createProject(pmUser, { name: 'Project' });
 
     expect(result.id).toBe(projectRow.id);
-    expect(result.memberCount).toBe(1);
+    expect(result.members).toHaveLength(1);
+    expect(result.members[0]?.userId).toBe(
+      '00000000-0000-4000-8000-000000000001',
+    );
     expect(assignmentValues).toHaveBeenCalledWith({
       workspaceId: pmUser.workspaceId,
       projectId: projectRow.id,

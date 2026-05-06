@@ -16,6 +16,7 @@ function createProject(id: string, name: string): ProjectResponse {
     createdAt: "2026-04-20T12:00:00.000Z",
     id,
     isActive: true,
+    members: [],
     name,
     source: "manual",
     totalHours: 12,

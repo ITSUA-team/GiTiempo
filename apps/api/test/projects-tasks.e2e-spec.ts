@@ -139,7 +139,8 @@ describe('Projects and tasks (e2e)', () => {
     expect(createRes.body.source).toBe('manual');
     expect(createRes.body.totalHours).toBe(0);
     // PM is auto-assigned, so the create response must reflect that immediately
-    expect(createRes.body.memberCount).toBe(1);
+    expect(Array.isArray(createRes.body.members)).toBe(true);
+    expect(createRes.body.members).toHaveLength(1);
 
     const [assignment] = await db
       .select()
@@ -150,13 +151,14 @@ describe('Projects and tasks (e2e)', () => {
     expect(assignment?.assignedBy).toBe(assignment?.userId);
   });
 
-  it('admin createProject returns memberCount 0 (no assignments)', async () => {
+  it('admin createProject returns empty members array (no assignments)', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/projects')
       .set('Authorization', bearer(adminToken))
       .send({ name: `Admin Created ${randomUUID()}` });
     expect(createRes.status).toBe(201);
-    expect(createRes.body.memberCount).toBe(0);
+    expect(Array.isArray(createRes.body.members)).toBe(true);
+    expect(createRes.body.members).toHaveLength(0);
   });
 
   it('allows admin assignment management for PMs and members', async () => {
@@ -466,7 +468,7 @@ describe('Projects and tasks (e2e)', () => {
     ).toHaveLength(1);
   });
 
-  describe('memberCount field', () => {
+  describe('members field', () => {
     let platformMemberCount: number;
     let clientMemberCount: number;
     let archivedMemberCount: number;
@@ -491,7 +493,7 @@ describe('Projects and tasks (e2e)', () => {
       ).length;
     });
 
-    it('list projects returns correct memberCount for each project', async () => {
+    it('list projects returns correct members array for each project', async () => {
       const res = await request(app.getHttpServer())
         .get('/projects')
         .set('Authorization', bearer(adminToken));
@@ -508,37 +510,68 @@ describe('Projects and tasks (e2e)', () => {
       );
 
       expect(platform).toBeDefined();
-      expect(typeof platform.memberCount).toBe('number');
-      expect(platform.memberCount).toBe(platformMemberCount);
+      expect(Array.isArray(platform.members)).toBe(true);
+      expect(platform.members).toHaveLength(platformMemberCount);
 
       expect(client).toBeDefined();
-      expect(client.memberCount).toBe(clientMemberCount);
+      expect(client.members).toHaveLength(clientMemberCount);
 
       expect(archived).toBeDefined();
-      expect(archived.memberCount).toBe(archivedMemberCount);
+      expect(archived.members).toHaveLength(archivedMemberCount);
     });
 
-    it('single-project GET returns correct memberCount', async () => {
+    it('single-project GET returns correct members array', async () => {
       const platformRes = await request(app.getHttpServer())
         .get(`/projects/${platformProjectId}`)
         .set('Authorization', bearer(adminToken));
       expect(platformRes.status).toBe(200);
-      expect(platformRes.body.memberCount).toBe(platformMemberCount);
+      expect(platformRes.body.members).toHaveLength(platformMemberCount);
 
       const clientRes = await request(app.getHttpServer())
         .get(`/projects/${clientProjectId}`)
         .set('Authorization', bearer(adminToken));
       expect(clientRes.status).toBe(200);
-      expect(clientRes.body.memberCount).toBe(clientMemberCount);
+      expect(clientRes.body.members).toHaveLength(clientMemberCount);
 
       const archivedRes = await request(app.getHttpServer())
         .get(`/projects/${archivedProjectId}`)
         .set('Authorization', bearer(adminToken));
       expect(archivedRes.status).toBe(200);
-      expect(archivedRes.body.memberCount).toBe(archivedMemberCount);
+      expect(archivedRes.body.members).toHaveLength(archivedMemberCount);
     });
 
-    it('memberCount is consistent between list and single-project endpoints', async () => {
+    it('members array contains correct member fields', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/projects/${platformProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      const members: unknown[] = res.body.members;
+      if (members.length > 0) {
+        const member = members[0] as Record<string, unknown>;
+        expect(typeof member['userId']).toBe('string');
+        expect(typeof member['role']).toBe('string');
+        expect('displayName' in member).toBe(true);
+        expect('email' in member).toBe(true);
+        expect('avatarUrl' in member).toBe(true);
+      }
+    });
+
+    it('project with no assignments returns empty members array', async () => {
+      // Create a fresh project as admin (no auto-assignment)
+      const createRes = await request(app.getHttpServer())
+        .post('/projects')
+        .set('Authorization', bearer(adminToken))
+        .send({ name: `No Members ${randomUUID()}` });
+      expect(createRes.status).toBe(201);
+
+      const getRes = await request(app.getHttpServer())
+        .get(`/projects/${createRes.body.id}`)
+        .set('Authorization', bearer(adminToken));
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.members).toEqual([]);
+    });
+
+    it('members array is consistent between list and single-project endpoints', async () => {
       const listRes = await request(app.getHttpServer())
         .get('/projects')
         .set('Authorization', bearer(adminToken));
@@ -553,7 +586,7 @@ describe('Projects and tasks (e2e)', () => {
         .set('Authorization', bearer(adminToken));
       expect(getRes.status).toBe(200);
 
-      expect(platformFromList.memberCount).toBe(getRes.body.memberCount);
+      expect(platformFromList.members).toHaveLength(getRes.body.members.length);
     });
   });
 });
