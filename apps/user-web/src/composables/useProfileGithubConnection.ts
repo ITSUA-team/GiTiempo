@@ -8,6 +8,13 @@ import { useRoute, useRouter } from "vue-router";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import type { GitHubConnectionStatusResponse } from "@gitiempo/shared";
+import {
+  createAppConfirm,
+  createAppToast,
+  getErrorMessage,
+  type ConfirmLike,
+  type ToastLike,
+} from "@gitiempo/web-shared";
 
 import {
   createProfileGitHubClient,
@@ -16,26 +23,6 @@ import {
 import { useAuthStore } from "@/stores/auth";
 
 /* eslint-disable no-unused-vars */
-
-interface ConfirmLike {
-  require(options: {
-    accept: () => void | Promise<void>;
-    acceptLabel: string;
-    acceptProps: { severity: "danger" };
-    header: string;
-    message: string;
-    rejectLabel: string;
-  }): void;
-}
-
-interface ToastLike {
-  add(message: {
-    detail: string;
-    life?: number;
-    severity: "error" | "success";
-    summary: string;
-  }): void;
-}
 
 interface UseProfileGithubConnectionOptions {
   authStore?: ReturnType<typeof useAuthStore>;
@@ -52,7 +39,6 @@ interface UseProfileGithubConnectionOptions {
 const defaultClient = createProfileGitHubClient({
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
 });
-const successToastLife = 4000;
 
 const callbackErrorMessages: Record<string, string> = {
   github_config: "GitHub is not configured for this environment yet.",
@@ -62,10 +48,6 @@ const callbackErrorMessages: Record<string, string> = {
   invalid_state: "The GitHub callback could not be validated. Start the connection again.",
 };
 const genericCallbackErrorMessage = "GitHub could not complete the connection flow.";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Something went wrong.";
-}
 
 function getCallbackToast(route: Pick<RouteLocationNormalizedLoaded, "query">): {
   detail: string;
@@ -79,7 +61,7 @@ function getCallbackToast(route: Pick<RouteLocationNormalizedLoaded, "query">): 
   if (github === "connected") {
     return {
       detail: "Your GitHub account is now connected.",
-      life: successToastLife,
+      life: 4000,
       severity: "success",
       summary: "GitHub connected",
     } as const;
@@ -121,6 +103,8 @@ export function useProfileGithubConnection(
   const route = options.route ?? useRoute();
   const router = options.router ?? useRouter();
   const toast = options.toast ?? useToast();
+  const appConfirm = createAppConfirm(confirm);
+  const appToast = createAppToast(toast);
   const locationAssign =
     options.locationAssign ?? ((url: string) => window.location.assign(url));
 
@@ -150,14 +134,6 @@ export function useProfileGithubConnection(
       : ("disconnected" as const);
   });
 
-  function showErrorToast(summary: string, detail: string): void {
-    toast.add({ detail, severity: "error", summary });
-  }
-
-  function showSuccessToast(summary: string, detail: string): void {
-    toast.add({ detail, life: successToastLife, severity: "success", summary });
-  }
-
   function requireAccessToken(): string {
     if (!authStore.accessToken) {
       throw new Error("Your session has expired. Please sign in again.");
@@ -176,7 +152,12 @@ export function useProfileGithubConnection(
       const message = getErrorMessage(error);
 
       requestErrorMessage.value = message;
-      showErrorToast("Could not load GitHub connection", message);
+      appToast.showErrorToast({
+        detail: "Refresh and try again.",
+        error,
+        logContext: { action: "load-connection", feature: "profile-github" },
+        summary: "Could not load GitHub connection",
+      });
     } finally {
       isLoading.value = false;
     }
@@ -211,7 +192,12 @@ export function useProfileGithubConnection(
         return;
       }
 
-      showErrorToast("Could not start GitHub connection", getErrorMessage(error));
+      appToast.showErrorToast({
+        detail: "Please try again.",
+        error,
+        logContext: { action: "start-connection", feature: "profile-github" },
+        summary: "Could not start GitHub connection",
+      });
       isConnecting.value = false;
     }
   }
@@ -221,26 +207,29 @@ export function useProfileGithubConnection(
 
     try {
       await client.disconnect(requireAccessToken());
-      showSuccessToast(
+      appToast.showSuccessToast(
         "GitHub disconnected",
         "Your GitHub account has been disconnected.",
       );
       await refreshConnectionStatus();
     } catch (error) {
-      showErrorToast("Could not disconnect GitHub", getErrorMessage(error));
+      appToast.showErrorToast({
+        detail: "Please try again.",
+        error,
+        logContext: { action: "disconnect", feature: "profile-github" },
+        summary: "Could not disconnect GitHub",
+      });
     } finally {
       isDisconnecting.value = false;
     }
   }
 
   function requestDisconnect(): void {
-    confirm.require({
+    appConfirm.confirmDestructive({
       accept: disconnect,
       acceptLabel: "Disconnect",
-      acceptProps: { severity: "danger" },
       header: "Disconnect GitHub?",
       message: "This will remove your current GitHub connection from the profile.",
-      rejectLabel: "Cancel",
     });
   }
 

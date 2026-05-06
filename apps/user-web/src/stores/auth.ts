@@ -32,7 +32,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   const isAuthenticated = computed(() => accessToken.value !== null);
   const displayName = computed(
-    () => profile.value?.displayName ?? "Alexey Tsukanov",
+    () => profile.value?.displayName ?? "Workspace member",
   );
   const workspaceName = computed(() => "Workspace Alpha");
   const userInitials = computed(() => {

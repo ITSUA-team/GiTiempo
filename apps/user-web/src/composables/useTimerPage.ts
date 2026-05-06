@@ -7,6 +7,11 @@ import {
   watch,
 } from "vue";
 import { createManualTimeEntrySchema, type TimeEntryResponse } from "@gitiempo/shared";
+import {
+  createAppToast,
+  getErrorMessage,
+  type ToastLike,
+} from "@gitiempo/web-shared";
 import { useToast } from "primevue/usetoast";
 
 import {
@@ -14,17 +19,6 @@ import {
   type TimerPageClient,
 } from "@/services/timer-page-client";
 import { useAuthStore } from "@/stores/auth";
-
-/* eslint-disable no-unused-vars */
-
-interface ToastLike {
-  add(message: {
-    detail: string;
-    life?: number;
-    severity: "error" | "success";
-    summary: string;
-  }): void;
-}
 
 interface UseTimerPageOptions {
   authStore?: ReturnType<typeof useAuthStore>;
@@ -35,12 +29,9 @@ interface UseTimerPageOptions {
   toast?: ToastLike;
 }
 
-/* eslint-enable no-unused-vars */
-
 const defaultClient = createTimerPageClient({
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
 });
-const successToastLife = 4000;
 
 function combineDateAndTime(date: Date, time: Date): Date {
   const next = new Date(date);
@@ -74,10 +65,6 @@ function formatElapsedTime(startedAt: string | null, nowMs: number): string {
   return `${hours}:${minutes}:${seconds}`;
 }
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Something went wrong.";
-}
-
 function isConflictErrorMessage(message: string): boolean {
   const normalized = message.toLowerCase();
 
@@ -96,6 +83,7 @@ export function useTimerPage(options: UseTimerPageOptions = {}) {
   const authStore = options.authStore ?? useAuthStore();
   const client = options.client ?? defaultClient;
   const toast = options.toast ?? useToast();
+  const appToast = createAppToast(toast);
   const now = options.now ?? (() => Date.now());
   const setIntervalFn = options.setIntervalFn ?? setInterval;
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
@@ -222,14 +210,6 @@ export function useTimerPage(options: UseTimerPageOptions = {}) {
     () => isSubmittingManualEntry.value || !selectedTaskId.value,
   );
 
-  function showErrorToast(summary: string, detail: string): void {
-    toast.add({ detail, severity: "error", summary });
-  }
-
-  function showSuccessToast(summary: string, detail: string): void {
-    toast.add({ detail, life: successToastLife, severity: "success", summary });
-  }
-
   function requireAccessToken(): string {
     if (!authStore.accessToken) {
       throw new Error("Your session has expired. Please sign in again.");
@@ -264,7 +244,12 @@ export function useTimerPage(options: UseTimerPageOptions = {}) {
       const message = getErrorMessage(error);
 
       currentTimerErrorMessage.value = message;
-      showErrorToast("Could not load the current timer", message);
+      appToast.showErrorToast({
+        detail: "Refresh and try again.",
+        error,
+        logContext: { action: "load-current-timer", feature: "timer-page" },
+        summary: "Could not load the current timer",
+      });
     } finally {
       isLoadingCurrentTimer.value = false;
     }
@@ -294,7 +279,12 @@ export function useTimerPage(options: UseTimerPageOptions = {}) {
 
       projects.value = [];
       projectsErrorMessage.value = message;
-      showErrorToast("Could not load projects", message);
+      appToast.showErrorToast({
+        detail: "Refresh and try again.",
+        error,
+        logContext: { action: "load-projects", feature: "timer-page" },
+        summary: "Could not load projects",
+      });
     } finally {
       isLoadingProjects.value = false;
     }
@@ -339,7 +329,12 @@ export function useTimerPage(options: UseTimerPageOptions = {}) {
 
       tasks.value = [];
       tasksErrorMessage.value = message;
-      showErrorToast("Could not load tasks", message);
+      appToast.showErrorToast({
+        detail: "Refresh and try again.",
+        error,
+        logContext: { action: "load-tasks", feature: "timer-page" },
+        summary: "Could not load tasks",
+      });
     } finally {
       if (requestId === taskRequestId) {
         isLoadingTasks.value = false;
@@ -397,13 +392,21 @@ export function useTimerPage(options: UseTimerPageOptions = {}) {
       try {
         await client.stopTimer(requireAccessToken());
         currentTimer.value = null;
-        showSuccessToast("Timer stopped", "Your running timer has been stopped.");
+        appToast.showSuccessToast(
+          "Timer stopped",
+          "Your running timer has been stopped.",
+        );
         await refreshCurrentTimer();
       } catch (error) {
         const message = getErrorMessage(error);
 
         timerActionErrorMessage.value = message;
-        showErrorToast("Could not stop the timer", message);
+        appToast.showErrorToast({
+          detail: "Please try again.",
+          error,
+          logContext: { action: "stop-timer", feature: "timer-page" },
+          summary: "Could not stop the timer",
+        });
       } finally {
         isStoppingTimer.value = false;
       }
@@ -423,13 +426,18 @@ export function useTimerPage(options: UseTimerPageOptions = {}) {
         selectedTaskId.value,
       );
       syncSelectionFromCurrentTimer();
-      showSuccessToast("Timer started", "Your timer is now running.");
+      appToast.showSuccessToast("Timer started", "Your timer is now running.");
       await refreshCurrentTimer();
     } catch (error) {
       const message = getErrorMessage(error);
 
       timerActionErrorMessage.value = message;
-      showErrorToast("Could not start the timer", message);
+      appToast.showErrorToast({
+        detail: "Please try again.",
+        error,
+        logContext: { action: "start-timer", feature: "timer-page" },
+        summary: "Could not start the timer",
+      });
       await refreshCurrentTimerAfterConflict(message);
     } finally {
       isStartingTimer.value = false;
@@ -443,13 +451,21 @@ export function useTimerPage(options: UseTimerPageOptions = {}) {
     try {
       await client.createManualEntry(requireAccessToken(), buildManualEntryPayload());
       clearManualInputs();
-      showSuccessToast("Manual entry added", "The completed time entry was saved.");
+      appToast.showSuccessToast(
+        "Manual entry added",
+        "The completed time entry was saved.",
+      );
       await refreshCurrentTimer();
     } catch (error) {
       const message = getErrorMessage(error);
 
       manualEntryErrorMessage.value = message;
-      showErrorToast("Could not add the manual entry", message);
+      appToast.showErrorToast({
+        detail: "Please review the entry and try again.",
+        error,
+        logContext: { action: "create-manual-entry", feature: "timer-page" },
+        summary: "Could not add the manual entry",
+      });
       await refreshCurrentTimerAfterConflict(message);
     } finally {
       isSubmittingManualEntry.value = false;

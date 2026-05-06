@@ -132,6 +132,7 @@ describe("ProfileView", () => {
   beforeEach(() => {
     resetAuthRuntimeForTesting();
     setAuthRuntimeForTesting(createRuntimeMock());
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     replaceSpy.mockClear();
     toastAddSpy.mockClear();
     githubActions.connect.mockClear();
@@ -200,11 +201,15 @@ describe("ProfileView", () => {
 
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        detail: "Display name update failed",
+        detail: "Please try again.",
         severity: "error",
         summary: "Could not save profile",
       }),
     );
+    expect(console.error).toHaveBeenCalledWith("Could not save profile", {
+      context: { action: "save-profile", feature: "profile" },
+      error: expect.any(Error),
+    });
     expect((wrapper.get('[data-testid="profile-display-name-input"]').element as HTMLInputElement).value).toBe(
       "Alexey Retry",
     );

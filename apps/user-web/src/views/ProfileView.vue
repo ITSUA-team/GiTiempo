@@ -4,6 +4,7 @@ import Button from "primevue/button";
 import ConfirmDialog from "primevue/confirmdialog";
 import InputText from "primevue/inputtext";
 import { updateUserSchema } from "@gitiempo/shared";
+import { createAppToast, runWithFeedback } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 import { useRouter } from "vue-router";
 
@@ -18,6 +19,7 @@ import { useToast } from "primevue/usetoast";
 const authStore = useAuthStore();
 const router = useRouter();
 const toast = useToast();
+const appToast = createAppToast(toast);
 
 const displayNameDraft = shallowRef(authStore.profile?.displayName ?? "");
 const displayNameErrorMessage = shallowRef<string | null>(null);
@@ -79,23 +81,25 @@ async function handleSaveProfile(): Promise<void> {
   isSavingProfile.value = true;
 
   try {
-    await authStore.updateProfile(parsed.data);
+    await runWithFeedback({
+      onError: {
+        detail: "Please try again.",
+        logContext: { action: "save-profile", feature: "profile" },
+        summary: "Could not save profile",
+      },
+      onSuccess: {
+        detail: "Your display name has been updated.",
+        summary: "Profile saved",
+      },
+      run: () => authStore.updateProfile(parsed.data),
+      toast: appToast,
+    });
     displayNameDraft.value = authStore.profile?.displayName ?? "";
-    toast.add({
-      detail: "Your display name has been updated.",
-      life: 4000,
-      severity: "success",
-      summary: "Profile saved",
-    });
-  } catch (error) {
-    toast.add({
-      detail: error instanceof Error ? error.message : "Something went wrong.",
-      severity: "error",
-      summary: "Could not save profile",
-    });
-  } finally {
-    isSavingProfile.value = false;
-  }
+    } catch {
+      // Toast feedback is handled inside the shared feedback runner.
+    } finally {
+      isSavingProfile.value = false;
+    }
 }
 </script>
 

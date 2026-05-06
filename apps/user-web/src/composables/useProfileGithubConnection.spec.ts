@@ -95,6 +95,7 @@ function mountProfileGithub(options?: {
 describe("useProfileGithubConnection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -149,11 +150,15 @@ describe("useProfileGithubConnection", () => {
     );
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({
-        detail: "GitHub connection could not be loaded",
+        detail: "Refresh and try again.",
         severity: "error",
         summary: "Could not load GitHub connection",
       }),
     );
+    expect(console.error).toHaveBeenCalledWith("Could not load GitHub connection", {
+      context: { action: "load-connection", feature: "profile-github" },
+      error: expect.any(Error),
+    });
   });
 
   it("handles a success callback toast, cleans the URL, and can still fall back to request-error", async () => {
@@ -241,11 +246,15 @@ describe("useProfileGithubConnection", () => {
     expect(profileGithub.state.value).toBe("disconnected");
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({
-        detail: "GitHub auth flow failed",
+        detail: "Please try again.",
         severity: "error",
         summary: "Could not start GitHub connection",
       }),
     );
+    expect(console.error).toHaveBeenCalledWith("Could not start GitHub connection", {
+      context: { action: "start-connection", feature: "profile-github" },
+      error: expect.any(Error),
+    });
   });
 
   it("disconnects GitHub after confirmation and refetches the authoritative state", async () => {
@@ -289,10 +298,14 @@ describe("useProfileGithubConnection", () => {
     expect(profileGithub.state.value).toBe("connected");
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({
-        detail: "Disconnect failed",
+        detail: "Please try again.",
         severity: "error",
         summary: "Could not disconnect GitHub",
       }),
     );
+    expect(console.error).toHaveBeenCalledWith("Could not disconnect GitHub", {
+      context: { action: "disconnect", feature: "profile-github" },
+      error: expect.any(Error),
+    });
   });
 });
