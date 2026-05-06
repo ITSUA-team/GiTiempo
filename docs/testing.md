@@ -49,6 +49,7 @@ pnpm typecheck
 pnpm test
 ```
 
+
 Run API e2e through the isolated Docker runner:
 
 ```bash
@@ -62,6 +63,13 @@ pnpm api:smoke:docker
 ```
 
 Both commands use ephemeral PostgreSQL and must not rely on `apps/api/.env`, a developer local database, staging database, production database, or any shared persistent CI database.
+
+When a frontend change touches shared frontend packages or shared auth/session/runtime helpers, targeted checks must cover every affected SPA, not only the app where the feature UI was edited.
+
+- `packages/web-shared` or `packages/web-config` changes require `user-web` and `admin-web` lint/typecheck.
+- Shared auth/session/runtime changes also require `pnpm --filter user-web test` and `pnpm --filter admin-web test` so both SPA integrations stay protected.
+
+API e2e should be run through the isolated database runner once the Docker Compose test infrastructure exists. Until then, direct `pnpm --filter @gitiempo/api test:e2e` is a local fallback only and requires a manually prepared database.
 
 ## GitHub Actions Runs
 

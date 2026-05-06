@@ -99,7 +99,7 @@ async function handleGoogleSignIn(): Promise<void> {
         <AuthSignInForm
           title="Sign in"
           description="Use your workspace account to continue into GiTiempo."
-          email-placeholder="alex@workspace.com"
+          email-placeholder="you@workspace.com"
           :error-message="errorMessage"
           :is-submitting="authStore.isSubmitting"
           @submit-credentials="handleEmailSignIn"

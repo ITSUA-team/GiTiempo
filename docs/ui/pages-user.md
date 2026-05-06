@@ -39,8 +39,18 @@
 
 ## Profile Page
 
-- Editable display name.
-- GitHub connection card with connected/disconnected states.
+- Editable display name backed by `PATCH /users/me`.
+- Display-name input is enabled and prefilled from the current user profile.
+- `Save changes` persists the latest valid display name and `Cancel` restores the latest persisted value.
+- A disabled placeholder row does not satisfy the editable display-name requirement.
+- GitHub connection card fields must reflect the current API contract only: `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt`.
+- GitHub connection card required states: loading, request-error, disconnected, connected, and redirecting/connecting.
+- Connected state actions: `Reconnect` and `Disconnect`.
+- Disconnected state primary action: `Connect GitHub`.
+- Disconnect uses the shared PrimeVue `<ConfirmDialog>` confirmation pattern before removing the connection.
+- GitHub OAuth callback outcomes after redirect back to `/profile` are surfaced with toast notifications only; do not render inline success or error banners for callback results.
+- When `avatarUrl` is `null`, do not render the avatar row in the GitHub connection card.
+- Disconnect confirmation and callback notifications should use standard PrimeVue `<ConfirmDialog>` and `<Toast>` components; do not invent custom dialog or toast patterns for this page.
 - Sign out action at the bottom using a ghost/destructive treatment.
 
 ## Cross-App Navigation

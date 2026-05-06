@@ -20,11 +20,15 @@
 - After the required UI docs, inspect the relevant approved design source. In this repo that usually means the active `.pen` file screen.
 - Current approved timer-page scope uses visible workspace `Project -> Task` selection only. Do not assume external-provider selector, manual freeform fallback, or pause/resume behavior unless the docs and design are updated together.
 - Desktop UI implementation is expected to be pixel-perfect to the approved design: match fonts, font sizes, spacing, sizing, radii, alignment, and component structure unless the user explicitly asks for a deviation.
+- For every UI task, build an explicit parity checklist from the approved `.pen` screen before editing: states, required fields, field order, actions, spacing, radii, and responsive structure.
+- If PrimeVue prevents an exact design match, keep the same behavior and information hierarchy, then call out the PrimeVue-only compromise in the final review.
+- Search for reusable components before leaving repeated page sections app-local, especially page headers, card shells, section headers, and settings/profile sub-blocks.
 - If the docs and design conflict, the docs are the source of truth. Stop and ask only when the conflict is still ambiguous after following the docs.
 
 ## Execution Rule
 
-- In the first progress update before frontend edits, name the `docs/ui/*` files you used for the task.
+- In the first progress update before frontend edits, name the `docs/ui/*` files and the approved `.pen` screen you used for the task.
+- In the final review for a UI task, state whether any PrimeVue conflict forced a deviation from the approved design.
 
 ## Commands
 

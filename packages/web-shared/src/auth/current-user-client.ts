@@ -1,4 +1,9 @@
-import { userResponseSchema, type UserResponse } from "@gitiempo/shared";
+import {
+  updateUserSchema,
+  userResponseSchema,
+  type UpdateUserInput,
+  type UserResponse,
+} from "@gitiempo/shared";
 import { requestJson } from "../http";
 
 /* eslint-disable no-unused-vars */
@@ -10,6 +15,10 @@ interface CurrentUserClientOptions {
 
 export interface CurrentUserClient {
   getCurrentUser(accessToken: string): Promise<UserResponse>;
+  updateCurrentUser(
+    accessToken: string,
+    input: UpdateUserInput,
+  ): Promise<UserResponse>;
 }
 
 /* eslint-enable no-unused-vars */
@@ -24,6 +33,17 @@ export function createCurrentUserClient({
         accessToken,
         apiBaseUrl,
         fetchFn,
+        path: "/users/me",
+        responseSchema: userResponseSchema,
+      });
+    },
+    updateCurrentUser(accessToken, input) {
+      return requestJson({
+        accessToken,
+        apiBaseUrl,
+        body: updateUserSchema.parse(input),
+        fetchFn,
+        method: "PATCH",
         path: "/users/me",
         responseSchema: userResponseSchema,
       });

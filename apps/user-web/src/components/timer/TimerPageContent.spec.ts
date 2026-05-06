@@ -16,6 +16,7 @@ function createProject(id: string, name: string): ProjectResponse {
     createdAt: "2026-04-20T12:00:00.000Z",
     id,
     isActive: true,
+    members: [],
     name,
     source: "manual",
     totalHours: 12,
@@ -146,9 +147,11 @@ describe("useTimerPage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-21T10:00:00.000Z"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -266,8 +269,16 @@ describe("useTimerPage", () => {
     expect(timerPage.selectedTaskId.value).toBe("task-1");
     expect(timerPage.primaryActionLabel.value).toBe("Stop");
     expect(toast.add).toHaveBeenCalledWith(
-      expect.objectContaining({ detail: "A timer is already running" }),
+      expect.objectContaining({
+        detail: "Please try again.",
+        severity: "error",
+        summary: "Could not start the timer",
+      }),
     );
+    expect(console.error).toHaveBeenCalledWith("Could not start the timer", {
+      context: { action: "start-timer", feature: "timer-page" },
+      error: expect.any(Error),
+    });
   });
 
   it("keeps manual inputs intact and refreshes timer state after a conflict", async () => {
@@ -303,10 +314,15 @@ describe("useTimerPage", () => {
     expect(timerPage.primaryActionLabel.value).toBe("Stop");
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({
-        detail: "Manual entry overlaps the current active timer",
+        detail: "Please review the entry and try again.",
         severity: "error",
+        summary: "Could not add the manual entry",
       }),
     );
+    expect(console.error).toHaveBeenCalledWith("Could not add the manual entry", {
+      context: { action: "create-manual-entry", feature: "timer-page" },
+      error: expect.any(Error),
+    });
   });
 
   it("validates manual interval ranges before submitting", async () => {

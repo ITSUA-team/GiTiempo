@@ -3,7 +3,9 @@
 ## Purpose
 
 Define project visibility, creation, update, and assignment behavior for workspace-scoped provider-neutral projects.
+
 ## Requirements
+
 ### Requirement: Project Visibility Is Role And Assignment Scoped
 
 The system MUST enforce project visibility from workspace membership, project visibility, and project assignments.
@@ -185,30 +187,36 @@ The system MUST allow admins to list, create, and remove project assignments for
 - **AND** the user's role controls allowed actions while the assignment controls project visibility
 
 ### Requirement: Project Time Entry Visibility Follows Project Visibility
+
 The system MUST use project visibility rules when exposing project-scoped time-entry lists.
 
 #### Scenario: Admin reads time entries for any workspace project
+
 - **GIVEN** the requester is an admin member of the workspace
 - **WHEN** the requester lists time entries for a project in that workspace
 - **THEN** the system returns time entries for that project
 
 #### Scenario: Assigned non-admin reads active project time entries
+
 - **GIVEN** the requester is a `pm` or `member` assigned to an active private project
 - **WHEN** the requester lists time entries for that project
 - **THEN** the system returns time entries for that project
 
 #### Scenario: Non-admin reads active public project time entries
+
 - **GIVEN** the requester is a `pm` or `member` in the workspace
 - **AND** the project is active and public
 - **WHEN** the requester lists time entries for that project
 - **THEN** the system returns time entries for that project
 
 #### Scenario: Unassigned non-admin cannot read private project time entries
+
 - **GIVEN** the requester is a `pm` or `member` not assigned to a private project
 - **WHEN** the requester attempts to list time entries for that project
 - **THEN** the system responds with 404 Not Found
 
 #### Scenario: Project time entry visibility does not grant mutation rights
+
 - **GIVEN** the requester can view another user's time entry through project visibility
 - **WHEN** the requester attempts to update or delete that other user's entry
 - **THEN** the system still enforces own-entry mutation rules

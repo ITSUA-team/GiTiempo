@@ -19,6 +19,7 @@ export interface AuthRuntime {
   signInWithEmailPassword(email: string, password: string): Promise<string>;
   signInWithGoogle(): Promise<string>;
   signOutIdentityProvider(): Promise<void>;
+  updateCurrentUser: CurrentUserClient["updateCurrentUser"];
 }
 
 interface DefaultAuthRuntimeOptions {
@@ -73,6 +74,7 @@ export function createDefaultAuthRuntime({
     signInWithEmailPassword,
     signInWithGoogle,
     signOutIdentityProvider,
+    updateCurrentUser: currentUserClient.updateCurrentUser,
   };
 }
 

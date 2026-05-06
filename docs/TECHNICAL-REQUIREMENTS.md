@@ -109,13 +109,22 @@ User → clicks "Connect GitHub" in profile settings
                            GitHub redirects to GET /github/callback?code=...&state=...
                           (browser redirect — no Authorization header)
                                ↓
-                           Backend validates the opaque state id against github_oauth_states,
+                            Backend validates the opaque state id against github_oauth_states,
                            checks expiry, consumes it once, and identifies the bound user
                           Backend exchanges `code` for GitHub user access token + refresh token
                           Backend stores encrypted tokens in GitHubConnection
-                               ↓
-                           Backend redirects user to USER_SPA_URL/profile
+                                ↓
+                            Backend redirects user to USER_SPA_URL/profile
 ```
+
+The user SPA handles the redirect result on `/profile` and surfaces success or failure with toast notifications only.
+
+The callback redirect contract uses `github` as the outcome query key:
+
+- `github=connected` for successful connection completion.
+- `github=error&code=<safe-error-code>` for handled failures, where `code` is a backend-defined safe enum such as `invalid_state`, `github_exchange_failed`, or `github_config`.
+
+Frontend callback handling must treat only those documented `github` values as supported outcomes.
 
 **Note:** The callback endpoint is unauthenticated (browser redirect from GitHub). User identification relies on the validated server-side OAuth state row, not on the GiTiempo JWT or a self-contained signed state JWT.
 

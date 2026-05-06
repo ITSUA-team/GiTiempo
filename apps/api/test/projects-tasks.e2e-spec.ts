@@ -138,6 +138,9 @@ describe('Projects and tasks (e2e)', () => {
     expect(createRes.body.visibility).toBe('private');
     expect(createRes.body.source).toBe('manual');
     expect(createRes.body.totalHours).toBe(0);
+    // PM is auto-assigned, so the create response must reflect that immediately
+    expect(Array.isArray(createRes.body.members)).toBe(true);
+    expect(createRes.body.members).toHaveLength(1);
 
     const [assignment] = await db
       .select()
@@ -146,6 +149,16 @@ describe('Projects and tasks (e2e)', () => {
       .limit(1);
     expect(assignment?.userId).toBeTruthy();
     expect(assignment?.assignedBy).toBe(assignment?.userId);
+  });
+
+  it('admin createProject returns empty members array (no assignments)', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `Admin Created ${randomUUID()}` });
+    expect(createRes.status).toBe(201);
+    expect(Array.isArray(createRes.body.members)).toBe(true);
+    expect(createRes.body.members).toHaveLength(0);
   });
 
   it('allows admin assignment management for PMs and members', async () => {
@@ -453,5 +466,127 @@ describe('Projects and tasks (e2e)', () => {
         (project) => project.id === publicAssigned.body.id,
       ),
     ).toHaveLength(1);
+  });
+
+  describe('members field', () => {
+    let platformMemberCount: number;
+    let clientMemberCount: number;
+    let archivedMemberCount: number;
+
+    beforeAll(async () => {
+      // Query actual assignment counts from DB so tests are resilient to
+      // other tests adding/removing assignments in the same suite run.
+      const countRows = await db
+        .select({
+          projectId: projectAssignments.projectId,
+        })
+        .from(projectAssignments)
+        .where(and(eq(projectAssignments.workspaceId, workspaceId)));
+      platformMemberCount = countRows.filter(
+        (r) => r.projectId === platformProjectId,
+      ).length;
+      clientMemberCount = countRows.filter(
+        (r) => r.projectId === clientProjectId,
+      ).length;
+      archivedMemberCount = countRows.filter(
+        (r) => r.projectId === archivedProjectId,
+      ).length;
+    });
+
+    it('list projects returns correct members array for each project', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/projects')
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+
+      const platform = res.body.find(
+        (p: { id: string }) => p.id === platformProjectId,
+      );
+      const client = res.body.find(
+        (p: { id: string }) => p.id === clientProjectId,
+      );
+      const archived = res.body.find(
+        (p: { id: string }) => p.id === archivedProjectId,
+      );
+
+      expect(platform).toBeDefined();
+      expect(Array.isArray(platform.members)).toBe(true);
+      expect(platform.members).toHaveLength(platformMemberCount);
+
+      expect(client).toBeDefined();
+      expect(client.members).toHaveLength(clientMemberCount);
+
+      expect(archived).toBeDefined();
+      expect(archived.members).toHaveLength(archivedMemberCount);
+    });
+
+    it('single-project GET returns correct members array', async () => {
+      const platformRes = await request(app.getHttpServer())
+        .get(`/projects/${platformProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(platformRes.status).toBe(200);
+      expect(platformRes.body.members).toHaveLength(platformMemberCount);
+
+      const clientRes = await request(app.getHttpServer())
+        .get(`/projects/${clientProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(clientRes.status).toBe(200);
+      expect(clientRes.body.members).toHaveLength(clientMemberCount);
+
+      const archivedRes = await request(app.getHttpServer())
+        .get(`/projects/${archivedProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(archivedRes.status).toBe(200);
+      expect(archivedRes.body.members).toHaveLength(archivedMemberCount);
+    });
+
+    it('members array contains correct member fields', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/projects/${platformProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      const members: unknown[] = res.body.members;
+      if (members.length > 0) {
+        const member = members[0] as Record<string, unknown>;
+        expect(typeof member['userId']).toBe('string');
+        expect(typeof member['role']).toBe('string');
+        expect('displayName' in member).toBe(true);
+        expect('email' in member).toBe(true);
+        expect('avatarUrl' in member).toBe(true);
+      }
+    });
+
+    it('project with no assignments returns empty members array', async () => {
+      // Create a fresh project as admin (no auto-assignment)
+      const createRes = await request(app.getHttpServer())
+        .post('/projects')
+        .set('Authorization', bearer(adminToken))
+        .send({ name: `No Members ${randomUUID()}` });
+      expect(createRes.status).toBe(201);
+
+      const getRes = await request(app.getHttpServer())
+        .get(`/projects/${createRes.body.id}`)
+        .set('Authorization', bearer(adminToken));
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.members).toEqual([]);
+    });
+
+    it('members array is consistent between list and single-project endpoints', async () => {
+      const listRes = await request(app.getHttpServer())
+        .get('/projects')
+        .set('Authorization', bearer(adminToken));
+      expect(listRes.status).toBe(200);
+
+      const platformFromList = listRes.body.find(
+        (p: { id: string }) => p.id === platformProjectId,
+      );
+
+      const getRes = await request(app.getHttpServer())
+        .get(`/projects/${platformProjectId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(getRes.status).toBe(200);
+
+      expect(platformFromList.members).toHaveLength(getRes.body.members.length);
+    });
   });
 });
