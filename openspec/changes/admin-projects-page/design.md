@@ -36,6 +36,19 @@ Design variables (from `GITiempo.pen`):
 ### D1 — Service layer in `apps/admin-web/src/services/`
 Two new files: `projects.ts` (7 functions) and `members.ts` (1 function). All accept `accessToken: string` as first param. Use `requestJson` from `@gitiempo/web-shared/http`. API base from `import.meta.env.VITE_API_BASE_URL`.
 
+Correct API routes (verified against `apps/api/src/projects/controllers/projects.controller.ts` and `apps/api/src/members/controllers/members.controller.ts`):
+
+| Function | Method | Correct path |
+|---|---|---|
+| `fetchProjects` | GET | `/projects` |
+| `fetchProjectSummary` | GET | `/projects/management-summary` ← **not** `/projects/summary` |
+| `fetchProjectAssignments` | GET | `/projects/{id}/assignments` |
+| `createProject` | POST | `/projects` |
+| `updateProject` | PATCH | `/projects/{id}` |
+| `assignMember` | POST | `/projects/{id}/assignments` |
+| `removeAssignment` | DELETE | `/projects/{id}/assignments/{assignmentId}` |
+| `fetchMembers` | GET | `/members` ← **not** `/workspace/members` |
+
 ### D2 — Access token from Pinia auth store
 `authStore.accessToken` is a `shallowRef<string | null>` exposed by the store. Pinia auto-unwraps refs in `storeToRefs`, so use `const { accessToken } = storeToRefs(useAuthStore())` and call `accessToken.value` in async handlers.
 
@@ -51,34 +64,45 @@ Page structure (matches design node tree exactly):
 
 | Section | Key measurements |
 |---|---|
+| Page content wrapper | `p-6 gap-6 bg-app-bg min-h-full flex flex-col` |
 | Page heading | `text-[28px] font-semibold text-text-dark` |
-| Sub-description | `text-sm font-normal text-text-muted` |
-| Header gap | `gap-[6px]` vertical |
-| Stat cards row | `h-[96px]`, `gap-4`, 3 equal-width cards |
-| Stat card | `rounded-lg shadow-card bg-surface p-4 gap-2` vertical layout |
+| Sub-description | `text-[14px] font-normal text-text-muted` (design: fontSize 14, weight normal — use `text-sm font-normal`) |
+| Header text block gap | `gap-[6px]` vertical between heading and description |
+| Header row | `flex items-center justify-between` — heading block left, CTA right |
+| "New Project" button | `bg-brand text-surface rounded-[6px] py-[10px] px-4 text-[14px] font-semibold` — use padding not fixed height (design: padding `[10, 16]`, cornerRadius 6) |
+| PageHeader outer gap | `gap-6` between heading row and stat cards |
+| Stat cards row | `flex gap-4` height `h-[96px]`, 3 equal-width cards |
+| Stat card | `flex-1 rounded-[10px] shadow-card bg-surface p-4 flex flex-col gap-2` — **cornerRadius is 10px** not `rounded-lg` (8px) |
 | Stat label | `text-[13px] font-medium text-text-muted` |
 | Stat value | `text-[28px] font-semibold text-text-dark` |
-| Projects card | `rounded-lg shadow-card bg-surface p-5 gap-4` vertical layout |
-| Table heading | `text-lg font-semibold text-text-dark` |
+| Projects card | `rounded-[10px] shadow-card bg-surface p-5 flex flex-col gap-4` — **cornerRadius 10px** |
+| Table heading | `text-lg font-semibold text-text-dark` (18px/600) |
 | Filter label | `text-xs font-medium text-text-muted` (12px) |
-| Filter dropdown | `h-[38px] w-[260px] rounded-sm border-divider` |
+| Filter dropdown | `h-[38px] w-[260px] rounded-sm` |
 | Table header row | `bg-app-bg h-[44px]`, cells `text-[13px] font-semibold text-text-dark px-3` |
 | Table body row | `h-[56px] border-t border-divider` |
-| Project name cell | `text-sm font-semibold text-text-dark` |
+| Project name cell | `text-sm font-semibold text-text-dark` (14px/600) |
 | Source/members cells | `text-[13px] font-normal text-text-muted` |
 | Hours cell | `text-[13px] font-semibold text-text-dark` |
 | Public badge | `bg-accent-tint text-brand rounded-sm px-2 py-1 text-xs font-semibold` |
 | Private badge | `bg-status-warn-bg text-status-warn-text rounded-sm px-2 py-1 text-xs font-semibold` |
-| Edit action | `text-[13px] font-semibold text-brand` ghost button |
-| Archive action | `text-[13px] font-semibold text-destructive` ghost button |
+| Edit action | `text-[13px] font-semibold text-brand` variant="text" ghost button |
+| Archive action | `text-[13px] font-semibold text-destructive` variant="text" ghost button |
 | Column widths | Project: fill, Source: 140px, Members: 220px, Hours: 120px, Visibility: 120px, Actions: 150px |
 
-Project settings inline expansion (appears below the expanded row, `bg-app-bg border-t border-divider p-4 gap-[10px]`):
-- Row label: `text-[13px] font-semibold text-text-dark`
-- `<MultiSelect>` for members: `fill` width, `h-[38px]`, `rounded-sm`
-- `<Select>` for visibility: `w-[180px]`, `h-[38px]`, `rounded-sm`
+Project settings inline expansion (appears below the expanded row):
+- Root: `bg-app-bg border-t border-divider p-4 flex items-end gap-[10px]`
+- Panel label: `text-[13px] font-semibold text-text-dark`
+- `<MultiSelect>` for members: `flex-1 h-[38px] rounded-sm`
+- `<Select>` for visibility: `w-[180px] h-[38px] rounded-sm`
 - Cancel button: `severity="secondary" variant="outlined" rounded-sm h-[34px]`
 - Save button: `bg-brand text-surface rounded-sm h-[34px]`
+
+**Identified pixel mismatches in current implementation (to fix in Group 13):**
+1. Stat card `rounded-lg` (8px) → must be `rounded-[10px]` (design: cornerRadius 10)
+2. Projects card `rounded-lg` (8px) → must be `rounded-[10px]`
+3. "New Project" button uses `h-9` fixed height → must use `py-[10px] px-4` padding (design: padding [10, 16], cornerRadius 6 = `rounded-[6px]`)
+4. `summaryStats` computed uses `summary.value?.activeProjects` — if `summary` is null while `loading` is false (error state), stats show `"—"` but cards still render; this is correct per design. However `summaryStats` should only be passed to `PageHeader` when summary is available — when null after error the stat cards should not render (pass empty array or omit). Currently they always render with `"—"` values which looks broken.
 
 ### D6 — Visibility badge uses bespoke `<span>`, not `<Tag severity>`
 PrimeVue `<Tag severity="secondary">` renders grey, which does not match the design. Both "Public" (accent-tint/brand) and "Private" (warn) badges use `<span>` with explicit token classes to guarantee pixel-perfect fidelity.

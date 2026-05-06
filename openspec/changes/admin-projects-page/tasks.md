@@ -101,3 +101,18 @@
 - [x] 12.1 Run `pnpm --filter admin-web lint` — fix all reported issues
 - [x] 12.2 Run `pnpm --filter admin-web typecheck` — fix all type errors
 - [x] 12.3 Run `pnpm --filter @gitiempo/web-shared typecheck` — fix all type errors
+
+## 13. Pixel-Perfect Fixes
+
+- [x] 13.1 Fix stat card radius in `PageHeader.vue`: change `rounded-lg` → `rounded-[10px]` on each stat card `<div>` (design cornerRadius is 10px, `rounded-lg` maps to 8px via token)
+- [x] 13.2 Fix projects card radius in `ProjectsView.vue`: change `rounded-lg` → `rounded-[10px]` on the projects card wrapper `<div>`
+- [x] 13.3 Fix "New Project" button in `ProjectsView.vue`: replace `h-9` fixed height with `py-[10px]` padding and change `rounded-sm` → `rounded-[6px]` (design: padding [10, 16], cornerRadius 6)
+- [x] 13.4 Fix `summaryStats` computed in `ProjectsView.vue`: return empty array `[]` when `summary.value` is null so stat cards are hidden (not shown with `"—"` values) when the summary API failed or hasn't loaded — stat cards should only render when real data is available
+- [x] 13.5 Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck` — confirm clean after fixes
+- [x] 13.6 Run `pnpm --filter @gitiempo/web-shared typecheck` — confirm still clean after PageHeader change
+
+## 14. API Route Fixes
+
+- [x] 14.1 Fix `fetchProjectSummary` in `apps/admin-web/src/services/projects.ts`: change path from `/projects/summary` → `/projects/management-summary` (actual route: `@Get('management-summary')` on `@Controller('projects')`)
+- [x] 14.2 Fix `fetchMembers` in `apps/admin-web/src/services/members.ts`: change path from `/workspace/members` → `/members` (actual route: `@Get()` on `@Controller('members')`)
+- [x] 14.3 Run `pnpm --filter admin-web typecheck` — confirm still clean after path fixes

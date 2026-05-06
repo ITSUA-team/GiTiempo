@@ -29,7 +29,7 @@ defineProps<{
       <div
         v-for="stat in stats"
         :key="stat.label"
-        class="flex-1 rounded-lg shadow-card bg-surface p-4 flex flex-col gap-2"
+        class="flex-1 rounded-[10px] shadow-card bg-surface p-4 flex flex-col gap-2"
       >
         <span class="text-[13px] font-medium text-text-muted">{{ stat.label }}</span>
         <span class="text-[28px] font-semibold text-text-dark">{{ stat.value }}</span>

@@ -31,7 +31,7 @@ export async function fetchProjectSummary(
   return requestJson({
     accessToken,
     apiBaseUrl: BASE,
-    path: "/projects/summary",
+    path: "/projects/management-summary",
     responseSchema: managementProjectSummaryResponseSchema,
   });
 }
