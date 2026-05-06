@@ -21,7 +21,9 @@ The test workflow must:
 - run the e2e suite
 - destroy the database state after the run
 
-The preferred implementation is Docker Compose with a PostgreSQL service and a test runner service. GitHub Actions service containers are acceptable if they preserve the same isolation guarantees.
+The implemented local and CI entrypoint is `pnpm api:e2e:docker`, backed by Docker Compose with a PostgreSQL service and a test runner service. GitHub Actions service containers remain acceptable for future workflows if they preserve the same isolation guarantees.
+
+API image smoke testing reuses the same isolation pattern through `pnpm api:smoke:docker`.
 
 ## Alternatives Considered
 

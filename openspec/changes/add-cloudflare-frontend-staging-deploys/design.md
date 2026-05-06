@@ -2,7 +2,7 @@
 
 `docs/deployment.md` and ADR 005 already define Cloudflare Workers Static Assets as the frontend hosting target for both Vue/Vite SPAs. The current repo has Vue Router history-mode routes, Vite build scripts, shared frontend packages, and a root `wrangler` dev dependency, but it does not yet have app-local Wrangler configuration or GitHub Actions workflows.
 
-This change is staging-only. Production routes, production approvals, and API deployment are deliberately excluded. The staging user app hostname is `gitiempo.itsua.dev`; the staging admin app hostname is `gitiempo-admin.itsua.dev`. The staging frontend API base URL is `https://gitiempo.itsua.dev` unless later API deployment work changes the public staging API URL.
+This change is staging-only. Production routes, production approvals, and API deployment are deliberately excluded. The staging user app hostname is `gitiempo.itsua.dev`; the staging admin app hostname is `gitiempo-admin.itsua.dev`. The staging frontend API base URL is `https://gitiempo-api.itsua.dev`.
 
 Affected areas:
 
@@ -62,11 +62,11 @@ Alternative considered: deploy to `workers.dev` first and add custom hostnames m
 
 ### Inject Vite configuration at build time through GitHub Environment values
 
-The deployment workflows pass `VITE_*` values into the build step. For staging:
+The deployment workflows pass `VITE_*` values from the staging GitHub Environment into the build step. For staging:
 
-- both apps use `VITE_API_BASE_URL=https://gitiempo.itsua.dev`
-- `user-web` uses `VITE_ADMIN_APP_URL=https://gitiempo-admin.itsua.dev`
-- `admin-web` uses `VITE_USER_APP_URL=https://gitiempo.itsua.dev`
+- both apps read `VITE_API_BASE_URL=https://gitiempo-api.itsua.dev`
+- `user-web` reads `VITE_ADMIN_APP_URL=https://gitiempo-admin.itsua.dev`
+- `admin-web` reads `VITE_USER_APP_URL=https://gitiempo.itsua.dev`
 - Firebase client values come from the staging GitHub Environment once configured
 
 Rationale: Vite embeds `VITE_*` values at build time. Worker runtime vars or secrets would not update already-built frontend bundles.
@@ -97,7 +97,7 @@ Rationale: docs require lint/typecheck/tests before deployment, and both SPAs de
 ## Risks / Trade-offs
 
 - Firebase authorized domains not ready -> Login fails after deploy. Mitigation: document `gitiempo.itsua.dev` and `gitiempo-admin.itsua.dev` as required Firebase authorized domains before smoke testing auth.
-- `VITE_API_BASE_URL` points at the user frontend hostname while the API staging URL is not finalized -> API calls may fail until backend staging routing exists. Mitigation: treat `VITE_API_BASE_URL` as a staging GitHub Environment value and document it as the current agreed placeholder/value.
+- `VITE_API_BASE_URL` points at an unavailable API hostname -> API calls may fail until backend staging routing exists. Mitigation: treat `VITE_API_BASE_URL` as a staging GitHub Environment value and document it in `deploy/github-environment.staging.example.env` as the current agreed value.
 - Wrangler custom-domain deployment may require Cloudflare token permissions beyond basic Worker deploy -> First deploy can fail. Mitigation: document that the API token must cover Workers deploy and route/custom-domain management for the `itsua.dev` zone.
 - Automatic deploys can publish incomplete staging builds if branch hygiene is weak -> Staging instability. Mitigation: keep deploy gates in the workflow before `wrangler deploy` and limit automatic triggers to the `staging` branch.
 - Custom hostname behavior can vary depending on Cloudflare account setup -> First deploy might require DNS/route verification. Mitigation: keep routes source-controlled and do the first deploy manually after Cloudflare/Firebase settings are ready.
@@ -106,7 +106,7 @@ Rationale: docs require lint/typecheck/tests before deployment, and both SPAs de
 
 1. Add app-local Wrangler configs for `user-web` and `admin-web` staging.
 2. Add GitHub Actions reusable and staging dispatcher workflows without running them locally.
-3. Add `README.md` staging deploy guide.
+3. Add `README.md` staging deploy guide and the shared `deploy/github-environment.staging.example.env` example.
 4. Verify local builds and checks only; do not run a live deploy in the implementation task.
 5. After Firebase authorized domains and GitHub Environment values are prepared, trigger `deploy-frontend-staging` manually.
 6. Validate that both staging hostnames serve app routes and that direct route refreshes return the SPA.
@@ -115,5 +115,5 @@ Rollback is Cloudflare-side: redeploy a previous Worker version or rerun the wor
 
 ## Open Questions
 
-- Is `https://gitiempo.itsua.dev` permanently the staging API base URL, or will API staging later move to a distinct API hostname?
+- Resolved after API deploy planning: staging API uses the dedicated hostname `https://gitiempo-api.itsua.dev`.
 - Which exact GitHub Environment variable names will be used for Firebase client values if the repository already has naming conventions outside the current docs?

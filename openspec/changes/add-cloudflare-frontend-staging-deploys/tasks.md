@@ -8,7 +8,7 @@
 ## 2. GitHub Actions Workflows
 
 - [x] 2.1 Add a reusable frontend staging deploy workflow that accepts the app target and runs install, lint, typecheck, tests, build, and Wrangler deploy for one SPA.
-- [x] 2.2 Configure the reusable workflow to pass staging build-time `VITE_*` values, including `VITE_API_BASE_URL=https://gitiempo.itsua.dev`, counterpart app URLs, and Firebase client values from the staging GitHub Environment.
+- [x] 2.2 Configure the reusable workflow to read staging build-time `VITE_*` values, including `VITE_API_BASE_URL=https://gitiempo-api.itsua.dev`, counterpart app URLs, and Firebase client values from the staging GitHub Environment.
 - [x] 2.3 Add the app-owned automatic `user-web` staging deploy workflow with `staging` branch and user-web/shared frontend path filters.
 - [x] 2.4 Add the app-owned automatic `admin-web` staging deploy workflow with `staging` branch and admin-web/shared frontend path filters.
 - [x] 2.5 Add the manual frontend staging dispatcher with `target=user-web|admin-web|both`.
@@ -17,6 +17,7 @@
 
 - [x] 3.1 Add a short `README.md` guide for frontend staging deploys, including hostnames, required GitHub Environment values, Firebase authorized domains, automatic triggers, and manual dispatcher usage.
 - [x] 3.2 Document that implementation of this change must not run a live deploy; the first live deploy is a separate operator action after GitHub/Firebase/Cloudflare setup is ready.
+- [x] 3.3 Document the shared staging GitHub Environment example at `deploy/github-environment.staging.example.env`.
 
 ## 4. Verification
 

@@ -8,6 +8,9 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
+    "test:e2e:api:docker": "./scripts/api-e2e-docker.sh",
+    "api:e2e:docker": "./scripts/api-e2e-docker.sh",
+    "api:smoke:docker": "./scripts/api-smoke-docker.sh",
     "lint": "turbo run lint",
     "openapi:export": "turbo run openapi:export"
   },

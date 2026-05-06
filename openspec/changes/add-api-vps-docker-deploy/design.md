@@ -19,6 +19,7 @@ Staging API will be published at `https://gitiempo-api.itsua.dev`. The current s
 - Run existing API e2e specs against Docker-backed ephemeral PostgreSQL instead of a host or developer database.
 - Add a minimal image smoke test before pushing/deploying the API image.
 - Align frontend staging `VITE_API_BASE_URL` and docs to `https://gitiempo-api.itsua.dev`.
+- Keep `docs/deployment.md`, `docs/testing.md`, ADRs, and the root `README.md` aligned with the implemented API deploy and test commands.
 
 **Non-Goals:**
 
@@ -45,9 +46,9 @@ Alternatives considered:
 
 ### Use GHCR and environment-driven VPS deploy settings
 
-GitHub Actions will build and push `ghcr.io/<owner>/<repo>/api:<tag>` using `GITHUB_TOKEN` package permissions. The deploy workflow will read the remote path from a GitHub Environment variable, with staging configured as `/root/gitiempo`.
+GitHub Actions will build and push `ghcr.io/<owner>/<repo>/api:<tag>` using `GITHUB_TOKEN` package permissions. Manual prebuilt deploys will accept only a short tag, full tag, or digest for this repository's `ghcr.io/<owner>/<repo>/api` image. The deploy workflow will read the remote path from a GitHub Environment variable, with staging configured as `/root/gitiempo`.
 
-Rationale: GHCR avoids extra registry credentials, and environment-driven deploy paths keep staging and production independent.
+Rationale: GHCR avoids extra registry credentials, constraining prebuilt image inputs prevents external image rollout or shell injection through image references, and environment-driven deploy paths keep staging and production independent.
 
 Alternatives considered:
 
@@ -57,6 +58,10 @@ Alternatives considered:
 ### Add a runtime-safe migration entrypoint
 
 The API image will include a compiled migration entrypoint that runs Drizzle migrations using runtime dependencies. The Compose `migrate` service will run this entrypoint as a one-shot release step before `api` is recreated.
+
+The VPS runtime `.env` will be passed to the `api` and `migrate` services with Compose `env_file`. The API container will still force internal `PORT=3000` so host ingress configuration cannot drift from the container healthcheck and published container port. `API_HOST_BIND` and `API_HOST_PORT` remain Compose interpolation values for the host-side bind only.
+
+The official PostgreSQL image will initialize an empty data volume from `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD`; no `init.sql` is required for the base database/user setup. `DATABASE_URL` remains explicit for API and migration connections and must match those `POSTGRES_*` values.
 
 Rationale: existing `db:migrate` uses `drizzle-kit`, which is a devDependency. Shipping dev tooling in the runtime image just to run production migrations increases image size and coupling. A compiled migrator keeps migrations explicit while preserving a lean runtime image.
 
@@ -78,9 +83,9 @@ Alternatives considered:
 - Per-spec database/schema isolation: stronger but unnecessary for the current sequential suite.
 - GitHub Actions service containers only: acceptable, but Compose keeps local and CI flows aligned and can be reused for image smoke tests.
 
-### Smoke the built image before publishing or deploying
+### Smoke the selected image before publishing or deploying
 
-The deploy workflow will start the built image against ephemeral PostgreSQL, run migrations, and check `/commons/health/ready`. The smoke test will not exercise business flows.
+The deploy workflow will start the selected image against ephemeral PostgreSQL, run migrations, and check `/commons/health/ready`. This applies to both newly built images and prebuilt rollback tags. The smoke test will not exercise business flows.
 
 Rationale: this proves the artifact can boot, validate env, connect to Postgres, apply migrations, and report readiness without adding slow or destructive behavior.
 
@@ -95,19 +100,22 @@ Trade-off: staging may not catch `NODE_ENV=production` validation gaps. The imag
 ## Risks / Trade-offs
 
 - Staging `NODE_ENV=development` may hide production-only env validation failures → Keep production deploy as a separate future hardening step and document required production env values.
-- External nginx misconfiguration can break public health checks even when Compose services are healthy → Provide an optional staging nginx example and keep workflow's final check against `PUBLIC_API_URL`.
+- External nginx or TLS misconfiguration can break public health checks even when Compose services are healthy → Provide an optional staging nginx HTTPS reverse-proxy example and keep workflow's final check against GitHub Environment `PUBLIC_API_URL`.
 - Compiled migration entrypoint can drift from `drizzle-kit` behavior → Use Drizzle's runtime migrator against the same committed migration directory and verify with e2e/smoke flows.
 - Existing e2e tests mutate shared test state → Keep Docker DB isolated per run and preserve sequential file execution.
 - Deploy workflow SSH steps can be brittle across VPS distributions → Keep remote commands small, environment-driven, and focused on Docker Compose operations only.
+- Deploy secrets can leak into untrusted build/test code if scoped too broadly → Keep `VPS_SSH_KEY` limited to SSH validation/configuration steps and do not pass GitHub registry tokens to the VPS.
 
 ## Migration Plan
 
 1. Add Dockerfile, `.dockerignore`, runtime migrator, Compose files, scripts, workflows, and docs.
 2. Validate locally with lint/typecheck/unit tests, Docker-backed API e2e, API image build, and API image smoke test.
-3. Configure GitHub Environment `staging` with GHCR permissions, VPS SSH settings, `PUBLIC_API_URL=https://gitiempo-api.itsua.dev`, deploy path `/root/gitiempo`, and runtime env values.
-4. Configure external staging nginx to proxy `gitiempo-api.itsua.dev` to `127.0.0.1:3000`.
-5. Run the API staging deploy workflow manually before relying on automatic staging branch deploys.
-6. After API staging is healthy, deploy frontend staging so `VITE_API_BASE_URL` points at the dedicated API hostname.
+3. Configure GitHub Environment `staging` using `deploy/github-environment.staging.example.env`, including frontend `VITE_*` URLs, Firebase client values, VPS SSH settings, `PUBLIC_API_URL=https://gitiempo-api.itsua.dev`, and deploy path `/root/gitiempo`.
+4. Create the VPS runtime `.env` from `deploy/api/.env.example`, ensuring `APP_URL=https://gitiempo-api.itsua.dev` and `DATABASE_URL` matches `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD`.
+5. Configure external staging nginx to terminate HTTPS for `gitiempo-api.itsua.dev` and proxy to `127.0.0.1:3000`.
+6. Run the API staging deploy workflow manually before relying on automatic staging branch deploys.
+7. After API staging is healthy, deploy frontend staging so `VITE_API_BASE_URL` points at the dedicated API hostname.
+8. Review deployment, testing, ADR, and README documentation for stale future-tense or ingress assumptions before considering the change complete.
 
 Rollback uses the deploy workflow with a previous GHCR image tag. Migrations are not automatically reversible; any schema rollback requires an explicit migration plan before production use. Emergency image rollback can set `run_migrations=false` only when the target image is compatible with the current database schema.
 

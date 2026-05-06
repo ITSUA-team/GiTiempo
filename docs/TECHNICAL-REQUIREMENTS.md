@@ -34,7 +34,7 @@ Build-ready engineering constraints derived from [PROPOSAL.md](./PROPOSAL.md).
 
 | Aspect            | Decision                                                       |
 | ----------------- | -------------------------------------------------------------- |
-| Runtime           | Node.js 22+ with TypeScript                                    |
+| Runtime           | Node.js 24 LTS with TypeScript                                 |
 | Framework         | NestJS (modular monolith)                                      |
 | Query builder     | Drizzle ORM (type-safe SQL, schema-as-code)                    |
 | Database          | PostgreSQL 16                                                  |
