@@ -359,6 +359,7 @@ Design source: node `6iAjf` (`Admin Projects` screen). Row3 (`o0rvG`) shows the 
 ### 27.2 — ProjectsTable: conditionally show Edit / Archive / Unarchive
 
 The Actions column must render differently based on `data.isActive`:
+
 - **Active** (`isActive: true`): Edit button (`text-brand`) + Archive button (`text-destructive`) — current behavior
 - **Archived** (`isActive: false`): no Edit button, only Unarchive button (`text-text-muted`)
 
@@ -398,10 +399,10 @@ Check whether the API supports fetching inactive projects before implementing:
 Instead of relying on the stale `summary` API response, derive the stat counts directly from the reactive `projects` ref which is always kept up-to-date by local mutations.
 
 - [x] 28.1 In `ProjectsView.vue`, rewrite `summaryStats` computed to derive counts from `projects.value` instead of `summary.value`:
-  - `Active Projects` = `projects.value.filter(p => p.isActive).length`
-  - `Private` = `projects.value.filter(p => p.isActive && p.visibility === 'private').length`
-  - `Public` = `projects.value.filter(p => p.isActive && p.visibility === 'public').length`
-  - Keep `summary.value` null-guard removed (no longer needed); keep the `summary` ref and `fetchProjectSummary` call intact for the initial load so the first render is still server-authoritative — but after that all mutations update `projects.value` which drives the stats.
+    - `Active Projects` = `projects.value.filter(p => p.isActive).length`
+    - `Private` = `projects.value.filter(p => p.isActive && p.visibility === 'private').length`
+    - `Public` = `projects.value.filter(p => p.isActive && p.visibility === 'public').length`
+    - Keep `summary.value` null-guard removed (no longer needed); keep the `summary` ref and `fetchProjectSummary` call intact for the initial load so the first render is still server-authoritative — but after that all mutations update `projects.value` which drives the stats.
 
 ### 28.2 — Quality
 
@@ -459,3 +460,15 @@ Review identified: P0 heading removal without design justification, P1 wrong Ske
 - [x] 32.3 In `ProjectSettingsPanel.vue`, add `for="settings-members"` to the members `<label>` and `input-id="settings-members"` to `<MultiSelect>`; add `for="settings-visibility"` to the visibility `<label>` and `input-id="settings-visibility"` to `<Select>` — connects labels to controls for screen-reader support
 - [x] 32.4 Run `pnpm --filter admin-web lint` — confirm clean
 - [x] 32.5 Run `pnpm --filter admin-web typecheck` — confirm clean
+
+## 33. Update memberCount in projects list after successful saveRow
+
+- [x] 33.1 In `ProjectsView.vue`, after `saveRow` succeeds, compute the new member count from `editMembers[projectId]` (length of current member list) and update `projects.value` so the `memberCount` field reflects the saved state — no extra API call required since `editMembers` already holds the final user-id list
+- [x] 33.2 Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck` — confirm clean
+
+## 34. Lazy-load members only when ProjectSettingsPanel is active
+
+- [x] 34.1 Do not fetch members on initial projects load — `GET /projects` response with `memberCount` is sufficient for the list view
+- [x] 34.2 Fetch members (`GET /projects/:id/members` or equivalent) only when `ProjectSettingsPanel.vue` becomes active for a given project (e.g. on panel open/mount)
+- [x] 34.3 If members for that project are already in `editMembers`, skip the request — no re-fetch on re-open
+- [x] 34.4 Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck` — confirm clean

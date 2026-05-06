@@ -28,10 +28,10 @@ const toast = useToast();
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const loading = ref(true);
-const assignmentsLoading = ref(false);
 const projects = ref<ProjectListResponse>([]);
 const members = ref<WorkspaceMemberListResponse>([]);
 const assignments = ref<Record<string, ProjectAssignmentListResponse>>({});
+const loadingAssignments = reactive<Record<string, boolean>>({});
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 async function loadAll(): Promise<void> {
@@ -66,28 +66,6 @@ async function loadAll(): Promise<void> {
         members.value = fetchedMembers;
     } finally {
         loading.value = false;
-    }
-
-    // Fan-out assignments fetch
-    assignmentsLoading.value = true;
-    try {
-        const results = await Promise.all(
-            projects.value.map((p) =>
-                fetchProjectAssignments(token, p.id)
-                    .then((a) => ({ id: p.id, a }))
-                    .catch(() => ({
-                        id: p.id,
-                        a: [] as ProjectAssignmentListResponse,
-                    })),
-            ),
-        );
-        const fresh: Record<string, ProjectAssignmentListResponse> = {};
-        for (const { id, a } of results) {
-            fresh[id] = a;
-        }
-        assignments.value = fresh;
-    } finally {
-        assignmentsLoading.value = false;
     }
 }
 
@@ -155,13 +133,38 @@ const savingRows = reactive<Record<string, boolean>>({});
 
 watch(expandedRows, (next) => {
     for (const projectId of Object.keys(next)) {
-        if (next[projectId] && editMembers[projectId] === undefined) {
-            editMembers[projectId] = (assignments.value[projectId] ?? []).map(
-                (a) => a.userId,
-            );
-            const proj = projects.value.find((p) => p.id === projectId);
-            editVisibility[projectId] = (proj?.visibility ?? 'public') as 'public' | 'private';
+        if (!next[projectId]) continue;
+
+        const proj = projects.value.find((p) => p.id === projectId);
+        editVisibility[projectId] ??= (proj?.visibility ?? 'public') as 'public' | 'private';
+
+        if (editMembers[projectId] !== undefined) continue;
+
+        // Assignments already cached — initialise edit state immediately
+        if (assignments.value[projectId] !== undefined) {
+            editMembers[projectId] = assignments.value[projectId].map((a) => a.userId);
+            continue;
         }
+
+        // Lazy-load assignments for this project on first open
+        const token = accessToken.value;
+        if (!token) {
+            editMembers[projectId] = [];
+            continue;
+        }
+        editMembers[projectId] = []; // placeholder while loading
+        loadingAssignments[projectId] = true;
+        fetchProjectAssignments(token, projectId)
+            .then((a) => {
+                assignments.value = { ...assignments.value, [projectId]: a };
+                editMembers[projectId] = a.map((x) => x.userId);
+            })
+            .catch(() => {
+                // keep empty on error — user can still edit
+            })
+            .finally(() => {
+                loadingAssignments[projectId] = false;
+            });
     }
 });
 
@@ -221,9 +224,12 @@ async function saveRow(projectId: string): Promise<void> {
             [projectId]: [...survivors, ...(newAssignments as typeof original)],
         };
 
-        // Update visibility in projects list
+        // Update visibility and memberCount in projects list
+        const newMemberCount = current.length;
         projects.value = projects.value.map((p) =>
-            p.id === projectId ? { ...p, visibility: newVisibility } : p,
+            p.id === projectId
+                ? { ...p, visibility: newVisibility, memberCount: newMemberCount }
+                : p,
         );
 
         collapseRow(projectId);
@@ -312,15 +318,14 @@ function onUpdateEditVisibility(id: string, value: 'public' | 'private'): void {
       <!-- Projects table card -->
       <ProjectsTable
         :projects="filteredProjects"
-        :assignments="assignments"
         :member-options="memberOptions"
         :member-select-options="memberSelectOptions"
         :visibility-options="visibilityOptions"
-        :assignments-loading="assignmentsLoading"
         :expanded-rows="expandedRows"
         :edit-members="editMembers"
         :edit-visibility="editVisibility"
         :saving-rows="savingRows"
+        :loading-assignments="loadingAssignments"
         :filter-member-id="filterMemberId"
         @update:expanded-rows="expandedRows = $event"
         @update:filter-member-id="filterMemberId = $event"

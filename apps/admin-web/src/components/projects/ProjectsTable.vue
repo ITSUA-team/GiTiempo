@@ -1,27 +1,22 @@
 <script setup lang="ts">
-import type {
-    ProjectAssignmentListResponse,
-    ProjectListResponse,
-} from '@gitiempo/shared';
+import type { ProjectListResponse } from '@gitiempo/shared';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Select from 'primevue/select';
-import Skeleton from 'primevue/skeleton';
 import ProjectSettingsPanel from './ProjectSettingsPanel.vue';
 import ProjectVisibilityBadge from './ProjectVisibilityBadge.vue';
 
 defineProps<{
     projects: ProjectListResponse;
-    assignments: Record<string, ProjectAssignmentListResponse>;
     memberOptions: { label: string; value: string }[];
     memberSelectOptions: { label: string; value: string }[];
     visibilityOptions: { label: string; value: string }[];
-    assignmentsLoading: boolean;
     expandedRows: Record<string, boolean>;
     editMembers: Record<string, string[]>;
     editVisibility: Record<string, 'public' | 'private'>;
     savingRows: Record<string, boolean>;
+    loadingAssignments: Record<string, boolean>;
     filterMemberId: string;
 }>();
 
@@ -111,14 +106,8 @@ const emit = defineEmits<{
         style="width: 220px"
       >
         <template #body="{ data }">
-          <span v-if="assignmentsLoading">
-            <Skeleton height="1rem" />
-          </span>
-          <span
-            v-else
-            class="text-text-muted text-[13px] font-normal"
-          >
-            {{ (assignments[data.id] ?? []).length }} members
+          <span class="text-text-muted text-[13px] font-normal">
+            {{ data.memberCount }} members
           </span>
         </template>
       </Column>
@@ -191,6 +180,7 @@ const emit = defineEmits<{
           :member-options="memberSelectOptions"
           :visibility-options="visibilityOptions"
           :saving="savingRows[data.id] ?? false"
+          :loading-members="loadingAssignments[data.id] ?? false"
           @update:model-members="emit('update:editMembers', data.id, $event)"
           @update:model-visibility="emit('update:editVisibility', data.id, $event)"
           @save="emit('saveRow', data.id)"

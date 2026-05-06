@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
+import ProgressSpinner from 'primevue/progressspinner';
 import Select from 'primevue/select';
 
 defineProps<{
@@ -9,6 +10,7 @@ defineProps<{
 	memberOptions: { label: string; value: string }[];
 	visibilityOptions: { label: string; value: string }[];
 	saving: boolean;
+	loadingMembers: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -36,7 +38,17 @@ const emit = defineEmits<{
         >
           Select members
         </label>
+        <div
+          v-if="loadingMembers"
+          class="flex h-[38px] items-center"
+        >
+          <ProgressSpinner
+            stroke-width="4"
+            style="width: 22px; height: 22px"
+          />
+        </div>
         <MultiSelect
+          v-else
           input-id="settings-members"
           :model-value="modelMembers"
           :options="memberOptions"
