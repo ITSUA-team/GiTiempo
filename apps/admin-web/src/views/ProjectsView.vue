@@ -114,14 +114,20 @@ onMounted(() => {
 });
 
 // ─── Summary stats ────────────────────────────────────────────────────────────
-const summaryStats = computed<StatItem[]>(() => {
-    if (!summary.value) return [];
-    return [
-        { label: 'Active Projects', value: summary.value.activeProjects },
-        { label: 'Private', value: summary.value.privateProjects },
-        { label: 'Public', value: summary.value.publicProjects },
-    ];
-});
+const summaryStats = computed<StatItem[]>(() => [
+    {
+        label: 'Active Projects',
+        value: projects.value.filter((p) => p.isActive).length,
+    },
+    {
+        label: 'Private',
+        value: projects.value.filter((p) => p.isActive && p.visibility === 'private').length,
+    },
+    {
+        label: 'Public',
+        value: projects.value.filter((p) => p.isActive && p.visibility === 'public').length,
+    },
+]);
 
 // ─── Member filter ────────────────────────────────────────────────────────────
 const filterMemberId = ref<string>('all');

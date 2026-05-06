@@ -150,7 +150,10 @@ const emit = defineEmits<{
         style="width: 120px"
       >
         <template #body="{ data }">
-          <ProjectVisibilityBadge :visibility="data.visibility" />
+          <ProjectVisibilityBadge
+            :visibility="data.visibility"
+            :is-active="data.isActive"
+          />
         </template>
       </Column>
 

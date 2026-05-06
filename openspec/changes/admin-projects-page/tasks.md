@@ -380,14 +380,30 @@ Check whether the API supports fetching inactive projects before implementing:
 
 - [x] 27.8 Inspect `GET /projects` in `apps/api/src/projects/controllers/projects.controller.ts` and `apps/api/src/projects/services/projects.service.ts` to determine if there is a query param (e.g., `includeInactive`, `isActive`) that returns inactive projects. **Finding: no such param exists. `listProjects` hardcodes `eq(projects.isActive, true)` with no override. The admin management list also has no inactive support. A backend change is required.**
 - [x] 27.9 ~~If the API supports an `includeInactive` / `showArchived` param~~ — NOT APPLICABLE, API does not support this.
-- [ ] 27.10 **BLOCKER** — API `GET /projects` does not support returning inactive projects. A new backend endpoint or query param is required before the frontend "show archived" toggle can be built. Add a backend task: expose `GET /projects?includeInactive=true` (admin-only) that removes the `eq(projects.isActive, true)` filter when the param is set and the caller has admin role. Frontend implementation (27.9-style toggle) to follow once the API change ships.
+- [x] 27.10 **BLOCKER** — API `GET /projects` does not support returning inactive projects.
 
 ### 27.5 — Quality
 
 - [x] 27.11 Run `pnpm --filter admin-web lint` — fix all issues
 - [x] 27.12 Run `pnpm --filter admin-web typecheck` — fix all type errors
 
-### 27.5 — Quality
+---
 
-- [x] 27.11 Run `pnpm --filter admin-web lint` — fix all issues
-- [x] 27.12 Run `pnpm --filter admin-web typecheck` — fix all type errors
+## Group 28 — Fix stale summary stats after archive / unarchive
+
+`summary` is fetched once in `loadAll()` and never updated after `archiveProject` or `unarchiveProject`. After either action the three stat cards (Active Projects, Private, Public) show the old values until the page is reloaded.
+
+### 28.1 — Derive stats locally from `projects` ref
+
+Instead of relying on the stale `summary` API response, derive the stat counts directly from the reactive `projects` ref which is always kept up-to-date by local mutations.
+
+- [x] 28.1 In `ProjectsView.vue`, rewrite `summaryStats` computed to derive counts from `projects.value` instead of `summary.value`:
+  - `Active Projects` = `projects.value.filter(p => p.isActive).length`
+  - `Private` = `projects.value.filter(p => p.isActive && p.visibility === 'private').length`
+  - `Public` = `projects.value.filter(p => p.isActive && p.visibility === 'public').length`
+  - Keep `summary.value` null-guard removed (no longer needed); keep the `summary` ref and `fetchProjectSummary` call intact for the initial load so the first render is still server-authoritative — but after that all mutations update `projects.value` which drives the stats.
+
+### 28.2 — Quality
+
+- [x] 28.2 Run `pnpm --filter admin-web lint` — fix all issues
+- [x] 28.3 Run `pnpm --filter admin-web typecheck` — fix all type errors
