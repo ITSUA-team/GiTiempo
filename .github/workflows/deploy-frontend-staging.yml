@@ -1,0 +1,42 @@
+name: Deploy frontend staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Frontend app to deploy.
+        required: true
+        default: both
+        type: choice
+        options:
+          - user-web
+          - admin-web
+          - both
+      ref:
+        description: Optional branch, tag, or SHA to deploy.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-user-web:
+    if: ${{ inputs.target == 'user-web' || inputs.target == 'both' }}
+    uses: ./.github/workflows/deploy-frontend-staging-reusable.yml
+    secrets: inherit
+    with:
+      app_name: user-web
+      app_path: apps/user-web
+      package_name: user-web
+      ref: ${{ inputs.ref }}
+
+  deploy-admin-web:
+    if: ${{ inputs.target == 'admin-web' || inputs.target == 'both' }}
+    uses: ./.github/workflows/deploy-frontend-staging-reusable.yml
+    secrets: inherit
+    with:
+      app_name: admin-web
+      app_path: apps/admin-web
+      package_name: admin-web
+      ref: ${{ inputs.ref }}

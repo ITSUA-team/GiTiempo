@@ -185,6 +185,52 @@ API environment variables are documented in `apps/api/.env.example`. Copy it to 
 
 Frontend apps deploy independently to Cloudflare Workers Static Assets. The API deploys to a VPS as a Docker image managed by Docker Compose. See [docs/deployment.md](docs/deployment.md).
 
+### Frontend Staging Deploys
+
+The staging frontend deploys publish two separate Vue SPAs to Cloudflare Workers Static Assets:
+
+| App | Staging URL | Worker config |
+|---|---|---|
+| `user-web` | `https://gitiempo.itsua.dev` | `apps/user-web/wrangler.toml` |
+| `admin-web` | `https://gitiempo-admin.itsua.dev` | `apps/admin-web/wrangler.toml` |
+
+Wrangler owns the staging custom-domain bindings in the Cloudflare-managed `itsua.dev` zone. Both configs serve the Vite `dist/` directory with SPA fallback so direct route refreshes return `index.html`.
+
+Required GitHub Environment: `staging`.
+
+Required staging values:
+
+| Name | Type | Notes |
+|---|---|---|
+| `CLOUDFLARE_ACCOUNT_ID` | environment variable | Cloudflare account that owns the Workers and `itsua.dev` zone |
+| `CLOUDFLARE_API_TOKEN` | environment secret | Must allow Workers deploys and custom-domain/route updates for `itsua.dev` |
+| `VITE_FIREBASE_API_KEY` | environment variable | Firebase client config used at Vite build time |
+| `VITE_FIREBASE_APP_ID` | environment variable | Firebase client config used at Vite build time |
+| `VITE_FIREBASE_AUTH_DOMAIN` | environment variable | Firebase client config used at Vite build time |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | environment variable | Firebase client config used at Vite build time |
+| `VITE_FIREBASE_PROJECT_ID` | environment variable | Firebase client config used at Vite build time |
+| `VITE_FIREBASE_STORAGE_BUCKET` | environment variable | Firebase client config used at Vite build time |
+
+The workflow sets these staging URLs during the build:
+
+- `VITE_API_BASE_URL=https://gitiempo.itsua.dev`
+- `VITE_ADMIN_APP_URL=https://gitiempo-admin.itsua.dev`
+- `VITE_USER_APP_URL=https://gitiempo.itsua.dev`
+
+Firebase Auth must authorize both staging domains before login can work end-to-end:
+
+- `gitiempo.itsua.dev`
+- `gitiempo-admin.itsua.dev`
+
+Automatic deploys run from the `staging` branch:
+
+- `deploy-user-web-staging.yml` runs when `apps/user-web` or shared frontend paths change.
+- `deploy-admin-web-staging.yml` runs when `apps/admin-web` or shared frontend paths change.
+
+Manual deploys use the `Deploy frontend staging` workflow with `target=user-web`, `target=admin-web`, or `target=both`. The optional `ref` input deploys a branch, tag, or SHA.
+
+Implementation safety rule: do not run a live `wrangler deploy` while adding or validating deploy infrastructure. The first live staging deploy is a separate operator action after the GitHub Environment, Firebase authorized domains, and Cloudflare token permissions are ready.
+
 ## Tech Stack
 
 | Layer | Technology |

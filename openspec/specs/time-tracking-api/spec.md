@@ -38,13 +38,20 @@ The backend MUST allow authenticated workspace members to create completed manua
 - **AND** the entry source is `manual`
 - **AND** the duration is computed from the submitted interval
 
+#### Scenario: User creates manual entry for public project task
+- **GIVEN** an authenticated workspace member is not assigned to a project
+- **AND** the project is public and active
+- **AND** the task is active
+- **WHEN** the member creates a manual entry for that task
+- **THEN** the backend stores a completed time entry owned by that member
+
 #### Scenario: Manual entry requires end after start
 - **GIVEN** an authenticated workspace member submits a manual entry
 - **WHEN** `endedAt` is not later than `startedAt`
 - **THEN** the backend rejects the request as invalid
 
-#### Scenario: Manual entry cannot target invisible task
-- **GIVEN** an authenticated workspace member lacks visibility to a task's project
+#### Scenario: Manual entry cannot target invisible private task
+- **GIVEN** an authenticated workspace member lacks visibility to a private task's project
 - **WHEN** the member attempts to create a manual entry for that task
 - **THEN** the backend responds with 404 Not Found
 
@@ -110,13 +117,21 @@ The backend MUST allow an authenticated workspace member to start one running ti
 - **THEN** the backend creates a running time entry owned by that user
 - **AND** the entry source is `web`
 
+#### Scenario: User starts timer for public project task
+- **GIVEN** an authenticated user has no running timer
+- **AND** the user is not assigned to a project
+- **AND** the project is public and active
+- **AND** the task is active
+- **WHEN** the user starts a timer for that task
+- **THEN** the backend creates a running time entry owned by that user
+
 #### Scenario: User cannot start second timer
 - **GIVEN** an authenticated user already has a running timer
 - **WHEN** the user attempts to start another timer
 - **THEN** the backend rejects the request with 409 Conflict
 
-#### Scenario: User cannot start timer for invisible task
-- **GIVEN** an authenticated user lacks visibility to a task's project
+#### Scenario: User cannot start timer for invisible private task
+- **GIVEN** an authenticated user lacks visibility to a private task's project
 - **WHEN** the user attempts to start a timer for that task
 - **THEN** the backend responds with 404 Not Found
 
@@ -176,13 +191,19 @@ The backend MUST allow authenticated users to list time entries for visible proj
 - **WHEN** the admin lists time entries for a project in that workspace
 - **THEN** the backend returns entries for that project regardless of entry owner
 
-#### Scenario: Assigned user lists active project time entries
-- **GIVEN** an authenticated PM or member is assigned to an active project
+#### Scenario: Non-admin lists active public project time entries
+- **GIVEN** an authenticated PM or member belongs to the workspace
+- **AND** the project is public and active
 - **WHEN** the user lists time entries for that project
 - **THEN** the backend returns entries for that project regardless of entry owner
 
-#### Scenario: Unassigned user cannot list project time entries
-- **GIVEN** an authenticated PM or member is not assigned to a project
+#### Scenario: Assigned user lists active private project time entries
+- **GIVEN** an authenticated PM or member is assigned to an active private project
+- **WHEN** the user lists time entries for that project
+- **THEN** the backend returns entries for that project regardless of entry owner
+
+#### Scenario: Unassigned user cannot list private project time entries
+- **GIVEN** an authenticated PM or member is not assigned to a private project
 - **WHEN** the user attempts to list time entries for that project
 - **THEN** the backend responds with 404 Not Found
 
@@ -190,4 +211,3 @@ The backend MUST allow authenticated users to list time entries for visible proj
 - **GIVEN** an authenticated user can view another user's time entry through a project list
 - **WHEN** the authenticated user attempts to update or delete that other user's entry through own-entry endpoints
 - **THEN** the backend responds with 404 Not Found
-

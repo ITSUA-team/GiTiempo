@@ -1,0 +1,84 @@
+name: Deploy frontend staging reusable
+
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        description: Frontend app name for logs and concurrency.
+        required: true
+        type: string
+      app_path:
+        description: Frontend app directory containing wrangler.toml.
+        required: true
+        type: string
+      package_name:
+        description: pnpm workspace package name.
+        required: true
+        type: string
+      ref:
+        description: Optional branch, tag, or SHA to deploy.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.app_name }} staging
+    runs-on: ubuntu-latest
+    environment: staging
+    concurrency:
+      group: frontend-staging-${{ inputs.app_name }}
+      cancel-in-progress: false
+    env:
+      CI: true
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_API_BASE_URL: https://gitiempo-api.itsua.dev
+      VITE_ADMIN_APP_URL: https://gitiempo-admin.itsua.dev
+      VITE_USER_APP_URL: https://gitiempo.itsua.dev
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint ${{ inputs.app_name }}
+        run: pnpm exec turbo run lint --filter="${{ inputs.package_name }}"
+
+      - name: Typecheck ${{ inputs.app_name }}
+        run: pnpm exec turbo run typecheck --filter="${{ inputs.package_name }}"
+
+      - name: Test ${{ inputs.app_name }}
+        run: pnpm exec turbo run test --filter="${{ inputs.package_name }}"
+
+      - name: Build ${{ inputs.app_name }}
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+        run: pnpm exec turbo run build --filter="${{ inputs.package_name }}"
+
+      - name: Deploy ${{ inputs.app_name }} to Cloudflare Workers staging
+        working-directory: ${{ inputs.app_path }}
+        run: pnpm exec wrangler deploy --env staging
