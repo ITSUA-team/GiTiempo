@@ -87,7 +87,7 @@ The system SHALL provide a GitHub Actions deployment workflow that builds, verif
 
 #### Scenario: Manual deploy accepts environment settings
 - **WHEN** an operator manually runs the API deploy workflow
-- **THEN** the workflow accepts an environment selection, optional source ref, optional image tag, and migration toggle
+- **THEN** the workflow accepts an environment selection, optional source ref, optional image tag, migration toggle, and seed toggle
 - **AND** it reads VPS SSH settings, public API URL, and remote deploy path from the selected GitHub Environment
 
 #### Scenario: Manual prebuilt image is constrained
@@ -100,7 +100,17 @@ The system SHALL provide a GitHub Actions deployment workflow that builds, verif
 - **WHEN** the API staging deploy workflow runs without a prebuilt image tag
 - **THEN** it builds and smoke-tests an API image
 - **AND** it pushes the image to GHCR
-- **AND** it connects to the configured VPS over SSH, updates the configured deploy directory, pulls the selected image, runs migrations when enabled, recreates the API service, and verifies public readiness through `GET /commons/health/ready`
+- **AND** it connects to the configured VPS over SSH, updates the configured deploy directory, pulls the selected image, runs migrations when enabled, runs seed only when explicitly enabled, recreates the API service, and verifies public readiness through `GET /commons/health/ready`
+
+#### Scenario: Manual seed is opt-in
+- **WHEN** an operator manually runs the API deploy workflow with the seed toggle disabled
+- **THEN** the workflow does not run the seed script
+- **AND** the seed toggle defaults to disabled
+
+#### Scenario: Manual seed runs after migrations
+- **WHEN** an operator manually runs the API deploy workflow with migrations and seed enabled
+- **THEN** the workflow runs the migration service first
+- **AND** it runs the compiled seed script before recreating the API service
 
 #### Scenario: SSH secret exposure is scoped
 - **WHEN** the API deploy workflow runs

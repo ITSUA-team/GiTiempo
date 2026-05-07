@@ -99,7 +99,21 @@ The Compose stack passes `.env` to the `api` and one-shot `migrate` services wit
 
 `APP_URL` is an API runtime value used when the backend builds its own OAuth callback URL. `PUBLIC_API_URL` is a GitHub Environment variable used by the deploy workflow for the final public readiness check; it does not belong in the VPS runtime `.env` unless a future runtime feature needs it.
 
+Seed users are optional runtime env values consumed only by the seed command. `SEED_ADMIN_EMAIL` and `SEED_ADMIN_FIREBASE_UID` create or update the initial admin membership. `SEED_MEMBER_EMAIL` and `SEED_MEMBER_FIREBASE_UID` create or update a member and assign that user to the seeded `Demo Client` project so the user app has visible project/task data. These values must match real Firebase Auth users; seed does not create Firebase Auth accounts or passwords.
+
 Staging defaults to `NODE_ENV=development` unless the environment overrides it.
+
+Run seed locally after migrations with:
+
+```bash
+pnpm --filter @gitiempo/api db:seed
+```
+
+Run seed on the VPS after migrations from `API_DEPLOY_PATH` with:
+
+```bash
+API_IMAGE=<selected-image> docker compose run --rm api node dist/src/db/seed.js
+```
 
 ### API Manual Triggers
 
@@ -109,6 +123,7 @@ API deploy workflows must support `workflow_dispatch` with:
 |---|---|---|
 | `environment` | `staging`, `production` | Choose VPS, secrets, and compose project |
 | `run_migrations` | `true`, `false` | Default `true`; skip only for emergency rollback or no-schema releases |
+| `run_seed` | `true`, `false` | Default `false`; run only for explicit bootstrap or seed refresh |
 | `ref` | branch, tag, or SHA | Optional source revision |
 | `image_tag` | API image tag or digest | Optional prebuilt image; must resolve to this repository's `ghcr.io/<owner>/<repo>/api` image |
 
@@ -140,8 +155,9 @@ The API deploy workflow must follow this order:
 10. Update environment and Compose files if needed.
 11. Perform temporary GHCR login on the VPS and pull the selected image.
 12. Run migrations explicitly.
-13. Recreate the API service with Docker Compose.
-14. Check `GET /commons/health/ready` through the public API URL.
+13. Run the idempotent seed script only when `run_seed=true`.
+14. Recreate the API service with Docker Compose.
+15. Check `GET /commons/health/ready` through the public API URL.
 
 Production deploys must not run destructive e2e tests against the production database. Only health and smoke checks are allowed after production rollout.
 
@@ -163,6 +179,7 @@ GitHub Actions stores deploy credentials and environment-specific values.
 | `GHCR_READ_TOKEN`, `GHCR_USERNAME` | Optional GitHub Environment secret/variable | Only needed if the default `GITHUB_TOKEN` cannot read the private GHCR package; the token is passed over SSH stdin and not stored in the VPS default Docker config |
 | API runtime env | VPS secret store or Compose `.env` on server | Not committed to git |
 | `DATABASE_URL` and `POSTGRES_*` | VPS secret store or Compose `.env` on server | `POSTGRES_*` initializes the database container on first start; `DATABASE_URL` connects API/migrations to that database |
+| `SEED_ADMIN_*`, `SEED_MEMBER_*` | VPS runtime env | Optional DB seed users matched to existing Firebase Auth UIDs |
 
 Repository `.env.example` files document names and safe placeholders only. They must not contain real credentials. The VPS runtime example lives in `deploy/api/.env.example`; the shared staging GitHub Environment example lives in `deploy/github-environment.staging.example.env`.
 

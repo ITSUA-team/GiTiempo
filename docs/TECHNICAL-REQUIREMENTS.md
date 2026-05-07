@@ -407,6 +407,8 @@ The API requires the following environment variables:
 | `ADMIN_WEB_URL`            | Public URL of the Admin SPA                                                                           |
 | `SEED_ADMIN_EMAIL`         | Email of the initial admin user (used by seed migration)                                              |
 | `SEED_ADMIN_FIREBASE_UID`  | Firebase UID of the initial admin user                                                                |
+| `SEED_MEMBER_EMAIL`        | Email of an optional seeded member user                                                               |
+| `SEED_MEMBER_FIREBASE_UID` | Firebase UID of an optional seeded member user                                                        |
 | `SMTP_HOST`                | SMTP server host (email notifications)                                                                |
 | `SMTP_PORT`                | SMTP server port                                                                                      |
 | `SMTP_USER`                | SMTP username                                                                                         |

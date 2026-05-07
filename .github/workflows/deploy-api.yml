@@ -19,6 +19,14 @@ on:
         options:
           - "true"
           - "false"
+      run_seed:
+        description: Run the idempotent seed script after migrations.
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
       ref:
         description: Optional branch, tag, or SHA to deploy.
         required: false
@@ -62,6 +70,7 @@ jobs:
       CI: true
       DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
       RUN_MIGRATIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_migrations || 'true' }}
+      RUN_SEED: ${{ github.event_name == 'workflow_dispatch' && inputs.run_seed || 'false' }}
       PREBUILT_IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || '' }}
       PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
       API_DEPLOY_PATH: ${{ vars.API_DEPLOY_PATH }}
@@ -237,6 +246,11 @@ jobs:
           if [ "$RUN_MIGRATIONS" = "true" ]; then
             ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
               "cd $remote_api_deploy_path && API_IMAGE=$remote_deploy_image docker compose run --rm migrate"
+          fi
+
+          if [ "$RUN_SEED" = "true" ]; then
+            ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
+              "cd $remote_api_deploy_path && API_IMAGE=$remote_deploy_image docker compose run --rm api node dist/src/db/seed.js"
           fi
 
           ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
