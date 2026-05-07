@@ -248,7 +248,7 @@ Required staging values:
 | `VPS_USER` | environment variable | VPS SSH user |
 | `VPS_SSH_KEY` | environment secret | SSH private key for deploy; scoped only to SSH-related workflow steps |
 
-Manual deploy without merging to `staging`: Actions -> `Deploy API` -> `Run workflow`, set `environment=staging`, `run_migrations=true`, `ref=<branch|tag|SHA>`, and leave `image_tag` empty to build a fresh image.
+Manual deploy without merging to `staging`: Actions -> `Deploy API` -> `Run workflow`, set `environment=staging`, `run_migrations=true`, `run_seed=false`, `ref=<branch|tag|SHA>`, and leave `image_tag` empty to build a fresh image. Use `run_seed=true` only for explicit database bootstrap or seed refresh.
 
 `image_tag` is only for rollback/prebuilt deploys and accepts this repository's GHCR API image tags or digests. Automatic staging deploys run from the `staging` branch when API deployment paths change.
 

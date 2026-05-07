@@ -23,6 +23,7 @@
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file-if-exists=.env src/db/seed.ts",
+    "db:seed:runtime": "node dist/src/db/seed.js",
     "openapi:export": "pnpm run build && node --env-file=.env dist/src/openapi/export.js"
   },
   "dependencies": {

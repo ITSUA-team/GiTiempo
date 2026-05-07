@@ -42,7 +42,7 @@
 
 ## 7. GitHub Actions Deploy
 
-- [x] 7.1 Add an API deploy workflow with `workflow_dispatch` inputs for environment, ref, image tag, and migration toggle.
+- [x] 7.1 Add an API deploy workflow with `workflow_dispatch` inputs for environment, ref, image tag, migration toggle, and default-off seed toggle.
 - [x] 7.2 Add automatic staging deploy triggers from the `staging` branch with API deployment-relevant path filters.
 - [x] 7.3 Configure the deploy workflow to build, smoke-test, and push API images to GHCR when no prebuilt image tag is supplied.
 - [x] 7.4 Configure the deploy workflow to read VPS SSH settings, remote deploy path, and public API URL from the selected GitHub Environment.

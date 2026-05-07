@@ -87,7 +87,8 @@ Run via turbo from repo root (`pnpm <script>`) or directly (`pnpm --filter @giti
 | `db:migrate`        | Drizzle: apply pending migrations                  |
 | `db:check`          | Drizzle: validate migration history                |
 | `db:studio`         | Drizzle Studio                                     |
-| `db:seed`           | Insert / update 3 seed users                       |
+| `db:seed`           | Insert / update deterministic and env-driven seed data |
+| `db:seed:runtime`   | Run compiled seed script from `dist/`              |
 | `openapi:export`    | Write `openapi.json` to `packages/shared/`        |
 
 ## Project layout

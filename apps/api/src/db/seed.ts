@@ -31,6 +31,7 @@ interface SeedUser {
   displayName: string;
   avatarUrl: string | null;
   role: WorkspaceRole;
+  assignToClientProject?: boolean;
 }
 
 const DEFAULT_WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
@@ -46,7 +47,7 @@ const ARCHIVED_TASK_ID = '00000000-0000-4000-8000-000000000104';
 const DEV_INVITE_EMAIL = 'new.member@example.com';
 const DEV_INVITE_TOKEN = 'dev-invite-token';
 
-const SEED_USERS: SeedUser[] = [
+const DEV_SEED_USERS: SeedUser[] = [
   {
     // Matches the test fake's default token `test:admin-uid:admin@example.com`
     // used by e2e suites and bruno's local environment.
@@ -78,6 +79,56 @@ const SEED_USERS: SeedUser[] = [
     role: 'member',
   },
 ];
+
+function getOptionalSeedUser({
+  uidEnv,
+  emailEnv,
+  displayName,
+  role,
+  assignToClientProject = false,
+}: {
+  uidEnv: string;
+  emailEnv: string;
+  displayName: string;
+  role: WorkspaceRole;
+  assignToClientProject?: boolean;
+}): SeedUser | null {
+  const firebaseUid = process.env[uidEnv]?.trim();
+  const email = process.env[emailEnv]?.trim();
+
+  if (!firebaseUid && !email) return null;
+  if (!firebaseUid || !email) {
+    throw new Error(`${uidEnv} and ${emailEnv} must be set together.`);
+  }
+
+  return {
+    firebaseUid,
+    email,
+    displayName,
+    avatarUrl: null,
+    role,
+    assignToClientProject,
+  };
+}
+
+function getSeedUsers(): SeedUser[] {
+  return [
+    ...DEV_SEED_USERS,
+    getOptionalSeedUser({
+      uidEnv: 'SEED_ADMIN_FIREBASE_UID',
+      emailEnv: 'SEED_ADMIN_EMAIL',
+      displayName: 'Seed admin',
+      role: 'admin',
+    }),
+    getOptionalSeedUser({
+      uidEnv: 'SEED_MEMBER_FIREBASE_UID',
+      emailEnv: 'SEED_MEMBER_EMAIL',
+      displayName: 'Seed member',
+      role: 'member',
+      assignToClientProject: true,
+    }),
+  ].filter((user): user is SeedUser => user !== null);
+}
 
 async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
@@ -146,9 +197,11 @@ async function main(): Promise<void> {
         },
       });
 
+    const seedUsers = getSeedUsers();
     let adminUserId: string | null = null;
     const userIdsByFirebaseUid = new Map<string, string>();
-    for (const user of SEED_USERS) {
+    const clientProjectSeedUserIds: string[] = [];
+    for (const user of seedUsers) {
       const [row] = await db
         .insert(users)
         .values({
@@ -172,6 +225,9 @@ async function main(): Promise<void> {
 
       if (user.role === 'admin') {
         adminUserId = row.id;
+      }
+      if (user.assignToClientProject) {
+        clientProjectSeedUserIds.push(row.id);
       }
 
       await db
@@ -237,6 +293,10 @@ async function main(): Promise<void> {
       throw new Error('Seed non-admin users were not created');
     }
 
+    const clientProjectUserIds = Array.from(
+      new Set([aliceUserId, carolUserId, ...clientProjectSeedUserIds]),
+    );
+
     await db
       .insert(projectAssignments)
       .values([
@@ -248,22 +308,16 @@ async function main(): Promise<void> {
         },
         {
           workspaceId: DEFAULT_WORKSPACE_ID,
-          projectId: CLIENT_PROJECT_ID,
-          userId: aliceUserId,
-          assignedBy: adminUserId,
-        },
-        {
-          workspaceId: DEFAULT_WORKSPACE_ID,
           projectId: PLATFORM_PROJECT_ID,
           userId: bobUserId,
           assignedBy: adminUserId,
         },
-        {
+        ...clientProjectUserIds.map((userId) => ({
           workspaceId: DEFAULT_WORKSPACE_ID,
           projectId: CLIENT_PROJECT_ID,
-          userId: carolUserId,
+          userId,
           assignedBy: adminUserId,
-        },
+        })),
       ])
       .onConflictDoUpdate({
         target: [projectAssignments.projectId, projectAssignments.userId],
@@ -342,7 +396,7 @@ async function main(): Promise<void> {
       });
 
     console.log(
-      `Seeded default workspace, settings, ${SEED_USERS.length} users, memberships, projects, tasks, and 1 dev invite.`,
+      `Seeded default workspace, settings, ${seedUsers.length} users, memberships, projects, tasks, and 1 dev invite.`,
     );
   } finally {
     await pool.end();
