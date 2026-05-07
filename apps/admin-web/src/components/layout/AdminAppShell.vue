@@ -23,6 +23,17 @@ const navItems = computed(() => [
   { label: "Projects", name: routeNames.projects },
   { label: "Settings", name: routeNames.settings },
 ]);
+
+// TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
+const activeName = computed(() => {
+  const name = route.name?.toString();
+
+  if (name === routeNames.addProject) {
+    return routeNames.projects;
+  }
+
+  return name;
+});
 </script>
 
 <template>
@@ -38,7 +49,7 @@ const navItems = computed(() => [
 
     <div class="flex min-h-[calc(100vh-4rem)]">
       <WorkspaceNavigation
-        :active-name="route.name?.toString()"
+        :active-name="activeName"
         :items="navItems"
       />
 
