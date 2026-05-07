@@ -11,6 +11,7 @@ import {
 import type { Pinia } from "pinia";
 
 import AdminAppShell from "@/components/layout/AdminAppShell.vue";
+import AddProjectMockView from "@/views/AddProjectMockView.vue";
 import DashboardView from "@/views/DashboardView.vue";
 import InvoicesView from "@/views/InvoicesView.vue";
 import LoginView from "@/views/LoginView.vue";
@@ -22,6 +23,7 @@ import { pinia } from "@/stores";
 import { useAuthStore } from "@/stores/auth";
 
 export const routeNames = {
+  addProject: "admin-add-project",
   dashboard: "admin-dashboard",
   invoices: "admin-invoices",
   login: "admin-login",
@@ -81,6 +83,11 @@ const routes: RouteRecordRaw[] = [
         path: "projects",
         name: routeNames.projects,
         component: ProjectsView,
+      },
+      {
+        path: "projects/new",
+        name: routeNames.addProject,
+        component: AddProjectMockView,
       },
       {
         path: "settings",
