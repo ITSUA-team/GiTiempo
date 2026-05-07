@@ -104,7 +104,7 @@ Trade-off: staging may not catch `NODE_ENV=production` validation gaps. The imag
 - Compiled migration entrypoint can drift from `drizzle-kit` behavior → Use Drizzle's runtime migrator against the same committed migration directory and verify with e2e/smoke flows.
 - Existing e2e tests mutate shared test state → Keep Docker DB isolated per run and preserve sequential file execution.
 - Deploy workflow SSH steps can be brittle across VPS distributions → Keep remote commands small, environment-driven, and focused on Docker Compose operations only.
-- Deploy secrets can leak into untrusted build/test code if scoped too broadly → Keep `VPS_SSH_KEY` limited to SSH validation/configuration steps and do not pass GitHub registry tokens to the VPS.
+- Deploy secrets can leak into untrusted build/test code if scoped too broadly → Keep `VPS_SSH_KEY` limited to SSH validation/configuration steps and pass GHCR pull auth to the VPS only through SSH stdin with a temporary Docker config.
 
 ## Migration Plan
 

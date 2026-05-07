@@ -208,28 +208,45 @@ jobs:
         shell: bash
         env:
           DEPLOY_IMAGE: ${{ steps.image.outputs.image }}
+          GHCR_USERNAME: ${{ vars.GHCR_USERNAME || github.actor }}
+          GHCR_TOKEN: ${{ secrets.GHCR_READ_TOKEN || github.token }}
         run: |
           set -euo pipefail
 
-          ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
-            "cd '$API_DEPLOY_PATH' && API_IMAGE='$DEPLOY_IMAGE' docker compose pull postgres api migrate"
+          remote_quote() {
+            local value="$1"
+            value="${value//\'/\'\\\'\'}"
+            printf "'%s'" "$value"
+          }
+
+          remote_api_deploy_path="$(remote_quote "$API_DEPLOY_PATH")"
+          remote_deploy_image="$(remote_quote "$DEPLOY_IMAGE")"
+          remote_ghcr_username="$(remote_quote "$GHCR_USERNAME")"
+
+          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
+            "set -eu
+             tmp_docker_config=\$(mktemp -d)
+             trap 'rm -rf \"\$tmp_docker_config\"' EXIT
+             DOCKER_CONFIG=\"\$tmp_docker_config\" docker login ghcr.io -u $remote_ghcr_username --password-stdin
+             cd $remote_api_deploy_path
+             API_IMAGE=$remote_deploy_image DOCKER_CONFIG=\"\$tmp_docker_config\" docker compose pull postgres api migrate"
 
           ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
-            "cd '$API_DEPLOY_PATH' && API_IMAGE='$DEPLOY_IMAGE' docker compose up -d postgres"
+            "cd $remote_api_deploy_path && API_IMAGE=$remote_deploy_image docker compose up -d postgres"
 
           if [ "$RUN_MIGRATIONS" = "true" ]; then
             ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
-              "cd '$API_DEPLOY_PATH' && API_IMAGE='$DEPLOY_IMAGE' docker compose run --rm migrate"
+              "cd $remote_api_deploy_path && API_IMAGE=$remote_deploy_image docker compose run --rm migrate"
           fi
 
           ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
-            "cd '$API_DEPLOY_PATH' && API_IMAGE='$DEPLOY_IMAGE' docker compose up -d --force-recreate api"
+            "cd $remote_api_deploy_path && API_IMAGE=$remote_deploy_image docker compose up -d --force-recreate api"
 
       - name: Check public API readiness
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl -fsS "$PUBLIC_API_URL/commons/health/ready"; then
               exit 0
             fi

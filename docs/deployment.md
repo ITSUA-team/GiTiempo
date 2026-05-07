@@ -138,7 +138,7 @@ The API deploy workflow must follow this order:
 8. Push the image to GHCR as `ghcr.io/<owner>/<repo>/api:<tag>` only when the workflow built it.
 9. Connect to the VPS over SSH.
 10. Update environment and Compose files if needed.
-11. Pull the selected image.
+11. Perform temporary GHCR login on the VPS and pull the selected image.
 12. Run migrations explicitly.
 13. Recreate the API service with Docker Compose.
 14. Check `GET /commons/health/ready` through the public API URL.
@@ -159,7 +159,8 @@ GitHub Actions stores deploy credentials and environment-specific values.
 | `VPS_SSH_KEY` | GitHub Environment secret | SSH private key used only by SSH validation/configuration steps |
 | `API_IMAGE` | VPS runtime env / workflow env | Selected GHCR image for Compose rollout and Compose interpolation |
 | `APP_URL` | VPS runtime env | Public API URL used by backend OAuth callback generation |
-| Registry credentials | GitHub Actions / GHCR integration | The runner logs into GHCR to push and smoke-test images; the VPS must already be logged into GHCR for private image pulls or the API package must be public |
+| Registry credentials | GitHub Actions / GHCR integration | The runner logs into GHCR to push and smoke-test images; the workflow also performs a temporary VPS GHCR login with an ephemeral Docker config only for `docker compose pull` |
+| `GHCR_READ_TOKEN`, `GHCR_USERNAME` | Optional GitHub Environment secret/variable | Only needed if the default `GITHUB_TOKEN` cannot read the private GHCR package; the token is passed over SSH stdin and not stored in the VPS default Docker config |
 | API runtime env | VPS secret store or Compose `.env` on server | Not committed to git |
 | `DATABASE_URL` and `POSTGRES_*` | VPS secret store or Compose `.env` on server | `POSTGRES_*` initializes the database container on first start; `DATABASE_URL` connects API/migrations to that database |
 

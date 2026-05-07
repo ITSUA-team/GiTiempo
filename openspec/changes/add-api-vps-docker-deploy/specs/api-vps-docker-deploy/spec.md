@@ -143,10 +143,11 @@ The system SHALL document and support staging API runtime configuration without 
 - **THEN** they contain safe placeholders only
 - **AND** real VPS `.env` files remain ignored and uncommitted
 
-#### Scenario: VPS pulls API images without workflow token transfer
+#### Scenario: VPS pulls API images with ephemeral GHCR auth
 - **WHEN** the API deploy workflow rolls out a private GHCR API image
-- **THEN** Docker on the VPS is expected to already be logged into GHCR with read access
-- **AND** the workflow does not pass GitHub registry tokens to the VPS
+- **THEN** the workflow performs a temporary GHCR login on the VPS before `docker compose pull`
+- **AND** it uses an ephemeral Docker config that is removed after the pull
+- **AND** it passes the GHCR token over SSH stdin rather than storing it in the VPS runtime `.env` or default Docker config
 
 ### Requirement: Deployment Documentation Alignment
 The system SHALL keep deployment and testing documentation aligned with the implemented API Docker deployment flow.
