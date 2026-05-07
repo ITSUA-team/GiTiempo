@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref } from 'vue';
 import type {
   ProjectResponse,
   ProjectVisibility,
   WorkspaceMemberListResponse,
-} from "@gitiempo/shared";
-import Button from "primevue/button";
-import MultiSelect from "primevue/multiselect";
-import Select from "primevue/select";
+} from '@gitiempo/shared';
+import { Form, FormField } from '@primevue/forms';
+import Button from 'primevue/button';
+import MultiSelect from 'primevue/multiselect';
+import Select from 'primevue/select';
 
-import { adminProjectsClient } from "@/services/admin-projects-client";
-import { useAuthStore } from "@/stores/auth";
+import { adminProjectsClient } from '@/services/admin-projects-client';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps<{
   project: ProjectResponse;
@@ -38,8 +39,8 @@ const memberOptions = props.allMembers.map((m) => ({
 }));
 
 const visibilityOptions = [
-  { label: "Public", value: "public" as const },
-  { label: "Private", value: "private" as const },
+  { label: 'Public', value: 'public' as const },
+  { label: 'Private', value: 'private' as const },
 ];
 
 async function handleSave(): Promise<void> {
@@ -82,7 +83,7 @@ async function handleSave(): Promise<void> {
       );
     }
 
-    emit("saved", updated);
+    emit('saved', updated);
   } finally {
     saving.value = false;
   }
@@ -90,49 +91,141 @@ async function handleSave(): Promise<void> {
 </script>
 
 <template>
-  <div class="border-divider bg-app-bg flex flex-col gap-2.5 border-t p-4">
-    <span class="text-text-dark text-[13px] font-semibold">Project settings</span>
-    <div class="flex items-end gap-2.5">
-      <div class="flex flex-1 flex-col gap-1.5">
-        <label
-          for="edit-members"
-          class="text-text-dark text-xs font-medium"
-        >Select members</label>
-        <MultiSelect
-          id="edit-members"
-          v-model="selectedMemberIds"
-          :options="memberOptions"
-          option-label="label"
-          option-value="value"
-          placeholder="Select members"
-          class="w-full"
+  <Form @submit.prevent>
+    <div class="edit-form-panel">
+      <!-- "Project settings" — Inter 600 13px #1a1a1a -->
+      <span class="edit-form-title">Project settings</span>
+
+      <!--
+        Fields row (y6fv74): horizontal flex, align-items=end, gap=10px
+      -->
+      <div class="edit-form-row">
+        <!--
+          Members field (SvnYS): flex:1, vertical, gap=6px
+          Label: Inter 500 12px #1a1a1a
+        -->
+        <FormField
+          name="members"
+          class="edit-form-field edit-form-field--fill"
+        >
+          <label
+            for="edit-members"
+            class="edit-form-label"
+            >Select members</label
+          >
+          <MultiSelect
+            id="edit-members"
+            v-model="selectedMemberIds"
+            :options="memberOptions"
+            option-label="label"
+            option-value="value"
+            placeholder="Select members"
+            fluid
+          />
+        </FormField>
+
+        <!--
+          Visibility field (H0rt2): width=180px, vertical, gap=6px
+          Label: Inter 500 12px #1a1a1a
+        -->
+        <FormField
+          name="visibility"
+          class="edit-form-field edit-form-field--180"
+        >
+          <label
+            for="edit-visibility"
+            class="edit-form-label"
+            >Visibility</label
+          >
+          <Select
+            id="edit-visibility"
+            v-model="selectedVisibility"
+            :options="visibilityOptions"
+            option-label="label"
+            option-value="value"
+            fluid
+          />
+        </FormField>
+
+        <!--
+          Cancel (xMII9):
+            fill=$color-surface(#fff), stroke=$color-divider(#eeeeee) 1px,
+            cornerRadius=6px, padding=[8px, 14px], Inter 500 13px #1a1a1a
+          → severity="secondary" outlined gives white bg + border
+        -->
+        <Button
+          label="Cancel"
+          severity="secondary"
+          outlined
+          @click="emit('cancelled')"
+        />
+
+        <!--
+          Save (Fq21c):
+            fill=$color-brand(#5d2b85), cornerRadius=6px,
+            padding=[8px, 14px], Inter 600 13px #ffffff
+          → default primary Button matches this exactly
+        -->
+        <Button
+          label="Save"
+          :loading="saving"
+          @click="handleSave"
         />
       </div>
-      <div class="flex w-[180px] flex-col gap-1.5">
-        <label
-          for="edit-visibility"
-          class="text-text-dark text-xs font-medium"
-        >Visibility</label>
-        <Select
-          id="edit-visibility"
-          v-model="selectedVisibility"
-          :options="visibilityOptions"
-          option-label="label"
-          option-value="value"
-          class="w-full"
-        />
-      </div>
-      <Button
-        label="Cancel"
-        severity="secondary"
-        outlined
-        @click="emit('cancelled')"
-      />
-      <Button
-        label="Save"
-        :loading="saving"
-        @click="handleSave"
-      />
     </div>
-  </div>
+  </Form>
 </template>
+
+<style scoped>
+/* Panel shell — exact design values, all inline so nothing overrides */
+.edit-form-panel {
+  background-color: #f4f4f5;
+  border-top: 1px solid #eeeeee;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* "Project settings" label */
+.edit-form-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1;
+}
+
+/* Fields row: horizontal, align bottom, gap 10px */
+.edit-form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+/* FormField wrapper: vertical stack, gap 6px */
+.edit-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-form-field--fill {
+  flex: 1;
+}
+
+.edit-form-field--180 {
+  width: 180px;
+}
+
+/* Field labels: Inter 500 12px #1a1a1a */
+.edit-form-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1a1a1a;
+  line-height: 1;
+}
+</style>
