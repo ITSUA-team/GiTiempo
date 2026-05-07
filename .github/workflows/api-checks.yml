@@ -18,25 +18,6 @@ on:
       - scripts/api-smoke-docker.sh
       - .github/workflows/api-checks.yml
       - .github/workflows/deploy-api.yml
-  push:
-    branches:
-      - staging
-    paths:
-      - apps/api/**
-      - packages/shared/**
-      - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - turbo.json
-      - .dockerignore
-      - apps/api/Dockerfile
-      - apps/api/compose.e2e.yml
-      - apps/api/compose.smoke.yml
-      - deploy/api/**
-      - scripts/api-e2e-docker.sh
-      - scripts/api-smoke-docker.sh
-      - .github/workflows/api-checks.yml
-      - .github/workflows/deploy-api.yml
 
 permissions:
   contents: read

@@ -79,7 +79,7 @@ Pull request workflows should run:
 - API integration/e2e tests with ephemeral PostgreSQL when `apps/api` or `packages/shared` changes
 - frontend build/test checks when `apps/user-web`, `apps/admin-web`, `packages/web-config`, or `packages/web-shared` changes
 
-The `staging` branch workflows should repeat the checks required for deployment. Deployment must not start from a failed test workflow.
+The `staging` branch deploy workflow should repeat the checks required for deployment. Deployment must not start from a failed test workflow.
 
 ## Deployment Checks
 
