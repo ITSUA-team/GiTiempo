@@ -252,7 +252,7 @@ Manual deploy without merging to `staging`: Actions -> `Deploy API` -> `Run work
 
 `image_tag` is only for rollback/prebuilt deploys and accepts this repository's GHCR API image tags or digests. Automatic staging deploys run from the `staging` branch when API deployment paths change.
 
-The VPS must already be logged into GHCR with read access to the API package, unless the package is public. The workflow does not pass GitHub registry tokens to the VPS.
+The workflow performs a temporary GHCR login on the VPS only for `docker compose pull`, using an ephemeral Docker config that is deleted after the pull. If the default `GITHUB_TOKEN` cannot read the private package, set optional `GHCR_READ_TOKEN` secret and `GHCR_USERNAME` variable in the GitHub Environment.
 
 The optional nginx baseline for the staging API is `deploy/api/nginx.staging.example.conf`. It includes port 80 to 443 redirect, TLS certificate placeholders, reverse proxy headers, websocket upgrade headers, request limits, timeouts, and common API security headers. It is not the full production readiness checklist: DNS, certificate renewal, firewall rules, real client IP handling behind any CDN, monitoring, backups, and rollback operations remain environment setup tasks.
 

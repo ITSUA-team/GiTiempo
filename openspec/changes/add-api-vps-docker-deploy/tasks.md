@@ -74,7 +74,7 @@
 - [x] 10.1 Restrict manual prebuilt `image_tag` deploys to this repository's GHCR API image tags or digests.
 - [x] 10.2 Smoke-test every selected API image, including prebuilt rollback tags, before SSH rollout.
 - [x] 10.3 Scope `VPS_SSH_KEY` only to SSH validation/configuration steps.
-- [x] 10.4 Keep GitHub registry tokens on the GitHub runner and document the VPS GHCR login or public-image prerequisite.
+- [x] 10.4 Add temporary VPS GHCR login for private image pulls without storing registry credentials in the VPS default Docker config.
 - [x] 10.5 Move the staging GitHub Environment example to `deploy/` and merge frontend/API values.
 - [x] 10.6 Read frontend staging URL values from GitHub Environment variables instead of workflow constants.
 - [x] 10.7 Expand the optional staging nginx example and docs with a TLS reverse-proxy baseline and production-readiness caveats.
