@@ -5,7 +5,6 @@ import type {
   ProjectVisibility,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
-import { Form, FormField } from '@primevue/forms';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
@@ -35,7 +34,9 @@ const selectedVisibility = ref<ProjectVisibility>(props.project.visibility);
 
 const saving = ref(false);
 
-const memberOptions = props.allMembers.map((m) => ({
+const memberOptions = props.allMembers
+  .filter((m) => m.role !== "admin")
+  .map((m) => ({
   label: m.displayName ?? m.email,
   value: m.userId,
 }));
@@ -96,87 +97,85 @@ async function handleSave(): Promise<void> {
 </script>
 
 <template>
-  <Form @submit.prevent>
-    <div class="edit-form-panel">
-      <!-- "Project settings" — Inter 600 13px #1a1a1a -->
-      <span class="edit-form-title">Project settings</span>
+  <div class="edit-form-panel">
+    <!-- "Project settings" — Inter 600 13px #1a1a1a -->
+    <span class="edit-form-title">Project settings</span>
 
-      <!--
+    <!--
         Fields row (y6fv74): horizontal flex, align-items=end, gap=10px
       -->
-      <div class="edit-form-row">
-        <!--
+    <div class="edit-form-row">
+      <!--
           Members field (SvnYS): flex:1, vertical, gap=6px
           Label: Inter 500 12px #1a1a1a
         -->
-        <FormField
-          name="members"
-          class="edit-form-field edit-form-field--fill"
-        >
-          <label
-            for="edit-members"
-            class="edit-form-label"
-          >Select members</label>
-          <MultiSelect
-            id="edit-members"
-            v-model="selectedMemberIds"
-            :options="memberOptions"
-            option-label="label"
-            option-value="value"
-            placeholder="Select members"
-            fluid
-          />
-        </FormField>
+      <div
+        name="members"
+        class="edit-form-field edit-form-field--fill"
+      >
+        <label
+          for="edit-members"
+          class="edit-form-label"
+        >Select members</label>
+        <MultiSelect
+          id="edit-members"
+          v-model="selectedMemberIds"
+          :options="memberOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="Select members"
+          fluid
+        />
+      </div>
 
-        <!--
+      <!--
           Visibility field (H0rt2): width=180px, vertical, gap=6px
           Label: Inter 500 12px #1a1a1a
         -->
-        <FormField
-          name="visibility"
-          class="edit-form-field edit-form-field--180"
-        >
-          <label
-            for="edit-visibility"
-            class="edit-form-label"
-          >Visibility</label>
-          <Select
-            id="edit-visibility"
-            v-model="selectedVisibility"
-            :options="visibilityOptions"
-            option-label="label"
-            option-value="value"
-            fluid
-          />
-        </FormField>
+      <div
+        name="visibility"
+        class="edit-form-field edit-form-field--180"
+      >
+        <label
+          for="edit-visibility"
+          class="edit-form-label"
+        >Visibility</label>
+        <Select
+          id="edit-visibility"
+          v-model="selectedVisibility"
+          :options="visibilityOptions"
+          option-label="label"
+          option-value="value"
+          fluid
+        />
+      </div>
 
-        <!--
+      <!--
           Cancel (xMII9):
             fill=$color-surface(#fff), stroke=$color-divider(#eeeeee) 1px,
             cornerRadius=6px, padding=[8px, 14px], Inter 500 13px #1a1a1a
           → severity="secondary" outlined gives white bg + border
         -->
-        <Button
-          label="Cancel"
-          severity="secondary"
-          outlined
-          @click="emit('cancelled')"
-        />
+      <Button
+        label="Cancel"
+        severity="secondary"
+        outlined
+        @click="emit('cancelled')"
+      />
 
-        <!--
+      <!--
           Save (Fq21c):
             fill=$color-brand(#5d2b85), cornerRadius=6px,
             padding=[8px, 14px], Inter 600 13px #ffffff
           → default primary Button matches this exactly
         -->
-        <Button
-          label="Save"
-          :loading="saving"
-          @click="handleSave"
-        />
-      </div>
+      <Button
+        label="Save"
+        :loading="saving"
+        @click="handleSave"
+      />
     </div>
-  </Form>
+  </div>
 </template>
 
 <style scoped>

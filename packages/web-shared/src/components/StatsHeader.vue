@@ -9,8 +9,12 @@ defineProps<{
   <div class="flex flex-col gap-6">
     <div class="flex items-center justify-between">
       <div class="flex flex-col gap-1.5">
-        <h1 class="text-[28px] font-semibold text-text-dark">{{ title }}</h1>
-        <p class="text-sm font-normal text-text-muted">{{ description }}</p>
+        <h1 class="text-text-dark text-[28px] font-semibold">
+          {{ title }}
+        </h1>
+        <p class="text-text-muted text-sm font-normal">
+          {{ description }}
+        </p>
       </div>
       <div>
         <slot name="actions" />

@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import type {
   ManagementProjectSummaryResponse,
   ProjectListResponse,
   WorkspaceMemberListResponse,
 } from "@gitiempo/shared";
-import { StatsHeader } from "@gitiempo/web-shared";
+import { StatsHeader, SurfaceCard } from "@gitiempo/web-shared";
 import Button from "primevue/button";
+import { useToast } from "primevue/usetoast";
 
 import ProjectStatCard from "@/components/ProjectStatCard.vue";
 import ProjectsTable from "@/components/ProjectsTable.vue";
@@ -17,6 +18,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const toast = useToast();
 
 const projects = ref<ProjectListResponse>([]);
 const summary = ref<ManagementProjectSummaryResponse>({
@@ -26,13 +28,14 @@ const summary = ref<ManagementProjectSummaryResponse>({
 });
 const members = ref<WorkspaceMemberListResponse>([]);
 const loading = ref(true);
+const loadError = ref<string | null>(null);
 
-const sortedProjects = computed(() =>
-  [...projects.value].sort((a, b) => {
+function sortProjects(list: ProjectListResponse): ProjectListResponse {
+  return [...list].sort((a, b) => {
     if (a.isActive === b.isActive) return 0;
     return a.isActive ? -1 : 1;
-  }),
-);
+  });
+}
 
 async function fetchAll(): Promise<void> {
   const token = authStore.accessToken;
@@ -42,6 +45,7 @@ async function fetchAll(): Promise<void> {
   }
 
   loading.value = true;
+  loadError.value = null;
 
   try {
     const [projectsData, summaryData, membersData] = await Promise.all([
@@ -50,9 +54,18 @@ async function fetchAll(): Promise<void> {
       adminProjectsClient.listMembers(token),
     ]);
 
-    projects.value = projectsData;
+    projects.value = sortProjects(projectsData);
     summary.value = summaryData;
     members.value = membersData;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "An unexpected error occurred";
+    loadError.value = message;
+    toast.add({
+      severity: "error",
+      summary: "Failed to load projects",
+      detail: message,
+      life: 5000,
+    });
   } finally {
     loading.value = false;
   }
@@ -73,8 +86,15 @@ async function refresh(): Promise<void> {
       adminProjectsClient.getManagementSummary(token),
     ]);
 
-    projects.value = projectsData;
+    projects.value = sortProjects(projectsData);
     summary.value = summaryData;
+  } catch (err) {
+    toast.add({
+      severity: "error",
+      summary: "Failed to refresh projects",
+      detail: err instanceof Error ? err.message : "An unexpected error occurred",
+      life: 5000,
+    });
   } finally {
     loading.value = false;
   }
@@ -89,42 +109,60 @@ onMounted(fetchAll);
 
 <template>
   <div class="flex flex-col gap-6 p-6">
-    <StatsHeader
-      title="Projects"
-      description="Manage project visibility, member assignments, and manual project creation."
-    >
-      <template #actions>
-        <Button
-          label="New Project"
-          icon="pi pi-plus"
-          @click="handleNewProject"
-        />
-      </template>
-      <template #stats>
-        <ProjectStatCard
-          label="Active Projects"
-          :value="summary.activeProjects"
-        />
-        <ProjectStatCard
-          label="Private Projects"
-          :value="summary.privateProjects"
-        />
-        <ProjectStatCard
-          label="Public Projects"
-          :value="summary.publicProjects"
-        />
-      </template>
-    </StatsHeader>
+    <!-- Error state — visible banner after initial load failure -->
+    <template v-if="loadError && !loading">
+      <SurfaceCard padding-class="p-6">
+        <div class="flex flex-col items-center gap-3 py-6 text-center">
+          <span class="text-text-dark text-[15px] font-semibold">Failed to load projects</span>
+          <span class="text-text-muted text-[13px]">{{ loadError }}</span>
+          <Button
+            label="Try again"
+            severity="secondary"
+            outlined
+            @click="fetchAll"
+          />
+        </div>
+      </SurfaceCard>
+    </template>
 
-    <div class="bg-surface shadow-card flex flex-col gap-4 rounded-lg p-5">
-      <ProjectsTable
-        :projects="sortedProjects"
-        :members="members"
-        :loading="loading"
-        @edit-saved="refresh"
-        @archive="refresh"
-        @unarchive="refresh"
-      />
-    </div>
+    <!-- Main content — visible immediately, table overlay handles loading -->
+    <template v-else>
+      <StatsHeader
+        title="Projects"
+        description="Manage project visibility, member assignments, and manual project creation."
+      >
+        <template #actions>
+          <Button
+            label="New Project"
+            @click="handleNewProject"
+          />
+        </template>
+        <template #stats>
+          <ProjectStatCard
+            label="Active Projects"
+            :value="summary.activeProjects"
+          />
+          <ProjectStatCard
+            label="Private"
+            :value="summary.privateProjects"
+          />
+          <ProjectStatCard
+            label="Public"
+            :value="summary.publicProjects"
+          />
+        </template>
+      </StatsHeader>
+
+      <SurfaceCard padding-class="p-5">
+        <ProjectsTable
+          :projects="projects"
+          :members="members"
+          :loading="loading"
+          @edit-saved="refresh"
+          @archive="refresh"
+          @unarchive="refresh"
+        />
+      </SurfaceCard>
+    </template>
   </div>
 </template>
