@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
+import Toast from "primevue/toast";
 
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
@@ -22,10 +23,22 @@ const navItems = computed(() => [
   { label: "Projects", name: routeNames.projects },
   { label: "Settings", name: routeNames.settings },
 ]);
+
+// TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
+const activeName = computed(() => {
+  const name = route.name?.toString();
+
+  if (name === routeNames.addProject) {
+    return routeNames.projects;
+  }
+
+  return name;
+});
 </script>
 
 <template>
   <div class="bg-app-bg text-text-dark min-h-screen">
+    <Toast />
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
@@ -36,7 +49,7 @@ const navItems = computed(() => [
 
     <div class="flex min-h-[calc(100vh-4rem)]">
       <WorkspaceNavigation
-        :active-name="route.name?.toString()"
+        :active-name="activeName"
         :items="navItems"
       />
 

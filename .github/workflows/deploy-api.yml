@@ -52,6 +52,8 @@ on:
       - deploy/api/**
       - scripts/api-e2e-docker.sh
       - scripts/api-smoke-docker.sh
+      - .github/actions/workspace-check/**
+      - .github/scripts/detect-ci-targets.mjs
       - .github/workflows/deploy-api.yml
 
 permissions:
@@ -68,6 +70,7 @@ jobs:
       cancel-in-progress: false
     env:
       CI: true
+      TURBO_TELEMETRY_DISABLED: 1
       DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
       RUN_MIGRATIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_migrations || 'true' }}
       RUN_SEED: ${{ github.event_name == 'workflow_dispatch' && inputs.run_seed || 'false' }}
@@ -83,39 +86,13 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
-      - name: Set up pnpm
+      - name: Run API checks
         if: env.PREBUILT_IMAGE_TAG == ''
-        uses: pnpm/action-setup@v4
+        uses: ./.github/actions/workspace-check
         with:
-          version: 10.14.0
-          run_install: false
-
-      - name: Set up Node.js
-        if: env.PREBUILT_IMAGE_TAG == ''
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        if: env.PREBUILT_IMAGE_TAG == ''
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint API
-        if: env.PREBUILT_IMAGE_TAG == ''
-        run: pnpm exec turbo run lint --filter=@gitiempo/api
-
-      - name: Typecheck API
-        if: env.PREBUILT_IMAGE_TAG == ''
-        run: pnpm exec turbo run typecheck --filter=@gitiempo/api
-
-      - name: Test API
-        if: env.PREBUILT_IMAGE_TAG == ''
-        run: pnpm exec turbo run test --filter=@gitiempo/api
-
-      - name: Run Docker-backed API e2e
-        if: env.PREBUILT_IMAGE_TAG == ''
-        run: pnpm api:e2e:docker
+          package-name: '@gitiempo/api'
+          run-build: 'false'
+          run-api-e2e: 'true'
 
       - name: Compute image metadata
         id: image
