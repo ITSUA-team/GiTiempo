@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import { useToast } from "primevue/usetoast";
+
+import type { WorkspaceMemberListResponse } from "@gitiempo/shared";
 
 import { routeNames } from "@/router";
 import { adminProjectsClient } from "@/services/admin-projects-client";
@@ -14,16 +15,49 @@ const router = useRouter();
 const authStore = useAuthStore();
 const toast = useToast();
 
+// Form state
 const projectName = ref("");
 const visibility = ref<"public" | "private">("private");
+const selectedManagerUserId = ref<string | null>(null);
 const isSubmitting = ref(false);
 const submitError = ref<string | null>(null);
 const nameError = ref<string | null>(null);
 
+// Members for PM selector
+const members = ref<WorkspaceMemberListResponse>([]);
+const membersLoading = ref(false);
+const membersError = ref<string | null>(null);
+
 const visibilityOptions = [
-  { label: "Public", value: "public" },
-  { label: "Private", value: "private" },
+  { label: "Public", value: "public" as const },
+  { label: "Private", value: "private" as const },
 ];
+
+const memberOptions = () =>
+  members.value
+    .filter((m) => m.role === "pm")
+    .map((m) => ({
+      label: m.displayName ?? m.email,
+      value: m.userId,
+    }));
+
+async function loadMembers(): Promise<void> {
+  const token = authStore.accessToken;
+
+  if (!token) return;
+
+  membersLoading.value = true;
+  membersError.value = null;
+
+  try {
+    members.value = await adminProjectsClient.listMembers(token);
+  } catch (err) {
+    membersError.value =
+      err instanceof Error ? err.message : "Failed to load members";
+  } finally {
+    membersLoading.value = false;
+  }
+}
 
 async function handleSubmit(): Promise<void> {
   nameError.value = null;
@@ -46,10 +80,19 @@ async function handleSubmit(): Promise<void> {
   isSubmitting.value = true;
 
   try {
-    await adminProjectsClient.createProject(token, {
+    const project = await adminProjectsClient.createProject(token, {
       name: trimmedName,
       visibility: visibility.value,
     });
+
+    // Assign selected PM if chosen
+    if (selectedManagerUserId.value) {
+      await adminProjectsClient.assignMember(
+        token,
+        project.id,
+        selectedManagerUserId.value,
+      );
+    }
 
     toast.add({
       severity: "success",
@@ -70,23 +113,26 @@ async function handleSubmit(): Promise<void> {
 function handleBack(): void {
   router.push({ name: routeNames.projects });
 }
+
+onMounted(loadMembers);
 </script>
 
 <template>
   <div class="flex flex-col gap-5 p-6">
     <!-- Back link -->
     <div>
-      <a
-        class="text-brand cursor-pointer text-[13px] font-semibold"
+      <button
+        type="button"
+        class="text-brand cursor-pointer bg-transparent text-[13px] font-semibold"
         @click="handleBack"
       >
         ← Back to projects
-      </a>
+      </button>
     </div>
 
     <!-- Page header -->
     <div class="flex flex-col gap-1.5">
-      <h1 class="text-text-dark text-[28px] font-semibold">
+      <h1 class="text-text-dark text-[28px] leading-tight font-semibold">
         Add Project
       </h1>
       <p class="text-text-muted text-sm font-normal">
@@ -98,13 +144,12 @@ function handleBack(): void {
     <!-- Body: form card + source card -->
     <div class="flex gap-5">
       <!-- Form card -->
-      <div
-        class="bg-surface flex flex-1 flex-col gap-3 rounded-lg p-4"
-      >
+      <div class="bg-surface flex flex-1 flex-col gap-3 rounded-lg p-4">
         <h2 class="text-text-dark text-lg font-semibold">
           Add Project Manually
         </h2>
 
+        <!-- Fields -->
         <div class="flex flex-col gap-2.5">
           <!-- Project name -->
           <div class="flex flex-col gap-1.5">
@@ -117,10 +162,10 @@ function handleBack(): void {
             <InputText
               id="project-name"
               v-model="projectName"
-              class="w-full"
               :invalid="!!nameError"
               :disabled="isSubmitting"
-              placeholder="Enter project name"
+              class="h-[34px] w-full rounded-[6px] px-3 text-[14px] font-medium"
+              placeholder="Customer Portal"
             />
             <small
               v-if="nameError"
@@ -132,25 +177,46 @@ function handleBack(): void {
 
           <!-- Source + Project manager row -->
           <div class="flex gap-3">
+            <!-- Source: read-only display field -->
             <div class="flex flex-1 flex-col gap-1.5">
               <label class="text-text-dark text-[13px] font-medium">
                 Source
               </label>
               <div
-                class="border-divider text-text-dark flex h-[34px] items-center rounded-md border px-3 text-sm font-medium"
+                class="border-divider text-text-dark flex h-[34px] items-center rounded-[6px] border bg-white px-3 text-[14px] font-medium"
               >
                 Manual
               </div>
             </div>
+
+            <!-- Project manager: select from members -->
             <div class="flex w-40 flex-col gap-1.5">
-              <label class="text-text-dark text-[13px] font-medium">
+              <label
+                class="text-text-dark text-[13px] font-medium"
+                for="project-manager"
+              >
                 Project manager
               </label>
-              <div
-                class="border-divider text-text-dark flex h-[34px] items-center rounded-md border px-3 text-sm font-medium"
+              <Select
+                id="project-manager"
+                v-model="selectedManagerUserId"
+                :options="memberOptions()"
+                option-label="label"
+                option-value="value"
+                placeholder="Select"
+                :loading="membersLoading"
+                :disabled="isSubmitting || membersLoading"
+                :pt="{
+                  root: { class: 'h-[34px] w-full text-[14px] rounded-[6px]' },
+                  label: { class: 'text-[14px] font-medium py-0 flex items-center' },
+                }"
+              />
+              <small
+                v-if="membersError"
+                class="text-status-error-text text-xs"
               >
-                {{ authStore.displayName ?? "—" }}
-              </div>
+                {{ membersError }}
+              </small>
             </div>
           </div>
 
@@ -168,27 +234,40 @@ function handleBack(): void {
               :options="visibilityOptions"
               option-label="label"
               option-value="value"
-              class="w-full"
               :disabled="isSubmitting"
+              :pt="{
+                root: { class: 'h-[34px] w-full text-[14px] rounded' },
+                label: { class: 'text-[14px] font-medium py-0 flex items-center' },
+              }"
             />
           </div>
         </div>
 
-        <!-- Action row -->
+        <!-- Action row: gap 10px, right-aligned -->
         <div class="flex items-center justify-end gap-2.5">
-          <Button
-            label="Back"
-            severity="secondary"
-            outlined
+          <!-- Back: $color-surface bg, 1px $color-divider border, $radius-sm (6px), padding 8×14, 13px/500/$color-text-dark -->
+          <button
+            type="button"
+            class="border-divider text-text-dark inline-flex h-[32px] cursor-pointer items-center rounded-[6px] border bg-white px-3.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="isSubmitting"
             @click="handleBack"
-          />
-          <Button
-            label="Create project"
-            :loading="isSubmitting"
+          >
+            Back
+          </button>
+
+          <!-- Create project: $color-brand bg, $radius-sm (6px), padding 8×14, 13px/600/$color-surface -->
+          <button
+            type="button"
+            class="bg-brand inline-flex h-[32px] cursor-pointer items-center rounded-[6px] px-3.5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
             :disabled="isSubmitting"
             @click="handleSubmit"
-          />
+          >
+            <span
+              v-if="isSubmitting"
+              class="mr-1.5 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"
+            />
+            Create project
+          </button>
         </div>
 
         <!-- Submit error -->
@@ -212,7 +291,7 @@ function handleBack(): void {
           screen covers the manual path.
         </p>
 
-        <!-- Manual project tile -->
+        <!-- Manual project tile: highlighted/selected -->
         <div
           class="border-brand flex flex-col gap-2 rounded-lg border bg-[#F7F2FC] p-3.5"
         >
@@ -225,10 +304,8 @@ function handleBack(): void {
           </span>
         </div>
 
-        <!-- Workspace import tile -->
-        <div
-          class="flex flex-col gap-2 rounded-lg bg-[#F4F4F5] p-3.5"
-        >
+        <!-- Workspace import tile: default/unselected -->
+        <div class="flex flex-col gap-2 rounded-lg bg-[#F4F4F5] p-3.5">
           <span class="text-text-dark text-sm font-semibold">
             Workspace import
           </span>
