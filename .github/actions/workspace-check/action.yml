@@ -1,0 +1,54 @@
+name: Workspace check
+description: Set up the workspace and run standard checks for one package.
+
+inputs:
+  package-name:
+    description: pnpm workspace package name to check.
+    required: true
+  run-build:
+    description: Run the package build task as part of the check.
+    required: false
+    default: 'false'
+  run-api-e2e:
+    description: Run Docker-backed API e2e after package checks.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10.14.0
+        run_install: false
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Run package checks
+      shell: bash
+      env:
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        RUN_BUILD: ${{ inputs.run-build }}
+      run: |
+        set -euo pipefail
+
+        tasks="lint typecheck test"
+        if [ "$RUN_BUILD" = "true" ]; then
+          tasks="$tasks build"
+        fi
+
+        pnpm exec turbo run $tasks --filter="$PACKAGE_NAME"
+
+    - name: Run Docker-backed API e2e
+      if: inputs.run-api-e2e == 'true'
+      shell: bash
+      run: pnpm api:e2e:docker

@@ -6,9 +6,9 @@ This document defines the target automated testing model for GI Tiempo. Test inf
 
 | Layer | Command | Database | When |
 |---|---|---|---|
-| Lint | `pnpm lint` | No | PR, staging branch, deploy workflows |
-| Typecheck | `pnpm typecheck` | No | PR, staging branch, deploy workflows |
-| Unit tests | `pnpm test` | No | PR, staging branch, deploy workflows |
+| Lint | `pnpm lint` | No | PR to `main` for affected packages, deploy gates |
+| Typecheck | `pnpm typecheck` | No | PR to `main` for affected packages, deploy gates |
+| Unit tests | `pnpm test` | No | PR to `main` for affected packages, deploy gates |
 | API integration/e2e | `pnpm api:e2e:docker` | Ephemeral PostgreSQL | API/shared PRs and API deploy workflow |
 | API container smoke | `pnpm api:smoke:docker` | Ephemeral PostgreSQL | Before pushing or deploying a selected API image |
 | Browser e2e | Playwright command once added | Staging environment | Deferred post-MVP |
@@ -69,17 +69,26 @@ When a frontend change touches shared frontend packages or shared auth/session/r
 - `packages/web-shared` or `packages/web-config` changes require `user-web` and `admin-web` lint/typecheck.
 - Shared auth/session/runtime changes also require `pnpm --filter user-web test` and `pnpm --filter admin-web test` so both SPA integrations stay protected.
 
-API e2e should be run through the isolated database runner once the Docker Compose test infrastructure exists. Until then, direct `pnpm --filter @gitiempo/api test:e2e` is a local fallback only and requires a manually prepared database.
+API e2e must run through the isolated database runner. Direct `pnpm --filter @gitiempo/api test:e2e` is a local fallback only and requires a manually prepared database.
 
 ## GitHub Actions Runs
 
-Pull request workflows should run:
+Pull requests targeting `main` run the unified `CI` workflow. The workflow detects changed files and runs checks only for affected workspace packages and their required dependents:
 
-- lint, typecheck, and unit tests for all affected packages
-- API integration/e2e tests with ephemeral PostgreSQL when `apps/api` or `packages/shared` changes
-- frontend build/test checks when `apps/user-web`, `apps/admin-web`, `packages/web-config`, or `packages/web-shared` changes
+- `apps/api`, API deploy files, or API Docker/test scripts: `@gitiempo/api` lint, typecheck, unit tests, and Docker-backed API e2e.
+- `apps/user-web`: `user-web` lint, typecheck, unit/component tests, and build.
+- `apps/admin-web`: `admin-web` lint, typecheck, unit/component tests, and build.
+- `packages/shared`: `@gitiempo/shared` checks plus API checks/e2e and both frontend app checks/builds.
+- `packages/web-shared`: `@gitiempo/web-shared` checks/build plus both frontend app checks/builds.
+- `packages/web-config`: `@gitiempo/web-config` checks/build plus both frontend app checks/builds.
+- Workspace-wide CI/tooling/package-manager changes: all packages above.
+- Docs-only or unrelated changes: no package matrix jobs; the stable `CI required` aggregate job succeeds after detection.
 
-The `staging` branch deploy workflow should repeat the checks required for deployment. Deployment must not start from a failed test workflow.
+Branch protection or a repository ruleset must require the stable `CI required` status check on `main`. Dynamic package matrix jobs are intentionally not required directly so the matrix can change without editing GitHub branch rules.
+
+There is no standalone CI workflow for direct pushes to `main` or `staging`. Direct pushes to `main` should be blocked by repository rules. The `staging` branch deploy workflows run their own deploy gates before deployment instead of depending on a separate push CI run.
+
+The shared implementation for package checks is `.github/actions/workspace-check/action.yml`. PR CI and deploy gates must reuse this action instead of duplicating install/lint/typecheck/test/build steps across workflows.
 
 ## Deployment Checks
 
