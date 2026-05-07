@@ -74,7 +74,7 @@ The system SHALL smoke-test the selected API image against ephemeral PostgreSQL 
 The system SHALL provide GitHub Actions checks for API-relevant changes before deployment.
 
 #### Scenario: API checks run for relevant changes
-- **WHEN** a pull request or staging branch push changes API, shared contract, package, Docker, Compose, or API workflow files
+- **WHEN** a pull request changes API, shared contract, package, Docker, Compose, or API workflow files
 - **THEN** the API checks workflow runs lint, typecheck, unit tests, and Docker-backed API e2e tests
 
 #### Scenario: API checks block failed isolated e2e

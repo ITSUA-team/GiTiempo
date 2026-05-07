@@ -18,6 +18,7 @@ describe("createTimerPageClient", () => {
           createdAt: "2026-04-20T12:00:00.000Z",
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
           isActive: true,
+          members: [],
           name: "Project Orion",
           source: "manual",
           totalHours: 12,
@@ -90,6 +91,7 @@ describe("createTimerPageClient", () => {
         isBillable: true,
         project: {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          members: [],
           name: "Project Orion",
         },
         projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
@@ -141,6 +143,7 @@ describe("createTimerPageClient", () => {
         isBillable: true,
         project: {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          members: [],
           name: "Project Orion",
         },
         projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
@@ -196,6 +199,7 @@ describe("createTimerPageClient", () => {
         isBillable: true,
         project: {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          members: [],
           name: "Project Orion",
         },
         projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
