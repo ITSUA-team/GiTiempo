@@ -1,6 +1,23 @@
 name: Deploy frontend staging
 
 on:
+  push:
+    branches:
+      - staging
+    paths:
+      - apps/user-web/**
+      - apps/admin-web/**
+      - packages/shared/**
+      - packages/web-config/**
+      - packages/web-shared/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - .github/actions/workspace-check/**
+      - .github/scripts/detect-ci-targets.mjs
+      - .github/workflows/deploy-frontend-staging-reusable.yml
+      - .github/workflows/deploy-frontend-staging.yml
   workflow_dispatch:
     inputs:
       target:
@@ -21,22 +38,53 @@ permissions:
   contents: read
 
 jobs:
-  deploy-user-web:
-    if: ${{ inputs.target == 'user-web' || inputs.target == 'both' }}
-    uses: ./.github/workflows/deploy-frontend-staging-reusable.yml
-    secrets: inherit
-    with:
-      app_name: user-web
-      app_path: apps/user-web
-      package_name: user-web
-      ref: ${{ inputs.ref }}
+  detect:
+    name: Detect frontend deploy targets
+    runs-on: ubuntu-latest
+    outputs:
+      has_targets: ${{ steps.detect.outputs.has_targets }}
+      matrix: ${{ steps.detect.outputs.matrix }}
 
-  deploy-admin-web:
-    if: ${{ inputs.target == 'admin-web' || inputs.target == 'both' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Detect frontend targets
+        id: detect
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          FRONTEND_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || '' }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            printf '' | node .github/scripts/detect-ci-targets.mjs frontend-deploy
+            exit 0
+          fi
+
+          zero_sha="0000000000000000000000000000000000000000"
+          {
+            if [ "$BEFORE_SHA" = "$zero_sha" ]; then
+              git ls-tree -r --name-only "$GITHUB_SHA"
+            else
+              git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA"
+            fi
+          } | node .github/scripts/detect-ci-targets.mjs frontend-deploy
+
+  deploy:
+    name: Deploy ${{ matrix.app_name }} staging
+    needs: detect
+    if: needs.detect.outputs.has_targets == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
     uses: ./.github/workflows/deploy-frontend-staging-reusable.yml
     secrets: inherit
     with:
-      app_name: admin-web
-      app_path: apps/admin-web
-      package_name: admin-web
-      ref: ${{ inputs.ref }}
+      app_name: ${{ matrix.app_name }}
+      app_path: ${{ matrix.app_path }}
+      package_name: ${{ matrix.package_name }}
+      ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
