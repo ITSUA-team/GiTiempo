@@ -5,10 +5,12 @@ import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
 } from "@gitiempo/shared";
+import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import Select from "primevue/select";
 import Tag from "primevue/tag";
+import { useToast } from "primevue/usetoast";
 
 import ProjectEditForm from "@/components/ProjectEditForm.vue";
 import { adminProjectsClient } from "@/services/admin-projects-client";
@@ -27,6 +29,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
+const toast = useToast();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
 
@@ -75,15 +78,25 @@ function handleEditCancelled(project: ProjectResponse): void {
 async function handleArchive(project: ProjectResponse): Promise<void> {
   const token = authStore.accessToken;
   if (!token) return;
-  await adminProjectsClient.updateProject(token, project.id, { isActive: false });
-  emit("archive");
+  try {
+    await adminProjectsClient.updateProject(token, project.id, { isActive: false });
+    emit("archive");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to archive project";
+    toast.add({ severity: "error", summary: "Archive failed", detail: message, life: 5000 });
+  }
 }
 
 async function handleUnarchive(project: ProjectResponse): Promise<void> {
   const token = authStore.accessToken;
   if (!token) return;
-  await adminProjectsClient.updateProject(token, project.id, { isActive: true });
-  emit("unarchive");
+  try {
+    await adminProjectsClient.updateProject(token, project.id, { isActive: true });
+    emit("unarchive");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to unarchive project";
+    toast.add({ severity: "error", summary: "Unarchive failed", detail: message, life: 5000 });
+  }
 }
 
 function formatSource(source: string): string {
@@ -233,29 +246,26 @@ function formatSource(source: string): string {
         <template #body="{ data }">
           <div class="flex items-center justify-end gap-2">
             <template v-if="data.isActive">
-              <button
-                type="button"
-                style="cursor: pointer; border: none; background: transparent; padding: 4px 6px; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #5d2b85; line-height: 1;"
+              <Button
+                label="Edit"
+                variant="link"
+                class="gt-action-btn gt-action-btn--brand"
                 @click="handleEdit(data)"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                style="cursor: pointer; border: none; background: transparent; padding: 4px 6px; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #d32f2f; line-height: 1;"
+              />
+              <Button
+                label="Archive"
+                variant="link"
+                class="gt-action-btn gt-action-btn--destructive"
                 @click="handleArchive(data)"
-              >
-                Archive
-              </button>
+              />
             </template>
             <template v-else>
-              <button
-                type="button"
-                style="cursor: pointer; border: none; background: transparent; padding: 4px 6px; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #666666; line-height: 1;"
+              <Button
+                label="Unarchive"
+                variant="link"
+                class="gt-action-btn gt-action-btn--muted"
                 @click="handleUnarchive(data)"
-              >
-                Unarchive
-              </button>
+              />
             </template>
           </div>
         </template>
@@ -321,5 +331,34 @@ function formatSource(source: string): string {
   padding: 0 !important;
   border: none !important;
   border-top: 1px solid #eeeeee !important;
+}
+
+/*
+ * Action link-buttons — override PrimeVue Button link variant chrome.
+ * Design: padding 4px 6px, Inter 600 13px, no underline, no extra margin.
+ */
+:deep(.gt-action-btn.p-button) {
+  padding: 4px 6px !important;
+  font-family: "Inter", sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  border-radius: 4px !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.gt-action-btn--brand.p-button) {
+  color: #5d2b85 !important;
+}
+
+:deep(.gt-action-btn--destructive.p-button) {
+  color: #d32f2f !important;
+}
+
+:deep(.gt-action-btn--muted.p-button) {
+  color: #666666 !important;
 }
 </style>

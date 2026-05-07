@@ -97,7 +97,7 @@ unarchive      // parent re-fetches projects + summary
 | Actions | 150px, right-aligned | Active: "Edit" (brand link-button) + "Archive" (destructive link-button). Archived: "Unarchive" only (muted). |
 
 ### Member filter
-PrimeVue `Dropdown` (label "Assigned member", width 260px) populated from `members` prop. Filters table rows client-side by checking `project.members.some(m => m.userId === selected)`.
+PrimeVue `Select` (renamed from `Dropdown` in PrimeVue v4; label "Assigned member", width 260px) populated from `members` prop. Filters table rows client-side by checking `project.members.some(m => m.userId === selected)`.
 
 ### Table header
 Left: "Projects Table" (`Inter 600 18px $color-text-dark`). Right: member filter.
@@ -115,6 +115,7 @@ Inline edit form embedded in DataTable row expansion. Fields match the design pa
 ### Props
 ```ts
 project: ProjectResponse
+allMembers: WorkspaceMemberListResponse   // full member list for the MultiSelect options
 ```
 
 ### Emits
@@ -125,7 +126,7 @@ cancelled
 
 ### Fields (all PrimeVue)
 1. **Members** – PrimeVue `MultiSelect`, label "Select members", full-width. Options from workspace members. Initial value = `project.members.map(m => m.userId)`.
-2. **Visibility** – PrimeVue `Dropdown`, label "Visibility", width 180px. Options: `[{ label: 'Public', value: 'public' }, { label: 'Private', value: 'private' }]`.
+2. **Visibility** – PrimeVue `Select` (renamed from `Dropdown` in PrimeVue v4), label "Visibility", width 180px. Options: `[{ label: 'Public', value: 'public' }, { label: 'Private', value: 'private' }]`.
 
 ### Actions (right-aligned row)
 - **Cancel** – PrimeVue `Button` severity `secondary` → emits `cancelled`

@@ -9,6 +9,7 @@ import { Form, FormField } from '@primevue/forms';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
+import { useToast } from 'primevue/usetoast';
 
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -24,6 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
+const toast = useToast();
 
 const selectedMemberIds = ref<string[]>(
   props.project.members.map((m) => m.userId),
@@ -84,6 +86,9 @@ async function handleSave(): Promise<void> {
     }
 
     emit('saved', updated);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to save project';
+    toast.add({ severity: 'error', summary: 'Save failed', detail: message, life: 5000 });
   } finally {
     saving.value = false;
   }
@@ -111,8 +116,7 @@ async function handleSave(): Promise<void> {
           <label
             for="edit-members"
             class="edit-form-label"
-            >Select members</label
-          >
+          >Select members</label>
           <MultiSelect
             id="edit-members"
             v-model="selectedMemberIds"
@@ -135,8 +139,7 @@ async function handleSave(): Promise<void> {
           <label
             for="edit-visibility"
             class="edit-form-label"
-            >Visibility</label
-          >
+          >Visibility</label>
           <Select
             id="edit-visibility"
             v-model="selectedVisibility"
