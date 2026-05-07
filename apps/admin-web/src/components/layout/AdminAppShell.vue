@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
+import Toast from "primevue/toast";
 
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
@@ -26,6 +27,7 @@ const navItems = computed(() => [
 
 <template>
   <div class="bg-app-bg text-text-dark min-h-screen">
+    <Toast />
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
