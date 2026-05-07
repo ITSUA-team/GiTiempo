@@ -18,7 +18,7 @@ Frontend and backend deploy independently. A frontend-only change must not resta
 
 `apps/user-web` and `apps/admin-web` deploy as separate Cloudflare Workers Static Assets projects.
 
-Each frontend app owns its own Wrangler configuration and GitHub Actions workflow. The app build output is the Vite `dist/` directory, served with SPA fallback so unknown routes return `index.html`.
+Each frontend app owns its own Wrangler configuration. GitHub Actions deploys both apps through the shared `deploy-frontend-staging.yml` workflow and reusable deploy job. The app build output is the Vite `dist/` directory, served with SPA fallback so unknown routes return `index.html`.
 
 Production frontend builds use build-time `VITE_*` variables:
 
@@ -31,28 +31,26 @@ Do not read production frontend config from repository `.env` files. GitHub Acti
 
 ### Frontend Manual Triggers
 
-Frontend deploy workflows must support `workflow_dispatch` with:
+The staging frontend deploy workflow supports `workflow_dispatch` with:
 
 | Input | Values | Purpose |
 |---|---|---|
 | `target` | `user-web`, `admin-web`, `both` | Choose which SPA to deploy |
-| `environment` | `staging`, `production` | Choose secret set and Cloudflare target |
 | `ref` | branch, tag, or SHA | Optional source revision |
 
-Manual production deploys should require GitHub Environment approval once environments are configured.
+Production frontend deploys are not configured yet. When added, they should require GitHub Environment approval.
 
 ### Frontend Automatic Triggers
 
-Automatic frontend deploys run from the `staging` branch.
+Automatic frontend deploys run from the `staging` branch through one matrix workflow. The workflow detects changed files and deploys only the affected SPA targets.
 
 Recommended path filters:
 
 | Workflow | Trigger paths |
 |---|---|
-| `deploy-user-web` | `apps/user-web/**`, `packages/shared/**`, `packages/web-config/**`, `packages/web-shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json` |
-| `deploy-admin-web` | `apps/admin-web/**`, `packages/shared/**`, `packages/web-config/**`, `packages/web-shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json` |
+| `deploy-frontend-staging` | `apps/user-web/**`, `apps/admin-web/**`, `packages/shared/**`, `packages/web-config/**`, `packages/web-shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, shared CI/deploy workflow files |
 
-The workflow must run lint/typecheck/tests for the affected app before deployment.
+The workflow must run lint/typecheck/tests/build for the affected app before deployment. Shared frontend package changes deploy both SPAs after both app gates pass.
 
 ## API Deploys
 
@@ -137,29 +135,30 @@ Recommended path filters:
 
 | Workflow | Trigger paths |
 |---|---|
-| `deploy-api` | `apps/api/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, `.dockerignore`, API Docker/Compose files, deployment files, API helper scripts, and API workflow files |
+| `deploy-api` | `apps/api/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, `.dockerignore`, API Docker/Compose files, deployment files, API helper scripts, shared check action/script files, and API workflow files |
 
 ### API Release Order
 
 The API deploy workflow must follow this order:
 
 1. Resolve the selected API image under `ghcr.io/<owner>/<repo>/api`.
-2. For newly built images, install dependencies and build workspace packages.
-3. For newly built images, run lint, typecheck, and unit tests.
-4. For newly built images, run API integration/e2e tests against an ephemeral PostgreSQL database with `pnpm api:e2e:docker`.
-5. For newly built images, build the API Docker image.
-6. Log in to GHCR on the GitHub runner.
-7. Smoke-test the selected image against ephemeral PostgreSQL with `scripts/api-smoke-docker.sh`.
-8. Push the image to GHCR as `ghcr.io/<owner>/<repo>/api:<tag>` only when the workflow built it.
-9. Connect to the VPS over SSH.
-10. Update environment and Compose files if needed.
-11. Perform temporary GHCR login on the VPS and pull the selected image.
-12. Run migrations explicitly.
-13. Run the idempotent seed script only when `run_seed=true`.
-14. Recreate the API service with Docker Compose.
-15. Check `GET /commons/health/ready` through the public API URL.
+2. For newly built images, run lint, typecheck, and unit tests through the shared API workspace check gate.
+3. For newly built images, run API integration/e2e tests against an ephemeral PostgreSQL database through the same gate.
+4. For newly built images, build the API Docker image.
+5. Log in to GHCR on the GitHub runner.
+6. Smoke-test the selected image against ephemeral PostgreSQL with `scripts/api-smoke-docker.sh`.
+7. Push the image to GHCR as `ghcr.io/<owner>/<repo>/api:<tag>` only when the workflow built it.
+8. Connect to the VPS over SSH.
+9. Update environment and Compose files if needed.
+10. Perform temporary GHCR login on the VPS and pull the selected image.
+11. Run migrations explicitly.
+12. Run the idempotent seed script only when `run_seed=true`.
+13. Recreate the API service with Docker Compose.
+14. Check `GET /commons/health/ready` through the public API URL.
 
 Production deploys must not run destructive e2e tests against the production database. Only health and smoke checks are allowed after production rollout.
+
+The shared implementation for PR and deploy package gates is `.github/actions/workspace-check/action.yml`. Do not duplicate install/lint/typecheck/test/build steps in deployment workflows.
 
 ## Secrets And Runtime Config
 
