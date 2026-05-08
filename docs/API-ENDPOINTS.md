@@ -113,8 +113,25 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Start timer from GitHub issue — auto-creates project and task if needed (used by Chrome extension) |
 | POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop running timer                                                                                 |
 
+**GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`
+
+**POST /time-entries** body: `{ taskId: string, startedAt: string, endedAt: string, description?: string | null, isBillable?: boolean }`
+
+- Creates a completed manual time entry, not a running timer.
+- `startedAt` and `endedAt` are ISO 8601 datetimes.
+- `endedAt` must be later than `startedAt`.
+- `isBillable` defaults to `true` when omitted.
+
+**PATCH /time-entries/:id** body: `{ taskId?: string, startedAt?: string, endedAt?: string, description?: string | null, isBillable?: boolean }`
+
+- Updates only completed entries; running entries must be stopped first.
+- `taskId` may be changed to move the entry to another visible active task.
+- If both `startedAt` and `endedAt` are provided, `endedAt` must be later than `startedAt`.
+
 **POST /time-entries/timer/start** body: `{ taskId: string }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string }`
+
+**GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`
 
 ---
 
