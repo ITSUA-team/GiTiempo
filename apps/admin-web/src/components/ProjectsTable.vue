@@ -10,6 +10,7 @@ import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
+import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 
 import ProjectEditForm from '@/components/ProjectEditForm.vue';
@@ -29,13 +30,14 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
+const confirm = useConfirm();
 const toast = useToast();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
 
 const memberFilterOptions = computed(() =>
   props.members.map((m) => ({
-    label: m.displayName ?? m.email,
+    label: `${m.displayName ?? m.email} (${m.role})`,
     value: m.userId,
   })),
 );
@@ -73,6 +75,19 @@ function handleEditSaved(project: ProjectResponse): void {
 
 function handleEditCancelled(project: ProjectResponse): void {
   collapseRow(project);
+}
+
+function confirmArchive(project: ProjectResponse): void {
+  confirm.require({
+    message: `"${project.name}" will be archived and hidden from non-admin users.`,
+    header: 'Archive project?',
+    acceptLabel: 'Archive',
+    rejectLabel: 'Cancel',
+    acceptProps: {
+      severity: 'danger',
+    },
+    accept: () => handleArchive(project),
+  });
 }
 
 async function handleArchive(project: ProjectResponse): Promise<void> {
@@ -256,7 +271,7 @@ function formatSource(source: string): string {
                 label="Archive"
                 variant="link"
                 class="gt-action-btn gt-action-btn--destructive"
-                @click="handleArchive(data)"
+                @click="confirmArchive(data)"
               />
             </template>
             <template v-else>

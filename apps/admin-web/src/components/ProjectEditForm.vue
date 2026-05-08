@@ -37,9 +37,9 @@ const saving = ref(false);
 const memberOptions = props.allMembers
   .filter((m) => m.role !== "admin")
   .map((m) => ({
-  label: m.displayName ?? m.email,
-  value: m.userId,
-}));
+    label: `${m.displayName ?? m.email} (${m.role})`,
+    value: m.userId,
+  }));
 
 const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
