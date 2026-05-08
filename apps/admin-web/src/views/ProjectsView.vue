@@ -162,19 +162,9 @@ onMounted(fetchAll);
           />
         </div>
         <!-- Table shell -->
-        <div style="border: 1px solid #eeeeee; border-radius: 6px; overflow: hidden">
+        <div class="border-divider overflow-hidden rounded-[6px] border">
           <!-- Header row -->
-          <div
-            style="
-              display: flex;
-              align-items: center;
-              background-color: #f4f4f5;
-              height: 44px;
-              border-bottom: 1px solid #eeeeee;
-              padding: 0 12px;
-              gap: 12px;
-            "
-          >
+          <div class="bg-app-bg border-divider flex h-[44px] items-center gap-3 border-b px-3">
             <Skeleton
               class="flex-1"
               height="0.75rem"
@@ -210,14 +200,7 @@ onMounted(fetchAll);
           <div
             v-for="i in 6"
             :key="i"
-            style="
-              display: flex;
-              align-items: center;
-              height: 56px;
-              border-top: 1px solid #eeeeee;
-              padding: 0 12px;
-              gap: 12px;
-            "
+            class="border-divider flex h-[56px] items-center gap-3 border-t px-3"
           >
             <div class="flex flex-1 items-center">
               <Skeleton
@@ -226,38 +209,35 @@ onMounted(fetchAll);
                 border-radius="4px"
               />
             </div>
-            <div style="width: 140px">
+            <div class="w-[140px]">
               <Skeleton
                 width="70%"
                 height="0.8rem"
                 border-radius="4px"
               />
             </div>
-            <div style="width: 220px">
+            <div class="w-[220px]">
               <Skeleton
                 width="50%"
                 height="0.8rem"
                 border-radius="4px"
               />
             </div>
-            <div style="width: 120px">
+            <div class="w-[120px]">
               <Skeleton
                 width="40%"
                 height="0.8rem"
                 border-radius="4px"
               />
             </div>
-            <div style="width: 120px">
+            <div class="w-[120px]">
               <Skeleton
                 width="3.5rem"
                 height="1.4rem"
                 border-radius="6px"
               />
             </div>
-            <div
-              style="width: 150px"
-              class="flex justify-end gap-2"
-            >
+            <div class="flex w-[150px] justify-end gap-2">
               <Skeleton
                 width="2.5rem"
                 height="0.8rem"

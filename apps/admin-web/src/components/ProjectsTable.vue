@@ -123,17 +123,13 @@ function formatSource(source: string): string {
 <template>
   <!-- Section title + member filter -->
   <div class="mb-4 flex items-center justify-between">
-    <h2
-      class="text-lg font-semibold"
-      style="color: #1a1a1a"
-    >
+    <h2 class="text-text-dark text-lg font-semibold">
       Projects Table
     </h2>
     <div class="flex flex-col gap-1.5">
       <label
         id="member-filter-label"
-        class="text-[12px] font-medium"
-        style="color: #666666"
+        class="text-text-muted text-[12px] font-medium"
       >Assigned member</label>
       <Select
         v-model="selectedMemberId"
@@ -153,37 +149,25 @@ function formatSource(source: string): string {
     Header is plain HTML so zero PrimeVue interference.
     DataTable body uses :show-headers="false" to avoid duplicate / unstyled headers.
   -->
-  <div style="border: 1px solid #eeeeee; border-radius: 6px; overflow: hidden">
+  <div class="border-divider overflow-hidden rounded-[6px] border">
     <!-- Header row: exact design values — fill=$color-app-bg, height=44px, Inter 600 13px $color-text-dark -->
-    <div
-      style="
-        display: flex;
-        align-items: center;
-        background-color: #f4f4f5;
-        height: 44px;
-        border-bottom: 1px solid #eeeeee;
-        font-family: 'Inter', sans-serif;
-        font-size: 13px;
-        font-weight: 600;
-        color: #1a1a1a;
-      "
-    >
-      <div style="flex: 1; padding: 0 12px">
+    <div class="bg-app-bg border-divider text-text-dark flex h-[44px] items-center border-b font-sans text-[13px] font-semibold">
+      <div class="flex-1 px-3">
         Project
       </div>
-      <div style="width: 140px; padding: 0 12px">
+      <div class="w-[140px] px-3">
         Source
       </div>
-      <div style="width: 220px; padding: 0 12px">
+      <div class="w-[220px] px-3">
         Assigned members
       </div>
-      <div style="width: 120px; padding: 0 12px">
+      <div class="w-[120px] px-3">
         Hours
       </div>
-      <div style="width: 120px; padding: 0 12px">
+      <div class="w-[120px] px-3">
         Visibility
       </div>
-      <div style="width: 150px; padding: 0 12px; text-align: right">
+      <div class="w-[150px] px-3 text-right">
         Actions
       </div>
     </div>
@@ -204,33 +188,32 @@ function formatSource(source: string): string {
         <template #body="{ data }">
           <span
             class="text-[14px] leading-none font-semibold"
-            :class="data.isActive ? '' : 'text-text-muted'"
-            :style="data.isActive ? 'color: #1a1a1a;' : ''"
+            :class="data.isActive ? 'text-text-dark' : 'text-text-muted'"
           >{{ data.name }}</span>
         </template>
       </Column>
 
-      <Column style="width: 140px">
+      <Column class="w-[140px]">
         <template #body="{ data }">
-          <span style="font-size: 13px; font-weight: 400; color: #666666">{{
+          <span class="text-text-muted text-[13px] font-normal">{{
             formatSource(data.source)
           }}</span>
         </template>
       </Column>
 
-      <Column style="width: 220px">
+      <Column class="w-[220px]">
         <template #body="{ data }">
-          <span style="font-size: 13px; font-weight: 400; color: #666666">{{ data.members.length }} members</span>
+          <span class="text-text-muted text-[13px] font-normal">{{ data.members.length }} members</span>
         </template>
       </Column>
 
-      <Column style="width: 120px">
+      <Column class="w-[120px]">
         <template #body="{ data }">
-          <span style="font-size: 13px; font-weight: 600; color: #1a1a1a">{{ data.totalHours }}h</span>
+          <span class="text-text-dark text-[13px] font-semibold">{{ data.totalHours }}h</span>
         </template>
       </Column>
 
-      <Column style="width: 120px">
+      <Column class="w-[120px]">
         <template #body="{ data }">
           <template v-if="data.isActive">
             <Tag
@@ -252,15 +235,14 @@ function formatSource(source: string): string {
             v-else
             :value="data.visibility === 'public' ? 'Public' : 'Private'"
             :pt="{
-              root: 'inline-flex items-center rounded-[6px] px-2 py-1 text-[12px] font-semibold leading-none',
-              label: 'text-[#666666]',
+              root: 'inline-flex items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
+              label: 'text-text-muted',
             }"
-            style="background-color: #eeeeee"
           />
         </template>
       </Column>
 
-      <Column style="width: 150px">
+      <Column class="w-[150px]">
         <template #body="{ data }">
           <div class="flex items-center justify-end gap-2">
             <template v-if="data.isActive">
@@ -300,11 +282,8 @@ function formatSource(source: string): string {
 
       <template #empty>
         <div class="flex flex-col items-center gap-2 py-10">
-          <span
-            class="text-[14px] font-semibold"
-            style="color: #1a1a1a"
-          >No projects found</span>
-          <span style="font-size: 13px; color: #666666">
+          <span class="text-text-dark text-[14px] font-semibold">No projects found</span>
+          <span class="text-text-muted text-[13px]">
             No projects match the current filter, or none have been created yet.
           </span>
         </div>

@@ -97,25 +97,17 @@ async function handleSave(): Promise<void> {
 </script>
 
 <template>
-  <div class="edit-form-panel">
-    <!-- "Project settings" — Inter 600 13px #1a1a1a -->
-    <span class="edit-form-title">Project settings</span>
+  <div class="bg-app-bg border-divider box-border flex w-full flex-col gap-[10px] border-t p-4">
+    <span class="text-text-dark font-sans text-[13px] leading-none font-semibold">Project settings</span>
 
-    <!--
-        Fields row (y6fv74): horizontal flex, align-items=end, gap=10px
-      -->
-    <div class="edit-form-row">
-      <!--
-          Members field (SvnYS): flex:1, vertical, gap=6px
-          Label: Inter 500 12px #1a1a1a
-        -->
+    <div class="flex items-end gap-[10px]">
       <div
         name="members"
-        class="edit-form-field edit-form-field--fill"
+        class="flex flex-1 flex-col gap-1.5"
       >
         <label
           for="edit-members"
-          class="edit-form-label"
+          class="text-text-dark font-sans text-[12px] leading-none font-medium"
         >Select members</label>
         <MultiSelect
           id="edit-members"
@@ -128,17 +120,13 @@ async function handleSave(): Promise<void> {
         />
       </div>
 
-      <!--
-          Visibility field (H0rt2): width=180px, vertical, gap=6px
-          Label: Inter 500 12px #1a1a1a
-        -->
       <div
         name="visibility"
-        class="edit-form-field edit-form-field--180"
+        class="flex w-[180px] flex-col gap-1.5"
       >
         <label
           for="edit-visibility"
-          class="edit-form-label"
+          class="text-text-dark font-sans text-[12px] leading-none font-medium"
         >Visibility</label>
         <Select
           id="edit-visibility"
@@ -150,12 +138,6 @@ async function handleSave(): Promise<void> {
         />
       </div>
 
-      <!--
-          Cancel (xMII9):
-            fill=$color-surface(#fff), stroke=$color-divider(#eeeeee) 1px,
-            cornerRadius=6px, padding=[8px, 14px], Inter 500 13px #1a1a1a
-          → severity="secondary" outlined gives white bg + border
-        -->
       <Button
         label="Cancel"
         severity="secondary"
@@ -163,12 +145,6 @@ async function handleSave(): Promise<void> {
         @click="emit('cancelled')"
       />
 
-      <!--
-          Save (Fq21c):
-            fill=$color-brand(#5d2b85), cornerRadius=6px,
-            padding=[8px, 14px], Inter 600 13px #ffffff
-          → default primary Button matches this exactly
-        -->
       <Button
         label="Save"
         :loading="saving"
@@ -177,57 +153,3 @@ async function handleSave(): Promise<void> {
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Panel shell — exact design values, all inline so nothing overrides */
-.edit-form-panel {
-  background-color: #f4f4f5;
-  border-top: 1px solid #eeeeee;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* "Project settings" label */
-.edit-form-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
-  line-height: 1;
-}
-
-/* Fields row: horizontal, align bottom, gap 10px */
-.edit-form-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-/* FormField wrapper: vertical stack, gap 6px */
-.edit-form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.edit-form-field--fill {
-  flex: 1;
-}
-
-.edit-form-field--180 {
-  width: 180px;
-}
-
-/* Field labels: Inter 500 12px #1a1a1a */
-.edit-form-label {
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: #1a1a1a;
-  line-height: 1;
-}
-</style>
