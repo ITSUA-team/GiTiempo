@@ -89,21 +89,19 @@ async function handleSave(): Promise<void> {
     <span class="edit-form-title">PM assignment</span>
 
     <div class="flex flex-wrap gap-3">
-      <div
+      <label
         v-for="project in activeProjects"
         :key="project.id"
-        class="flex items-center gap-2"
+        :for="`assign-${member.id}-${project.id}`"
+        class="bg-surface flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2"
       >
         <Checkbox
           v-model="selectedProjectIds"
           :input-id="`assign-${member.id}-${project.id}`"
           :value="project.id"
         />
-        <label
-          :for="`assign-${member.id}-${project.id}`"
-          class="text-text-dark text-[13px] font-medium"
-        >{{ project.name }}</label>
-      </div>
+        <span class="text-text-dark text-[13px] font-medium">{{ project.name }}</span>
+      </label>
     </div>
 
     <div class="flex items-center justify-end gap-2.5">
@@ -111,6 +109,7 @@ async function handleSave(): Promise<void> {
         label="Cancel"
         severity="secondary"
         outlined
+        class="gt-cancel-btn"
         @click="emit('cancelled')"
       />
       <Button
@@ -140,5 +139,12 @@ async function handleSave(): Promise<void> {
   font-weight: 600;
   color: #1a1a1a;
   line-height: 1;
+}
+
+:deep(.gt-cancel-btn) {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-divider) !important;
+  color: var(--color-text-dark) !important;
+  font-weight: 500 !important;
 }
 </style>

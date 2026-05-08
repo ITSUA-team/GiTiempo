@@ -84,8 +84,14 @@ function isSelf(member: WorkspaceMemberResponse): boolean {
   return props.currentUserId !== null && member.userId === props.currentUserId;
 }
 
-function toggleExpansion(member: WorkspaceMemberResponse, mode: 'assign' | 'edit'): void {
-  if (expandedRows.value[member.id] && expansionMode.value[member.id] === mode) {
+function toggleExpansion(
+  member: WorkspaceMemberResponse,
+  mode: 'assign' | 'edit',
+): void {
+  if (
+    expandedRows.value[member.id] &&
+    expansionMode.value[member.id] === mode
+  ) {
     const next = { ...expandedRows.value };
     delete next[member.id];
     expandedRows.value = next;
@@ -134,7 +140,8 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         });
         emit('member-removed');
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to remove member';
+        const message =
+          err instanceof Error ? err.message : 'Failed to remove member';
         toast.add({
           severity: 'error',
           summary: 'Remove failed',
@@ -149,9 +156,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 
 <template>
   <div class="mb-4">
-    <h2 class="text-text-dark text-lg font-semibold">
-      Members Table
-    </h2>
+    <h2 class="text-text-dark text-lg font-semibold">Members Table</h2>
   </div>
 
   <ManagementTableShell :columns="columns">
@@ -175,7 +180,9 @@ function handleRemove(member: WorkspaceMemberResponse): void {
               :label="!data.avatarUrl ? getInitials(data) : undefined"
               shape="circle"
               class="size-8"
-              :pt="{ root: 'bg-accent-tint text-brand text-[13px] font-semibold' }"
+              :pt="{
+                root: 'bg-accent-tint text-brand text-[13px] font-semibold',
+              }"
             />
             <div class="flex flex-col">
               <span class="text-text-dark text-[14px] font-semibold">
@@ -184,7 +191,8 @@ function handleRemove(member: WorkspaceMemberResponse): void {
               <span
                 v-if="data.displayName"
                 class="text-text-muted text-[12px]"
-              >{{ data.email }}</span>
+                >{{ data.email }}</span
+              >
             </div>
           </div>
         </template>
@@ -193,14 +201,18 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       <!-- Role -->
       <Column style="width: 120px">
         <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{ formatRole(data.role) }}</span>
+          <span class="text-black text-[13px] font-bold">{{
+            formatRole(data.role)
+          }}</span>
         </template>
       </Column>
 
       <!-- Projects Assigned (computed client-side) -->
       <Column style="width: 160px">
         <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{ formatProjectsAssigned(data) }}</span>
+          <span class="text-text-muted text-[13px] font-normal">{{
+            formatProjectsAssigned(data)
+          }}</span>
         </template>
       </Column>
 
@@ -259,7 +271,9 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 
       <template #empty>
         <div class="flex flex-col items-center gap-2 py-10">
-          <span class="text-text-dark text-[14px] font-semibold">No members found</span>
+          <span class="text-text-dark text-[14px] font-semibold"
+            >No members found</span
+          >
           <span class="text-text-muted text-[13px]">
             Invite members to get started.
           </span>

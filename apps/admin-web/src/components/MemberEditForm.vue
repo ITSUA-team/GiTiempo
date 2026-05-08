@@ -123,6 +123,7 @@ async function handleSave(): Promise<void> {
         label="Cancel"
         severity="secondary"
         outlined
+        class="gt-cancel-btn"
         @click="emit('cancelled')"
       />
       <Button
@@ -180,5 +181,12 @@ async function handleSave(): Promise<void> {
   font-weight: 500;
   color: #1a1a1a;
   line-height: 1;
+}
+
+:deep(.gt-cancel-btn) {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-divider) !important;
+  color: var(--color-text-dark) !important;
+  font-weight: 500 !important;
 }
 </style>

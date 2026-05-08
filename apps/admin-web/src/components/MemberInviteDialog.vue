@@ -132,7 +132,8 @@ function handleCancel(): void {
       <Button
         label="Cancel"
         severity="secondary"
-        variant="text"
+        outlined
+        class="gt-cancel-btn"
         @click="handleCancel"
       />
       <Button
@@ -143,3 +144,12 @@ function handleCancel(): void {
     </template>
   </Dialog>
 </template>
+
+<style scoped>
+:deep(.gt-cancel-btn) {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-divider) !important;
+  color: var(--color-text-dark) !important;
+  font-weight: 500 !important;
+}
+</style>
