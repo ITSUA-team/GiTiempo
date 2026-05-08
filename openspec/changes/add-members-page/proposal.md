@@ -18,10 +18,7 @@ A cross-design audit of `GITiempo.pen` (Projects `6iAjf`, Members `sBfSO`, plus 
   - `StatCard` extracted from `apps/admin-web/src/components/ProjectStatCard.vue` (also replaces the inline stat card markup defined in the Members `.pen` design and matches the documented "stat card" pattern).
   - `ManagementTableShell` extracted from the boxed-table chrome of `ProjectsTable.vue` (outer rounded border, custom 44px header row, stripped DataTable body, `gt-action-btn` link button styles, expansion row chrome) so both `ProjectsTable` and the new `MembersTable` render through it.
   - `ProjectsView` is updated to consume the promoted shared components without behavior changes; this is a pure refactor so Projects parity is preserved.
-- Extend the workspace member API response with `lastActiveAt: string | null` and a `projectsAssignedCount: number` so the Members table `Last Active` and `Projects Assigned` columns are first-class data instead of derived guesses:
-  - Add a `last_active_at` timestamp column to `users` (nullable) and update it from time-entry / timer write paths.
-  - Update `WorkspaceMemberResponse` Zod schema in `@gitiempo/shared` and `MembersService.listMembers` to return both fields, joined with the projects-per-member count.
-  - Regenerate `packages/shared/openapi.json` after the contract change.
+- **Note — deferred backend work**: The API does not yet return `lastActiveAt` or `projectsAssignedCount` on the member response. The `Last Active` column renders `—` for all rows, and `Projects Assigned` is computed client-side from the projects list loaded by the page. Extending the contract and adding `users.last_active_at` is tracked as a follow-up backend change.
 
 ## Capabilities
 
@@ -32,14 +29,11 @@ A cross-design audit of `GITiempo.pen` (Projects `6iAjf`, Members `sBfSO`, plus 
 ### Modified Capabilities
 
 - `admin-pages`: Replace the single "Members management view" scenario with an explicit set of scenarios covering header, stat counters, invite dialog, inline PM assignment, edit row, and remove confirmation, mirroring how the Projects page is already specified.
-- `workspace-membership`: Extend the listMembers response contract with `lastActiveAt` and `projectsAssignedCount` so admin UIs can render activity and assignment context without N+1 fetches.
-- `users`: Track per-user last-activity timestamp and update it on time-tracking write paths.
 - `frontend-shared-leaves`: Add `StatCard` and `ManagementTableShell` to the documented set of shared leaves, matching the existing rule that doc-defined repeated UI patterns become shared once a second consumer ships.
 
 ## Impact
 
-- **Backend (`apps/api`)**: new `users.last_active_at` column + migration; touch points in `time-entries`/`timers` write paths to bump it; `MembersService.listMembers` query joins projects-per-member; new fields in DTOs; OpenAPI regen.
-- **Shared contracts (`packages/shared`)**: `workspaceMemberResponseSchema` gains `lastActiveAt` and `projectsAssignedCount`; `openapi.json` regenerated.
 - **Shared frontend (`packages/web-shared`)**: new `StatCard.vue` and `ManagementTableShell.vue` components plus barrel exports.
 - **Admin web (`apps/admin-web`)**: full `MembersView.vue` implementation, new `MembersTable`, `MemberInviteDialog`, `MemberAssignPmPanel`, `MemberEditForm` components and a new `admin-members-client.ts` service; `ProjectsTable.vue` and `ProjectsView.vue` refactored to consume the shared `StatCard` / `ManagementTableShell`.
+- **No backend changes** — the API is used as-is. Needed backend extensions (`users.last_active_at`, enriched member response) are tracked as a follow-up change.
 - **No new third-party dependencies** are introduced.

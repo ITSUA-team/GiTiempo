@@ -10,7 +10,7 @@ The Projects page (`apps/admin-web/src/views/ProjectsView.vue`, `components/Proj
 
 This change must therefore both (a) ship the Members page pixel-aligned to the `.pen` and (b) promote the two repeating leaves (`StatCard`, table chrome) to `packages/web-shared` so Projects and Members share a single implementation. Both `apps/admin-web/AGENTS.md` and `packages/web-shared/AGENTS.md` already direct us to extract docs-defined repeated UI patterns once a second consumer ships, and `frontend-shared-leaves` codifies that rule.
 
-The page also needs two backend extensions to render the table truthfully: `Last Active` (currently no field exists on `users` or `workspace_members`) and `Projects Assigned` per member (today only resolvable by counting from `GET /projects` on the client). These are added at the contract level rather than left as client-side derivations because (a) `Last Active` requires a real DB write path that does not yet exist and (b) sending counts from the server keeps the table honest with future server-side pagination.
+The page also needs two pieces of data the API does not yet provide: `Last Active` (no `last_active_at` field exists on `users` or `workspace_members`) and `Projects Assigned` per member (today only resolvable by counting from `GET /projects` on the client). For this frontend-only change, `Last Active` renders `—` and `Projects Assigned` is computed client-side from the already-loaded projects list. Backend extensions to provide these fields server-side are tracked as a follow-up change.
 
 ## Goals / Non-Goals
 
@@ -24,8 +24,6 @@ The page also needs two backend extensions to render the table truthfully: `Last
 - Implement inline PM assignment expansion under non-admin rows, wired to `POST/DELETE /projects/:id/assignments`, mirroring the inline expansion pattern of `ProjectEditForm`.
 - Implement edit (role change) via inline expansion using `PATCH /members/:id/role`.
 - Implement remove via PrimeVue `<ConfirmDialog>` and `useConfirm()` per `docs/ui/patterns.md`, wired to `DELETE /members/:id`.
-- Add `users.last_active_at` and update it from time-tracking write paths so the `Last Active` column has truthful data.
-- Extend the workspace member contract with `lastActiveAt` and `projectsAssignedCount` and regenerate `packages/shared/openapi.json`.
 
 **Non-Goals:**
 
@@ -34,7 +32,7 @@ The page also needs two backend extensions to render the table truthfully: `Last
 - Server-side pagination, search, or sort on the members table. Both Projects and Members render the full list client-side for MVP, identical to current Projects behavior.
 - Splitting `WorkspaceAdminGuard` to allow PMs to access this page. The Members page stays admin-only.
 - Mobile-specific layout work beyond what PrimeVue and Tailwind tokens already provide. Desktop-first parity is the bar, matching `apps/admin-web/AGENTS.md`.
-- Last-activity backfill across pre-existing time entries; the column starts as `null` until the first new write occurs after the migration.
+- Backend changes: adding `users.last_active_at`, enriching the member response with `lastActiveAt`/`projectsAssignedCount`, or regenerating `openapi.json`. These are deferred to a follow-up change.
 
 ## Decisions
 
@@ -81,17 +79,12 @@ Alternatives considered:
 - Save calls `PATCH /members/:id/role`. On success: collapse the row, toast `Member updated`, refresh.
 - This is the documented PrimeVue/API parity compromise that `apps/admin-web/AGENTS.md` requires us to call out in the final review.
 
-### Backend: `users.last_active_at` + `lastActiveAt` and `projectsAssignedCount` on the member contract
+### `Last Active` renders `—`; `Projects Assigned` computed client-side
 
-- Add `last_active_at timestamptz null` to `users` (Drizzle migration).
-- Bump `users.last_active_at` from time-tracking write paths only (start timer, stop timer, create entry, update entry, delete entry). This avoids an N+1 update on read paths and keeps the column meaningful (it tracks "tracked time", which is what the design's `Last Active` column communicates). A future change can broaden it to other write paths.
-- Update `workspaceMemberResponseSchema` in `packages/shared/src/contracts/workspace-members.ts` to include `lastActiveAt: z.iso.datetime().nullable()` and `projectsAssignedCount: z.number().int().min(0)`.
-- `MembersService.listMembers` joins `project_assignments` (or `workspace_members.user_id` against `projects.members`, whichever the existing `Project` data model uses) and `count()`s assignments per user in a single query, and selects `users.last_active_at`.
-- Run `pnpm openapi:export` (or the equivalent build-based regen path noted in `apps/api/AGENTS.md`) to refresh `packages/shared/openapi.json`.
+The API does not return `lastActiveAt` or `projectsAssignedCount` on the member response. Rather than block the frontend on backend changes:
 
-Alternatives considered:
-
-- _Compute `projectsAssignedCount` and `lastActiveAt` on the client by scanning `GET /projects`._ Rejected for `lastActiveAt` because no `last_active_at` field exists anywhere today. Rejected for `projectsAssignedCount` because keeping it server-derived avoids the assumption that the projects list is fully loaded (eventual server-side pagination breaks the client-only count).
+- `Last Active` renders `—` for all rows. When the backend adds `users.last_active_at` in a follow-up change, the column can be wired to the real field.
+- `Projects Assigned` is computed client-side by counting assignments from the already-loaded `GET /projects` response. This works because the page already fetches the full project list for the PM assignment panel. When the backend adds `projectsAssignedCount` to the member response, the client-side derivation can be replaced.
 
 ### `MembersView` mounts `<ConfirmDialog />` at the view root, like Projects already does
 
@@ -99,25 +92,21 @@ Alternatives considered:
 
 ## Risks / Trade-offs
 
-- [Schema drift if OpenAPI regen is skipped] → The PR description includes a checklist item to regenerate `packages/shared/openapi.json` per `apps/api/AGENTS.md`. The `pnpm openapi:export` gotcha (tsx vs nest build) is documented there and the maintainer-preferred regen path is the build-based one.
-- [`last_active_at` is null for all existing users on first deploy] → Mitigation: render `—` in the `Last Active` cell when null and document that the column populates as users start tracking after the migration. No backfill is attempted.
 - [Pixel parity drift between `ProjectsTable` and `MembersTable` after the shared shell extraction] → Mitigation: refactor `ProjectsTable` to consume `ManagementTableShell` in the same change, and verify both screens by snapshot/visual review against the `.pen`. The shared component owns the chrome so both consumers cannot drift.
 - [Edit form Name/Email being read-only is visually different from the design] → Mitigation: keep field shape and order identical (Name, Email, Role) so the layout still matches; disabled state is the only deviation, called out explicitly in the final review per `apps/admin-web/AGENTS.md`.
 - [Last-admin protection regressions when removing a member] → The backend already enforces "Last admin cannot be removed" (`workspace-membership` spec, `MembersService.assertCanLoseAdminRole`). The UI surfaces the resulting 409 message via the existing toast pattern and does not attempt to pre-disable the action; this matches Projects' approach to backend-enforced invariants.
 - [Promoting `ManagementTableShell` could leak product-specific behavior into a shared component] → Mitigation: the shell only exposes column descriptors, body row slot, expansion slot, empty slot, and link-button styles. Filter selects and product-specific columns stay in the consumer (e.g., the assigned-member filter remains in `ProjectsTable`; nothing similar exists for Members today).
+- [`Projects Assigned` count computed client-side may drift from truth if server-side pagination is added later] → Mitigation: documented as a known limitation; when the backend extends the member response, the client derivation can be swapped for the server-provided count.
 
 ## Migration Plan
 
-1. Backend: add the `users.last_active_at` migration and the `MembersService.listMembers` projection update; wire `last_active_at` updates from time-entry/timer write paths.
-2. Shared contracts: extend `workspaceMemberResponseSchema` with the two new fields; rebuild `@gitiempo/shared`; regenerate `packages/shared/openapi.json`.
-3. Shared frontend: add `StatCard` and `ManagementTableShell` to `packages/web-shared`; export them from the package entry.
-4. Admin web refactor: update `ProjectStatCard` consumers to import `StatCard` from `@gitiempo/web-shared` and refactor `ProjectsTable.vue` to render through `ManagementTableShell`. Verify Projects parity visually before adding Members.
-5. Admin web feature: ship `MembersView.vue`, `MembersTable.vue`, `MemberInviteDialog.vue`, `MemberAssignPmPanel.vue`, `MemberEditForm.vue`, and `services/admin-members-client.ts`.
-6. Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck && pnpm --filter admin-web test`, `pnpm --filter user-web lint && pnpm --filter user-web typecheck` (web-shared touched), and `pnpm --filter @gitiempo/api lint && pnpm --filter @gitiempo/api typecheck && pnpm --filter @gitiempo/api test`, plus `pnpm --filter @gitiempo/api test:e2e` for the member/invite suites.
+1. Shared frontend: add `StatCard` and `ManagementTableShell` to `packages/web-shared`; export them from the package entry.
+2. Admin web refactor: update `ProjectStatCard` consumers to import `StatCard` from `@gitiempo/web-shared` and refactor `ProjectsTable.vue` to render through `ManagementTableShell`. Verify Projects parity visually before adding Members.
+3. Admin web feature: ship `MembersView.vue`, `MembersTable.vue`, `MemberInviteDialog.vue`, `MemberAssignPmPanel.vue`, `MemberEditForm.vue`, and `services/admin-members-client.ts`.
+4. Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`, `pnpm --filter user-web lint && pnpm --filter user-web typecheck` (web-shared touched).
 
-Rollback: revert the migration and the contract change (the SQL drop of `users.last_active_at` is reversible). The frontend additions are net-new files plus a refactor; reverting the change reinstates the placeholder page.
+Rollback: the frontend additions are net-new files plus a refactor; reverting the change reinstates the placeholder page.
 
 ## Open Questions
 
 - Should `Active Members` exclude PMs? The design caption ("Manage team roles, project assignments, and member activity") and the existing `members` endpoint both treat the count as "all active memberships". This change uses `members.length` and notes that PMs are counted (the dedicated `PMs Assigned` card already breaks them out). Confirm during review.
-- Should `Last Active` reflect any authenticated request (including web shell visits) or only time-tracking writes? This change scopes it to time-tracking writes for now (see Decisions); broaden in a follow-up if product wants a "last seen in app" semantic.
