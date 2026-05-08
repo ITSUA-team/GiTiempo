@@ -6,11 +6,10 @@ import type {
   ProjectListResponse,
   WorkspaceMemberListResponse,
 } from "@gitiempo/shared";
-import { StatsHeader, SurfaceCard } from "@gitiempo/web-shared";
+import { StatCard, StatsHeader, SurfaceCard } from "@gitiempo/web-shared";
 import Button from "primevue/button";
 import { useToast } from "primevue/usetoast";
 
-import ProjectStatCard from "@/components/ProjectStatCard.vue";
 import ProjectsTable from "@/components/ProjectsTable.vue";
 import { routeNames } from "@/router";
 import { adminProjectsClient } from "@/services/admin-projects-client";
@@ -138,15 +137,15 @@ onMounted(fetchAll);
           />
         </template>
         <template #stats>
-          <ProjectStatCard
+          <StatCard
             label="Active Projects"
             :value="summary.activeProjects"
           />
-          <ProjectStatCard
+          <StatCard
             label="Private"
             :value="summary.privateProjects"
           />
-          <ProjectStatCard
+          <StatCard
             label="Public"
             :value="summary.publicProjects"
           />
