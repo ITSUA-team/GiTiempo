@@ -167,6 +167,20 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 - Running timer format: `HH:MM:SS`.
 - Never show raw seconds outside the running timer.
 
+## Compact Top-Bar Timer
+
+- Use this surface in the center area of every authenticated `user-web` top bar. Do not apply it to `admin-web` unless the docs are updated explicitly.
+- Running state shows the running label, live `HH:MM:SS`, current `Project / Task`, and one stop action.
+- Not-running state shows the last tracked task context and one start action that creates a new time entry for that task.
+- Last tracked task context means the most recent own time entry whose task and parent project are still visible and active for the current user.
+- A completed timer entry or manual entry may seed the last tracked task context if the task remains trackable.
+- The `Start` action always creates a fresh running time entry. It must not resume or mutate the previous time entry record.
+- If there is no eligible last tracked task context, keep the same not-running surface and disable the start action.
+- While the timer summary is loading, render the same surface shape with the action disabled.
+- If the timer summary fails to load, keep the surface shape visible, disable the action, and use standard toast feedback for the failure.
+- Keep the component compact enough to fit the existing `h-16` top bar.
+- Hide or truncate the context text first on smaller widths before compressing the elapsed-time value or removing the action.
+
 ## Pagination
 
 Use PrimeVue `<Paginator>`.

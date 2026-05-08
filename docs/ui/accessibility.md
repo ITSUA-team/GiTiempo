@@ -11,6 +11,9 @@
 - All form fields need associated `<label>` elements.
 - Icon-only buttons need `aria-label`.
 - Custom interactive elements must support keyboard navigation.
+- For the compact top-bar timer, keep the rendered action text explicit (`Start`, `Stop`) even if the surface becomes visually compact.
+- Do not make the live `HH:MM:SS` timer assertive; avoid announcing every second to screen readers.
+- Disabled timer actions must use proper disabled semantics, not only muted styling.
 
 ## Covered By PrimeVue
 

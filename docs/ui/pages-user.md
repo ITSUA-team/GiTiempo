@@ -16,6 +16,15 @@
 - Selector options come from the current user's visible workspace projects and tasks only.
 - Start / Stop button: large CTA, full width on mobile, fixed width on desktop.
 - Timer display: centered `text-5xl font-semibold text-brand`, format `HH:MM:SS`.
+- Authenticated top bar: every authenticated `user-web` page shows the compact timer surface.
+- Running top-bar state: show live `HH:MM:SS`, current `Project / Task`, and a stop action.
+- Not-running top-bar state: show the last tracked task context and a start action that creates a new time entry for that task.
+- Last tracked task context means the most recent own time entry whose task and parent project are still visible and active for the current user.
+- A completed timer entry or manual entry may seed the last tracked task context if that task is still visible and active.
+- The top-bar `Start` action creates a fresh running time entry. It must not resume or update the previous time entry record.
+- If there is no eligible last tracked task context, keep the same not-running top-bar layout but disable the start action.
+- While the top-bar timer summary is loading, keep the layout visible and disable the action.
+- If the top-bar timer summary fails to load, keep the layout visible in a disabled fallback state and surface the failure through toast feedback.
 - Manual interval entry: panel containing date/time controls below the timer actions.
 
 ## Time Entries Page
