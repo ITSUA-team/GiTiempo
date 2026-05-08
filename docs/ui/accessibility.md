@@ -14,6 +14,9 @@
 - For the compact top-bar timer, keep the rendered action text explicit (`Start`, `Stop`) even if the surface becomes visually compact.
 - Do not make the live `HH:MM:SS` timer assertive; avoid announcing every second to screen readers.
 - Disabled timer actions must use proper disabled semantics, not only muted styling.
+- The compact top-bar timer task information field must be keyboard reachable and expose an accessible name such as `Change timer task`.
+- The centered task-picker dialog must restore focus to the invoking task information field when it closes.
+- The create-task title field inside the task-picker dialog must have a visible label and error text tied to the field.
 
 ## Covered By PrimeVue
 

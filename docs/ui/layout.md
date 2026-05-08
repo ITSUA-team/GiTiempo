@@ -15,10 +15,11 @@ User SPA and Admin SPA share the same shell:
 
 - Left: product logo and workspace name.
 - Center: every authenticated `user-web` page top bar shows the compact timer surface. This requirement does not apply to `admin-web`.
-- Running state: show live `HH:MM:SS`, current `Project / Task`, and a single stop action.
-- Not-running state: show the last tracked task context and a start action that creates a new time entry for that task.
-- Last tracked task context means the most recent own time entry whose task and parent project are still visible and active for the current user.
-- If there is no eligible last tracked task context, keep the same compact surface but disable the start action.
+- The task information field inside the compact timer surface is always clickable and opens the centered task-picker dialog.
+- Running state: show live `HH:MM:SS`, current `Project / Task`, clickable task information, and a single stop action.
+- Not-running state: show the last tracked task context, clickable task information, and a start action that creates a new time entry for that task.
+- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
+- If there is no eligible last tracked task context, keep the same compact surface, keep the task information field clickable, and disable the start action.
 - While the timer summary is still loading, keep the compact surface rendered with a disabled action.
 - If the timer summary fails to load, keep the compact surface rendered in a disabled fallback state and surface the failure through the standard toast flow.
 - Right: counterpart workspace link, user avatar, and display name.
@@ -31,6 +32,7 @@ User SPA and Admin SPA share the same shell:
 - Hover: `hover:bg-app-bg`.
 - Active: `bg-accent-tint text-brand font-semibold border-l-[3px] border-brand`.
 - Group dividers: `border-t border-divider my-2`.
+- Authenticated `user-web` navigation no longer includes a dedicated Timer page entry; timer start/stop and task switching live in the global top-bar timer surface.
 
 ## Responsive Breakpoints
 
