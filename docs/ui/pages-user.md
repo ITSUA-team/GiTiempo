@@ -20,13 +20,19 @@
 
 ## Time Entries Page
 
-- Filter bar: date range, single project filter, search field.
-- Search placeholder copy: `Search tasks`.
+- Header actions include a primary PrimeVue `<Button>` labeled `+ New time entry` in the same row as the page title. It opens the shared manual time-entry PrimeVue `<Dialog>` without a preset day.
+- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup.
+- The task lookup placeholder copy is `Search tasks`.
+- The task lookup applies `taskId` filtering from the selected suggestion; do not document it as a backend free-text search endpoint.
 - Entries grouped by day.
+- Each day heading row includes its own PrimeVue `<Button>` labeled `+ New time entry` beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form.
 - Entry row includes task, project, time range, duration, edit, delete.
 - Running entry highlighted with `bg-accent-tint`.
-- Inline edit opens within the row, not a modal.
-- Inline edit shows task as read-only text and only edits the time interval fields in place.
+- Clicking `Edit` opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
+- Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
+- The shared time-entry dialog uses these fields in both create and edit modes: project `<Select>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
+- Edit mode allows changing the selected project and task in addition to `startedAt`, `endedAt`, `description`, and `isBillable`.
+- This create/edit surface must ship as a true popup dialog overlay. Do not render it inline inside the Time Entries page layout.
 - Delete uses the shared confirmation dialog pattern before removing an entry.
 - Pagination uses PrimeVue `<Paginator>` below the grouped entry sections.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.

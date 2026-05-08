@@ -70,7 +70,7 @@ Use `<DatePicker>`.
 
 - Date range filters use `selectionMode="range"`.
 - Time-only fields use `timeOnly` and `hourFormat="24"`.
-- Date and time combined uses `showTime`.
+- Date and time combined uses `showTime` and should be used for time-entry create and edit forms that submit `startedAt` and `endedAt` ISO datetimes.
 - Do not split HH/MM into separate text inputs.
 
 ```vue
@@ -107,6 +107,42 @@ Use sequential PrimeVue `<Select>` controls.
   class="w-full"
 />
 ```
+
+## Task Lookup
+
+Use PrimeVue `<AutoComplete>` when the UI helps the user find a task by title but the API still expects a selected task id.
+
+- Time Entries task filter uses `<AutoComplete>` instead of a raw text input.
+- Manual time-entry create forms should also use `<AutoComplete>` for task selection once the project context is known.
+- Suggestions should be visible tasks for the current user and may be narrowed by the selected project.
+- The applied API filter or payload still uses the selected task's `taskId`; do not document this as a backend free-text search query.
+- Use `forceSelection` so the submitted value always maps to a real task option.
+
+```vue
+<AutoComplete
+  v-model="selectedTask"
+  :suggestions="taskSuggestions"
+  optionLabel="title"
+  placeholder="Search tasks"
+  forceSelection
+  dropdown
+  class="w-full"
+/>
+```
+
+## Time Entry Dialogs
+
+Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
+
+- The header-level and day-level `+ New time entry` actions should open the shared dialog in create mode.
+- The day-level create action pre-populates the selected day in the form.
+- Row-level `Edit` actions should open the same shared dialog in edit mode.
+- Edit mode pre-fills the selected entry's current project, task, `startedAt`, `endedAt`, description, and `isBillable` state.
+- Required fields follow the time-entry form contract: project, task, `startedAt`, and `endedAt`.
+- Optional fields are description and `isBillable`.
+- Use PrimeVue `<Textarea>` for description and `<Checkbox binary>` for billable state.
+- Default copy differs by mode: create uses `New time entry` and `Save entry`; edit uses `Edit time entry` and `Save changes`.
+- The design mockup may live as a separate reference frame, but implementation must render it as an actual modal popup, not as inline page content.
 
 ## Multi-Select Filters
 

@@ -3206,11 +3206,11 @@
       "type": "frame",
       "id": "R2FI0",
       "x": 2800,
-      "y": 0,
+      "y": -109,
       "name": "Time Entries",
       "clip": true,
       "width": 1280,
-      "height": 900,
+      "height": 1009,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -3524,10 +3524,34 @@
                           "type": "text",
                           "id": "93YcY",
                           "fill": "$color-text-muted",
-                          "content": "Review tracked time, filter by project, and edit entries inline.",
+                          "content": "Review tracked time, add manual entries, and edit entries in a shared dialog.",
                           "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z6maH",
+                      "name": "newEntryHeaderButton",
+                      "fill": "$color-brand",
+                      "cornerRadius": "$radius-sm",
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cVH3w",
+                          "fill": "$color-surface",
+                          "content": "+ New time entry",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
                         }
                       ]
                     }
@@ -3647,7 +3671,7 @@
                           "type": "text",
                           "id": "3lWgO",
                           "fill": "$color-text-dark",
-                          "content": "Search",
+                          "content": "Task",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "500"
@@ -3701,13 +3725,51 @@
                       "gap": 10,
                       "children": [
                         {
-                          "type": "text",
+                          "type": "frame",
                           "id": "zmjCq",
-                          "fill": "$color-text-dark",
-                          "content": "Today, Apr 21",
-                          "fontFamily": "Inter",
-                          "fontSize": 16,
-                          "fontWeight": "600"
+                          "name": "dayOneHeader",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ctTdh",
+                              "fill": "$color-text-dark",
+                              "content": "Today, Apr 21",
+                              "fontFamily": "Inter",
+                              "fontSize": 16,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "sp7Qx",
+                              "name": "newEntryDayButton",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$color-divider"
+                              },
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "q37am6",
+                                  "fill": "$color-brand",
+                                  "content": "+ New time entry",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
                         },
                         {
                           "type": "frame",
@@ -4014,220 +4076,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "soTjK",
-                              "name": "editPanel",
-                              "width": "fill_container",
-                              "fill": "$color-app-bg",
-                              "stroke": {
-                                "thickness": {
-                                  "top": 1
-                                },
-                                "fill": "$color-divider"
-                              },
-                              "layout": "vertical",
-                              "gap": 12,
-                              "padding": 16,
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "okJKX",
-                                  "fill": "$color-text-dark",
-                                  "content": "Inline edit",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "600"
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "AK9Ts",
-                                  "name": "editRow",
-                                  "width": "fill_container",
-                                  "gap": 12,
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "1AlT5",
-                                      "name": "e1",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": 6,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "v945Y",
-                                          "fill": "$color-text-dark",
-                                          "content": "Task",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 12,
-                                          "fontWeight": "500"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "TkXFb",
-                                          "fill": "#1A1A1A",
-                                          "content": "Improve reports filters",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 14,
-                                          "fontWeight": "500"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "JmLkW",
-                                      "name": "e2",
-                                      "width": 150,
-                                      "layout": "vertical",
-                                      "gap": 6,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "dCyg7",
-                                          "fill": "$color-text-dark",
-                                          "content": "Start",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 12,
-                                          "fontWeight": "500"
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "waVYh",
-                                          "width": "fill_container",
-                                          "height": 38,
-                                          "fill": "$color-surface",
-                                          "cornerRadius": "$radius-sm",
-                                          "stroke": {
-                                            "thickness": 1,
-                                            "fill": "$color-divider"
-                                          },
-                                          "padding": [
-                                            0,
-                                            12
-                                          ],
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "type": "text",
-                                              "id": "yBoxL",
-                                              "fill": "$color-text-dark",
-                                              "content": "09:00",
-                                              "fontFamily": "Inter",
-                                              "fontSize": 14,
-                                              "fontWeight": "500"
-                                            }
-                                          ]
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "YWVfb",
-                                      "name": "e3",
-                                      "width": 150,
-                                      "layout": "vertical",
-                                      "gap": 6,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "aAIxT",
-                                          "fill": "$color-text-dark",
-                                          "content": "End",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 12,
-                                          "fontWeight": "500"
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "UnKrW",
-                                          "width": "fill_container",
-                                          "height": 38,
-                                          "fill": "$color-surface",
-                                          "cornerRadius": "$radius-sm",
-                                          "stroke": {
-                                            "thickness": 1,
-                                            "fill": "$color-divider"
-                                          },
-                                          "padding": [
-                                            0,
-                                            12
-                                          ],
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "type": "text",
-                                              "id": "L2SxM",
-                                              "fill": "$color-text-dark",
-                                              "content": "10:42",
-                                              "fontFamily": "Inter",
-                                              "fontSize": 14,
-                                              "fontWeight": "500"
-                                            }
-                                          ]
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "yIIKf",
-                                  "name": "editActions",
-                                  "width": "fill_container",
-                                  "gap": 10,
-                                  "justifyContent": "end",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "5YOAE",
-                                      "fill": "$color-surface",
-                                      "cornerRadius": "$radius-sm",
-                                      "stroke": {
-                                        "thickness": 1,
-                                        "fill": "$color-divider"
-                                      },
-                                      "padding": [
-                                        10,
-                                        16
-                                      ],
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "DHFJu",
-                                          "fill": "$color-text-dark",
-                                          "content": "Cancel",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 14,
-                                          "fontWeight": "500"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "Je3y3",
-                                      "fill": "$color-brand",
-                                      "cornerRadius": "$radius-sm",
-                                      "padding": [
-                                        10,
-                                        16
-                                      ],
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "Vc4Oj",
-                                          "fill": "$color-surface",
-                                          "content": "Save",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 14,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
                               "id": "jxadK",
                               "name": "row2",
                               "width": "fill_container",
@@ -4407,13 +4255,51 @@
                       "gap": 10,
                       "children": [
                         {
-                          "type": "text",
+                          "type": "frame",
                           "id": "gfyeH",
-                          "fill": "$color-text-dark",
-                          "content": "Yesterday, Apr 20",
-                          "fontFamily": "Inter",
-                          "fontSize": 16,
-                          "fontWeight": "600"
+                          "name": "dayTwoHeader",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "benVz",
+                              "fill": "$color-text-dark",
+                              "content": "Yesterday, Apr 20",
+                              "fontFamily": "Inter",
+                              "fontSize": 16,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "PD4Y5",
+                              "name": "newEntryDayButton",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$color-divider"
+                              },
+                              "padding": [
+                                8,
+                                12
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "d4BGTH",
+                                  "fill": "$color-brand",
+                                  "content": "+ New time entry",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
                         },
                         {
                           "type": "frame",
@@ -17025,6 +16911,469 @@
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "hjdYE",
+      "x": 3080,
+      "y": -920,
+      "name": "Time Entry Dialog",
+      "width": 720,
+      "height": 719,
+      "fill": "#F4F4F5",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "Nun9U",
+          "name": "dialogScreenHeader",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "cYIDl",
+              "fill": "#1A1A1A",
+              "content": "Time Entry Dialog",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "e9ylt",
+              "fill": "#666666",
+              "content": "Standalone popup reference for the shared time-entry create and edit flow.",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "f7O7sI",
+          "name": "dialogRow",
+          "width": "fill_container",
+          "justifyContent": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "B2rXaf",
+              "name": "newEntryDialogVisible",
+              "width": 560,
+              "height": 546,
+              "fill": "#FFFFFF",
+              "cornerRadius": 10,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#EEEEEE"
+              },
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "oiThM",
+                  "name": "dialogHeader",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "cZOsq",
+                      "fill": "#1A1A1A",
+                      "content": "Edit time entry",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "phYGT",
+                      "fill": "#666666",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Update the selected time entry using the same popup layout as create mode.",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QMI7e",
+                  "name": "projectDialogField",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "P3lVyd",
+                      "fill": "#1A1A1A",
+                      "content": "Project",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m39m0",
+                      "name": "projectInput",
+                      "width": "fill_container",
+                      "height": 38,
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 6,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#EEEEEE"
+                      },
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g5s0M2",
+                          "fill": "#1A1A1A",
+                          "content": "Admin Web",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "k3pNi",
+                          "fill": "#666666",
+                          "content": "Select",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "x6i2c",
+                  "name": "taskDialogField",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Tz5U8",
+                      "fill": "#1A1A1A",
+                      "content": "Task",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OX2oU",
+                      "name": "taskInput",
+                      "width": "fill_container",
+                      "height": 38,
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 6,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#EEEEEE"
+                      },
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "AczBf",
+                          "fill": "#666666",
+                          "content": "Improve reports filters",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "xqa26",
+                          "fill": "#5D2B85",
+                          "content": "AutoComplete",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GA4ps",
+                  "name": "dateRow",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hpV7g",
+                      "name": "startField",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "U98BT",
+                          "fill": "#1A1A1A",
+                          "content": "Start",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Ox6hu",
+                          "name": "startInput",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "#EEEEEE"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "yln0b",
+                              "fill": "#1A1A1A",
+                              "content": "Apr 21, 09:00",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VQZjf",
+                      "name": "endField",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Y3T7f",
+                          "fill": "#1A1A1A",
+                          "content": "End",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LDy6n",
+                          "name": "endInput",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "#EEEEEE"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DyOgC",
+                              "fill": "#1A1A1A",
+                              "content": "Apr 21, 10:30",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tJjR9",
+                  "name": "descriptionField",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wLS8j",
+                      "fill": "#1A1A1A",
+                      "content": "Description",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P1GEbm",
+                      "name": "descriptionInput",
+                      "width": "fill_container",
+                      "height": 82,
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 6,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#EEEEEE"
+                      },
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xgMUy",
+                          "fill": "#666666",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Summarize PM scope changes for the reports table.",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EOypW",
+                  "name": "billable",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 6,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#EEEEEE"
+                  },
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "votCs",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "#5D2B85",
+                      "cornerRadius": 4
+                    },
+                    {
+                      "type": "text",
+                      "id": "EVsBI",
+                      "fill": "#1A1A1A",
+                      "content": "Billable entry",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Gj1My",
+                  "name": "actions",
+                  "width": "fill_container",
+                  "gap": 10,
+                  "justifyContent": "end",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "QXWBG",
+                      "name": "cancel",
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 6,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#EEEEEE"
+                      },
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "c3jsW",
+                          "fill": "#1A1A1A",
+                          "content": "Cancel",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "G3YKG",
+                      "name": "save",
+                      "fill": "#5D2B85",
+                      "cornerRadius": 6,
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "icieO",
+                          "fill": "#FFFFFF",
+                          "content": "Save changes",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
                         }
                       ]
                     }
