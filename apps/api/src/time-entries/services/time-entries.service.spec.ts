@@ -19,6 +19,10 @@ const user: AuthUser = {
   role: 'member',
 };
 
+const mockUsersActivity = {
+  touchLastActive: vi.fn().mockResolvedValue(undefined),
+};
+
 const completedEntry = {
   id: 'entry-1',
   workspaceId: user.workspaceId,
@@ -87,6 +91,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       {} as never,
+      mockUsersActivity as never,
     );
 
     await expect(
@@ -113,6 +118,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       {} as never,
+      mockUsersActivity as never,
     );
 
     await expect(
@@ -139,6 +145,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       tasks as never,
+      mockUsersActivity as never,
     );
 
     await expect(
@@ -164,6 +171,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       {} as never,
+      mockUsersActivity as never,
     );
 
     await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
@@ -189,6 +197,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       tasks as never,
+      mockUsersActivity as never,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
@@ -236,6 +245,7 @@ describe('TimeEntriesService', () => {
       members as never,
       {} as never,
       {} as never,
+      mockUsersActivity as never,
     );
     Object.defineProperty(service, 'findOrCreateGitHubProject', {
       value: vi.fn().mockResolvedValue({
