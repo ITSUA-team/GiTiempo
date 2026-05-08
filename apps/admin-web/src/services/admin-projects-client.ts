@@ -1,9 +1,11 @@
 import {
+	createProjectSchema,
 	managementProjectSummaryResponseSchema,
 	projectListResponseSchema,
 	projectResponseSchema,
 	updateProjectSchema,
 	workspaceMemberListResponseSchema,
+	type CreateProjectInput,
 	type ManagementProjectSummaryResponse,
 	type ProjectListResponse,
 	type ProjectResponse,
@@ -29,6 +31,10 @@ export interface AdminProjectsClient {
 		projectId: string,
 		userId: string,
 	): Promise<void>;
+	createProject(
+		accessToken: string,
+		input: CreateProjectInput,
+	): Promise<ProjectResponse>;
 	getManagementSummary(
 		accessToken: string,
 	): Promise<ManagementProjectSummaryResponse>;
@@ -67,6 +73,18 @@ export function createAdminProjectsClient({
 			if (!response.ok) {
 				throw new Error(await getResponseErrorMessage(response));
 			}
+		},
+
+		createProject(accessToken, input) {
+			return requestJson({
+				accessToken,
+				apiBaseUrl,
+				body: createProjectSchema.parse(input),
+				fetchFn,
+				method: 'POST',
+				path: '/projects',
+				responseSchema: projectResponseSchema,
+			});
 		},
 
 		getManagementSummary(accessToken) {
