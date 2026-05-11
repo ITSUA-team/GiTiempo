@@ -17,3 +17,53 @@ body {
 #app {
   min-height: 100vh;
 }
+
+/* ─── Management DataTable chrome reset ─────────────────────────────────────
+   Targets PrimeVue-rendered DOM that cannot be reached via Tailwind templates.
+   The hook class "gt-management-table" is applied by each DataTable consumer.
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .gt-management-table.p-datatable {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  .gt-management-table .p-datatable-table-container {
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .gt-management-table table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .gt-management-table .p-datatable-tbody > tr:not(.p-datatable-row-expansion) {
+    height: 56px;
+    background: transparent;
+  }
+
+  .gt-management-table .p-datatable-tbody > tr:not(.p-datatable-row-expansion):hover {
+    background: transparent;
+  }
+
+  .gt-management-table .p-datatable-tbody > tr:not(.p-datatable-row-expansion) > td {
+    padding: 0 12px;
+    border: none;
+    border-top: 1px solid var(--color-divider);
+    vertical-align: middle;
+    font-family: "Inter", sans-serif;
+  }
+
+  .gt-management-table .p-datatable-row-expansion {
+    height: auto;
+  }
+
+  .gt-management-table .p-datatable-row-expansion > td {
+    padding: 0;
+    border: none;
+    border-top: 1px solid var(--color-divider);
+  }
+}

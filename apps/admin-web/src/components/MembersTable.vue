@@ -38,6 +38,13 @@ const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
 
+const actionBtnBase = 'px-1.5 py-1 text-[13px] font-semibold leading-none rounded bg-transparent border-none shadow-none no-underline';
+const actionBtnPt = {
+  brand: { root: { class: `${actionBtnBase} text-brand` } },
+  destructive: { root: { class: `${actionBtnBase} text-destructive` } },
+  muted: { root: { class: `${actionBtnBase} text-text-muted` } },
+} as const;
+
 const expandedRows = ref<Record<string, boolean>>({});
 const expansionMode = ref<Record<string, 'assign' | 'edit'>>({});
 
@@ -208,19 +215,19 @@ function handleRemove(member: WorkspaceMemberResponse): void {
                 v-if="data.role !== 'admin'"
                 label="Assign PM"
                 variant="link"
-                class="gt-action-btn gt-action-btn--brand"
+                :pt="actionBtnPt.brand"
                 @click="toggleExpansion(data, 'assign')"
               />
               <Button
                 label="Edit"
                 variant="link"
-                class="gt-action-btn gt-action-btn--brand"
+                :pt="actionBtnPt.brand"
                 @click="toggleExpansion(data, 'edit')"
               />
               <Button
                 label="Remove"
                 variant="link"
-                class="gt-action-btn gt-action-btn--destructive"
+                :pt="actionBtnPt.destructive"
                 @click="handleRemove(data)"
               />
             </template>

@@ -37,6 +37,13 @@ const { requireConfirmation } = useConfirmation();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
 
+const actionBtnBase = 'px-1.5 py-1 text-[13px] font-semibold leading-none rounded bg-transparent border-none shadow-none no-underline';
+const actionBtnPt = {
+  brand: { root: { class: `${actionBtnBase} text-brand` } },
+  destructive: { root: { class: `${actionBtnBase} text-destructive` } },
+  muted: { root: { class: `${actionBtnBase} text-text-muted` } },
+} as const;
+
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
   { key: 'source', label: 'Source', width: 140 },
@@ -233,13 +240,13 @@ function formatSource(source: string): string {
               <Button
                 label="Edit"
                 variant="link"
-                class="gt-action-btn gt-action-btn--brand"
+                :pt="actionBtnPt.brand"
                 @click="handleEdit(data)"
               />
               <Button
                 label="Archive"
                 variant="link"
-                class="gt-action-btn gt-action-btn--destructive"
+                :pt="actionBtnPt.destructive"
                 @click="confirmArchive(data)"
               />
             </template>
@@ -247,7 +254,7 @@ function formatSource(source: string): string {
               <Button
                 label="Unarchive"
                 variant="link"
-                class="gt-action-btn gt-action-btn--muted"
+                :pt="actionBtnPt.muted"
                 @click="handleUnarchive(data)"
               />
             </template>
