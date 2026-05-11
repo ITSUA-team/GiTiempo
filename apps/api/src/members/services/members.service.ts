@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, sql } from 'drizzle-orm';
 import type {
   UpdateWorkspaceMemberRoleInput,
   WorkspaceMemberResponse,
@@ -102,6 +102,12 @@ export class MembersService {
   }
 
   async listMembers(workspaceId: string): Promise<WorkspaceMemberResponse[]> {
+    const projectsAssignedCount = sql<number>`(
+      SELECT COUNT(*)::int FROM project_assignments pa
+      WHERE pa.user_id = ${workspaceMembers.userId}
+        AND pa.workspace_id = ${workspaceMembers.workspaceId}
+    )`.as('projects_assigned_count');
+
     const rows = await this.db
       .select({
         id: workspaceMembers.id,
@@ -112,6 +118,8 @@ export class MembersService {
         avatarUrl: users.avatarUrl,
         role: workspaceMembers.role,
         joinedAt: workspaceMembers.joinedAt,
+        lastActiveAt: users.lastActiveAt,
+        projectsAssignedCount: projectsAssignedCount,
       })
       .from(workspaceMembers)
       .innerJoin(users, eq(users.id, workspaceMembers.userId))
@@ -120,6 +128,8 @@ export class MembersService {
     return rows.map((row) => ({
       ...row,
       joinedAt: row.joinedAt.toISOString(),
+      lastActiveAt: row.lastActiveAt?.toISOString() ?? null,
+      projectsAssignedCount: row.projectsAssignedCount ?? 0,
     }));
   }
 
@@ -155,6 +165,12 @@ export class MembersService {
         .returning();
       if (!updated) throw new Error('Failed to update member role');
 
+      const assignedCount = sql<number>`(
+        SELECT COUNT(*)::int FROM project_assignments pa
+        WHERE pa.user_id = ${updated.userId}
+          AND pa.workspace_id = ${updated.workspaceId}
+      )`.as('projects_assigned_count');
+
       const [row] = await tx
         .select({
           id: workspaceMembers.id,
@@ -165,6 +181,8 @@ export class MembersService {
           avatarUrl: users.avatarUrl,
           role: workspaceMembers.role,
           joinedAt: workspaceMembers.joinedAt,
+          lastActiveAt: users.lastActiveAt,
+          projectsAssignedCount: assignedCount,
         })
         .from(workspaceMembers)
         .innerJoin(users, eq(users.id, workspaceMembers.userId))
@@ -172,7 +190,12 @@ export class MembersService {
         .limit(1);
 
       if (!row) throw new Error('Failed to load updated member');
-      return { ...row, joinedAt: row.joinedAt.toISOString() };
+      return {
+        ...row,
+        joinedAt: row.joinedAt.toISOString(),
+        lastActiveAt: row.lastActiveAt?.toISOString() ?? null,
+        projectsAssignedCount: row.projectsAssignedCount ?? 0,
+      };
     });
   }
 
