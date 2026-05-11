@@ -84,7 +84,7 @@ Use PrimeVue `<Button>`. Do not recreate app buttons with raw HTML unless the su
 
 ### Form Inputs
 
-Use `<InputText>`, `<Textarea>`, `<InputNumber>`, and `<Password>`. For form payloads that are shared between apps or map to API contracts, validate with Zod before submitting.
+Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<Select>`, `<AutoComplete>`, `<Checkbox>`, and `<DatePicker>` as appropriate for the field type. For form payloads that are shared between apps or map to API contracts, validate with Zod before submitting.
 
 - Wrap in `<div class="flex flex-col gap-1">` with a real `<label>`.
 - Single-line height: `h-[38px]`.
