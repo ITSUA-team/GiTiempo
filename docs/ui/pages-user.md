@@ -34,7 +34,7 @@
 - Header actions include a primary PrimeVue `<Button>` labeled `+ New time entry` in the same row as the page title. It opens the shared manual time-entry PrimeVue `<Dialog>` without a preset day.
 - Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup.
 - The task lookup placeholder copy is `Search tasks`.
-- The task lookup applies `taskId` filtering from the selected suggestion; do not document it as a backend free-text search endpoint.
+- The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
 - Entries grouped by day.
 - Each day heading row includes its own PrimeVue `<Button>` labeled `+ New time entry` beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form.
 - Entry row includes task, project, time range, duration, edit, delete.
