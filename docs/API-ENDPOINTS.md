@@ -93,11 +93,14 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 | Method | Path                       | Auth | Role | Description                                                                                      |
 | ------ | -------------------------- | ---- | ---- | ------------------------------------------------------------------------------------------------ |
-| GET    | `/projects/:id/tasks`      | JWT  | Any  | List tasks for a visible active project. Private projects require assignment for non-admin users. |
+| GET    | `/projects/:id/tasks`      | JWT  | Any  | List active tasks for a visible active project by default. Private projects require assignment for non-admin users. |
 | POST   | `/projects/:id/tasks`      | JWT  | Any  | Create a provider-neutral task in a visible active project.                                      |
 | GET    | `/tasks/:id`               | JWT  | Any  | Get task details when the user has visibility to the task's project.                             |
 | PATCH  | `/tasks/:id`               | JWT  | Any  | Update task (title, status, isActive) when the user has visibility to the task's active project. |
+| DELETE | `/tasks/:id`               | JWT  | Any  | Permanently delete a visible task only when it has no related time entries.                      |
 | POST   | `/projects/:id/tasks/sync` | JWT  | Any  | Trigger task sync from the project's configured external provider refs.                          |
+
+**DELETE /tasks/:id** returns `204 No Content` when the task has no related time entries. If any time entry references the task, the backend returns `409 Conflict` with an explanatory message. Task responses do not include `canDelete`, `hasTimeEntries`, or other delete-eligibility metadata; clients must handle a rejected delete attempt.
 
 ---
 
@@ -105,7 +108,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 | Method | Path                                    | Auth | Role | Description                                                                                        |
 | ------ | --------------------------------------- | ---- | ---- | -------------------------------------------------------------------------------------------------- |
-| GET    | `/time-entries`                         | JWT  | Any  | List current user's time entries (filterable by date, project, task)                               |
+| GET    | `/time-entries`                         | JWT  | Any  | List current user's time entries (filterable by date, project, task, task-title search)            |
 | POST   | `/time-entries`                         | JWT  | Any  | Create manual time entry (start/end)                                                               |
 | GET    | `/time-entries/:id`                     | JWT  | Any  | Get time entry details                                                                             |
 | PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry (description, times, billable)                                               |
@@ -115,7 +118,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Start timer from GitHub issue — auto-creates project and task if needed (used by Chrome extension) |
 | POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop running timer                                                                                 |
 
-**GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`
+**GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`, `search?`
 
 **POST /time-entries** body: `{ taskId: string, startedAt: string, endedAt: string, description?: string | null, isBillable?: boolean }`
 
@@ -133,7 +136,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 **POST /time-entries/timer/start** body: `{ taskId: string }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string }`
 
-**GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`
+**GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`, `search?`
 
 ---
 
@@ -141,7 +144,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 | Method | Path                         | Auth | Role | Description                                                                                                                                               |
 | ------ | ---------------------------- | ---- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/projects/:id/time-entries` | JWT  | Any  | List all time entries for a visible project. Private projects require assignment for non-admin users. Members remain read-only for other users' entries. |
+| GET    | `/projects/:id/time-entries` | JWT  | Any  | List all time entries for a visible project, with optional task-title search. Private projects require assignment for non-admin users. Members remain read-only for other users' entries. |
 
 ---
 

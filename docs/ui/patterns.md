@@ -111,13 +111,13 @@ Use sequential PrimeVue `<Select>` controls.
 
 ## Task Lookup
 
-Use PrimeVue `<AutoComplete>` when the UI helps the user find a task by title but the API still expects a selected task id.
+Use PrimeVue `<AutoComplete>` when the UI helps the user find or filter tasks by title.
 
 - Time Entries task filter uses `<AutoComplete>` instead of a raw text input.
 - Manual time-entry create forms should also use `<AutoComplete>` for task selection once the project context is known.
 - Suggestions should be visible tasks for the current user and may be narrowed by the selected project.
-- The applied API filter or payload still uses the selected task's `taskId`; do not document this as a backend free-text search query.
-- Use `forceSelection` so the submitted value always maps to a real task option.
+- Time Entries list filtering may send backend `search` so task-title filtering applies across the paginated result set.
+- Create, edit, and timer payloads still submit a selected task's `taskId`; use `forceSelection` when the submitted value must map to a real task option.
 
 ```vue
 <AutoComplete
@@ -130,6 +130,18 @@ Use PrimeVue `<AutoComplete>` when the UI helps the user find a task by title bu
   class="w-full"
 />
 ```
+
+## Combined Projects And Tasks Search
+
+Use PrimeVue `<AutoComplete>` when the UI helps the user search already loaded project and task names from the frontend.
+
+- The user Projects page uses a single combined search field instead of separate project and task filters.
+- Placeholder copy: `Search projects or tasks`.
+- Suggestions may include both project names and task names from the currently loaded visible data set.
+- This search filters frontend-visible data only. Do not document it as a backend search endpoint.
+- Project-name matches keep the full matching project group visible.
+- Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
+- Clearing the field restores the full grouped list.
 
 ## Time Entry Dialogs
 

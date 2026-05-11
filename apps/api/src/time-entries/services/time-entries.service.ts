@@ -6,7 +6,17 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, count, desc, eq, gte, isNull, lt, type SQL } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  isNull,
+  lt,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type {
   CreateManualTimeEntryInput,
   CurrentTimeEntryResponse,
@@ -366,6 +376,12 @@ export class TimeEntriesService {
     }
     if (query.taskId !== undefined) {
       conditions.push(eq(timeEntries.taskId, query.taskId));
+    }
+    if (query.search !== undefined) {
+      const searchPattern = `%${escapeLikePattern(query.search)}%`;
+      conditions.push(
+        sql`${tasksTable.title} ILIKE ${searchPattern} ESCAPE '\'`,
+      );
     }
     return conditions;
   }
@@ -765,6 +781,10 @@ function getPostgresError(error: unknown): {
     return candidate;
   }
   return getPostgresError(candidate.cause);
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
 }
 
 export function calculateDurationSeconds(

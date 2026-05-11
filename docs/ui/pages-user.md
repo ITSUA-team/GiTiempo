@@ -34,7 +34,7 @@
 - Header actions include a primary PrimeVue `<Button>` labeled `+ New time entry` in the same row as the page title. It opens the shared manual time-entry PrimeVue `<Dialog>` without a preset day.
 - Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup.
 - The task lookup placeholder copy is `Search tasks`.
-- The task lookup applies `taskId` filtering from the selected suggestion; do not document it as a backend free-text search endpoint.
+- The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
 - Entries grouped by day.
 - Each day heading row includes its own PrimeVue `<Button>` labeled `+ New time entry` beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form.
 - Entry row includes task, project, time range, duration, edit, delete.
@@ -48,11 +48,31 @@
 - Pagination uses PrimeVue `<Paginator>` below the grouped entry sections.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 
-## Project View Page
+## Projects Page
 
-- Header with project name, description, and total tracked hours.
-- Read-only time entries table filtered to the project.
-- No edit or delete actions.
+- Header actions include a primary PrimeVue `<Button>` labeled `+ New task` in the same row as the page title.
+- The page uses the same high-level structure as Time Entries: page header row, grouped content sections, and a card/table shell for each group.
+- A filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`.
+- The combined search filters already loaded visible projects and tasks on the frontend. Do not document it as a backend free-text search endpoint.
+- Project-name matches keep the full matching project group visible.
+- Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
+- Clearing the search restores the full grouped project list.
+- Content is grouped by visible project instead of by day.
+- Each project section header shows the project name on the left and a secondary PrimeVue `<Button>` labeled `+ Add task` on the right.
+- Tasks for that project render beneath the project header inside the same section card.
+- Task rows include task title, status, updated metadata, edit, and delete actions.
+- Clicking `Edit` opens the shared task PrimeVue `<Dialog>` in update mode.
+- The same task dialog is used for both create and update flows.
+- Page-level `+ New task` opens the dialog in create mode with a required project `<Select>`.
+- Project-level `+ Add task` opens the same dialog in create mode with that project already selected.
+- Update mode pre-fills the selected project, task title, and editable task fields.
+- The task dialog must ship as a true popup dialog overlay. Do not render create or update forms inline inside the Projects page layout.
+- Delete uses the shared confirmation dialog pattern before permanently removing the task.
+- Task deletion is available only when the task has no related time entries.
+- Tasks with related time entries return a `409 Conflict` from the backend when deletion is attempted, and the Projects page surfaces that message without removing the task locally.
+- Task responses do not include `canDelete`, `hasTimeEntries`, or other delete-eligibility metadata, so the Projects page must not rely on precomputed delete availability.
+- Task lists show active tasks by default and exclude inactive tasks from the default grouped list.
+- Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 
 ## Profile Page
 
