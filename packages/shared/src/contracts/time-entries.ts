@@ -4,6 +4,13 @@ export const timeEntrySourceSchema = z.enum(["web", "extension", "manual"]);
 
 const dateTimeSchema = z.iso.datetime();
 
+const optionalSearchSchema = z
+  .string()
+  .trim()
+  .max(200)
+  .transform((value) => (value === "" ? undefined : value))
+  .optional();
+
 const timeEntryProjectSummarySchema = z.object({
   id: z.uuid(),
   name: z.string(),
@@ -64,6 +71,7 @@ export const timeEntryListQuerySchema = z
     dateTo: dateTimeSchema.optional(),
     projectId: z.uuid().optional(),
     taskId: z.uuid().optional(),
+    search: optionalSearchSchema,
   })
   .strict()
   .refine(
