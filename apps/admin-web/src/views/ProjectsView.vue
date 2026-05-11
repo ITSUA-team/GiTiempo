@@ -8,16 +8,16 @@ import type {
 } from "@gitiempo/shared";
 import { StatCard, StatsHeader, SurfaceCard } from "@gitiempo/web-shared";
 import Button from "primevue/button";
-import { useToast } from "primevue/usetoast";
 
 import ProjectsTable from "@/components/ProjectsTable.vue";
 import { routeNames } from "@/router";
 import { adminProjectsClient } from "@/services/admin-projects-client";
 import { useAuthStore } from "@/stores/auth";
+import { useToasts } from "@/composables/useToasts";
 
 const router = useRouter();
 const authStore = useAuthStore();
-const toast = useToast();
+const { errorToast } = useToasts();
 
 const projects = ref<ProjectListResponse>([]);
 const summary = ref<ManagementProjectSummaryResponse>({
@@ -59,12 +59,7 @@ async function fetchAll(): Promise<void> {
   } catch (err) {
     const message = err instanceof Error ? err.message : "An unexpected error occurred";
     loadError.value = message;
-    toast.add({
-      severity: "error",
-      summary: "Failed to load projects",
-      detail: message,
-      life: 5000,
-    });
+    errorToast(message);
   } finally {
     loading.value = false;
   }
@@ -88,12 +83,7 @@ async function refresh(): Promise<void> {
     projects.value = sortProjects(projectsData);
     summary.value = summaryData;
   } catch (err) {
-    toast.add({
-      severity: "error",
-      summary: "Failed to refresh projects",
-      detail: err instanceof Error ? err.message : "An unexpected error occurred",
-      life: 5000,
-    });
+    errorToast(err instanceof Error ? err.message : "An unexpected error occurred");
   } finally {
     loading.value = false;
   }

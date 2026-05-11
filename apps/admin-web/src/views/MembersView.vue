@@ -8,16 +8,16 @@ import type {
 import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import ConfirmDialog from 'primevue/confirmdialog';
-import { useToast } from 'primevue/usetoast';
 
 import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
+import { useToasts } from '@/composables/useToasts';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const toast = useToast();
+const { errorToast } = useToasts();
 
 const members = ref<WorkspaceMemberListResponse>([]);
 const invites = ref<WorkspaceInviteListResponse>([]);
@@ -59,12 +59,7 @@ async function fetchAll(): Promise<void> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'An unexpected error occurred';
     loadError.value = message;
-    toast.add({
-      severity: 'error',
-      summary: 'Failed to load members',
-      detail: message,
-      life: 5000,
-    });
+    errorToast(message);
   } finally {
     loading.value = false;
   }
@@ -90,12 +85,7 @@ async function refresh(): Promise<void> {
     invites.value = invitesData;
     projects.value = projectsData;
   } catch (err) {
-    toast.add({
-      severity: 'error',
-      summary: 'Failed to refresh members',
-      detail: err instanceof Error ? err.message : 'An unexpected error occurred',
-      life: 5000,
-    });
+    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred');
   } finally {
     loading.value = false;
   }
