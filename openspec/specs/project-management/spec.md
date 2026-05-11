@@ -8,7 +8,7 @@ Define project visibility, creation, update, and assignment behavior for workspa
 
 ### Requirement: Project Visibility Is Role And Assignment Scoped
 
-The system MUST enforce project visibility from workspace membership, project visibility, and project assignments.
+The system MUST enforce project visibility from workspace membership, project visibility, and project assignments. Every returned project object MUST include a `memberCount` field (integer >= 0) representing the total number of workspace members assigned to that project, and MUST include `isActive` indicating the active status of the project.
 
 #### Scenario: Admin lists all projects
 
@@ -16,6 +16,8 @@ The system MUST enforce project visibility from workspace membership, project vi
 - **WHEN** the requester lists projects
 - **THEN** the system returns active and inactive projects in that workspace
 - **AND** the result includes both public and private projects
+- **AND** each project includes `memberCount` with the correct count of assigned members
+- **AND** each project includes `isActive`
 
 #### Scenario: Non-admin lists active public and assigned projects
 
@@ -24,6 +26,7 @@ The system MUST enforce project visibility from workspace membership, project vi
 - **THEN** the system returns active public projects in that workspace
 - **AND** the system returns active private projects assigned to that requester
 - **AND** projects matching both public and assigned scope are returned once
+- **AND** each project includes `memberCount` with the correct count of assigned members
 
 #### Scenario: Non-admin can read active public project
 
@@ -31,6 +34,7 @@ The system MUST enforce project visibility from workspace membership, project vi
 - **AND** the project is active and public
 - **WHEN** the requester reads that project by id
 - **THEN** the system returns the project
+- **AND** the project includes `memberCount`
 
 #### Scenario: Non-admin can read assigned private project
 
@@ -38,6 +42,7 @@ The system MUST enforce project visibility from workspace membership, project vi
 - **AND** the requester is assigned to an active private project
 - **WHEN** the requester reads that project by id
 - **THEN** the system returns the project
+- **AND** the project includes `memberCount`
 
 #### Scenario: Non-admin cannot read unassigned private project
 
