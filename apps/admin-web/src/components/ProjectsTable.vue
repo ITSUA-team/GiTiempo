@@ -14,6 +14,7 @@ import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
+import { useConfirmation } from '@/composables/useConfirmation';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 import { useToasts } from '@/composables/useToasts';
@@ -32,6 +33,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
+const { requireConfirmation } = useConfirmation();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
 
@@ -98,6 +100,15 @@ async function handleArchive(project: ProjectResponse): Promise<void> {
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to archive project');
   }
+}
+
+function confirmArchive(project: ProjectResponse): void {
+  requireConfirmation(
+    `"${project.name}" will be archived and hidden from non-admin users.`,
+    'Archive project?',
+    'Archive',
+    () => handleArchive(project),
+  );
 }
 
 async function handleUnarchive(project: ProjectResponse): Promise<void> {
@@ -229,7 +240,7 @@ function formatSource(source: string): string {
                 label="Archive"
                 variant="link"
                 class="gt-action-btn gt-action-btn--destructive"
-                @click="handleArchive(data)"
+                @click="confirmArchive(data)"
               />
             </template>
             <template v-else>

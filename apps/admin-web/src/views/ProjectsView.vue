@@ -8,6 +8,7 @@ import type {
 } from "@gitiempo/shared";
 import { StatCard, StatsHeader, SurfaceCard } from "@gitiempo/web-shared";
 import Button from "primevue/button";
+import ConfirmDialog from "primevue/confirmdialog";
 
 import ProjectsTable from "@/components/ProjectsTable.vue";
 import { routeNames } from "@/router";
@@ -98,6 +99,7 @@ onMounted(fetchAll);
 
 <template>
   <div class="flex flex-col gap-6 p-6">
+    <ConfirmDialog />
     <!-- Error state — visible banner after initial load failure -->
     <template v-if="loadError && !loading">
       <SurfaceCard padding-class="p-6">

@@ -14,10 +14,9 @@ import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
-import { useConfirm } from 'primevue/useconfirm';
-
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
+import { useConfirmation } from '@/composables/useConfirmation';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
 import { useToasts } from '@/composables/useToasts';
@@ -37,7 +36,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
-const confirm = useConfirm();
+const { requireConfirmation } = useConfirmation();
 
 const expandedRows = ref<Record<string, boolean>>({});
 const expansionMode = ref<Record<string, 'assign' | 'edit'>>({});
@@ -110,15 +109,11 @@ function handleEditSaved(member: WorkspaceMemberResponse): void {
 }
 
 function handleRemove(member: WorkspaceMemberResponse): void {
-  confirm.require({
-    message: `${member.displayName ?? member.email} will be removed from this workspace. This action cannot be undone.`,
-    header: 'Remove member?',
-    acceptLabel: 'Remove',
-    rejectLabel: 'Cancel',
-    acceptProps: {
-      severity: 'danger',
-    },
-    accept: async () => {
+  requireConfirmation(
+    `${member.displayName ?? member.email} will be removed from this workspace. This action cannot be undone.`,
+    'Remove member?',
+    'Remove',
+    async () => {
       const token = authStore.accessToken;
       if (!token) return;
 
@@ -130,7 +125,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         errorToast(err instanceof Error ? err.message : 'Failed to remove member');
       }
     },
-  });
+  );
 }
 </script>
 
