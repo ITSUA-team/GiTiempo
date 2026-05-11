@@ -71,37 +71,13 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 
 ### Requirement: Time Entries Page Record Management
 
-The Time Entries page MUST allow authenticated users to review, filter, create, edit, and delete their own time entries, with manual interval creation owned by this page rather than the top-bar timer.
+The Time Entries page MUST own manual time-entry creation for authenticated users instead of the removed dedicated timer page.
 
-#### Scenario: Time entries page renders documented header and filters
+#### Scenario: Manual entry stays on Time Entries
 
-- **WHEN** the authenticated user opens Time Entries
-- **THEN** the page header shows a primary `+ New time entry` action beside the page title
-- **AND** the filter bar includes date range, project filter, and task lookup controls
-- **AND** loading, empty, and request-error states remain visually distinct
-
-#### Scenario: Manual entry dialog creates a completed entry
-
-- **GIVEN** the user opens the Time Entries `New time entry` dialog
-- **WHEN** the user selects project, task, started-at, ended-at, optional description, and billable state, then submits valid data
-- **THEN** the app creates a completed manual time entry
-- **AND** the page refreshes the visible entry list
-- **AND** success or failure is surfaced through standard toast feedback
-
-#### Scenario: Day-level new entry action presets date
-
-- **GIVEN** the Time Entries page is grouped by day
-- **WHEN** the user activates a day row `+ New time entry` action
-- **THEN** the same manual-entry dialog opens
-- **AND** the dialog pre-fills the selected day while leaving task and time selection editable
-
-#### Scenario: Delete uses confirmation
-
-- **GIVEN** the Time Entries page displays a completed entry
-- **WHEN** the user chooses to delete it
-- **THEN** the app asks for confirmation using the shared confirmation dialog pattern
-- **AND** confirming the action deletes the entry and refreshes the list
-- **AND** cancellation leaves the entry unchanged
+- **WHEN** the user needs to create a completed manual time entry
+- **THEN** the create flow is owned by the Time Entries page rather than the top-bar timer or task-picker dialog
+- **AND** the top-bar timer change does not move manual interval controls into shell chrome
 
 ## MODIFIED Requirements
 
@@ -128,6 +104,6 @@ The time entries page SHALL allow the user to review and edit their own complete
 
 ### Requirement: Timer Workflow Page
 
-**Reason**: Timer start, stop, and task-context selection now live in the authenticated user-web top bar, and manual interval entry belongs on Time Entries.
+**Reason**: Timer start, stop, and task-context selection now live in the authenticated user-web top bar.
 
-**Migration**: Use the Global Top-Bar Timer and Top-Bar Timer Task Picker for timer control. Use the Time Entries page manual-entry dialog for completed manual intervals.
+**Migration**: Use the Global Top-Bar Timer and Top-Bar Timer Task Picker for timer control.

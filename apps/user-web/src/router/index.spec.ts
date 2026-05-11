@@ -64,11 +64,11 @@ describe("app router auth guards", () => {
       pinia,
     });
 
-    await router.push("/timer");
+    await router.push("/time-entries");
     await router.isReady();
 
     expect(router.currentRoute.value.name).toBe(routeNames.login);
-    expect(router.currentRoute.value.query.redirect).toBe("/timer");
+    expect(router.currentRoute.value.query.redirect).toBe("/time-entries");
   });
 
   it("redirects to login after bootstrap rejects a persisted refresh token", async () => {

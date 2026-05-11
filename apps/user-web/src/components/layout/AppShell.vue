@@ -4,6 +4,7 @@ import { RouterView, useRoute } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
+import TopBarTimer from "@/components/timer/TopBarTimer.vue";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -18,10 +19,6 @@ const navItems = computed(() => [
   {
     label: "Dashboard",
     name: routeNames.dashboard,
-  },
-  {
-    label: "Timer",
-    name: routeNames.timer,
   },
   {
     label: "Time Entries",
@@ -47,7 +44,11 @@ const navItems = computed(() => [
       :display-name="authStore.displayName"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"
-    />
+    >
+      <template #center>
+        <TopBarTimer />
+      </template>
+    </WorkspaceHeader>
 
     <div class="flex min-h-[calc(100vh-4rem)]">
       <WorkspaceNavigation
