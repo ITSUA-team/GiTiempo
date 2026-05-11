@@ -111,13 +111,13 @@ Use sequential PrimeVue `<Select>` controls.
 
 ## Task Lookup
 
-Use PrimeVue `<AutoComplete>` when the UI helps the user find a task by title but the API still expects a selected task id.
+Use PrimeVue `<AutoComplete>` when the UI helps the user find or filter tasks by title.
 
 - Time Entries task filter uses `<AutoComplete>` instead of a raw text input.
 - Manual time-entry create forms should also use `<AutoComplete>` for task selection once the project context is known.
 - Suggestions should be visible tasks for the current user and may be narrowed by the selected project.
-- The applied API filter or payload still uses the selected task's `taskId`; do not document this as a backend free-text search query.
-- Use `forceSelection` so the submitted value always maps to a real task option.
+- Time Entries list filtering may send backend `search` so task-title filtering applies across the paginated result set.
+- Create, edit, and timer payloads still submit a selected task's `taskId`; use `forceSelection` when the submitted value must map to a real task option.
 
 ```vue
 <AutoComplete
