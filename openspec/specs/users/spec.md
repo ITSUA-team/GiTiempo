@@ -53,6 +53,22 @@ The backend SHALL allow updates only to mutable current-user profile fields defi
 - **WHEN** a current-user update request is received
 - **THEN** the backend rejects the request as unauthorized
 
+### Requirement: Users Table Stores Last Activity Timestamp
+
+The users data model SHALL include a nullable last-activity timestamp column that records when the user last performed a tracked write operation.
+
+#### Scenario: Column exists with null default
+
+- **GIVEN** the users table schema
+- **WHEN** a new user record is created
+- **THEN** the last-activity timestamp is null by default
+
+#### Scenario: Column accepts timestamp updates
+
+- **GIVEN** an existing user record
+- **WHEN** the system updates the user's last-activity timestamp
+- **THEN** the new timestamp value is persisted
+
 ### Requirement: Stable Frontend Current User Contract
 
 The backend MUST shape current-user responses according to the shared public user contract.
