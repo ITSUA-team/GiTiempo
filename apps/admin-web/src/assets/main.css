@@ -38,6 +38,7 @@ body {
   .gt-management-table table {
     border-collapse: collapse;
     width: 100%;
+    table-layout: fixed;
   }
 
   .gt-management-table .p-datatable-tbody > tr:not(.p-datatable-row-expansion) {
