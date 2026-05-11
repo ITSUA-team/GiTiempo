@@ -9,8 +9,10 @@ import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
   projectAssignments,
+  projectExternalRefs,
   projects,
   tasks,
+  timeEntries,
   users,
   workspaces,
 } from '../src/db/schema';
@@ -27,8 +29,10 @@ describe('Projects and tasks (e2e)', () => {
   let platformProjectId: string;
   let clientProjectId: string;
   let archivedProjectId: string;
+  let adminUserId: string;
   let aliceUserId: string;
   let bobUserId: string;
+  let carolUserId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -65,6 +69,14 @@ describe('Projects and tasks (e2e)', () => {
     clientProjectId = clientProject.id;
     archivedProjectId = archivedProject.id;
 
+    const [admin] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.firebaseUid, 'admin-uid'))
+      .limit(1);
+    if (!admin) throw new Error('Expected seeded admin user');
+    adminUserId = admin.id;
+
     const [alice] = await db
       .select({ id: users.id })
       .from(users)
@@ -80,6 +92,14 @@ describe('Projects and tasks (e2e)', () => {
       .limit(1);
     if (!bob) throw new Error('Expected seeded Bob user');
     bobUserId = bob.id;
+
+    const [carol] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.firebaseUid, 'seed-user-3'))
+      .limit(1);
+    if (!carol) throw new Error('Expected seeded Carol user');
+    carolUserId = carol.id;
 
     adminToken = (await login(app)).accessToken;
     pmToken = (await login(app, 'test:seed-user-1:alice@gitiempo.dev:Alice'))
@@ -109,6 +129,7 @@ describe('Projects and tasks (e2e)', () => {
       (project: { id: string }) => project.id === platformProjectId,
     );
     expect(platform).toMatchObject({
+      description: expect.any(String),
       visibility: 'private',
       source: 'manual',
     });
@@ -159,6 +180,190 @@ describe('Projects and tasks (e2e)', () => {
     expect(createRes.status).toBe(201);
     expect(Array.isArray(createRes.body.members)).toBe(true);
     expect(createRes.body.members).toHaveLength(0);
+  });
+
+  it('creates, updates, and clears project descriptions', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Description ${randomUUID()}`,
+        description: 'Initial project description',
+      });
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.description).toBe('Initial project description');
+
+    const updateRes = await request(app.getHttpServer())
+      .patch(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ description: 'Updated project description' });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.description).toBe('Updated project description');
+
+    const clearRes = await request(app.getHttpServer())
+      .patch(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ description: null });
+    expect(clearRes.status).toBe(200);
+    expect(clearRes.body.description).toBeNull();
+
+    const getRes = await request(app.getHttpServer())
+      .get(`/projects/${createRes.body.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.description).toBeNull();
+  });
+
+  it('returns provider summaries for manual and GitHub-linked project details', async () => {
+    const manualRes = await request(app.getHttpServer())
+      .get(`/projects/${platformProjectId}`)
+      .set('Authorization', bearer(adminToken));
+    expect(manualRes.status).toBe(200);
+    expect(manualRes.body.providerSummary).toEqual({
+      source: 'manual',
+      externalType: null,
+      externalKey: null,
+      externalUrl: null,
+    });
+
+    const [githubProject] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `GitHub Detail ${randomUUID()}`,
+        description: 'GitHub linked project',
+        visibility: 'public',
+      })
+      .returning();
+    if (!githubProject) throw new Error('Expected GitHub project');
+
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: githubProject.id,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: 'gitiempo/admin-web',
+      externalUrl: 'https://github.com/gitiempo/admin-web',
+    });
+
+    const githubRes = await request(app.getHttpServer())
+      .get(`/projects/${githubProject.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(githubRes.status).toBe(200);
+    expect(githubRes.body.providerSummary).toEqual({
+      source: 'github',
+      externalType: 'repository',
+      externalKey: 'gitiempo/admin-web',
+      externalUrl: 'https://github.com/gitiempo/admin-web',
+    });
+  });
+
+  it('returns tracked and assigned-member summaries for project details', async () => {
+    const [summaryProject] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Summary Detail ${randomUUID()}`,
+        description: 'Summary project',
+        visibility: 'private',
+      })
+      .returning();
+    if (!summaryProject) throw new Error('Expected summary project');
+
+    await db.insert(projectAssignments).values([
+      {
+        workspaceId,
+        projectId: summaryProject.id,
+        userId: aliceUserId,
+        assignedBy: adminUserId,
+      },
+      {
+        workspaceId,
+        projectId: summaryProject.id,
+        userId: bobUserId,
+        assignedBy: adminUserId,
+      },
+      {
+        workspaceId,
+        projectId: summaryProject.id,
+        userId: carolUserId,
+        assignedBy: adminUserId,
+      },
+    ]);
+
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: summaryProject.id,
+        title: `Summary Task ${randomUUID()}`,
+      })
+      .returning();
+    if (!task) throw new Error('Expected summary task');
+
+    await db.insert(timeEntries).values([
+      {
+        workspaceId,
+        taskId: task.id,
+        userId: aliceUserId,
+        startedAt: new Date('2026-05-01T09:00:00.000Z'),
+        endedAt: new Date('2026-05-01T10:00:00.000Z'),
+        durationSeconds: 3600,
+        isBillable: true,
+      },
+      {
+        workspaceId,
+        taskId: task.id,
+        userId: bobUserId,
+        startedAt: new Date('2026-05-02T09:00:00.000Z'),
+        endedAt: new Date('2026-05-02T09:30:00.000Z'),
+        durationSeconds: 1800,
+        isBillable: false,
+      },
+    ]);
+    const [runningEntry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId: task.id,
+        userId: aliceUserId,
+        startedAt: new Date('2026-05-03T09:00:00.000Z'),
+      })
+      .returning({ id: timeEntries.id });
+    if (!runningEntry) throw new Error('Expected running entry');
+
+    const res = await request(app.getHttpServer())
+      .get(`/projects/${summaryProject.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body.trackedSummary).toEqual({
+      totalSeconds: 5400,
+      billableSeconds: 3600,
+      billableShare: 3600 / 5400,
+      lastActivityAt: '2026-05-02T09:00:00.000Z',
+    });
+    expect(res.body.assignedMembersSummary.count).toBe(3);
+    expect(res.body.assignedMembersSummary.previewMembers).toHaveLength(3);
+    expect(res.body.assignedMembersSummary.remainingCount).toBe(0);
+
+    const emptyProject = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `Empty Summary ${randomUUID()}` });
+    expect(emptyProject.status).toBe(201);
+
+    const emptyRes = await request(app.getHttpServer())
+      .get(`/projects/${emptyProject.body.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(emptyRes.status).toBe(200);
+    expect(emptyRes.body.trackedSummary).toEqual({
+      totalSeconds: 0,
+      billableSeconds: 0,
+      billableShare: null,
+      lastActivityAt: null,
+    });
+
+    await db.delete(timeEntries).where(eq(timeEntries.id, runningEntry.id));
   });
 
   it('allows admin assignment management for PMs and members', async () => {
@@ -313,6 +518,13 @@ describe('Projects and tasks (e2e)', () => {
       .get(`/projects/${platformProjectId}/tasks`)
       .set('Authorization', bearer(otherMemberToken));
     expect(listTasks.status).toBe(404);
+
+    const readProject = await request(app.getHttpServer())
+      .get(`/projects/${platformProjectId}`)
+      .set('Authorization', bearer(otherMemberToken));
+    expect(readProject.status).toBe(404);
+    expect(readProject.body.providerSummary).toBeUndefined();
+    expect(readProject.body.trackedSummary).toBeUndefined();
 
     const readTask = await request(app.getHttpServer())
       .get(`/tasks/${platformTask.id}`)
