@@ -219,7 +219,7 @@ The current web frontend baseline includes:
 **Pages:**
 
 - Dashboard — active timer, recent time entries
-- Timer — task selector (visible project → task), start/stop
+- Global top-bar timer — task selector dialog (visible project → task), start/stop
 - Time Entries — list, edit, delete own entries
 - Project View — visible project members' time entries (read-only)
 - Profile — display name, GitHub connection (connect/disconnect)

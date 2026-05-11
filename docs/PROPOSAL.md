@@ -44,7 +44,7 @@ Data is synced **on-demand**: when a user opens the task selector, the backend q
 
 **Project = GitHub Project or GitHub Repository.** A project in the application can map to either a GitHub Project (board that groups issues from multiple repos) or a GitHub Repository (issues within a single repo). The default is GitHub Project. Users choose the grouping mode when selecting or creating a project.
 
-The current timer page implementation scope still uses visible workspace data for task selection: **Project → Task**.
+The current timer interaction scope uses visible workspace data for task selection through the global top-bar task-picker dialog: **Project → Task**.
 
 ### 2. Time Entry
 

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ZodSerializerInterceptor } from 'nestjs-zod';
+import { UsersActivityService } from './services/users-activity.service';
 import { UsersService } from './services/users.service';
 import { UsersController } from './controllers/users.controller';
 
@@ -8,6 +9,7 @@ import { UsersController } from './controllers/users.controller';
   controllers: [UsersController],
   providers: [
     UsersService,
+    UsersActivityService,
     // Enables `@ZodSerializerDto(...)` on controller methods to strip
     // any internal fields (e.g. `firebaseUid`) from the response.
     {
@@ -15,6 +17,6 @@ import { UsersController } from './controllers/users.controller';
       useClass: ZodSerializerInterceptor,
     },
   ],
-  exports: [UsersService],
+  exports: [UsersService, UsersActivityService],
 })
 export class UsersModule {}
