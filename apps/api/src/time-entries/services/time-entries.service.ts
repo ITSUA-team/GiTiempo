@@ -30,6 +30,7 @@ import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema'
 import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { users } from '../../users/schemas/users.schema';
+import { UsersActivityService } from '../../users/services/users-activity.service';
 import { timeEntries } from '../schemas/time-entries.schema';
 
 type QueryExecutor = Pick<DrizzleDB, 'select' | 'insert' | 'update' | 'delete'>;
@@ -70,6 +71,7 @@ export class TimeEntriesService {
     private readonly members: MembersService,
     private readonly projects: ProjectsService,
     private readonly tasks: TasksService,
+    private readonly usersActivity: UsersActivityService,
   ) {}
 
   async listOwnEntries(
@@ -119,7 +121,9 @@ export class TimeEntriesService {
       .returning({ id: timeEntries.id });
     if (!row) throw new Error('Failed to create time entry');
 
-    return this.requireEntryResponse(this.db, row.id);
+    const result = await this.requireEntryResponse(this.db, row.id);
+    void this.usersActivity.touchLastActive(user.sub);
+    return result;
   }
 
   async getOwnEntry(
@@ -166,7 +170,9 @@ export class TimeEntriesService {
       .returning({ id: timeEntries.id });
     if (!updated) throw new Error('Failed to update time entry');
 
-    return this.requireEntryResponse(this.db, updated.id);
+    const result = await this.requireEntryResponse(this.db, updated.id);
+    void this.usersActivity.touchLastActive(user.sub);
+    return result;
   }
 
   async deleteOwnEntry(user: AuthUser, entryId: string): Promise<void> {
@@ -176,6 +182,7 @@ export class TimeEntriesService {
     }
 
     await this.db.delete(timeEntries).where(eq(timeEntries.id, row.id));
+    void this.usersActivity.touchLastActive(user.sub);
   }
 
   async getCurrentTimer(user: AuthUser): Promise<CurrentTimeEntryResponse> {
@@ -200,7 +207,9 @@ export class TimeEntriesService {
     input: StartTimerInput,
   ): Promise<TimeEntryResponse> {
     const { task } = await this.tasks.requireTrackableTask(user, input.taskId);
-    return this.createRunningEntry(user, task.id, 'web');
+    const result = await this.createRunningEntry(user, task.id, 'web');
+    void this.usersActivity.touchLastActive(user.sub);
+    return result;
   }
 
   async startTimerFromGitHub(
@@ -271,7 +280,9 @@ export class TimeEntriesService {
         return entry.id;
       });
 
-      return this.requireEntryResponse(this.db, entryId);
+      const result = await this.requireEntryResponse(this.db, entryId);
+      void this.usersActivity.touchLastActive(user.sub);
+      return result;
     } catch (error) {
       this.handleRunningTimerConflict(error);
       throw error;
@@ -309,7 +320,9 @@ export class TimeEntriesService {
       return updated.id;
     });
 
-    return this.requireEntryResponse(this.db, entryId);
+    const result = await this.requireEntryResponse(this.db, entryId);
+    void this.usersActivity.touchLastActive(user.sub);
+    return result;
   }
 
   private async createRunningEntry(
