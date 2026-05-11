@@ -10,7 +10,7 @@ import Button from 'primevue/button';
 import ConfirmDialog from 'primevue/confirmdialog';
 import { useToast } from 'primevue/usetoast';
 
-import MemberInviteDialog from '@/components/MemberInviteDialog.vue';
+import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';

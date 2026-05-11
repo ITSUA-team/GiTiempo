@@ -16,8 +16,8 @@ import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import { useConfirm } from 'primevue/useconfirm';
 
-import MemberAssignPmPanel from '@/components/MemberAssignPmPanel.vue';
-import MemberEditForm from '@/components/MemberEditForm.vue';
+import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
+import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
 import { useToasts } from '@/composables/useToasts';

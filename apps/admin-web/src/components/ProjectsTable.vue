@@ -13,7 +13,7 @@ import DataTable from 'primevue/datatable';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
-import ProjectEditForm from '@/components/ProjectEditForm.vue';
+import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 import { useToasts } from '@/composables/useToasts';
