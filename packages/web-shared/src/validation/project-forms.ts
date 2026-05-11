@@ -15,3 +15,9 @@ export const projectEditFormSchema = z.object({
 });
 
 export type ProjectEditFormInput = z.infer<typeof projectEditFormSchema>;
+
+export const memberAssignFormSchema = z.object({
+  projectIds: z.array(z.string()),
+});
+
+export type MemberAssignFormInput = z.infer<typeof memberAssignFormSchema>;

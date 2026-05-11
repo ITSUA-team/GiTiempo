@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
-import { EditFormPanel } from '@gitiempo/web-shared';
+import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
+import type { MemberAssignFormInput } from '@gitiempo/web-shared';
+import { Form } from '@primevue/forms';
+import { zodResolver } from '@primevue/forms/resolvers/zod';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 
@@ -21,45 +23,45 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
-const saving = ref(false);
-
-// Compute which projects this member is currently assigned to
-const selectedProjectIds = ref<string[]>(
-  props.projects
-    .filter((p) => p.isActive && p.members.some((m) => m.userId === props.member.userId))
-    .map((p) => p.id),
-);
 
 const activeProjects = props.projects.filter((p) => p.isActive);
 
-async function handleSave(): Promise<void> {
+const initialValues: MemberAssignFormInput = {
+  projectIds: props.projects
+    .filter((p) => p.isActive && p.members.some((m) => m.userId === props.member.userId))
+    .map((p) => p.id),
+};
+
+const resolver = zodResolver(memberAssignFormSchema);
+
+async function handleSubmit({
+  valid,
+  values,
+}: {
+  valid: boolean;
+  values: Record<string, unknown>;
+}): Promise<void> {
+  if (!valid) return;
+
   const token = authStore.accessToken;
+  if (!token) return;
 
-  if (!token) {
-    return;
-  }
+  const { projectIds } = values as MemberAssignFormInput;
 
-  saving.value = true;
+  const currentAssignedIds = new Set(
+    props.projects
+      .filter((p) => p.isActive && p.members.some((m) => m.userId === props.member.userId))
+      .map((p) => p.id),
+  );
+  const nextAssignedIds = new Set(projectIds);
+
+  const toAdd = projectIds.filter((id) => !currentAssignedIds.has(id));
+  const toRemove = [...currentAssignedIds].filter((id) => !nextAssignedIds.has(id));
 
   try {
-    const currentAssignedIds = new Set(
-      props.projects
-        .filter((p) => p.isActive && p.members.some((m) => m.userId === props.member.userId))
-        .map((p) => p.id),
-    );
-    const nextAssignedIds = new Set(selectedProjectIds.value);
-
-    const toAdd = selectedProjectIds.value.filter(
-      (id) => !currentAssignedIds.has(id),
-    );
-    const toRemove = [...currentAssignedIds].filter(
-      (id) => !nextAssignedIds.has(id),
-    );
-
     for (const projectId of toAdd) {
       await adminProjectsClient.assignMember(token, projectId, props.member.userId);
     }
-
     for (const projectId of toRemove) {
       await adminProjectsClient.removeAssignment(token, projectId, props.member.userId);
     }
@@ -68,42 +70,47 @@ async function handleSave(): Promise<void> {
     emit('saved');
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to save assignments');
-  } finally {
-    saving.value = false;
   }
 }
 </script>
 
 <template>
   <EditFormPanel title="PM assignment">
-    <div class="flex flex-wrap gap-3">
-      <label
-        v-for="project in activeProjects"
-        :key="project.id"
-        :for="`assign-${member.id}-${project.id}`"
-        class="bg-surface flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2"
-      >
-        <Checkbox
-          v-model="selectedProjectIds"
-          :input-id="`assign-${member.id}-${project.id}`"
-          :value="project.id"
-        />
-        <span class="text-text-dark text-[13px] font-medium">{{ project.name }}</span>
-      </label>
-    </div>
+    <Form
+      :resolver="resolver"
+      :initial-values="initialValues"
+      @submit="handleSubmit"
+    >
+      <div class="flex flex-wrap gap-3">
+        <label
+          v-for="project in activeProjects"
+          :key="project.id"
+          :for="`assign-${member.id}-${project.id}`"
+          class="bg-surface flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2"
+        >
+          <Checkbox
+            name="projectIds"
+            :input-id="`assign-${member.id}-${project.id}`"
+            :value="project.id"
+          />
+          <span class="text-text-dark text-[13px] font-medium">{{ project.name }}</span>
+        </label>
+      </div>
 
-    <div class="flex items-center justify-end gap-2.5">
-      <Button
-        label="Cancel"
-        severity="secondary"
-        outlined
-        @click="emit('cancelled')"
-      />
-      <Button
-        label="Save Assignments"
-        :loading="saving"
-        @click="handleSave"
-      />
-    </div>
+      <div class="mt-3 flex items-center justify-end gap-2.5">
+        <Button
+          label="Cancel"
+          severity="secondary"
+          outlined
+          type="button"
+          :pt="{ root: { class: 'bg-white' } }"
+          @click="emit('cancelled')"
+        />
+        <Button
+          label="Save Assignments"
+          type="submit"
+        />
+      </div>
+    </Form>
   </EditFormPanel>
 </template>

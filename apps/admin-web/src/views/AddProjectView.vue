@@ -243,6 +243,7 @@ onMounted(loadMembers);
               severity="secondary"
               outlined
               type="button"
+              :pt="{ root: { class: 'bg-white' } }"
               :disabled="isSubmitting"
               @click="handleBack"
             />

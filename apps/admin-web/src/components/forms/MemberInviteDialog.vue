@@ -126,6 +126,7 @@ function handleCancel(reset: () => void): void {
             severity="secondary"
             outlined
             type="button"
+            :pt="{ root: { class: 'bg-white' } }"
             @click="handleCancel(reset)"
           />
           <Button

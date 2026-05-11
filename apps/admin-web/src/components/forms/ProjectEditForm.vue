@@ -136,6 +136,7 @@ async function handleSave({
           severity="secondary"
           outlined
           type="button"
+          :pt="{ root: { class: 'bg-white' } }"
           @click="emit('cancelled')"
         />
         <Button
