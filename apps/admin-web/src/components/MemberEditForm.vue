@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import type { WorkspaceMemberResponse, WorkspaceRole } from '@gitiempo/shared';
+import { EditFormPanel, WORKSPACE_ROLE_OPTIONS } from '@gitiempo/web-shared';
+import { Form } from '@primevue/forms';
+import { zodResolver } from '@primevue/forms/resolvers/zod';
+import { z } from 'zod';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
-import { useToast } from 'primevue/usetoast';
 
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
+import { useToasts } from '@/composables/useToasts';
 
 const props = defineProps<{
   member: WorkspaceMemberResponse;
@@ -19,174 +22,108 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
-const toast = useToast();
-const saving = ref(false);
-const selectedRole = ref<WorkspaceRole>(props.member.role);
+const { successToast, errorToast } = useToasts();
 
-const roleOptions = [
-  { label: 'Member', value: 'member' as const },
-  { label: 'PM', value: 'pm' as const },
-  { label: 'Admin', value: 'admin' as const },
-];
+const editRoleSchema = z.object({ role: z.enum(['admin', 'pm', 'member']) });
+const resolver = zodResolver(editRoleSchema);
 
-async function handleSave(): Promise<void> {
+const initialValues = { role: props.member.role };
+
+async function handleSave({
+  valid,
+  values,
+}: {
+  valid: boolean;
+  values: Record<string, unknown>;
+}): Promise<void> {
+  if (!valid) return;
+
   const token = authStore.accessToken;
+  if (!token) return;
 
-  if (!token) {
-    return;
-  }
+  const role = values.role as WorkspaceRole;
 
-  if (selectedRole.value === props.member.role) {
+  if (role === props.member.role) {
     emit('cancelled');
     return;
   }
 
-  saving.value = true;
-
   try {
-    await adminMembersClient.updateMemberRole(token, props.member.id, {
-      role: selectedRole.value,
-    });
-
-    toast.add({
-      severity: 'success',
-      summary: 'Member updated',
-      detail: `Role for ${props.member.displayName ?? props.member.email} changed to ${selectedRole.value}.`,
-      life: 4000,
-    });
+    await adminMembersClient.updateMemberRole(token, props.member.id, { role });
+    successToast(
+      `Role for ${props.member.displayName ?? props.member.email} changed to ${role}.`,
+    );
     emit('saved');
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to update role';
-    toast.add({
-      severity: 'error',
-      summary: 'Update failed',
-      detail: message,
-      life: 5000,
-    });
-  } finally {
-    saving.value = false;
+    errorToast(err instanceof Error ? err.message : 'Failed to update role');
   }
 }
 </script>
 
 <template>
-  <div class="edit-form-panel">
-    <span class="edit-form-title">Edit member</span>
+  <EditFormPanel title="Edit member">
+    <Form
+      :resolver="resolver"
+      :initial-values="initialValues"
+      @submit="handleSave"
+    >
+      <div class="flex items-end gap-2.5">
+        <!-- Name (read-only) -->
+        <div class="flex flex-1 flex-col gap-1.5">
+          <label
+            for="edit-member-name"
+            class="text-text-dark font-sans text-[12px] leading-none font-medium"
+          >Name</label>
+          <InputText
+            id="edit-member-name"
+            :model-value="member.displayName ?? '—'"
+            disabled
+            fluid
+          />
+          <small class="text-text-muted text-xs">Editing name and email is not yet supported.</small>
+        </div>
 
-    <div class="edit-form-row">
-      <!-- Name (read-only) -->
-      <div class="edit-form-field edit-form-field--fill">
-        <label
-          for="edit-member-name"
-          class="edit-form-label"
-        >Name</label>
-        <InputText
-          id="edit-member-name"
-          :model-value="member.displayName ?? '—'"
-          disabled
-          fluid
+        <!-- Email (read-only) -->
+        <div class="flex flex-1 flex-col gap-1.5">
+          <label
+            for="edit-member-email"
+            class="text-text-dark font-sans text-[12px] leading-none font-medium"
+          >Email</label>
+          <InputText
+            id="edit-member-email"
+            :model-value="member.email"
+            disabled
+            fluid
+          />
+        </div>
+
+        <!-- Role (editable) -->
+        <div class="flex w-[180px] flex-col gap-1.5">
+          <label
+            for="edit-member-role"
+            class="text-text-dark font-sans text-[12px] leading-none font-medium"
+          >Role</label>
+          <Select
+            id="edit-member-role"
+            name="role"
+            :options="WORKSPACE_ROLE_OPTIONS"
+            option-label="label"
+            option-value="value"
+            fluid
+          />
+        </div>
+
+        <Button
+          label="Cancel"
+          severity="secondary"
+          outlined
+          @click="emit('cancelled')"
         />
-        <small class="text-text-muted text-xs">Editing name and email is not yet supported.</small>
-      </div>
-
-      <!-- Email (read-only) -->
-      <div class="edit-form-field edit-form-field--fill">
-        <label
-          for="edit-member-email"
-          class="edit-form-label"
-        >Email</label>
-        <InputText
-          id="edit-member-email"
-          :model-value="member.email"
-          disabled
-          fluid
+        <Button
+          label="Save"
+          type="submit"
         />
       </div>
-
-      <!-- Role (editable) -->
-      <div class="edit-form-field edit-form-field--180">
-        <label
-          for="edit-member-role"
-          class="edit-form-label"
-        >Role</label>
-        <Select
-          id="edit-member-role"
-          v-model="selectedRole"
-          :options="roleOptions"
-          option-label="label"
-          option-value="value"
-          fluid
-        />
-      </div>
-
-      <Button
-        label="Cancel"
-        severity="secondary"
-        outlined
-        class="gt-cancel-btn"
-        @click="emit('cancelled')"
-      />
-      <Button
-        label="Save"
-        :loading="saving"
-        @click="handleSave"
-      />
-    </div>
-  </div>
+    </Form>
+  </EditFormPanel>
 </template>
-
-<style scoped>
-.edit-form-panel {
-  background-color: #f4f4f5;
-  border-top: 1px solid #eeeeee;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.edit-form-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
-  line-height: 1;
-}
-
-.edit-form-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.edit-form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.edit-form-field--fill {
-  flex: 1;
-}
-
-.edit-form-field--180 {
-  width: 180px;
-}
-
-.edit-form-label {
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: #1a1a1a;
-  line-height: 1;
-}
-
-:deep(.gt-cancel-btn) {
-  background-color: var(--color-surface) !important;
-  border-color: var(--color-divider) !important;
-  color: var(--color-text-dark) !important;
-  font-weight: 500 !important;
-}
-</style>

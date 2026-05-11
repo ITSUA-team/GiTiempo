@@ -5,19 +5,22 @@ import type {
   WorkspaceMemberListResponse,
   WorkspaceMemberResponse,
 } from '@gitiempo/shared';
-import { ManagementTableShell } from '@gitiempo/web-shared';
+import {
+  ManagementTableShell,
+  formatWorkspaceRole,
+} from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import { useConfirm } from 'primevue/useconfirm';
-import { useToast } from 'primevue/usetoast';
 
 import MemberAssignPmPanel from '@/components/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/MemberEditForm.vue';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
+import { useToasts } from '@/composables/useToasts';
 
 const props = defineProps<{
   members: WorkspaceMemberListResponse;
@@ -33,7 +36,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
-const toast = useToast();
+const { successToast, errorToast } = useToasts();
 const confirm = useConfirm();
 
 const expandedRows = ref<Record<string, boolean>>({});
@@ -56,17 +59,6 @@ function getInitials(member: WorkspaceMemberResponse): string {
     .map((part) => part.charAt(0).toUpperCase());
 
   return parts.join('') || '??';
-}
-
-function formatRole(role: string): string {
-  switch (role) {
-    case 'admin':
-      return 'Admin';
-    case 'pm':
-      return 'PM';
-    default:
-      return 'Member';
-  }
 }
 
 function getProjectsAssignedCount(member: WorkspaceMemberResponse): number {
@@ -132,22 +124,10 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 
       try {
         await adminMembersClient.removeMember(token, member.id);
-        toast.add({
-          severity: 'success',
-          summary: 'Member removed',
-          detail: `${member.displayName ?? member.email} has been removed.`,
-          life: 4000,
-        });
+        successToast(`${member.displayName ?? member.email} has been removed.`);
         emit('member-removed');
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to remove member';
-        toast.add({
-          severity: 'error',
-          summary: 'Remove failed',
-          detail: message,
-          life: 5000,
-        });
+        errorToast(err instanceof Error ? err.message : 'Failed to remove member');
       }
     },
   });
@@ -156,7 +136,9 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 
 <template>
   <div class="mb-4">
-    <h2 class="text-text-dark text-lg font-semibold">Members Table</h2>
+    <h2 class="text-text-dark text-lg font-semibold">
+      Members Table
+    </h2>
   </div>
 
   <ManagementTableShell :columns="columns">
@@ -191,8 +173,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
               <span
                 v-if="data.displayName"
                 class="text-text-muted text-[12px]"
-                >{{ data.email }}</span
-              >
+              >{{ data.email }}</span>
             </div>
           </div>
         </template>
@@ -201,8 +182,8 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       <!-- Role -->
       <Column style="width: 120px">
         <template #body="{ data }">
-          <span class="text-black text-[13px] font-bold">{{
-            formatRole(data.role)
+          <span class="text-[13px] font-bold text-black">{{
+            formatWorkspaceRole(data.role)
           }}</span>
         </template>
       </Column>
@@ -271,9 +252,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 
       <template #empty>
         <div class="flex flex-col items-center gap-2 py-10">
-          <span class="text-text-dark text-[14px] font-semibold"
-            >No members found</span
-          >
+          <span class="text-text-dark text-[14px] font-semibold">No members found</span>
           <span class="text-text-muted text-[13px]">
             Invite members to get started.
           </span>

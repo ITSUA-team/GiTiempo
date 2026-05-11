@@ -12,11 +12,11 @@ import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
-import { useToast } from 'primevue/usetoast';
 
 import ProjectEditForm from '@/components/ProjectEditForm.vue';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
+import { useToasts } from '@/composables/useToasts';
 
 const props = defineProps<{
   projects: ProjectListResponse;
@@ -31,7 +31,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
-const toast = useToast();
+const { successToast, errorToast } = useToasts();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
 
@@ -93,16 +93,10 @@ async function handleArchive(project: ProjectResponse): Promise<void> {
     await adminProjectsClient.updateProject(token, project.id, {
       isActive: false,
     });
+    successToast(`${project.name} has been archived.`);
     emit('archive');
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Failed to archive project';
-    toast.add({
-      severity: 'error',
-      summary: 'Archive failed',
-      detail: message,
-      life: 5000,
-    });
+    errorToast(err instanceof Error ? err.message : 'Failed to archive project');
   }
 }
 
@@ -113,16 +107,10 @@ async function handleUnarchive(project: ProjectResponse): Promise<void> {
     await adminProjectsClient.updateProject(token, project.id, {
       isActive: true,
     });
+    successToast(`${project.name} is now active.`);
     emit('unarchive');
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Failed to unarchive project';
-    toast.add({
-      severity: 'error',
-      summary: 'Unarchive failed',
-      detail: message,
-      life: 5000,
-    });
+    errorToast(err instanceof Error ? err.message : 'Failed to unarchive project');
   }
 }
 
@@ -220,10 +208,9 @@ function formatSource(source: string): string {
             v-else
             :value="data.visibility === 'public' ? 'Public' : 'Private'"
             :pt="{
-              root: 'inline-flex items-center rounded-[6px] px-2 py-1 text-[12px] font-semibold leading-none',
-              label: 'text-[#666666]',
+              root: 'inline-flex items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
+              label: 'text-text-muted',
             }"
-            style="background-color: #eeeeee"
           />
         </template>
       </Column>

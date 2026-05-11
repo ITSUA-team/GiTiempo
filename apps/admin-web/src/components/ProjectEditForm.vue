@@ -5,13 +5,14 @@ import type {
   ProjectVisibility,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
+import { EditFormPanel } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
-import { useToast } from 'primevue/usetoast';
 
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
+import { useToasts } from '@/composables/useToasts';
 
 const props = defineProps<{
   project: ProjectResponse;
@@ -24,7 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
-const toast = useToast();
+const { successToast, errorToast } = useToasts();
 
 const selectedMemberIds = ref<string[]>(
   props.project.members.map((m) => m.userId),
@@ -35,11 +36,11 @@ const selectedVisibility = ref<ProjectVisibility>(props.project.visibility);
 const saving = ref(false);
 
 const memberOptions = props.allMembers
-  .filter((m) => m.role !== "admin")
+  .filter((m) => m.role !== 'admin')
   .map((m) => ({
-  label: m.displayName ?? m.email,
-  value: m.userId,
-}));
+    label: m.displayName ?? m.email,
+    value: m.userId,
+  }));
 
 const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
@@ -86,10 +87,10 @@ async function handleSave(): Promise<void> {
       );
     }
 
+    successToast(`${props.project.name} has been updated.`);
     emit('saved', updated);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to save project';
-    toast.add({ severity: 'error', summary: 'Save failed', detail: message, life: 5000 });
+    errorToast(err instanceof Error ? err.message : 'Failed to save project');
   } finally {
     saving.value = false;
   }
@@ -97,25 +98,12 @@ async function handleSave(): Promise<void> {
 </script>
 
 <template>
-  <div class="edit-form-panel">
-    <!-- "Project settings" — Inter 600 13px #1a1a1a -->
-    <span class="edit-form-title">Project settings</span>
-
-    <!--
-        Fields row (y6fv74): horizontal flex, align-items=end, gap=10px
-      -->
-    <div class="edit-form-row">
-      <!--
-          Members field (SvnYS): flex:1, vertical, gap=6px
-          Label: Inter 500 12px #1a1a1a
-        -->
-      <div
-        name="members"
-        class="edit-form-field edit-form-field--fill"
-      >
+  <EditFormPanel title="Project settings">
+    <div class="flex items-end gap-2.5">
+      <div class="flex flex-1 flex-col gap-1.5">
         <label
           for="edit-members"
-          class="edit-form-label"
+          class="text-text-dark font-sans text-[12px] leading-none font-medium"
         >Select members</label>
         <MultiSelect
           id="edit-members"
@@ -128,17 +116,10 @@ async function handleSave(): Promise<void> {
         />
       </div>
 
-      <!--
-          Visibility field (H0rt2): width=180px, vertical, gap=6px
-          Label: Inter 500 12px #1a1a1a
-        -->
-      <div
-        name="visibility"
-        class="edit-form-field edit-form-field--180"
-      >
+      <div class="flex w-[180px] flex-col gap-1.5">
         <label
           for="edit-visibility"
-          class="edit-form-label"
+          class="text-text-dark font-sans text-[12px] leading-none font-medium"
         >Visibility</label>
         <Select
           id="edit-visibility"
@@ -150,92 +131,18 @@ async function handleSave(): Promise<void> {
         />
       </div>
 
-      <!--
-          Cancel (xMII9):
-            fill=$color-surface(#fff), stroke=$color-divider(#eeeeee) 1px,
-            cornerRadius=6px, padding=[8px, 14px], Inter 500 13px #1a1a1a
-          → severity="secondary" outlined gives white bg + border
-        -->
       <Button
         label="Cancel"
         severity="secondary"
         outlined
-        class="gt-cancel-btn"
         @click="emit('cancelled')"
       />
 
-      <!--
-          Save (Fq21c):
-            fill=$color-brand(#5d2b85), cornerRadius=6px,
-            padding=[8px, 14px], Inter 600 13px #ffffff
-          → default primary Button matches this exactly
-        -->
       <Button
         label="Save"
         :loading="saving"
         @click="handleSave"
       />
     </div>
-  </div>
+  </EditFormPanel>
 </template>
-
-<style scoped>
-/* Panel shell — exact design values, all inline so nothing overrides */
-.edit-form-panel {
-  background-color: #f4f4f5;
-  border-top: 1px solid #eeeeee;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* "Project settings" label */
-.edit-form-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
-  line-height: 1;
-}
-
-/* Fields row: horizontal, align bottom, gap 10px */
-.edit-form-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-/* FormField wrapper: vertical stack, gap 6px */
-.edit-form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.edit-form-field--fill {
-  flex: 1;
-}
-
-.edit-form-field--180 {
-  width: 180px;
-}
-
-/* Field labels: Inter 500 12px #1a1a1a */
-.edit-form-label {
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: #1a1a1a;
-  line-height: 1;
-}
-
-:deep(.gt-cancel-btn) {
-  background-color: var(--color-surface) !important;
-  border-color: var(--color-divider) !important;
-  color: var(--color-text-dark) !important;
-  font-weight: 500 !important;
-}
-</style>

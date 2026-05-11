@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
+import { EditFormPanel } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
-import { useToast } from 'primevue/usetoast';
 
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
+import { useToasts } from '@/composables/useToasts';
 
 const props = defineProps<{
   member: WorkspaceMemberResponse;
@@ -19,7 +20,7 @@ const emit = defineEmits<{
 }>();
 
 const authStore = useAuthStore();
-const toast = useToast();
+const { successToast, errorToast } = useToasts();
 const saving = ref(false);
 
 // Compute which projects this member is currently assigned to
@@ -63,21 +64,10 @@ async function handleSave(): Promise<void> {
       await adminProjectsClient.removeAssignment(token, projectId, props.member.userId);
     }
 
-    toast.add({
-      severity: 'success',
-      summary: 'Assignments updated',
-      detail: `Project assignments for ${props.member.displayName ?? props.member.email} saved.`,
-      life: 4000,
-    });
+    successToast(`Project assignments for ${props.member.displayName ?? props.member.email} saved.`);
     emit('saved');
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to save assignments';
-    toast.add({
-      severity: 'error',
-      summary: 'Save failed',
-      detail: message,
-      life: 5000,
-    });
+    errorToast(err instanceof Error ? err.message : 'Failed to save assignments');
   } finally {
     saving.value = false;
   }
@@ -85,9 +75,7 @@ async function handleSave(): Promise<void> {
 </script>
 
 <template>
-  <div class="edit-form-panel">
-    <span class="edit-form-title">PM assignment</span>
-
+  <EditFormPanel title="PM assignment">
     <div class="flex flex-wrap gap-3">
       <label
         v-for="project in activeProjects"
@@ -109,7 +97,6 @@ async function handleSave(): Promise<void> {
         label="Cancel"
         severity="secondary"
         outlined
-        class="gt-cancel-btn"
         @click="emit('cancelled')"
       />
       <Button
@@ -118,33 +105,5 @@ async function handleSave(): Promise<void> {
         @click="handleSave"
       />
     </div>
-  </div>
+  </EditFormPanel>
 </template>
-
-<style scoped>
-.edit-form-panel {
-  background-color: #f4f4f5;
-  border-top: 1px solid #eeeeee;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.edit-form-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
-  line-height: 1;
-}
-
-:deep(.gt-cancel-btn) {
-  background-color: var(--color-surface) !important;
-  border-color: var(--color-divider) !important;
-  color: var(--color-text-dark) !important;
-  font-weight: 500 !important;
-}
-</style>
