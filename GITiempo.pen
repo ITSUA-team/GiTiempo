@@ -322,29 +322,6 @@
                 },
                 {
                   "type": "frame",
-                  "id": "4dAO6",
-                  "name": "nav2",
-                  "width": "fill_container",
-                  "height": 44,
-                  "padding": [
-                    0,
-                    20
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "q39bT",
-                      "fill": "$color-text-dark",
-                      "content": "Timer",
-                      "fontFamily": "$font-sans",
-                      "fontSize": 14,
-                      "fontWeight": "500"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "EB8eo",
                   "name": "nav3",
                   "width": "fill_container",
@@ -2862,29 +2839,6 @@
                 },
                 {
                   "type": "frame",
-                  "id": "uWIl0",
-                  "name": "nav2",
-                  "width": "fill_container",
-                  "height": 44,
-                  "padding": [
-                    0,
-                    20
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "Id7TB",
-                      "fill": "$color-text-dark",
-                      "content": "Timer",
-                      "fontFamily": "Inter",
-                      "fontSize": 14,
-                      "fontWeight": "500"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "39LYf",
                   "name": "nav3",
                   "width": "fill_container",
@@ -5206,29 +5160,6 @@
                       "id": "3rK7y",
                       "fill": "$color-text-dark",
                       "content": "Dashboard",
-                      "fontFamily": "Inter",
-                      "fontSize": 14,
-                      "fontWeight": "500"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "kcump",
-                  "name": "nav2",
-                  "width": "fill_container",
-                  "height": 44,
-                  "padding": [
-                    0,
-                    20
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "y1RQ6",
-                      "fill": "$color-text-dark",
-                      "content": "Timer",
                       "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "500"
@@ -12210,29 +12141,6 @@
                       "id": "WRVBP",
                       "fill": "$color-text-dark",
                       "content": "Dashboard",
-                      "fontFamily": "Inter",
-                      "fontSize": 14,
-                      "fontWeight": "500"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "NLyjZ",
-                  "name": "nav2",
-                  "width": "fill_container",
-                  "height": 44,
-                  "padding": [
-                    0,
-                    20
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "DSFeY",
-                      "fill": "$color-text-dark",
-                      "content": "Timer",
                       "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "500"

@@ -14,7 +14,8 @@ The user-web app SHALL expose a public login route and authenticated member rout
 
 - **WHEN** the router is initialized
 - **THEN** it includes a public login route
-- **AND** it includes authenticated routes for dashboard, timer, time entries, project view, and profile
+- **AND** it includes authenticated routes for dashboard, time entries, project view, and profile
+- **AND** it does not include a dedicated authenticated timer route
 
 ### Requirement: Protected Route Enforcement
 
@@ -41,6 +42,7 @@ Authenticated user pages MUST render within the shared app shell layout.
 
 #### Scenario: Protected page renders inside the shell
 
-- **WHEN** an authenticated user navigates to dashboard, timer, time entries, project view, or profile
+- **WHEN** an authenticated user navigates to dashboard, time entries, project view, or profile
 - **THEN** the selected page renders inside the shared authenticated shell
 - **AND** the shell provides the documented top bar, sidebar navigation, and main-content container structure
+- **AND** timer start, stop, and task switching are available from the shell top bar rather than a dedicated Timer route

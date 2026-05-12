@@ -120,6 +120,13 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 - **THEN** the shared header renders the counterpart workspace link, display name, and avatar
 - **AND** it does not render a shared settings/profile action
 
+#### Scenario: User-web owns header center timer content
+
+- **WHEN** `user-web` needs to render the compact top-bar timer in the shared header center region
+- **THEN** the shared header allows app-owned center content without owning timer state, API calls, or task-picker behavior
+- **AND** `admin-web` can keep the same shared header without rendering a top-bar timer
+- **AND** the shared header layout remains stable when the center region is empty
+
 ### Requirement: Shared Authenticated Navigation Uses User-Web Text-Only Base
 
 The frontend codebase SHALL extract authenticated shell navigation into `@gitiempo/web-shared` when the user/admin nav structure can be shared without moving route ownership or active-state logic out of the apps.
