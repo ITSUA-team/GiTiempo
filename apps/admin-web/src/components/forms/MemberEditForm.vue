@@ -7,6 +7,7 @@ import { z } from 'zod';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
+import { shallowRef } from 'vue';
 
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
@@ -23,6 +24,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
+const saving = shallowRef(false);
 
 const editRoleSchema = z.object({ role: z.enum(['admin', 'pm', 'member']) });
 const resolver = zodResolver(editRoleSchema);
@@ -36,7 +38,7 @@ async function handleSave({
   valid: boolean;
   values: Record<string, unknown>;
 }): Promise<void> {
-  if (!valid) return;
+  if (!valid || saving.value) return;
 
   const token = authStore.accessToken;
   if (!token) return;
@@ -48,6 +50,8 @@ async function handleSave({
     return;
   }
 
+  saving.value = true;
+
   try {
     await adminMembersClient.updateMemberRole(token, props.member.id, { role });
     successToast(
@@ -55,7 +59,12 @@ async function handleSave({
     );
     emit('saved');
   } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to update role');
+    errorToast(err instanceof Error ? err.message : 'Failed to update role', {
+      error: err,
+      logContext: { action: 'update-member-role', feature: 'members' },
+    });
+  } finally {
+    saving.value = false;
   }
 }
 </script>
@@ -122,6 +131,8 @@ async function handleSave({
         />
         <Button
           label="Save"
+          :disabled="saving"
+          :loading="saving"
           type="submit"
         />
       </div>

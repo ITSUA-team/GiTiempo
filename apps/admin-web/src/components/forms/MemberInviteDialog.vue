@@ -56,7 +56,10 @@ async function handleSubmit({
     visible.value = false;
     emit('created');
   } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to send invite');
+    errorToast(err instanceof Error ? err.message : 'Failed to send invite', {
+      error: err,
+      logContext: { action: 'create-invite', feature: 'members' },
+    });
   } finally {
     submitting.value = false;
   }

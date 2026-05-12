@@ -11,6 +11,7 @@ import { zodResolver } from '@primevue/forms/resolvers/zod';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
+import { shallowRef } from 'vue';
 
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -28,6 +29,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
+const saving = shallowRef(false);
 
 const memberOptions = props.allMembers
   .filter((m) => m.role !== WorkspaceRoles.Admin)
@@ -52,12 +54,14 @@ async function handleSave({
   valid: boolean;
   values: Record<string, unknown>;
 }): Promise<void> {
-  if (!valid) return;
+  if (!valid || saving.value) return;
 
   const token = authStore.accessToken;
   if (!token) return;
 
   const { visibility, memberIds } = values as ProjectEditFormInput;
+
+  saving.value = true;
 
   try {
     const updated = await adminProjectsClient.updateProject(
@@ -84,7 +88,12 @@ async function handleSave({
     successToast(`${props.project.name} has been updated.`);
     emit('saved', updated);
   } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to save project');
+    errorToast(err instanceof Error ? err.message : 'Failed to save project', {
+      error: err,
+      logContext: { action: 'update-project', feature: 'projects' },
+    });
+  } finally {
+    saving.value = false;
   }
 }
 </script>
@@ -141,6 +150,8 @@ async function handleSave({
         />
         <Button
           label="Save"
+          :disabled="saving"
+          :loading="saving"
           type="submit"
         />
       </div>

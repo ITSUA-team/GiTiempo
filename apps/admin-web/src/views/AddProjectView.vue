@@ -103,7 +103,10 @@ async function handleSubmit({
     successToast(`"${trimmedName}" has been created successfully.`);
     await router.push({ name: routeNames.projects });
   } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred');
+    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
+      error: err,
+      logContext: { action: 'create-project', feature: 'projects' },
+    });
   } finally {
     isSubmitting.value = false;
   }

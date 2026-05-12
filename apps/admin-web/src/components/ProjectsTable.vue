@@ -9,6 +9,7 @@ import {
   ManagementTableEmptyState,
   ManagementTableShell,
   managementTableActionPt,
+  managementTableColumnPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
@@ -105,7 +106,10 @@ async function handleArchive(project: ProjectResponse): Promise<void> {
     successToast(`${project.name} has been archived.`);
     emit('archive');
   } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to archive project');
+    errorToast(err instanceof Error ? err.message : 'Failed to archive project', {
+      error: err,
+      logContext: { action: 'archive-project', feature: 'projects' },
+    });
   }
 }
 
@@ -131,7 +135,10 @@ async function handleUnarchive(project: ProjectResponse): Promise<void> {
     successToast(`${project.name} is now active.`);
     emit('unarchive');
   } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to unarchive project');
+    errorToast(err instanceof Error ? err.message : 'Failed to unarchive project', {
+      error: err,
+      logContext: { action: 'unarchive-project', feature: 'projects' },
+    });
   }
 }
 
@@ -170,7 +177,7 @@ function formatSource(source: string): string {
     :loading="loading"
     data-key="id"
   >
-    <Column>
+    <Column :pt="managementTableColumnPt">
       <template #body="{ data }">
         <span
           class="text-[14px] leading-none font-semibold"
@@ -179,7 +186,10 @@ function formatSource(source: string): string {
       </template>
     </Column>
 
-    <Column style="width: 140px">
+    <Column
+      style="width: 140px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
           formatSource(data.source)
@@ -187,19 +197,28 @@ function formatSource(source: string): string {
       </template>
     </Column>
 
-    <Column style="width: 220px">
+    <Column
+      style="width: 220px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{ data.members.length }} members</span>
       </template>
     </Column>
 
-    <Column style="width: 120px">
+    <Column
+      style="width: 120px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <span class="text-text-dark text-[13px] font-semibold">{{ data.totalHours }}h</span>
       </template>
     </Column>
 
-    <Column style="width: 120px">
+    <Column
+      style="width: 120px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <template v-if="data.isActive">
           <Tag
@@ -228,7 +247,10 @@ function formatSource(source: string): string {
       </template>
     </Column>
 
-    <Column style="width: 150px">
+    <Column
+      style="width: 150px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <div class="flex items-center justify-end gap-2">
           <template v-if="data.isActive">

@@ -10,6 +10,7 @@ import {
   ManagementTableShell,
   formatWorkspaceRole,
   managementTableActionPt,
+  managementTableColumnPt,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
@@ -141,7 +142,10 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         successToast(`${member.displayName ?? member.email} has been removed.`);
         emit('member-removed');
       } catch (err) {
-        errorToast(err instanceof Error ? err.message : 'Failed to remove member');
+        errorToast(err instanceof Error ? err.message : 'Failed to remove member', {
+          error: err,
+          logContext: { action: 'remove-member', feature: 'members' },
+        });
       }
     },
   );
@@ -163,7 +167,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     data-key="id"
   >
     <!-- Member: avatar + name + email -->
-    <Column>
+    <Column :pt="managementTableColumnPt">
       <template #body="{ data }">
         <div class="flex items-center gap-3">
           <Avatar
@@ -189,7 +193,10 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     </Column>
 
     <!-- Role -->
-    <Column style="width: 120px">
+    <Column
+      style="width: 120px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <span class="text-[13px] font-bold text-black">{{
           formatWorkspaceRole(data.role)
@@ -198,7 +205,10 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     </Column>
 
     <!-- Projects Assigned -->
-    <Column style="width: 160px">
+    <Column
+      style="width: 160px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
           formatProjectsAssigned(data)
@@ -207,7 +217,10 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     </Column>
 
     <!-- Last Active -->
-    <Column style="width: 140px">
+    <Column
+      style="width: 140px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
           formatLastActive(data.lastActiveAt)
@@ -216,7 +229,10 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     </Column>
 
     <!-- Actions -->
-    <Column style="width: 200px">
+    <Column
+      style="width: 200px"
+      :pt="managementTableColumnPt"
+    >
       <template #body="{ data }">
         <div class="flex items-center justify-end gap-2">
           <template v-if="!isSelf(data)">

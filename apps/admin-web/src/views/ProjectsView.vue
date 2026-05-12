@@ -67,7 +67,10 @@ async function fetchAll(): Promise<void> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'An unexpected error occurred';
     loadError.value = message;
-    errorToast(message);
+    errorToast(message, {
+      error: err,
+      logContext: { action: 'load-projects', feature: 'projects' },
+    });
   } finally {
     loading.value = false;
   }
@@ -91,7 +94,10 @@ async function refresh(): Promise<void> {
     projects.value = sortProjects(projectsData);
     summary.value = summaryData;
   } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred');
+    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
+      error: err,
+      logContext: { action: 'refresh-projects', feature: 'projects' },
+    });
   } finally {
     loading.value = false;
   }

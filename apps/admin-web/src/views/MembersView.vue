@@ -28,6 +28,12 @@ const loadError = ref<string | null>(null);
 const initialLoaded = ref(false);
 const inviteDialogVisible = ref(false);
 
+interface LoadDataOptions {
+  errorAction: string;
+  setError?: boolean;
+  setInitialLoaded?: boolean;
+}
+
 const currentUserId = computed(() => authStore.profile?.id ?? null);
 
 const activeMembers = computed(() => members.value.length);
@@ -38,7 +44,11 @@ const pmsAssigned = computed(
   () => members.value.filter((m) => m.role === 'pm').length,
 );
 
-async function fetchAll(): Promise<void> {
+async function loadData({
+  errorAction,
+  setError = false,
+  setInitialLoaded = false,
+}: LoadDataOptions): Promise<void> {
   const token = authStore.accessToken;
 
   if (!token) {
@@ -46,7 +56,9 @@ async function fetchAll(): Promise<void> {
   }
 
   loading.value = true;
-  loadError.value = null;
+  if (setError) {
+    loadError.value = null;
+  }
 
   try {
     const [membersData, invitesData, projectsData] = await Promise.all([
@@ -58,40 +70,33 @@ async function fetchAll(): Promise<void> {
     members.value = membersData;
     invites.value = invitesData;
     projects.value = projectsData;
-    initialLoaded.value = true;
+    if (setInitialLoaded) {
+      initialLoaded.value = true;
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-    loadError.value = message;
-    errorToast(message);
+    if (setError) {
+      loadError.value = message;
+    }
+    errorToast(message, {
+      error: err,
+      logContext: { action: errorAction, feature: 'members' },
+    });
   } finally {
     loading.value = false;
   }
 }
 
+async function fetchAll(): Promise<void> {
+  await loadData({
+    errorAction: 'load-members',
+    setError: true,
+    setInitialLoaded: true,
+  });
+}
+
 async function refresh(): Promise<void> {
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  loading.value = true;
-
-  try {
-    const [membersData, invitesData, projectsData] = await Promise.all([
-      adminMembersClient.listMembers(token),
-      adminMembersClient.listInvites(token),
-      adminProjectsClient.listProjects(token),
-    ]);
-
-    members.value = membersData;
-    invites.value = invitesData;
-    projects.value = projectsData;
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred');
-  } finally {
-    loading.value = false;
-  }
+  await loadData({ errorAction: 'refresh-members' });
 }
 
 function handleInviteCreated(): void {

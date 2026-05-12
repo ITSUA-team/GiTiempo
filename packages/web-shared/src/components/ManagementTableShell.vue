@@ -41,15 +41,23 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       :loading="loading"
       :show-headers="false"
       :data-key="dataKey"
-      class="gt-management-table"
       :pt="{
+        root: { class: 'border-none bg-transparent' },
+        tableContainer: { class: 'overflow-visible rounded-none border-none' },
+        table: { class: 'w-full table-fixed border-collapse' },
+        bodyRow: { class: 'h-[56px] bg-transparent hover:bg-transparent' },
         rowExpansion: { style: 'height: auto;' },
+        rowExpansionCell: { class: 'border-0 border-t border-divider p-0' },
+        emptyMessageCell: { class: 'border-0 border-t border-divider p-0' },
       }"
     >
       <slot />
 
       <template #expansion="slotProps">
-        <slot name="expansion" v-bind="slotProps" />
+        <slot
+          name="expansion"
+          v-bind="slotProps"
+        />
       </template>
 
       <template #empty>
@@ -58,50 +66,3 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
     </DataTable>
   </div>
 </template>
-
-<style scoped>
-:deep(.gt-management-table.p-datatable) {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-}
-
-:deep(.gt-management-table .p-datatable-table-container) {
-  border: none;
-  border-radius: 0;
-  overflow: visible;
-}
-
-:deep(.gt-management-table table) {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-}
-
-:deep(.gt-management-table .p-datatable-tbody > tr:not(.p-datatable-row-expansion)) {
-  height: 56px;
-  background: transparent;
-}
-
-:deep(.gt-management-table .p-datatable-tbody > tr:not(.p-datatable-row-expansion):hover) {
-  background: transparent;
-}
-
-:deep(.gt-management-table .p-datatable-tbody > tr:not(.p-datatable-row-expansion) > td) {
-  padding: 0 12px;
-  border: none;
-  border-top: 1px solid var(--color-divider);
-  vertical-align: middle;
-  font-family: 'Inter', sans-serif;
-}
-
-:deep(.gt-management-table .p-datatable-row-expansion) {
-  height: auto;
-}
-
-:deep(.gt-management-table .p-datatable-row-expansion > td) {
-  padding: 0;
-  border: none;
-  border-top: 1px solid var(--color-divider);
-}
-</style>

@@ -6,6 +6,7 @@ import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
+import { shallowRef } from 'vue';
 
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -23,6 +24,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
+const saving = shallowRef(false);
 
 const activeProjects = props.projects.filter((p) => p.isActive);
 
@@ -41,7 +43,7 @@ async function handleSubmit({
   valid: boolean;
   values: Record<string, unknown>;
 }): Promise<void> {
-  if (!valid) return;
+  if (!valid || saving.value) return;
 
   const token = authStore.accessToken;
   if (!token) return;
@@ -58,6 +60,8 @@ async function handleSubmit({
   const toAdd = projectIds.filter((id) => !currentAssignedIds.has(id));
   const toRemove = [...currentAssignedIds].filter((id) => !nextAssignedIds.has(id));
 
+  saving.value = true;
+
   try {
     for (const projectId of toAdd) {
       await adminProjectsClient.assignMember(token, projectId, props.member.userId);
@@ -69,7 +73,12 @@ async function handleSubmit({
     successToast(`Project assignments for ${props.member.displayName ?? props.member.email} saved.`);
     emit('saved');
   } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to save assignments');
+    errorToast(err instanceof Error ? err.message : 'Failed to save assignments', {
+      error: err,
+      logContext: { action: 'save-project-assignments', feature: 'members' },
+    });
+  } finally {
+    saving.value = false;
   }
 }
 </script>
@@ -108,6 +117,8 @@ async function handleSubmit({
         />
         <Button
           label="Save Assignments"
+          :disabled="saving"
+          :loading="saving"
           type="submit"
         />
       </div>
