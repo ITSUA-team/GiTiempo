@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
+import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
 
 import { routeNames } from "@/router";
@@ -39,6 +40,7 @@ const activeName = computed(() => {
 <template>
   <div class="bg-app-bg text-text-dark min-h-screen">
     <Toast />
+    <ConfirmDialog />
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
