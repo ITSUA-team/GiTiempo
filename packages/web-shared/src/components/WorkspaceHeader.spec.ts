@@ -7,16 +7,18 @@ import { describe, expect, it } from "vitest";
 import WorkspaceHeader from "./WorkspaceHeader.vue";
 
 describe("WorkspaceHeader", () => {
-  it("renders workspace identity and counterpart link", () => {
+  const baseProps = {
+    counterpartHref: "https://admin.example.test/login",
+    counterpartLabel: "Admin workspace",
+    displayName: "Alexey Tsukanov",
+    userInitials: "AT",
+    workspaceName: "Workspace Alpha",
+  };
+
+  it("renders workspace identity and counterpart link without center content", () => {
     const counterpartHref = "https://admin.example.test/login";
     const wrapper = mount(WorkspaceHeader, {
-      props: {
-        counterpartHref,
-        counterpartLabel: "Admin workspace",
-        displayName: "Alexey Tsukanov",
-        userInitials: "AT",
-        workspaceName: "Workspace Alpha",
-      },
+      props: baseProps,
       global: {
         plugins: [PrimeVue],
       },
@@ -30,5 +32,24 @@ describe("WorkspaceHeader", () => {
       "Admin workspace",
     );
     expect(wrapper.findAll("[aria-label]")).toHaveLength(1);
+    expect(wrapper.text()).not.toContain("Running timer");
+  });
+
+  it("renders app-owned center slot content", () => {
+    const wrapper = mount(WorkspaceHeader, {
+      props: baseProps,
+      slots: {
+        center:
+          '<div class="rounded-lg border px-3 py-1" data-testid="header-center-slot">Running timer</div>',
+      },
+      global: {
+        plugins: [PrimeVue],
+      },
+    });
+
+    const centerSlot = wrapper.get('[data-testid="header-center-slot"]');
+
+    expect(centerSlot.text()).toBe("Running timer");
+    expect(wrapper.text()).toContain("Alexey Tsukanov");
   });
 });

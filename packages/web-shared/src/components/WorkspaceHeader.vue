@@ -20,7 +20,7 @@ const props = withDefaults(
 
 <template>
   <header
-    class="border-divider bg-surface sticky top-0 z-20 flex h-16 items-center justify-between border-b px-4 sm:px-6"
+    class="border-divider bg-surface sticky top-0 z-20 grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 border-b px-4 sm:px-6"
   >
     <div class="flex items-center gap-3">
       <div
@@ -35,6 +35,12 @@ const props = withDefaults(
         <p class="text-text-muted text-xs">
           {{ props.workspaceName }}
         </p>
+      </div>
+    </div>
+
+    <div class="min-w-0 px-2">
+      <div class="flex justify-center">
+        <slot name="center" />
       </div>
     </div>
 

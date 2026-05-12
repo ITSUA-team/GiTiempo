@@ -5,8 +5,10 @@ import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
-import { ManagementTableShell } from '@gitiempo/web-shared';
-import type { ManagementTableColumn } from '@gitiempo/web-shared';
+import {
+  ManagementTableShell,
+  type ManagementTableColumn,
+} from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -15,9 +17,9 @@ import Tag from 'primevue/tag';
 
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
 import { useConfirmation } from '@/composables/useConfirmation';
+import { useToasts } from '@/composables/useToasts';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/useToasts';
 
 const props = defineProps<{
   projects: ProjectListResponse;
@@ -37,7 +39,8 @@ const { requireConfirmation } = useConfirmation();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
 
-const actionBtnBase = 'px-1.5 py-1 text-[13px] font-semibold leading-none rounded bg-transparent border-none shadow-none no-underline';
+const actionBtnBase =
+  'px-1.5 py-1 text-[13px] font-semibold leading-none rounded bg-transparent border-none shadow-none no-underline';
 const actionBtnPt = {
   brand: { root: { class: `${actionBtnBase} text-brand` } },
   destructive: { root: { class: `${actionBtnBase} text-destructive` } },
@@ -54,9 +57,9 @@ const columns: ManagementTableColumn[] = [
 ];
 
 const memberFilterOptions = computed(() =>
-  props.members.map((m) => ({
-    label: m.displayName ?? m.email,
-    value: m.userId,
+  props.members.map((member) => ({
+    label: `${member.displayName ?? member.email} (${member.role})`,
+    value: member.userId,
   })),
 );
 
@@ -65,8 +68,8 @@ const filteredProjects = computed(() => {
     return props.projects;
   }
 
-  return props.projects.filter((p) =>
-    p.members.some((m) => m.userId === selectedMemberId.value),
+  return props.projects.filter((project) =>
+    project.members.some((member) => member.userId === selectedMemberId.value),
   );
 });
 
@@ -75,9 +78,10 @@ function handleEdit(project: ProjectResponse): void {
     const next = { ...expandedRows.value };
     delete next[project.id];
     expandedRows.value = next;
-  } else {
-    expandedRows.value = { [project.id]: true };
+    return;
   }
+
+  expandedRows.value = { [project.id]: true };
 }
 
 function collapseRow(project: ProjectResponse): void {
@@ -97,7 +101,10 @@ function handleEditCancelled(project: ProjectResponse): void {
 
 async function handleArchive(project: ProjectResponse): Promise<void> {
   const token = authStore.accessToken;
-  if (!token) return;
+  if (!token) {
+    return;
+  }
+
   try {
     await adminProjectsClient.updateProject(token, project.id, {
       isActive: false,
@@ -120,7 +127,10 @@ function confirmArchive(project: ProjectResponse): void {
 
 async function handleUnarchive(project: ProjectResponse): Promise<void> {
   const token = authStore.accessToken;
-  if (!token) return;
+  if (!token) {
+    return;
+  }
+
   try {
     await adminProjectsClient.updateProject(token, project.id, {
       isActive: true,
@@ -138,11 +148,8 @@ function formatSource(source: string): string {
 </script>
 
 <template>
-  <!-- Section title + member filter -->
   <div class="mb-4 flex items-center justify-between">
-    <h2
-      class="text-text-dark text-lg font-semibold"
-    >
+    <h2 class="text-text-dark text-lg font-semibold">
       Projects Table
     </h2>
     <div class="flex flex-col gap-1.5">

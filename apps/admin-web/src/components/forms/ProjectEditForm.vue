@@ -101,7 +101,7 @@ async function handleSave({
         <div class="flex flex-1 flex-col gap-1.5">
           <label
             for="edit-members"
-            class="text-text-dark font-sans text-[12px] font-medium leading-none"
+            class="text-text-dark font-sans text-[12px] leading-none font-medium"
           >Select members</label>
           <MultiSelect
             id="edit-members"
@@ -118,7 +118,7 @@ async function handleSave({
         <div class="flex w-[180px] flex-col gap-1.5">
           <label
             for="edit-visibility"
-            class="text-text-dark font-sans text-[12px] font-medium leading-none"
+            class="text-text-dark font-sans text-[12px] leading-none font-medium"
           >Visibility</label>
           <Select
             id="edit-visibility"
