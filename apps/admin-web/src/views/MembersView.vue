@@ -8,8 +8,8 @@ import type {
 import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import ConfirmDialog from 'primevue/confirmdialog';
-import Skeleton from 'primevue/skeleton';
 
+import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
 import { useToasts } from '@/composables/useToasts';
@@ -111,140 +111,7 @@ onMounted(fetchAll);
     <ConfirmDialog />
 
     <template v-if="loading && !initialLoaded">
-      <div class="flex flex-col gap-6">
-        <div class="flex items-center justify-between">
-          <div class="flex flex-col gap-1.5">
-            <Skeleton
-              width="10rem"
-              height="2rem"
-              border-radius="6px"
-            />
-            <Skeleton
-              width="24rem"
-              height="1rem"
-              border-radius="6px"
-            />
-          </div>
-          <Skeleton
-            width="8.5rem"
-            height="2.25rem"
-            border-radius="6px"
-          />
-        </div>
-
-        <div class="grid gap-4 sm:grid-cols-3">
-          <Skeleton
-            v-for="index in 3"
-            :key="index"
-            height="6rem"
-            border-radius="8px"
-          />
-        </div>
-      </div>
-
-      <SurfaceCard padding-class="p-5">
-        <div class="mb-4">
-          <Skeleton
-            width="8rem"
-            height="1.25rem"
-            border-radius="6px"
-          />
-        </div>
-
-        <div class="border-divider overflow-hidden rounded-[6px] border">
-          <div class="bg-app-bg border-divider flex h-[44px] items-center gap-3 border-b px-3">
-            <Skeleton
-              class="flex-1"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="120px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="160px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="140px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="200px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-          </div>
-
-          <div
-            v-for="index in 6"
-            :key="index"
-            class="border-divider flex h-[56px] items-center gap-3 border-t px-3"
-          >
-            <div class="flex flex-1 items-center gap-3">
-              <Skeleton
-                width="2rem"
-                height="2rem"
-                border-radius="9999px"
-              />
-              <div class="flex flex-col gap-1.5">
-                <Skeleton
-                  width="8rem"
-                  height="0.875rem"
-                  border-radius="4px"
-                />
-                <Skeleton
-                  width="10rem"
-                  height="0.75rem"
-                  border-radius="4px"
-                />
-              </div>
-            </div>
-            <div class="w-[120px]">
-              <Skeleton
-                width="4rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[160px]">
-              <Skeleton
-                width="5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[140px]">
-              <Skeleton
-                width="5.5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="flex w-[200px] justify-end gap-2">
-              <Skeleton
-                width="4rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="2.5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="3rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-          </div>
-        </div>
-      </SurfaceCard>
+      <ManagementPageSkeleton variant="members" />
     </template>
 
     <template v-else-if="loadError && !loading">
