@@ -5,11 +5,11 @@
 - [x] 1.3 Re-export both components from `packages/web-shared/src/components/index.ts` and the package barrel `packages/web-shared/src/index.ts`.
 - [x] 1.4 Refactor `apps/admin-web/src/views/ProjectsView.vue` and `apps/admin-web/src/components/ProjectsTable.vue` to consume `StatCard` and `ManagementTableShell` from `@gitiempo/web-shared` without behavior change. Delete `apps/admin-web/src/components/ProjectStatCard.vue` once unreferenced.
 - [x] 1.5 Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck` and `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck` and confirm all green.
-- [ ] 1.6 Visually verify the Projects screen against the `.pen` design (`6iAjf`) so parity is preserved before adding Members.
+- [x] 1.6 Visually verify the Projects screen against the `.pen` design (`6iAjf`) so parity is preserved before adding Members.
 
 ## 2. Admin web: Members data layer
 
-- [x] 2.1 Add `apps/admin-web/src/services/admin-members-client.ts` exposing `listMembers`, `updateMemberRole`, `removeMember`, `listInvites`, `createInvite`, and `cancelInvite` via the shared `requestJson` helper, matching the existing `admin-projects-client.ts` style.
+- [x] 2.1 Add `apps/admin-web/src/services/admin-members-client.ts` exposing `listMembers`, `updateMemberRole`, `removeMember`, `listInvites`, and `createInvite` via the shared `requestJson` helper, and move all `/members` reads in `admin-web` to that client so endpoint ownership stays consolidated.
 - [x] 2.2 Add a thin browser-only invite form schema at `packages/web-shared/src/validation/workspace-invite-form.ts` that wraps `createWorkspaceInviteSchema` from `@gitiempo/shared` and exposes a UI-friendly Zod helper plus error mapping, re-exporting from the package barrel.
 
 ## 3. Admin web: `MembersView` page composition
@@ -21,7 +21,7 @@
 
 ## 4. Admin web: Members table and inline panels
 
-- [x] 4.1 Add `apps/admin-web/src/components/MembersTable.vue` rendering through `ManagementTableShell` with columns `Member`, `Role`, `Projects Assigned`, `Last Active`, `Actions`. Member cell shows `<Avatar>` plus name and email. Last Active cell renders `—` (API does not provide this field yet). Projects Assigned is computed client-side from the projects list.
+- [x] 4.1 Add `apps/admin-web/src/components/MembersTable.vue` rendering through `ManagementTableShell` with columns `Member`, `Role`, `Projects Assigned`, `Last Active`, `Actions`. Member cell shows `<Avatar>` plus name and email. `Projects Assigned` renders `projectsAssignedCount` from `GET /members`, and `Last Active` renders the formatted `lastActiveAt` value with `—` only when the contract returns `null`.
 - [x] 4.2 Implement actions per row:
   - `Assign PM` (only when `role !== 'admin'`) toggles inline expansion that renders `MemberAssignPmPanel`.
   - `Edit` toggles inline expansion that renders `MemberEditForm`.
@@ -41,4 +41,4 @@
 - [x] 6.1 Build a written parity checklist from the `.pen` Members screen (`sBfSO`) covering states, required fields, field order, actions, spacing, radii, and responsive structure, and confirm each item against the implementation.
 - [x] 6.2 Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`.
 - [x] 6.3 Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck` because `packages/web-shared` changed.
-- [x] 6.4 In the final review, explicitly state the documented PrimeVue/API parity compromise: the inline edit form keeps Name and Email fields visible per the design but renders them disabled because no admin-side endpoint exists to update them today. The Last Active column renders `—` because the API does not return `lastActiveAt` yet.
+- [x] 6.4 In the final review, explicitly state the documented PrimeVue/API parity compromise: the inline edit form keeps Name and Email fields visible per the design but renders them disabled because no admin-side endpoint exists to update them today.

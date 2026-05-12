@@ -19,7 +19,6 @@ function createProject(id: string, name: string, isActive = true): ProjectRespon
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
-    description: null,
     id,
     isActive,
     members: [],

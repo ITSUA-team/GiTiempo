@@ -20,7 +20,6 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
         {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
-          description: null,
           id: "project-1",
           isActive: true,
           members: [],

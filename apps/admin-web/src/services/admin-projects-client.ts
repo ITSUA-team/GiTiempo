@@ -4,13 +4,11 @@ import {
 	projectListResponseSchema,
 	projectResponseSchema,
 	updateProjectSchema,
-	workspaceMemberListResponseSchema,
 	type CreateProjectInput,
 	type ManagementProjectSummaryResponse,
 	type ProjectListResponse,
 	type ProjectResponse,
 	type UpdateProjectInput,
-	type WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import {
 	getRequestUrl,
@@ -38,7 +36,6 @@ export interface AdminProjectsClient {
 	getManagementSummary(
 		accessToken: string,
 	): Promise<ManagementProjectSummaryResponse>;
-	listMembers(accessToken: string): Promise<WorkspaceMemberListResponse>;
 	listProjects(accessToken: string): Promise<ProjectListResponse>;
 	removeAssignment(
 		accessToken: string,
@@ -94,16 +91,6 @@ export function createAdminProjectsClient({
 				fetchFn,
 				path: '/projects/management-summary',
 				responseSchema: managementProjectSummaryResponseSchema,
-			});
-		},
-
-		listMembers(accessToken) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
-				fetchFn,
-				path: '/members',
-				responseSchema: workspaceMemberListResponseSchema,
 			});
 		},
 

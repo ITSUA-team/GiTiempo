@@ -6,12 +6,13 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import {
+  ManagementTableEmptyState,
   ManagementTableShell,
+  managementTableActionPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
@@ -38,14 +39,6 @@ const { successToast, errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
-
-const actionBtnBase =
-  'px-1.5 py-1 text-[13px] font-semibold leading-none rounded bg-transparent border-none shadow-none no-underline';
-const actionBtnPt = {
-  brand: { root: { class: `${actionBtnBase} text-brand` } },
-  destructive: { root: { class: `${actionBtnBase} text-destructive` } },
-  muted: { root: { class: `${actionBtnBase} text-text-muted` } },
-} as const;
 
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
@@ -170,122 +163,114 @@ function formatSource(source: string): string {
     </div>
   </div>
 
-  <ManagementTableShell :columns="columns">
-    <DataTable
-      v-model:expanded-rows="expandedRows"
-      :value="filteredProjects"
-      :loading="loading"
-      :show-headers="false"
-      data-key="id"
-      class="gt-management-table"
-      :pt="{
-        rowExpansion: { style: 'height: auto;' },
-      }"
-    >
-      <Column>
-        <template #body="{ data }">
-          <span
-            class="text-[14px] leading-none font-semibold"
-            :class="data.isActive ? 'text-text-dark' : 'text-text-muted'"
-          >{{ data.name }}</span>
-        </template>
-      </Column>
+  <ManagementTableShell
+    v-model:expanded-rows="expandedRows"
+    :columns="columns"
+    :value="filteredProjects"
+    :loading="loading"
+    data-key="id"
+  >
+    <Column>
+      <template #body="{ data }">
+        <span
+          class="text-[14px] leading-none font-semibold"
+          :class="data.isActive ? 'text-text-dark' : 'text-text-muted'"
+        >{{ data.name }}</span>
+      </template>
+    </Column>
 
-      <Column style="width: 140px">
-        <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{
-            formatSource(data.source)
-          }}</span>
-        </template>
-      </Column>
+    <Column style="width: 140px">
+      <template #body="{ data }">
+        <span class="text-text-muted text-[13px] font-normal">{{
+          formatSource(data.source)
+        }}</span>
+      </template>
+    </Column>
 
-      <Column style="width: 220px">
-        <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{ data.members.length }} members</span>
-        </template>
-      </Column>
+    <Column style="width: 220px">
+      <template #body="{ data }">
+        <span class="text-text-muted text-[13px] font-normal">{{ data.members.length }} members</span>
+      </template>
+    </Column>
 
-      <Column style="width: 120px">
-        <template #body="{ data }">
-          <span class="text-text-dark text-[13px] font-semibold">{{ data.totalHours }}h</span>
-        </template>
-      </Column>
+    <Column style="width: 120px">
+      <template #body="{ data }">
+        <span class="text-text-dark text-[13px] font-semibold">{{ data.totalHours }}h</span>
+      </template>
+    </Column>
 
-      <Column style="width: 120px">
-        <template #body="{ data }">
-          <template v-if="data.isActive">
-            <Tag
-              v-if="data.visibility === 'public'"
-              value="Public"
-              :pt="{
-                root: 'inline-flex items-center rounded-[6px] bg-accent-tint px-2 py-1 text-[12px] font-semibold leading-none text-brand',
-              }"
-            />
-            <Tag
-              v-else
-              value="Private"
-              :pt="{
-                root: 'inline-flex items-center rounded-[6px] bg-status-warn-bg px-2 py-1 text-[12px] font-semibold leading-none text-status-warn-text',
-              }"
-            />
-          </template>
+    <Column style="width: 120px">
+      <template #body="{ data }">
+        <template v-if="data.isActive">
+          <Tag
+            v-if="data.visibility === 'public'"
+            value="Public"
+            :pt="{
+              root: 'inline-flex items-center rounded-[6px] bg-accent-tint px-2 py-1 text-[12px] font-semibold leading-none text-brand',
+            }"
+          />
           <Tag
             v-else
-            :value="data.visibility === 'public' ? 'Public' : 'Private'"
+            value="Private"
             :pt="{
-              root: 'inline-flex items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
-              label: 'text-text-muted',
+              root: 'inline-flex items-center rounded-[6px] bg-status-warn-bg px-2 py-1 text-[12px] font-semibold leading-none text-status-warn-text',
             }"
           />
         </template>
-      </Column>
-
-      <Column style="width: 150px">
-        <template #body="{ data }">
-          <div class="flex items-center justify-end gap-2">
-            <template v-if="data.isActive">
-              <Button
-                label="Edit"
-                variant="link"
-                :pt="actionBtnPt.brand"
-                @click="handleEdit(data)"
-              />
-              <Button
-                label="Archive"
-                variant="link"
-                :pt="actionBtnPt.destructive"
-                @click="confirmArchive(data)"
-              />
-            </template>
-            <template v-else>
-              <Button
-                label="Unarchive"
-                variant="link"
-                :pt="actionBtnPt.muted"
-                @click="handleUnarchive(data)"
-              />
-            </template>
-          </div>
-        </template>
-      </Column>
-
-      <template #expansion="{ data }">
-        <ProjectEditForm
-          :project="data"
-          :all-members="members"
-          @saved="handleEditSaved(data)"
-          @cancelled="handleEditCancelled(data)"
+        <Tag
+          v-else
+          :value="data.visibility === 'public' ? 'Public' : 'Private'"
+          :pt="{
+            root: 'inline-flex items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
+            label: 'text-text-muted',
+          }"
         />
       </template>
+    </Column>
 
-      <template #empty>
-        <div class="flex flex-col items-center gap-2 py-10">
-          <span class="text-text-dark text-[14px] font-semibold">No projects found</span>
-          <span class="text-text-muted text-[13px]">
-            No projects match the current filter, or none have been created yet.
-          </span>
+    <Column style="width: 150px">
+      <template #body="{ data }">
+        <div class="flex items-center justify-end gap-2">
+          <template v-if="data.isActive">
+            <Button
+              label="Edit"
+              variant="link"
+              :pt="managementTableActionPt.brand"
+              @click="handleEdit(data)"
+            />
+            <Button
+              label="Archive"
+              variant="link"
+              :pt="managementTableActionPt.destructive"
+              @click="confirmArchive(data)"
+            />
+          </template>
+          <template v-else>
+            <Button
+              label="Unarchive"
+              variant="link"
+              :pt="managementTableActionPt.muted"
+              @click="handleUnarchive(data)"
+            />
+          </template>
         </div>
       </template>
-    </DataTable>
+    </Column>
+
+    <template #expansion="{ data }">
+      <ProjectEditForm
+        :project="data"
+        :all-members="members"
+        @saved="handleEditSaved(data)"
+        @cancelled="handleEditCancelled(data)"
+      />
+    </template>
+
+    <template #empty>
+      <ManagementTableEmptyState
+        title="No projects found"
+        description="No projects match the current filter, or none have been created yet."
+      />
+    </template>
   </ManagementTableShell>
 </template>

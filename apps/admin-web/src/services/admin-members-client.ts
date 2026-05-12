@@ -26,7 +26,6 @@ interface AdminMembersClientOptions {
 /* eslint-disable no-unused-vars */
 
 export interface AdminMembersClient {
-	cancelInvite(accessToken: string, inviteId: string): Promise<void>;
 	createInvite(
 		accessToken: string,
 		input: CreateWorkspaceInviteInput,
@@ -46,22 +45,6 @@ export function createAdminMembersClient({
 	fetchFn = fetch,
 }: AdminMembersClientOptions): AdminMembersClient {
 	return {
-		async cancelInvite(accessToken, inviteId) {
-			const response = await fetchFn(
-				getRequestUrl(apiBaseUrl, `/invites/${inviteId}`),
-				{
-					headers: {
-						Authorization: `Bearer ${accessToken}`,
-					},
-					method: 'DELETE',
-				},
-			);
-
-			if (!response.ok) {
-				throw new Error(await getResponseErrorMessage(response));
-			}
-		},
-
 		createInvite(accessToken, input) {
 			return requestJson({
 				accessToken,

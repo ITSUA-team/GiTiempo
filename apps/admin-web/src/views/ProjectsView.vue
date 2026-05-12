@@ -14,6 +14,7 @@ import Skeleton from 'primevue/skeleton';
 import ProjectsTable from '@/components/ProjectsTable.vue';
 import { useToasts } from '@/composables/useToasts';
 import { routeNames } from '@/router';
+import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 
@@ -56,7 +57,7 @@ async function fetchAll(): Promise<void> {
     const [projectsData, summaryData, membersData] = await Promise.all([
       adminProjectsClient.listProjects(token),
       adminProjectsClient.getManagementSummary(token),
-      adminProjectsClient.listMembers(token),
+      adminMembersClient.listMembers(token),
     ]);
 
     projects.value = sortProjects(projectsData);

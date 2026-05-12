@@ -9,16 +9,16 @@ A cross-design audit of `GITiempo.pen` (Projects `6iAjf`, Members `sBfSO`, plus 
 - Replace the `MembersView` placeholder in `apps/admin-web` with the full Members page rendered from the approved design (`sBfSO`):
   - `StatsHeader` (already shared) with title `Members`, description, and a top-right primary `Invite Member` action.
   - Three stat cards in the header row: `Active Members`, `Pending Invites`, `PMs Assigned` — values derived from `GET /members` and `GET /invites`.
-  - A `Members Table` card (`SurfaceCard` wrapper) using the same boxed table chrome as `ProjectsTable` with columns `Member`, `Role`, `Projects Assigned`, `Last Active`, `Actions`.
+  - A `Members Table` card (`SurfaceCard` wrapper) using the same boxed table chrome as `ProjectsTable` with columns `Member`, `Role`, `Projects Assigned`, `Last Active`, `Actions`, rendering `projectsAssignedCount` and `lastActiveAt` directly from `GET /members`.
   - Inline expansion under non-admin member rows for `Assign PM` (PrimeVue `Checkbox` group of workspace projects, pre-filled with current assignments) with `Cancel` / `Save Assignments` actions, wired to `POST /projects/:id/assignments` and `DELETE /projects/:id/assignments/:userId`.
   - `Edit` action opens the same inline expansion pattern as `ProjectEditForm` with the member form (Name, Email, Role); only Role is editable for MVP — Name and Email are rendered read-only because the API exposes no admin-side update for those fields. This deviation is documented in `design.md`.
   - `Remove` action opens the same destructive PrimeVue `<ConfirmDialog>` pattern used by Projects archive (per `docs/ui/patterns.md`) and calls `DELETE /members/:id`.
   - `Invite Member` opens a PrimeVue `<Dialog>` matching the bottom-left dialog in the design (Email input, Role select with `Member`/`PM`/`Admin`, Cancel + Send Invite buttons), validated with a shared Zod form schema that wraps `createWorkspaceInviteSchema` and submitted to `POST /invites`. On success the dialog closes, a toast confirms delivery, and the `Pending Invites` counter is incremented locally and re-fetched.
 - Promote two repeating UI leaves into `packages/web-shared`:
   - `StatCard` extracted from `apps/admin-web/src/components/ProjectStatCard.vue` (also replaces the inline stat card markup defined in the Members `.pen` design and matches the documented "stat card" pattern).
-  - `ManagementTableShell` extracted from the boxed-table chrome of `ProjectsTable.vue` (outer rounded border, custom 44px header row, stripped DataTable body, `gt-action-btn` link button styles, expansion row chrome) so both `ProjectsTable` and the new `MembersTable` render through it.
+  - `ManagementTableShell` extracted from the boxed-table chrome of `ProjectsTable.vue` (outer rounded border, custom 44px header row, stripped DataTable body, `gt-action-btn` link button styles, expansion row chrome) so both `ProjectsTable` and the new `MembersTable` render through one shared table primitive.
   - `ProjectsView` is updated to consume the promoted shared components without behavior changes; this is a pure refactor so Projects parity is preserved.
-- **Note — deferred backend work**: The API does not yet return `lastActiveAt` or `projectsAssignedCount` on the member response. The `Last Active` column renders `—` for all rows, and `Projects Assigned` is computed client-side from the projects list loaded by the page. Extending the contract and adding `users.last_active_at` is tracked as a follow-up backend change.
+- `admin-members-client.ts` owns `/members` and `/invites` frontend boundaries, while `admin-projects-client.ts` continues to own project-assignment mutations used by the inline PM assignment panel.
 
 ## Capabilities
 
@@ -33,7 +33,7 @@ A cross-design audit of `GITiempo.pen` (Projects `6iAjf`, Members `sBfSO`, plus 
 
 ## Impact
 
-- **Shared frontend (`packages/web-shared`)**: new `StatCard.vue` and `ManagementTableShell.vue` components plus barrel exports.
-- **Admin web (`apps/admin-web`)**: full `MembersView.vue` implementation, new `MembersTable`, `MemberInviteDialog`, `MemberAssignPmPanel`, `MemberEditForm` components and a new `admin-members-client.ts` service; `ProjectsTable.vue` and `ProjectsView.vue` refactored to consume the shared `StatCard` / `ManagementTableShell`.
-- **No backend changes** — the API is used as-is. Needed backend extensions (`users.last_active_at`, enriched member response) are tracked as a follow-up change.
+- **Shared frontend (`packages/web-shared`)**: new `StatCard.vue`, `ManagementTableShell.vue`, and adjacent management-table leaves plus barrel exports.
+- **Admin web (`apps/admin-web`)**: full `MembersView.vue` implementation, new `MembersTable`, `MemberInviteDialog`, `MemberAssignPmPanel`, `MemberEditForm` components and a new `admin-members-client.ts` service for member/invite endpoints; `ProjectsTable.vue`, `ProjectsView.vue`, and `AddProjectView.vue` refactored to consume the shared `StatCard` / `ManagementTableShell` and the consolidated member client.
+- **No backend changes** — the existing enriched member contract is used as-is.
 - **No new third-party dependencies** are introduced.

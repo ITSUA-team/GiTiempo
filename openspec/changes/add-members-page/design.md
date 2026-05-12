@@ -10,7 +10,7 @@ The Projects page (`apps/admin-web/src/views/ProjectsView.vue`, `components/Proj
 
 This change must therefore both (a) ship the Members page pixel-aligned to the `.pen` and (b) promote the two repeating leaves (`StatCard`, table chrome) to `packages/web-shared` so Projects and Members share a single implementation. Both `apps/admin-web/AGENTS.md` and `packages/web-shared/AGENTS.md` already direct us to extract docs-defined repeated UI patterns once a second consumer ships, and `frontend-shared-leaves` codifies that rule.
 
-The page also needs two pieces of data the API does not yet provide: `Last Active` (no `last_active_at` field exists on `users` or `workspace_members`) and `Projects Assigned` per member (today only resolvable by counting from `GET /projects` on the client). For this frontend-only change, `Last Active` renders `—` and `Projects Assigned` is computed client-side from the already-loaded projects list. Backend extensions to provide these fields server-side are tracked as a follow-up change.
+The current `GET /members` contract already returns `lastActiveAt` and `projectsAssignedCount`, so the page should render those fields directly instead of deriving counts from `GET /projects` or falling back to a permanent placeholder.
 
 ## Goals / Non-Goals
 
@@ -32,7 +32,6 @@ The page also needs two pieces of data the API does not yet provide: `Last Activ
 - Server-side pagination, search, or sort on the members table. Both Projects and Members render the full list client-side for MVP, identical to current Projects behavior.
 - Splitting `WorkspaceAdminGuard` to allow PMs to access this page. The Members page stays admin-only.
 - Mobile-specific layout work beyond what PrimeVue and Tailwind tokens already provide. Desktop-first parity is the bar, matching `apps/admin-web/AGENTS.md`.
-- Backend changes: adding `users.last_active_at`, enriching the member response with `lastActiveAt`/`projectsAssignedCount`, or regenerating `openapi.json`. These are deferred to a follow-up change.
 
 ## Decisions
 
@@ -41,7 +40,7 @@ The page also needs two pieces of data the API does not yet provide: `Last Activ
 `apps/admin-web/AGENTS.md` requires us to "search for reusable components before leaving repeated page sections app-local, especially page headers, card shells, section headers". `packages/web-shared/AGENTS.md` allows extraction once a second consumer is real, which it is on the day Members ships.
 
 - `StatCard.vue`: stable contract `defineProps<{ label: string; value: number | string }>()`. Identical to the existing `ProjectStatCard.vue` markup. Replaces both Projects and Members stat cards.
-- `ManagementTableShell.vue`: wraps the outer rounded border, custom 44px header row built from a `columns` prop (`{ key, label, width?: number | 'fill', align?: 'start' | 'end' }`), the stripped `DataTable` body via slots, and the `gt-action-btn` link button styles. Slots: `#row` (per-row body cells), `#expansion` (inline panel), `#empty`.
+- `ManagementTableShell.vue`: wraps the outer rounded border, custom 44px header row built from a `columns` prop (`{ key, label, width?: number | 'fill', align?: 'start' | 'end' }`), the stripped `DataTable` body, and the shared action-link styles. Slots: column content, `#expansion` (inline panel), `#empty`.
 
 Alternatives considered:
 
@@ -54,6 +53,12 @@ Alternatives considered:
 - The Members table card is wrapped in `SurfaceCard padding-class="p-5"` (matches Projects).
 - Member removal uses `useConfirm().require({ ... acceptProps: { severity: 'danger' } })` per `docs/ui/patterns.md`. The `<ConfirmDialog>` host stays at the route or `AdminAppShell` level — not inside `MembersTable` — per the same doc.
 - No bespoke confirm modal is built; the same `<ConfirmDialog>` pattern Projects already exposes is used.
+
+### Keep `/members` ownership inside `admin-members-client`
+
+- `admin-members-client.ts` owns `listMembers`, `updateMemberRole`, `removeMember`, `listInvites`, and `createInvite` because those endpoints live under `/members` and `/invites`.
+- `admin-projects-client.ts` continues to own `listProjects`, project CRUD, management summary, and `POST/DELETE /projects/:id/assignments*` because the inline PM assignment panel mutates project-owned resources.
+- `ProjectsView.vue` and `AddProjectView.vue` should switch their member-list reads to `admin-members-client.listMembers(...)` so the admin frontend keeps one owner for the `/members` contract.
 
 ### Invite dialog is a PrimeVue `<Dialog>` form with shared Zod validation
 
@@ -79,12 +84,11 @@ Alternatives considered:
 - Save calls `PATCH /members/:id/role`. On success: collapse the row, toast `Member updated`, refresh.
 - This is the documented PrimeVue/API parity compromise that `apps/admin-web/AGENTS.md` requires us to call out in the final review.
 
-### `Last Active` renders `—`; `Projects Assigned` computed client-side
+### `Last Active` and `Projects Assigned` render directly from the member contract
 
-The API does not return `lastActiveAt` or `projectsAssignedCount` on the member response. Rather than block the frontend on backend changes:
-
-- `Last Active` renders `—` for all rows. When the backend adds `users.last_active_at` in a follow-up change, the column can be wired to the real field.
-- `Projects Assigned` is computed client-side by counting assignments from the already-loaded `GET /projects` response. This works because the page already fetches the full project list for the PM assignment panel. When the backend adds `projectsAssignedCount` to the member response, the client-side derivation can be replaced.
+- `Last Active` renders the formatted `lastActiveAt` value from `GET /members`, falling back to `—` only when the field is `null`.
+- `Projects Assigned` renders the contract-provided `projectsAssignedCount` so archived or otherwise non-visible assignments are still represented accurately.
+- `GET /projects` remains loaded because the inline PM assignment panel needs the active project list and current project-member membership sets for checkbox prefill and diffing.
 
 ### `MembersView` mounts `<ConfirmDialog />` at the view root, like Projects already does
 
@@ -95,13 +99,12 @@ The API does not return `lastActiveAt` or `projectsAssignedCount` on the member 
 - [Pixel parity drift between `ProjectsTable` and `MembersTable` after the shared shell extraction] → Mitigation: refactor `ProjectsTable` to consume `ManagementTableShell` in the same change, and verify both screens by snapshot/visual review against the `.pen`. The shared component owns the chrome so both consumers cannot drift.
 - [Edit form Name/Email being read-only is visually different from the design] → Mitigation: keep field shape and order identical (Name, Email, Role) so the layout still matches; disabled state is the only deviation, called out explicitly in the final review per `apps/admin-web/AGENTS.md`.
 - [Last-admin protection regressions when removing a member] → The backend already enforces "Last admin cannot be removed" (`workspace-membership` spec, `MembersService.assertCanLoseAdminRole`). The UI surfaces the resulting 409 message via the existing toast pattern and does not attempt to pre-disable the action; this matches Projects' approach to backend-enforced invariants.
-- [Promoting `ManagementTableShell` could leak product-specific behavior into a shared component] → Mitigation: the shell only exposes column descriptors, body row slot, expansion slot, empty slot, and link-button styles. Filter selects and product-specific columns stay in the consumer (e.g., the assigned-member filter remains in `ProjectsTable`; nothing similar exists for Members today).
-- [`Projects Assigned` count computed client-side may drift from truth if server-side pagination is added later] → Mitigation: documented as a known limitation; when the backend extends the member response, the client derivation can be swapped for the server-provided count.
+- [Promoting `ManagementTableShell` could leak product-specific behavior into a shared component] → Mitigation: the shell only owns the repeated table chrome, DataTable scaffolding, expansion surface, empty-state surface, and link-button styles. Filter selects and product-specific columns stay in the consumer (e.g., the assigned-member filter remains in `ProjectsTable`; nothing similar exists for Members today).
 
 ## Migration Plan
 
 1. Shared frontend: add `StatCard` and `ManagementTableShell` to `packages/web-shared`; export them from the package entry.
-2. Admin web refactor: update `ProjectStatCard` consumers to import `StatCard` from `@gitiempo/web-shared` and refactor `ProjectsTable.vue` to render through `ManagementTableShell`. Verify Projects parity visually before adding Members.
+2. Admin web refactor: update `ProjectStatCard` consumers to import `StatCard` from `@gitiempo/web-shared`, refactor `ProjectsTable.vue` to render through `ManagementTableShell`, and move `listMembers` reads to `admin-members-client.ts`. Verify Projects parity visually before adding Members.
 3. Admin web feature: ship `MembersView.vue`, `MembersTable.vue`, `MemberInviteDialog.vue`, `MemberAssignPmPanel.vue`, `MemberEditForm.vue`, and `services/admin-members-client.ts`.
 4. Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`, `pnpm --filter user-web lint && pnpm --filter user-web typecheck` (web-shared touched).
 

@@ -16,6 +16,7 @@ import Select from 'primevue/select';
 
 import { useToasts } from '@/composables/useToasts';
 import { routeNames } from '@/router';
+import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 
@@ -60,7 +61,7 @@ async function loadMembers(): Promise<void> {
   membersError.value = null;
 
   try {
-    members.value = await adminProjectsClient.listMembers(token);
+    members.value = await adminMembersClient.listMembers(token);
   } catch (err) {
     membersError.value = err instanceof Error ? err.message : 'Failed to load members';
   } finally {

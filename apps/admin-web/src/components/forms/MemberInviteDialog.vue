@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { WorkspaceRoles } from '@gitiempo/shared';
 import type { WorkspaceRole } from '@gitiempo/shared';
 import { WORKSPACE_ROLE_OPTIONS, workspaceInviteFormSchema } from '@gitiempo/web-shared';
+import type { WorkspaceInviteFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import Button from 'primevue/button';
@@ -26,9 +26,9 @@ const { successToast, errorToast } = useToasts();
 
 const submitting = ref(false);
 
-const initialValues = {
+const initialValues: { email: string; role: WorkspaceRole | '' } = {
   email: '',
-  role: WorkspaceRoles.Member,
+  role: '',
 };
 
 const resolver = zodResolver(workspaceInviteFormSchema);
@@ -50,7 +50,7 @@ async function handleSubmit({
   submitting.value = true;
 
   try {
-    await adminMembersClient.createInvite(token, values as { email: string; role: WorkspaceRole });
+    await adminMembersClient.createInvite(token, values as WorkspaceInviteFormInput);
     successToast(`Invitation sent to ${values.email as string}.`);
     reset();
     visible.value = false;
@@ -115,9 +115,18 @@ function handleCancel(reset: () => void): void {
             :options="WORKSPACE_ROLE_OPTIONS"
             option-label="label"
             option-value="value"
+            placeholder="Select a role"
             :invalid="role?.invalid"
             class="w-full"
           />
+          <Message
+            v-if="role?.invalid"
+            severity="error"
+            size="small"
+            variant="simple"
+          >
+            {{ role.error?.message }}
+          </Message>
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
@@ -139,4 +148,3 @@ function handleCancel(reset: () => void): void {
     </Form>
   </Dialog>
 </template>
-
