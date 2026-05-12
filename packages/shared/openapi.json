@@ -1440,6 +1440,9 @@
           },
           "409": {
             "description": "Running entries must be stopped first"
+          },
+          "422": {
+            "description": "Task or project inactive"
           }
         },
         "security": [
@@ -3401,6 +3404,11 @@
       "UpdateTimeEntryDto": {
         "type": "object",
         "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
           "startedAt": {
             "type": "string",
             "format": "date-time",
