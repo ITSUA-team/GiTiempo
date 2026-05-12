@@ -9,7 +9,9 @@ import { SurfaceCard } from "@gitiempo/web-shared";
 import type { TimeEntriesDayGroup } from "@/composables/useTimeEntriesPage";
 
 const props = defineProps<{
+  // eslint-disable-next-line no-unused-vars
   formatDuration: (entry: TimeEntryResponse) => string;
+  // eslint-disable-next-line no-unused-vars
   formatTimeRange: (entry: TimeEntryResponse) => string;
   group: TimeEntriesDayGroup;
   isDeletingEntry: string | null;

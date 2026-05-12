@@ -12,6 +12,7 @@ import type {
 } from "@gitiempo/shared";
 import type { ConfirmLike } from "@gitiempo/web-shared";
 
+import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
 
 import { useTimeEntriesPage } from "./useTimeEntriesPage";
@@ -94,7 +95,9 @@ interface MountOptions {
 }
 
 function createDeferred<T>() {
+  // eslint-disable-next-line no-unused-vars
   let resolve!: (value: T) => void;
+  // eslint-disable-next-line no-unused-vars
   let reject!: (reason?: unknown) => void;
 
   const promise = new Promise<T>((nextResolve, nextReject) => {
@@ -330,9 +333,7 @@ describe("useTimeEntriesPage", () => {
     const firstResponse = createDeferred<TimeEntryListResponse>();
     const secondResponse = createDeferred<TimeEntryListResponse>();
     const listOwnEntries = vi
-      .fn<
-        (accessToken: string, query?: { limit?: number; page?: number; projectId?: string }) => Promise<TimeEntryListResponse>
-      >()
+      .fn<TimeEntriesClient["listOwnEntries"]>()
       .mockImplementationOnce(async () => firstResponse.promise)
       .mockImplementationOnce(async () => secondResponse.promise);
 
@@ -529,7 +530,7 @@ describe("useTimeEntriesPage", () => {
     const firstTasks = createDeferred<TaskResponse[]>();
     const secondTasks = createDeferred<TaskResponse[]>();
     const listProjectTasks = vi
-      .fn<(accessToken: string, projectId: string) => Promise<TaskResponse[]>>()
+      .fn<TimeEntriesClient["listProjectTasks"]>()
       .mockImplementationOnce(async () => firstTasks.promise)
       .mockImplementationOnce(async () => secondTasks.promise);
 
