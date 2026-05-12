@@ -44,7 +44,7 @@ Data is synced **on-demand**: when a user opens the task selector, the backend q
 
 **Project = GitHub Project or GitHub Repository.** A project in the application can map to either a GitHub Project (board that groups issues from multiple repos) or a GitHub Repository (issues within a single repo). The default is GitHub Project. Users choose the grouping mode when selecting or creating a project.
 
-The current timer page implementation scope still uses visible workspace data for task selection: **Project → Task**.
+The current timer interaction scope uses visible workspace data for task selection through the global top-bar task-picker dialog: **Project → Task**.
 
 ### 2. Time Entry
 
@@ -105,7 +105,7 @@ A Chrome extension adds **Start/Stop Timer** and other controls directly onto Gi
 - Signs in with email or Google (Firebase Auth)
 - Tracks time against tasks (timer or manual interval)
 - Edits own time entries
-- Views time entries of other users within assigned projects (read-only, via project view)
+- Works with visible project tasks through the grouped Projects page and can still view project-scoped team time in assigned projects where the product surfaces it
 - Can connect GitHub account for GitHub-based task selection and Chrome extension
 - Can work with manual tasks inside assigned projects without GitHub
 

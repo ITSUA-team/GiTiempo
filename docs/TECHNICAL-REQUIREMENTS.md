@@ -219,9 +219,9 @@ The current web frontend baseline includes:
 **Pages:**
 
 - Dashboard — active timer, recent time entries
-- Timer — task selector (visible project → task), start/stop
+- Global top-bar timer — task selector dialog (visible project → task), start/stop
 - Time Entries — list, edit, delete own entries
-- Project View — visible project members' time entries (read-only)
+- Projects — visible projects grouped with active task create, update, frontend search, and conditional hard-delete flows
 - Profile — display name, GitHub connection (connect/disconnect)
 
 ### 3.2 Admin SPA (`apps/admin-web/`)

@@ -108,8 +108,12 @@ describe('Time entries (e2e)', () => {
         or(
           eq(tasks.title, 'Chrome extension issue'),
           eq(tasks.title, 'Other project issue'),
+          like(tasks.title, 'Search task search %'),
         ),
       );
+    await db
+      .delete(projects)
+      .where(like(projects.name, 'Search task search %'));
     await db.delete(projects).where(like(projects.name, 'gitiempo-test/%'));
     await db.delete(projects).where(like(projects.name, 'Other %'));
     await db.delete(workspaces).where(like(workspaces.name, 'Foreign %'));
@@ -152,6 +156,116 @@ describe('Time entries (e2e)', () => {
     expect(list.body.items).toHaveLength(1);
     expect(list.body.items[0].id).toBe(first.body.id);
     expect(list.body.meta.total).toBe(1);
+  });
+
+  it('searches own entries by task title with filters and pagination', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const [otherProject] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Search task search project ${suffix}`,
+        visibility: 'public',
+      })
+      .returning({ id: projects.id });
+    if (!otherProject) throw new Error('Expected search project');
+
+    const deployTaskId = await createTask(
+      platformProjectId,
+      `Search task search Deploy Pipeline ${suffix}`,
+    );
+    const docsTaskId = await createTask(
+      platformProjectId,
+      `Search task search Docs Cleanup ${suffix}`,
+    );
+    const otherProjectTaskId = await createTask(
+      otherProject.id,
+      `Search task search Deploy Archive ${suffix}`,
+    );
+
+    const deployEntryId = await createStoredEntry(
+      memberUserId,
+      deployTaskId,
+      '2026-05-01T10:00:00.000Z',
+      '2026-05-01T10:30:00.000Z',
+    );
+    await createStoredEntry(
+      memberUserId,
+      docsTaskId,
+      '2026-05-02T10:00:00.000Z',
+      '2026-05-02T10:30:00.000Z',
+    );
+    await createStoredEntry(
+      memberUserId,
+      otherProjectTaskId,
+      '2026-05-03T10:00:00.000Z',
+      '2026-05-03T10:30:00.000Z',
+    );
+    await createStoredEntry(
+      otherMemberUserId,
+      deployTaskId,
+      '2026-05-04T10:00:00.000Z',
+      '2026-05-04T10:30:00.000Z',
+    );
+
+    const partial = await request(app.getHttpServer())
+      .get('/time-entries')
+      .query({ search: 'Deploy', page: 1, limit: 10 })
+      .set('Authorization', bearer(memberToken));
+    expect(partial.status).toBe(200);
+    expect(partial.body.items).toHaveLength(2);
+    expect(partial.body.meta.total).toBe(2);
+    expect(
+      partial.body.items.map(
+        (item: { task: { title: string } }) => item.task.title,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        `Search task search Deploy Pipeline ${suffix}`,
+        `Search task search Deploy Archive ${suffix}`,
+      ]),
+    );
+
+    const caseInsensitive = await request(app.getHttpServer())
+      .get('/time-entries')
+      .query({ search: 'dEpLoY', page: 1, limit: 10 })
+      .set('Authorization', bearer(memberToken));
+    expect(caseInsensitive.status).toBe(200);
+    expect(caseInsensitive.body.meta.total).toBe(2);
+
+    const noMatch = await request(app.getHttpServer())
+      .get('/time-entries')
+      .query({ search: `Missing ${suffix}`, page: 1, limit: 10 })
+      .set('Authorization', bearer(memberToken));
+    expect(noMatch.status).toBe(200);
+    expect(noMatch.body.items).toHaveLength(0);
+    expect(noMatch.body.meta.total).toBe(0);
+    expect(noMatch.body.meta.totalPages).toBe(0);
+
+    const composed = await request(app.getHttpServer())
+      .get('/time-entries')
+      .query({
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-05-02T00:00:00.000Z',
+        projectId: platformProjectId,
+        search: 'deploy',
+        page: 1,
+        limit: 10,
+      })
+      .set('Authorization', bearer(memberToken));
+    expect(composed.status).toBe(200);
+    expect(composed.body.items).toHaveLength(1);
+    expect(composed.body.items[0].id).toBe(deployEntryId);
+    expect(composed.body.meta.total).toBe(1);
+
+    const paginated = await request(app.getHttpServer())
+      .get('/time-entries')
+      .query({ search: 'deploy', page: 1, limit: 1 })
+      .set('Authorization', bearer(memberToken));
+    expect(paginated.status).toBe(200);
+    expect(paginated.body.items).toHaveLength(1);
+    expect(paginated.body.meta.total).toBe(2);
+    expect(paginated.body.meta.totalPages).toBe(2);
   });
 
   it('allows own completed entry get/update/delete and hides other users entries', async () => {
@@ -260,6 +374,28 @@ describe('Time entries (e2e)', () => {
     });
     expect(created.status).toBe(201);
 
+    const suffix = randomUUID().slice(0, 8);
+    const visibleTaskId = await createTask(
+      platformProjectId,
+      `Search task search Team Visible ${suffix}`,
+    );
+    const hiddenTaskId = await createTask(
+      platformProjectId,
+      `Search task search Team Hidden ${suffix}`,
+    );
+    const visibleEntryId = await createStoredEntry(
+      memberUserId,
+      visibleTaskId,
+      '2026-05-03T10:00:00.000Z',
+      '2026-05-03T10:30:00.000Z',
+    );
+    await createStoredEntry(
+      memberUserId,
+      hiddenTaskId,
+      '2026-05-04T10:00:00.000Z',
+      '2026-05-04T10:30:00.000Z',
+    );
+
     const adminList = await request(app.getHttpServer())
       .get(`/projects/${platformProjectId}/time-entries`)
       .set('Authorization', bearer(adminToken));
@@ -276,8 +412,17 @@ describe('Time entries (e2e)', () => {
       assignedList.body.items.map((item: { id: string }) => item.id),
     ).toContain(created.body.id);
 
+    const searchedList = await request(app.getHttpServer())
+      .get(`/projects/${platformProjectId}/time-entries`)
+      .query({ search: 'visible' })
+      .set('Authorization', bearer(memberToken));
+    expect(searchedList.status).toBe(200);
+    expect(searchedList.body.items).toHaveLength(1);
+    expect(searchedList.body.items[0].id).toBe(visibleEntryId);
+
     const unassignedList = await request(app.getHttpServer())
       .get(`/projects/${platformProjectId}/time-entries`)
+      .query({ search: 'visible' })
       .set('Authorization', bearer(otherMemberToken));
     expect(unassignedList.status).toBe(404);
   });
@@ -557,6 +702,42 @@ describe('Time entries (e2e)', () => {
         taskId: platformTaskId,
         ...overrides,
       });
+  }
+
+  async function createTask(projectId: string, title: string): Promise<string> {
+    const [task] = await db
+      .insert(tasks)
+      .values({ workspaceId, projectId, title })
+      .returning({ id: tasks.id });
+    if (!task) throw new Error('Expected created task');
+    return task.id;
+  }
+
+  async function createStoredEntry(
+    userId: string,
+    taskId: string,
+    startedAtValue: string,
+    endedAtValue: string,
+  ): Promise<string> {
+    const startedAt = new Date(startedAtValue);
+    const endedAt = new Date(endedAtValue);
+    const durationSeconds = Math.floor(
+      (endedAt.getTime() - startedAt.getTime()) / 1000,
+    );
+    const [entry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId,
+        userId,
+        startedAt,
+        endedAt,
+        durationSeconds,
+        source: 'manual',
+      })
+      .returning({ id: timeEntries.id });
+    if (!entry) throw new Error('Expected created time entry');
+    return entry.id;
   }
 
   async function createGitHubRefs(

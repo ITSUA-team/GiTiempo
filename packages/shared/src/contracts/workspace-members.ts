@@ -11,6 +11,8 @@ export const workspaceMemberResponseSchema = z.object({
   avatarUrl: z.string().nullable(),
   role: workspaceRoleSchema,
   joinedAt: z.iso.datetime(),
+  lastActiveAt: z.iso.datetime().nullable(),
+  projectsAssignedCount: z.number().int().min(0),
 });
 
 export const workspaceMemberListResponseSchema = z.array(
@@ -22,6 +24,12 @@ export const updateWorkspaceMemberRoleSchema = z
     role: workspaceRoleSchema,
   })
   .strict();
+
+export const WorkspaceRoles = {
+  Admin: "admin",
+  PM: "pm",
+  Member: "member",
+} as const;
 
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type WorkspaceMemberResponse = z.infer<

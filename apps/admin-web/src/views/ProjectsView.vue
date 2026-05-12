@@ -1,24 +1,26 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type {
   ManagementProjectSummaryResponse,
   ProjectListResponse,
   WorkspaceMemberListResponse,
-} from "@gitiempo/shared";
-import { StatsHeader, SurfaceCard } from "@gitiempo/web-shared";
-import Button from "primevue/button";
-import { useToast } from "primevue/usetoast";
+} from '@gitiempo/shared';
+import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
+import Button from 'primevue/button';
+import ConfirmDialog from 'primevue/confirmdialog';
 
-import ProjectStatCard from "@/components/ProjectStatCard.vue";
-import ProjectsTable from "@/components/ProjectsTable.vue";
-import { routeNames } from "@/router";
-import { adminProjectsClient } from "@/services/admin-projects-client";
-import { useAuthStore } from "@/stores/auth";
+import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
+import ProjectsTable from '@/components/ProjectsTable.vue';
+import { useToasts } from '@/composables/useToasts';
+import { routeNames } from '@/router';
+import { adminMembersClient } from '@/services/admin-members-client';
+import { adminProjectsClient } from '@/services/admin-projects-client';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const toast = useToast();
+const { errorToast } = useToasts();
 
 const projects = ref<ProjectListResponse>([]);
 const summary = ref<ManagementProjectSummaryResponse>({
@@ -29,10 +31,14 @@ const summary = ref<ManagementProjectSummaryResponse>({
 const members = ref<WorkspaceMemberListResponse>([]);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
+const initialLoaded = ref(false);
 
 function sortProjects(list: ProjectListResponse): ProjectListResponse {
   return [...list].sort((a, b) => {
-    if (a.isActive === b.isActive) return 0;
+    if (a.isActive === b.isActive) {
+      return 0;
+    }
+
     return a.isActive ? -1 : 1;
   });
 }
@@ -51,20 +57,19 @@ async function fetchAll(): Promise<void> {
     const [projectsData, summaryData, membersData] = await Promise.all([
       adminProjectsClient.listProjects(token),
       adminProjectsClient.getManagementSummary(token),
-      adminProjectsClient.listMembers(token),
+      adminMembersClient.listMembers(token),
     ]);
 
     projects.value = sortProjects(projectsData);
     summary.value = summaryData;
     members.value = membersData;
+    initialLoaded.value = true;
   } catch (err) {
-    const message = err instanceof Error ? err.message : "An unexpected error occurred";
+    const message = err instanceof Error ? err.message : 'An unexpected error occurred';
     loadError.value = message;
-    toast.add({
-      severity: "error",
-      summary: "Failed to load projects",
-      detail: message,
-      life: 5000,
+    errorToast(message, {
+      error: err,
+      logContext: { action: 'load-projects', feature: 'projects' },
     });
   } finally {
     loading.value = false;
@@ -89,11 +94,9 @@ async function refresh(): Promise<void> {
     projects.value = sortProjects(projectsData);
     summary.value = summaryData;
   } catch (err) {
-    toast.add({
-      severity: "error",
-      summary: "Failed to refresh projects",
-      detail: err instanceof Error ? err.message : "An unexpected error occurred",
-      life: 5000,
+    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
+      error: err,
+      logContext: { action: 'refresh-projects', feature: 'projects' },
     });
   } finally {
     loading.value = false;
@@ -109,8 +112,13 @@ onMounted(fetchAll);
 
 <template>
   <div class="flex flex-col gap-6 p-6">
-    <!-- Error state — visible banner after initial load failure -->
-    <template v-if="loadError && !loading">
+    <ConfirmDialog />
+
+    <template v-if="loading && !initialLoaded">
+      <ManagementPageSkeleton variant="projects" />
+    </template>
+
+    <template v-else-if="loadError && !loading">
       <SurfaceCard padding-class="p-6">
         <div class="flex flex-col items-center gap-3 py-6 text-center">
           <span class="text-text-dark text-[15px] font-semibold">Failed to load projects</span>
@@ -125,7 +133,6 @@ onMounted(fetchAll);
       </SurfaceCard>
     </template>
 
-    <!-- Main content — visible immediately, table overlay handles loading -->
     <template v-else>
       <StatsHeader
         title="Projects"
@@ -138,15 +145,15 @@ onMounted(fetchAll);
           />
         </template>
         <template #stats>
-          <ProjectStatCard
+          <StatCard
             label="Active Projects"
             :value="summary.activeProjects"
           />
-          <ProjectStatCard
+          <StatCard
             label="Private"
             :value="summary.privateProjects"
           />
-          <ProjectStatCard
+          <StatCard
             label="Public"
             :value="summary.publicProjects"
           />

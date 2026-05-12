@@ -16,7 +16,6 @@ import LoginView from "@/views/LoginView.vue";
 import ProfileView from "@/views/ProfileView.vue";
 import ProjectView from "@/views/ProjectView.vue";
 import TimeEntriesView from "@/views/TimeEntriesView.vue";
-import TimerView from "@/views/TimerView.vue";
 import { pinia } from "@/stores";
 import { useAuthStore } from "@/stores/auth";
 
@@ -26,7 +25,6 @@ export const routeNames = {
   profile: "profile",
   project: "project",
   timeEntries: "time-entries",
-  timer: "timer",
 } as const;
 
 function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
@@ -63,11 +61,6 @@ const routes: RouteRecordRaw[] = [
         path: "",
         name: routeNames.dashboard,
         component: DashboardView,
-      },
-      {
-        path: "timer",
-        name: routeNames.timer,
-        component: TimerView,
       },
       {
         path: "time-entries",

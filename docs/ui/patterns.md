@@ -86,6 +86,7 @@ Use sequential PrimeVue `<Select>` controls.
 - Enable `filter` on each select.
 - Disable each level until the previous one has a value.
 - Use `:loading` while downstream options are fetched.
+- This pattern is used inside the centered top-bar task-picker dialog.
 
 ```vue
 <Select
@@ -110,13 +111,13 @@ Use sequential PrimeVue `<Select>` controls.
 
 ## Task Lookup
 
-Use PrimeVue `<AutoComplete>` when the UI helps the user find a task by title but the API still expects a selected task id.
+Use PrimeVue `<AutoComplete>` when the UI helps the user find or filter tasks by title.
 
 - Time Entries task filter uses `<AutoComplete>` instead of a raw text input.
 - Manual time-entry create forms should also use `<AutoComplete>` for task selection once the project context is known.
 - Suggestions should be visible tasks for the current user and may be narrowed by the selected project.
-- The applied API filter or payload still uses the selected task's `taskId`; do not document this as a backend free-text search query.
-- Use `forceSelection` so the submitted value always maps to a real task option.
+- Time Entries list filtering may send backend `search` so task-title filtering applies across the paginated result set.
+- Create, edit, and timer payloads still submit a selected task's `taskId`; use `forceSelection` when the submitted value must map to a real task option.
 
 ```vue
 <AutoComplete
@@ -129,6 +130,18 @@ Use PrimeVue `<AutoComplete>` when the UI helps the user find a task by title bu
   class="w-full"
 />
 ```
+
+## Combined Projects And Tasks Search
+
+Use PrimeVue `<AutoComplete>` when the UI helps the user search already loaded project and task names from the frontend.
+
+- The user Projects page uses a single combined search field instead of separate project and task filters.
+- Placeholder copy: `Search projects or tasks`.
+- Suggestions may include both project names and task names from the currently loaded visible data set.
+- This search filters frontend-visible data only. Do not document it as a backend search endpoint.
+- Project-name matches keep the full matching project group visible.
+- Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
+- Clearing the field restores the full grouped list.
 
 ## Time Entry Dialogs
 
@@ -143,6 +156,25 @@ Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
 - Use PrimeVue `<Textarea>` for description and `<Checkbox binary>` for billable state.
 - Default copy differs by mode: create uses `New time entry` and `Save entry`; edit uses `Edit time entry` and `Save changes`.
 - The design mockup may live as a separate reference frame, but implementation must render it as an actual modal popup, not as inline page content.
+
+## Top-Bar Timer Task Picker
+
+Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-bar timer task information field.
+
+- The task information field in the compact top-bar timer is always clickable, including when start is disabled.
+- The dialog is the primary place to switch the selected task context for timer start/stop behavior in `user-web`.
+- Use visible `Project -> Task` selection only.
+- Use sequential PrimeVue `<Select>` controls for project and task selection.
+- The selected project must be visible to the current user.
+- The selected task must belong to the selected visible project.
+- The dialog supports creating a new task inside the currently selected visible project.
+- Do not support creating a new project from this dialog.
+- The create-task form uses a single required task-title field backed by the existing task-create contract.
+- When task creation succeeds, keep the dialog open with the new task selected and let the user confirm with `Use selected task`.
+- The dialog must clearly separate task selection from task creation so the user always knows whether they are picking an existing task or creating a new one.
+- Loading, empty, validation-error, and request-error states must stay distinct.
+- The dialog must not include manual interval entry controls; manual entry remains on Time Entries only.
+- Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
 
 ## Multi-Select Filters
 
@@ -166,6 +198,21 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 - Default duration format: `Xh Ym`.
 - Running timer format: `HH:MM:SS`.
 - Never show raw seconds outside the running timer.
+
+## Compact Top-Bar Timer
+
+- Use this surface in the center area of every authenticated `user-web` top bar. Do not apply it to `admin-web` unless the docs are updated explicitly.
+- Running state shows the running label, live `HH:MM:SS`, clickable current `Project / Task`, and one stop action.
+- Not-running state shows the last tracked task context, clickable task information, and one start action that creates a new time entry for that task.
+- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
+- A completed timer entry or manual entry may seed the last tracked task context if the task remains trackable.
+- The `Start` action always creates a fresh running time entry. It must not resume or mutate the previous time entry record.
+- Clicking the task information field opens the centered task-picker dialog.
+- If there is no eligible last tracked task context, keep the same not-running surface, keep the task information field clickable, and disable the start action.
+- While the timer summary is loading, render the same surface shape with the action disabled.
+- If the timer summary fails to load, keep the surface shape visible, disable the action, and use standard toast feedback for the failure.
+- Keep the component compact enough to fit the existing `h-16` top bar.
+- Hide or truncate the context text first on smaller widths before compressing the elapsed-time value or removing the action.
 
 ## Pagination
 

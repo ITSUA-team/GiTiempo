@@ -3,6 +3,7 @@ import {
   check,
   index,
   pgTable,
+  text,
   timestamp,
   uuid,
   varchar,
@@ -19,6 +20,7 @@ export const projects = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: 'restrict' }),
     name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
     color: varchar('color', { length: 7 }),
     visibility: varchar('visibility', { length: 20 })
       .$type<ProjectVisibility>()
