@@ -254,6 +254,8 @@ async function main(): Promise<void> {
           id: PLATFORM_PROJECT_ID,
           workspaceId: DEFAULT_WORKSPACE_ID,
           name: 'Internal Platform',
+          description:
+            'Internal product and platform work for API, authorization, and shared delivery foundations.',
           color: '#2563EB',
           visibility: 'private',
           isActive: true,
@@ -262,6 +264,8 @@ async function main(): Promise<void> {
           id: CLIENT_PROJECT_ID,
           workspaceId: DEFAULT_WORKSPACE_ID,
           name: 'Demo Client',
+          description:
+            'Client-facing delivery workspace used for onboarding, reporting, and billing demos.',
           color: '#16A34A',
           visibility: 'private',
           isActive: true,
@@ -270,6 +274,8 @@ async function main(): Promise<void> {
           id: ARCHIVED_PROJECT_ID,
           workspaceId: DEFAULT_WORKSPACE_ID,
           name: 'Archived Initiative',
+          description:
+            'Historical project kept for archived task and time-entry reference coverage.',
           color: '#64748B',
           visibility: 'private',
           isActive: false,
@@ -279,6 +285,7 @@ async function main(): Promise<void> {
         target: projects.id,
         set: {
           name: sql`excluded.name`,
+          description: sql`excluded.description`,
           color: sql`excluded.color`,
           visibility: sql`excluded.visibility`,
           isActive: sql`excluded.is_active`,

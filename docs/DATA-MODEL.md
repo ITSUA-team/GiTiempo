@@ -403,7 +403,7 @@ All enums are stored as `VARCHAR` with application-level validation via Zod sche
 | `users` → `github_connections` | CASCADE |
 | `users` → `project_assignments` | CASCADE through workspace membership removal |
 
-**Soft deletes:** Projects and Tasks use `is_active` flag instead of hard deletes. Time entries are never deleted by cascade — admins can manually remove them.
+**Delete behavior:** Projects use `is_active` for archive/unarchive behavior. Tasks may be permanently deleted only when no `time_entries` row references them; this hard-delete rule overrides the previous task soft-delete default for unused tasks. Tasks that have related time entries must remain stored and may only be deactivated with `is_active = false`. Time entries are never deleted by cascade — admins can manually remove them.
 
 ---
 
