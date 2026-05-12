@@ -664,7 +664,9 @@ export class ProjectsService {
       .select({
         totalSeconds: sql<number>`COALESCE(SUM(${timeEntries.durationSeconds}), 0)`,
         billableSeconds: sql<number>`COALESCE(SUM(CASE WHEN ${timeEntries.isBillable} THEN ${timeEntries.durationSeconds} ELSE 0 END), 0)`,
-        lastActivityAt: sql<Date | null>`MAX(${timeEntries.startedAt})`,
+        lastActivityAt: sql<
+          Date | string | null
+        >`MAX(${timeEntries.startedAt})`,
       })
       .from(timeEntries)
       .innerJoin(tasksTable, eq(tasksTable.id, timeEntries.taskId))
@@ -683,7 +685,7 @@ export class ProjectsService {
       totalSeconds,
       billableSeconds,
       billableShare: totalSeconds > 0 ? billableSeconds / totalSeconds : null,
-      lastActivityAt: row?.lastActivityAt?.toISOString() ?? null,
+      lastActivityAt: toIsoDateString(row?.lastActivityAt),
     };
   }
 
@@ -715,6 +717,15 @@ export class ProjectsService {
 function toNumber(value: number | string | null | undefined): number {
   if (value === undefined || value === null) return 0;
   return typeof value === 'number' ? value : Number(value);
+}
+
+function toIsoDateString(
+  value: Date | string | null | undefined,
+): string | null {
+  if (value === undefined || value === null) return null;
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 function compareProjectMembers(a: ProjectMember, b: ProjectMember): number {
