@@ -131,6 +131,18 @@ Use PrimeVue `<AutoComplete>` when the UI helps the user find or filter tasks by
 />
 ```
 
+## Combined Projects And Tasks Search
+
+Use PrimeVue `<AutoComplete>` when the UI helps the user search already loaded project and task names from the frontend.
+
+- The user Projects page uses a single combined search field instead of separate project and task filters.
+- Placeholder copy: `Search projects or tasks`.
+- Suggestions may include both project names and task names from the currently loaded visible data set.
+- This search filters frontend-visible data only. Do not document it as a backend search endpoint.
+- Project-name matches keep the full matching project group visible.
+- Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
+- Clearing the field restores the full grouped list.
+
 ## Time Entry Dialogs
 
 Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
