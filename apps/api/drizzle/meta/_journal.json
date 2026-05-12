@@ -57,6 +57,13 @@
       "when": 1778246755229,
       "tag": "0007_conscious_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778520307875,
+      "tag": "0008_big_maelstrom",
+      "breakpoints": true
     }
   ]
 }

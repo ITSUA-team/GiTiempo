@@ -105,7 +105,7 @@ A Chrome extension adds **Start/Stop Timer** and other controls directly onto Gi
 - Signs in with email or Google (Firebase Auth)
 - Tracks time against tasks (timer or manual interval)
 - Edits own time entries
-- Views time entries of other users within assigned projects (read-only, via project view)
+- Works with visible project tasks through the grouped Projects page and can still view project-scoped team time in assigned projects where the product surfaces it
 - Can connect GitHub account for GitHub-based task selection and Chrome extension
 - Can work with manual tasks inside assigned projects without GitHub
 

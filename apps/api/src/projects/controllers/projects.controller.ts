@@ -29,6 +29,7 @@ import { ManagementProjectSummaryResponseDto } from '../dto/management-project-s
 import { MyProjectSummaryResponseDto } from '../dto/my-project-summary-response.dto';
 import { ProjectAssignmentListResponseDto } from '../dto/project-assignment-list-response.dto';
 import { ProjectAssignmentResponseDto } from '../dto/project-assignment-response.dto';
+import { ProjectDetailResponseDto } from '../dto/project-detail-response.dto';
 import { ProjectListResponseDto } from '../dto/project-list-response.dto';
 import { ProjectResponseDto } from '../dto/project-response.dto';
 import { UpdateProjectDto } from '../dto/update-project.dto';
@@ -88,13 +89,13 @@ export class ProjectsController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get a visible project' })
-  @ApiOkResponse({ type: ProjectResponseDto })
+  @ApiOkResponse({ type: ProjectDetailResponseDto })
   @ApiNotFoundResponse({ description: 'Project not found' })
-  @ZodSerializerDto(ProjectResponseDto)
+  @ZodSerializerDto(ProjectDetailResponseDto)
   getProject(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-  ): Promise<ProjectResponseDto> {
+  ): Promise<ProjectDetailResponseDto> {
     return this.projects.getProject(user, id);
   }
 
