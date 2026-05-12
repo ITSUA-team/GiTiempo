@@ -1,25 +1,26 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type {
   ManagementProjectSummaryResponse,
   ProjectListResponse,
   WorkspaceMemberListResponse,
-} from "@gitiempo/shared";
-import { StatsHeader, SurfaceCard } from "@gitiempo/web-shared";
-import Button from "primevue/button";
-import Skeleton from "primevue/skeleton";
-import { useToast } from "primevue/usetoast";
+} from '@gitiempo/shared';
+import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
+import Button from 'primevue/button';
+import ConfirmDialog from 'primevue/confirmdialog';
 
-import ProjectStatCard from "@/components/ProjectStatCard.vue";
-import ProjectsTable from "@/components/ProjectsTable.vue";
-import { routeNames } from "@/router";
-import { adminProjectsClient } from "@/services/admin-projects-client";
-import { useAuthStore } from "@/stores/auth";
+import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
+import ProjectsTable from '@/components/ProjectsTable.vue';
+import { useToasts } from '@/composables/useToasts';
+import { routeNames } from '@/router';
+import { adminMembersClient } from '@/services/admin-members-client';
+import { adminProjectsClient } from '@/services/admin-projects-client';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const toast = useToast();
+const { errorToast } = useToasts();
 
 const projects = ref<ProjectListResponse>([]);
 const summary = ref<ManagementProjectSummaryResponse>({
@@ -34,7 +35,10 @@ const initialLoaded = ref(false);
 
 function sortProjects(list: ProjectListResponse): ProjectListResponse {
   return [...list].sort((a, b) => {
-    if (a.isActive === b.isActive) return 0;
+    if (a.isActive === b.isActive) {
+      return 0;
+    }
+
     return a.isActive ? -1 : 1;
   });
 }
@@ -53,7 +57,7 @@ async function fetchAll(): Promise<void> {
     const [projectsData, summaryData, membersData] = await Promise.all([
       adminProjectsClient.listProjects(token),
       adminProjectsClient.getManagementSummary(token),
-      adminProjectsClient.listMembers(token),
+      adminMembersClient.listMembers(token),
     ]);
 
     projects.value = sortProjects(projectsData);
@@ -61,13 +65,11 @@ async function fetchAll(): Promise<void> {
     members.value = membersData;
     initialLoaded.value = true;
   } catch (err) {
-    const message = err instanceof Error ? err.message : "An unexpected error occurred";
+    const message = err instanceof Error ? err.message : 'An unexpected error occurred';
     loadError.value = message;
-    toast.add({
-      severity: "error",
-      summary: "Failed to load projects",
-      detail: message,
-      life: 5000,
+    errorToast(message, {
+      error: err,
+      logContext: { action: 'load-projects', feature: 'projects' },
     });
   } finally {
     loading.value = false;
@@ -92,11 +94,9 @@ async function refresh(): Promise<void> {
     projects.value = sortProjects(projectsData);
     summary.value = summaryData;
   } catch (err) {
-    toast.add({
-      severity: "error",
-      summary: "Failed to refresh projects",
-      detail: err instanceof Error ? err.message : "An unexpected error occurred",
-      life: 5000,
+    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
+      error: err,
+      logContext: { action: 'refresh-projects', feature: 'projects' },
     });
   } finally {
     loading.value = false;
@@ -112,149 +112,12 @@ onMounted(fetchAll);
 
 <template>
   <div class="flex flex-col gap-6 p-6">
-    <!-- Initial loading skeleton — mirrors real layout structure -->
-    <template v-if="loading && !initialLoaded">
-      <!-- StatsHeader skeleton -->
-      <div class="flex flex-col gap-6">
-        <div class="flex items-center justify-between">
-          <div class="flex flex-col gap-1.5">
-            <Skeleton
-              width="10rem"
-              height="2rem"
-              border-radius="6px"
-            />
-            <Skeleton
-              width="22rem"
-              height="1rem"
-              border-radius="6px"
-            />
-          </div>
-          <Skeleton
-            width="7.5rem"
-            height="2.25rem"
-            border-radius="6px"
-          />
-        </div>
-        <div class="flex h-24 gap-4">
-          <Skeleton
-            v-for="i in 3"
-            :key="i"
-            class="flex-1"
-            height="100%"
-            border-radius="8px"
-          />
-        </div>
-      </div>
+    <ConfirmDialog />
 
-      <!-- Table skeleton -->
-      <SurfaceCard padding-class="p-5">
-        <!-- Section title + filter row -->
-        <div class="mb-4 flex items-center justify-between">
-          <Skeleton
-            width="8rem"
-            height="1.25rem"
-            border-radius="6px"
-          />
-          <Skeleton
-            width="16rem"
-            height="2.25rem"
-            border-radius="6px"
-          />
-        </div>
-        <!-- Table shell -->
-        <div class="border-divider overflow-hidden rounded-[6px] border">
-          <!-- Header row -->
-          <div class="bg-app-bg border-divider flex h-[44px] items-center gap-3 border-b px-3">
-            <Skeleton
-              class="flex-1"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="140px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="220px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="120px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="120px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="150px"
-              height="0.75rem"
-              border-radius="4px"
-            />
-          </div>
-          <!-- Data rows -->
-          <div
-            v-for="i in 6"
-            :key="i"
-            class="border-divider flex h-[56px] items-center gap-3 border-t px-3"
-          >
-            <div class="flex flex-1 items-center">
-              <Skeleton
-                width="60%"
-                height="0.875rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[140px]">
-              <Skeleton
-                width="70%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[220px]">
-              <Skeleton
-                width="50%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[120px]">
-              <Skeleton
-                width="40%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[120px]">
-              <Skeleton
-                width="3.5rem"
-                height="1.4rem"
-                border-radius="6px"
-              />
-            </div>
-            <div class="flex w-[150px] justify-end gap-2">
-              <Skeleton
-                width="2.5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="3.5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-          </div>
-        </div>
-      </SurfaceCard>
+    <template v-if="loading && !initialLoaded">
+      <ManagementPageSkeleton variant="projects" />
     </template>
 
-    <!-- Error state — visible only after fetch has fully failed -->
     <template v-else-if="loadError && !loading">
       <SurfaceCard padding-class="p-6">
         <div class="flex flex-col items-center gap-3 py-6 text-center">
@@ -270,7 +133,6 @@ onMounted(fetchAll);
       </SurfaceCard>
     </template>
 
-    <!-- Main content — visible only after first successful load -->
     <template v-else>
       <StatsHeader
         title="Projects"
@@ -283,15 +145,15 @@ onMounted(fetchAll);
           />
         </template>
         <template #stats>
-          <ProjectStatCard
+          <StatCard
             label="Active Projects"
             :value="summary.activeProjects"
           />
-          <ProjectStatCard
+          <StatCard
             label="Private"
             :value="summary.privateProjects"
           />
-          <ProjectStatCard
+          <StatCard
             label="Public"
             :value="summary.publicProjects"
           />
