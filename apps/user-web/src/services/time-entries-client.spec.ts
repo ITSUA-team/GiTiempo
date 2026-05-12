@@ -23,6 +23,7 @@ describe("createTimeEntriesClient", () => {
         {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
+          description: null,
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
           isActive: true,
           members: [],

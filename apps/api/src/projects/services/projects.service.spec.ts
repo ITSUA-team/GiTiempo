@@ -29,6 +29,7 @@ const projectRow = {
   id: 'project-1',
   workspaceId: 'workspace-1',
   name: 'Project',
+  description: 'Project description',
   color: null,
   visibility: 'private' as const,
   isActive: true,
@@ -171,11 +172,13 @@ describe('ProjectsService', () => {
           ...archivedRow,
           source: 'manual',
           totalHours: 0,
+          members: [],
         })
         .mockResolvedValueOnce({
           ...unarchivedRow,
           source: 'manual',
           totalHours: 0,
+          members: [],
         }),
     });
 

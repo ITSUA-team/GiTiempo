@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import { useToast } from "primevue/usetoast";
@@ -121,13 +122,12 @@ onMounted(loadMembers);
   <div class="flex flex-col gap-5 p-6">
     <!-- Back link -->
     <div>
-      <button
-        type="button"
-        class="text-brand cursor-pointer bg-transparent text-[13px] font-semibold"
+      <Button
+        label="← Back to projects"
+        variant="link"
+        class="!p-0 text-[13px] font-semibold"
         @click="handleBack"
-      >
-        ← Back to projects
-      </button>
+      />
     </div>
 
     <!-- Page header -->
@@ -245,29 +245,23 @@ onMounted(loadMembers);
 
         <!-- Action row: gap 10px, right-aligned -->
         <div class="flex items-center justify-end gap-2.5">
-          <!-- Back: $color-surface bg, 1px $color-divider border, $radius-sm (6px), padding 8×14, 13px/500/$color-text-dark -->
-          <button
-            type="button"
-            class="border-divider text-text-dark inline-flex h-[32px] cursor-pointer items-center rounded-[6px] border bg-white px-3.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
+          <!-- Back: secondary outlined — surface bg, divider border, text-dark -->
+          <Button
+            label="Back"
+            severity="secondary"
+            outlined
             :disabled="isSubmitting"
+            class="max-h-8"
             @click="handleBack"
-          >
-            Back
-          </button>
+          />
 
-          <!-- Create project: $color-brand bg, $radius-sm (6px), padding 8×14, 13px/600/$color-surface -->
-          <button
-            type="button"
-            class="bg-brand inline-flex h-[32px] cursor-pointer items-center rounded-[6px] px-3.5 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
-            :disabled="isSubmitting"
+          <!-- Create project: primary — brand bg, white text, built-in :loading spinner -->
+          <Button
+            label="Create project"
+            :loading="isSubmitting"
+            class="max-h-8"
             @click="handleSubmit"
-          >
-            <span
-              v-if="isSubmitting"
-              class="mr-1.5 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"
-            />
-            Create project
-          </button>
+          />
         </div>
 
         <!-- Submit error -->

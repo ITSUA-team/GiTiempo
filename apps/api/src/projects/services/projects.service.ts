@@ -12,9 +12,14 @@ import type {
   CreateProjectInput,
   ManagementProjectSummaryResponse,
   MyProjectSummaryResponse,
+  ProjectAssignedMembersSummary,
   ProjectAssignmentResponse,
+  ProjectDetailResponse,
+  ProjectMember,
+  ProjectProviderSummary,
   ProjectResponse,
   ProjectSource,
+  ProjectTrackedSummary,
   UpdateProjectInput,
 } from '@gitiempo/shared';
 import { projectMemberSchema } from '@gitiempo/shared';
@@ -23,9 +28,11 @@ import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
+import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
+import { projectExternalRefs } from '../schemas/project-external-refs.schema';
 import { projects } from '../schemas/projects.schema';
 
 export type ProjectRow = typeof projects.$inferSelect;
@@ -190,6 +197,7 @@ export class ProjectsService {
     const createValues = {
       workspaceId: user.workspaceId,
       name: input.name,
+      description: input.description ?? null,
       color: input.color ?? null,
       visibility: input.visibility ?? 'private',
     };
@@ -236,14 +244,24 @@ export class ProjectsService {
   async getProject(
     user: AuthUser,
     projectId: string,
-  ): Promise<ProjectResponse> {
+  ): Promise<ProjectDetailResponse> {
     const project = await this.requireVisibleProject(user, projectId);
     const row = await this.findProjectResponseInWorkspace(
       user.workspaceId,
       project.id,
     );
     if (!row) throw new NotFoundException('Project not found');
-    return this.toProjectResponse(row);
+    const [providerSummary, trackedSummary] = await Promise.all([
+      this.getProviderSummary(user.workspaceId, project.id, row.source),
+      this.getTrackedSummary(user.workspaceId, project.id),
+    ]);
+    const members = this.parseProjectMembers(row.members);
+    return {
+      ...this.toProjectResponse(row, members),
+      providerSummary,
+      trackedSummary,
+      assignedMembersSummary: this.toAssignedMembersSummary(members),
+    };
   }
 
   async updateProject(
@@ -272,6 +290,9 @@ export class ProjectsService {
       .update(projects)
       .set({
         ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.description !== undefined
+          ? { description: input.description }
+          : {}),
         ...(input.color !== undefined ? { color: input.color } : {}),
         ...(input.visibility !== undefined
           ? { visibility: input.visibility }
@@ -534,6 +555,7 @@ export class ProjectsService {
       id: projects.id,
       workspaceId: projects.workspaceId,
       name: projects.name,
+      description: projects.description,
       color: projects.color,
       visibility: projects.visibility,
       source: sql<ProjectSource>`CASE WHEN EXISTS (
@@ -571,21 +593,115 @@ export class ProjectsService {
     };
   }
 
-  private toProjectResponse(row: ProjectResponseRow): ProjectResponse {
+  private toProjectResponse(
+    row: ProjectResponseRow,
+    members = this.parseProjectMembers(row.members),
+  ): ProjectResponse {
     return {
       id: row.id,
       workspaceId: row.workspaceId,
       name: row.name,
+      description: row.description,
       color: row.color,
       visibility: row.visibility,
       source: row.source,
       totalHours: toNumber(row.totalHours),
-      members: projectMemberSchema
-        .array()
-        .parse(Array.isArray(row.members) ? row.members : []),
+      members,
       isActive: row.isActive,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private async getProviderSummary(
+    workspaceId: string,
+    projectId: string,
+    source: ProjectSource,
+  ): Promise<ProjectProviderSummary> {
+    if (source === 'manual') {
+      return {
+        source,
+        externalType: null,
+        externalKey: null,
+        externalUrl: null,
+      };
+    }
+
+    const [row] = await this.db
+      .select({
+        externalType: projectExternalRefs.externalType,
+        externalKey: projectExternalRefs.externalKey,
+        externalUrl: projectExternalRefs.externalUrl,
+      })
+      .from(projectExternalRefs)
+      .where(
+        and(
+          eq(projectExternalRefs.workspaceId, workspaceId),
+          eq(projectExternalRefs.projectId, projectId),
+          eq(projectExternalRefs.provider, 'github'),
+        ),
+      )
+      .orderBy(
+        sql`CASE WHEN ${projectExternalRefs.externalType} = 'repository' THEN 0 ELSE 1 END`,
+        projectExternalRefs.externalType,
+        projectExternalRefs.externalKey,
+      )
+      .limit(1);
+
+    return {
+      source,
+      externalType: row?.externalType ?? null,
+      externalKey: row?.externalKey ?? null,
+      externalUrl: row?.externalUrl ?? null,
+    };
+  }
+
+  private async getTrackedSummary(
+    workspaceId: string,
+    projectId: string,
+  ): Promise<ProjectTrackedSummary> {
+    const [row] = await this.db
+      .select({
+        totalSeconds: sql<number>`COALESCE(SUM(${timeEntries.durationSeconds}), 0)`,
+        billableSeconds: sql<number>`COALESCE(SUM(CASE WHEN ${timeEntries.isBillable} THEN ${timeEntries.durationSeconds} ELSE 0 END), 0)`,
+        lastActivityAt: sql<Date | null>`MAX(${timeEntries.startedAt})`,
+      })
+      .from(timeEntries)
+      .innerJoin(tasksTable, eq(tasksTable.id, timeEntries.taskId))
+      .where(
+        and(
+          eq(timeEntries.workspaceId, workspaceId),
+          eq(tasksTable.workspaceId, workspaceId),
+          eq(tasksTable.projectId, projectId),
+          isNotNull(timeEntries.durationSeconds),
+        ),
+      );
+
+    const totalSeconds = Math.trunc(toNumber(row?.totalSeconds));
+    const billableSeconds = Math.trunc(toNumber(row?.billableSeconds));
+    return {
+      totalSeconds,
+      billableSeconds,
+      billableShare: totalSeconds > 0 ? billableSeconds / totalSeconds : null,
+      lastActivityAt: row?.lastActivityAt?.toISOString() ?? null,
+    };
+  }
+
+  private parseProjectMembers(members: unknown): ProjectMember[] {
+    return projectMemberSchema
+      .array()
+      .parse(Array.isArray(members) ? members : []);
+  }
+
+  private toAssignedMembersSummary(
+    members: ProjectMember[],
+  ): ProjectAssignedMembersSummary {
+    const sortedMembers = [...members].sort(compareProjectMembers);
+    const previewMembers = sortedMembers.slice(0, 3);
+    return {
+      count: sortedMembers.length,
+      previewMembers,
+      remainingCount: Math.max(sortedMembers.length - previewMembers.length, 0),
     };
   }
 
@@ -599,6 +715,24 @@ export class ProjectsService {
 function toNumber(value: number | string | null | undefined): number {
   if (value === undefined || value === null) return 0;
   return typeof value === 'number' ? value : Number(value);
+}
+
+function compareProjectMembers(a: ProjectMember, b: ProjectMember): number {
+  return (
+    roleRank(a.role) - roleRank(b.role) ||
+    memberDisplayName(a).localeCompare(memberDisplayName(b)) ||
+    a.userId.localeCompare(b.userId)
+  );
+}
+
+function roleRank(role: ProjectMember['role']): number {
+  if (role === 'pm') return 0;
+  if (role === 'member') return 1;
+  return 2;
+}
+
+function memberDisplayName(member: ProjectMember): string {
+  return member.displayName ?? member.email;
 }
 
 function startOfIsoWeekUtc(now: Date): Date {
