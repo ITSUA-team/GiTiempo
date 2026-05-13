@@ -18270,6 +18270,208 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "err404",
+      "x": 9800,
+      "y": 0,
+      "name": "404 Not Found",
+      "width": 1280,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "clip": true,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "err404Top",
+          "name": "topbar",
+          "width": "fill_container",
+          "height": 64,
+          "fill": "#FFFFFF",
+          "stroke": { "thickness": { "bottom": 1 }, "fill": "#EEEEEE" },
+          "padding": [0, 24],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "err404Brand",
+              "name": "brand",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                { "type": "frame", "id": "err404Logo", "name": "logo", "width": 32, "height": 32, "fill": "#E8E1F5", "cornerRadius": 10 },
+                { "type": "text", "id": "err404BrandText", "fill": "#1A1A1A", "content": "GiTiempo", "fontFamily": "Inter", "fontSize": 16, "fontWeight": "600" }
+              ]
+            },
+            { "type": "text", "id": "err404User", "fill": "#666666", "content": "Authenticated workspace", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "500" }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "err404Main",
+          "name": "main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "err404Sidebar",
+              "name": "sidebar",
+              "width": 240,
+              "height": "fill_container",
+              "fill": "#FFFFFF",
+              "stroke": { "thickness": { "right": 1 }, "fill": "#EEEEEE" },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [16, 0],
+              "children": [
+                { "type": "frame", "id": "err404Nav1", "name": "navItem", "width": "fill_container", "height": 44, "fill": "#E8E1F5", "stroke": { "thickness": { "left": 3 }, "fill": "#5D2B85" } },
+                { "type": "frame", "id": "err404Nav2", "name": "navItem", "width": "fill_container", "height": 44 },
+                { "type": "frame", "id": "err404Nav3", "name": "navItem", "width": "fill_container", "height": 44 }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "err404Content",
+              "name": "content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "#F4F4F5",
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "err404Panel",
+                  "name": "errorPanel",
+                  "width": 520,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": { "thickness": 1, "fill": "#EEEEEE" },
+                  "effect": { "type": "shadow", "shadowType": "outer", "color": "#00000014", "offset": { "x": 0, "y": 1 }, "blur": 3 },
+                  "layout": "vertical",
+                  "alignItems": "center",
+                  "gap": 16,
+                  "padding": 32,
+                  "children": [
+                    { "type": "frame", "id": "err404Icon", "name": "errorIcon", "width": 64, "height": 64, "fill": "#E8E1F5", "cornerRadius": 32, "layout": "vertical", "justifyContent": "center", "alignItems": "center", "children": [{ "type": "text", "id": "err404Glyph", "fill": "#5D2B85", "content": "?", "fontFamily": "Inter", "fontSize": 28, "fontWeight": "600" }] },
+                    { "type": "text", "id": "err404Code", "fill": "#5D2B85", "content": "404", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600" },
+                    { "type": "text", "id": "err404Title", "fill": "#1A1A1A", "content": "Page not found", "fontFamily": "Inter", "fontSize": 28, "fontWeight": "600", "textAlign": "center" },
+                    { "type": "text", "id": "err404Copy", "fill": "#666666", "content": "The page you are looking for may have moved, been deleted, or never existed.", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "normal", "textAlign": "center", "textGrowth": "fixed-width", "width": 360 },
+                    { "type": "frame", "id": "err404Actions", "name": "errorActions", "width": "fill_container", "gap": 10, "justifyContent": "center", "padding": [8, 0, 0, 0], "children": [{ "type": "frame", "id": "err404Primary", "name": "primaryAction", "fill": "#5D2B85", "cornerRadius": 6, "padding": [10, 16], "children": [{ "type": "text", "id": "err404PrimaryText", "fill": "#FFFFFF", "content": "Back to dashboard", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "600" }] }, { "type": "frame", "id": "err404Secondary", "name": "secondaryAction", "fill": "#FFFFFF", "cornerRadius": 6, "stroke": { "thickness": 1, "fill": "#EEEEEE" }, "padding": [10, 16], "children": [{ "type": "text", "id": "err404SecondaryText", "fill": "#1A1A1A", "content": "Go back", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "600" }] }] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "err403",
+      "x": 11200,
+      "y": 0,
+      "name": "403 Forbidden",
+      "width": 1280,
+      "height": 900,
+      "fill": "#FFFFFF",
+      "clip": true,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "err403Top",
+          "name": "topbar",
+          "width": "fill_container",
+          "height": 64,
+          "fill": "#FFFFFF",
+          "stroke": { "thickness": { "bottom": 1 }, "fill": "#EEEEEE" },
+          "padding": [0, 24],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "err403Brand",
+              "name": "brand",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                { "type": "frame", "id": "err403Logo", "name": "logo", "width": 32, "height": 32, "fill": "#E8E1F5", "cornerRadius": 10 },
+                { "type": "text", "id": "err403BrandText", "fill": "#1A1A1A", "content": "GiTiempo", "fontFamily": "Inter", "fontSize": 16, "fontWeight": "600" }
+              ]
+            },
+            { "type": "text", "id": "err403User", "fill": "#666666", "content": "Authenticated workspace", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "500" }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "err403Main",
+          "name": "main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "err403Sidebar",
+              "name": "sidebar",
+              "width": 240,
+              "height": "fill_container",
+              "fill": "#FFFFFF",
+              "stroke": { "thickness": { "right": 1 }, "fill": "#EEEEEE" },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [16, 0],
+              "children": [
+                { "type": "frame", "id": "err403Nav1", "name": "navItem", "width": "fill_container", "height": 44, "fill": "#E8E1F5", "stroke": { "thickness": { "left": 3 }, "fill": "#5D2B85" } },
+                { "type": "frame", "id": "err403Nav2", "name": "navItem", "width": "fill_container", "height": 44 },
+                { "type": "frame", "id": "err403Nav3", "name": "navItem", "width": "fill_container", "height": 44 }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "err403Content",
+              "name": "content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "#F4F4F5",
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "err403Panel",
+                  "name": "errorPanel",
+                  "width": 520,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": { "thickness": 1, "fill": "#EEEEEE" },
+                  "effect": { "type": "shadow", "shadowType": "outer", "color": "#00000014", "offset": { "x": 0, "y": 1 }, "blur": 3 },
+                  "layout": "vertical",
+                  "alignItems": "center",
+                  "gap": 16,
+                  "padding": 32,
+                  "children": [
+                    { "type": "frame", "id": "err403Icon", "name": "errorIcon", "width": 64, "height": 64, "fill": "#E8E1F5", "cornerRadius": 32, "layout": "vertical", "justifyContent": "center", "alignItems": "center", "children": [{ "type": "text", "id": "err403Glyph", "fill": "#5D2B85", "content": "!", "fontFamily": "Inter", "fontSize": 28, "fontWeight": "600" }] },
+                    { "type": "text", "id": "err403Code", "fill": "#5D2B85", "content": "403", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600" },
+                    { "type": "text", "id": "err403Title", "fill": "#1A1A1A", "content": "You do not have access", "fontFamily": "Inter", "fontSize": 28, "fontWeight": "600", "textAlign": "center" },
+                    { "type": "text", "id": "err403Copy", "fill": "#666666", "content": "Your current role cannot open this page. Switch workspace or return to the dashboard.", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "normal", "textAlign": "center", "textGrowth": "fixed-width", "width": 360 },
+                    { "type": "frame", "id": "err403Actions", "name": "errorActions", "width": "fill_container", "gap": 10, "justifyContent": "center", "padding": [8, 0, 0, 0], "children": [{ "type": "frame", "id": "err403Primary", "name": "primaryAction", "fill": "#5D2B85", "cornerRadius": 6, "padding": [10, 16], "children": [{ "type": "text", "id": "err403PrimaryText", "fill": "#FFFFFF", "content": "Back to dashboard", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "600" }] }, { "type": "frame", "id": "err403Secondary", "name": "secondaryAction", "fill": "#FFFFFF", "cornerRadius": 6, "stroke": { "thickness": 1, "fill": "#EEEEEE" }, "padding": [10, 16], "children": [{ "type": "text", "id": "err403SecondaryText", "fill": "#1A1A1A", "content": "Switch workspace", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "600" }] }] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {

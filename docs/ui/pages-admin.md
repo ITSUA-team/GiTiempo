@@ -45,3 +45,12 @@
 
 - The admin SPA should expose a visible entry point back to the user workspace when the user SPA is available.
 - Prefer placing the cross-link in the shared shell identity/top-bar area so it stays consistent with the user SPA shell treatment.
+
+## Error Pages
+
+- 404 Not Found renders inside the authenticated admin shell when the user reaches an unknown `admin-web` route.
+- 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, primary action `Back to dashboard`, and secondary action `Go back`.
+- 403 Forbidden renders inside the authenticated admin shell when the current user is signed in but lacks permission for an admin page, report scope, project, invoice, member, or workspace setting.
+- 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current admin role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace is available.
+- Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the page content area; request errors stay scoped to the feature surface that failed.
+- Do not hide the shell navigation on authenticated 403/404 pages; users should retain normal admin navigation and the cross-app workspace entry point.
