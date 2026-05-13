@@ -37,7 +37,7 @@
 - The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
 - Entries grouped by day.
 - Each day heading row includes its own PrimeVue `<Button>` labeled `+ New time entry` beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form.
-- Entry row includes task, project, time range, duration, edit, delete.
+- Entry row includes task, project, time range, duration, and icon-only edit/delete actions with `Edit` and `Delete` tooltips.
 - Running entry highlighted with `bg-accent-tint`.
 - Clicking `Edit` opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
 - Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
@@ -60,7 +60,7 @@
 - Content is grouped by visible project instead of by day.
 - Each project section header shows the project name on the left and a secondary PrimeVue `<Button>` labeled `+ Add task` on the right.
 - Tasks for that project render beneath the project header inside the same section card.
-- Task rows include task title, status, updated metadata, edit, and delete actions.
+- Task rows include task title, status, updated metadata, and icon-only edit/delete actions with `Edit` and `Delete` tooltips.
 - Clicking `Edit` opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
 - Page-level `+ New task` opens the dialog in create mode with a required project `<Select>`.
@@ -94,3 +94,12 @@
 
 - The user SPA should expose a visible entry point to the admin workspace when the admin SPA is available.
 - Prefer placing the cross-link in the shared shell identity/top-bar area so it is available from authenticated user pages without competing with page-level actions.
+
+## Error Pages
+
+- 404 Not Found renders inside the authenticated app shell when the user reaches an unknown `user-web` route.
+- 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, primary action `Back to dashboard`, and secondary action `Go back`.
+- 403 Forbidden renders inside the authenticated app shell when the current user is signed in but lacks access to the requested page or workspace resource.
+- 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current workspace role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace is available.
+- Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the page content area; request errors stay scoped to the feature surface that failed.
+- Do not hide the shell navigation on authenticated 403/404 pages; users should retain normal workspace navigation and the top-bar timer surface.
