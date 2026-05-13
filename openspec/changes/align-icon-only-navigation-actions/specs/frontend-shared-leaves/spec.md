@@ -17,8 +17,15 @@ The frontend codebase SHALL extract authenticated shell navigation into `@gitiem
 - **AND** each item uses the former text label as tooltip copy and accessible label
 - **AND** default, hover, and active visual states follow the documented navigation token styling
 
+#### Scenario: Shared desktop and tablet sidebar width fits icon-only content
+
+- **WHEN** the shared authenticated navigation is rendered in tablet or desktop sidebar layouts
+- **THEN** the sidebar width fits the icon-only navigation content instead of using a fixed full-width desktop rail
+- **AND** the tappable item hit area, hover treatment, active-state indicator, and accessible labeling remain unchanged
+
 #### Scenario: Shared mobile navigation remains accessible
 
 - **WHEN** the shared authenticated navigation is rendered in the mobile navigation pattern
 - **THEN** each mobile navigation item exposes the same accessible label as its desktop counterpart
 - **AND** removing visible text does not remove the tappable navigation target or active-route indication
+- **AND** the mobile bottom navigation layout remains unchanged

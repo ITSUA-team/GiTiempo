@@ -133,7 +133,7 @@ Use `<DataTable>` and `<Column>`.
 - Right align numeric columns.
 - Table row actions are icon-only in both SPAs. Do not render visible action text such as `Edit`, `Delete`, or `View` inside action cells.
 - Use the former action text as both the PrimeVue tooltip copy and the accessible label, e.g. an edit icon button with tooltip `Edit`.
-- Use Brand Purple for non-destructive action icons and Destructive red for delete/remove icons.
+- Use Brand Purple for primary non-destructive action icons, Text Muted for secondary non-destructive actions such as `Unarchive`, and Destructive red for delete/remove/archive icons.
 - Keep row action columns compact, right-aligned, and visually secondary to the row content.
 
 ```vue

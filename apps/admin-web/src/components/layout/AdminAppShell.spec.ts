@@ -36,6 +36,13 @@ describe("AdminAppShell", () => {
 
     const wrapper = mount(AdminAppShell, {
       global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute('data-tooltip', String(binding.value));
+            },
+          },
+        },
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
       },
     });
@@ -47,6 +54,7 @@ describe("AdminAppShell", () => {
     expect(workspaceLink.text()).toBe("User workspace");
     expect(wrapper.find('[aria-label="Open workspace settings"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(false);
+    expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
     expect(settingsLinks).toHaveLength(2);
   });
 });
