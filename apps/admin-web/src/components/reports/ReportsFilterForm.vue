@@ -31,7 +31,7 @@ const groupByOptions: { label: string; value: ReportGroupBy }[] = [
 
 const reportsFilterSchema = z
   .object({
-    projectId: z.string().min(1, 'Project is required.').nullable().optional(),
+    projectId: z.string().nullable().optional(),
     memberId: z.string().nullable().optional(),
     dateRange: z.array(z.date().nullable()).nullable().optional(),
     groupBy: z.enum(['project', 'member']),
@@ -47,7 +47,7 @@ const reportsFilterSchema = z
 const resolver = zodResolver(reportsFilterSchema);
 
 const initialValues = {
-  projectId: '',
+  projectId: null,
   memberId: null,
   dateRange: null,
   groupBy: 'project',
@@ -107,7 +107,8 @@ const selectPt = {
         :options="projectOptions"
         option-label="label"
         option-value="value"
-        placeholder="Select project"
+        placeholder="All projects"
+        show-clear
         :disabled="disabled"
         :pt="selectPt"
       />

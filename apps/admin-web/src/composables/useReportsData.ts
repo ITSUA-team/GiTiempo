@@ -467,7 +467,9 @@ function getVisibleProjectsForScope(
   projectId: string | null,
 ): ProjectResponse[] {
   if (!projectId) {
-    return projects;
+    return projects.filter(
+      (project) => project.isActive && project.totalHours > 0,
+    );
   }
 
   return projects.filter((project) => project.id === projectId);
@@ -515,7 +517,11 @@ export function useReportsData({
   const summary = computed(() => deriveReportSummary(memberScopedEntries.value));
   const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
   const isEmpty = computed(
-    () => initialLoaded.value && !loading.value && rows.value.length === 0,
+    () =>
+      initialLoaded.value &&
+      !loading.value &&
+      loadError.value === null &&
+      rows.value.length === 0,
   );
 
   async function fetchEntriesForScope(
@@ -583,10 +589,11 @@ export function useReportsData({
         projects.value = nextProjects;
       }
 
-      if (!selectedProjectId.value) {
-        selectedProjectId.value = nextProjects[0]?.id ?? null;
-      } else if (!nextProjects.some((project) => project.id === selectedProjectId.value)) {
-        selectedProjectId.value = nextProjects[0]?.id ?? null;
+      if (
+        selectedProjectId.value !== null &&
+        !nextProjects.some((project) => project.id === selectedProjectId.value)
+      ) {
+        selectedProjectId.value = null;
       }
 
       const nextEntries = await fetchEntriesForScope(token, nextProjects);

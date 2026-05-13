@@ -34,6 +34,7 @@ function createProject(
   id: string,
   name: string,
   members: ProjectResponse['members'] = [],
+  totalHours = 1,
 ): ProjectResponse {
   return {
     color: null,
@@ -44,7 +45,7 @@ function createProject(
     members,
     name,
     source: 'manual',
-    totalHours: 0,
+    totalHours,
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'public',
     workspaceId,
@@ -220,7 +221,7 @@ describe('useReportsData', () => {
     vi.useRealTimers();
   });
 
-  it('loads visible projects, defaults to one project, and debounces project/date refreshes', async () => {
+  it('loads active projects with tracked hours by default and debounces project/date refreshes', async () => {
     const accessToken = shallowRef('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
     const listProjectEntries = vi.fn().mockResolvedValue(emptyResponse());
@@ -242,7 +243,7 @@ describe('useReportsData', () => {
     await flushPromises();
 
     expect(listProjects).toHaveBeenCalledTimes(1);
-    expect(listProjectEntries).toHaveBeenCalledTimes(1);
+    expect(listProjectEntries).toHaveBeenCalledTimes(2);
     expect(listProjectEntries).toHaveBeenCalledWith(
       'access-token',
       projectBillingId,
@@ -253,7 +254,17 @@ describe('useReportsData', () => {
         page: 1,
       }),
     );
-    expect(reports.selectedProjectId.value).toBe(projectBillingId);
+    expect(listProjectEntries).toHaveBeenCalledWith(
+      'access-token',
+      projectOrionId,
+      expect.objectContaining({
+        dateFrom: new Date(2026, 4, 1).toISOString(),
+        dateTo: new Date(2026, 4, 14).toISOString(),
+        limit: 100,
+        page: 1,
+      }),
+    );
+    expect(reports.selectedProjectId.value).toBeNull();
     expect(reports.loadError.value).toBeNull();
 
     listProjectEntries.mockClear();
