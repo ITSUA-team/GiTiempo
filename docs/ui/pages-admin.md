@@ -10,13 +10,15 @@
 
 ## Reports Page
 
-- Filter bar: project, member, date range, group-by.
-- Filters apply in real time with 300ms debounce.
-- Summary totals row above the results table.
-- Results table is sortable, searchable, column-filterable, and supports CSV export.
+- Report setup bar: project, member, date range, group-by.
+- Report setup controls define the frontend CSV generation scope and do not change the loaded table rows or summary cards by themselves.
+- Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
+- Summary totals row above the results table reflects the loaded report data.
+- Results table is searchable, column-filterable, uses stable default ordering, and supports CSV export.
 - Results table header includes global search with placeholder `Search report rows`.
-- Results table column filters use the shared PrimeVue DataTable filter-row pattern for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
-- PM users cannot widen filters beyond their assigned scope.
+- Results table column filters use the existing management-table filter-row treatment for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
+- CSV export generates rows from the current report setup controls through existing scoped project time-entry endpoints; table-only search and column filters do not change export scope.
+- PM users cannot widen filters beyond active projects in their assigned scope.
 
 ## Invoices Page
 
