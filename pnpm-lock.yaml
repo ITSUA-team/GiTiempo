@@ -77,6 +77,9 @@ importers:
       '@primeuix/themes':
         specifier: ^2.0.3
         version: 2.0.3
+      '@primevue/forms':
+        specifier: ^4.5.5
+        version: 4.5.5(vue@3.5.32(typescript@6.0.3))
       '@vueuse/core':
         specifier: ^14.2.1
         version: 14.2.1(vue@3.5.32(typescript@6.0.3))
@@ -5515,10 +5518,12 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -7373,6 +7378,14 @@ snapshots:
       '@primeuix/forms': 0.1.0
       '@primeuix/utils': 0.6.4
       '@primevue/core': 4.5.5(vue@3.5.32(typescript@5.9.3))
+    transitivePeerDependencies:
+      - vue
+
+  '@primevue/forms@4.5.5(vue@3.5.32(typescript@6.0.3))':
+    dependencies:
+      '@primeuix/forms': 0.1.0
+      '@primeuix/utils': 0.6.4
+      '@primevue/core': 4.5.5(vue@3.5.32(typescript@6.0.3))
     transitivePeerDependencies:
       - vue
 

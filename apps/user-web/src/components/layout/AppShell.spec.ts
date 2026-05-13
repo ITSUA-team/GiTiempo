@@ -22,7 +22,7 @@ describe("AppShell", () => {
     vi.unstubAllEnvs();
   });
 
-  it("preserves the visible admin workspace link and shared navigation", async () => {
+  it("preserves the visible admin workspace link, top-bar timer, and shared navigation", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore(pinia);
@@ -39,15 +39,23 @@ describe("AppShell", () => {
     const wrapper = mount(AppShell, {
       global: {
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          TopBarTimer: {
+            template: '<div data-testid="top-bar-timer">Top bar timer</div>',
+          },
+        },
       },
     });
     const workspaceLink = wrapper.get(
       'a[href="https://admin.example.test/login"]',
     );
     const profileLinks = wrapper.findAll('a[href="/profile"]');
+    const timerLinks = wrapper.findAll('a[href="/timer"]');
 
     expect(workspaceLink.text()).toBe("Admin workspace");
     expect(wrapper.find('[aria-label="Open profile settings"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);
     expect(profileLinks).toHaveLength(2);
+    expect(timerLinks).toHaveLength(0);
   });
 });

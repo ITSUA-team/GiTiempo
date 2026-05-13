@@ -25,6 +25,12 @@ export const updateWorkspaceMemberRoleSchema = z
   })
   .strict();
 
+export const WorkspaceRoles = {
+  Admin: "admin",
+  PM: "pm",
+  Member: "member",
+} as const;
+
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type WorkspaceMemberResponse = z.infer<
   typeof workspaceMemberResponseSchema

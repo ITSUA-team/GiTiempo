@@ -12,13 +12,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^12.4.0",
     "@gitiempo/shared": "workspace:*",
     "@gitiempo/web-config": "workspace:*",
     "@gitiempo/web-shared": "workspace:*",
     "@heroicons/vue": "^2.2.0",
     "@primeuix/themes": "^2.0.3",
+    "@primevue/forms": "^4.5.5",
     "@vueuse/core": "^14.2.1",
+    "firebase": "^12.4.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",
@@ -27,15 +28,15 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
-    "@vue/test-utils": "^2.4.6",
     "@types/node": "^25.6.0",
     "@vitejs/plugin-vue": "^6.0.6",
+    "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.9.1",
+    "jsdom": "^27.2.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "vitest": "^4.1.4",
-    "jsdom": "^27.2.0",
     "vue-tsc": "^3.2.6"
   }
 }
