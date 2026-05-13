@@ -135,6 +135,7 @@ export class TimeEntriesController {
   @ApiOkResponse({ type: TimeEntryResponseDto })
   @ApiConflictResponse({ description: 'Running entries must be stopped first' })
   @ApiNotFoundResponse({ description: 'Time entry not found' })
+  @ApiUnprocessableEntityResponse({ description: 'Task or project inactive' })
   @ZodSerializerDto(TimeEntryResponseDto)
   updateOwnEntry(
     @CurrentUser() user: AuthUser,

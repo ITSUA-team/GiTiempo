@@ -161,10 +161,15 @@ export class TimeEntriesService {
     const endedAt =
       input.endedAt !== undefined ? new Date(input.endedAt) : row.endedAt;
     const durationSeconds = calculateDurationSeconds(startedAt, endedAt);
+    const nextTaskId =
+      input.taskId !== undefined && input.taskId !== row.taskId
+        ? (await this.tasks.requireTrackableTask(user, input.taskId)).task.id
+        : row.taskId;
 
     const [updated] = await this.db
       .update(timeEntries)
       .set({
+        ...(nextTaskId !== row.taskId ? { taskId: nextTaskId } : {}),
         ...(input.startedAt !== undefined ? { startedAt } : {}),
         ...(input.endedAt !== undefined ? { endedAt } : {}),
         ...(input.description !== undefined
