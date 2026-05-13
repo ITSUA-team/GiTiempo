@@ -62,6 +62,13 @@ export interface ReportTableFilters {
   billable: ReportBillableFilter;
 }
 
+export interface ReportGenerationFilters {
+  projectId: string | null;
+  memberId: string | null;
+  dateRange: ReportDateRange;
+  groupBy: ReportGroupBy;
+}
+
 interface UseReportsDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   projectsClient?: Pick<AdminProjectsClient, 'listProjects'>;
@@ -131,10 +138,6 @@ function formatUserName(user: {
   email: string;
 }): string {
   return user.displayName?.trim() || user.email;
-}
-
-function formatCountLabel(count: number, singular: string, plural: string): string {
-  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function sortByLabel<T extends { label: string }>(items: T[]): T[] {
@@ -231,7 +234,7 @@ export function deriveReportRows(
   const groups = new Map<string, GroupAccumulator>();
 
   for (const entry of entries) {
-    const groupId = groupBy === 'project' ? entry.project.id : entry.user.id;
+    const groupId = `${entry.project.id}:${entry.user.id}`;
     const group = getOrCreateAccumulator(groups, groupId);
     const durationSeconds = getEntryDuration(entry);
 
@@ -252,15 +255,9 @@ export function deriveReportRows(
       return {
         id: group.id,
         projectIds: [...group.projectIds],
-        projectName:
-          groupBy === 'project'
-            ? projectNames[0] ?? 'Unknown project'
-            : formatCountLabel(projectNames.length, 'project', 'projects'),
+        projectName: projectNames[0] ?? 'Unknown project',
         memberIds: [...group.memberIds],
-        memberName:
-          groupBy === 'member'
-            ? memberNames[0] ?? 'Unknown member'
-            : formatCountLabel(memberNames.length, 'member', 'members'),
+        memberName: memberNames[0] ?? 'Unknown member',
         totalSeconds: group.totalSeconds,
         billableSeconds: group.billableSeconds,
         billableShare:
@@ -269,8 +266,15 @@ export function deriveReportRows(
       } satisfies ReportRow;
     })
     .sort((a, b) => {
-      const primary = a.projectName.localeCompare(b.projectName);
-      return primary === 0 ? a.memberName.localeCompare(b.memberName) : primary;
+      const primary =
+        groupBy === 'member'
+          ? a.memberName.localeCompare(b.memberName)
+          : a.projectName.localeCompare(b.projectName);
+      const secondary =
+        groupBy === 'member'
+          ? a.projectName.localeCompare(b.projectName)
+          : a.memberName.localeCompare(b.memberName);
+      return primary === 0 ? secondary : primary;
     });
 }
 
@@ -309,6 +313,21 @@ export function deriveReportSummary(entries: TimeEntryResponse[]): ReportSummary
   };
 }
 
+export function getReportRowUnbillableSeconds(row: ReportRow): number {
+  return Math.max(0, row.totalSeconds - row.billableSeconds);
+}
+
+export function getReportRowHoursSeconds(
+  row: ReportRow,
+  billableFilter: ReportBillableFilter,
+): number {
+  if (billableFilter === 'withoutBillable') {
+    return getReportRowUnbillableSeconds(row);
+  }
+
+  return row.totalSeconds;
+}
+
 export function filterReportRows(
   rows: ReportRow[],
   filters: ReportTableFilters,
@@ -324,15 +343,17 @@ export function filterReportRows(
       return false;
     }
 
-    if (filters.hours === 'gt0' && row.totalSeconds <= 0) {
+    const hoursSeconds = getReportRowHoursSeconds(row, filters.billable);
+
+    if (filters.hours === 'gt0' && hoursSeconds <= 0) {
       return false;
     }
 
-    if (filters.hours === 'gte8' && row.totalSeconds < 8 * 60 * 60) {
+    if (filters.hours === 'gte8' && hoursSeconds < 8 * 60 * 60) {
       return false;
     }
 
-    if (filters.hours === 'gte40' && row.totalSeconds < 40 * 60 * 60) {
+    if (filters.hours === 'gte40' && hoursSeconds < 40 * 60 * 60) {
       return false;
     }
 
@@ -340,7 +361,10 @@ export function filterReportRows(
       return false;
     }
 
-    if (filters.billable === 'withoutBillable' && row.billableSeconds > 0) {
+    if (
+      filters.billable === 'withoutBillable' &&
+      getReportRowUnbillableSeconds(row) <= 0
+    ) {
       return false;
     }
 
@@ -351,7 +375,7 @@ export function filterReportRows(
     const haystack = [
       row.projectName,
       row.memberName,
-      formatReportDuration(row.totalSeconds),
+      formatReportDuration(hoursSeconds),
       formatReportDuration(row.billableSeconds),
       formatReportPercent(row.billableShare),
     ]
@@ -527,12 +551,14 @@ export function useReportsData({
   async function fetchEntriesForScope(
     token: string,
     visibleProjects: ProjectListResponse,
+    projectId: string | null,
+    reportDateRange: ReportDateRange,
   ): Promise<TimeEntryResponse[]> {
     const targetProjects = getVisibleProjectsForScope(
       visibleProjects,
-      selectedProjectId.value,
+      projectId,
     );
-    const dateQuery = toReportDateQuery(dateRange.value);
+    const dateQuery = toReportDateQuery(reportDateRange);
     const nextEntries: TimeEntryResponse[] = [];
 
     for (const project of targetProjects) {
@@ -596,7 +622,12 @@ export function useReportsData({
         selectedProjectId.value = null;
       }
 
-      const nextEntries = await fetchEntriesForScope(token, nextProjects);
+      const nextEntries = await fetchEntriesForScope(
+        token,
+        nextProjects,
+        selectedProjectId.value,
+        dateRange.value,
+      );
 
       if (currentRequestId !== requestId) {
         return;
@@ -652,6 +683,32 @@ export function useReportsData({
     });
   }
 
+  async function buildRowsForFilters(
+    filters: ReportGenerationFilters,
+  ): Promise<ReportRow[]> {
+    const token = accessToken.value;
+
+    if (!token) {
+      return [];
+    }
+
+    let sourceProjects = projects.value;
+    if (sourceProjects.length === 0) {
+      sourceProjects = sortProjects(await projectsClient.listProjects(token));
+      projects.value = sourceProjects;
+    }
+
+    const reportEntries = await fetchEntriesForScope(
+      token,
+      sourceProjects,
+      filters.projectId,
+      filters.dateRange,
+    );
+    const memberEntries = filterEntriesByMember(reportEntries, filters.memberId);
+
+    return deriveReportRows(memberEntries, filters.groupBy);
+  }
+
   watch(
     [
       selectedProjectId,
@@ -684,6 +741,7 @@ export function useReportsData({
     memberOptions,
     projectOptions,
     projects,
+    buildRowsForFilters,
     refresh,
     rows,
     selectedMemberId,

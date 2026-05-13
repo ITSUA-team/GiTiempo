@@ -13,6 +13,8 @@ import {
   filterReportRows,
   formatReportDuration,
   formatReportPercent,
+  type ReportDateRange,
+  type ReportGroupBy,
   useReportsData,
 } from '@/composables/useReportsData';
 import { useAuthStore } from '@/stores/auth';
@@ -31,6 +33,11 @@ const reports = useReportsData({
 });
 
 const tableFilters = ref(createDefaultReportTableFilters());
+const reportProjectId = ref<string | null>(reports.selectedProjectId.value);
+const reportMemberId = ref<string | null>(reports.selectedMemberId.value);
+const reportDateRange = ref<ReportDateRange>(reports.dateRange.value);
+const reportGroupBy = ref<ReportGroupBy>(reports.groupBy.value);
+const exporting = ref(false);
 const tableRows = computed(() =>
   filterReportRows(reports.rows.value, tableFilters.value),
 );
@@ -45,13 +52,36 @@ const avgPerMemberLabel = computed(() =>
   formatReportDuration(reports.summary.value.avgPerMemberSeconds),
 );
 
-function handleExport(): void {
-  if (tableRows.value.length === 0) {
+async function handleExport(): Promise<void> {
+  if (exporting.value) {
     return;
   }
 
-  const filename = downloadReportsCsv(tableRows.value);
-  successToast(`Exported ${filename}.`);
+  exporting.value = true;
+
+  try {
+    const exportRows = await reports.buildRowsForFilters({
+      projectId: reportProjectId.value,
+      memberId: reportMemberId.value,
+      dateRange: reportDateRange.value,
+      groupBy: reportGroupBy.value,
+    });
+
+    if (exportRows.length === 0) {
+      return;
+    }
+
+    const filename = downloadReportsCsv(exportRows);
+    successToast(`Exported ${filename}.`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to export reports';
+    errorToast(message, {
+      error,
+      logContext: { action: 'export-reports', feature: 'reports' },
+    });
+  } finally {
+    exporting.value = false;
+  }
 }
 </script>
 
@@ -84,16 +114,18 @@ function handleExport(): void {
         <template #actions>
           <Button
             label="Export CSV"
-            :disabled="reports.loading.value || tableRows.length === 0"
+            data-testid="export-reports-csv"
+            :disabled="reports.loading.value || exporting"
+            :loading="exporting"
             @click="handleExport"
           />
         </template>
         <template #stats>
           <ReportsFilterForm
-            v-model:project-id="reports.selectedProjectId.value"
-            v-model:member-id="reports.selectedMemberId.value"
-            v-model:date-range="reports.dateRange.value"
-            v-model:group-by="reports.groupBy.value"
+            v-model:project-id="reportProjectId"
+            v-model:member-id="reportMemberId"
+            v-model:date-range="reportDateRange"
+            v-model:group-by="reportGroupBy"
             :project-options="reports.projectOptions.value"
             :member-options="reports.memberOptions.value"
             :disabled="reports.loading.value"

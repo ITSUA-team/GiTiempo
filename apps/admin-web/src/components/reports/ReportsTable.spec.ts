@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
+import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
@@ -56,14 +57,82 @@ describe('ReportsTable', () => {
     });
 
     expect(wrapper.text()).toContain('Results');
+    expect(wrapper.text()).toContain('Project');
+    expect(wrapper.text()).toContain('Member');
+    expect(wrapper.text()).toContain('Hours');
+    expect(wrapper.text()).toContain('Billable');
     expect(wrapper.text()).toContain('Project Orion');
     expect(wrapper.text()).toContain('Alex Admin');
+    expect(wrapper.text()).toContain('All projects');
+    expect(wrapper.text()).toContain('All members');
+    expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
+    const columnFilters = wrapper.findAllComponents(Select);
+    expect(columnFilters).toHaveLength(4);
+    expect(columnFilters.every((filter) => filter.props('disabled') !== true)).toBe(
+      true,
+    );
 
     const search = wrapper.get('input[aria-label="Search report rows"]');
     await search.setValue('orion');
 
     expect(filters.global).toBe('orion');
+  });
+
+  it('shows selected filter labels in the table filter row', () => {
+    const filters = createDefaultReportTableFilters();
+    filters.projectId = 'project-1';
+    filters.memberId = 'member-1';
+    filters.hours = 'gt0';
+    filters.billable = 'withBillable';
+
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters,
+        loading: false,
+        memberOptions: [{ label: 'Selected Member', value: 'member-1' }],
+        projectOptions: [{ label: 'Selected Project', value: 'project-1' }],
+        rows: [],
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+      },
+    });
+
+    expect(wrapper.text()).toContain('Selected Project');
+    expect(wrapper.text()).toContain('Selected Member');
+    expect(wrapper.text()).toContain('Tracked');
+    expect(wrapper.text()).toContain('Billable');
+    expect(wrapper.text()).not.toContain('All projects');
+    expect(wrapper.text()).not.toContain('All members');
+  });
+
+  it('shows unbillable hours when the non-billable table filter is selected', () => {
+    const filters = createDefaultReportTableFilters();
+    filters.billable = 'withoutBillable';
+
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters,
+        loading: false,
+        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
+        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        rows: [
+          {
+            ...rows[0]!,
+            billableSeconds: 1800,
+            totalSeconds: 7200,
+          },
+        ],
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+      },
+    });
+
+    expect(wrapper.text()).toContain('1h 30m');
+    expect(wrapper.text()).toContain('30m');
+    expect(wrapper.text()).not.toContain('2h 00m');
   });
 });

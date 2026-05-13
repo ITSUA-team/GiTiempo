@@ -16,6 +16,7 @@ import type * as ReportsDataModule from '@/composables/useReportsData';
 import { useAuthStore } from '@/stores/auth';
 
 const reportMocks = vi.hoisted(() => ({
+  buildRowsForFilters: vi.fn(),
   downloadReportsCsv: vi.fn(() => 'gitiempo-reports-2026-05-13.csv'),
   errorToast: vi.fn(),
   refresh: vi.fn(),
@@ -44,8 +45,23 @@ import ReportsView from './ReportsView.vue';
 
 const ReportsFilterFormStub = {
   name: 'ReportsFilterForm',
-  props: ['projectOptions', 'memberOptions', 'disabled'],
-  template: '<div data-testid="reports-filter-form">filters</div>',
+  props: [
+    'projectId',
+    'memberId',
+    'dateRange',
+    'groupBy',
+    'projectOptions',
+    'memberOptions',
+    'disabled',
+  ],
+  emits: [
+    'update:projectId',
+    'update:memberId',
+    'update:dateRange',
+    'update:groupBy',
+  ],
+  template:
+    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button></div>',
 };
 
 const ReportsTableStub = {
@@ -97,6 +113,7 @@ function createReportState({
     memberOptions: computed(() => [{ label: 'Alex Admin', value: 'member-1' }]),
     projectOptions: computed(() => [{ label: 'Project Orion', value: 'project-1' }]),
     projects: shallowRef([]),
+    buildRowsForFilters: reportMocks.buildRowsForFilters,
     refresh: reportMocks.refresh,
     rows: reportRows,
     selectedMemberId: shallowRef<string | null>(null),
@@ -159,6 +176,8 @@ function mountReportsView() {
 
 describe('ReportsView', () => {
   beforeEach(() => {
+    reportMocks.buildRowsForFilters.mockReset();
+    reportMocks.buildRowsForFilters.mockResolvedValue([reportRow]);
     reportMocks.downloadReportsCsv.mockClear();
     reportMocks.errorToast.mockClear();
     reportMocks.refresh.mockClear();
@@ -198,11 +217,37 @@ describe('ReportsView', () => {
     expect(wrapper.text()).toContain('Tracked Hours');
     expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
 
-    await wrapper.get('button').trigger('click');
+    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
+    await flushPromises();
 
+    expect(reportMocks.buildRowsForFilters).toHaveBeenCalledWith({
+      dateRange: null,
+      groupBy: 'project',
+      memberId: null,
+      projectId: null,
+    });
     expect(reportMocks.downloadReportsCsv).toHaveBeenCalledWith([reportRow]);
     expect(reportMocks.successToast).toHaveBeenCalledWith(
       'Exported gitiempo-reports-2026-05-13.csv.',
+    );
+  });
+
+  it('keeps header report setup changes separate from table data', async () => {
+    const wrapper = mountReportsView();
+    const state = reportMocks.state as ReturnType<typeof createReportState>;
+    await flushPromises();
+
+    await wrapper.get('[data-testid="change-report-project"]').trigger('click');
+
+    expect(state.selectedProjectId.value).toBeNull();
+    expect(reportMocks.refresh).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+
+    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.buildRowsForFilters).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: 'project-2' }),
     );
   });
 });

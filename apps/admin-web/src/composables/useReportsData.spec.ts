@@ -19,6 +19,7 @@ import {
   filterReportRows,
   formatReportDuration,
   formatReportPercent,
+  getReportRowHoursSeconds,
   useReportsData,
 } from './useReportsData';
 
@@ -165,23 +166,30 @@ describe('reports data helpers', () => {
     ]);
   });
 
-  it('derives grouped rows and summary totals from time-entry responses', () => {
+  it('derives project-member rows and summary totals from time-entry responses', () => {
     const rows = deriveReportRows(entries, 'project');
     const summary = deriveReportSummary(entries);
 
+    expect(rows).toHaveLength(3);
     expect(rows).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           billableSeconds: 1800,
-          memberName: '1 member',
+          memberName: 'Nina PM',
           projectName: 'Billing, API',
           totalSeconds: 1800,
         }),
         expect.objectContaining({
           billableSeconds: 7200,
-          memberName: '2 members',
+          memberName: 'Alex Admin',
           projectName: 'Project Orion',
-          totalSeconds: 10800,
+          totalSeconds: 7200,
+        }),
+        expect.objectContaining({
+          billableSeconds: 0,
+          memberName: 'Nina PM',
+          projectName: 'Project Orion',
+          totalSeconds: 3600,
         }),
       ]),
     );
@@ -206,8 +214,44 @@ describe('reports data helpers', () => {
     );
 
     expect(visibleRows).toHaveLength(1);
-    expect(csv).toContain('"Billing, API",1 member,30m,30m,100%,1');
+    expect(csv).toContain('"Billing, API",Nina PM,30m,30m,100%,1');
     expect(download.filename).toBe('gitiempo-reports-2026-05-13.csv');
+  });
+
+  it('uses unbillable hours when filtering for non-billable report rows', () => {
+    const [mixedRow] = deriveReportRows(
+      [
+        createEntry({
+          billable: true,
+          durationSeconds: 3600,
+          entryId: '55555555-5555-4555-8555-555555555554',
+          projectId: projectOrionId,
+          projectName: 'Project Orion',
+          taskId: taskOrionId,
+          userId: alexId,
+          userName: 'Alex Admin',
+        }),
+        createEntry({
+          billable: false,
+          durationSeconds: 1800,
+          entryId: '55555555-5555-4555-8555-555555555555',
+          projectId: projectOrionId,
+          projectName: 'Project Orion',
+          taskId: taskOrionId,
+          userId: alexId,
+          userName: 'Alex Admin',
+        }),
+      ],
+      'project',
+    );
+    const filters = createDefaultReportTableFilters();
+
+    filters.billable = 'withoutBillable';
+
+    const visibleRows = filterReportRows(mixedRow ? [mixedRow] : [], filters);
+
+    expect(visibleRows).toHaveLength(1);
+    expect(getReportRowHoursSeconds(visibleRows[0]!, filters.billable)).toBe(1800);
   });
 });
 
@@ -293,6 +337,63 @@ describe('useReportsData', () => {
         page: 1,
       }),
     );
+  });
+
+  it('builds export rows from report filters without mutating table selection', async () => {
+    const accessToken = shallowRef('access-token');
+    const listProjects = vi.fn().mockResolvedValue(projects);
+    const listProjectEntries = vi.fn(
+      async (
+        _accessToken: string,
+        projectId: string,
+      ): Promise<TimeEntryListResponse> => {
+        const items = entries.filter((entry) => entry.projectId === projectId);
+
+        return {
+          items,
+          meta: { limit: 100, page: 1, total: items.length, totalPages: 1 },
+        };
+      },
+    );
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mount(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            accessToken,
+            projectsClient: { listProjects },
+            reportsClient: { listProjectEntries },
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+    listProjectEntries.mockClear();
+
+    const exportRows = await reports.buildRowsForFilters({
+      dateRange: null,
+      groupBy: 'project',
+      memberId: ninaId,
+      projectId: projectBillingId,
+    });
+
+    expect(listProjectEntries).toHaveBeenCalledTimes(1);
+    expect(listProjectEntries).toHaveBeenCalledWith(
+      'access-token',
+      projectBillingId,
+      expect.objectContaining({ limit: 100, page: 1 }),
+    );
+    expect(exportRows).toEqual([
+      expect.objectContaining({
+        memberName: 'Nina PM',
+        projectName: 'Billing, API',
+        totalSeconds: 1800,
+      }),
+    ]);
+    expect(reports.selectedProjectId.value).toBeNull();
   });
 
   it('keeps request errors distinct from empty report results', async () => {

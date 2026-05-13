@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { ManagementTableEmptyState } from '@gitiempo/web-shared';
+import {
+  ManagementTableEmptyState,
+  ManagementTableShell,
+  managementTableColumnPt,
+  type ManagementTableColumn,
+} from '@gitiempo/web-shared';
 import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
@@ -9,6 +13,7 @@ import Select from 'primevue/select';
 
 import {
   formatReportDuration,
+  getReportRowHoursSeconds,
   type ReportBillableFilter,
   type ReportFilterOption,
   type ReportHoursFilter,
@@ -25,6 +30,13 @@ defineProps<{
 
 const filters = defineModel<ReportTableFilters>('filters', { required: true });
 
+const columns: ManagementTableColumn[] = [
+  { key: 'project', label: 'Project', width: 'fill' },
+  { key: 'member', label: 'Member', width: 180 },
+  { key: 'hours', label: 'Hours', width: 140, align: 'end' },
+  { key: 'billable', label: 'Billable', width: 140, align: 'end' },
+];
+
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
   { label: 'Tracked', value: 'gt0' },
@@ -38,22 +50,6 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
   { label: 'Non-billable', value: 'withoutBillable' },
 ];
 
-const tablePt = {
-  root: { class: 'border-none bg-transparent' },
-  tableContainer: { class: 'overflow-x-auto rounded-[6px] border border-divider' },
-  table: { class: 'w-full min-w-[760px] border-collapse' },
-  headerRow: { class: 'bg-app-bg' },
-  headerCell: {
-    class:
-      'border-0 bg-app-bg px-3 py-0 text-[13px] font-semibold text-text-dark',
-  },
-  bodyRow: { class: 'h-12 border-t border-divider hover:bg-app-bg' },
-  bodyCell: { class: 'border-0 px-3 py-0 align-middle' },
-  columnFilterRow: { class: 'border-t border-divider' },
-  columnFilterCell: { class: 'border-0 bg-surface px-3 py-2' },
-  emptyMessageCell: { class: 'border-0 border-t border-divider p-0' },
-} as const;
-
 const filterSelectPt = {
   root: { class: 'h-[34px] w-full rounded-[6px] text-[12px]' },
   label: { class: 'flex items-center py-0 text-[12px] font-normal' },
@@ -61,8 +57,8 @@ const filterSelectPt = {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h2 class="text-text-dark text-lg font-semibold">
         Results
       </h2>
@@ -77,98 +73,96 @@ const filterSelectPt = {
       </IconField>
     </div>
 
-    <DataTable
+    <ManagementTableShell
+      :columns="columns"
       :value="rows"
       :loading="loading"
       data-key="id"
-      filter-display="row"
-      removable-sort
-      :pt="tablePt"
     >
-      <Column
-        field="projectName"
-        header="Project"
-        sortable
-      >
-        <template #body="{ data }">
-          <span class="text-text-dark text-[14px] font-medium">{{ data.projectName }}</span>
-        </template>
-        <template #filter>
+      <template #filters>
+        <div class="min-w-0 flex-1 px-3">
           <Select
             v-model="filters.projectId"
             :options="projectOptions"
+            aria-label="Filter report rows by project"
             option-label="label"
             option-value="value"
             placeholder="All projects"
             show-clear
             :pt="filterSelectPt"
           />
-        </template>
-      </Column>
+        </div>
 
-      <Column
-        field="memberName"
-        header="Member"
-        sortable
-        style="width: 180px"
-      >
-        <template #body="{ data }">
-          <span class="text-text-muted text-[13px] font-normal">{{ data.memberName }}</span>
-        </template>
-        <template #filter>
+        <div class="w-[180px] px-3">
           <Select
             v-model="filters.memberId"
             :options="memberOptions"
+            aria-label="Filter report rows by member"
             option-label="label"
             option-value="value"
             placeholder="All members"
             show-clear
             :pt="filterSelectPt"
           />
-        </template>
-      </Column>
+        </div>
 
-      <Column
-        field="totalSeconds"
-        header="Hours"
-        sortable
-        style="width: 140px"
-      >
-        <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(data.totalSeconds) }}</span>
-          </div>
-        </template>
-        <template #filter>
+        <div class="w-[140px] px-3 text-right">
           <Select
             v-model="filters.hours"
             :options="hoursFilterOptions"
+            aria-label="Filter report rows by hours"
             option-label="label"
             option-value="value"
             :pt="filterSelectPt"
           />
+        </div>
+
+        <div class="w-[140px] px-3 text-right">
+          <Select
+            v-model="filters.billable"
+            :options="billableFilterOptions"
+            aria-label="Filter report rows by billable hours"
+            option-label="label"
+            option-value="value"
+            :pt="filterSelectPt"
+          />
+        </div>
+      </template>
+
+      <Column :pt="managementTableColumnPt">
+        <template #body="{ data }">
+          <span class="text-text-dark text-[14px] leading-none font-semibold">{{ data.projectName }}</span>
         </template>
       </Column>
 
       <Column
-        field="billableSeconds"
-        header="Billable"
-        sortable
+        style="width: 180px"
+        :pt="managementTableColumnPt"
+      >
+        <template #body="{ data }">
+          <span class="text-text-muted text-[13px] font-normal">{{ data.memberName }}</span>
+        </template>
+      </Column>
+
+      <Column
         style="width: 140px"
+        :pt="managementTableColumnPt"
+      >
+        <template #body="{ data }">
+          <div class="text-right">
+            <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(getReportRowHoursSeconds(data, filters.billable)) }}</span>
+          </div>
+        </template>
+      </Column>
+
+      <Column
+        style="width: 140px"
+        :pt="managementTableColumnPt"
       >
         <template #body="{ data }">
           <div class="text-right">
             <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(data.billableSeconds) }}</span>
           </div>
-        </template>
-        <template #filter>
-          <Select
-            v-model="filters.billable"
-            :options="billableFilterOptions"
-            option-label="label"
-            option-value="value"
-            :pt="filterSelectPt"
-          />
         </template>
       </Column>
 
@@ -178,6 +172,6 @@ const filterSelectPt = {
           description="No matching report rows are available for the current filters."
         />
       </template>
-    </DataTable>
+    </ManagementTableShell>
   </div>
 </template>
