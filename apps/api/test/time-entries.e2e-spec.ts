@@ -308,6 +308,99 @@ describe('Time entries (e2e)', () => {
     expect(afterDelete.status).toBe(404);
   });
 
+  it('allows moving a completed entry to another visible active task', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const nextTaskId = await createTask(
+      platformProjectId,
+      `Search task search Move Entry ${suffix}`,
+    );
+    const created = await createManualEntry(memberToken, {
+      startedAt: '2026-05-01T10:00:00.000Z',
+      endedAt: '2026-05-01T11:00:00.000Z',
+    });
+    expect(created.status).toBe(201);
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/time-entries/${created.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: nextTaskId });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.taskId).toBe(nextTaskId);
+    expect(updated.body.task.title).toBe(
+      `Search task search Move Entry ${suffix}`,
+    );
+    expect(updated.body.projectId).toBe(platformProjectId);
+    expect(updated.body.durationSeconds).toBe(3600);
+  });
+
+  it('rejects moving a completed entry to an invisible private task', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const [privateProject] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Other Private ${suffix}`,
+        visibility: 'private',
+      })
+      .returning({ id: projects.id });
+    if (!privateProject) throw new Error('Expected private project');
+
+    const hiddenTaskId = await createTask(
+      privateProject.id,
+      `Search task search Hidden Move ${suffix}`,
+    );
+    const created = await createManualEntry(memberToken, {
+      startedAt: '2026-05-01T10:00:00.000Z',
+      endedAt: '2026-05-01T11:00:00.000Z',
+    });
+    expect(created.status).toBe(201);
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/time-entries/${created.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: hiddenTaskId });
+
+    expect(updated.status).toBe(404);
+
+    const own = await request(app.getHttpServer())
+      .get(`/time-entries/${created.body.id}`)
+      .set('Authorization', bearer(memberToken));
+    expect(own.status).toBe(200);
+    expect(own.body.taskId).toBe(platformTaskId);
+  });
+
+  it('rejects moving a completed entry to inactive work', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const inactiveTaskId = await createTask(
+      platformProjectId,
+      `Search task search Inactive Move ${suffix}`,
+    );
+    await db
+      .update(tasks)
+      .set({ isActive: false })
+      .where(eq(tasks.id, inactiveTaskId));
+
+    const created = await createManualEntry(memberToken, {
+      startedAt: '2026-05-01T10:00:00.000Z',
+      endedAt: '2026-05-01T11:00:00.000Z',
+    });
+    expect(created.status).toBe(201);
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/time-entries/${created.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: inactiveTaskId });
+
+    expect(updated.status).toBe(422);
+
+    const own = await request(app.getHttpServer())
+      .get(`/time-entries/${created.body.id}`)
+      .set('Authorization', bearer(memberToken));
+    expect(own.status).toBe(200);
+    expect(own.body.taskId).toBe(platformTaskId);
+  });
+
   it('supports current timer, start conflict, and stop lifecycle', async () => {
     const emptyCurrent = await request(app.getHttpServer())
       .get('/time-entries/current')
