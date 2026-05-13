@@ -123,6 +123,12 @@ Use `<DataTable>` and `<Column>`.
 
 - Header row: `bg-app-bg text-[13px] font-medium uppercase tracking-wide text-text-dark`.
 - Body row: `h-12 border-b border-divider hover:bg-app-bg`.
+- Searchable admin tables use the PrimeVue DataTable global filter pattern: table/card header contains a right-aligned `IconField` + `InputIcon` + `InputText` search control bound to `filters.global.value`.
+- Admin table search placeholder copy follows `Search <table label>`, for example `Search invoices`, `Search members`, `Search projects`, and `Search report rows`.
+- Admin table search filters the visible table rows using DataTable `globalFilterFields`; do not document it as a new backend free-text endpoint unless the API contract is updated separately.
+- Admin tables with filterable columns use PrimeVue column filters in `filterDisplay="row"` style: a compact filter row directly below the header row, with one filter control per filterable column and no filter control in the actions column.
+- Use column-appropriate PrimeVue filter controls: `InputText` for text/id/name/email/source filters, `Select` for single status/role/visibility filters, `MultiSelect filter display="chip"` for member/project assignment filters, and numeric/date controls only when the column data type requires them.
+- Clearing global search or a column filter restores the full result set allowed by page-level filters and role scope.
 - Selected row: `bg-accent-tint text-text-dark`.
 - Right align numeric columns.
 - Table row actions are icon-only in both SPAs. Do not render visible action text such as `Edit`, `Delete`, or `View` inside action cells.
