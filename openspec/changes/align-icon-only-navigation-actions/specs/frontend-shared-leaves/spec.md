@@ -26,6 +26,6 @@ The frontend codebase SHALL extract authenticated shell navigation into `@gitiem
 #### Scenario: Shared mobile navigation remains accessible
 
 - **WHEN** the shared authenticated navigation is rendered in the mobile navigation pattern
-- **THEN** each mobile navigation item exposes the same accessible label as its desktop counterpart
+- **THEN** it keeps the existing bottom navigation bar layout while rendering icon-only items without visible text labels
+- **AND** each mobile navigation item exposes the same accessible label as its desktop counterpart
 - **AND** removing visible text does not remove the tappable navigation target or active-route indication
-- **AND** the mobile bottom navigation layout remains unchanged

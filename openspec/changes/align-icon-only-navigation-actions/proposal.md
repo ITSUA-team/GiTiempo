@@ -4,7 +4,7 @@ The UI docs and approved `GITiempo.pen` screens now require icon-only authentica
 
 ## What Changes
 
-- Align the shared authenticated navigation requirements with icon-only sidebar and mobile navigation across `user-web` and `admin-web`.
+- Align the shared authenticated navigation requirements with icon-only sidebar navigation and icon-only mobile bottom navigation across `user-web` and `admin-web`.
 - Update the desktop and tablet authenticated sidebar layout so the icon-only navigation rail fits its content width instead of preserving a fixed full-width desktop sidebar.
 - Require former navigation/action text to remain available as tooltip copy and accessible labels when visible labels are removed.
 - Align table row action requirements with icon-only buttons across user and admin management tables.

@@ -17,7 +17,7 @@ No backend/API coordination is required because the change is visual, accessibil
 - Make the OpenSpec requirements agree with UI docs and approved `.pen` designs for icon-only navigation and row actions.
 - Keep route ownership, route targets, and active-state decisions app-local while allowing the shared navigation renderer to display icons.
 - Preserve label text as tooltip copy and accessible labels for navigation and row action buttons.
-- Make the desktop and tablet sidebar rail shrink to icon-only content width while keeping the current mobile bottom navigation layout unchanged.
+- Make the desktop and tablet sidebar rail shrink to icon-only content width while keeping the current mobile bottom-navigation placement and touch-target layout unchanged.
 - Use documented token styling for active/default/destructive icon states.
 - Verify both `user-web` and `admin-web` because the implementation touches shared frontend UI.
 
@@ -56,7 +56,7 @@ No backend/API coordination is required because the change is visual, accessibil
 
 5. Treat non-mobile sidebar width as part of the shared navigation contract.
 
-   Since the sidebar is now icon-only across authenticated SPAs, the fixed desktop `w-60` layout no longer matches the intended visual behavior. The shared navigation surface should size the tablet/desktop rail to its icon-only content while leaving the mobile bottom navigation unchanged.
+   Since the sidebar is now icon-only across authenticated SPAs, the fixed desktop `w-60` layout no longer matches the intended visual behavior. The shared navigation surface should size the tablet/desktop rail to its icon-only content while keeping mobile as the same bottom navigation bar, but with the same icon-only items and accessible labels.
 
    Alternative considered: keep a fixed desktop width even after removing visible labels. Rejected because it preserves unused horizontal space and conflicts with the requested shell layout direction.
 
@@ -64,7 +64,7 @@ No backend/API coordination is required because the change is visual, accessibil
 
 - Shared package dependency mismatch → `@gitiempo/web-shared` currently does not list `@heroicons/vue`; either add the dependency to the shared package if icons are imported there, or pass icon components from each app so dependency ownership stays app-local.
 - Tooltip directive availability → icon-only controls depend on PrimeVue tooltip registration; verify current bootstrap supports the intended tooltip approach in both apps before relying on it.
-- Mobile navigation ambiguity → docs say mobile uses shared nav items, while sidebar docs explicitly ban visible labels in sidebar desktop/collapsed layouts. The specs should require icon-only mobile navigation too only where implementation can preserve accessible labels and touch targets.
+- Mobile navigation discoverability → mobile keeps the existing bottom-bar placement, but now uses icon-only items. Preserve accessible labels, active-route indication, and stable touch targets so the mobile treatment stays usable without visible text.
 - Desktop width ambiguity → the previous docs preserved a fixed `w-60` desktop shell even after switching to icon-only nav. The updated change should explicitly align the non-mobile sidebar width behavior with the icon-only rail design.
 - Action discoverability → removing visible text can reduce discoverability; mitigate with consistent icons, tooltip copy, accessible labels, and compact but usable hit areas.
 - Tests may assert button text → update tests to query accessible labels or test IDs where appropriate instead of visible `Edit`/`Delete` text.

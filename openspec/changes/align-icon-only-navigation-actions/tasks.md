@@ -2,9 +2,9 @@
 
 - [x] 1.1 Update `WorkspaceNavigation` item typing to accept app-provided icon metadata while keeping label, route target, and active-state ownership app-local.
 - [x] 1.2 Render authenticated sidebar navigation as icon-only items with documented hit area, hover state, active state, tooltip copy, and accessible labels.
-- [x] 1.3 Preserve mobile navigation accessibility and active-route indication after removing visible nav text.
+- [x] 1.3 Preserve mobile bottom-navigation accessibility and active-route indication with icon-only items in the existing bottom-bar layout.
 - [x] 1.4 Add or update focused shared navigation tests for icon rendering, labels/tooltips, active state, and route target preservation.
-- [x] 1.5 Update non-mobile authenticated sidebar width behavior to fit icon-only content while keeping mobile bottom navigation unchanged.
+- [x] 1.5 Update non-mobile authenticated sidebar width behavior to fit icon-only content while keeping the existing mobile bottom-bar layout.
 
 ## 2. App Navigation Wiring
 
