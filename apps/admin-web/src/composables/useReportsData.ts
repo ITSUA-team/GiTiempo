@@ -52,6 +52,7 @@ export interface ReportSummary {
   memberCount: number;
   avgPerMemberSeconds: number;
   topProjectName: string;
+  topProjectSeconds: number;
 }
 
 export interface ReportTableFilters {
@@ -227,6 +228,22 @@ function getOrCreateAccumulator(
   return next;
 }
 
+function formatAggregateLabel(
+  names: string[],
+  emptyLabel: string,
+  pluralLabel: string,
+): string {
+  if (names.length === 0) {
+    return emptyLabel;
+  }
+
+  if (names.length === 1) {
+    return names[0]!;
+  }
+
+  return `${names.length} ${pluralLabel}`;
+}
+
 export function deriveReportRows(
   entries: TimeEntryResponse[],
   groupBy: ReportGroupBy,
@@ -258,6 +275,64 @@ export function deriveReportRows(
         projectName: projectNames[0] ?? 'Unknown project',
         memberIds: [...group.memberIds],
         memberName: memberNames[0] ?? 'Unknown member',
+        totalSeconds: group.totalSeconds,
+        billableSeconds: group.billableSeconds,
+        billableShare:
+          group.totalSeconds > 0 ? group.billableSeconds / group.totalSeconds : null,
+        entryCount: group.entryCount,
+      } satisfies ReportRow;
+    })
+    .sort((a, b) => {
+      const primary =
+        groupBy === 'member'
+          ? a.memberName.localeCompare(b.memberName)
+          : a.projectName.localeCompare(b.projectName);
+      const secondary =
+        groupBy === 'member'
+          ? a.projectName.localeCompare(b.projectName)
+          : a.memberName.localeCompare(b.memberName);
+      return primary === 0 ? secondary : primary;
+    });
+}
+
+export function deriveGeneratedReportRows(
+  entries: TimeEntryResponse[],
+  groupBy: ReportGroupBy,
+): ReportRow[] {
+  const groups = new Map<string, GroupAccumulator>();
+
+  for (const entry of entries) {
+    const groupId =
+      groupBy === 'member' ? `member:${entry.user.id}` : `project:${entry.project.id}`;
+    const group = getOrCreateAccumulator(groups, groupId);
+    const durationSeconds = getEntryDuration(entry);
+
+    group.projectIds.add(entry.project.id);
+    group.projectNames.add(entry.project.name);
+    group.memberIds.add(entry.user.id);
+    group.memberNames.add(formatUserName(entry.user));
+    group.totalSeconds += durationSeconds;
+    group.billableSeconds += entry.isBillable ? durationSeconds : 0;
+    group.entryCount += 1;
+  }
+
+  return [...groups.values()]
+    .map((group) => {
+      const projectNames = [...group.projectNames].sort((a, b) => a.localeCompare(b));
+      const memberNames = [...group.memberNames].sort((a, b) => a.localeCompare(b));
+
+      return {
+        id: group.id,
+        projectIds: [...group.projectIds],
+        projectName:
+          groupBy === 'member'
+            ? formatAggregateLabel(projectNames, 'Unknown project', 'projects')
+            : (projectNames[0] ?? 'Unknown project'),
+        memberIds: [...group.memberIds],
+        memberName:
+          groupBy === 'project'
+            ? formatAggregateLabel(memberNames, 'Unknown member', 'members')
+            : (memberNames[0] ?? 'Unknown member'),
         totalSeconds: group.totalSeconds,
         billableSeconds: group.billableSeconds,
         billableShare:
@@ -310,6 +385,7 @@ export function deriveReportSummary(entries: TimeEntryResponse[]): ReportSummary
     memberCount: memberIds.size,
     avgPerMemberSeconds: memberIds.size > 0 ? totalSeconds / memberIds.size : 0,
     topProjectName: topProject?.name ?? 'None',
+    topProjectSeconds: topProject?.seconds ?? 0,
   };
 }
 
@@ -317,7 +393,7 @@ export function getReportRowUnbillableSeconds(row: ReportRow): number {
   return Math.max(0, row.totalSeconds - row.billableSeconds);
 }
 
-export function getReportRowHoursSeconds(
+export function getReportRowBillableSeconds(
   row: ReportRow,
   billableFilter: ReportBillableFilter,
 ): number {
@@ -325,7 +401,7 @@ export function getReportRowHoursSeconds(
     return getReportRowUnbillableSeconds(row);
   }
 
-  return row.totalSeconds;
+  return row.billableSeconds;
 }
 
 export function filterReportRows(
@@ -343,7 +419,7 @@ export function filterReportRows(
       return false;
     }
 
-    const hoursSeconds = getReportRowHoursSeconds(row, filters.billable);
+    const hoursSeconds = row.totalSeconds;
 
     if (filters.hours === 'gt0' && hoursSeconds <= 0) {
       return false;
@@ -376,7 +452,7 @@ export function filterReportRows(
       row.projectName,
       row.memberName,
       formatReportDuration(hoursSeconds),
-      formatReportDuration(row.billableSeconds),
+      formatReportDuration(getReportRowBillableSeconds(row, filters.billable)),
       formatReportPercent(row.billableShare),
     ]
       .join(' ')
@@ -706,7 +782,7 @@ export function useReportsData({
     );
     const memberEntries = filterEntriesByMember(reportEntries, filters.memberId);
 
-    return deriveReportRows(memberEntries, filters.groupBy);
+    return deriveGeneratedReportRows(memberEntries, filters.groupBy);
   }
 
   watch(

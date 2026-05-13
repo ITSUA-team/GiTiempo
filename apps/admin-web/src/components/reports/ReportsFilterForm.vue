@@ -13,7 +13,7 @@ import type {
   ReportGroupBy,
 } from '@/composables/useReportsData';
 
-defineProps<{
+const props = defineProps<{
   disabled?: boolean;
   memberOptions: ReportFilterOption[];
   projectOptions: ReportFilterOption[];
@@ -28,6 +28,15 @@ const groupByOptions: { label: string; value: ReportGroupBy }[] = [
   { label: 'Project', value: 'project' },
   { label: 'Member', value: 'member' },
 ];
+
+const projectGenerationOptions = computed(() => [
+  { label: 'All projects', value: null },
+  ...props.projectOptions,
+]);
+const memberGenerationOptions = computed(() => [
+  { label: 'All assigned members', value: null },
+  ...props.memberOptions,
+]);
 
 const reportsFilterSchema = z
   .object({
@@ -84,8 +93,25 @@ const dateRangeError = computed(() => {
 });
 
 const selectPt = {
-  root: { class: 'h-[38px] w-full rounded-[6px] text-[14px]' },
-  label: { class: 'flex items-center py-0 text-[14px] font-medium' },
+  root: {
+    class:
+      'border-divider bg-surface h-[38px] w-full rounded-[6px] border shadow-none',
+  },
+  label: {
+    class:
+      'flex items-center px-3 py-0 text-[14px] font-medium text-text-dark',
+  },
+  dropdown: { class: 'w-9 text-text-muted' },
+} as const;
+
+const datePickerPt = {
+  root: { class: 'w-full' },
+  pcInputText: {
+    root: {
+      class:
+        'border-divider bg-surface h-[38px] rounded-[6px] border px-3 text-[14px] font-medium text-text-dark shadow-none',
+    },
+  },
 } as const;
 </script>
 
@@ -93,7 +119,7 @@ const selectPt = {
   <Form
     :resolver="resolver"
     :initial-values="initialValues"
-    class="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]"
+    class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]"
   >
     <div class="flex flex-col gap-1.5">
       <label
@@ -101,14 +127,13 @@ const selectPt = {
         class="text-text-dark text-[13px] font-medium"
       >Project</label>
       <Select
-        id="reports-project"
         v-model="projectId"
+        input-id="reports-project"
         name="projectId"
-        :options="projectOptions"
+        :options="projectGenerationOptions"
         option-label="label"
         option-value="value"
         placeholder="All projects"
-        show-clear
         :disabled="disabled"
         :pt="selectPt"
       />
@@ -120,14 +145,13 @@ const selectPt = {
         class="text-text-dark text-[13px] font-medium"
       >Member</label>
       <Select
-        id="reports-member"
         v-model="memberId"
+        input-id="reports-member"
         name="memberId"
-        :options="memberOptions"
+        :options="memberGenerationOptions"
         option-label="label"
         option-value="value"
         placeholder="All assigned members"
-        show-clear
         :disabled="disabled"
         :pt="selectPt"
       />
@@ -139,8 +163,8 @@ const selectPt = {
         class="text-text-dark text-[13px] font-medium"
       >Date range</label>
       <DatePicker
-        id="reports-date-range"
         v-model="datePickerValue"
+        input-id="reports-date-range"
         name="dateRange"
         selection-mode="range"
         :manual-input="false"
@@ -150,10 +174,7 @@ const selectPt = {
         :disabled="disabled"
         fluid
         :invalid="!!dateRangeError"
-        :pt="{
-          root: { class: 'w-full' },
-          input: { class: 'h-[38px] text-[14px] font-medium' },
-        }"
+        :pt="datePickerPt"
       />
       <Message
         v-if="dateRangeError"
@@ -171,8 +192,8 @@ const selectPt = {
         class="text-text-dark text-[13px] font-medium"
       >Group by</label>
       <Select
-        id="reports-group-by"
         v-model="groupBy"
+        input-id="reports-group-by"
         name="groupBy"
         :options="groupByOptions"
         option-label="label"

@@ -51,6 +51,19 @@ const billableShareLabel = computed(() =>
 const avgPerMemberLabel = computed(() =>
   formatReportDuration(reports.summary.value.avgPerMemberSeconds),
 );
+const trackedHoursDescription = computed(() => {
+  const count = reports.summary.value.memberCount;
+  return `Across ${count} ${count === 1 ? 'member' : 'members'}`;
+});
+const topProjectDescription = computed(() => {
+  const seconds = reports.summary.value.topProjectSeconds;
+
+  if (seconds <= 0) {
+    return 'No tracked time';
+  }
+
+  return `${formatReportDuration(seconds)} tracked this period`;
+});
 
 async function handleExport(): Promise<void> {
   if (exporting.value) {
@@ -120,35 +133,38 @@ async function handleExport(): Promise<void> {
             @click="handleExport"
           />
         </template>
-        <template #stats>
-          <ReportsFilterForm
-            v-model:project-id="reportProjectId"
-            v-model:member-id="reportMemberId"
-            v-model:date-range="reportDateRange"
-            v-model:group-by="reportGroupBy"
-            :project-options="reports.projectOptions.value"
-            :member-options="reports.memberOptions.value"
-            :disabled="reports.loading.value"
-          />
-        </template>
       </StatsHeader>
+
+      <ReportsFilterForm
+        v-model:project-id="reportProjectId"
+        v-model:member-id="reportMemberId"
+        v-model:date-range="reportDateRange"
+        v-model:group-by="reportGroupBy"
+        :project-options="reports.projectOptions.value"
+        :member-options="reports.memberOptions.value"
+        :disabled="reports.loading.value"
+      />
 
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Tracked Hours"
           :value="totalHoursLabel"
+          :description="trackedHoursDescription"
         />
         <StatCard
           label="Billable"
           :value="billableShareLabel"
+          description="Within PM scope"
         />
         <StatCard
           label="Avg per Member"
           :value="avgPerMemberLabel"
+          description="Weekly average"
         />
         <StatCard
           label="Top Project"
           :value="reports.summary.value.topProjectName"
+          :description="topProjectDescription"
         />
       </div>
 

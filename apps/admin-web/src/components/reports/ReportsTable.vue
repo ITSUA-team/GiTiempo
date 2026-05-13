@@ -13,7 +13,7 @@ import Select from 'primevue/select';
 
 import {
   formatReportDuration,
-  getReportRowHoursSeconds,
+  getReportRowBillableSeconds,
   type ReportBillableFilter,
   type ReportFilterOption,
   type ReportHoursFilter,
@@ -150,7 +150,7 @@ const filterSelectPt = {
       >
         <template #body="{ data }">
           <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(getReportRowHoursSeconds(data, filters.billable)) }}</span>
+            <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(data.totalSeconds) }}</span>
           </div>
         </template>
       </Column>
@@ -161,7 +161,7 @@ const filterSelectPt = {
       >
         <template #body="{ data }">
           <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(data.billableSeconds) }}</span>
+            <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(getReportRowBillableSeconds(data, filters.billable)) }}</span>
           </div>
         </template>
       </Column>

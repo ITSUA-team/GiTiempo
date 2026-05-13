@@ -20,7 +20,10 @@ defineProps<{
         <slot name="actions" />
       </div>
     </div>
-    <div class="flex h-24 gap-4">
+    <div
+      v-if="$slots.stats"
+      class="flex h-24 gap-4"
+    >
       <slot name="stats" />
     </div>
   </div>

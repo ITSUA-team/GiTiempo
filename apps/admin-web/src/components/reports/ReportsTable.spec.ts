@@ -108,7 +108,7 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).not.toContain('All members');
   });
 
-  it('shows unbillable hours when the non-billable table filter is selected', () => {
+  it('keeps total hours stable and shows unbillable value when non-billable is selected', () => {
     const filters = createDefaultReportTableFilters();
     filters.billable = 'withoutBillable';
 
@@ -121,7 +121,7 @@ describe('ReportsTable', () => {
         rows: [
           {
             ...rows[0]!,
-            billableSeconds: 1800,
+            billableSeconds: 2700,
             totalSeconds: 7200,
           },
         ],
@@ -131,8 +131,8 @@ describe('ReportsTable', () => {
       },
     });
 
-    expect(wrapper.text()).toContain('1h 30m');
-    expect(wrapper.text()).toContain('30m');
-    expect(wrapper.text()).not.toContain('2h 00m');
+    expect(wrapper.text()).toContain('2h 00m');
+    expect(wrapper.text()).toContain('1h 15m');
+    expect(wrapper.text()).not.toContain('45m');
   });
 });

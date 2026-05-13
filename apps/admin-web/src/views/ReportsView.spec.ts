@@ -61,7 +61,7 @@ const ReportsFilterFormStub = {
     'update:groupBy',
   ],
   template:
-    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button></div>',
+    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button><button data-testid="change-report-group-by" @click="$emit(\'update:groupBy\', \'member\')">group</button></div>',
 };
 
 const ReportsTableStub = {
@@ -215,6 +215,10 @@ describe('ReportsView', () => {
 
     expect(wrapper.text()).toContain('Reports');
     expect(wrapper.text()).toContain('Tracked Hours');
+    expect(wrapper.text()).toContain('Across 1 member');
+    expect(wrapper.text()).toContain('Within PM scope');
+    expect(wrapper.text()).toContain('Weekly average');
+    expect(wrapper.text()).toContain('2h 00m tracked this period');
     expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
 
     await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
@@ -238,6 +242,7 @@ describe('ReportsView', () => {
     await flushPromises();
 
     await wrapper.get('[data-testid="change-report-project"]').trigger('click');
+    await wrapper.get('[data-testid="change-report-group-by"]').trigger('click');
 
     expect(state.selectedProjectId.value).toBeNull();
     expect(reportMocks.refresh).not.toHaveBeenCalled();
@@ -247,7 +252,7 @@ describe('ReportsView', () => {
     await flushPromises();
 
     expect(reportMocks.buildRowsForFilters).toHaveBeenCalledWith(
-      expect.objectContaining({ projectId: 'project-2' }),
+      expect.objectContaining({ groupBy: 'member', projectId: 'project-2' }),
     );
   });
 });

@@ -13,13 +13,14 @@ import {
   buildReportsCsv,
   createDefaultReportTableFilters,
   createReportsCsvDownload,
+  deriveGeneratedReportRows,
   deriveMemberOptions,
   deriveReportRows,
   deriveReportSummary,
   filterReportRows,
   formatReportDuration,
   formatReportPercent,
-  getReportRowHoursSeconds,
+  getReportRowBillableSeconds,
   useReportsData,
 } from './useReportsData';
 
@@ -199,6 +200,44 @@ describe('reports data helpers', () => {
     expect(summary.topProjectName).toBe('Project Orion');
   });
 
+  it('aggregates generated report rows by the selected group option', () => {
+    const byProject = deriveGeneratedReportRows(entries, 'project');
+    const byMember = deriveGeneratedReportRows(entries, 'member');
+
+    expect(byProject).toEqual([
+      expect.objectContaining({
+        billableSeconds: 1800,
+        entryCount: 1,
+        memberName: 'Nina PM',
+        projectName: 'Billing, API',
+        totalSeconds: 1800,
+      }),
+      expect.objectContaining({
+        billableSeconds: 7200,
+        entryCount: 2,
+        memberName: '2 members',
+        projectName: 'Project Orion',
+        totalSeconds: 10_800,
+      }),
+    ]);
+    expect(byMember).toEqual([
+      expect.objectContaining({
+        billableSeconds: 7200,
+        entryCount: 1,
+        memberName: 'Alex Admin',
+        projectName: 'Project Orion',
+        totalSeconds: 7200,
+      }),
+      expect.objectContaining({
+        billableSeconds: 1800,
+        entryCount: 2,
+        memberName: 'Nina PM',
+        projectName: '2 projects',
+        totalSeconds: 5400,
+      }),
+    ]);
+  });
+
   it('filters visible report rows and builds escaped CSV output', () => {
     const rows = deriveReportRows(entries, 'project');
     const filters = createDefaultReportTableFilters();
@@ -218,7 +257,7 @@ describe('reports data helpers', () => {
     expect(download.filename).toBe('gitiempo-reports-2026-05-13.csv');
   });
 
-  it('uses unbillable hours when filtering for non-billable report rows', () => {
+  it('filters non-billable rows without changing tracked hours', () => {
     const [mixedRow] = deriveReportRows(
       [
         createEntry({
@@ -251,7 +290,10 @@ describe('reports data helpers', () => {
     const visibleRows = filterReportRows(mixedRow ? [mixedRow] : [], filters);
 
     expect(visibleRows).toHaveLength(1);
-    expect(getReportRowHoursSeconds(visibleRows[0]!, filters.billable)).toBe(1800);
+    expect(visibleRows[0]!.totalSeconds).toBe(5400);
+    expect(getReportRowBillableSeconds(visibleRows[0]!, filters.billable)).toBe(
+      1800,
+    );
   });
 });
 
@@ -391,6 +433,63 @@ describe('useReportsData', () => {
         memberName: 'Nina PM',
         projectName: 'Billing, API',
         totalSeconds: 1800,
+      }),
+    ]);
+    expect(reports.selectedProjectId.value).toBeNull();
+  });
+
+  it('builds export rows using the selected group-by aggregation', async () => {
+    const accessToken = shallowRef('access-token');
+    const listProjects = vi.fn().mockResolvedValue(projects);
+    const listProjectEntries = vi.fn(
+      async (
+        _accessToken: string,
+        projectId: string,
+      ): Promise<TimeEntryListResponse> => {
+        const items = entries.filter((entry) => entry.projectId === projectId);
+
+        return {
+          items,
+          meta: { limit: 100, page: 1, total: items.length, totalPages: 1 },
+        };
+      },
+    );
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mount(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            accessToken,
+            projectsClient: { listProjects },
+            reportsClient: { listProjectEntries },
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+    listProjectEntries.mockClear();
+
+    const exportRows = await reports.buildRowsForFilters({
+      dateRange: null,
+      groupBy: 'member',
+      memberId: null,
+      projectId: null,
+    });
+
+    expect(listProjectEntries).toHaveBeenCalledTimes(2);
+    expect(exportRows).toEqual([
+      expect.objectContaining({
+        memberName: 'Alex Admin',
+        projectName: 'Project Orion',
+        totalSeconds: 7200,
+      }),
+      expect.objectContaining({
+        memberName: 'Nina PM',
+        projectName: '2 projects',
+        totalSeconds: 5400,
       }),
     ]);
     expect(reports.selectedProjectId.value).toBeNull();
