@@ -104,6 +104,7 @@ export const createManualTimeEntrySchema = z
 
 export const updateTimeEntrySchema = z
   .object({
+    taskId: z.uuid().optional(),
     startedAt: dateTimeSchema.optional(),
     endedAt: dateTimeSchema.optional(),
     description: z.string().max(2000).nullable().optional(),
@@ -112,6 +113,7 @@ export const updateTimeEntrySchema = z
   .strict()
   .refine(
     (data) =>
+      data.taskId !== undefined ||
       data.startedAt !== undefined ||
       data.endedAt !== undefined ||
       data.description !== undefined ||

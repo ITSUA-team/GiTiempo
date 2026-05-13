@@ -43,152 +43,103 @@ The user dashboard SHALL expose the active timer state and recent time-entry act
 - WHEN the dashboard loads
 - THEN the dashboard uses the shared empty-state pattern for the missing sections
 
-### Requirement: Timer Workflow Page
+### Requirement: Global Top-Bar Timer
 
-The timer page MUST allow authenticated users to track time against visible workspace tasks by selecting a project and task, controlling the running timer, and logging manual intervals.
+The user-web authenticated shell MUST expose timer start, stop, and task-context selection through a compact top-bar timer surface on every authenticated member page.
 
-#### Scenario: Timer page loads visible project choices
+#### Scenario: Running timer shown in authenticated top bar
 
-- **GIVEN** an authenticated user opens the timer page
-- **WHEN** the page loads
-- **THEN** the page shows the approved timer layout inside the authenticated shell
-- **AND** the project selector lists the current user's visible workspace projects
-- **AND** the task selector is disabled until a project is selected
+- **GIVEN** the authenticated user has a running timer
+- **WHEN** any authenticated user-web page renders
+- **THEN** the top bar shows a compact running timer surface with live `HH:MM:SS`, current `Project / Task`, a clickable task information field, and one stop action
+- **AND** the elapsed display advances while the timer remains active without requiring a page refresh
 
-#### Scenario: Task choices load after project selection
+#### Scenario: Idle top-bar timer uses eligible last tracked task
 
-- **GIVEN** the timer page has loaded visible projects
-- **WHEN** the user selects a project
-- **THEN** the task selector loads tasks for that selected project
-- **AND** the task selector lists only tasks from that project that the user can see
+- **GIVEN** the authenticated user has no running timer
+- **AND** the user has a most recent own time entry whose task and parent project are still visible and active
+- **WHEN** any authenticated user-web page renders
+- **THEN** the top bar shows that last tracked `Project / Task` context
+- **AND** the top bar start action creates a fresh running time entry for that task
+- **AND** the previous time entry record is not resumed or mutated
 
-#### Scenario: Task loading failure does not render as empty data
+#### Scenario: No eligible task keeps picker available
 
-- **GIVEN** the user has selected a project
-- **WHEN** the task request fails
-- **THEN** the page renders an explicit error state for that failed request
-- **AND** the page does not replace that failure with a "no tasks available" empty-state message
+- **GIVEN** the authenticated user has no running timer
+- **AND** no recent own time entry resolves to a currently visible active project and active task
+- **WHEN** the top-bar timer renders
+- **THEN** the top bar keeps the compact timer surface visible in a no-eligible-task state
+- **AND** the task information field remains clickable
+- **AND** the start action is disabled until a valid task context is selected
 
-#### Scenario: Timer started from selected task
+#### Scenario: Timer summary load failure stays compact
 
-- **GIVEN** the user has no running timer
-- **AND** the user has selected a project and task
-- **WHEN** the user activates the `Start` CTA
-- **THEN** the page starts timing against the selected task
-- **AND** the page shows the running timer state with elapsed duration in `HH:MM:SS` format
-- **AND** the running timer summary shows the project and task names
+- **WHEN** current timer or timer-summary data fails to load in the authenticated shell
+- **THEN** the top-bar timer keeps the same compact surface shape visible
+- **AND** the start or stop action is disabled while the state is not actionable
+- **AND** the failure is surfaced through standard toast feedback
 
-#### Scenario: Running timer can be stopped
+#### Scenario: Task information opens picker dialog
 
-- **GIVEN** the user has a running timer
-- **WHEN** the user activates the `Stop` CTA
-- **THEN** the page stops the current timer
-- **AND** the page refreshes the current timer state to show that no timer is running
+- **WHEN** the user activates the top-bar task information field
+- **THEN** a centered task-picker dialog opens
+- **AND** the dialog uses visible Project -> Task selection only
+- **AND** the dialog does not include manual interval entry controls
 
-#### Scenario: Running timer locks project and task selection
+### Requirement: Top-Bar Timer Task Picker
 
-- **GIVEN** the user has a running timer
-- **WHEN** the running timer state is rendered
-- **THEN** the project selector is disabled
-- **AND** the task selector is disabled
-- **AND** the project selector value reflects the running timer's current project
-- **AND** the task selector value reflects the running timer's current task
-- **AND** the page does not allow project or task selection state to change until the running timer has been stopped
+The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context or create a new task inside the selected visible project.
 
-#### Scenario: Timer CTA label follows running state
+#### Scenario: Existing task selected for timer context
 
-- **GIVEN** the timer page renders
-- **WHEN** no timer is running
-- **THEN** the singular timer CTA is labeled `Start`
-- **AND** when a timer is running, the singular timer CTA is labeled `Stop`
+- **GIVEN** the top-bar timer task picker is open
+- **WHEN** the user selects a visible project and one of that project's tasks
+- **THEN** the dialog allows confirmation with `Use selected task`
+- **AND** the top-bar timer context updates to the selected `Project / Task`
+- **AND** a subsequent idle start action starts a fresh timer for that task
 
-#### Scenario: Running timer display continues to advance while active
+#### Scenario: New task created inside selected project
 
-- **GIVEN** the timer page is showing a running timer
-- **WHEN** time passes on the client while the timer remains active
-- **THEN** the rendered `HH:MM:SS` display continues to advance from the running entry start time
-- **AND** the page does not require a manual refresh for elapsed time to update
+- **GIVEN** the top-bar timer task picker is open with a visible project selected
+- **WHEN** the user submits a valid new task title
+- **THEN** the app creates the task inside the selected project
+- **AND** the dialog remains open with the newly created task selected
+- **AND** the user can confirm the context with `Use selected task`
 
-#### Scenario: Manual interval is submitted
+#### Scenario: Task picker states remain distinct
 
-- **GIVEN** the user has selected a project and task
-- **AND** the manual interval panel has a date, start time, and end time
-- **WHEN** the user submits the manual interval
-- **THEN** the page creates a completed manual time entry for the selected task
-- **AND** the manual interval controls are ready for another entry after a successful submit
+- **WHEN** project loading, task loading, empty results, validation failure, or request failure occurs in the task picker
+- **THEN** the dialog renders a state specific to that condition
+- **AND** failed requests are not collapsed into empty-data messaging
 
-#### Scenario: Manual interval conflict with current active timer is surfaced and preserved
+### Requirement: Time Entries Page Record Management
 
-- **GIVEN** the user has a current active timer
-- **AND** the user submits a manual interval that the API rejects because it conflicts with that active timer
-- **WHEN** the manual-entry request fails
-- **THEN** the page shows an error toast with the API failure message
-- **AND** the page refreshes current timer state before deciding whether the page is idle or running
-- **AND** the page keeps the running timer state rendered from the current active entry
-- **AND** the page keeps the manual interval inputs available for correction instead of resetting them as if the request had succeeded
-- **AND** the manual-entry failure is rendered only in the manual interval panel, not duplicated in the timer CTA error region
+The Time Entries page MUST own manual time-entry creation for authenticated users instead of the removed dedicated timer page.
 
-#### Scenario: Timer page shows toast feedback for API outcomes
+#### Scenario: Manual entry stays on Time Entries
 
-- **WHEN** the page loads or mutates timer-page data through visible-project, task-list, current-timer, start-timer, stop-timer, or manual-entry API calls
-- **THEN** failed API calls show an error toast using the repository error-message order (`message`, then `error`, then status fallback)
-- **AND** successful start, stop, and manual-entry mutations show a success toast
-
-#### Scenario: Selector state resyncs from the current active timer
-
-- **GIVEN** the page loads or refreshes current timer state
-- **WHEN** the API returns a running timer
-- **THEN** the page updates the selected project and selected task to match the current active time entry
-- **AND** the running timer summary and selector values stay aligned to that authoritative server state
-
-#### Scenario: Start-timer conflict refreshes authoritative current timer state
-
-- **GIVEN** the page appears idle locally
-- **WHEN** the user starts a timer and the API rejects the request because a timer is already running
-- **THEN** the page shows an error toast with the API failure message
-- **AND** the page refreshes current timer state
-- **AND** if the refresh returns a running timer, the page renders that active timer and resyncs the project and task selector values from it
-
-#### Scenario: Timer page excludes external-provider-only behavior
-
-- **WHEN** the timer page renders
-- **THEN** it does not require GitHub connection state
-- **AND** it does not show organization, repository, issue, freeform manual-task fallback, or pause/resume controls
-
-#### Scenario: Stateful timer behavior remains verifiable
-
-- **WHEN** the timer page implementation is updated
-- **THEN** stateful behavior such as CTA label switching, project-to-task reset rules, running-timer selector locking, active-timer selector resync, manual interval validation, and active-timer conflict handling remains covered by focused page or composable tests
-
-#### Scenario: Timer page keeps a single feature-state representation
-
-- **WHEN** the timer page composes route-level UI with timer-page behavior
-- **THEN** the page keeps one explicit feature-state representation between the composable and the component surface
-- **AND** it does not introduce an additional proxy layer only to change template ergonomics
-
-#### Scenario: Timer page fetch boundaries remain aligned with shared transport conventions
-
-- **WHEN** timer-page API helpers are introduced or refactored
-- **THEN** they reuse the repository error-message order (`message`, then `error`, then status fallback)
-- **AND** any extracted shared fetch helper replaces nearby duplicate request logic instead of becoming an extra transport variant
-- **AND** any extracted low-level fetch helper is not exported from the root shared package barrel unless it is intentionally part of the public frontend package contract
-- **AND** the fetch boundary has direct tests for request path, headers, payload shape, response parsing, and API error propagation
-
-#### Scenario: Timer page does not land new Vue lint warning debt
-
-- **WHEN** timer-page Vue markup is added or rewritten
-- **THEN** auto-fixable lint warnings such as Tailwind class order, Vue attribute order, and formatting warnings are fixed before the timer-page tasks are marked complete
+- **WHEN** the user needs to create a completed manual time entry
+- **THEN** the create flow is owned by the Time Entries page rather than the top-bar timer or task-picker dialog
+- **AND** the top-bar timer change does not move manual interval controls into shell chrome
 
 ### Requirement: Time Entries Editing Flow
 
-The time entries page SHALL allow the user to review and edit their own entries inline.
+The time entries page SHALL allow the user to review and edit their own completed entries through a shared dialog surface.
 
-#### Scenario: Inline edit for a time entry
+#### Scenario: Dialog edit for a time entry
 
 - GIVEN the user views their time entries list
-- WHEN they choose to edit one entry
-- THEN the edit interaction opens inline within the row
-- AND the page does not require a modal for that edit flow
+- WHEN they choose to edit one completed entry
+- THEN the edit interaction opens in a PrimeVue dialog
+- AND the dialog pre-fills the selected entry's project, task, started-at, ended-at, description, and billable state
+- AND saving valid changes updates the entry, closes or resets the dialog according to the page flow, refreshes the list, and shows toast feedback
+
+#### Scenario: Running entry is not editable before stop
+
+- GIVEN the user views a running time entry in the Time Entries page
+- WHEN edit controls are rendered for that entry
+- THEN the page does not allow editing it as a completed manual interval
+- AND the user can stop the running timer from the global top-bar timer instead
 
 ### Requirement: Profile Identity Surface
 

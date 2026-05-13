@@ -28,9 +28,11 @@ User SPA and Admin SPA share the same shell:
 ### Sidebar Navigation
 
 - Nav item: `h-11 px-4`.
-- Default: `text-sm font-medium text-text-dark`, icon `text-text-muted`.
+- Sidebar links are icon-only in both authenticated SPAs. Do not render visible text labels in the sidebar on desktop or collapsed layouts.
+- Use the former link text as the PrimeVue tooltip copy and the accessible label, e.g. icon-only `Dashboard` link with tooltip `Dashboard`.
+- Default: icon `text-text-muted` with an icon-only hit area that keeps the same `h-11 px-4` spacing.
 - Hover: `hover:bg-app-bg`.
-- Active: `bg-accent-tint text-brand font-semibold border-l-[3px] border-brand`.
+- Active: `bg-accent-tint text-brand font-semibold border-l-[3px] border-brand`; the active icon uses Brand Purple.
 - Group dividers: `border-t border-divider my-2`.
 - Authenticated `user-web` navigation no longer includes a dedicated Timer page entry; timer start/stop and task switching live in the global top-bar timer surface.
 

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
@@ -215,6 +216,69 @@ describe('TimeEntriesService', () => {
         source: 'manual',
       }),
     );
+  });
+
+  it('reassigns completed entries to another visible active task', async () => {
+    const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
+    const set = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({ returning }),
+    });
+    const db = {
+      select: vi.fn().mockReturnValue(selectRows([completedEntry])),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const tasks = {
+      requireTrackableTask: vi.fn().mockResolvedValue({
+        project: { id: 'project-2', isActive: true },
+        task: { id: 'task-2', isActive: true },
+      }),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      tasks as never,
+      mockUsersActivity as never,
+    );
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: vi.fn().mockResolvedValue({ ...completedEntry, taskId: 'task-2' }),
+    });
+
+    await service.updateOwnEntry(user, completedEntry.id, { taskId: 'task-2' });
+
+    expect(tasks.requireTrackableTask).toHaveBeenCalledWith(user, 'task-2');
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        durationSeconds: 3600,
+        taskId: 'task-2',
+      }),
+    );
+  });
+
+  it('propagates inactive task reassignment failures for completed entries', async () => {
+    const db = {
+      select: vi.fn().mockReturnValue(selectRows([completedEntry])),
+      update: vi.fn(),
+    };
+    const tasks = {
+      requireTrackableTask: vi
+        .fn()
+        .mockRejectedValue(
+          new UnprocessableEntityException('Task is inactive'),
+        ),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      tasks as never,
+      mockUsersActivity as never,
+    );
+
+    await expect(
+      service.updateOwnEntry(user, completedEntry.id, { taskId: 'task-2' }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(db.update).not.toHaveBeenCalled();
   });
 
   it('starts GitHub timer transactionally', async () => {
