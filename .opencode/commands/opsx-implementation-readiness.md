@@ -81,6 +81,11 @@ Unless the user narrows the scope, always check these sources:
    - `READY WITH GAPS`: the target is implementable, but there are non-blocking gaps or drift to fix
    - `NOT READY`: blocking source or API gaps make successful implementation unsafe
 
+   OpenSpec proposal recommendation rule:
+   - Recommend `/opsx-propose` only when the only blocking gap is missing, incomplete, stale, or conflicting OpenSpec planning/spec coverage.
+   - Do not recommend `/opsx-propose` for backend/API blockers, missing approved `.pen`, missing docs outside OpenSpec, or implementation drift.
+   - If OpenSpec gaps and backend/API blockers both exist, report them separately and keep the next-update plan split between planning fixes and backend/API fixes.
+
 6. **Generate the next-update plan**
 
    Produce an ordered, minimal plan for the next update.
@@ -90,6 +95,8 @@ Unless the user narrows the scope, always check these sources:
    - Do not update `proposal.md`, `design.md`, `tasks.md`, code, or `.pen` files
    - Prefer small, concrete next actions
    - Separate planning/source-of-truth fixes from implementation fixes
+   - When the only blocker is OpenSpec planning/spec coverage, make the first plan step `Run /opsx-propose "<suggested-change-name-or-description>"`.
+   - Do not suggest `/opsx-propose` when the blockers are backend/API support, missing approved `.pen`, missing docs, or implementation drift.
 
 7. **Output the review**
 
@@ -133,6 +140,8 @@ Unless the user narrows the scope, always check these sources:
 - If docs and design disagree, follow the repo guidance: docs are the source of truth unless still ambiguous
 - When possible, cite concrete file paths and line references
 - Keep the result actionable and concise
+- If OpenSpec is the only blocker, label it explicitly as a planning/source-of-truth gap and recommend `/opsx-propose`.
+- If backend/API blockers exist, keep them separate from any OpenSpec recommendation instead of treating proposal work as the fix for missing backend behavior.
 
 **Guardrails**
 
