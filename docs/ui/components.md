@@ -125,6 +125,10 @@ Use `<DataTable>` and `<Column>`.
 - Body row: `h-12 border-b border-divider hover:bg-app-bg`.
 - Selected row: `bg-accent-tint text-text-dark`.
 - Right align numeric columns.
+- Table row actions are icon-only in both SPAs. Do not render visible action text such as `Edit`, `Delete`, or `View` inside action cells.
+- Use the former action text as both the PrimeVue tooltip copy and the accessible label, e.g. an edit icon button with tooltip `Edit`.
+- Use Brand Purple for non-destructive action icons and Destructive red for delete/remove icons.
+- Keep row action columns compact, right-aligned, and visually secondary to the row content.
 
 ```vue
 <DataTable
