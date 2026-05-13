@@ -12,6 +12,7 @@ import type {
   ReportFilterOption,
   ReportGroupBy,
 } from '@/composables/useReportsData';
+import { getReportDateRangeError } from '@/composables/useReportsData';
 
 const props = defineProps<{
   disabled?: boolean;
@@ -47,8 +48,7 @@ const reportsFilterSchema = z
   })
   .refine(
     (values) => {
-      const [start, end] = values.dateRange ?? [];
-      return !start || !end || end.getTime() >= start.getTime();
+      return getReportDateRangeError(values.dateRange as ReportDateRange) === null;
     },
     { message: 'End date must be after the start date.', path: ['dateRange'] },
   );
@@ -83,13 +83,7 @@ const datePickerValue = computed<Date[] | null>({
 });
 
 const dateRangeError = computed(() => {
-  const [start, end] = dateRange.value ?? [];
-
-  if (start && end && end.getTime() < start.getTime()) {
-    return 'End date must be after the start date.';
-  }
-
-  return null;
+  return getReportDateRangeError(dateRange.value);
 });
 
 const selectPt = {

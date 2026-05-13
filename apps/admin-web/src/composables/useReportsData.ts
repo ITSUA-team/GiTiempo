@@ -91,6 +91,7 @@ interface GroupAccumulator {
 }
 
 const pageLimit = 100;
+const reportDateRangeErrorMessage = 'End date must be after the start date.';
 
 export function getDefaultReportDateRange(now = new Date()): ReportDateRange {
   return [
@@ -107,6 +108,22 @@ export function createDefaultReportTableFilters(): ReportTableFilters {
     hours: 'any',
     billable: 'any',
   };
+}
+
+export function getReportDateRangeError(
+  dateRange: ReportDateRange,
+): string | null {
+  const [start, end] = dateRange ?? [];
+
+  if (start && end && end.getTime() < start.getTime()) {
+    return reportDateRangeErrorMessage;
+  }
+
+  return null;
+}
+
+export function isReportDateRangeValid(dateRange: ReportDateRange): boolean {
+  return getReportDateRangeError(dateRange) === null;
 }
 
 export function formatReportDuration(totalSeconds: number): string {
@@ -544,6 +561,12 @@ function nextDayStartIso(date: Date): string {
 export function toReportDateQuery(
   dateRange: ReportDateRange,
 ): Pick<TimeEntryListQuery, 'dateFrom' | 'dateTo'> {
+  const dateRangeError = getReportDateRangeError(dateRange);
+
+  if (dateRangeError) {
+    throw new Error(dateRangeError);
+  }
+
   const [dateFrom, dateTo] = dateRange ?? [];
   const query: Pick<TimeEntryListQuery, 'dateFrom' | 'dateTo'> = {};
 
@@ -675,6 +698,13 @@ export function useReportsData({
 
     const currentRequestId = requestId + 1;
     requestId = currentRequestId;
+
+    if (!isReportDateRangeValid(dateRange.value)) {
+      loading.value = false;
+      loadError.value = null;
+      return;
+    }
+
     loading.value = true;
     loadError.value = null;
 
@@ -762,6 +792,12 @@ export function useReportsData({
   async function buildRowsForFilters(
     filters: ReportGenerationFilters,
   ): Promise<ReportRow[]> {
+    const dateRangeError = getReportDateRangeError(filters.dateRange);
+
+    if (dateRangeError) {
+      throw new Error(dateRangeError);
+    }
+
     const token = accessToken.value;
 
     if (!token) {

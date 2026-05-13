@@ -60,8 +60,16 @@ const ReportsFilterFormStub = {
     'update:dateRange',
     'update:groupBy',
   ],
+  setup() {
+    return {
+      invalidDateRange: [
+        new Date('2026-05-03T12:00:00.000Z'),
+        new Date('2026-05-02T12:00:00.000Z'),
+      ],
+    };
+  },
   template:
-    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button><button data-testid="change-report-group-by" @click="$emit(\'update:groupBy\', \'member\')">group</button></div>',
+    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button><button data-testid="change-report-group-by" @click="$emit(\'update:groupBy\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button></div>',
 };
 
 const ReportsTableStub = {
@@ -234,6 +242,22 @@ describe('ReportsView', () => {
     expect(reportMocks.successToast).toHaveBeenCalledWith(
       'Exported gitiempo-reports-2026-05-13.csv.',
     );
+  });
+
+  it('blocks CSV export when the report date range is invalid', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="set-invalid-report-date"]').trigger('click');
+
+    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
+
+    await exportButton.trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.buildRowsForFilters).not.toHaveBeenCalled();
+    expect(reportMocks.downloadReportsCsv).not.toHaveBeenCalled();
   });
 
   it('keeps header report setup changes separate from table data', async () => {

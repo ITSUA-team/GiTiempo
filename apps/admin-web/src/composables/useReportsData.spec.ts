@@ -20,7 +20,9 @@ import {
   filterReportRows,
   formatReportDuration,
   formatReportPercent,
+  getReportDateRangeError,
   getReportRowBillableSeconds,
+  isReportDateRangeValid,
   useReportsData,
 } from './useReportsData';
 
@@ -295,6 +297,24 @@ describe('reports data helpers', () => {
       1800,
     );
   });
+
+  it('detects invalid report date ranges with a shared helper', () => {
+    const invalidRange: [Date, Date] = [
+      new Date('2026-05-03T12:00:00.000Z'),
+      new Date('2026-05-02T12:00:00.000Z'),
+    ];
+
+    expect(isReportDateRangeValid(invalidRange)).toBe(false);
+    expect(getReportDateRangeError(invalidRange)).toBe(
+      'End date must be after the start date.',
+    );
+    expect(
+      isReportDateRangeValid([
+        new Date('2026-05-02T12:00:00.000Z'),
+        new Date('2026-05-03T12:00:00.000Z'),
+      ]),
+    ).toBe(true);
+  });
 });
 
 describe('useReportsData', () => {
@@ -493,6 +513,53 @@ describe('useReportsData', () => {
       }),
     ]);
     expect(reports.selectedProjectId.value).toBeNull();
+  });
+
+  it('blocks invalid date ranges before report refresh and export requests', async () => {
+    const accessToken = shallowRef('access-token');
+    const listProjects = vi.fn().mockResolvedValue(projects);
+    const listProjectEntries = vi.fn().mockResolvedValue(emptyResponse());
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mount(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            accessToken,
+            projectsClient: { listProjects },
+            reportsClient: { listProjectEntries },
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+    listProjects.mockClear();
+    listProjectEntries.mockClear();
+
+    reports.dateRange.value = [
+      new Date('2026-05-03T12:00:00.000Z'),
+      new Date('2026-05-02T12:00:00.000Z'),
+    ];
+
+    await vi.advanceTimersByTimeAsync(300);
+    await flushPromises();
+
+    expect(listProjects).not.toHaveBeenCalled();
+    expect(listProjectEntries).not.toHaveBeenCalled();
+    expect(reports.loadError.value).toBeNull();
+
+    await expect(
+      reports.buildRowsForFilters({
+        dateRange: reports.dateRange.value,
+        groupBy: 'project',
+        memberId: null,
+        projectId: null,
+      }),
+    ).rejects.toThrow('End date must be after the start date.');
+    expect(listProjects).not.toHaveBeenCalled();
+    expect(listProjectEntries).not.toHaveBeenCalled();
   });
 
   it('keeps request errors distinct from empty report results', async () => {

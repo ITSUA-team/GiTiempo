@@ -4,6 +4,7 @@ import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
+import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ReportsFilterForm from '@/components/reports/ReportsFilterForm.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
 import { useToasts } from '@/composables/useToasts';
@@ -13,6 +14,7 @@ import {
   filterReportRows,
   formatReportDuration,
   formatReportPercent,
+  getReportDateRangeError,
   type ReportDateRange,
   type ReportGroupBy,
   useReportsData,
@@ -41,6 +43,12 @@ const exporting = ref(false);
 const tableRows = computed(() =>
   filterReportRows(reports.rows.value, tableFilters.value),
 );
+const reportDateRangeError = computed(() =>
+  getReportDateRangeError(reportDateRange.value),
+);
+const exportDisabled = computed(
+  () => reports.loading.value || exporting.value || reportDateRangeError.value !== null,
+);
 
 const totalHoursLabel = computed(() =>
   formatReportDuration(reports.summary.value.totalSeconds),
@@ -66,7 +74,7 @@ const topProjectDescription = computed(() => {
 });
 
 async function handleExport(): Promise<void> {
-  if (exporting.value) {
+  if (exporting.value || reportDateRangeError.value) {
     return;
   }
 
@@ -105,18 +113,11 @@ async function handleExport(): Promise<void> {
     </template>
 
     <template v-else-if="reports.loadError.value && !reports.loading.value">
-      <SurfaceCard padding-class="p-6">
-        <div class="flex flex-col items-center gap-3 py-6 text-center">
-          <span class="text-text-dark text-[15px] font-semibold">Failed to load reports</span>
-          <span class="text-text-muted text-[13px]">{{ reports.loadError.value }}</span>
-          <Button
-            label="Try again"
-            severity="secondary"
-            outlined
-            @click="reports.refresh"
-          />
-        </div>
-      </SurfaceCard>
+      <RequestErrorCard
+        title="Failed to load reports"
+        :message="reports.loadError.value"
+        @retry="reports.refresh"
+      />
     </template>
 
     <template v-else>
@@ -128,7 +129,7 @@ async function handleExport(): Promise<void> {
           <Button
             label="Export CSV"
             data-testid="export-reports-csv"
-            :disabled="reports.loading.value || exporting"
+            :disabled="exportDisabled"
             :loading="exporting"
             @click="handleExport"
           />
