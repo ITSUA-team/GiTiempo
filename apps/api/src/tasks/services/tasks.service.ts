@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -15,6 +16,7 @@ import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
+import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { tasks } from '../schemas/tasks.schema';
 
 export type TaskRow = typeof tasks.$inferSelect;
@@ -96,6 +98,35 @@ export class TasksService {
     return this.toResponse(row);
   }
 
+  async deleteTask(user: AuthUser, taskId: string): Promise<void> {
+    const { task } = await this.requireVisibleTask(user, taskId);
+    const [entry] = await this.db
+      .select({ id: timeEntries.id })
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, user.workspaceId),
+          eq(timeEntries.taskId, task.id),
+        ),
+      )
+      .limit(1);
+
+    if (entry) throw new ConflictException('Task has related time entries');
+
+    try {
+      const [deleted] = await this.db
+        .delete(tasks)
+        .where(
+          and(eq(tasks.id, task.id), eq(tasks.workspaceId, user.workspaceId)),
+        )
+        .returning({ id: tasks.id });
+      if (!deleted) throw new NotFoundException('Task not found');
+    } catch (err) {
+      this.handleTimeEntryReferenceConflict(err);
+      throw err;
+    }
+  }
+
   async requireVisibleTask(
     user: AuthUser,
     taskId: string,
@@ -140,4 +171,30 @@ export class TasksService {
       updatedAt: row.updatedAt.toISOString(),
     };
   }
+
+  private handleTimeEntryReferenceConflict(error: unknown): void {
+    const pgError = getPostgresError(error);
+    if (
+      pgError?.code === '23503' &&
+      pgError.constraint === 'time_entries_task_id_tasks_id_fk'
+    ) {
+      throw new ConflictException('Task has related time entries');
+    }
+  }
+}
+
+function getPostgresError(error: unknown): {
+  code?: unknown;
+  constraint?: unknown;
+} | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const candidate = error as {
+    code?: unknown;
+    constraint?: unknown;
+    cause?: unknown;
+  };
+  if (candidate.code !== undefined || candidate.constraint !== undefined) {
+    return candidate;
+  }
+  return getPostgresError(candidate.cause);
 }
