@@ -197,7 +197,9 @@ Use `<Avatar>`.
 Use `<Skeleton>` for inline placeholders and `<ProgressSpinner>` for full-page loads.
 
 - Table/list loading: render skeleton rows sized like final content.
-- Full page loading: centered spinner.
+- Structured content-rich first loads may use PrimeVue `<Skeleton>` placeholders instead of a spinner when the skeleton mirrors the final header, card, field rows, and action layout.
+- Full page loading: centered spinner for generic indeterminate page loads where a structured skeleton is not more accurate.
+- Request-error states must remain distinct from empty states and default form values; do not show empty/default content after a failed required request.
 - Button loading: `<Button loading>`.
 
 ```vue
