@@ -12,6 +12,7 @@ import {
   projectExternalRefs,
   projects,
   tasks,
+  taskExternalRefs,
   timeEntries,
   users,
   workspaces,
@@ -237,12 +238,14 @@ describe('Projects and tasks (e2e)', () => {
       .returning();
     if (!githubProject) throw new Error('Expected GitHub project');
 
+    const externalKey = `gitiempo/admin-web-${randomUUID()}`;
+
     await db.insert(projectExternalRefs).values({
       workspaceId,
       projectId: githubProject.id,
       provider: 'github',
       externalType: 'repository',
-      externalKey: 'gitiempo/admin-web',
+      externalKey,
       externalUrl: 'https://github.com/gitiempo/admin-web',
     });
 
@@ -253,7 +256,7 @@ describe('Projects and tasks (e2e)', () => {
     expect(githubRes.body.providerSummary).toEqual({
       source: 'github',
       externalType: 'repository',
-      externalKey: 'gitiempo/admin-web',
+      externalKey,
       externalUrl: 'https://github.com/gitiempo/admin-web',
     });
   });
@@ -471,6 +474,153 @@ describe('Projects and tasks (e2e)', () => {
       .set('Authorization', bearer(memberToken))
       .send({ name: 'Forbidden' });
     expect(projectMutation.status).toBe(403);
+  });
+
+  it('deletes visible unused tasks', async () => {
+    const createTask = await request(app.getHttpServer())
+      .post(`/projects/${platformProjectId}/tasks`)
+      .set('Authorization', bearer(memberToken))
+      .send({ title: `Delete Unused ${randomUUID()}` });
+    expect(createTask.status).toBe(201);
+
+    const deleteTask = await request(app.getHttpServer())
+      .delete(`/tasks/${createTask.body.id}`)
+      .set('Authorization', bearer(memberToken));
+    expect(deleteTask.status).toBe(204);
+
+    const readTask = await request(app.getHttpServer())
+      .get(`/tasks/${createTask.body.id}`)
+      .set('Authorization', bearer(memberToken));
+    expect(readTask.status).toBe(404);
+  });
+
+  it('hides invisible tasks from delete attempts', async () => {
+    const [privateProject] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Delete Private ${randomUUID()}`,
+        visibility: 'private',
+      })
+      .returning();
+    if (!privateProject) throw new Error('Expected private project');
+
+    const [privateTask] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: privateProject.id,
+        title: `Delete Invisible ${randomUUID()}`,
+      })
+      .returning();
+    if (!privateTask) throw new Error('Expected private task');
+
+    const deleteTask = await request(app.getHttpServer())
+      .delete(`/tasks/${privateTask.id}`)
+      .set('Authorization', bearer(otherMemberToken));
+    expect(deleteTask.status).toBe(404);
+
+    const [stillExists] = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.id, privateTask.id))
+      .limit(1);
+    expect(stillExists?.id).toBe(privateTask.id);
+  });
+
+  it('rejects deleting tasks with completed time entries', async () => {
+    const createTask = await request(app.getHttpServer())
+      .post(`/projects/${platformProjectId}/tasks`)
+      .set('Authorization', bearer(memberToken))
+      .send({ title: `Delete Completed ${randomUUID()}` });
+    expect(createTask.status).toBe(201);
+
+    const entry = await request(app.getHttpServer())
+      .post('/time-entries')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        taskId: createTask.body.id,
+        startedAt: '2026-05-04T10:00:00.000Z',
+        endedAt: '2026-05-04T10:30:00.000Z',
+      });
+    expect(entry.status).toBe(201);
+
+    const deleteTask = await request(app.getHttpServer())
+      .delete(`/tasks/${createTask.body.id}`)
+      .set('Authorization', bearer(memberToken));
+    expect(deleteTask.status).toBe(409);
+
+    const readTask = await request(app.getHttpServer())
+      .get(`/tasks/${createTask.body.id}`)
+      .set('Authorization', bearer(memberToken));
+    expect(readTask.status).toBe(200);
+  });
+
+  it('rejects deleting tasks with running time entries', async () => {
+    const createTask = await request(app.getHttpServer())
+      .post(`/projects/${platformProjectId}/tasks`)
+      .set('Authorization', bearer(memberToken))
+      .send({ title: `Delete Running ${randomUUID()}` });
+    expect(createTask.status).toBe(201);
+
+    const [runningEntry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId: createTask.body.id,
+        userId: adminUserId,
+        startedAt: new Date('2026-05-04T11:00:00.000Z'),
+      })
+      .returning({ id: timeEntries.id });
+    if (!runningEntry) throw new Error('Expected running entry');
+
+    const deleteTask = await request(app.getHttpServer())
+      .delete(`/tasks/${createTask.body.id}`)
+      .set('Authorization', bearer(memberToken));
+    expect(deleteTask.status).toBe(409);
+
+    const [stillRunning] = await db
+      .select({ id: timeEntries.id, endedAt: timeEntries.endedAt })
+      .from(timeEntries)
+      .where(eq(timeEntries.id, runningEntry.id))
+      .limit(1);
+    expect(stillRunning?.id).toBe(runningEntry.id);
+    expect(stillRunning?.endedAt).toBeNull();
+
+    await db.delete(timeEntries).where(eq(timeEntries.id, runningEntry.id));
+  });
+
+  it('removes task external refs when deleting unused linked tasks', async () => {
+    const createTask = await request(app.getHttpServer())
+      .post(`/projects/${platformProjectId}/tasks`)
+      .set('Authorization', bearer(memberToken))
+      .send({ title: `Delete Linked ${randomUUID()}` });
+    expect(createTask.status).toBe(201);
+
+    const [ref] = await db
+      .insert(taskExternalRefs)
+      .values({
+        workspaceId,
+        projectId: platformProjectId,
+        taskId: createTask.body.id,
+        provider: 'github',
+        externalType: 'issue',
+        externalKey: `gitiempo/delete-${randomUUID()}`,
+      })
+      .returning({ id: taskExternalRefs.id });
+    if (!ref) throw new Error('Expected task external ref');
+
+    const deleteTask = await request(app.getHttpServer())
+      .delete(`/tasks/${createTask.body.id}`)
+      .set('Authorization', bearer(memberToken));
+    expect(deleteTask.status).toBe(204);
+
+    const [remainingRef] = await db
+      .select({ id: taskExternalRefs.id })
+      .from(taskExternalRefs)
+      .where(eq(taskExternalRefs.id, ref.id))
+      .limit(1);
+    expect(remainingRef).toBeUndefined();
   });
 
   it('prevents task updates in inactive projects', async () => {

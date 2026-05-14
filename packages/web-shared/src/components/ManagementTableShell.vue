@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import DataTable from 'primevue/datatable';
 
-export interface ManagementTableColumn {
-  key: string;
-  label: string;
-  width?: number | 'fill';
-  align?: 'start' | 'end';
-}
+import type { ManagementTableColumn } from './management-table';
 
 defineProps<{
   columns: ManagementTableColumn[];
