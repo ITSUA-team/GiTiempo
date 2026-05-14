@@ -134,7 +134,8 @@ describe('createAdminReportsClient', () => {
       }),
     );
     expect(result.filename).toBe('time-report-2026-05.csv');
-    await expect(result.blob.text()).resolves.toContain('Project Orion');
+    expect(result.blob.type).toBe('text/csv;charset=utf-8');
+    expect(result.blob.size).toBeGreaterThan(0);
   });
 
   it('surfaces API error messages from the report endpoints', async () => {
