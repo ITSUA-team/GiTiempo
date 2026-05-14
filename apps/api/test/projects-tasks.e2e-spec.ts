@@ -162,13 +162,19 @@ describe('Projects and tasks (e2e)', () => {
       .where(
         and(
           eq(projects.workspaceId, workspaceId),
-          or(...TEST_PROJECT_NAME_PREFIXES.map((prefix) => like(projects.name, `${prefix}%`))),
+          or(
+            ...TEST_PROJECT_NAME_PREFIXES.map((prefix) =>
+              like(projects.name, `${prefix}%`),
+            ),
+          ),
         ),
       );
 
     const testProjectIds = testProjects.map((project) => project.id);
     const taskConditions = [
-      ...TEST_TASK_TITLE_PREFIXES.map((prefix) => like(tasks.title, `${prefix}%`)),
+      ...TEST_TASK_TITLE_PREFIXES.map((prefix) =>
+        like(tasks.title, `${prefix}%`),
+      ),
     ];
 
     if (testProjectIds.length > 0) {
@@ -179,16 +185,18 @@ describe('Projects and tasks (e2e)', () => {
       ? await db
           .select({ id: tasks.id })
           .from(tasks)
-          .where(
-            and(eq(tasks.workspaceId, workspaceId), or(...taskConditions)),
-          )
+          .where(and(eq(tasks.workspaceId, workspaceId), or(...taskConditions)))
       : [];
 
     const testTaskIds = testTasks.map((task) => task.id);
 
     if (testTaskIds.length > 0) {
-      await db.delete(timeEntries).where(inArray(timeEntries.taskId, testTaskIds));
-      await db.delete(taskExternalRefs).where(inArray(taskExternalRefs.taskId, testTaskIds));
+      await db
+        .delete(timeEntries)
+        .where(inArray(timeEntries.taskId, testTaskIds));
+      await db
+        .delete(taskExternalRefs)
+        .where(inArray(taskExternalRefs.taskId, testTaskIds));
       await db.delete(tasks).where(inArray(tasks.id, testTaskIds));
     }
 
