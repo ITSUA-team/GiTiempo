@@ -10,10 +10,10 @@ const fallbackLogContext: FeedbackLogContext = { feature: 'app', action: 'unknow
 
 export function useToasts() {
   const toast = useToast();
-  const { showSuccessToast, showErrorToast } = createAppToast(toast);
+  const { showErrorToast, showInfoToast, showSuccessToast } = createAppToast(toast);
 
   function infoToast(message: string): void {
-    toast.add({ detail: message, life: 4000, severity: 'info', summary: 'Info' });
+    showInfoToast('Info', message);
   }
 
   function successToast(message: string): void {
