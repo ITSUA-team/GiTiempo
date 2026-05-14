@@ -15,7 +15,7 @@ export interface ToastLike {
   add(message: {
     detail: string;
     life?: number;
-    severity: "error" | "success";
+    severity: "error" | "info" | "success";
     summary: string;
   }): void;
 }
@@ -57,12 +57,12 @@ interface RunWithFeedbackOptions<T> {
   };
   onSuccess?: FeedbackCopy;
   run: () => Promise<T>;
-  toast: ReturnType<typeof createAppToast>;
+  toast: Pick<ReturnType<typeof createAppToast>, "showErrorToast" | "showSuccessToast">;
 }
 
 /* eslint-enable no-unused-vars */
 
-const successToastLife = 4000;
+const dismissibleToastLife = 4000;
 
 const defaultFeedbackLogger: FeedbackLogger = {
   error(message, metadata) {
@@ -93,11 +93,16 @@ export function createAppToast(
   }
 
   function showSuccessToast(summary: string, detail: string): void {
-    toast.add({ detail, life: successToastLife, severity: "success", summary });
+    toast.add({ detail, life: dismissibleToastLife, severity: "success", summary });
+  }
+
+  function showInfoToast(summary: string, detail: string): void {
+    toast.add({ detail, life: dismissibleToastLife, severity: "info", summary });
   }
 
   return {
     showErrorToast,
+    showInfoToast,
     showSuccessToast,
   };
 }

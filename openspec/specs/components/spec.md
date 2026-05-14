@@ -37,7 +37,7 @@ Application-level buttons, inputs, tables, tags, avatars, and loading surfaces S
 
 ### Requirement: Shared Empty And Loading States
 
-The frontend MUST use consistent empty-state and loading-state patterns across pages.
+The frontend MUST use consistent empty-state, request-error, and loading-state patterns across pages.
 
 #### Scenario: Empty list or dashboard section
 
@@ -49,4 +49,12 @@ The frontend MUST use consistent empty-state and loading-state patterns across p
 
 - GIVEN a page is waiting for required data to load
 - WHEN the page is not yet ready
-- THEN it presents the shared loading-state pattern appropriate for the page scope
+- THEN it presents a page-level skeleton matching the final page structure where practical
+- AND it does not render an empty state before the initial request finishes
+
+#### Scenario: Request errors stay distinct from empty states
+
+- GIVEN a page or section fails to load required data
+- WHEN the failed request state is rendered
+- THEN it presents a request-error state with retry affordance where retry is available
+- AND it does not substitute an empty-state message for the failed request
