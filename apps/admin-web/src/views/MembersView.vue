@@ -12,6 +12,7 @@ import ConfirmDialog from 'primevue/confirmdialog';
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
+import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useToasts } from '@/composables/useToasts';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
@@ -115,18 +116,11 @@ onMounted(fetchAll);
     </template>
 
     <template v-else-if="loadError && !loading">
-      <SurfaceCard padding-class="p-6">
-        <div class="flex flex-col items-center gap-3 py-6 text-center">
-          <span class="text-text-dark text-[15px] font-semibold">Failed to load members</span>
-          <span class="text-text-muted text-[13px]">{{ loadError }}</span>
-          <Button
-            label="Try again"
-            severity="secondary"
-            outlined
-            @click="fetchAll"
-          />
-        </div>
-      </SurfaceCard>
+      <RequestErrorCard
+        title="Failed to load members"
+        :message="loadError"
+        @retry="fetchAll"
+      />
     </template>
 
     <template v-else>

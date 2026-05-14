@@ -21,6 +21,20 @@ describe("createAppToast", () => {
     });
   });
 
+  it("shows info toasts with the shared default lifetime", () => {
+    const toast = { add: vi.fn() };
+    const appToast = createAppToast(toast);
+
+    appToast.showInfoToast("Info", "No data to export.");
+
+    expect(toast.add).toHaveBeenCalledWith({
+      detail: "No data to export.",
+      life: 4000,
+      severity: "info",
+      summary: "Info",
+    });
+  });
+
   it("shows safe error toast copy without rendering backend error messages", () => {
     const toast = { add: vi.fn() };
     const logger = { error: vi.fn() };
