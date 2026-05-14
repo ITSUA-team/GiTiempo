@@ -196,8 +196,15 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | ------ | --------------------- | ---- | ----- | ------------------------------------------------------- |
 | GET    | `/workspace`          | JWT  | Any   | Get current workspace info                              |
 | PATCH  | `/workspace`          | JWT  | Admin | Update workspace settings (name)                        |
-| GET    | `/workspace/settings` | JWT  | Admin | Get workspace settings (currency, default hourly rate)  |
-| PATCH  | `/workspace/settings` | JWT  | Admin | Update workspace settings (currency, defaultHourlyRate) |
+| GET    | `/workspace/settings` | JWT  | Admin | Get workspace settings (currency, default hourly rate, time zone)  |
+| PATCH  | `/workspace/settings` | JWT  | Admin | Update workspace settings (currency, defaultHourlyRate, timeZone) |
+
+**GET /workspace/settings** response includes `{ id, workspaceId, currency, defaultHourlyRate, timeZone, createdAt, updatedAt }`.
+
+**PATCH /workspace/settings** body: `{ currency?: string, defaultHourlyRate?: number | null, timeZone?: string }`
+
+- `timeZone` must be a valid IANA time-zone identifier such as `UTC` or `Europe/Kyiv`.
+- `defaultHourlyRate` is a nullable workspace billing default for invoice creation; invoice records store their own hourly-rate snapshot after creation.
 
 ---
 

@@ -48,7 +48,7 @@
 ## Settings Page
 
 - Single-column grouped form layout.
-- Workspace fields include name, default hourly rate, and currency.
+- Workspace fields include name, default hourly rate, currency, and time zone.
 - Save action pinned per section or at the page bottom.
 
 ## Cross-App Navigation

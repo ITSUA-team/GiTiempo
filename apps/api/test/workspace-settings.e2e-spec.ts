@@ -30,7 +30,7 @@ describe('Workspace settings (e2e)', () => {
     if (!workspace) throw new Error('Expected seeded workspace');
     await db
       .update(workspaceSettings)
-      .set({ currency: 'USD', defaultHourlyRate: 100 })
+      .set({ currency: 'USD', defaultHourlyRate: 100, timeZone: 'UTC' })
       .where(eq(workspaceSettings.workspaceId, workspace.id));
   });
 
@@ -67,6 +67,7 @@ describe('Workspace settings (e2e)', () => {
       expect(res.body).toHaveProperty('updatedAt');
       expect(res.body.currency).toBe('USD');
       expect(res.body.defaultHourlyRate).toBe(100);
+      expect(res.body.timeZone).toBe('UTC');
     });
   });
 
@@ -123,6 +124,28 @@ describe('Workspace settings (e2e)', () => {
       expect(verify.body.defaultHourlyRate).toBeNull();
     });
 
+    it('updates timeZone', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeZone: 'Europe/Kyiv' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.timeZone).toBe('Europe/Kyiv');
+
+      const verify = await request(app.getHttpServer())
+        .get('/workspace/settings')
+        .set('Authorization', bearer(adminToken));
+      expect(verify.body.timeZone).toBe('Europe/Kyiv');
+
+      const [ws] = await db.select().from(workspaces).limit(1);
+      const [row] = await db
+        .select()
+        .from(workspaceSettings)
+        .where(eq(workspaceSettings.workspaceId, ws.id));
+      expect(row?.timeZone).toBe('Europe/Kyiv');
+    });
+
     it('returns 400 for empty body', async () => {
       const res = await request(app.getHttpServer())
         .patch('/workspace/settings')
@@ -137,6 +160,15 @@ describe('Workspace settings (e2e)', () => {
         .patch('/workspace/settings')
         .set('Authorization', bearer(adminToken))
         .send({ currency: 'usd' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for invalid timeZone', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/workspace/settings')
+        .set('Authorization', bearer(adminToken))
+        .send({ timeZone: 'Not/AZone' });
 
       expect(res.status).toBe(400);
     });
