@@ -66,6 +66,8 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.reports)).toBe(true);
     expect(router.hasRoute(routeNames.invoices)).toBe(true);
     expect(router.hasRoute(routeNames.members)).toBe(true);
+    expect(router.hasRoute(routeNames.forbidden)).toBe(true);
+    expect(router.hasRoute(routeNames.notFound)).toBe(true);
     expect(router.hasRoute(routeNames.projects)).toBe(true);
     expect(router.hasRoute(routeNames.settings)).toBe(true);
   });
@@ -83,6 +85,8 @@ describe("admin router", () => {
       { path: "/members", name: routeNames.members },
       { path: "/projects", name: routeNames.projects },
       { path: "/settings", name: routeNames.settings },
+      { path: "/403", name: routeNames.forbidden },
+      { path: "/missing-page", name: routeNames.notFound },
     ] as const;
 
     for (const route of protectedRoutes) {
@@ -120,6 +124,46 @@ describe("admin router", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.query.redirect).toBe("/reports");
+  });
+
+  it("redirects anonymous users from unknown routes to login", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/missing-page");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.query.redirect).toBe("/missing-page");
+  });
+
+  it("renders the authenticated not-found route after bootstrap succeeds", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRefreshToken("refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        refreshSession: async () => ({
+          accessToken: "access-token",
+          accessTokenExpiresIn: 900,
+          refreshToken: "refresh-token-next",
+        }),
+      }),
+    );
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/missing-page");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.notFound);
   });
 
   it("redirects to login after bootstrap rejects a persisted refresh token", async () => {
