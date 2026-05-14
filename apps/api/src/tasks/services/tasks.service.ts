@@ -33,6 +33,10 @@ export class TasksService {
     projectId: string,
   ): Promise<TaskResponse[]> {
     const project = await this.projects.requireVisibleProject(user, projectId);
+    if (!project.isActive) {
+      throw new NotFoundException('Project not found');
+    }
+
     const rows = await this.db
       .select()
       .from(tasks)
@@ -40,6 +44,7 @@ export class TasksService {
         and(
           eq(tasks.workspaceId, user.workspaceId),
           eq(tasks.projectId, project.id),
+          eq(tasks.isActive, true),
         ),
       );
 

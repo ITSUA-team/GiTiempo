@@ -176,6 +176,85 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("updates an existing task and parses the response", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        createdAt: "2026-04-20T12:00:00.000Z",
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        isActive: true,
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        status: "closed",
+        title: "Review PM scope rules",
+        updatedAt: "2026-04-21T10:00:00.000Z",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+      }),
+    );
+    const client = createTimeEntriesClient({ fetchFn });
+
+    const task = await client.updateTask(
+      "access-token",
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      {
+        status: "closed",
+        title: "Review PM scope rules",
+      },
+    );
+
+    expect(task.status).toBe("closed");
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      {
+        body: JSON.stringify({
+          title: "Review PM scope rules",
+          status: "closed",
+        }),
+        headers: {
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      },
+    );
+  });
+
+  it("handles task deletion with the no-content contract", async () => {
+    const fetchFn = vi.fn(async () => noContentResponse());
+    const client = createTimeEntriesClient({ fetchFn });
+
+    await expect(
+      client.deleteTask(
+        "access-token",
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      ),
+    ).resolves.toBeUndefined();
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      {
+        headers: {
+          Authorization: "Bearer access-token",
+        },
+        method: "DELETE",
+      },
+    );
+  });
+
+  it("propagates task deletion errors using repository messages", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse(
+        { message: "Task has related time entries" },
+        { status: 409 },
+      ),
+    );
+    const client = createTimeEntriesClient({ fetchFn });
+
+    await expect(
+      client.deleteTask(
+        "access-token",
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      ),
+    ).rejects.toThrow("Task has related time entries");
+  });
+
   it("posts timer start requests with the selected task payload", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({

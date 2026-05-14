@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { and, eq } from 'drizzle-orm';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { and, eq, inArray, like, or } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
@@ -18,6 +18,41 @@ import {
   workspaces,
 } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
+
+const TEST_PROJECT_NAME_PREFIXES = [
+  'PM Created ',
+  'Admin Created ',
+  'Description ',
+  'GitHub Detail ',
+  'Summary Detail ',
+  'Empty Summary ',
+  'Unassigned ',
+  'PM Active State ',
+  'Admin Archive ',
+  'Delete Private ',
+  'Inactive Task Parent ',
+  'Inactive Public ',
+  'Inactive Admin ',
+  'Public Access ',
+  'PM Public ',
+  'No Members ',
+] as const;
+
+const TEST_TASK_TITLE_PREFIXES = [
+  'Summary Task ',
+  'Member Task',
+  'Delete Unused ',
+  'Delete Invisible ',
+  'Delete Completed ',
+  'Delete Running ',
+  'Delete Linked ',
+  'Inactive Project Task ',
+  'Visible Active ',
+  'Visible Inactive ',
+  'Inactive Public Task ',
+  'Inactive Admin Task ',
+  'Public Task',
+] as const;
 
 describe('Projects and tasks (e2e)', () => {
   let app: INestApplication;
@@ -115,6 +150,58 @@ describe('Projects and tasks (e2e)', () => {
   afterAll(async () => {
     await app.close();
   });
+
+  afterEach(async () => {
+    await cleanupTestFixtures();
+  });
+
+  async function cleanupTestFixtures(): Promise<void> {
+    const testProjects = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(
+        and(
+          eq(projects.workspaceId, workspaceId),
+          or(...TEST_PROJECT_NAME_PREFIXES.map((prefix) => like(projects.name, `${prefix}%`))),
+        ),
+      );
+
+    const testProjectIds = testProjects.map((project) => project.id);
+    const taskConditions = [
+      ...TEST_TASK_TITLE_PREFIXES.map((prefix) => like(tasks.title, `${prefix}%`)),
+    ];
+
+    if (testProjectIds.length > 0) {
+      taskConditions.push(inArray(tasks.projectId, testProjectIds));
+    }
+
+    const testTasks = taskConditions.length
+      ? await db
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(
+            and(eq(tasks.workspaceId, workspaceId), or(...taskConditions)),
+          )
+      : [];
+
+    const testTaskIds = testTasks.map((task) => task.id);
+
+    if (testTaskIds.length > 0) {
+      await db.delete(timeEntries).where(inArray(timeEntries.taskId, testTaskIds));
+      await db.delete(taskExternalRefs).where(inArray(taskExternalRefs.taskId, testTaskIds));
+      await db.delete(tasks).where(inArray(tasks.id, testTaskIds));
+    }
+
+    if (testProjectIds.length > 0) {
+      await db
+        .delete(projectExternalRefs)
+        .where(inArray(projectExternalRefs.projectId, testProjectIds));
+      await db
+        .delete(projectAssignments)
+        .where(inArray(projectAssignments.projectId, testProjectIds));
+      await db.delete(projects).where(inArray(projects.id, testProjectIds));
+    }
+  }
 
   it('lists all projects for admin and only assigned active projects for members', async () => {
     const adminRes = await request(app.getHttpServer())
@@ -649,6 +736,136 @@ describe('Projects and tasks (e2e)', () => {
       .set('Authorization', bearer(adminToken))
       .send({ title: 'Should Not Update' });
     expect(updateTask.status).toBe(422);
+  });
+
+  it('lists only active tasks for visible active projects', async () => {
+    const [activeTask] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: platformProjectId,
+        title: `Visible Active ${randomUUID()}`,
+        status: 'open',
+        isActive: true,
+      })
+      .returning();
+    const [inactiveTask] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: platformProjectId,
+        title: `Visible Inactive ${randomUUID()}`,
+        status: 'closed',
+        isActive: false,
+      })
+      .returning();
+    if (!activeTask || !inactiveTask) throw new Error('Expected task fixtures');
+
+    const listTasks = await request(app.getHttpServer())
+      .get(`/projects/${platformProjectId}/tasks`)
+      .set('Authorization', bearer(memberToken));
+
+    expect(listTasks.status).toBe(200);
+    expect(listTasks.body.map((task: { id: string }) => task.id)).toContain(
+      activeTask.id,
+    );
+    expect(listTasks.body.map((task: { id: string }) => task.id)).not.toContain(
+      inactiveTask.id,
+    );
+  });
+
+  it('lists only active tasks for admins on visible active projects', async () => {
+    const [activeTask] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: platformProjectId,
+        title: `Admin Visible Active ${randomUUID()}`,
+        status: 'open',
+        isActive: true,
+      })
+      .returning();
+    const [inactiveTask] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: platformProjectId,
+        title: `Admin Visible Inactive ${randomUUID()}`,
+        status: 'closed',
+        isActive: false,
+      })
+      .returning();
+    if (!activeTask || !inactiveTask) throw new Error('Expected task fixtures');
+
+    const listTasks = await request(app.getHttpServer())
+      .get(`/projects/${platformProjectId}/tasks`)
+      .set('Authorization', bearer(adminToken));
+
+    expect(listTasks.status).toBe(200);
+    expect(listTasks.body.map((task: { id: string }) => task.id)).toContain(
+      activeTask.id,
+    );
+    expect(listTasks.body.map((task: { id: string }) => task.id)).not.toContain(
+      inactiveTask.id,
+    );
+  });
+
+  it('returns not found for non-admin task lists on inactive projects', async () => {
+    const [inactiveProject] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Inactive Public ${randomUUID()}`,
+        visibility: 'public',
+        isActive: false,
+      })
+      .returning();
+    if (!inactiveProject) throw new Error('Expected inactive project');
+
+    const [inactiveTask] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: inactiveProject.id,
+        title: `Inactive Public Task ${randomUUID()}`,
+      })
+      .returning();
+    if (!inactiveTask) throw new Error('Expected inactive project task');
+
+    const listTasks = await request(app.getHttpServer())
+      .get(`/projects/${inactiveProject.id}/tasks`)
+      .set('Authorization', bearer(otherMemberToken));
+
+    expect(listTasks.status).toBe(404);
+  });
+
+  it('returns not found for admin task lists on inactive projects', async () => {
+    const [inactiveProject] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Inactive Admin ${randomUUID()}`,
+        visibility: 'public',
+        isActive: false,
+      })
+      .returning();
+    if (!inactiveProject) throw new Error('Expected inactive project');
+
+    const [inactiveTask] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: inactiveProject.id,
+        title: `Inactive Admin Task ${randomUUID()}`,
+      })
+      .returning();
+    if (!inactiveTask) throw new Error('Expected inactive project task');
+
+    const listTasks = await request(app.getHttpServer())
+      .get(`/projects/${inactiveProject.id}/tasks`)
+      .set('Authorization', bearer(adminToken));
+
+    expect(listTasks.status).toBe(404);
   });
 
   it('hides project tasks from unassigned members', async () => {

@@ -27,7 +27,7 @@ const navItems = computed(() => [
   {
     label: "Projects",
     name: routeNames.project,
-    to: { name: routeNames.project, params: { projectId: "workspace-alpha" } },
+    to: { name: routeNames.project },
   },
   {
     label: "Profile",
