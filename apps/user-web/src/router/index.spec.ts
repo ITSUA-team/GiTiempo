@@ -157,4 +157,19 @@ describe("app router auth guards", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
+
+  it("defines the authenticated projects list route without the placeholder detail route", () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    expect(router.resolve("/projects").name).toBe(routeNames.project);
+    expect(router.getRoutes().some((route) => route.path === "/projects/:projectId")).toBe(
+      false,
+    );
+  });
 });

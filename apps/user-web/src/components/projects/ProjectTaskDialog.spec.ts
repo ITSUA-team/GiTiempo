@@ -88,7 +88,7 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.text()).toContain("Create task");
   });
 
-  it("renders edit mode with a status field and a fixed project selection", () => {
+  it("renders edit mode with a display-only project field and status select", () => {
     const wrapper = mountDialog({
       mode: "edit",
       projectId: "project-1",
@@ -100,8 +100,8 @@ describe("ProjectTaskDialog", () => {
 
     const selects = wrapper.findAll("select");
 
-    expect(selects).toHaveLength(2);
-    expect(selects[0]?.attributes("disabled")).toBeDefined();
+    expect(selects).toHaveLength(1);
+    expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Save changes");
   });
 

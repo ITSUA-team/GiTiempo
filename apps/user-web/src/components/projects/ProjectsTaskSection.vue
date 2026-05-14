@@ -3,12 +3,16 @@ import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 import Tag from "primevue/tag";
-import Tooltip from "primevue/tooltip";
 import {
   PencilSquareIcon,
   TrashIcon,
 } from "@heroicons/vue/24/outline";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
+import {
+  ManagementTableEmptyState,
+  ManagementTableRowAction,
+  SurfaceCard,
+} from "@gitiempo/web-shared";
 
 interface ProjectsTaskSectionProps {
   // eslint-disable-next-line no-unused-vars
@@ -26,7 +30,9 @@ const emit = defineEmits<{
   editTask: [task: TaskResponse];
 }>();
 
-const vTooltip = Tooltip;
+const statusColumnWidth = "8.125rem";
+const updatedColumnWidth = "10.625rem";
+const actionsColumnWidth = "8.75rem";
 
 function formatTaskCount(count: number): string {
   return `${count} active task${count === 1 ? "" : "s"}`;
@@ -70,7 +76,11 @@ function getStatusPt(task: TaskResponse) {
       />
     </div>
 
-    <div class="border-divider bg-surface shadow-card rounded-lg border">
+    <SurfaceCard
+      body-class="overflow-x-auto"
+      border
+      padding-class="p-0"
+    >
       <DataTable
         data-key="id"
         :pt="{
@@ -86,9 +96,10 @@ function getStatusPt(task: TaskResponse) {
         :value="props.tasks"
       >
         <template #empty>
-          <div class="text-text-muted px-4 py-6 text-sm">
-            No active tasks yet.
-          </div>
+          <ManagementTableEmptyState
+            description="Add a task to start tracking work for this project."
+            title="No active tasks yet"
+          />
         </template>
 
         <Column header="Task">
@@ -101,7 +112,7 @@ function getStatusPt(task: TaskResponse) {
 
         <Column
           header="Status"
-          style="width: 120px"
+          :style="{ width: statusColumnWidth }"
         >
           <template #body="slotProps">
             <div>
@@ -115,7 +126,7 @@ function getStatusPt(task: TaskResponse) {
 
         <Column
           header="Updated"
-          style="width: 160px"
+          :style="{ width: updatedColumnWidth }"
         >
           <template #body="slotProps">
             <div class="text-text-muted text-[13px]">
@@ -126,38 +137,28 @@ function getStatusPt(task: TaskResponse) {
 
         <Column
           header="Actions"
-          style="width: 120px"
+          :style="{ width: actionsColumnWidth }"
         >
           <template #body="slotProps">
-            <div class="flex items-center justify-end gap-1 py-2">
-              <Button
-                v-tooltip.bottom="'Edit'"
-                aria-label="Edit"
+            <div class="flex items-center justify-end gap-2">
+              <ManagementTableRowAction
                 data-testid="project-task-edit"
-                type="button"
-                variant="text"
-                class="text-brand h-8 w-8 px-0"
+                :icon="PencilSquareIcon"
+                label="Edit"
                 @click="emit('editTask', slotProps.data)"
-              >
-                <PencilSquareIcon class="size-4" />
-              </Button>
-              <Button
-                v-tooltip.bottom="'Delete'"
-                aria-label="Delete"
+              />
+              <ManagementTableRowAction
                 data-testid="project-task-delete"
-                type="button"
-                variant="text"
-                severity="danger"
-                class="h-8 w-8 px-0"
+                :icon="TrashIcon"
+                label="Delete"
                 :loading="props.isDeletingTaskId === slotProps.data.id"
+                tone="destructive"
                 @click="emit('deleteTask', slotProps.data)"
-              >
-                <TrashIcon class="size-4" />
-              </Button>
+              />
             </div>
           </template>
         </Column>
       </DataTable>
-    </div>
+    </SurfaceCard>
   </section>
 </template>

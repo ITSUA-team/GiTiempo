@@ -5,6 +5,7 @@ import {
   type GitHubConnectionStatusResponse,
 } from "@gitiempo/shared";
 import {
+  getDefaultFetchFn,
   getRequestUrl,
   getResponseErrorMessage,
   requestJson,
@@ -27,7 +28,7 @@ export interface ProfileGitHubClient {
 
 export function createProfileGitHubClient({
   apiBaseUrl,
-  fetchFn = fetch,
+  fetchFn = getDefaultFetchFn(),
 }: ProfileGitHubClientOptions = {}): ProfileGitHubClient {
   return {
     async disconnect(accessToken) {

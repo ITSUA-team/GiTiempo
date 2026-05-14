@@ -23,6 +23,7 @@ import {
   type UpdateTimeEntryInput,
 } from "@gitiempo/shared";
 import {
+  getDefaultFetchFn,
   getRequestUrl,
   getResponseErrorMessage,
   requestJson,
@@ -120,7 +121,7 @@ async function requestNoContent(options: {
 
 export function createTimeEntriesClient({
   apiBaseUrl,
-  fetchFn = fetch,
+  fetchFn = getDefaultFetchFn(),
 }: TimeEntriesClientOptions = {}): TimeEntriesClient {
   return {
     createManualEntry(accessToken, input) {

@@ -71,9 +71,9 @@ describe("WorkspaceNavigation", () => {
     });
 
     expect(wrapper.findAll("svg")).toHaveLength(10);
-    expect(wrapper.findAll('a[href="/projects/workspace-alpha"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[href="/projects"]')).toHaveLength(2);
 
-    const activeLink = wrapper.get('a[href="/projects/workspace-alpha"]');
+    const activeLink = wrapper.get('a[href="/projects"]');
     const desktopRail = wrapper.get("aside");
 
     expect(desktopRail.classes()).toContain("w-fit");

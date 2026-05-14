@@ -38,6 +38,10 @@ const statusOptions = [
   { label: "Closed", value: "closed" },
 ] satisfies { label: string; value: TaskStatus }[];
 
+const selectedProjectName = computed(() => {
+  return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
+});
+
 const projectModel = computed({
   get: () => props.projectId,
   set: (value: string | null | undefined) => {
@@ -105,7 +109,14 @@ const titleModel = computed({
         >
           Project
         </label>
+        <div
+          v-if="props.mode === 'edit'"
+          class="border-divider bg-surface text-text-dark flex h-[38px] items-center rounded-md border px-3 text-sm"
+        >
+          {{ selectedProjectName }}
+        </div>
         <Select
+          v-else
           v-model="projectModel"
           filter
           fluid
@@ -113,7 +124,7 @@ const titleModel = computed({
           option-label="name"
           option-value="id"
           placeholder="Select project"
-          :disabled="props.mode === 'edit' || props.isSaving"
+          :disabled="props.isSaving"
           :invalid="!!props.errors.projectId"
           :options="props.projects"
         />

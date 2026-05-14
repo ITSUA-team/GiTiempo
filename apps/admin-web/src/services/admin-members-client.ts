@@ -13,6 +13,7 @@ import {
 	type WorkspaceMemberResponse,
 } from '@gitiempo/shared';
 import {
+	getDefaultFetchFn,
 	getRequestUrl,
 	getResponseErrorMessage,
 	requestJson,
@@ -42,7 +43,7 @@ export interface AdminMembersClient {
 
 export function createAdminMembersClient({
 	apiBaseUrl,
-	fetchFn = fetch,
+	fetchFn = getDefaultFetchFn(),
 }: AdminMembersClientOptions): AdminMembersClient {
 	return {
 		createInvite(accessToken, input) {

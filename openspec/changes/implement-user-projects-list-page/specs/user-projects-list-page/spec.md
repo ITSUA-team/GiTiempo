@@ -38,6 +38,12 @@ The Projects list page MUST match the approved user Projects list design and ren
 - **WHEN** the Projects list page loads the project's default task list
 - **THEN** inactive tasks are not shown in the grouped default list
 
+#### Scenario: Inactive projects are excluded from the page
+- **GIVEN** the visible projects response includes inactive projects
+- **WHEN** the Projects list page prepares grouped project sections
+- **THEN** inactive projects are excluded from the rendered grouped list
+- **AND** the page does not request default task lists for those inactive projects
+
 ### Requirement: User Projects Combined Search
 The Projects list page MUST filter already-loaded visible project and task data on the frontend using one combined projects/tasks search control.
 
@@ -80,6 +86,7 @@ The Projects list page MUST use a true PrimeVue Dialog for task creation and upd
 - **WHEN** the user activates the row `Edit` action
 - **THEN** a task update dialog opens
 - **AND** the dialog pre-fills the task's project, title, and status
+- **AND** the project field is display-only in update mode
 - **AND** saving valid changes updates the task and refreshes the rendered row from the authoritative response
 
 #### Scenario: Task dialog validation and request failures are retryable
