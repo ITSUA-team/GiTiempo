@@ -77,14 +77,19 @@ Unless the user narrows the scope, always check these sources:
 5. **Determine readiness status**
 
    Use one of these outcomes:
-   - `READY`: all key inputs exist and no blocking gaps are found
-   - `READY WITH GAPS`: the target is implementable, but there are non-blocking gaps or drift to fix
-   - `NOT READY`: blocking source or API gaps make successful implementation unsafe
+   - `READY`: all key inputs exist and no blocking gaps or meaningful implementation drift are found
+   - `READY WITH GAPS`: the target is implementable, but there are non-blocking gaps or minor parity drift to fix
+   - `NOT READY`: blocking source, API, or implementation prerequisite gaps make successful implementation unsafe
+
+   Classify gaps before deciding whether to recommend a proposal:
+   - `Minor/parity update`: small UI mismatches, copy corrections, visual polish, narrow bug fixes, or straightforward implementation follow-up that does not change approved behavior or scope
+   - `Scope/significant update`: new or changed behavior, new page states or flows, route changes, auth or permission changes, endpoint or contract shape changes, cross-layer coordination, or source-of-truth changes across docs/specs/.pen
 
    OpenSpec proposal recommendation rule:
-   - Recommend `/opsx-propose` only when the only blocking gap is missing, incomplete, stale, or conflicting OpenSpec planning/spec coverage.
-   - Do not recommend `/opsx-propose` for backend/API blockers, missing approved `.pen`, missing docs outside OpenSpec, or implementation drift.
-   - If OpenSpec gaps and backend/API blockers both exist, report them separately and keep the next-update plan split between planning fixes and backend/API fixes.
+   - Recommend `/opsx-propose` only when the review shows a scope/significant update is needed in specs/source-of-truth, frontend behavior, or backend/API behavior.
+   - Do not recommend `/opsx-propose` for minor/parity updates, small implementation drift, visual polish, copy-only fixes, or straightforward implementation follow-up inside the already-approved scope.
+   - If missing docs, missing approved `.pen`, or backend/API blockers can be fixed without changing approved scope, report them as blockers without recommending `/opsx-propose`.
+   - If both scope/significant updates and implementation blockers exist, report them separately and keep the next-update plan split between planning fixes and implementation fixes.
 
 6. **Generate the next-update plan**
 
@@ -95,8 +100,8 @@ Unless the user narrows the scope, always check these sources:
    - Do not update `proposal.md`, `design.md`, `tasks.md`, code, or `.pen` files
    - Prefer small, concrete next actions
    - Separate planning/source-of-truth fixes from implementation fixes
-   - When the only blocker is OpenSpec planning/spec coverage, make the first plan step `Run /opsx-propose "<suggested-change-name-or-description>"`.
-   - Do not suggest `/opsx-propose` when the blockers are backend/API support, missing approved `.pen`, missing docs, or implementation drift.
+   - When a scope/significant update is required, make the first plan step `Run /opsx-propose "<suggested-change-name-or-description>"`.
+   - Do not suggest `/opsx-propose` for minor/parity gaps, missing approved `.pen`, missing docs, backend/API blockers, or implementation drift unless fixing them changes approved scope or source-of-truth behavior.
 
 7. **Output the review**
 
@@ -108,6 +113,9 @@ Unless the user narrows the scope, always check these sources:
    ### Status
    READY | READY WITH GAPS | NOT READY
 
+   ### Proposal Recommendation
+   NONE | Run /opsx-propose "<suggested-change-name-or-description>"
+
    ### Source Coverage
    - Docs: PASS | WARN | FAIL
    - Specs: PASS | WARN | FAIL
@@ -117,6 +125,9 @@ Unless the user narrows the scope, always check these sources:
 
    ### Findings
    - <finding with file references where possible>
+
+   ### Proposal Rationale
+   - <why a proposal is or is not needed, including impacted domains: spec, frontend, api>
 
    ### Missing Inputs
    - <blocking missing input, if any>
@@ -140,8 +151,18 @@ Unless the user narrows the scope, always check these sources:
 - If docs and design disagree, follow the repo guidance: docs are the source of truth unless still ambiguous
 - When possible, cite concrete file paths and line references
 - Keep the result actionable and concise
-- If OpenSpec is the only blocker, label it explicitly as a planning/source-of-truth gap and recommend `/opsx-propose`.
-- If backend/API blockers exist, keep them separate from any OpenSpec recommendation instead of treating proposal work as the fix for missing backend behavior.
+- Mark the review `READY` when docs, approved `.pen`, specs/contracts, and current implementation have no blocking or meaningful drift gaps.
+- Recommend `/opsx-propose` only for scope/significant updates, not for minor/parity fixes.
+- If a frontend or API change is already clearly approved by docs/specs/.pen and only needs implementation, do not recommend `/opsx-propose`.
+- If backend/API blockers exist, keep them separate from any proposal recommendation instead of treating proposal work as the fix for missing backend behavior.
+
+**Examples**
+
+- `READY`, no proposal: docs/specs/.pen/code all align and no meaningful gaps remain.
+- `READY WITH GAPS`, no proposal: the approved `.pen` shows small spacing or copy drift, but behavior and scope are unchanged.
+- `READY WITH GAPS`, recommend proposal: implementation is mostly aligned, but the target needs a new UI state or user flow not covered by docs/specs/.pen.
+- `NOT READY`, no proposal: a required endpoint behavior is already specified, but the backend support is still missing and no approved scope change is needed.
+- `NOT READY`, recommend proposal: the UI requires a new API contract, auth rule, or behavior change that expands or changes approved scope.
 
 **Guardrails**
 

@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import {
+  ArchiveBoxIcon,
+  ArrowUturnLeftIcon,
+  PencilSquareIcon,
+} from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 import type {
   ProjectListResponse,
@@ -7,12 +12,11 @@ import type {
 } from '@gitiempo/shared';
 import {
   ManagementTableEmptyState,
+  ManagementTableRowAction,
   ManagementTableShell,
-  managementTableActionPt,
   managementTableColumnPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
-import Button from 'primevue/button';
 import Column from 'primevue/column';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
@@ -254,24 +258,26 @@ function formatSource(source: string): string {
       <template #body="{ data }">
         <div class="flex items-center justify-end gap-2">
           <template v-if="data.isActive">
-            <Button
+            <ManagementTableRowAction
+              :data-testid="`project-edit-${data.id}`"
+              :icon="PencilSquareIcon"
               label="Edit"
-              variant="link"
-              :pt="managementTableActionPt.brand"
               @click="handleEdit(data)"
             />
-            <Button
+            <ManagementTableRowAction
+              :data-testid="`project-archive-${data.id}`"
+              :icon="ArchiveBoxIcon"
               label="Archive"
-              variant="link"
-              :pt="managementTableActionPt.destructive"
+              tone="destructive"
               @click="confirmArchive(data)"
             />
           </template>
           <template v-else>
-            <Button
+            <ManagementTableRowAction
+              :data-testid="`project-unarchive-${data.id}`"
+              :icon="ArrowUturnLeftIcon"
               label="Unarchive"
-              variant="link"
-              :pt="managementTableActionPt.muted"
+              tone="muted"
               @click="handleUnarchive(data)"
             />
           </template>

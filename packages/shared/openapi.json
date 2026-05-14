@@ -1069,6 +1069,39 @@
         "tags": [
           "tasks"
         ]
+      },
+      "delete": {
+        "operationId": "TasksController_deleteTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Task deleted"
+          },
+          "404": {
+            "description": "Task not found"
+          },
+          "409": {
+            "description": "Task has related time entries"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a visible unused task",
+        "tags": [
+          "tasks"
+        ]
       }
     },
     "/time-entries": {

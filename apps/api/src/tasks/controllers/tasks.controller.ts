@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -10,7 +11,9 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -85,5 +88,18 @@ export class TasksController {
     @Body() body: UpdateTaskDto,
   ): Promise<TaskResponseDto> {
     return this.tasks.updateTask(user, id, body);
+  }
+
+  @Delete('tasks/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a visible unused task' })
+  @ApiNoContentResponse({ description: 'Task deleted' })
+  @ApiNotFoundResponse({ description: 'Task not found' })
+  @ApiConflictResponse({ description: 'Task has related time entries' })
+  deleteTask(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.tasks.deleteTask(user, id);
   }
 }
