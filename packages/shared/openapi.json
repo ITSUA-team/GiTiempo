@@ -2369,6 +2369,11 @@
             "minimum": 0,
             "nullable": true
           },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -2385,6 +2390,7 @@
           "workspaceId",
           "currency",
           "defaultHourlyRate",
+          "timeZone",
           "createdAt",
           "updatedAt"
         ]
@@ -2400,6 +2406,11 @@
             "type": "number",
             "minimum": 0,
             "nullable": true
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           }
         },
         "additionalProperties": false

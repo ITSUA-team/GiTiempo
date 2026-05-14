@@ -30,6 +30,16 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       </div>
     </div>
 
+    <div
+      v-if="$slots.filters"
+      class="border-divider bg-surface text-text-muted flex h-[44px] items-center font-sans text-[12px] font-normal"
+    >
+      <slot
+        name="filters"
+        :columns="columns"
+      />
+    </div>
+
     <DataTable
       v-model:expanded-rows="expandedRows"
       :value="value"

@@ -233,7 +233,7 @@ The current web frontend baseline includes:
 - Invoices — create, view status, list (PM: assigned projects only)
 - Members — invite, manage roles, assign users to projects (Admin only)
 - Projects — manage project visibility, member assignments, and assigned-member filtering (Admin only)
-- Settings — workspace config: name, currency, default hourly rate (Admin only)
+- Settings — workspace config: name, currency, default hourly rate, time zone (Admin only)
 
 ### 3.3 Shared UI Patterns
 

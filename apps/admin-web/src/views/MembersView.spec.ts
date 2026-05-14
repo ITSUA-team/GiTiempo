@@ -193,4 +193,40 @@ describe('MembersView', () => {
     );
     expect(testMocks.errorToast).not.toHaveBeenCalled();
   });
+
+  it('renders request errors with a retry action', async () => {
+    testMocks.listMembers
+      .mockRejectedValueOnce(new Error('No scope'))
+      .mockResolvedValueOnce([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.listProjects.mockResolvedValue([]);
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = 'access-token';
+
+    const wrapper = mount(MembersView, {
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          ConfirmDialog: ConfirmDialogStub,
+          MemberInviteDialog: MemberInviteDialogStub,
+          MembersTable: MembersTableStub,
+          Skeleton: SkeletonStub,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Failed to load members');
+    expect(wrapper.text()).toContain('No scope');
+
+    await wrapper.get('button').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+  });
 });

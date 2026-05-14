@@ -5,18 +5,22 @@
 
 ## Dashboard
 
+- Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity table.
 - Four summary stat cards.
 - Recent activity feed using the same DataTable patterns as user pages.
 
 ## Reports Page
 
-- Filter bar: project, member, date range, group-by.
-- Filters apply in real time with 300ms debounce.
-- Summary totals row above the results table.
-- Results table is sortable, searchable, column-filterable, and supports CSV export.
+- Initial report load uses a skeleton matching the reports header, setup controls, summary cards, and results table.
+- Report setup bar: project, member, date range, group-by.
+- Report setup controls define the backend CSV export scope and do not change the loaded table rows or summary cards by themselves.
+- Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
+- Summary totals row above the results table reflects the loaded backend-generated project-member report data.
+- Results table is searchable, column-filterable, uses stable default ordering, and supports CSV export.
 - Results table header includes global search with placeholder `Search report rows`.
-- Results table column filters use the shared PrimeVue DataTable filter-row pattern for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
-- PM users cannot widen filters beyond their assigned scope.
+- Results table column filters use the existing management-table filter-row treatment for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
+- CSV export downloads rows from the backend report export endpoint for the current report setup controls; table-only search and column filters do not change export scope.
+- PM users cannot widen filters beyond active projects visible through their report scope, including active public projects plus active private projects assigned to that PM.
 
 ## Invoices Page
 
@@ -27,6 +31,7 @@
 
 ## Members Page
 
+- Initial page load uses a skeleton matching the stats header, stat cards, and members table before rendering empty or request-error states.
 - Members table with avatar, role, projects assigned, last active, and icon-only row actions with text tooltips.
 - Members table is searchable with placeholder `Search members` and uses column filters for member name/email, role, assigned projects, and last active.
 - Invite member opens a dialog.
@@ -34,15 +39,16 @@
 
 ## Projects Page
 
+- Initial page load uses a skeleton matching the stats header, stat cards, and projects table before rendering empty or request-error states.
 - Project list table includes project name, source, assigned members, total hours, visibility, and icon-only row actions with text tooltips.
 - Project list table is searchable with placeholder `Search projects` and uses column filters for project name, source, assigned members, total hours, and visibility.
 - Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<Select>`, followed by `Cancel` and `Save` actions.
-- Manual project creation uses a dialog.
+- Manual project creation uses the authenticated Add Project page at `/projects/new`.
 
 ## Settings Page
 
 - Single-column grouped form layout.
-- Workspace fields include name, default hourly rate, and currency.
+- Workspace fields include name, default hourly rate, currency, and time zone.
 - Save action pinned per section or at the page bottom.
 
 ## Cross-App Navigation
