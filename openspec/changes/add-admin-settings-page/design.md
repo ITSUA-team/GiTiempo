@@ -13,6 +13,7 @@ Required implementation references are `docs/ui/INDEX.md`, `docs/ui/pages-admin.
 - Replace the Settings placeholder with a functional admin-web page using PrimeVue controls and token-based Tailwind classes.
 - Match the approved `h8YRz` visual language where compatible with the current API: shell state, header copy, card width, grouped sections, control sizing, spacing, radii, typography, separators, and bottom action alignment.
 - Load current workspace identity and workspace settings using the existing endpoints.
+- Use current workspace identity to define the authenticated admin shell workspace label instead of keeping the fallback `Workspace Admin` label.
 - Render a page-level PrimeVue Skeleton that approximates the header, settings card, field rows, and action row while initial data is loading.
 - Keep request-error state distinct from empty/default state and provide retry plus toast feedback.
 - Save only changed current API fields and keep failed edits retryable.

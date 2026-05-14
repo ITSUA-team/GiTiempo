@@ -18,10 +18,12 @@ import {
 	type AdminSettingsFormValues,
 } from './admin-settings-form';
 
+/* eslint-disable no-unused-vars */
 interface AdminSettingsAuthState {
 	accessToken: string | null;
-	setWorkspaceName?: (_name: string) => void;
+	setWorkspaceName?: (name: string) => void;
 }
+/* eslint-enable no-unused-vars */
 
 interface AdminSettingsToasts {
 	errorToast: ReturnType<typeof useToasts>['errorToast'];

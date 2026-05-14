@@ -48,6 +48,7 @@
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint; this page must not require API, shared contract, database, seed, migration, or OpenAPI changes.
 - Initial load reads workspace identity from `/workspace` and workspace settings from `/workspace/settings`.
+- The authenticated admin shell header reads `/workspace` by default for the visible workspace label; Settings save updates that label from the authoritative workspace response.
 - Save sends workspace name changes to `/workspace` and currency/default hourly rate changes to `/workspace/settings`; unchanged resources are not patched only to satisfy schemas.
 - `Cancel` restores the latest loaded or saved values without sending a request.
 - Use a structured PrimeVue Skeleton first-load state that mirrors the implemented header, card, field rows, and action row.

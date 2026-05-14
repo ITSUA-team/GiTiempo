@@ -30,6 +30,7 @@ The admin Settings page MUST load workspace identity and workspace settings from
 - **THEN** it requests the current workspace through `GET /workspace`
 - **AND** it requests workspace settings through `GET /workspace/settings`
 - **AND** it initializes form state from those authoritative responses
+- **AND** the authenticated admin shell uses the current workspace response for the visible workspace label instead of a hardcoded workspace name
 
 #### Scenario: Initial loading renders structured skeleton
 
@@ -56,6 +57,7 @@ The admin Settings page MUST save changed current API fields through the existin
 - **AND** currency or default hourly rate changes are sent through `PATCH /workspace/settings`
 - **AND** unchanged resources are not patched just to satisfy request schemas
 - **AND** successful save refreshes or reconciles the rendered form from authoritative responses
+- **AND** successful workspace name save updates the authenticated admin shell workspace label from the authoritative response
 - **AND** the page shows success toast feedback
 
 #### Scenario: Save failure preserves edits
