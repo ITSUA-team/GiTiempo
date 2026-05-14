@@ -58,6 +58,26 @@ List and report endpoints MUST use a consistent shared query vocabulary for pagi
 - THEN `dateFrom` includes entries whose start time is equal to the boundary
 - AND `dateTo` excludes entries whose start time is equal to the boundary
 
+#### Scenario: Report date defaults use current calendar month
+
+- GIVEN a client requests a report endpoint without one or both date filters
+- WHEN the backend resolves the effective report date window
+- THEN an omitted `dateFrom` defaults to the start of the current UTC calendar month
+- AND an omitted `dateTo` defaults to the start of the next UTC calendar month
+
+#### Scenario: Report started-at filtering is closed-open
+
+- GIVEN a client filters reports by the effective date window
+- WHEN the backend applies report date filtering
+- THEN `dateFrom` includes entries whose start time is equal to the boundary
+- AND `dateTo` excludes entries whose start time is equal to the boundary
+
+#### Scenario: Report grouping uses shared groupBy parameter
+
+- GIVEN a client requests an aggregate report endpoint
+- WHEN grouping is supplied
+- THEN the request uses the shared `groupBy` parameter
+
 ### Requirement: Project Summary Windows Are Calendar Based
 
 The API MUST calculate project tracked-hour summary windows from calendar boundaries.
