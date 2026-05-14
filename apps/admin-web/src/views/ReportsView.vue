@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
+import type { TimeReportGroupBy } from '@gitiempo/shared';
 import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
@@ -8,23 +9,36 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ReportsFilterForm from '@/components/reports/ReportsFilterForm.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
 import { useToasts } from '@/composables/useToasts';
+import { useReportsData } from '@/composables/useReportsData';
+import { downloadReportExport } from '@/lib/report-download';
 import {
   createDefaultReportTableFilters,
-  downloadReportsCsv,
   filterReportRows,
   formatReportDuration,
   formatReportPercent,
   getReportDateRangeError,
   type ReportDateRange,
-  type ReportGroupBy,
-  useReportsData,
-} from '@/composables/useReportsData';
+} from '@/lib/report-view-model';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const { errorToast, successToast } = useToasts();
+const { errorToast, infoToast, successToast } = useToasts();
 
-const reports = useReportsData({
+const {
+  dateRange,
+  exportCurrentReport,
+  groupBy,
+  isInitialLoading,
+  loadError,
+  loading,
+  memberOptions,
+  projectOptions,
+  refresh,
+  rows,
+  selectedMemberId,
+  selectedProjectId,
+  summary,
+} = useReportsData({
   accessToken: computed(() => authStore.accessToken),
   onError(message, error, action) {
     errorToast(message, {
@@ -35,36 +49,36 @@ const reports = useReportsData({
 });
 
 const tableFilters = ref(createDefaultReportTableFilters());
-const reportProjectId = ref<string | null>(reports.selectedProjectId.value);
-const reportMemberId = ref<string | null>(reports.selectedMemberId.value);
-const reportDateRange = ref<ReportDateRange>(reports.dateRange.value);
-const reportGroupBy = ref<ReportGroupBy>(reports.groupBy.value);
-const exporting = ref(false);
+const reportProjectId = shallowRef<string | null>(selectedProjectId.value);
+const reportMemberId = shallowRef<string | null>(selectedMemberId.value);
+const reportDateRange = shallowRef<ReportDateRange>(dateRange.value);
+const reportGroupBy = shallowRef<TimeReportGroupBy>(groupBy.value);
+const exporting = shallowRef(false);
 const tableRows = computed(() =>
-  filterReportRows(reports.rows.value, tableFilters.value),
+  filterReportRows(rows.value, tableFilters.value),
 );
 const reportDateRangeError = computed(() =>
   getReportDateRangeError(reportDateRange.value),
 );
 const exportDisabled = computed(
-  () => reports.loading.value || exporting.value || reportDateRangeError.value !== null,
+  () => loading.value || exporting.value || reportDateRangeError.value !== null,
 );
 
 const totalHoursLabel = computed(() =>
-  formatReportDuration(reports.summary.value.totalSeconds),
+  formatReportDuration(summary.value.totalSeconds),
 );
 const billableShareLabel = computed(() =>
-  formatReportPercent(reports.summary.value.billableShare),
+  formatReportPercent(summary.value.billableShare),
 );
 const avgPerMemberLabel = computed(() =>
-  formatReportDuration(reports.summary.value.avgPerMemberSeconds),
+  formatReportDuration(summary.value.avgPerMemberSeconds),
 );
 const trackedHoursDescription = computed(() => {
-  const count = reports.summary.value.memberCount;
+  const count = summary.value.memberCount;
   return `Across ${count} ${count === 1 ? 'member' : 'members'}`;
 });
 const topProjectDescription = computed(() => {
-  const seconds = reports.summary.value.topProjectSeconds;
+  const seconds = summary.value.topProjectSeconds;
 
   if (seconds <= 0) {
     return 'No tracked time';
@@ -81,18 +95,23 @@ async function handleExport(): Promise<void> {
   exporting.value = true;
 
   try {
-    const exportRows = await reports.buildRowsForFilters({
-      projectId: reportProjectId.value,
-      memberId: reportMemberId.value,
-      dateRange: reportDateRange.value,
-      groupBy: reportGroupBy.value,
-    });
-
-    if (exportRows.length === 0) {
+    if (rows.value.length === 0) {
+      infoToast('No data to export for the selected filters.');
       return;
     }
 
-    const filename = downloadReportsCsv(exportRows);
+    const exportResult = await exportCurrentReport({
+      dateRange: reportDateRange.value,
+      groupBy: reportGroupBy.value,
+      memberId: reportMemberId.value,
+      projectId: reportProjectId.value,
+    });
+
+    if (!exportResult) {
+      return;
+    }
+
+    const filename = downloadReportExport(exportResult);
     successToast(`Exported ${filename}.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to export reports';
@@ -108,15 +127,15 @@ async function handleExport(): Promise<void> {
 
 <template>
   <div class="flex flex-col gap-6 p-6">
-    <template v-if="reports.isInitialLoading.value">
+    <template v-if="isInitialLoading">
       <ManagementPageSkeleton variant="reports" />
     </template>
 
-    <template v-else-if="reports.loadError.value && !reports.loading.value">
+    <template v-else-if="loadError && !loading">
       <RequestErrorCard
         title="Failed to load reports"
-        :message="reports.loadError.value"
-        @retry="reports.refresh"
+        :message="loadError"
+        @retry="refresh"
       />
     </template>
 
@@ -141,9 +160,9 @@ async function handleExport(): Promise<void> {
         v-model:member-id="reportMemberId"
         v-model:date-range="reportDateRange"
         v-model:group-by="reportGroupBy"
-        :project-options="reports.projectOptions.value"
-        :member-options="reports.memberOptions.value"
-        :disabled="reports.loading.value"
+        :project-options="projectOptions"
+        :member-options="memberOptions"
+        :disabled="loading"
       />
 
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -164,7 +183,7 @@ async function handleExport(): Promise<void> {
         />
         <StatCard
           label="Top Project"
-          :value="reports.summary.value.topProjectName"
+          :value="summary.topProjectName"
           :description="topProjectDescription"
         />
       </div>
@@ -173,9 +192,9 @@ async function handleExport(): Promise<void> {
         <ReportsTable
           v-model:filters="tableFilters"
           :rows="tableRows"
-          :loading="reports.loading.value"
-          :project-options="reports.projectOptions.value"
-          :member-options="reports.memberOptions.value"
+          :loading="loading"
+          :project-options="projectOptions"
+          :member-options="memberOptions"
         />
       </SurfaceCard>
     </template>

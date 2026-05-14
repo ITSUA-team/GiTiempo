@@ -9,7 +9,12 @@ interface ErrorToastOptions {
 const fallbackLogContext: FeedbackLogContext = { feature: 'app', action: 'unknown' };
 
 export function useToasts() {
-  const { showSuccessToast, showErrorToast } = createAppToast(useToast());
+  const toast = useToast();
+  const { showSuccessToast, showErrorToast } = createAppToast(toast);
+
+  function infoToast(message: string): void {
+    toast.add({ detail: message, life: 4000, severity: 'info', summary: 'Info' });
+  }
 
   function successToast(message: string): void {
     showSuccessToast('Success', message);
@@ -24,5 +29,5 @@ export function useToasts() {
     });
   }
 
-  return { successToast, errorToast };
+  return { successToast, errorToast, infoToast };
 }

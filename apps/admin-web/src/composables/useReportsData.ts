@@ -1,6 +1,7 @@
 import {
   computed,
   onMounted,
+  onUnmounted,
   shallowRef,
   watch,
   type ComputedRef,
@@ -8,12 +9,22 @@ import {
 } from 'vue';
 import type {
   ProjectListResponse,
-  ProjectMember,
   ProjectResponse,
-  TimeEntryListQuery,
   TimeEntryResponse,
 } from '@gitiempo/shared';
 
+import {
+  deriveMemberOptions,
+  deriveProjectOptions,
+  deriveReportRows,
+  deriveReportSummary,
+  filterEntriesByMember,
+  getDefaultReportDateRange,
+  isReportDateRangeValid,
+  toTimeReportExportQuery,
+  type ReportDateRange,
+  type ReportSetupFilters,
+} from '@/lib/report-view-model';
 import {
   adminProjectsClient,
   type AdminProjectsClient,
@@ -21,54 +32,8 @@ import {
 import {
   adminReportsClient,
   type AdminReportsClient,
+  type ReportsCsvExport,
 } from '@/services/admin-reports-client';
-
-export type ReportGroupBy = 'project' | 'member';
-export type ReportDateRange = [Date | null, Date | null] | null;
-export type ReportHoursFilter = 'any' | 'gt0' | 'gte8' | 'gte40';
-export type ReportBillableFilter = 'any' | 'withBillable' | 'withoutBillable';
-
-export interface ReportFilterOption {
-  label: string;
-  value: string;
-}
-
-export interface ReportRow {
-  id: string;
-  projectIds: string[];
-  projectName: string;
-  memberIds: string[];
-  memberName: string;
-  totalSeconds: number;
-  billableSeconds: number;
-  billableShare: number | null;
-  entryCount: number;
-}
-
-export interface ReportSummary {
-  totalSeconds: number;
-  billableSeconds: number;
-  billableShare: number | null;
-  memberCount: number;
-  avgPerMemberSeconds: number;
-  topProjectName: string;
-  topProjectSeconds: number;
-}
-
-export interface ReportTableFilters {
-  global: string;
-  projectId: string | null;
-  memberId: string | null;
-  hours: ReportHoursFilter;
-  billable: ReportBillableFilter;
-}
-
-export interface ReportGenerationFilters {
-  projectId: string | null;
-  memberId: string | null;
-  dateRange: ReportDateRange;
-  groupBy: ReportGroupBy;
-}
 
 interface UseReportsDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
@@ -79,507 +44,7 @@ interface UseReportsDataOptions {
   /* eslint-enable no-unused-vars */
 }
 
-interface GroupAccumulator {
-  id: string;
-  projectIds: Set<string>;
-  projectNames: Set<string>;
-  memberIds: Set<string>;
-  memberNames: Set<string>;
-  totalSeconds: number;
-  billableSeconds: number;
-  entryCount: number;
-}
-
 const pageLimit = 100;
-const reportDateRangeErrorMessage = 'End date must be after the start date.';
-
-export function getDefaultReportDateRange(now = new Date()): ReportDateRange {
-  return [
-    new Date(now.getFullYear(), now.getMonth(), 1),
-    new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-  ];
-}
-
-export function createDefaultReportTableFilters(): ReportTableFilters {
-  return {
-    global: '',
-    projectId: null,
-    memberId: null,
-    hours: 'any',
-    billable: 'any',
-  };
-}
-
-export function getReportDateRangeError(
-  dateRange: ReportDateRange,
-): string | null {
-  const [start, end] = dateRange ?? [];
-
-  if (start && end && end.getTime() < start.getTime()) {
-    return reportDateRangeErrorMessage;
-  }
-
-  return null;
-}
-
-export function isReportDateRangeValid(dateRange: ReportDateRange): boolean {
-  return getReportDateRangeError(dateRange) === null;
-}
-
-export function formatReportDuration(totalSeconds: number): string {
-  const safeSeconds = Math.max(0, Math.round(totalSeconds));
-  const totalMinutes = Math.floor(safeSeconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours === 0) {
-    return `${minutes}m`;
-  }
-
-  return `${hours}h ${String(minutes).padStart(2, '0')}m`;
-}
-
-export function formatReportPercent(value: number | null): string {
-  if (value === null) {
-    return '0%';
-  }
-
-  return `${Math.round(value * 100)}%`;
-}
-
-export function formatReportDateYmd(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function formatUserName(user: {
-  displayName: string | null;
-  email: string;
-}): string {
-  return user.displayName?.trim() || user.email;
-}
-
-function sortByLabel<T extends { label: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) => a.label.localeCompare(b.label));
-}
-
-function addProjectMemberOption(
-  options: Map<string, ReportFilterOption>,
-  member: ProjectMember,
-): void {
-  options.set(member.userId, {
-    label: member.displayName?.trim() || member.email,
-    value: member.userId,
-  });
-}
-
-export function deriveProjectOptions(
-  projects: ProjectListResponse,
-): ReportFilterOption[] {
-  return sortByLabel(
-    projects.map((project) => ({
-      label: project.name,
-      value: project.id,
-    })),
-  );
-}
-
-export function deriveMemberOptions(
-  projects: ProjectListResponse,
-  entries: TimeEntryResponse[],
-): ReportFilterOption[] {
-  const options = new Map<string, ReportFilterOption>();
-
-  for (const project of projects) {
-    for (const member of project.members) {
-      addProjectMemberOption(options, member);
-    }
-  }
-
-  for (const entry of entries) {
-    options.set(entry.user.id, {
-      label: formatUserName(entry.user),
-      value: entry.user.id,
-    });
-  }
-
-  return sortByLabel([...options.values()]);
-}
-
-export function filterEntriesByMember(
-  entries: TimeEntryResponse[],
-  memberId: string | null,
-): TimeEntryResponse[] {
-  if (!memberId) {
-    return entries;
-  }
-
-  return entries.filter((entry) => entry.user.id === memberId);
-}
-
-function getEntryDuration(entry: TimeEntryResponse): number {
-  return Math.max(0, entry.durationSeconds ?? 0);
-}
-
-function getOrCreateAccumulator(
-  groups: Map<string, GroupAccumulator>,
-  id: string,
-): GroupAccumulator {
-  const existing = groups.get(id);
-
-  if (existing) {
-    return existing;
-  }
-
-  const next: GroupAccumulator = {
-    id,
-    projectIds: new Set<string>(),
-    projectNames: new Set<string>(),
-    memberIds: new Set<string>(),
-    memberNames: new Set<string>(),
-    totalSeconds: 0,
-    billableSeconds: 0,
-    entryCount: 0,
-  };
-
-  groups.set(id, next);
-  return next;
-}
-
-function formatAggregateLabel(
-  names: string[],
-  emptyLabel: string,
-  pluralLabel: string,
-): string {
-  if (names.length === 0) {
-    return emptyLabel;
-  }
-
-  if (names.length === 1) {
-    return names[0]!;
-  }
-
-  return `${names.length} ${pluralLabel}`;
-}
-
-export function deriveReportRows(
-  entries: TimeEntryResponse[],
-  groupBy: ReportGroupBy,
-): ReportRow[] {
-  const groups = new Map<string, GroupAccumulator>();
-
-  for (const entry of entries) {
-    const groupId = `${entry.project.id}:${entry.user.id}`;
-    const group = getOrCreateAccumulator(groups, groupId);
-    const durationSeconds = getEntryDuration(entry);
-
-    group.projectIds.add(entry.project.id);
-    group.projectNames.add(entry.project.name);
-    group.memberIds.add(entry.user.id);
-    group.memberNames.add(formatUserName(entry.user));
-    group.totalSeconds += durationSeconds;
-    group.billableSeconds += entry.isBillable ? durationSeconds : 0;
-    group.entryCount += 1;
-  }
-
-  return [...groups.values()]
-    .map((group) => {
-      const projectNames = [...group.projectNames].sort((a, b) => a.localeCompare(b));
-      const memberNames = [...group.memberNames].sort((a, b) => a.localeCompare(b));
-
-      return {
-        id: group.id,
-        projectIds: [...group.projectIds],
-        projectName: projectNames[0] ?? 'Unknown project',
-        memberIds: [...group.memberIds],
-        memberName: memberNames[0] ?? 'Unknown member',
-        totalSeconds: group.totalSeconds,
-        billableSeconds: group.billableSeconds,
-        billableShare:
-          group.totalSeconds > 0 ? group.billableSeconds / group.totalSeconds : null,
-        entryCount: group.entryCount,
-      } satisfies ReportRow;
-    })
-    .sort((a, b) => {
-      const primary =
-        groupBy === 'member'
-          ? a.memberName.localeCompare(b.memberName)
-          : a.projectName.localeCompare(b.projectName);
-      const secondary =
-        groupBy === 'member'
-          ? a.projectName.localeCompare(b.projectName)
-          : a.memberName.localeCompare(b.memberName);
-      return primary === 0 ? secondary : primary;
-    });
-}
-
-export function deriveGeneratedReportRows(
-  entries: TimeEntryResponse[],
-  groupBy: ReportGroupBy,
-): ReportRow[] {
-  const groups = new Map<string, GroupAccumulator>();
-
-  for (const entry of entries) {
-    const groupId =
-      groupBy === 'member' ? `member:${entry.user.id}` : `project:${entry.project.id}`;
-    const group = getOrCreateAccumulator(groups, groupId);
-    const durationSeconds = getEntryDuration(entry);
-
-    group.projectIds.add(entry.project.id);
-    group.projectNames.add(entry.project.name);
-    group.memberIds.add(entry.user.id);
-    group.memberNames.add(formatUserName(entry.user));
-    group.totalSeconds += durationSeconds;
-    group.billableSeconds += entry.isBillable ? durationSeconds : 0;
-    group.entryCount += 1;
-  }
-
-  return [...groups.values()]
-    .map((group) => {
-      const projectNames = [...group.projectNames].sort((a, b) => a.localeCompare(b));
-      const memberNames = [...group.memberNames].sort((a, b) => a.localeCompare(b));
-
-      return {
-        id: group.id,
-        projectIds: [...group.projectIds],
-        projectName:
-          groupBy === 'member'
-            ? formatAggregateLabel(projectNames, 'Unknown project', 'projects')
-            : (projectNames[0] ?? 'Unknown project'),
-        memberIds: [...group.memberIds],
-        memberName:
-          groupBy === 'project'
-            ? formatAggregateLabel(memberNames, 'Unknown member', 'members')
-            : (memberNames[0] ?? 'Unknown member'),
-        totalSeconds: group.totalSeconds,
-        billableSeconds: group.billableSeconds,
-        billableShare:
-          group.totalSeconds > 0 ? group.billableSeconds / group.totalSeconds : null,
-        entryCount: group.entryCount,
-      } satisfies ReportRow;
-    })
-    .sort((a, b) => {
-      const primary =
-        groupBy === 'member'
-          ? a.memberName.localeCompare(b.memberName)
-          : a.projectName.localeCompare(b.projectName);
-      const secondary =
-        groupBy === 'member'
-          ? a.projectName.localeCompare(b.projectName)
-          : a.memberName.localeCompare(b.memberName);
-      return primary === 0 ? secondary : primary;
-    });
-}
-
-export function deriveReportSummary(entries: TimeEntryResponse[]): ReportSummary {
-  let totalSeconds = 0;
-  let billableSeconds = 0;
-  const memberIds = new Set<string>();
-  const projectTotals = new Map<string, { name: string; seconds: number }>();
-
-  for (const entry of entries) {
-    const durationSeconds = getEntryDuration(entry);
-
-    totalSeconds += durationSeconds;
-    billableSeconds += entry.isBillable ? durationSeconds : 0;
-    memberIds.add(entry.user.id);
-
-    const projectTotal = projectTotals.get(entry.project.id) ?? {
-      name: entry.project.name,
-      seconds: 0,
-    };
-    projectTotal.seconds += durationSeconds;
-    projectTotals.set(entry.project.id, projectTotal);
-  }
-
-  const topProject = [...projectTotals.values()].sort(
-    (a, b) => b.seconds - a.seconds || a.name.localeCompare(b.name),
-  )[0];
-
-  return {
-    totalSeconds,
-    billableSeconds,
-    billableShare: totalSeconds > 0 ? billableSeconds / totalSeconds : null,
-    memberCount: memberIds.size,
-    avgPerMemberSeconds: memberIds.size > 0 ? totalSeconds / memberIds.size : 0,
-    topProjectName: topProject?.name ?? 'None',
-    topProjectSeconds: topProject?.seconds ?? 0,
-  };
-}
-
-export function getReportRowUnbillableSeconds(row: ReportRow): number {
-  return Math.max(0, row.totalSeconds - row.billableSeconds);
-}
-
-export function getReportRowBillableSeconds(
-  row: ReportRow,
-  billableFilter: ReportBillableFilter,
-): number {
-  if (billableFilter === 'withoutBillable') {
-    return getReportRowUnbillableSeconds(row);
-  }
-
-  return row.billableSeconds;
-}
-
-export function filterReportRows(
-  rows: ReportRow[],
-  filters: ReportTableFilters,
-): ReportRow[] {
-  const search = filters.global.trim().toLowerCase();
-
-  return rows.filter((row) => {
-    if (filters.projectId && !row.projectIds.includes(filters.projectId)) {
-      return false;
-    }
-
-    if (filters.memberId && !row.memberIds.includes(filters.memberId)) {
-      return false;
-    }
-
-    const hoursSeconds = row.totalSeconds;
-
-    if (filters.hours === 'gt0' && hoursSeconds <= 0) {
-      return false;
-    }
-
-    if (filters.hours === 'gte8' && hoursSeconds < 8 * 60 * 60) {
-      return false;
-    }
-
-    if (filters.hours === 'gte40' && hoursSeconds < 40 * 60 * 60) {
-      return false;
-    }
-
-    if (filters.billable === 'withBillable' && row.billableSeconds <= 0) {
-      return false;
-    }
-
-    if (
-      filters.billable === 'withoutBillable' &&
-      getReportRowUnbillableSeconds(row) <= 0
-    ) {
-      return false;
-    }
-
-    if (!search) {
-      return true;
-    }
-
-    const haystack = [
-      row.projectName,
-      row.memberName,
-      formatReportDuration(hoursSeconds),
-      formatReportDuration(getReportRowBillableSeconds(row, filters.billable)),
-      formatReportPercent(row.billableShare),
-    ]
-      .join(' ')
-      .toLowerCase();
-
-    return haystack.includes(search);
-  });
-}
-
-export function escapeReportCsvCell(value: string | number): string {
-  const text = String(value);
-
-  if (!/[",\n]/.test(text)) {
-    return text;
-  }
-
-  return `"${text.replaceAll('"', '""')}"`;
-}
-
-export function buildReportsCsv(rows: ReportRow[]): string {
-  const header = [
-    'Project',
-    'Member',
-    'Tracked Hours',
-    'Billable Hours',
-    'Billable Share',
-    'Entry Count',
-  ];
-  const lines = [header.map(escapeReportCsvCell).join(',')];
-
-  for (const row of rows) {
-    lines.push(
-      [
-        row.projectName,
-        row.memberName,
-        formatReportDuration(row.totalSeconds),
-        formatReportDuration(row.billableSeconds),
-        formatReportPercent(row.billableShare),
-        row.entryCount,
-      ]
-        .map(escapeReportCsvCell)
-        .join(','),
-    );
-  }
-
-  return `${lines.join('\n')}\n`;
-}
-
-export function createReportsCsvDownload(
-  rows: ReportRow[],
-  now = new Date(),
-): { csv: string; filename: string } {
-  return {
-    csv: buildReportsCsv(rows),
-    filename: `gitiempo-reports-${formatReportDateYmd(now)}.csv`,
-  };
-}
-
-export function downloadReportsCsv(rows: ReportRow[], now = new Date()): string {
-  const { csv, filename } = createReportsCsvDownload(rows, now);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-
-  return filename;
-}
-
-function startOfDayIso(date: Date): string {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  ).toISOString();
-}
-
-function nextDayStartIso(date: Date): string {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate() + 1,
-  ).toISOString();
-}
-
-export function toReportDateQuery(
-  dateRange: ReportDateRange,
-): Pick<TimeEntryListQuery, 'dateFrom' | 'dateTo'> {
-  const dateRangeError = getReportDateRangeError(dateRange);
-
-  if (dateRangeError) {
-    throw new Error(dateRangeError);
-  }
-
-  const [dateFrom, dateTo] = dateRange ?? [];
-  const query: Pick<TimeEntryListQuery, 'dateFrom' | 'dateTo'> = {};
-
-  if (dateFrom) {
-    query.dateFrom = startOfDayIso(dateFrom);
-  }
-
-  if (dateTo) {
-    query.dateTo = nextDayStartIso(dateTo);
-  }
-
-  return query;
-}
 
 function sortProjects(projects: ProjectListResponse): ProjectListResponse {
   return [...projects].sort((a, b) => a.name.localeCompare(b.name));
@@ -619,7 +84,7 @@ export function useReportsData({
   const selectedProjectId = shallowRef<string | null>(null);
   const selectedMemberId = shallowRef<string | null>(null);
   const dateRange = shallowRef<ReportDateRange>(getDefaultReportDateRange());
-  const groupBy = shallowRef<ReportGroupBy>('project');
+  const groupBy = shallowRef<ReportSetupFilters['groupBy']>('project');
   const loading = shallowRef(true);
   const initialLoaded = shallowRef(false);
   const loadError = shallowRef<string | null>(null);
@@ -634,9 +99,7 @@ export function useReportsData({
   const memberScopedEntries = computed(() =>
     filterEntriesByMember(entries.value, selectedMemberId.value),
   );
-  const rows = computed(() =>
-    deriveReportRows(memberScopedEntries.value, groupBy.value),
-  );
+  const rows = computed(() => deriveReportRows(memberScopedEntries.value));
   const summary = computed(() => deriveReportSummary(memberScopedEntries.value));
   const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
   const isEmpty = computed(
@@ -647,17 +110,46 @@ export function useReportsData({
       rows.value.length === 0,
   );
 
+  function getCurrentSetupFilters(): ReportSetupFilters {
+    return {
+      dateRange: dateRange.value,
+      groupBy: groupBy.value,
+      memberId: selectedMemberId.value,
+      projectId: selectedProjectId.value,
+    };
+  }
+
+  function syncSelectedFiltersWithOptions(): void {
+    if (
+      selectedProjectId.value &&
+      !projectOptions.value.some(
+        (option) => option.value === selectedProjectId.value,
+      )
+    ) {
+      selectedProjectId.value = null;
+    }
+
+    if (
+      selectedMemberId.value &&
+      !memberOptions.value.some((option) => option.value === selectedMemberId.value)
+    ) {
+      selectedMemberId.value = null;
+    }
+  }
+
   async function fetchEntriesForScope(
     token: string,
     visibleProjects: ProjectListResponse,
     projectId: string | null,
     reportDateRange: ReportDateRange,
   ): Promise<TimeEntryResponse[]> {
-    const targetProjects = getVisibleProjectsForScope(
-      visibleProjects,
-      projectId,
-    );
-    const dateQuery = toReportDateQuery(reportDateRange);
+    const targetProjects = getVisibleProjectsForScope(visibleProjects, projectId);
+    const dateQuery = toTimeReportExportQuery({
+      dateRange: reportDateRange,
+      groupBy: 'project',
+      memberId: null,
+      projectId: null,
+    });
     const nextEntries: TimeEntryResponse[] = [];
 
     for (const project of targetProjects) {
@@ -666,9 +158,10 @@ export function useReportsData({
 
       do {
         const response = await reportsClient.listProjectEntries(token, project.id, {
-          ...dateQuery,
-          page,
+          dateFrom: dateQuery.dateFrom,
+          dateTo: dateQuery.dateTo,
           limit: pageLimit,
+          page,
         });
 
         nextEntries.push(...response.items);
@@ -709,28 +202,19 @@ export function useReportsData({
     loadError.value = null;
 
     try {
-      let nextProjects = projects.value;
-
       if (reloadProjects) {
-        nextProjects = sortProjects(await projectsClient.listProjects(token));
+        projects.value = sortProjects(await projectsClient.listProjects(token));
 
         if (currentRequestId !== requestId) {
           return;
         }
 
-        projects.value = nextProjects;
-      }
-
-      if (
-        selectedProjectId.value !== null &&
-        !nextProjects.some((project) => project.id === selectedProjectId.value)
-      ) {
-        selectedProjectId.value = null;
+        syncSelectedFiltersWithOptions();
       }
 
       const nextEntries = await fetchEntriesForScope(
         token,
-        nextProjects,
+        projects.value,
         selectedProjectId.value,
         dateRange.value,
       );
@@ -765,7 +249,7 @@ export function useReportsData({
     }
   }
 
-  function scheduleEntriesRefresh(): void {
+  function scheduleReportRefresh(): void {
     if (!initialLoaded.value) {
       return;
     }
@@ -789,36 +273,16 @@ export function useReportsData({
     });
   }
 
-  async function buildRowsForFilters(
-    filters: ReportGenerationFilters,
-  ): Promise<ReportRow[]> {
-    const dateRangeError = getReportDateRangeError(filters.dateRange);
-
-    if (dateRangeError) {
-      throw new Error(dateRangeError);
-    }
-
+  async function exportCurrentReport(
+    filters: ReportSetupFilters = getCurrentSetupFilters(),
+  ): Promise<ReportsCsvExport | null> {
     const token = accessToken.value;
 
     if (!token) {
-      return [];
+      return null;
     }
 
-    let sourceProjects = projects.value;
-    if (sourceProjects.length === 0) {
-      sourceProjects = sortProjects(await projectsClient.listProjects(token));
-      projects.value = sourceProjects;
-    }
-
-    const reportEntries = await fetchEntriesForScope(
-      token,
-      sourceProjects,
-      filters.projectId,
-      filters.dateRange,
-    );
-    const memberEntries = filterEntriesByMember(reportEntries, filters.memberId);
-
-    return deriveGeneratedReportRows(memberEntries, filters.groupBy);
+    return reportsClient.exportTimeReport(token, toTimeReportExportQuery(filters));
   }
 
   watch(
@@ -827,23 +291,18 @@ export function useReportsData({
       () => dateRange.value?.[0]?.getTime() ?? null,
       () => dateRange.value?.[1]?.getTime() ?? null,
     ],
-    scheduleEntriesRefresh,
+    scheduleReportRefresh,
   );
 
-  watch(memberOptions, (options) => {
-    if (
-      selectedMemberId.value &&
-      !options.some((option) => option.value === selectedMemberId.value)
-    ) {
-      selectedMemberId.value = null;
-    }
-  });
+  watch([projectOptions, memberOptions], syncSelectedFiltersWithOptions);
 
   onMounted(refresh);
+  onUnmounted(clearDebounceTimer);
 
   return {
     dateRange,
     entries,
+    exportCurrentReport,
     groupBy,
     initialLoaded,
     isEmpty,
@@ -853,7 +312,6 @@ export function useReportsData({
     memberOptions,
     projectOptions,
     projects,
-    buildRowsForFilters,
     refresh,
     rows,
     selectedMemberId,

@@ -13,13 +13,13 @@
 
 - Initial report load uses a skeleton matching the reports header, setup controls, summary cards, and results table.
 - Report setup bar: project, member, date range, group-by.
-- Report setup controls define the frontend CSV generation scope and do not change the loaded table rows or summary cards by themselves.
+- Report setup controls define the backend CSV export scope and do not change the loaded table rows or summary cards by themselves.
 - Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
-- Summary totals row above the results table reflects the loaded report data.
+- Summary totals row above the results table reflects the loaded scoped project-member time-entry data.
 - Results table is searchable, column-filterable, uses stable default ordering, and supports CSV export.
 - Results table header includes global search with placeholder `Search report rows`.
 - Results table column filters use the existing management-table filter-row treatment for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
-- CSV export generates rows from the current report setup controls through existing scoped project time-entry endpoints; table-only search and column filters do not change export scope.
+- CSV export downloads rows from the backend report export endpoint for the current report setup controls; table-only search and column filters do not change export scope.
 - PM users cannot widen filters beyond active projects in their assigned scope.
 
 ## Invoices Page

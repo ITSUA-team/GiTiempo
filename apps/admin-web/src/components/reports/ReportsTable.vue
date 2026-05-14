@@ -17,15 +17,15 @@ import {
   type ReportBillableFilter,
   type ReportFilterOption,
   type ReportHoursFilter,
-  type ReportRow,
+  type ReportTableRow,
   type ReportTableFilters,
-} from '@/composables/useReportsData';
+} from '@/lib/report-view-model';
 
 defineProps<{
   loading: boolean;
   memberOptions: ReportFilterOption[];
   projectOptions: ReportFilterOption[];
-  rows: ReportRow[];
+  rows: ReportTableRow[];
 }>();
 
 const filters = defineModel<ReportTableFilters>('filters', { required: true });

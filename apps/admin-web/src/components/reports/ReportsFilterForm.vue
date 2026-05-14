@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { z } from 'zod';
-import { Form } from '@primevue/forms';
-import { zodResolver } from '@primevue/forms/resolvers/zod';
+import { Form, type FormResolverOptions } from '@primevue/forms';
+import {
+  timeReportExportQuerySchema,
+  type TimeReportGroupBy,
+} from '@gitiempo/shared';
 import DatePicker from 'primevue/datepicker';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
@@ -10,9 +12,9 @@ import Select from 'primevue/select';
 import type {
   ReportDateRange,
   ReportFilterOption,
-  ReportGroupBy,
-} from '@/composables/useReportsData';
-import { getReportDateRangeError } from '@/composables/useReportsData';
+  ReportSetupFilters,
+} from '@/lib/report-view-model';
+import { toTimeReportExportQuery } from '@/lib/report-view-model';
 
 const props = defineProps<{
   disabled?: boolean;
@@ -23,11 +25,18 @@ const props = defineProps<{
 const projectId = defineModel<string | null>('projectId', { required: true });
 const memberId = defineModel<string | null>('memberId', { required: true });
 const dateRange = defineModel<ReportDateRange>('dateRange', { required: true });
-const groupBy = defineModel<ReportGroupBy>('groupBy', { required: true });
+const groupBy = defineModel<TimeReportGroupBy>('groupBy', { required: true });
 
-const groupByOptions: { label: string; value: ReportGroupBy }[] = [
+interface ReportsFilterFormValues {
+  dateRange: ReportDateRange;
+  groupBy: TimeReportGroupBy;
+  memberId: string | null;
+  projectId: string | null;
+}
+
+const groupByOptions: { label: string; value: TimeReportGroupBy }[] = [
   { label: 'Project', value: 'project' },
-  { label: 'Member', value: 'member' },
+  { label: 'Member', value: 'user' },
 ];
 
 const projectGenerationOptions = computed(() => [
@@ -39,52 +48,87 @@ const memberGenerationOptions = computed(() => [
   ...props.memberOptions,
 ]);
 
-const reportsFilterSchema = z
-  .object({
-    projectId: z.string().nullable().optional(),
-    memberId: z.string().nullable().optional(),
-    dateRange: z.array(z.date().nullable()).nullable().optional(),
-    groupBy: z.enum(['project', 'member']),
-  })
-  .refine(
-    (values) => {
-      return getReportDateRangeError(values.dateRange as ReportDateRange) === null;
-    },
-    { message: 'End date must be after the start date.', path: ['dateRange'] },
-  );
+const initialValues = computed<ReportsFilterFormValues>(() => ({
+  projectId: projectId.value,
+  memberId: memberId.value,
+  dateRange: dateRange.value,
+  groupBy: groupBy.value,
+}));
 
-const resolver = zodResolver(reportsFilterSchema);
+type DatePickerRangeValue = Date | (Date | null)[] | null | undefined;
 
-const initialValues = {
-  projectId: null,
-  memberId: null,
-  dateRange: null,
-  groupBy: 'project',
-};
+function normalizeDateRangeValue(value: DatePickerRangeValue): ReportDateRange {
+  if (!value) {
+    return null;
+  }
 
-const datePickerValue = computed<Date[] | null>({
-  get() {
-    const selectedRange = dateRange.value;
+  if (value instanceof Date) {
+    return [value, null];
+  }
 
-    if (!selectedRange) {
-      return null;
+  if (value.length === 0) {
+    return null;
+  }
+
+  return [value[0] ?? null, value[1] ?? null];
+}
+
+function getFormValues(values: Record<string, unknown>): ReportSetupFilters {
+  return {
+    dateRange: normalizeDateRangeValue(
+      values.dateRange as DatePickerRangeValue,
+    ),
+    groupBy: (values.groupBy ?? 'project') as TimeReportGroupBy,
+    memberId: (values.memberId as string | null | undefined) ?? null,
+    projectId: (values.projectId as string | null | undefined) ?? null,
+  };
+}
+
+function resolver({ values }: FormResolverOptions) {
+  try {
+    const query = toTimeReportExportQuery(getFormValues(values));
+    const result = timeReportExportQuerySchema.safeParse(query);
+
+    if (result.success) {
+      return { values, errors: {} };
     }
 
-    return selectedRange.filter((date): date is Date => date instanceof Date);
-  },
-  set(value) {
-    if (!value || value.length === 0) {
-      dateRange.value = null;
-      return;
-    }
+    const errors = result.error.issues.reduce<Record<string, { message: string }[]>>(
+      (current, issue) => {
+        const path = issue.path[0];
+        const field = path === 'dateFrom' || path === 'dateTo' ? 'dateRange' : path;
 
-    dateRange.value = [value[0] ?? null, value[1] ?? null];
-  },
-});
+        if (typeof field === 'string') {
+          current[field] = [{ message: issue.message }];
+        }
 
-const dateRangeError = computed(() => {
-  return getReportDateRangeError(dateRange.value);
-});
+        return current;
+      },
+      {},
+    );
+
+    return { values, errors };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid report setup';
+    return { values, errors: { dateRange: [{ message }] } };
+  }
+}
+
+function handleProjectUpdate(value: string | null): void {
+  projectId.value = value;
+}
+
+function handleMemberUpdate(value: string | null): void {
+  memberId.value = value;
+}
+
+function handleDateRangeUpdate(value: DatePickerRangeValue): void {
+  dateRange.value = normalizeDateRangeValue(value);
+}
+
+function handleGroupByUpdate(value: TimeReportGroupBy): void {
+  groupBy.value = value;
+}
 
 const selectPt = {
   root: {
@@ -111,8 +155,10 @@ const datePickerPt = {
 
 <template>
   <Form
-    :resolver="resolver"
+    v-slot="$form"
     :initial-values="initialValues"
+    :resolver="resolver"
+    :validate-on-value-update="true"
     class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]"
   >
     <div class="flex flex-col gap-1.5">
@@ -121,15 +167,16 @@ const datePickerPt = {
         class="text-text-dark text-[13px] font-medium"
       >Project</label>
       <Select
-        v-model="projectId"
         input-id="reports-project"
         name="projectId"
+        :model-value="projectId"
         :options="projectGenerationOptions"
         option-label="label"
         option-value="value"
         placeholder="All projects"
         :disabled="disabled"
         :pt="selectPt"
+        @update:model-value="handleProjectUpdate"
       />
     </div>
 
@@ -139,15 +186,16 @@ const datePickerPt = {
         class="text-text-dark text-[13px] font-medium"
       >Member</label>
       <Select
-        v-model="memberId"
         input-id="reports-member"
         name="memberId"
+        :model-value="memberId"
         :options="memberGenerationOptions"
         option-label="label"
         option-value="value"
         placeholder="All assigned members"
         :disabled="disabled"
         :pt="selectPt"
+        @update:model-value="handleMemberUpdate"
       />
     </div>
 
@@ -157,9 +205,9 @@ const datePickerPt = {
         class="text-text-dark text-[13px] font-medium"
       >Date range</label>
       <DatePicker
-        v-model="datePickerValue"
         input-id="reports-date-range"
         name="dateRange"
+        :model-value="dateRange"
         selection-mode="range"
         :manual-input="false"
         show-button-bar
@@ -167,16 +215,17 @@ const datePickerPt = {
         date-format="M d, yy"
         :disabled="disabled"
         fluid
-        :invalid="!!dateRangeError"
+        :invalid="$form.dateRange?.invalid === true"
         :pt="datePickerPt"
+        @update:model-value="handleDateRangeUpdate"
       />
       <Message
-        v-if="dateRangeError"
+        v-if="$form.dateRange?.invalid"
         severity="error"
         size="small"
         variant="simple"
       >
-        {{ dateRangeError }}
+        {{ $form.dateRange.error?.message }}
       </Message>
     </div>
 
@@ -186,14 +235,15 @@ const datePickerPt = {
         class="text-text-dark text-[13px] font-medium"
       >Group by</label>
       <Select
-        v-model="groupBy"
         input-id="reports-group-by"
         name="groupBy"
+        :model-value="groupBy"
         :options="groupByOptions"
         option-label="label"
         option-value="value"
         :disabled="disabled"
         :pt="selectPt"
+        @update:model-value="handleGroupByUpdate"
       />
     </div>
   </Form>

@@ -3,10 +3,38 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAdminReportsClient } from './admin-reports-client';
 
 const projectId = '11111111-1111-4111-8111-111111111111';
-const taskId = '22222222-2222-4222-8222-222222222222';
 const userId = '33333333-3333-4333-8333-333333333333';
-const workspaceId = '44444444-4444-4444-8444-444444444444';
-const entryId = '55555555-5555-4555-8555-555555555555';
+
+const reportResponse = {
+  dateRange: {
+    dateFrom: '2026-05-01T00:00:00.000Z',
+    dateTo: '2026-06-01T00:00:00.000Z',
+  },
+  groupBy: 'project',
+  items: [
+    {
+      billableSeconds: 3600,
+      billableShare: 0.5,
+      entryCount: 2,
+      firstStartedAt: '2026-05-01T10:00:00.000Z',
+      groupBy: 'project',
+      lastStartedAt: '2026-05-02T10:00:00.000Z',
+      nonBillableSeconds: 3600,
+      project: { id: projectId, name: 'Project Orion' },
+      task: null,
+      totalSeconds: 7200,
+      user: null,
+    },
+  ],
+  meta: { limit: 20, page: 2, total: 21, totalPages: 2 },
+  summary: {
+    billableSeconds: 3600,
+    billableShare: 0.5,
+    entryCount: 2,
+    nonBillableSeconds: 3600,
+    totalSeconds: 7200,
+  },
+} as const;
 
 describe('createAdminReportsClient', () => {
   const fetchFn = vi.fn<typeof fetch>();
@@ -19,86 +47,117 @@ describe('createAdminReportsClient', () => {
     fetchFn.mockReset();
   });
 
-  it('lists project entries with auth headers, pagination, and serialized filters', async () => {
+  it('gets time reports with auth headers and serialized shared filters', async () => {
     fetchFn.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          items: [
-            {
-              createdAt: '2026-05-01T10:00:00.000Z',
-              description: null,
-              durationSeconds: 7200,
-              endedAt: '2026-05-01T12:00:00.000Z',
-              id: entryId,
-              isBillable: true,
-              project: { id: projectId, name: 'Project Orion' },
-              projectId,
-              source: 'manual',
-              startedAt: '2026-05-01T10:00:00.000Z',
-              task: { id: taskId, title: 'API work' },
-              taskId,
-              updatedAt: '2026-05-01T12:00:00.000Z',
-              user: {
-                avatarUrl: null,
-                displayName: 'Alex Admin',
-                email: 'alex@example.com',
-                id: userId,
-              },
-              userId,
-              workspaceId,
-            },
-          ],
-          meta: { limit: 100, page: 2, total: 101, totalPages: 2 },
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 200,
-        },
-      ),
+      new Response(JSON.stringify(reportResponse), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }),
     );
 
-    const result = await client.listProjectEntries('access-token', projectId, {
+    const result = await client.getTimeReport('access-token', {
       dateFrom: '2026-05-01T00:00:00.000Z',
-      dateTo: '2026-05-08T00:00:00.000Z',
-      limit: 100,
+      dateTo: '2026-06-01T00:00:00.000Z',
+      groupBy: 'project',
+      limit: 20,
       page: 2,
-      search: 'api',
+      projectId,
+      search: 'orion',
+      sortBy: 'project',
+      sortOrder: 'asc',
+      userId,
     });
 
     const [url, init] = fetchFn.mock.calls[0] ?? [];
     const requestUrl = new URL(String(url));
 
     expect(requestUrl.origin).toBe('https://api.example.test');
-    expect(requestUrl.pathname).toBe(`/projects/${projectId}/time-entries`);
+    expect(requestUrl.pathname).toBe('/reports/time');
     expect(requestUrl.searchParams.get('page')).toBe('2');
-    expect(requestUrl.searchParams.get('limit')).toBe('100');
+    expect(requestUrl.searchParams.get('limit')).toBe('20');
     expect(requestUrl.searchParams.get('dateFrom')).toBe(
       '2026-05-01T00:00:00.000Z',
     );
     expect(requestUrl.searchParams.get('dateTo')).toBe(
-      '2026-05-08T00:00:00.000Z',
+      '2026-06-01T00:00:00.000Z',
     );
-    expect(requestUrl.searchParams.get('search')).toBe('api');
+    expect(requestUrl.searchParams.get('groupBy')).toBe('project');
+    expect(requestUrl.searchParams.get('projectId')).toBe(projectId);
+    expect(requestUrl.searchParams.get('userId')).toBe(userId);
+    expect(requestUrl.searchParams.get('search')).toBe('orion');
+    expect(requestUrl.searchParams.get('sortBy')).toBe('project');
+    expect(requestUrl.searchParams.get('sortOrder')).toBe('asc');
     expect(init).toEqual(
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: 'Bearer access-token' }),
         method: 'GET',
       }),
     );
-    expect(result.meta.totalPages).toBe(2);
-    expect(result.items[0]?.project.name).toBe('Project Orion');
+    expect(result.summary.totalSeconds).toBe(7200);
+    expect(result.items[0]?.project?.name).toBe('Project Orion');
   });
 
-  it('surfaces API error messages from the project entries endpoint', async () => {
+  it('exports time reports as CSV using backend filename metadata', async () => {
     fetchFn.mockResolvedValue(
-      new Response(JSON.stringify({ message: 'Project not found' }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 404,
+      new Response('Group By,Project\nproject,Project Orion\n', {
+        headers: {
+          'Content-Disposition': 'attachment; filename="time-report-2026-05.csv"',
+          'Content-Type': 'text/csv; charset=utf-8',
+        },
+        status: 200,
       }),
     );
 
+    const result = await client.exportTimeReport('access-token', {
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-06-01T00:00:00.000Z',
+      groupBy: 'user',
+      projectId,
+      sortBy: 'user',
+      sortOrder: 'asc',
+      userId,
+    });
+
+    const [url, init] = fetchFn.mock.calls[0] ?? [];
+    const requestUrl = new URL(String(url));
+
+    expect(requestUrl.pathname).toBe('/reports/time/export');
+    expect(requestUrl.searchParams.get('groupBy')).toBe('user');
+    expect(requestUrl.searchParams.get('projectId')).toBe(projectId);
+    expect(requestUrl.searchParams.get('userId')).toBe(userId);
+    expect(requestUrl.searchParams.get('sortBy')).toBe('user');
+    expect(requestUrl.searchParams.get('sortOrder')).toBe('asc');
+    expect(init).toEqual(
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer access-token' },
+        method: 'GET',
+      }),
+    );
+    expect(result.filename).toBe('time-report-2026-05.csv');
+    await expect(result.blob.text()).resolves.toContain('Project Orion');
+  });
+
+  it('surfaces API error messages from the report endpoints', async () => {
+    fetchFn
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: 'Reports are forbidden' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 403,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: 'Reports are forbidden' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 403,
+        }),
+      );
+
     await expect(
-      client.listProjectEntries('access-token', projectId, { limit: 100, page: 1 }),
-    ).rejects.toThrow('Project not found');
+      client.getTimeReport('access-token', { limit: 20, page: 1 }),
+    ).rejects.toThrow('Reports are forbidden');
+
+    await expect(client.exportTimeReport('access-token')).rejects.toThrow(
+      'Reports are forbidden',
+    );
   });
 });

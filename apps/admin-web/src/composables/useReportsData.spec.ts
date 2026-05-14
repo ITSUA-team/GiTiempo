@@ -9,22 +9,7 @@ import type {
   TimeEntryResponse,
 } from '@gitiempo/shared';
 
-import {
-  buildReportsCsv,
-  createDefaultReportTableFilters,
-  createReportsCsvDownload,
-  deriveGeneratedReportRows,
-  deriveMemberOptions,
-  deriveReportRows,
-  deriveReportSummary,
-  filterReportRows,
-  formatReportDuration,
-  formatReportPercent,
-  getReportDateRangeError,
-  getReportRowBillableSeconds,
-  isReportDateRangeValid,
-  useReportsData,
-} from './useReportsData';
+import { useReportsData } from './useReportsData';
 
 const workspaceId = '44444444-4444-4444-8444-444444444444';
 const projectOrionId = '11111111-1111-4111-8111-111111111111';
@@ -38,7 +23,6 @@ function createProject(
   id: string,
   name: string,
   members: ProjectResponse['members'] = [],
-  totalHours = 1,
 ): ProjectResponse {
   return {
     color: null,
@@ -49,7 +33,7 @@ function createProject(
     members,
     name,
     source: 'manual',
-    totalHours,
+    totalHours: 1,
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'public',
     workspaceId,
@@ -147,175 +131,19 @@ const entries: TimeEntryResponse[] = [
     durationSeconds: 1800,
     entryId: '55555555-5555-4555-8555-555555555553',
     projectId: projectBillingId,
-    projectName: 'Billing, API',
+    projectName: 'Billing API',
     taskId: taskBillingId,
     userId: ninaId,
     userName: 'Nina PM',
   }),
 ];
 
-function emptyResponse(page = 1): TimeEntryListResponse {
+function createEntryResponse(items: TimeEntryResponse[]): TimeEntryListResponse {
   return {
-    items: [],
-    meta: { limit: 100, page, total: 0, totalPages: 0 },
+    items,
+    meta: { limit: 100, page: 1, total: items.length, totalPages: 1 },
   };
 }
-
-describe('reports data helpers', () => {
-  it('derives scoped member options from visible project members and loaded rows', () => {
-    expect(deriveMemberOptions(projects, entries)).toEqual([
-      { label: 'Alex Admin', value: alexId },
-      { label: 'Nina PM', value: ninaId },
-    ]);
-  });
-
-  it('derives project-member rows and summary totals from time-entry responses', () => {
-    const rows = deriveReportRows(entries, 'project');
-    const summary = deriveReportSummary(entries);
-
-    expect(rows).toHaveLength(3);
-    expect(rows).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          billableSeconds: 1800,
-          memberName: 'Nina PM',
-          projectName: 'Billing, API',
-          totalSeconds: 1800,
-        }),
-        expect.objectContaining({
-          billableSeconds: 7200,
-          memberName: 'Alex Admin',
-          projectName: 'Project Orion',
-          totalSeconds: 7200,
-        }),
-        expect.objectContaining({
-          billableSeconds: 0,
-          memberName: 'Nina PM',
-          projectName: 'Project Orion',
-          totalSeconds: 3600,
-        }),
-      ]),
-    );
-    expect(formatReportDuration(summary.totalSeconds)).toBe('3h 30m');
-    expect(formatReportDuration(summary.avgPerMemberSeconds)).toBe('1h 45m');
-    expect(formatReportPercent(summary.billableShare)).toBe('71%');
-    expect(summary.topProjectName).toBe('Project Orion');
-  });
-
-  it('aggregates generated report rows by the selected group option', () => {
-    const byProject = deriveGeneratedReportRows(entries, 'project');
-    const byMember = deriveGeneratedReportRows(entries, 'member');
-
-    expect(byProject).toEqual([
-      expect.objectContaining({
-        billableSeconds: 1800,
-        entryCount: 1,
-        memberName: 'Nina PM',
-        projectName: 'Billing, API',
-        totalSeconds: 1800,
-      }),
-      expect.objectContaining({
-        billableSeconds: 7200,
-        entryCount: 2,
-        memberName: '2 members',
-        projectName: 'Project Orion',
-        totalSeconds: 10_800,
-      }),
-    ]);
-    expect(byMember).toEqual([
-      expect.objectContaining({
-        billableSeconds: 7200,
-        entryCount: 1,
-        memberName: 'Alex Admin',
-        projectName: 'Project Orion',
-        totalSeconds: 7200,
-      }),
-      expect.objectContaining({
-        billableSeconds: 1800,
-        entryCount: 2,
-        memberName: 'Nina PM',
-        projectName: '2 projects',
-        totalSeconds: 5400,
-      }),
-    ]);
-  });
-
-  it('filters visible report rows and builds escaped CSV output', () => {
-    const rows = deriveReportRows(entries, 'project');
-    const filters = createDefaultReportTableFilters();
-
-    filters.global = 'billing';
-    filters.billable = 'withBillable';
-
-    const visibleRows = filterReportRows(rows, filters);
-    const csv = buildReportsCsv(visibleRows);
-    const download = createReportsCsvDownload(
-      visibleRows,
-      new Date('2026-05-13T12:00:00.000Z'),
-    );
-
-    expect(visibleRows).toHaveLength(1);
-    expect(csv).toContain('"Billing, API",Nina PM,30m,30m,100%,1');
-    expect(download.filename).toBe('gitiempo-reports-2026-05-13.csv');
-  });
-
-  it('filters non-billable rows without changing tracked hours', () => {
-    const [mixedRow] = deriveReportRows(
-      [
-        createEntry({
-          billable: true,
-          durationSeconds: 3600,
-          entryId: '55555555-5555-4555-8555-555555555554',
-          projectId: projectOrionId,
-          projectName: 'Project Orion',
-          taskId: taskOrionId,
-          userId: alexId,
-          userName: 'Alex Admin',
-        }),
-        createEntry({
-          billable: false,
-          durationSeconds: 1800,
-          entryId: '55555555-5555-4555-8555-555555555555',
-          projectId: projectOrionId,
-          projectName: 'Project Orion',
-          taskId: taskOrionId,
-          userId: alexId,
-          userName: 'Alex Admin',
-        }),
-      ],
-      'project',
-    );
-    const filters = createDefaultReportTableFilters();
-
-    filters.billable = 'withoutBillable';
-
-    const visibleRows = filterReportRows(mixedRow ? [mixedRow] : [], filters);
-
-    expect(visibleRows).toHaveLength(1);
-    expect(visibleRows[0]!.totalSeconds).toBe(5400);
-    expect(getReportRowBillableSeconds(visibleRows[0]!, filters.billable)).toBe(
-      1800,
-    );
-  });
-
-  it('detects invalid report date ranges with a shared helper', () => {
-    const invalidRange: [Date, Date] = [
-      new Date('2026-05-03T12:00:00.000Z'),
-      new Date('2026-05-02T12:00:00.000Z'),
-    ];
-
-    expect(isReportDateRangeValid(invalidRange)).toBe(false);
-    expect(getReportDateRangeError(invalidRange)).toBe(
-      'End date must be after the start date.',
-    );
-    expect(
-      isReportDateRangeValid([
-        new Date('2026-05-02T12:00:00.000Z'),
-        new Date('2026-05-03T12:00:00.000Z'),
-      ]),
-    ).toBe(true);
-  });
-});
 
 describe('useReportsData', () => {
   beforeEach(() => {
@@ -327,10 +155,18 @@ describe('useReportsData', () => {
     vi.useRealTimers();
   });
 
-  it('loads active projects with tracked hours by default and debounces project/date refreshes', async () => {
+  it('loads frontend table rows as project-member time breakdowns', async () => {
     const accessToken = shallowRef('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
-    const listProjectEntries = vi.fn().mockResolvedValue(emptyResponse());
+    const listProjectEntries = vi.fn(
+      async (
+        _accessToken: string,
+        projectId: string,
+      ): Promise<TimeEntryListResponse> =>
+        createEntryResponse(entries.filter((entry) => entry.projectId === projectId)),
+    );
+    const exportTimeReport = vi.fn();
+    const getTimeReport = vi.fn();
     let reports!: ReturnType<typeof useReportsData>;
 
     mount(
@@ -339,7 +175,7 @@ describe('useReportsData', () => {
           reports = useReportsData({
             accessToken,
             projectsClient: { listProjects },
-            reportsClient: { listProjectEntries },
+            reportsClient: { exportTimeReport, getTimeReport, listProjectEntries },
           });
           return () => null;
         },
@@ -348,39 +184,58 @@ describe('useReportsData', () => {
 
     await flushPromises();
 
-    expect(listProjects).toHaveBeenCalledTimes(1);
+    expect(getTimeReport).not.toHaveBeenCalled();
     expect(listProjectEntries).toHaveBeenCalledTimes(2);
-    expect(listProjectEntries).toHaveBeenCalledWith(
-      'access-token',
-      projectBillingId,
+    expect(reports.rows.value).toEqual([
       expect.objectContaining({
-        dateFrom: new Date(2026, 4, 1).toISOString(),
-        dateTo: new Date(2026, 4, 14).toISOString(),
-        limit: 100,
-        page: 1,
+        memberName: 'Nina PM',
+        projectName: 'Billing API',
+        totalSeconds: 1800,
       }),
-    );
-    expect(listProjectEntries).toHaveBeenCalledWith(
-      'access-token',
-      projectOrionId,
       expect.objectContaining({
-        dateFrom: new Date(2026, 4, 1).toISOString(),
-        dateTo: new Date(2026, 4, 14).toISOString(),
-        limit: 100,
-        page: 1,
+        memberName: 'Alex Admin',
+        projectName: 'Project Orion',
+        totalSeconds: 7200,
       }),
-    );
-    expect(reports.selectedProjectId.value).toBeNull();
-    expect(reports.loadError.value).toBeNull();
+      expect.objectContaining({
+        memberName: 'Nina PM',
+        projectName: 'Project Orion',
+        totalSeconds: 3600,
+      }),
+    ]);
+    expect(reports.summary.value.totalSeconds).toBe(12600);
+  });
 
+  it('debounces project/date table refreshes without applying export group-by to the table', async () => {
+    const accessToken = shallowRef('access-token');
+    const listProjects = vi.fn().mockResolvedValue(projects);
+    const listProjectEntries = vi.fn().mockResolvedValue(createEntryResponse([]));
+    const exportTimeReport = vi.fn();
+    const getTimeReport = vi.fn();
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mount(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            accessToken,
+            projectsClient: { listProjects },
+            reportsClient: { exportTimeReport, getTimeReport, listProjectEntries },
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
     listProjectEntries.mockClear();
+
     reports.selectedProjectId.value = projectOrionId;
+    reports.groupBy.value = 'user';
     reports.dateRange.value = [
       new Date('2026-05-01T12:00:00.000Z'),
       new Date('2026-05-02T12:00:00.000Z'),
     ];
-    const expectedDateFrom = new Date(2026, 4, 1).toISOString();
-    const expectedDateTo = new Date(2026, 4, 3).toISOString();
 
     await vi.advanceTimersByTimeAsync(299);
     expect(listProjectEntries).not.toHaveBeenCalled();
@@ -393,30 +248,23 @@ describe('useReportsData', () => {
       'access-token',
       projectOrionId,
       expect.objectContaining({
-        dateFrom: expectedDateFrom,
-        dateTo: expectedDateTo,
+        dateFrom: new Date(2026, 4, 1).toISOString(),
+        dateTo: new Date(2026, 4, 3).toISOString(),
         limit: 100,
         page: 1,
       }),
     );
   });
 
-  it('builds export rows from report filters without mutating table selection', async () => {
+  it('exports through the reports API using explicit export setup controls', async () => {
     const accessToken = shallowRef('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
-    const listProjectEntries = vi.fn(
-      async (
-        _accessToken: string,
-        projectId: string,
-      ): Promise<TimeEntryListResponse> => {
-        const items = entries.filter((entry) => entry.projectId === projectId);
-
-        return {
-          items,
-          meta: { limit: 100, page: 1, total: items.length, totalPages: 1 },
-        };
-      },
-    );
+    const listProjectEntries = vi.fn().mockResolvedValue(createEntryResponse(entries));
+    const exportTimeReport = vi.fn().mockResolvedValue({
+      blob: new Blob(['csv'], { type: 'text/csv' }),
+      filename: 'time-report.csv',
+    });
+    const getTimeReport = vi.fn();
     let reports!: ReturnType<typeof useReportsData>;
 
     mount(
@@ -425,7 +273,7 @@ describe('useReportsData', () => {
           reports = useReportsData({
             accessToken,
             projectsClient: { listProjects },
-            reportsClient: { listProjectEntries },
+            reportsClient: { exportTimeReport, getTimeReport, listProjectEntries },
           });
           return () => null;
         },
@@ -433,47 +281,33 @@ describe('useReportsData', () => {
     );
 
     await flushPromises();
-    listProjectEntries.mockClear();
 
-    const exportRows = await reports.buildRowsForFilters({
+    const result = await reports.exportCurrentReport({
       dateRange: null,
-      groupBy: 'project',
+      groupBy: 'user',
       memberId: ninaId,
       projectId: projectBillingId,
     });
 
-    expect(listProjectEntries).toHaveBeenCalledTimes(1);
-    expect(listProjectEntries).toHaveBeenCalledWith(
+    expect(result?.filename).toBe('time-report.csv');
+    expect(exportTimeReport).toHaveBeenCalledWith(
       'access-token',
-      projectBillingId,
-      expect.objectContaining({ limit: 100, page: 1 }),
-    );
-    expect(exportRows).toEqual([
       expect.objectContaining({
-        memberName: 'Nina PM',
-        projectName: 'Billing, API',
-        totalSeconds: 1800,
+        groupBy: 'user',
+        projectId: projectBillingId,
+        sortBy: 'totalSeconds',
+        sortOrder: 'desc',
+        userId: ninaId,
       }),
-    ]);
-    expect(reports.selectedProjectId.value).toBeNull();
+    );
   });
 
-  it('builds export rows using the selected group-by aggregation', async () => {
+  it('blocks invalid table date ranges before refresh and export requests', async () => {
     const accessToken = shallowRef('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
-    const listProjectEntries = vi.fn(
-      async (
-        _accessToken: string,
-        projectId: string,
-      ): Promise<TimeEntryListResponse> => {
-        const items = entries.filter((entry) => entry.projectId === projectId);
-
-        return {
-          items,
-          meta: { limit: 100, page: 1, total: items.length, totalPages: 1 },
-        };
-      },
-    );
+    const listProjectEntries = vi.fn().mockResolvedValue(createEntryResponse([]));
+    const exportTimeReport = vi.fn();
+    const getTimeReport = vi.fn();
     let reports!: ReturnType<typeof useReportsData>;
 
     mount(
@@ -482,7 +316,7 @@ describe('useReportsData', () => {
           reports = useReportsData({
             accessToken,
             projectsClient: { listProjects },
-            reportsClient: { listProjectEntries },
+            reportsClient: { exportTimeReport, getTimeReport, listProjectEntries },
           });
           return () => null;
         },
@@ -490,52 +324,6 @@ describe('useReportsData', () => {
     );
 
     await flushPromises();
-    listProjectEntries.mockClear();
-
-    const exportRows = await reports.buildRowsForFilters({
-      dateRange: null,
-      groupBy: 'member',
-      memberId: null,
-      projectId: null,
-    });
-
-    expect(listProjectEntries).toHaveBeenCalledTimes(2);
-    expect(exportRows).toEqual([
-      expect.objectContaining({
-        memberName: 'Alex Admin',
-        projectName: 'Project Orion',
-        totalSeconds: 7200,
-      }),
-      expect.objectContaining({
-        memberName: 'Nina PM',
-        projectName: '2 projects',
-        totalSeconds: 5400,
-      }),
-    ]);
-    expect(reports.selectedProjectId.value).toBeNull();
-  });
-
-  it('blocks invalid date ranges before report refresh and export requests', async () => {
-    const accessToken = shallowRef('access-token');
-    const listProjects = vi.fn().mockResolvedValue(projects);
-    const listProjectEntries = vi.fn().mockResolvedValue(emptyResponse());
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mount(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            accessToken,
-            projectsClient: { listProjects },
-            reportsClient: { listProjectEntries },
-          });
-          return () => null;
-        },
-      }),
-    );
-
-    await flushPromises();
-    listProjects.mockClear();
     listProjectEntries.mockClear();
 
     reports.dateRange.value = [
@@ -546,26 +334,24 @@ describe('useReportsData', () => {
     await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
 
-    expect(listProjects).not.toHaveBeenCalled();
     expect(listProjectEntries).not.toHaveBeenCalled();
-    expect(reports.loadError.value).toBeNull();
-
     await expect(
-      reports.buildRowsForFilters({
+      reports.exportCurrentReport({
         dateRange: reports.dateRange.value,
         groupBy: 'project',
         memberId: null,
         projectId: null,
       }),
     ).rejects.toThrow('End date must be after the start date.');
-    expect(listProjects).not.toHaveBeenCalled();
-    expect(listProjectEntries).not.toHaveBeenCalled();
+    expect(exportTimeReport).not.toHaveBeenCalled();
   });
 
   it('keeps request errors distinct from empty report results', async () => {
     const accessToken = shallowRef('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects.slice(0, 1));
     const listProjectEntries = vi.fn().mockRejectedValue(new Error('No scope'));
+    const exportTimeReport = vi.fn();
+    const getTimeReport = vi.fn();
     const onError = vi.fn();
     let reports!: ReturnType<typeof useReportsData>;
 
@@ -576,7 +362,7 @@ describe('useReportsData', () => {
             accessToken,
             onError,
             projectsClient: { listProjects },
-            reportsClient: { listProjectEntries },
+            reportsClient: { exportTimeReport, getTimeReport, listProjectEntries },
           });
           return () => null;
         },
@@ -589,41 +375,6 @@ describe('useReportsData', () => {
     expect(reports.isEmpty.value).toBe(false);
     expect(onError).toHaveBeenCalledWith(
       'No scope',
-      expect.any(Error),
-      'load-reports',
-    );
-  });
-
-  it('normalizes throttler errors into an actionable reports message', async () => {
-    const accessToken = shallowRef('access-token');
-    const listProjects = vi.fn().mockResolvedValue(projects.slice(0, 1));
-    const listProjectEntries = vi
-      .fn()
-      .mockRejectedValue(new Error('ThrottlerException: Too Many Requests'));
-    const onError = vi.fn();
-    let reports!: ReturnType<typeof useReportsData>;
-
-    mount(
-      defineComponent({
-        setup() {
-          reports = useReportsData({
-            accessToken,
-            onError,
-            projectsClient: { listProjects },
-            reportsClient: { listProjectEntries },
-          });
-          return () => null;
-        },
-      }),
-    );
-
-    await flushPromises();
-
-    expect(reports.loadError.value).toBe(
-      'Too many report requests. Select a project and shorter date range, then try again.',
-    );
-    expect(onError).toHaveBeenCalledWith(
-      'Too many report requests. Select a project and shorter date range, then try again.',
       expect.any(Error),
       'load-reports',
     );

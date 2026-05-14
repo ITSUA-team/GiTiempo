@@ -6,18 +6,20 @@ import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
 import {
   createDefaultReportTableFilters,
-  type ReportRow,
-} from '@/composables/useReportsData';
+  type ReportTableRow,
+} from '@/lib/report-view-model';
 import ReportsTable from './ReportsTable.vue';
 
-const rows: ReportRow[] = [
+const rows: ReportTableRow[] = [
   {
     billableSeconds: 3600,
     billableShare: 0.5,
     entryCount: 2,
+    groupBy: 'project',
     id: 'project-1',
     memberIds: ['member-1'],
     memberName: 'Alex Admin',
+    nonBillableSeconds: 3600,
     projectIds: ['project-1'],
     projectName: 'Project Orion',
     totalSeconds: 7200,
@@ -134,5 +136,39 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 15m');
     expect(wrapper.text()).not.toContain('45m');
+  });
+
+  it('renders mapped API row variants with the existing report columns', () => {
+    const filters = createDefaultReportTableFilters();
+
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters,
+        loading: false,
+        memberOptions: [{ label: 'Nina PM', value: 'member-2' }],
+        projectOptions: [{ label: 'Billing API', value: 'project-2' }],
+        rows: [
+          {
+            billableSeconds: 1800,
+            billableShare: 0.5,
+            entryCount: 2,
+            groupBy: 'user',
+            id: 'user-1',
+            memberIds: ['member-2'],
+            memberName: 'Nina PM',
+            nonBillableSeconds: 1800,
+            projectIds: [],
+            projectName: 'Project scope',
+            totalSeconds: 3600,
+          },
+        ],
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+      },
+    });
+
+    expect(wrapper.text()).toContain('Project scope');
+    expect(wrapper.text()).toContain('Nina PM');
   });
 });

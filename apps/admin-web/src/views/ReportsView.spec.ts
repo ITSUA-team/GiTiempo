@@ -4,21 +4,20 @@ import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import type { TimeReportGroupBy } from '@gitiempo/shared';
 
-import {
-  createDefaultReportTableFilters,
-  deriveReportSummary,
-  type ReportDateRange,
-  type ReportGroupBy,
-  type ReportRow,
-} from '@/composables/useReportsData';
-import type * as ReportsDataModule from '@/composables/useReportsData';
+import type {
+  ReportDateRange,
+  ReportSummaryView,
+  ReportTableRow,
+} from '@/lib/report-view-model';
 import { useAuthStore } from '@/stores/auth';
 
 const reportMocks = vi.hoisted(() => ({
-  buildRowsForFilters: vi.fn(),
-  downloadReportsCsv: vi.fn(() => 'gitiempo-reports-2026-05-13.csv'),
+  downloadReportExport: vi.fn(() => 'time-report-2026-05.csv'),
   errorToast: vi.fn(),
+  exportCurrentReport: vi.fn(),
+  infoToast: vi.fn(),
   refresh: vi.fn(),
   state: undefined as unknown,
   successToast: vi.fn(),
@@ -27,19 +26,18 @@ const reportMocks = vi.hoisted(() => ({
 vi.mock('@/composables/useToasts', () => ({
   useToasts: () => ({
     errorToast: reportMocks.errorToast,
+    infoToast: reportMocks.infoToast,
     successToast: reportMocks.successToast,
   }),
 }));
 
-vi.mock('@/composables/useReportsData', async (importOriginal) => {
-  const actual = await importOriginal<typeof ReportsDataModule>();
+vi.mock('@/lib/report-download', () => ({
+  downloadReportExport: reportMocks.downloadReportExport,
+}));
 
-  return {
-    ...actual,
-    downloadReportsCsv: reportMocks.downloadReportsCsv,
-    useReportsData: () => reportMocks.state,
-  };
-});
+vi.mock('@/composables/useReportsData', () => ({
+  useReportsData: () => reportMocks.state,
+}));
 
 import ReportsView from './ReportsView.vue';
 
@@ -69,7 +67,7 @@ const ReportsFilterFormStub = {
     };
   },
   template:
-    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button><button data-testid="change-report-group-by" @click="$emit(\'update:groupBy\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button></div>',
+    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button><button data-testid="change-report-member" @click="$emit(\'update:memberId\', \'member-2\')">member</button><button data-testid="change-report-group-by" @click="$emit(\'update:groupBy\', \'user\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button></div>',
 };
 
 const ReportsTableStub = {
@@ -84,15 +82,29 @@ const ManagementPageSkeletonStub = {
   template: '<div data-testid="reports-skeleton">{{ variant }}</div>',
 };
 
-const reportRow: ReportRow = {
+const reportRow: ReportTableRow = {
   billableSeconds: 3600,
   billableShare: 0.5,
   entryCount: 2,
+  groupBy: 'project',
   id: 'project-1',
   memberIds: ['member-1'],
   memberName: 'Alex Admin',
+  nonBillableSeconds: 3600,
   projectIds: ['project-1'],
   projectName: 'Project Orion',
+  totalSeconds: 7200,
+};
+
+const summary: ReportSummaryView = {
+  avgPerMemberSeconds: 7200,
+  billableSeconds: 3600,
+  billableShare: 0.5,
+  entryCount: 2,
+  memberCount: 1,
+  nonBillableSeconds: 3600,
+  topProjectName: 'Project Orion',
+  topProjectSeconds: 7200,
   totalSeconds: 7200,
 };
 
@@ -105,14 +117,15 @@ function createReportState({
   isInitialLoading?: boolean;
   loadError?: string | null;
   loading?: boolean;
-  rows?: ReportRow[];
+  rows?: ReportTableRow[];
 } = {}) {
   const reportRows = shallowRef(rows);
 
   return {
     dateRange: shallowRef<ReportDateRange>(null),
-    entries: shallowRef([]),
-    groupBy: shallowRef<ReportGroupBy>('project'),
+    exportCurrentReport: reportMocks.exportCurrentReport,
+    getFilteredRows: vi.fn(),
+    groupBy: shallowRef<TimeReportGroupBy>('project'),
     initialLoaded: shallowRef(!isInitialLoading),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: shallowRef(isInitialLoading),
@@ -121,45 +134,15 @@ function createReportState({
     memberOptions: computed(() => [{ label: 'Alex Admin', value: 'member-1' }]),
     projectOptions: computed(() => [{ label: 'Project Orion', value: 'project-1' }]),
     projects: shallowRef([]),
-    buildRowsForFilters: reportMocks.buildRowsForFilters,
     refresh: reportMocks.refresh,
+    reportResponse: shallowRef(null),
     rows: reportRows,
     selectedMemberId: shallowRef<string | null>(null),
     selectedProjectId: shallowRef<string | null>(null),
-    summary: computed(() =>
-      deriveReportSummary([
-        {
-          createdAt: '2026-05-01T10:00:00.000Z',
-          description: null,
-          durationSeconds: 7200,
-          endedAt: '2026-05-01T12:00:00.000Z',
-          id: '55555555-5555-4555-8555-555555555551',
-          isBillable: true,
-          project: {
-            id: '11111111-1111-4111-8111-111111111111',
-            name: 'Project Orion',
-          },
-          projectId: '11111111-1111-4111-8111-111111111111',
-          source: 'manual',
-          startedAt: '2026-05-01T10:00:00.000Z',
-          task: {
-            id: '22222222-2222-4222-8222-222222222222',
-            title: 'Implementation',
-          },
-          taskId: '22222222-2222-4222-8222-222222222222',
-          updatedAt: '2026-05-01T12:00:00.000Z',
-          user: {
-            avatarUrl: null,
-            displayName: 'Alex Admin',
-            email: 'alex@example.com',
-            id: '33333333-3333-4333-8333-333333333333',
-          },
-          userId: '33333333-3333-4333-8333-333333333333',
-          workspaceId: '44444444-4444-4444-8444-444444444444',
-        },
-      ]),
-    ),
-    tableFilters: shallowRef(createDefaultReportTableFilters()),
+    summary: computed(() => ({
+      ...summary,
+      totalSeconds: rows.reduce((total, row) => total + row.totalSeconds, 0),
+    })),
   };
 }
 
@@ -184,10 +167,14 @@ function mountReportsView() {
 
 describe('ReportsView', () => {
   beforeEach(() => {
-    reportMocks.buildRowsForFilters.mockReset();
-    reportMocks.buildRowsForFilters.mockResolvedValue([reportRow]);
-    reportMocks.downloadReportsCsv.mockClear();
+    reportMocks.downloadReportExport.mockClear();
     reportMocks.errorToast.mockClear();
+    reportMocks.exportCurrentReport.mockReset();
+    reportMocks.exportCurrentReport.mockResolvedValue({
+      blob: new Blob(['csv'], { type: 'text/csv' }),
+      filename: 'time-report-2026-05.csv',
+    });
+    reportMocks.infoToast.mockClear();
     reportMocks.refresh.mockClear();
     reportMocks.successToast.mockClear();
     reportMocks.state = createReportState();
@@ -217,7 +204,7 @@ describe('ReportsView', () => {
     expect(reportMocks.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('renders reports and exports the currently visible rows', async () => {
+  it('renders API-backed reports and exports through the backend CSV result', async () => {
     const wrapper = mountReportsView();
     await flushPromises();
 
@@ -232,15 +219,34 @@ describe('ReportsView', () => {
     await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
     await flushPromises();
 
-    expect(reportMocks.buildRowsForFilters).toHaveBeenCalledWith({
+    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith({
       dateRange: null,
       groupBy: 'project',
       memberId: null,
       projectId: null,
     });
-    expect(reportMocks.downloadReportsCsv).toHaveBeenCalledWith([reportRow]);
+    expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
+      blob: expect.any(Blob),
+      filename: 'time-report-2026-05.csv',
+    });
     expect(reportMocks.successToast).toHaveBeenCalledWith(
-      'Exported gitiempo-reports-2026-05-13.csv.',
+      'Exported time-report-2026-05.csv.',
+    );
+  });
+
+  it('shows feedback when the loaded setup has no rows to export', async () => {
+    reportMocks.state = createReportState({ rows: [] });
+
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+    expect(reportMocks.infoToast).toHaveBeenCalledWith(
+      'No data to export for the selected filters.',
     );
   });
 
@@ -256,27 +262,51 @@ describe('ReportsView', () => {
     await exportButton.trigger('click');
     await flushPromises();
 
-    expect(reportMocks.buildRowsForFilters).not.toHaveBeenCalled();
-    expect(reportMocks.downloadReportsCsv).not.toHaveBeenCalled();
+    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
   });
 
-  it('keeps header report setup changes separate from table data', async () => {
+  it('surfaces backend CSV export failures as error toasts', async () => {
+    reportMocks.exportCurrentReport.mockRejectedValueOnce(
+      new Error('CSV export failed'),
+    );
+
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
+    expect(reportMocks.errorToast).toHaveBeenCalledWith('CSV export failed', {
+      error: expect.any(Error),
+      logContext: { action: 'export-reports', feature: 'reports' },
+    });
+  });
+
+  it('keeps header setup controls as export scope instead of table state', async () => {
     const wrapper = mountReportsView();
     const state = reportMocks.state as ReturnType<typeof createReportState>;
     await flushPromises();
 
     await wrapper.get('[data-testid="change-report-project"]').trigger('click');
+    await wrapper.get('[data-testid="change-report-member"]').trigger('click');
     await wrapper.get('[data-testid="change-report-group-by"]').trigger('click');
 
     expect(state.selectedProjectId.value).toBeNull();
-    expect(reportMocks.refresh).not.toHaveBeenCalled();
+    expect(state.selectedMemberId.value).toBeNull();
+    expect(state.groupBy.value).toBe('project');
     expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
 
     await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
     await flushPromises();
 
-    expect(reportMocks.buildRowsForFilters).toHaveBeenCalledWith(
-      expect.objectContaining({ groupBy: 'member', projectId: 'project-2' }),
+    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupBy: 'user',
+        memberId: 'member-2',
+        projectId: 'project-2',
+      }),
     );
   });
 });
