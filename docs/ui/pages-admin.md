@@ -5,11 +5,13 @@
 
 ## Dashboard
 
+- Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity table.
 - Four summary stat cards.
 - Recent activity feed using the same DataTable patterns as user pages.
 
 ## Reports Page
 
+- Initial report load uses a skeleton matching the reports header, setup controls, summary cards, and results table.
 - Report setup bar: project, member, date range, group-by.
 - Report setup controls define the frontend CSV generation scope and do not change the loaded table rows or summary cards by themselves.
 - Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
@@ -29,6 +31,7 @@
 
 ## Members Page
 
+- Initial page load uses a skeleton matching the stats header, stat cards, and members table before rendering empty or request-error states.
 - Members table with avatar, role, projects assigned, last active, and icon-only row actions with text tooltips.
 - Members table is searchable with placeholder `Search members` and uses column filters for member name/email, role, assigned projects, and last active.
 - Invite member opens a dialog.
@@ -36,10 +39,11 @@
 
 ## Projects Page
 
+- Initial page load uses a skeleton matching the stats header, stat cards, and projects table before rendering empty or request-error states.
 - Project list table includes project name, source, assigned members, total hours, visibility, and icon-only row actions with text tooltips.
 - Project list table is searchable with placeholder `Search projects` and uses column filters for project name, source, assigned members, total hours, and visibility.
 - Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<Select>`, followed by `Cancel` and `Save` actions.
-- Manual project creation uses a dialog.
+- Manual project creation uses the authenticated Add Project page at `/projects/new`.
 
 ## Settings Page
 

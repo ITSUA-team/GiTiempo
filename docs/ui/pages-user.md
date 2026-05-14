@@ -5,6 +5,7 @@
 
 ## Dashboard
 
+- Initial page load uses a skeleton that approximates the dashboard header, timer/stat surfaces, and recent entries table before rendering empty states.
 - Active Timer widget: full-width `<Card>` showing task, project, elapsed time, and stop action.
 - Recent Time Entries: `<DataTable>` with last 10 entries.
 - Empty dashboard state: reuse the shared empty state pattern.
@@ -31,6 +32,7 @@
 
 ## Time Entries Page
 
+- Initial page load uses a skeleton matching the header action row, filters, grouped entry cards, and pagination region.
 - Header actions include a primary PrimeVue `<Button>` labeled `+ New time entry` in the same row as the page title. It opens the shared manual time-entry PrimeVue `<Dialog>` without a preset day.
 - Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup.
 - The task lookup placeholder copy is `Search tasks`.
@@ -50,6 +52,7 @@
 
 ## Projects Page
 
+- Initial page load uses a skeleton matching the header action row, search row, and grouped project sections.
 - Header actions include a primary PrimeVue `<Button>` labeled `+ New task` in the same row as the page title.
 - The page uses the same high-level structure as Time Entries: page header row, grouped content sections, and a card/table shell for each group.
 - A filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`.
@@ -76,6 +79,7 @@
 
 ## Profile Page
 
+- Initial page load uses a skeleton matching the profile form and GitHub connection card before rendering disconnected, empty, or request-error states.
 - Editable display name backed by `PATCH /users/me`.
 - Display-name input is enabled and prefilled from the current user profile.
 - `Save changes` persists the latest valid display name and `Cancel` restores the latest persisted value.

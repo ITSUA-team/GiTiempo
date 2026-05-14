@@ -104,6 +104,27 @@ The frontend codebase SHALL review repeated user/admin presentational micro-bloc
 - **THEN** that scaffold should be considered for extraction into a shared prop-driven Vue component
 - **AND** app-specific route ownership and copy remain in the consuming app
 
+### Requirement: Shared Stat Card Surface Is Extractable
+
+The frontend codebase SHALL place the documented stat-card surface in `@gitiempo/web-shared` once a second admin or user page renders it through the same prop-driven contract.
+
+#### Scenario: Stat card is shared across management pages
+
+- **WHEN** more than one route renders the same compact label-plus-value stat card surface
+- **THEN** the stat card is implemented as a shared prop-driven Vue component in `@gitiempo/web-shared`
+- **AND** consumers do not maintain parallel app-local stat cards with the same markup
+
+### Requirement: Shared Management Table Chrome Is Extractable
+
+The frontend codebase SHALL place repeated boxed management-table chrome in `@gitiempo/web-shared` once a second admin page renders the same chrome around its table.
+
+#### Scenario: Management table chrome is shared across admin pages
+
+- **WHEN** `admin-web` renders more than one page with the same boxed management table chrome
+- **THEN** the chrome is implemented as a shared prop-driven Vue component in `@gitiempo/web-shared`
+- **AND** product-specific columns, filters, and per-row content stay in the consuming page
+- **AND** consumers do not maintain a parallel app-local copy of the chrome
+
 ### Requirement: Shared Authenticated Header Chrome Is Extractable
 
 The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/web-shared` when the user/admin header structure is identical and all app-specific orchestration can remain local.
