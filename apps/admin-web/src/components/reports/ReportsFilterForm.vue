@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Form, type FormResolverOptions } from '@primevue/forms';
+import { Form } from '@primevue/forms';
+import { zodResolver } from '@primevue/forms/resolvers/zod';
+import type { TimeReportGroupBy } from '@gitiempo/shared';
 import {
-  timeReportExportQuerySchema,
-  type TimeReportGroupBy,
-} from '@gitiempo/shared';
+  normalizeReportDateRangeValue,
+  reportFilterFormSchema,
+  type ReportDatePickerRangeValue,
+  type ReportFilterFormValues,
+} from '@gitiempo/web-shared';
 import DatePicker from 'primevue/datepicker';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
@@ -12,9 +16,7 @@ import Select from 'primevue/select';
 import type {
   ReportDateRange,
   ReportFilterOption,
-  ReportSetupFilters,
 } from '@/lib/report-view-model';
-import { toTimeReportExportQuery } from '@/lib/report-view-model';
 
 const props = defineProps<{
   disabled?: boolean;
@@ -26,13 +28,6 @@ const projectId = defineModel<string | null>('projectId', { required: true });
 const memberId = defineModel<string | null>('memberId', { required: true });
 const dateRange = defineModel<ReportDateRange>('dateRange', { required: true });
 const groupBy = defineModel<TimeReportGroupBy>('groupBy', { required: true });
-
-interface ReportsFilterFormValues {
-  dateRange: ReportDateRange;
-  groupBy: TimeReportGroupBy;
-  memberId: string | null;
-  projectId: string | null;
-}
 
 const groupByOptions: { label: string; value: TimeReportGroupBy }[] = [
   { label: 'Project', value: 'project' },
@@ -48,71 +43,14 @@ const memberGenerationOptions = computed(() => [
   ...props.memberOptions,
 ]);
 
-const initialValues = computed<ReportsFilterFormValues>(() => ({
+const initialValues = computed<ReportFilterFormValues>(() => ({
   projectId: projectId.value,
   memberId: memberId.value,
   dateRange: dateRange.value,
   groupBy: groupBy.value,
 }));
 
-type DatePickerRangeValue = Date | (Date | null)[] | null | undefined;
-
-function normalizeDateRangeValue(value: DatePickerRangeValue): ReportDateRange {
-  if (!value) {
-    return null;
-  }
-
-  if (value instanceof Date) {
-    return [value, null];
-  }
-
-  if (value.length === 0) {
-    return null;
-  }
-
-  return [value[0] ?? null, value[1] ?? null];
-}
-
-function getFormValues(values: Record<string, unknown>): ReportSetupFilters {
-  return {
-    dateRange: normalizeDateRangeValue(
-      values.dateRange as DatePickerRangeValue,
-    ),
-    groupBy: (values.groupBy ?? 'project') as TimeReportGroupBy,
-    memberId: (values.memberId as string | null | undefined) ?? null,
-    projectId: (values.projectId as string | null | undefined) ?? null,
-  };
-}
-
-function resolver({ values }: FormResolverOptions) {
-  try {
-    const query = toTimeReportExportQuery(getFormValues(values));
-    const result = timeReportExportQuerySchema.safeParse(query);
-
-    if (result.success) {
-      return { values, errors: {} };
-    }
-
-    const errors = result.error.issues.reduce<Record<string, { message: string }[]>>(
-      (current, issue) => {
-        const path = issue.path[0];
-        const field = path === 'dateFrom' || path === 'dateTo' ? 'dateRange' : path;
-
-        if (typeof field === 'string') {
-          current[field] = [{ message: issue.message }];
-        }
-
-        return current;
-      },
-      {},
-    );
-
-    return { values, errors };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Invalid report setup';
-    return { values, errors: { dateRange: [{ message }] } };
-  }
-}
+const resolver = zodResolver(reportFilterFormSchema);
 
 function handleProjectUpdate(value: string | null): void {
   projectId.value = value;
@@ -122,8 +60,8 @@ function handleMemberUpdate(value: string | null): void {
   memberId.value = value;
 }
 
-function handleDateRangeUpdate(value: DatePickerRangeValue): void {
-  dateRange.value = normalizeDateRangeValue(value);
+function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
+  dateRange.value = normalizeReportDateRangeValue(value);
 }
 
 function handleGroupByUpdate(value: TimeReportGroupBy): void {
