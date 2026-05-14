@@ -20,6 +20,7 @@ import { InvitesModule } from './invites/invites.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TimeEntriesModule } from './time-entries/time-entries.module';
+import { ReportsModule } from './reports/reports.module';
 import { GithubModule } from './github/github.module';
 
 @Module({
@@ -49,6 +50,7 @@ import { GithubModule } from './github/github.module';
     ProjectsModule,
     TasksModule,
     TimeEntriesModule,
+    ReportsModule,
     GithubModule,
     CommonsModule,
   ],
