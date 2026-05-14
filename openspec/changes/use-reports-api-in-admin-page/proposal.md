@@ -25,4 +25,5 @@ The Admin Reports page shows project-member table rows, and both table data and 
 - Affected app code: `apps/admin-web/src/views/ReportsView.vue`, `apps/admin-web/src/components/reports/*`, `apps/admin-web/src/composables/useReportsData.ts`, and `apps/admin-web/src/services/admin-reports-client.ts`.
 - Removed app-local files: `apps/admin-web/src/lib/reports-helpers.ts`, `apps/admin-web/src/lib/reports-filter-schema.ts`, and their tests.
 - Shared contracts consumed: `packages/shared/src/contracts/reports.ts`.
+- Prerequisite: `add-reports-time-api` must be available before this frontend change ships because this change consumes `GET /reports/time` and `GET /reports/time/export` without redefining those contracts.
 - No backend, shared contract, database, or migration changes are expected.

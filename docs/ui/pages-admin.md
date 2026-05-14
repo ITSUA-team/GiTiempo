@@ -20,7 +20,7 @@
 - Results table header includes global search with placeholder `Search report rows`.
 - Results table column filters use the existing management-table filter-row treatment for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
 - CSV export downloads rows from the backend report export endpoint for the current report setup controls; table-only search and column filters do not change export scope.
-- PM users cannot widen filters beyond active projects in their assigned scope.
+- PM users cannot widen filters beyond active projects visible through their report scope, including active public projects plus active private projects assigned to that PM.
 
 ## Invoices Page
 

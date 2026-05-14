@@ -1,6 +1,6 @@
 ## 1. Reports API Client
 
-- [x] 1.1 Extend `apps/admin-web/src/services/admin-reports-client.ts` with backend report export plus scoped project time-entry methods.
+- [x] 1.1 Extend `apps/admin-web/src/services/admin-reports-client.ts` with `getTimeReport` and `exportTimeReport` methods for the backend reports API.
 - [x] 1.2 Update reports client tests for query serialization, response parsing, CSV Blob download metadata, and API error propagation.
 
 ## 2. Reports View Model And Composable

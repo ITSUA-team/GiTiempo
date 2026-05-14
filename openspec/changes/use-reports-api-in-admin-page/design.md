@@ -2,7 +2,7 @@
 
 `apps/admin-web` already has an authenticated Reports route matching the approved `GITiempo.pen` Admin Reports screen. The current implementation must keep the existing report setup model where header controls define CSV export scope instead of rewriting the currently loaded table and summary state.
 
-The completed `add-reports-time-api` change introduced shared `TimeReport*` contracts plus `GET /reports/time` and `GET /reports/time/export`. That change explicitly did not build the Admin Reports UI, so this change wires the existing page to those API contracts without changing backend behavior.
+The completed `add-reports-time-api` change introduced shared `TimeReport*` contracts plus `GET /reports/time` and `GET /reports/time/export`. That change explicitly did not build the Admin Reports UI, so this change wires the existing page to those API contracts without changing backend behavior. `add-reports-time-api` is a prerequisite for implementation and deployment of this change.
 
 ## Goals / Non-Goals
 
@@ -42,13 +42,13 @@ Alternative considered: apply setup controls to the table request immediately. R
 
 ### Treat CSV export as a backend file response
 
-The route view will call the reports client export method and download the returned Blob using the filename from `Content-Disposition` when available. A `204`/empty-body special case is not expected because the endpoint returns CSV headers even for no rows; the frontend can still show an informational toast when the loaded report has no rows for the current table data.
+The route view will call the reports client export method and download the returned Blob using the filename from `Content-Disposition` when available. A `204`/empty-body special case is not expected because the endpoint returns CSV headers even for no rows. Empty currently loaded table data or empty table-only filter results must not skip the backend export request; informational empty-data feedback may be shown only after or alongside a completed backend export, not as a replacement for it.
 
 Alternative considered: keep browser CSV generation around as a fallback. Rejected because the backend endpoint is the new source of truth and fallback generation would preserve stale local aggregation logic.
 
 ### Replace stale helpers with UI view-model mapping
 
-The old `reports-helpers.ts` and `reports-filter-schema.ts` will be removed. Any remaining frontend code should be limited to display formatting, table-filter defaults, date-range conversion, and mapping scoped time entries to the existing table presentation model.
+The old `reports-helpers.ts` and `reports-filter-schema.ts` will be removed. Any remaining frontend code should be limited to display formatting, table-filter defaults, date-range conversion, and mapping backend `TimeReportResponse.items` into the existing table presentation model.
 
 Alternative considered: patch the existing helper file to consume API rows. Rejected because the file name and contents would keep stale frontend aggregation and local schema responsibilities alive.
 

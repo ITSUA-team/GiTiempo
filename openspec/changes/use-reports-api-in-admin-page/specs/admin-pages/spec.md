@@ -45,11 +45,11 @@ The reports page MUST support report setup controls for backend CSV export, scop
 - **THEN** summary totals are derived from the loaded backend-generated report rows
 - **AND** table-only search or column filters do not recalculate summary cards
 
-#### Scenario: PM stays inside assigned scope
+#### Scenario: PM stays inside visible report scope
 
 - **WHEN** a PM uses the reports page
-- **THEN** project and member choices are limited to projects and users visible through the PM's existing project scope
-- **AND** the PM cannot expand filters beyond that assigned scope from the reports UI
+- **THEN** project and member choices are limited to active projects and users visible through the PM's existing report scope
+- **AND** the PM cannot expand filters beyond active public projects plus active private projects assigned to that PM from the reports UI
 - **AND** the existing scoped project and report APIs remain responsible for enforcing PM scope on loaded rows and CSV export
 
 #### Scenario: Admin can explicitly report inactive or empty visible projects
