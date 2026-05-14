@@ -64,6 +64,13 @@
       "when": 1778520307875,
       "tag": "0008_big_maelstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778772191896,
+      "tag": "0009_motionless_red_wolf",
+      "breakpoints": true
     }
   ]
 }
