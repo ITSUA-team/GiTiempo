@@ -42,7 +42,7 @@ The reports page MUST support report setup controls for backend CSV export, scop
 #### Scenario: Summary totals reflect loaded report data
 
 - **WHEN** report data loads successfully
-- **THEN** summary totals are derived from the loaded scoped time entries
+- **THEN** summary totals are derived from the loaded backend-generated report rows
 - **AND** table-only search or column filters do not recalculate summary cards
 
 #### Scenario: PM stays inside assigned scope

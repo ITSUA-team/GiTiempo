@@ -7,23 +7,20 @@ import {
   type ComputedRef,
   type Ref,
 } from 'vue';
-import type {
-  ProjectListResponse,
-  ProjectResponse,
-  TimeEntryResponse,
-} from '@gitiempo/shared';
+import type { ProjectListResponse, ProjectResponse } from '@gitiempo/shared';
 
 import {
+  deriveReportSummaryView,
   deriveMemberOptions,
   deriveProjectOptions,
-  deriveReportRows,
-  deriveReportSummary,
-  filterEntriesByMember,
   getDefaultReportDateRange,
   isReportDateRangeValid,
+  toReportTableRows,
+  toTimeReportQuery,
   toTimeReportExportQuery,
   type ReportDateRange,
   type ReportSetupFilters,
+  type ReportTableRow,
 } from '@/lib/report-view-model';
 import {
   adminProjectsClient,
@@ -80,7 +77,7 @@ export function useReportsData({
   onError,
 }: UseReportsDataOptions) {
   const projects = shallowRef<ProjectListResponse>([]);
-  const entries = shallowRef<TimeEntryResponse[]>([]);
+  const reportRows = shallowRef<ReportTableRow[]>([]);
   const selectedProjectId = shallowRef<string | null>(null);
   const selectedMemberId = shallowRef<string | null>(null);
   const dateRange = shallowRef<ReportDateRange>(getDefaultReportDateRange());
@@ -93,14 +90,9 @@ export function useReportsData({
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const projectOptions = computed(() => deriveProjectOptions(projects.value));
-  const memberOptions = computed(() =>
-    deriveMemberOptions(projects.value, entries.value),
-  );
-  const memberScopedEntries = computed(() =>
-    filterEntriesByMember(entries.value, selectedMemberId.value),
-  );
-  const rows = computed(() => deriveReportRows(memberScopedEntries.value));
-  const summary = computed(() => deriveReportSummary(memberScopedEntries.value));
+  const memberOptions = computed(() => deriveMemberOptions(projects.value));
+  const rows = computed(() => reportRows.value);
+  const summary = computed(() => deriveReportSummaryView(rows.value));
   const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
   const isEmpty = computed(
     () =>
@@ -137,40 +129,46 @@ export function useReportsData({
     }
   }
 
-  async function fetchEntriesForScope(
+  async function fetchReportRowsForScope(
     token: string,
     visibleProjects: ProjectListResponse,
     projectId: string | null,
     reportDateRange: ReportDateRange,
-  ): Promise<TimeEntryResponse[]> {
+  ): Promise<ReportTableRow[]> {
     const targetProjects = getVisibleProjectsForScope(visibleProjects, projectId);
-    const dateQuery = toTimeReportExportQuery({
-      dateRange: reportDateRange,
-      groupBy: 'project',
-      memberId: null,
-      projectId: null,
-    });
-    const nextEntries: TimeEntryResponse[] = [];
+    const nextRows: ReportTableRow[] = [];
 
     for (const project of targetProjects) {
       let page = 1;
       let totalPages = 1;
 
       do {
-        const response = await reportsClient.listProjectEntries(token, project.id, {
-          dateFrom: dateQuery.dateFrom,
-          dateTo: dateQuery.dateTo,
-          limit: pageLimit,
-          page,
-        });
+        const response = await reportsClient.getTimeReport(
+          token,
+          toTimeReportQuery(
+            {
+              dateRange: reportDateRange,
+              groupBy: 'user',
+              memberId: null,
+              projectId: project.id,
+            },
+            page,
+            pageLimit,
+          ),
+        );
 
-        nextEntries.push(...response.items);
+        nextRows.push(...toReportTableRows(response, {
+          memberOptions: memberOptions.value,
+          projectOptions: projectOptions.value,
+          selectedMemberId: null,
+          selectedProjectId: project.id,
+        }));
         totalPages = Math.max(1, response.meta.totalPages);
         page += 1;
       } while (page <= totalPages);
     }
 
-    return nextEntries;
+    return nextRows;
   }
 
   async function loadReports({
@@ -212,7 +210,7 @@ export function useReportsData({
         syncSelectedFiltersWithOptions();
       }
 
-      const nextEntries = await fetchEntriesForScope(
+      const nextRows = await fetchReportRowsForScope(
         token,
         projects.value,
         selectedProjectId.value,
@@ -223,7 +221,7 @@ export function useReportsData({
         return;
       }
 
-      entries.value = nextEntries;
+      reportRows.value = nextRows;
       if (setInitialLoaded) {
         initialLoaded.value = true;
       }
@@ -301,7 +299,6 @@ export function useReportsData({
 
   return {
     dateRange,
-    entries,
     exportCurrentReport,
     groupBy,
     initialLoaded,

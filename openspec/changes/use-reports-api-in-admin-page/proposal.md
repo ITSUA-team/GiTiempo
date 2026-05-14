@@ -1,13 +1,13 @@
 ## Why
 
-The Admin Reports page already shows project-member table rows from scoped project time entries, but CSV export must be requested from the reports API. The page needs to preserve the existing table semantics while moving export delivery to the backend endpoint.
+The Admin Reports page shows project-member table rows, and both table data and CSV export should now come from the reports API. The page needs to preserve the existing table semantics while moving report generation to backend endpoints.
 
 ## What Changes
 
 - Replace browser-built CSV export with the shared `GET /reports/time/export` CSV endpoint.
 - Keep the approved Reports page structure: header export action, project/member/date/group setup controls, summary cards, searchable/filterable results table, skeleton, request-error, and empty states.
 - Use shared reports contracts for query and response validation instead of admin-web-local report schemas/helpers.
-- Preserve frontend table rows as project-member time breakdowns from scoped project time-entry data.
+- Preserve frontend table rows as project-member time breakdowns from backend-generated report data.
 - Remove stale frontend-only CSV/schema files and update tests around the reports client, composable, view, and table behavior.
 
 ## Capabilities

@@ -15,7 +15,7 @@
 - Report setup bar: project, member, date range, group-by.
 - Report setup controls define the backend CSV export scope and do not change the loaded table rows or summary cards by themselves.
 - Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
-- Summary totals row above the results table reflects the loaded scoped project-member time-entry data.
+- Summary totals row above the results table reflects the loaded backend-generated project-member report data.
 - Results table is searchable, column-filterable, uses stable default ordering, and supports CSV export.
 - Results table header includes global search with placeholder `Search report rows`.
 - Results table column filters use the existing management-table filter-row treatment for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.

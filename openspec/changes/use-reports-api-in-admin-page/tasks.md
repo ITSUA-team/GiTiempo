@@ -5,8 +5,8 @@
 
 ## 2. Reports View Model And Composable
 
-- [x] 2.1 Remove stale frontend aggregation/schema files and replace them with table row display mapping, date conversion, formatting, and table-filter defaults only.
-- [x] 2.2 Refactor `useReportsData` to load selector options from projects, load project-member table rows from scoped project time entries, debounce valid table project/date refreshes, ignore stale responses, and keep member/table filters local.
+- [x] 2.1 Remove stale frontend aggregation/schema files and replace them with Zod-validated table row display mapping, date conversion, formatting, and table-filter defaults only.
+- [x] 2.2 Refactor `useReportsData` to load selector options from projects, load project-member table rows from backend report responses, debounce valid table project/date refreshes, ignore stale responses, and keep member/table filters local.
 - [x] 2.3 Update composable tests for initial table load, setup-control export scope, invalid date blocking, stale/error handling, and PM-scope selector behavior.
 
 ## 3. Reports UI Wiring

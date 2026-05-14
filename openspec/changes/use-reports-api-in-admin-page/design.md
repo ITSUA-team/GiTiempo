@@ -9,7 +9,7 @@ The completed `add-reports-time-api` change introduced shared `TimeReport*` cont
 **Goals:**
 
 - Make `Export CSV` request the backend CSV export endpoint with the same report setup controls.
-- Preserve frontend table rows as project-member time breakdowns: member, project, tracked time, billable time, billable share, and entry count.
+- Preserve frontend table rows as backend-generated project-member time breakdowns: member, project, tracked time, billable time, billable share, and entry count.
 - Keep the visible Reports layout aligned with `docs/ui/INDEX.md`, `docs/ui/pages-admin.md`, and `GITiempo.pen` node `p2VXD`.
 - Remove app-local CSV serialization and local report form schema in favor of shared reports contracts and small UI-only mapping/formatting code.
 - Preserve table-only discovery controls: global search and column filters refine the currently loaded rows locally and do not alter export scope.
@@ -28,15 +28,15 @@ The completed `add-reports-time-api` change introduced shared `TimeReport*` cont
 
 Alternative considered: create a second reports API client for aggregate reports. Rejected because it would split one endpoint family across overlapping clients and violate the frontend client ownership rule.
 
-### Keep project time entries for the frontend table
+### Use backend report generation for the frontend table
 
-The Reports table is a frontend discovery surface and must continue to show member/project time breakdowns. `useReportsData` will keep using `AdminProjectsClient.listProjects` for selector options and scoped project time-entry endpoints for table rows and summary cards. Backend report endpoints are used for CSV export, not to replace the table row model.
+The Reports table is a frontend discovery surface and must continue to show member/project time breakdowns. `useReportsData` will keep using `AdminProjectsClient.listProjects` for selector options, then request backend report rows grouped by user within each visible project so the table preserves member identity without loading raw project time entries. Backend report endpoints are used for both table rows and CSV export.
 
-Alternative considered: render table rows directly from `GET /reports/time` project aggregates. Rejected because project aggregates collapse member context, which breaks the required table meaning.
+Alternative considered: render table rows directly from a single `GET /reports/time` project aggregate response. Rejected because project aggregates collapse member context, which breaks the required table meaning.
 
 ### Keep report setup state export-only
 
-The setup controls define backend CSV export scope: project, member, date range, and group-by map to `projectId`, `userId`, `dateFrom/dateTo`, and `groupBy` only when exporting. Control changes do not refresh the loaded table or summary state. Table search and column filters remain local discovery controls over the loaded rows.
+The setup controls define backend CSV export scope: project, member, date range, and group-by map to `projectId`, `userId`, `dateFrom/dateTo`, and `groupBy` only when exporting. Control changes do not refresh the loaded table or summary state. Table search and column filters remain local discovery controls over the loaded backend-generated rows.
 
 Alternative considered: apply setup controls to the table request immediately. Rejected because the Reports UI previously treated these controls as CSV-generation scope, and the table has separate discovery filters.
 

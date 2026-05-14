@@ -1,11 +1,7 @@
 import {
-  timeEntryListQuerySchema,
-  timeEntryListResponseSchema,
   timeReportExportQuerySchema,
   timeReportQuerySchema,
   timeReportResponseSchema,
-  type TimeEntryListQuery,
-  type TimeEntryListResponse,
   type TimeReportExportQuery,
   type TimeReportQuery,
   type TimeReportResponse,
@@ -37,11 +33,6 @@ export interface AdminReportsClient {
     accessToken: string,
     query?: Partial<TimeReportQuery>,
   ): Promise<TimeReportResponse>;
-  listProjectEntries(
-    accessToken: string,
-    projectId: string,
-    query?: Partial<TimeEntryListQuery>,
-  ): Promise<TimeEntryListResponse>;
 }
 
 /* eslint-enable no-unused-vars */
@@ -96,23 +87,6 @@ export function buildTimeReportExportQuery(
   return searchParams.toString();
 }
 
-export function buildProjectTimeEntriesQuery(
-  query: Partial<TimeEntryListQuery> | undefined,
-): string {
-  const parsed = timeEntryListQuerySchema.parse(query ?? {});
-  const searchParams = new URLSearchParams();
-
-  searchParams.set('page', String(parsed.page));
-  searchParams.set('limit', String(parsed.limit));
-  setIfDefined(searchParams, 'dateFrom', parsed.dateFrom);
-  setIfDefined(searchParams, 'dateTo', parsed.dateTo);
-  setIfDefined(searchParams, 'projectId', parsed.projectId);
-  setIfDefined(searchParams, 'taskId', parsed.taskId);
-  setIfDefined(searchParams, 'search', parsed.search);
-
-  return searchParams.toString();
-}
-
 function getFilenameFromContentDisposition(value: string | null): string {
   if (!value) {
     return fallbackExportFilename;
@@ -158,18 +132,6 @@ export function createAdminReportsClient({
         fetchFn,
         path: `/reports/time?${search}`,
         responseSchema: timeReportResponseSchema,
-      });
-    },
-
-    listProjectEntries(accessToken, projectId, query) {
-      const search = buildProjectTimeEntriesQuery(query);
-
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
-        path: `/projects/${projectId}/time-entries?${search}`,
-        responseSchema: timeEntryListResponseSchema,
       });
     },
   };
