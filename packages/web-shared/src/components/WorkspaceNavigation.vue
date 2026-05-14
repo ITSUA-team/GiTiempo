@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import type { Component } from "vue";
 import { RouterLink, type RouteLocationRaw } from "vue-router";
 
 type WorkspaceNavigationItem = {
+  icon: Component;
   label: string;
   name: string;
   to?: RouteLocationRaw;
@@ -19,21 +21,29 @@ function isActive(name: string): boolean {
 
 <template>
   <aside
-    class="border-divider bg-surface hidden border-r sm:flex sm:w-52 sm:flex-col lg:w-60"
+    class="border-divider bg-surface hidden w-fit border-r sm:flex sm:flex-col"
   >
     <nav class="flex flex-1 flex-col gap-1 py-4">
       <RouterLink
         v-for="item in props.items"
         :key="item.name"
+        v-tooltip.right="item.label"
         :to="item.to ?? { name: item.name }"
+        :aria-current="isActive(item.name) ? 'page' : undefined"
+        :aria-label="item.label"
         :class="[
-          'flex h-11 items-center rounded-r-md px-4 text-sm font-medium transition-colors',
+          'flex h-11 items-center justify-center px-4 text-sm font-medium transition-colors sm:mx-2 sm:rounded-md',
           isActive(item.name)
             ? 'border-brand bg-accent-tint text-brand border-l-[3px] font-semibold'
-            : 'text-text-dark hover:bg-app-bg',
+            : 'text-text-muted hover:bg-app-bg',
         ]"
       >
-        <span>{{ item.label }}</span>
+        <component
+          :is="item.icon"
+          aria-hidden="true"
+          class="size-5 shrink-0"
+        />
+        <span class="sr-only">{{ item.label }}</span>
       </RouterLink>
     </nav>
   </aside>
@@ -44,11 +54,23 @@ function isActive(name: string): boolean {
     <RouterLink
       v-for="item in props.items"
       :key="`mobile-${item.name}`"
+      v-tooltip.top="item.label"
       :to="item.to ?? { name: item.name }"
-      :class="isActive(item.name) ? 'text-brand' : 'text-text-muted'"
-      class="flex flex-1 items-center justify-center px-2 text-center text-xs font-medium"
+      :aria-current="isActive(item.name) ? 'page' : undefined"
+      :aria-label="item.label"
+      :class="[
+        'flex flex-1 items-center justify-center border-t-2 px-2 transition-colors',
+        isActive(item.name)
+          ? 'border-brand bg-accent-tint text-brand'
+          : 'text-text-muted hover:bg-app-bg border-transparent',
+      ]"
     >
-      <span>{{ item.label }}</span>
+      <component
+        :is="item.icon"
+        aria-hidden="true"
+        class="size-5 shrink-0"
+      />
+      <span class="sr-only">{{ item.label }}</span>
     </RouterLink>
   </nav>
 </template>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
 
 import type { TimeEntryResponse } from "@gitiempo/shared";
-import { SurfaceCard } from "@gitiempo/web-shared";
+import { ManagementTableRowAction, SurfaceCard } from "@gitiempo/web-shared";
 
 import type { TimeEntriesDayGroup } from "@/composables/useTimeEntriesPage";
 
@@ -23,6 +24,11 @@ const emit = defineEmits<{
   deleteEntry: [entry: TimeEntryResponse];
   editEntry: [entry: TimeEntryResponse];
 }>();
+
+const projectColumnWidth = '12rem';
+const timeColumnWidth = '10rem';
+const durationColumnWidth = '7rem';
+const actionsColumnWidth = '7rem';
 
 function getEntryRowClass(entry: TimeEntryResponse): string {
   return entry.endedAt === null ? "bg-accent-tint" : "bg-surface";
@@ -63,7 +69,7 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
         class="w-full"
         data-key="id"
         row-hover
-        table-style="min-width: 740px"
+        table-style="min-width: 740px; table-layout: fixed"
       >
         <Column header="Task">
           <template #body="{ data: entry }">
@@ -81,7 +87,10 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
           </template>
         </Column>
 
-        <Column header="Project">
+        <Column
+          header="Project"
+          :style="{ width: projectColumnWidth }"
+        >
           <template #body="{ data: entry }">
             <p class="text-text-dark truncate text-sm font-medium">
               {{ entry.project.name }}
@@ -89,7 +98,10 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
           </template>
         </Column>
 
-        <Column header="Time">
+        <Column
+          header="Time"
+          :style="{ width: timeColumnWidth }"
+        >
           <template #body="{ data: entry }">
             <p class="text-text-dark text-sm font-medium">
               {{ props.formatTimeRange(entry) }}
@@ -97,7 +109,10 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
           </template>
         </Column>
 
-        <Column header="Duration">
+        <Column
+          header="Duration"
+          :style="{ width: durationColumnWidth }"
+        >
           <template #body="{ data: entry }">
             <p class="text-text-dark text-sm font-medium tabular-nums">
               {{ props.formatDuration(entry) }}
@@ -105,9 +120,9 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
           </template>
         </Column>
 
-        <Column>
+        <Column :style="{ width: actionsColumnWidth }">
           <template #body="{ data: entry }">
-            <div class="flex items-center justify-center gap-2 py-2">
+            <div class="flex items-center justify-end gap-2">
               <p
                 v-if="entry.endedAt === null"
                 class="text-text-muted text-xs"
@@ -115,21 +130,18 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
                 Stop from the top bar
               </p>
               <template v-else>
-                <Button
+                <ManagementTableRowAction
                   :data-testid="`time-entry-edit-${entry.id}`"
+                  :icon="PencilSquareIcon"
                   label="Edit"
-                  severity="secondary"
-                  size="small"
-                  variant="text"
                   @click="emit('editEntry', entry)"
                 />
-                <Button
+                <ManagementTableRowAction
                   :data-testid="`time-entry-delete-${entry.id}`"
+                  :icon="TrashIcon"
                   label="Delete"
-                  severity="danger"
-                  size="small"
-                  variant="text"
                   :loading="props.isDeletingEntry === entry.id"
+                  tone="destructive"
                   @click="emit('deleteEntry', entry)"
                 />
               </template>

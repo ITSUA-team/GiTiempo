@@ -261,7 +261,7 @@ The shared contracts SHALL define stable time-entry response shapes for backend 
 - **AND** includes pagination metadata
 
 ### Requirement: Shared Time Entry Request Validation
-The shared contracts SHALL define validation rules for manual entry creation, entry updates, timer actions, Chrome Extension timer starts, and list filters including task-title search.
+The shared contracts SHALL define validation rules for manual entry creation, entry updates including optional task reassignment, timer actions, Chrome Extension timer starts, and list filters including task-title search.
 
 #### Scenario: Manual create request uses shared schema
 - **GIVEN** a client constructs a manual time-entry create request
@@ -272,8 +272,15 @@ The shared contracts SHALL define validation rules for manual entry creation, en
 #### Scenario: Time entry update request uses shared schema
 - **GIVEN** a client constructs a time-entry update request
 - **WHEN** the request payload is validated
-- **THEN** the payload requires at least one mutable time-entry field
+- **THEN** the payload accepts optional task identifier, start time, end time, description, and billable fields
+- **AND** requires at least one mutable time-entry field
 - **AND** rejects unknown additional fields
+
+#### Scenario: Time entry update can change task only by identifier
+- **GIVEN** a client constructs a time-entry update request that moves an entry to another task
+- **WHEN** the request payload is validated
+- **THEN** the payload accepts a valid `taskId`
+- **AND** does not accept embedded task or project objects
 
 #### Scenario: Timer start request uses shared schema
 - **GIVEN** a client constructs a timer start request
