@@ -22,7 +22,7 @@ import {
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const { errorToast, infoToast, successToast } = useToasts();
+const { errorToast, successToast } = useToasts();
 
 const {
   dateRange,
@@ -95,11 +95,6 @@ async function handleExport(): Promise<void> {
   exporting.value = true;
 
   try {
-    if (rows.value.length === 0) {
-      infoToast('No data to export for the selected filters.');
-      return;
-    }
-
     const exportResult = await exportCurrentReport({
       dateRange: reportDateRange.value,
       groupBy: reportGroupBy.value,

@@ -96,6 +96,7 @@ const datePickerPt = {
     v-slot="$form"
     :initial-values="initialValues"
     :resolver="resolver"
+    :validate-on-mount="true"
     :validate-on-value-update="true"
     class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]"
   >

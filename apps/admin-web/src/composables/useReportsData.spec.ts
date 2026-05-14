@@ -21,6 +21,7 @@ function createProject(
   id: string,
   name: string,
   members: ProjectResponse['members'] = [],
+  overrides: Partial<ProjectResponse> = {},
 ): ProjectResponse {
   return {
     color: null,
@@ -35,6 +36,7 @@ function createProject(
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'public',
     workspaceId,
+    ...overrides,
   };
 }
 
@@ -223,6 +225,66 @@ describe('useReportsData', () => {
     ]);
     expect(reports.summary.value.totalSeconds).toBe(12600);
     expect(reports.summary.value.entryCount).toBe(3);
+  });
+
+  it('keeps active public and assigned private projects in PM-visible report scope', async () => {
+    const accessToken = shallowRef('access-token');
+    const scopedProjects: ProjectListResponse = [
+      createProject(projectOrionId, 'Public Roadmap', [
+        {
+          avatarUrl: null,
+          displayName: 'Alex Admin',
+          email: 'alex@example.com',
+          role: 'admin',
+          userId: alexId,
+        },
+      ]),
+      createProject(
+        projectBillingId,
+        'Private Assigned',
+        [
+          {
+            avatarUrl: null,
+            displayName: 'Nina PM',
+            email: 'nina@example.com',
+            role: 'pm',
+            userId: ninaId,
+          },
+        ],
+        { visibility: 'private' },
+      ),
+    ];
+    const listProjects = vi.fn().mockResolvedValue(scopedProjects);
+    const reportsClient = createReportsClientMocks();
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mount(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            accessToken,
+            projectsClient: { listProjects },
+            reportsClient,
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+
+    expect(reports.projectOptions.value).toEqual([
+      { label: 'Private Assigned', value: projectBillingId },
+      { label: 'Public Roadmap', value: projectOrionId },
+    ]);
+    expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({ projectId: projectOrionId }),
+    );
+    expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({ projectId: projectBillingId }),
+    );
   });
 
   it('debounces project/date table refreshes without applying export group-by to the table', async () => {

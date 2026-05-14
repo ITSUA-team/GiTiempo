@@ -129,4 +129,39 @@ describe('report-view-model', () => {
 
     expect(() => filterReportRows([row], invalidFilters)).toThrow();
   });
+
+  it('filters non-billable rows without changing billable display values', () => {
+    const filters = createDefaultReportTableFilters();
+    filters.billable = 'withoutBillable';
+    const rows: ReportTableRow[] = [
+      {
+        billableSeconds: 1800,
+        billableShare: 0.5,
+        entryCount: 1,
+        groupBy: 'user',
+        id: `user:${projectId}:no-task:${userId}`,
+        memberIds: [userId],
+        memberName: 'Alex Admin',
+        nonBillableSeconds: 1800,
+        projectIds: [projectId],
+        projectName: 'Project Orion',
+        totalSeconds: 3600,
+      },
+      {
+        billableSeconds: 3600,
+        billableShare: 1,
+        entryCount: 1,
+        groupBy: 'user',
+        id: `user:${projectId}:no-task:other-user`,
+        memberIds: ['33333333-3333-4333-8333-333333333334'],
+        memberName: 'Nina PM',
+        nonBillableSeconds: 0,
+        projectIds: [projectId],
+        projectName: 'Project Orion',
+        totalSeconds: 3600,
+      },
+    ];
+
+    expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
+  });
 });

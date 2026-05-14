@@ -14,7 +14,9 @@ import type {
 import { useAuthStore } from '@/stores/auth';
 
 const reportMocks = vi.hoisted(() => ({
-  downloadReportExport: vi.fn(() => 'time-report-2026-05.csv'),
+  downloadReportExport: vi.fn(
+    (exportResult: { filename: string }) => exportResult.filename,
+  ),
   errorToast: vi.fn(),
   exportCurrentReport: vi.fn(),
   infoToast: vi.fn(),
@@ -234,8 +236,12 @@ describe('ReportsView', () => {
     );
   });
 
-  it('shows feedback when the loaded setup has no rows to export', async () => {
+  it('exports through the backend even when the loaded report has no rows', async () => {
     reportMocks.state = createReportState({ rows: [] });
+    reportMocks.exportCurrentReport.mockResolvedValueOnce({
+      blob: new Blob(['Group By,Project\n'], { type: 'text/csv' }),
+      filename: 'time-report-empty.csv',
+    });
 
     const wrapper = mountReportsView();
     await flushPromises();
@@ -243,11 +249,20 @@ describe('ReportsView', () => {
     await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
     await flushPromises();
 
-    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
-    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
-    expect(reportMocks.infoToast).toHaveBeenCalledWith(
-      'No data to export for the selected filters.',
+    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith({
+      dateRange: null,
+      groupBy: 'project',
+      memberId: null,
+      projectId: null,
+    });
+    expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
+      blob: expect.any(Blob),
+      filename: 'time-report-empty.csv',
+    });
+    expect(reportMocks.successToast).toHaveBeenCalledWith(
+      'Exported time-report-empty.csv.',
     );
+    expect(reportMocks.infoToast).not.toHaveBeenCalled();
   });
 
   it('blocks CSV export when the report date range is invalid', async () => {

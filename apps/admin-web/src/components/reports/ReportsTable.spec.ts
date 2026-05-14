@@ -110,7 +110,7 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).not.toContain('All members');
   });
 
-  it('keeps total hours stable and shows unbillable value when non-billable is selected', () => {
+  it('keeps billable hours stable when the non-billable filter is selected', () => {
     const filters = createDefaultReportTableFilters();
     filters.billable = 'withoutBillable';
 
@@ -134,8 +134,8 @@ describe('ReportsTable', () => {
     });
 
     expect(wrapper.text()).toContain('2h 00m');
-    expect(wrapper.text()).toContain('1h 15m');
-    expect(wrapper.text()).not.toContain('45m');
+    expect(wrapper.text()).toContain('45m');
+    expect(wrapper.text()).not.toContain('1h 15m');
   });
 
   it('renders mapped API row variants with the existing report columns', () => {
