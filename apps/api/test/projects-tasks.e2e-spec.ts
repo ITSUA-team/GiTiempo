@@ -39,6 +39,8 @@ const TEST_PROJECT_NAME_PREFIXES = [
 ] as const;
 
 const TEST_TASK_TITLE_PREFIXES = [
+  'Admin Visible Active ',
+  'Admin Visible Inactive ',
   'Summary Task ',
   'Member Task',
   'Delete Unused ',
