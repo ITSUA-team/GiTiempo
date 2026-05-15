@@ -5,6 +5,7 @@ import {
   type TokenPairResponse,
 } from "@gitiempo/shared";
 import {
+  getDefaultFetchFn,
   getRequestUrl,
   getResponseErrorMessage,
   requestJson,
@@ -27,7 +28,7 @@ export interface AuthHttpClient {
 
 export function createAuthHttpClient({
   apiBaseUrl,
-  fetchFn = fetch,
+  fetchFn = getDefaultFetchFn(),
 }: AuthHttpClientOptions = {}): AuthHttpClient {
   return {
     loginWithFirebaseToken(firebaseIdToken) {

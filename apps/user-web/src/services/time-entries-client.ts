@@ -3,11 +3,13 @@ import {
   createTaskSchema,
   currentTimeEntryResponseSchema,
   projectListResponseSchema,
+  taskResponseSchema,
   startTimerSchema,
   taskListResponseSchema,
   timeEntryListQuerySchema,
   timeEntryListResponseSchema,
   timeEntryResponseSchema,
+  updateTaskSchema,
   updateTimeEntrySchema,
   type CreateManualTimeEntryInput,
   type CreateTaskInput,
@@ -17,9 +19,11 @@ import {
   type TimeEntryListQuery,
   type TimeEntryListResponse,
   type TimeEntryResponse,
+  type UpdateTaskInput,
   type UpdateTimeEntryInput,
 } from "@gitiempo/shared";
 import {
+  getDefaultFetchFn,
   getRequestUrl,
   getResponseErrorMessage,
   requestJson,
@@ -42,6 +46,7 @@ export interface TimeEntriesClient {
     projectId: string,
     input: CreateTaskInput,
   ): Promise<TaskResponse>;
+  deleteTask(accessToken: string, taskId: string): Promise<void>;
   deleteEntry(accessToken: string, entryId: string): Promise<void>;
   getCurrentTimer(accessToken: string): Promise<CurrentTimeEntryResponse>;
   listOwnEntries(
@@ -57,6 +62,11 @@ export interface TimeEntriesClient {
     entryId: string,
     input: UpdateTimeEntryInput,
   ): Promise<TimeEntryResponse>;
+  updateTask(
+    accessToken: string,
+    taskId: string,
+    input: UpdateTaskInput,
+  ): Promise<TaskResponse>;
 }
 
 /* eslint-enable no-unused-vars */
@@ -91,9 +101,27 @@ function buildTimeEntryListQuery(query: Partial<TimeEntryListQuery> | undefined)
   return searchParams.toString();
 }
 
+async function requestNoContent(options: {
+  accessToken: string;
+  apiBaseUrl?: string;
+  fetchFn: typeof fetch;
+  path: string;
+}): Promise<void> {
+  const response = await options.fetchFn(getRequestUrl(options.apiBaseUrl, options.path), {
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+    },
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(await getResponseErrorMessage(response));
+  }
+}
+
 export function createTimeEntriesClient({
   apiBaseUrl,
-  fetchFn = fetch,
+  fetchFn = getDefaultFetchFn(),
 }: TimeEntriesClientOptions = {}): TimeEntriesClient {
   return {
     createManualEntry(accessToken, input) {
@@ -118,17 +146,21 @@ export function createTimeEntriesClient({
         responseSchema: taskListResponseSchema.element,
       });
     },
-    async deleteEntry(accessToken, entryId) {
-      const response = await fetchFn(getRequestUrl(apiBaseUrl, `/time-entries/${entryId}`), {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        method: "DELETE",
+    async deleteTask(accessToken, taskId) {
+      await requestNoContent({
+        accessToken,
+        apiBaseUrl,
+        fetchFn,
+        path: `/tasks/${taskId}`,
       });
-
-      if (!response.ok) {
-        throw new Error(await getResponseErrorMessage(response));
-      }
+    },
+    async deleteEntry(accessToken, entryId) {
+      await requestNoContent({
+        accessToken,
+        apiBaseUrl,
+        fetchFn,
+        path: `/time-entries/${entryId}`,
+      });
     },
     getCurrentTimer(accessToken) {
       return requestJson({
@@ -198,6 +230,17 @@ export function createTimeEntriesClient({
         method: "PATCH",
         path: `/time-entries/${entryId}`,
         responseSchema: timeEntryResponseSchema,
+      });
+    },
+    updateTask(accessToken, taskId, input) {
+      return requestJson({
+        accessToken,
+        apiBaseUrl,
+        body: updateTaskSchema.parse(input),
+        fetchFn,
+        method: "PATCH",
+        path: `/tasks/${taskId}`,
+        responseSchema: taskResponseSchema,
       });
     },
   };

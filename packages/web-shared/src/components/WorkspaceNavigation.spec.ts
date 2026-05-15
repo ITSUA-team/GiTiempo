@@ -26,7 +26,7 @@ function createTestRouter() {
         name: "time-entries",
       },
       {
-        path: "/projects/:projectId",
+        path: "/projects",
         component: { template: "<div />" },
         name: "project",
       },
@@ -53,7 +53,7 @@ describe("WorkspaceNavigation", () => {
             icon: TestIcon,
             label: "Projects",
             name: "project",
-            to: { name: "project", params: { projectId: "workspace-alpha" } },
+            to: { name: "project" },
           },
           { icon: TestIcon, label: "Profile", name: "profile" },
         ],
@@ -71,9 +71,9 @@ describe("WorkspaceNavigation", () => {
     });
 
     expect(wrapper.findAll("svg")).toHaveLength(10);
-    expect(wrapper.findAll('a[href="/projects/workspace-alpha"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[href="/projects"]')).toHaveLength(2);
 
-    const activeLink = wrapper.get('a[href="/projects/workspace-alpha"]');
+    const activeLink = wrapper.get('a[href="/projects"]');
     const desktopRail = wrapper.get("aside");
 
     expect(desktopRail.classes()).toContain("w-fit");
@@ -102,7 +102,7 @@ describe("WorkspaceNavigation", () => {
             icon: TestIcon,
             label: "Projects",
             name: "project",
-            to: { name: "project", params: { projectId: "workspace-alpha" } },
+            to: { name: "project" },
           },
           { icon: TestIcon, label: "Settings", name: "settings" },
         ],

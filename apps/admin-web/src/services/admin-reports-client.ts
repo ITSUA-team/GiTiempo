@@ -7,6 +7,7 @@ import {
   type TimeReportResponse,
 } from '@gitiempo/shared';
 import {
+  getDefaultFetchFn,
   getRequestUrl,
   getResponseErrorMessage,
   requestJson,
@@ -98,7 +99,7 @@ function getFilenameFromContentDisposition(value: string | null): string {
 
 export function createAdminReportsClient({
   apiBaseUrl,
-  fetchFn = fetch,
+  fetchFn = getDefaultFetchFn(),
 }: AdminReportsClientOptions = {}): AdminReportsClient {
   return {
     async exportTimeReport(accessToken, query) {
@@ -141,5 +142,4 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 export const adminReportsClient = createAdminReportsClient({
   apiBaseUrl,
-  fetchFn: fetch,
 });

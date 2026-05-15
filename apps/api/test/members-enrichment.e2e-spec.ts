@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
@@ -54,7 +54,12 @@ describe('Members enrichment: lastActiveAt & projectsAssignedCount (e2e)', () =>
     const [task] = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.projectId, platformProject.id))
+      .where(
+        and(
+          eq(tasks.projectId, platformProject.id),
+          eq(tasks.title, 'Set up API project foundation'),
+        ),
+      )
       .limit(1);
     if (!task) throw new Error('Expected seeded task');
     platformTaskId = task.id;

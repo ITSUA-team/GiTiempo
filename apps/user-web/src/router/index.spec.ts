@@ -151,13 +151,13 @@ describe("app router auth guards", () => {
       pinia,
     });
 
-    await router.push("/projects/workspace-alpha");
+    await router.push("/projects");
     await router.isReady();
 
     const authStore = useAuthStore(pinia);
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.query.redirect).toBe(
-      "/projects/workspace-alpha",
+      "/projects",
     );
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.bootstrapComplete).toBe(true);
@@ -219,5 +219,20 @@ describe("app router auth guards", () => {
     await router.isReady();
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("defines the authenticated projects list route without the placeholder detail route", () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    expect(router.resolve("/projects").name).toBe(routeNames.project);
+    expect(router.getRoutes().some((route) => route.path === "/projects/:projectId")).toBe(
+      false,
+    );
   });
 });

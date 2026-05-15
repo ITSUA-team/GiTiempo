@@ -11,6 +11,10 @@ interface RequestJsonOptions<TResponse> {
   responseSchema: ZodType<TResponse>;
 }
 
+export function getDefaultFetchFn(): typeof fetch {
+  return globalThis.fetch.bind(globalThis);
+}
+
 export function getApiBaseUrl(apiBaseUrl: string | undefined): string {
   return apiBaseUrl?.replace(/\/$/, "") ?? "";
 }
@@ -40,7 +44,7 @@ export async function requestJson<TResponse>({
   accessToken,
   apiBaseUrl,
   body,
-  fetchFn = fetch,
+  fetchFn = getDefaultFetchFn(),
   headers,
   method = "GET",
   path,

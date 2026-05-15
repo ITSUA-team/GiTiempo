@@ -72,7 +72,7 @@ const routes: RouteRecordRaw[] = [
         component: TimeEntriesView,
       },
       {
-        path: "projects/:projectId",
+        path: "projects",
         name: routeNames.project,
         component: ProjectView,
       },
