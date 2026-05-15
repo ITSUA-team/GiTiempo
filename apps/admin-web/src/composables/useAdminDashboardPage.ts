@@ -5,6 +5,7 @@ import {
   type ComputedRef,
   type Ref,
 } from 'vue';
+import type { WorkspaceRole } from '@gitiempo/shared';
 
 import {
   deriveDashboardActivityRows,
@@ -35,10 +36,12 @@ interface UseAdminDashboardPageOptions {
   /* eslint-enable no-unused-vars */
   projectsClient?: Pick<AdminProjectsClient, 'getManagementSummary' | 'listProjects'>;
   reportsClient?: Pick<AdminReportsClient, 'getTimeReport'>;
+  role?: Ref<WorkspaceRole | null> | ComputedRef<WorkspaceRole | null>;
 }
 
 const dashboardPageLimit = 100;
 const activityPreviewLimit = 5;
+const missingRoleMessage = 'Workspace role is required to view the dashboard.';
 const missingTokenMessage = 'Sign in to view the dashboard.';
 
 function getErrorMessage(error: unknown): string {
@@ -52,6 +55,7 @@ export function useAdminDashboardPage({
   onError,
   projectsClient = adminProjectsClient,
   reportsClient = adminReportsClient,
+  role = shallowRef<WorkspaceRole | null>('admin'),
 }: UseAdminDashboardPageOptions) {
   const stats = shallowRef<AdminDashboardStatCard[]>([]);
   const allActivityRows = shallowRef<AdminDashboardActivityRow[]>([]);
@@ -94,41 +98,72 @@ export function useAdminDashboardPage({
       return;
     }
 
+    const dashboardRole = role.value;
+
+    if (!dashboardRole) {
+      stats.value = [];
+      allActivityRows.value = [];
+      showAllActivity.value = false;
+      loadError.value = missingRoleMessage;
+      initialLoaded.value = true;
+      loading.value = false;
+      return;
+    }
+
     const requestedAt = now();
     const weekRange = getDashboardWeekRange(requestedAt);
+    const reportQuery = {
+      ...weekRange,
+      groupBy: 'project' as const,
+      limit: dashboardPageLimit,
+      page: 1,
+      sortBy: 'lastStartedAt' as const,
+      sortOrder: 'desc' as const,
+    };
 
     loading.value = true;
     loadError.value = null;
 
     try {
-      const [members, invites, projectSummary, projects, report] = await Promise.all([
-        membersClient.listMembers(token),
-        membersClient.listInvites(token),
-        projectsClient.getManagementSummary(token),
-        projectsClient.listProjects(token),
-        reportsClient.getTimeReport(token, {
-          ...weekRange,
-          groupBy: 'project',
-          limit: dashboardPageLimit,
-          page: 1,
-          sortBy: 'lastStartedAt',
-          sortOrder: 'desc',
-        }),
-      ]);
+      const dashboardData =
+        dashboardRole === 'admin'
+          ? await (async () => {
+              const [members, invites, projectSummary, projects, report] =
+                await Promise.all([
+                  membersClient.listMembers(token),
+                  membersClient.listInvites(token),
+                  projectsClient.getManagementSummary(token),
+                  projectsClient.listProjects(token),
+                  reportsClient.getTimeReport(token, reportQuery),
+                ]);
+
+              return {
+                invites,
+                members,
+                projectSummary,
+                projects,
+                report,
+              };
+            })()
+          : await (async () => {
+              const [projectSummary, projects, report] = await Promise.all([
+                projectsClient.getManagementSummary(token),
+                projectsClient.listProjects(token),
+                reportsClient.getTimeReport(token, reportQuery),
+              ]);
+
+              return {
+                projectSummary,
+                projects,
+                report,
+              };
+            })();
 
       if (currentRequestId !== requestId) {
         return;
       }
 
-      const dashboardData = {
-        invites,
-        members,
-        projectSummary,
-        projects,
-        report,
-      };
-
-      stats.value = deriveDashboardStats(dashboardData, requestedAt);
+      stats.value = deriveDashboardStats(dashboardData, requestedAt, dashboardRole);
       allActivityRows.value = deriveDashboardActivityRows(
         dashboardData,
         requestedAt,

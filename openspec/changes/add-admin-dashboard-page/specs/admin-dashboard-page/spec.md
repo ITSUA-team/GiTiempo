@@ -8,34 +8,58 @@ The admin Dashboard page MUST replace the placeholder with a PrimeVue/Tailwind w
 
 - **WHEN** an authenticated admin or PM opens the Dashboard page
 - **THEN** the page renders a `Dashboard` header with supporting copy based on the approved `GITiempo.pen` Admin Dashboard design
-- **AND** the page renders four summary stat cards in the approved dashboard card treatment
+- **AND** the page renders four role-appropriate summary stat cards in the approved dashboard card treatment
 - **AND** the page renders a `Recent Activity` surface below the summary cards
 - **AND** the page uses the authenticated admin shell with Dashboard navigation active
 
 #### Scenario: Dashboard uses existing endpoints only
 
 - **WHEN** the Dashboard loads data
-- **THEN** it uses existing members, invites, projects, and reports/time endpoints or existing admin-web clients
+- **THEN** it uses existing members, invites, projects, and reports/time endpoints or existing admin-web clients only where the authenticated user's role is allowed to use them
 - **AND** it does not require a new dashboard, activity, invoice, or aggregate endpoint
 - **AND** it does not require shared contract, database, seed, migration, or OpenAPI changes
+
+#### Scenario: PM dashboard avoids admin-only member and invite clients
+
+- **WHEN** an authenticated PM opens the Dashboard page
+- **THEN** dashboard data loading does not call member list or invite list clients
+- **AND** it uses existing project summary, project list, and reports/time clients only
+- **AND** dashboard metrics and activity remain scoped to the PM-visible project/report data returned by those endpoints
 
 ### Requirement: Admin Dashboard Summary Cards Use Current Data
 
 The admin Dashboard summary cards MUST be derived from currently available workspace data without inventing unsupported metrics.
 
-#### Scenario: Summary cards render API-backed metrics
+#### Scenario: Admin summary cards render API-backed metrics
 
-- **WHEN** dashboard data loads successfully
+- **WHEN** dashboard data loads successfully for an admin
 - **THEN** the summary cards include active member count derived from current member data
 - **AND** they include hours this week derived from current report/time data
+- **AND** they include pending invites derived from current invite data
 - **AND** they include active project count derived from current project summary or project list data
-- **AND** the fourth card is either current API-backed data such as pending invites or an inactive future invoice metric that is clearly not persisted or API-backed
+
+#### Scenario: PM summary cards render PM-safe metrics
+
+- **WHEN** dashboard data loads successfully for a PM
+- **THEN** the summary cards are derived only from project summary, project list, and reports/time data
+- **AND** they include active project count derived from current project summary or project list data
+- **AND** they include hours this week derived from current report/time data
+- **AND** they include public project count derived from current project summary data
+- **AND** they include private project count derived from current project summary data
+
+#### Scenario: Hours this week uses a local-week report window
+
+- **WHEN** the Dashboard queries reports/time for Hours This Week
+- **THEN** it sends `dateFrom` as the user's local Monday at `00:00:00.000` converted to ISO
+- **AND** it sends `dateTo` as the current dashboard request time converted to ISO
+- **AND** it treats the backend's `dateTo` as an exclusive upper boundary
+- **AND** it requests `groupBy=project`, `page=1`, `limit=100`, `sortBy=lastStartedAt`, and `sortOrder=desc`
 
 #### Scenario: Unsupported invoice metrics are not invented
 
 - **WHEN** invoice endpoints or contracts are unavailable
 - **THEN** the Dashboard does not display fabricated open invoice totals or invoice activity as real data
-- **AND** any invoice-related card or activity remains inactive/future-labeled until a separate API change provides data
+- **AND** it does not render invoice cards or invoice activity as current dashboard data until a separate API change provides data
 
 ### Requirement: Admin Dashboard Recent Activity Uses Design Feed
 
@@ -49,6 +73,20 @@ The admin Dashboard recent activity surface MUST render as a compact feed matchi
 - **AND** rows are sorted newest first and limited to the dashboard's compact recent activity surface
 - **AND** visible type/status labels are not rendered as tags or table columns
 - **AND** circular indicators expose their activity type with the same PrimeVue tooltip treatment used by navigation and accessible label text
+
+#### Scenario: PM recent activity excludes admin-only member and invite rows
+
+- **WHEN** dashboard data loads successfully for a PM and activity-like data is available
+- **THEN** Recent Activity derives rows from PM-safe project updates and report/time timestamps only
+- **AND** it does not require member or invite activity data
+
+#### Scenario: Recent activity can expand locally when more rows exist
+
+- **WHEN** more than five recent activity rows are available
+- **THEN** Recent Activity initially previews the first five rows
+- **AND** it renders a PrimeVue button labeled `View all activity`
+- **AND** activating the button expands the feed locally without navigating or calling a new endpoint
+- **AND** the expanded feed can collapse back to the five-row preview
 
 #### Scenario: Recent activity empty state is distinct
 

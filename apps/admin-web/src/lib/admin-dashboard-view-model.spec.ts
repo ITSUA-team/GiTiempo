@@ -13,6 +13,7 @@ import {
   deriveDashboardStats,
   formatDashboardHours,
   formatRelativeTime,
+  getDashboardWeekRange,
 } from './admin-dashboard-view-model';
 
 const workspaceId = '33333333-3333-4333-8333-333333333333';
@@ -162,6 +163,29 @@ describe('admin dashboard view model', () => {
     expect(stats.map((stat) => stat.label)).not.toContain('Open Invoices');
   });
 
+  it('derives PM-safe stats without member or invite data', () => {
+    const stats = deriveDashboardStats(
+      {
+        projectSummary,
+        projects: [
+          createProject('project-1', 'Project Orion', '2026-05-12T10:00:00.000Z'),
+        ],
+        report: createReport([
+          createReportRow('project-1', 'Project Orion', '2026-05-13T08:00:00.000Z', 7200),
+        ]),
+      },
+      now,
+      'pm',
+    );
+
+    expect(stats).toEqual([
+      { description: 'Visible project scope', label: 'Active Projects', value: 2 },
+      { description: 'In visible project scope', label: 'Hours This Week', value: '2h' },
+      { description: 'Visible public projects', label: 'Public Projects', value: 1 },
+      { description: 'Assigned private projects', label: 'Private Projects', value: 1 },
+    ]);
+  });
+
   it('derives recent activity newest first from current endpoint timestamps', () => {
     const rows = deriveDashboardActivityRows(
       {
@@ -208,10 +232,36 @@ describe('admin dashboard view model', () => {
     expect(rows).toEqual([]);
   });
 
+  it('derives PM-safe activity from project and report timestamps only', () => {
+    const rows = deriveDashboardActivityRows(
+      {
+        projectSummary,
+        projects: [
+          createProject('project-1', 'Project Orion', '2026-05-13T09:00:00.000Z'),
+        ],
+        report: createReport([
+          createReportRow('project-1', 'Project Orion', '2026-05-13T11:42:00.000Z', 7200),
+        ]),
+      },
+      now,
+    );
+
+    expect(rows.map((row) => row.type)).toEqual(['time', 'project']);
+  });
+
   it('formats dashboard durations and relative time labels compactly', () => {
     expect(formatDashboardHours(0)).toBe('0h');
     expect(formatDashboardHours(1800)).toBe('30m');
     expect(formatDashboardHours(5400)).toBe('1h 30m');
     expect(formatRelativeTime('2026-05-13T11:59:40.000Z', now)).toBe('Just now');
+  });
+
+  it('creates the dashboard report window from local week start through request time', () => {
+    const requestedAt = new Date(2026, 4, 13, 12, 0, 0);
+
+    expect(getDashboardWeekRange(requestedAt)).toEqual({
+      dateFrom: new Date(2026, 4, 11, 0, 0, 0, 0).toISOString(),
+      dateTo: requestedAt.toISOString(),
+    });
   });
 });

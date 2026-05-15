@@ -29,13 +29,19 @@ export interface AdminDashboardActivityRow {
   typeLabel: string;
 }
 
-interface DashboardDataInput {
-  invites: WorkspaceInviteListResponse;
-  members: WorkspaceMemberListResponse;
+interface ProjectScopedDashboardDataInput {
   projectSummary: ManagementProjectSummaryResponse;
   projects: ProjectListResponse;
   report: TimeReportResponse;
 }
+
+interface AdminDashboardDataInput extends ProjectScopedDashboardDataInput {
+  invites: WorkspaceInviteListResponse;
+  members: WorkspaceMemberListResponse;
+}
+
+type DashboardDataInput = ProjectScopedDashboardDataInput &
+  Partial<Pick<AdminDashboardDataInput, 'invites' | 'members'>>;
 
 const roleLabels: Record<WorkspaceRole, string> = {
   admin: 'Admin',
@@ -223,11 +229,14 @@ export function getDashboardWeekRange(now = new Date()): {
   dateFrom: string;
   dateTo: string;
 } {
-  const startOfWeek = new Date(now);
-  const day = startOfWeek.getDay();
+  const day = now.getDay();
   const mondayOffset = day === 0 ? -6 : 1 - day;
+  const startOfWeek = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + mondayOffset,
+  );
 
-  startOfWeek.setDate(startOfWeek.getDate() + mondayOffset);
   startOfWeek.setHours(0, 0, 0, 0);
 
   return {
@@ -236,8 +245,8 @@ export function getDashboardWeekRange(now = new Date()): {
   };
 }
 
-export function deriveDashboardStats(
-  { invites, members, projectSummary, projects, report }: DashboardDataInput,
+function deriveAdminDashboardStats(
+  { invites, members, projectSummary, projects, report }: AdminDashboardDataInput,
   now = new Date(),
 ): AdminDashboardStatCard[] {
   const trackedToday = members.filter((member) => {
@@ -274,8 +283,50 @@ export function deriveDashboardStats(
   ];
 }
 
+function deriveProjectScopedDashboardStats(
+  { projectSummary, report }: ProjectScopedDashboardDataInput,
+): AdminDashboardStatCard[] {
+  return [
+    {
+      description: 'Visible project scope',
+      label: 'Active Projects',
+      value: projectSummary.activeProjects,
+    },
+    {
+      description: 'In visible project scope',
+      label: 'Hours This Week',
+      value: formatDashboardHours(report.summary.totalSeconds),
+    },
+    {
+      description: 'Visible public projects',
+      label: 'Public Projects',
+      value: projectSummary.publicProjects,
+    },
+    {
+      description: 'Assigned private projects',
+      label: 'Private Projects',
+      value: projectSummary.privateProjects,
+    },
+  ];
+}
+
+export function deriveDashboardStats(
+  data: DashboardDataInput,
+  now = new Date(),
+  role: WorkspaceRole = 'admin',
+): AdminDashboardStatCard[] {
+  if (role === 'admin' && data.members && data.invites) {
+    return deriveAdminDashboardStats(
+      data as AdminDashboardDataInput,
+      now,
+    );
+  }
+
+  return deriveProjectScopedDashboardStats(data);
+}
+
 export function deriveDashboardActivityRows(
-  { invites, members, projects, report }: DashboardDataInput,
+  { invites = [], members = [], projects, report }: DashboardDataInput,
   now = new Date(),
   limit = 5,
 ): AdminDashboardActivityRow[] {

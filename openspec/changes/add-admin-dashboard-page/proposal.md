@@ -9,6 +9,7 @@ The admin Dashboard route still renders a placeholder even though the approved `
 - Reuse existing shared UI leaves where they fit, especially `StatsHeader` and `StatCard` from `@gitiempo/web-shared`.
 - Build the Recent Activity surface as the approved compact feed with token-backed circular indicators and PrimeVue buttons for available actions.
 - Use only existing endpoints and frontend clients for dashboard data; do not modify `apps/api`, shared contracts, database schema, migrations, seeds, or OpenAPI artifacts.
+- Keep dashboard data loading role-aware: admins may use member/invite management data, while PMs use only project and report endpoints that are already PM-safe.
 - Add admin-web-local state mapping, request-error, empty, and skeleton states for the dashboard page.
 
 ## Capabilities

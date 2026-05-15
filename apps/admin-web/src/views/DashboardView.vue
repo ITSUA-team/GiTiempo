@@ -30,6 +30,7 @@ const {
       logContext: { action, feature: 'dashboard' },
     });
   },
+  role: computed(() => authStore.profile?.role ?? null),
 });
 </script>
 

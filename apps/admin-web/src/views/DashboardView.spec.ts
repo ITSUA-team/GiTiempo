@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UserResponse } from '@gitiempo/shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
 import type {
@@ -16,6 +17,7 @@ const dashboardMocks = vi.hoisted(() => ({
   options: undefined as unknown as {
     accessToken: { value: string | null };
     onError?: CallableFunction;
+    role?: { value: UserResponse['role'] | null };
   },
   refresh: vi.fn(),
   state: undefined as unknown,
@@ -55,6 +57,16 @@ const activityRows: AdminDashboardActivityRow[] = [
     typeLabel: 'Member',
   },
 ];
+
+const currentUser: UserResponse = {
+  avatarUrl: null,
+  createdAt: '2026-05-01T10:00:00.000Z',
+  displayName: 'Alex Admin',
+  email: 'alex@example.com',
+  id: '11111111-1111-4111-8111-111111111111',
+  role: 'admin',
+  updatedAt: '2026-05-01T10:00:00.000Z',
+};
 
 function createDashboardState({
   isInitialLoading = false,
@@ -96,6 +108,7 @@ function mountDashboardView() {
 
   const authStore = useAuthStore(pinia);
   authStore.accessToken = 'access-token';
+  authStore.profile = currentUser;
 
   return mount(DashboardView, {
     global: {
@@ -159,6 +172,7 @@ describe('DashboardView', () => {
     mountDashboardView();
 
     expect(dashboardMocks.options.accessToken.value).toBe('access-token');
+    expect(dashboardMocks.options.role?.value).toBe('admin');
 
     const error = new Error('No scope');
     dashboardMocks.options.onError?.('No scope', error, 'load-dashboard');

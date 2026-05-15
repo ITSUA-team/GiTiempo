@@ -205,6 +205,45 @@ describe('useAdminDashboardPage', () => {
     ]);
   });
 
+  it('loads PM dashboard stats and activity without admin-only member or invite clients', async () => {
+    const clients = createDashboardClients();
+    const dashboard = mountDashboard({
+      ...clients,
+      role: shallowRef('pm'),
+    });
+
+    await flushPromises();
+
+    expect(clients.membersClient.listMembers).not.toHaveBeenCalled();
+    expect(clients.membersClient.listInvites).not.toHaveBeenCalled();
+    expect(clients.projectsClient.getManagementSummary).toHaveBeenCalledWith(
+      'access-token',
+    );
+    expect(clients.projectsClient.listProjects).toHaveBeenCalledWith('access-token');
+    expect(clients.reportsClient.getTimeReport).toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({
+        ...getDashboardWeekRange(now),
+        groupBy: 'project',
+        limit: 100,
+        page: 1,
+        sortBy: 'lastStartedAt',
+        sortOrder: 'desc',
+      }),
+    );
+    expect(dashboard.loadError.value).toBeNull();
+    expect(dashboard.stats.value.map((stat) => stat.label)).toEqual([
+      'Active Projects',
+      'Hours This Week',
+      'Public Projects',
+      'Private Projects',
+    ]);
+    expect(dashboard.activityRows.value.map((row) => row.type)).toEqual([
+      'time',
+      'project',
+    ]);
+  });
+
   it('keeps request failures retryable and reports the failure once', async () => {
     const clients = createDashboardClients();
     const onError = vi.fn();
@@ -243,9 +282,30 @@ describe('useAdminDashboardPage', () => {
     expect(clients.membersClient.listMembers).not.toHaveBeenCalled();
     expect(clients.membersClient.listInvites).not.toHaveBeenCalled();
     expect(clients.projectsClient.getManagementSummary).not.toHaveBeenCalled();
+    expect(clients.projectsClient.listProjects).not.toHaveBeenCalled();
     expect(clients.reportsClient.getTimeReport).not.toHaveBeenCalled();
     expect(dashboard.isInitialLoading.value).toBe(false);
     expect(dashboard.loadError.value).toBe('Sign in to view the dashboard.');
+  });
+
+  it('does not call dashboard clients when the workspace role is absent', async () => {
+    const clients = createDashboardClients();
+    const dashboard = mountDashboard({
+      ...clients,
+      role: shallowRef(null),
+    });
+
+    await flushPromises();
+
+    expect(clients.membersClient.listMembers).not.toHaveBeenCalled();
+    expect(clients.membersClient.listInvites).not.toHaveBeenCalled();
+    expect(clients.projectsClient.getManagementSummary).not.toHaveBeenCalled();
+    expect(clients.projectsClient.listProjects).not.toHaveBeenCalled();
+    expect(clients.reportsClient.getTimeReport).not.toHaveBeenCalled();
+    expect(dashboard.isInitialLoading.value).toBe(false);
+    expect(dashboard.loadError.value).toBe(
+      'Workspace role is required to view the dashboard.',
+    );
   });
 
   it('previews five activity rows and expands when more rows are available', async () => {

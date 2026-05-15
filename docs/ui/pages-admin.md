@@ -6,8 +6,8 @@
 ## Dashboard
 
 - Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity feed.
-- Four summary stat cards use existing API-backed workspace metrics only: Active Members, Hours This Week, Pending Invites, and Active Projects.
-- Hours This Week is derived from the reports/time endpoint for the current week; member, invite, and project metrics are derived from existing members, invites, projects, and project management-summary endpoints.
+- Four summary stat cards use existing API-backed workspace metrics only. Admin users see Active Members, Hours This Week, Pending Invites, and Active Projects. PM users use PM-safe project/report metrics only and must not call member or invite management clients.
+- Hours This Week is derived from the reports/time endpoint using a frontend-supplied local-week window: local Monday at `00:00:00.000` through the current request time, converted to ISO timestamps. Member, invite, and project metrics are derived only from endpoints allowed for the current role.
 - The approved design's Open Invoices metric is deferred until an invoice API/contract exists; do not display fabricated invoice totals or invoice activity.
 - Recent Activity uses the approved feed layout with compact rows, newest-first ordering, token-backed circular activity indicators, activity copy, and relative time.
 - Recent Activity rows are derived from current timestamps such as member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and report row timing fields; successful loads with no derived rows render an empty state instead of default activity.

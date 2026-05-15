@@ -10,7 +10,7 @@
 - Shell: keep authenticated admin shell and active Dashboard navigation owned by `AdminAppShell`.
 - Header: render `Dashboard` and `Workspace overview with key metrics and recent activity.` with the approved 28px/14px hierarchy.
 - Stats: render four dashboard stat cards in a single desktop row, 108px design height, 16px gaps, `shadow-card`, `rounded-lg`, 16px padding, 13px label, 28px value, and 12px helper copy.
-- Current API metrics: derive Active Members from members, Hours This Week from reports/time, Active Projects from projects summary/list, and choose a fourth current-API metric such as Pending Invites or an explicitly inactive Open Invoices future metric.
+- Current API metrics: admins derive Active Members from members, Hours This Week from reports/time, Pending Invites from invites, and Active Projects from projects summary/list; PM users derive role-safe metrics only from projects and reports/time.
 - API-scope compromise: do not invent invoice totals or invoice activity while no invoice endpoint exists.
 - Recent Activity: render a `Recent Activity` card below stats with 20px padding, 16px internal gap, compact rows, newest-first ordering, and activity/time information.
 - Feed requirement: implement Recent Activity with compact design feed rows, circular token-backed indicators, activity text, and time copy.
@@ -50,3 +50,10 @@
 - [x] 5.3 Run `pnpm --filter admin-web typecheck`.
 - [x] 5.4 Perform final design parity review against `GITiempo.pen` frame `bCRah`, explicitly documenting the invoice/API compromise and any PrimeVue-only compromise.
 - [x] 5.5 Run `pnpm exec openspec validate add-admin-dashboard-page --strict` and fix validation issues.
+
+## 6. Review Fixes
+
+- [x] 6.1 Update OpenSpec deltas/tasks to codify PM-safe dashboard scope, fixed Pending Invites admin card, local-week report bounds, and Recent Activity expansion.
+- [x] 6.2 Update dashboard composable/view model so admin users may load members/invites while PM/non-admin users use only project summary, project list, and reports/time clients.
+- [x] 6.3 Add focused tests proving PM dashboard loading does not call members/invites, admin still renders Pending Invites, activity expansion remains specified, and local-week query bounds are sent.
+- [x] 6.4 Run admin-web tests/lint/typecheck and strict OpenSpec validation.
