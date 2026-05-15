@@ -138,7 +138,7 @@ async function handleExport(): Promise<void> {
       <SectionHeader
         title="Reports"
         description="Live project and member reporting within the current PM scope."
-        variant="stats"
+        variant="page"
       >
         <template #actions>
           <Button

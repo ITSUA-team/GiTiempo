@@ -43,17 +43,27 @@ withDefaults(
 
   <header
     v-else-if="variant === 'page'"
-    class="flex flex-col gap-1.5"
+    :class="
+      $slots.actions
+        ? 'flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'
+        : 'flex flex-col gap-1.5'
+    "
   >
-    <h1 class="text-text-dark text-2xl font-semibold">
-      {{ title }}
-    </h1>
-    <p
-      v-if="description"
-      class="text-text-muted text-sm"
+    <div
+      :class="$slots.actions ? 'flex flex-col gap-1.5' : undefined"
     >
-      {{ description }}
-    </p>
+      <h1 class="text-text-dark text-2xl font-semibold">
+        {{ title }}
+      </h1>
+      <p
+        v-if="description"
+        class="text-text-muted text-sm"
+      >
+        {{ description }}
+      </p>
+    </div>
+
+    <slot name="actions" />
   </header>
 
   <div

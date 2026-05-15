@@ -36,7 +36,7 @@ onMounted(() => {
       <SectionHeader
         title="Settings"
         description="Configure workspace defaults, billing preferences, and organization details."
-        variant="stats"
+        variant="page"
       />
 
       <SurfaceCard
