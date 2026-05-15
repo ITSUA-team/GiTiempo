@@ -6,9 +6,8 @@ import type {
   ProjectListResponse,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
-import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
+import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
-import ConfirmDialog from 'primevue/confirmdialog';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import ProjectsTable from '@/components/ProjectsTable.vue';
@@ -112,9 +111,7 @@ onMounted(fetchAll);
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 p-6">
-    <ConfirmDialog />
-
+  <div class="flex flex-col gap-6">
     <template v-if="loading && !initialLoaded">
       <ManagementPageSkeleton variant="projects" />
     </template>
@@ -128,9 +125,10 @@ onMounted(fetchAll);
     </template>
 
     <template v-else>
-      <StatsHeader
+      <SectionHeader
         title="Projects"
         description="Manage project visibility, member assignments, and manual project creation."
+        variant="stats"
       >
         <template #actions>
           <Button
@@ -152,7 +150,7 @@ onMounted(fetchAll);
             :value="summary.publicProjects"
           />
         </template>
-      </StatsHeader>
+      </SectionHeader>
 
       <SurfaceCard padding-class="p-5">
         <ProjectsTable

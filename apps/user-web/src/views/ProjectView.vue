@@ -123,19 +123,19 @@ const {
     </template>
 
     <template v-else>
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <PageHeader
-          subtitle="Create, update, and organize tasks across your visible projects."
-          title="Projects"
-        />
-
-        <Button
-          data-testid="projects-header-create"
-          label="+ New task"
-          :disabled="!canCreateTasks"
-          @click="openCreateDialog()"
-        />
-      </div>
+      <PageHeader
+        subtitle="Create, update, and organize tasks across your visible projects."
+        title="Projects"
+      >
+        <template #actions>
+          <Button
+            data-testid="projects-header-create"
+            label="+ New task"
+            :disabled="!canCreateTasks"
+            @click="openCreateDialog()"
+          />
+        </template>
+      </PageHeader>
 
       <div class="flex max-w-[360px] flex-col gap-1.5">
         <label

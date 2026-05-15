@@ -46,6 +46,7 @@ function assignForm(
 ): void {
 	form.currency = values.currency;
 	form.defaultHourlyRate = values.defaultHourlyRate;
+	form.timeZone = values.timeZone;
 	form.workspaceName = values.workspaceName;
 }
 
@@ -90,6 +91,7 @@ export function useAdminSettingsPage(
 	const form = reactive<AdminSettingsFormValues>({
 		currency: 'USD',
 		defaultHourlyRate: null,
+		timeZone: 'UTC',
 		workspaceName: '',
 	});
 
@@ -100,7 +102,8 @@ export function useAdminSettingsPage(
 		return (
 			form.workspaceName !== current.workspaceName ||
 			form.defaultHourlyRate !== current.defaultHourlyRate ||
-			form.currency !== current.currency
+			form.currency !== current.currency ||
+			form.timeZone !== current.timeZone
 		);
 	});
 

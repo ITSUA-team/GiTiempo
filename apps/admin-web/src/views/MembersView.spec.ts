@@ -65,11 +65,6 @@ const MemberInviteDialogStub = {
   template: '<div data-testid="member-invite-dialog" />',
 };
 
-const ConfirmDialogStub = {
-  name: 'ConfirmDialog',
-  template: '<div data-testid="confirm-dialog" />',
-};
-
 const SkeletonStub = {
   name: 'Skeleton',
   template: '<div data-testid="skeleton" />',
@@ -165,7 +160,6 @@ describe('MembersView', () => {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
         stubs: {
-          ConfirmDialog: ConfirmDialogStub,
           MemberInviteDialog: MemberInviteDialogStub,
           MembersTable: MembersTableStub,
           Skeleton: SkeletonStub,
@@ -211,7 +205,6 @@ describe('MembersView', () => {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
         stubs: {
-          ConfirmDialog: ConfirmDialogStub,
           MemberInviteDialog: MemberInviteDialogStub,
           MembersTable: MembersTableStub,
           Skeleton: SkeletonStub,
