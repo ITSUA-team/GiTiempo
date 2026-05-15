@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  UserPlusIcon,
+} from '@heroicons/vue/24/outline';
 import { ref } from 'vue';
 import type {
   ProjectListResponse,
@@ -7,14 +12,14 @@ import type {
 } from '@gitiempo/shared';
 import {
   ManagementTableEmptyState,
+  ManagementTableRowAction,
   ManagementTableShell,
+  SectionHeader,
   formatWorkspaceRole,
-  managementTableActionPt,
   managementTableColumnPt,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
-import Button from 'primevue/button';
 import Column from 'primevue/column';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
@@ -154,9 +159,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 
 <template>
   <div class="mb-4">
-    <h2 class="text-text-dark text-lg font-semibold">
-      Members Table
-    </h2>
+    <SectionHeader title="Members Table" />
   </div>
 
   <ManagementTableShell
@@ -236,23 +239,24 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       <template #body="{ data }">
         <div class="flex items-center justify-end gap-2">
           <template v-if="!isSelf(data)">
-            <Button
+            <ManagementTableRowAction
               v-if="data.role !== 'admin'"
+              :data-testid="`member-assign-pm-${data.id}`"
+              :icon="UserPlusIcon"
               label="Assign PM"
-              variant="link"
-              :pt="managementTableActionPt.brand"
               @click="toggleExpansion(data, 'assign')"
             />
-            <Button
+            <ManagementTableRowAction
+              :data-testid="`member-edit-${data.id}`"
+              :icon="PencilSquareIcon"
               label="Edit"
-              variant="link"
-              :pt="managementTableActionPt.brand"
               @click="toggleExpansion(data, 'edit')"
             />
-            <Button
+            <ManagementTableRowAction
+              :data-testid="`member-remove-${data.id}`"
+              :icon="TrashIcon"
               label="Remove"
-              variant="link"
-              :pt="managementTableActionPt.destructive"
+              tone="destructive"
               @click="handleRemove(data)"
             />
           </template>

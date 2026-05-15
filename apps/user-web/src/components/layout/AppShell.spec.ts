@@ -38,8 +38,18 @@ describe("AppShell", () => {
 
     const wrapper = mount(AppShell, {
       global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute('data-tooltip', String(binding.value));
+            },
+          },
+        },
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
         stubs: {
+          DashboardOverview: {
+            template: '<div data-testid="dashboard-overview" />',
+          },
           TopBarTimer: {
             template: '<div data-testid="top-bar-timer">Top bar timer</div>',
           },
@@ -54,7 +64,10 @@ describe("AppShell", () => {
 
     expect(workspaceLink.text()).toBe("Admin workspace");
     expect(wrapper.find('[aria-label="Open profile settings"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="dashboard-overview"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);
+    expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Time Entries"]')).toHaveLength(2);
     expect(profileLinks).toHaveLength(2);
     expect(timerLinks).toHaveLength(0);
   });

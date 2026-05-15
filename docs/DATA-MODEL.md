@@ -113,9 +113,15 @@ Per-workspace configuration. One settings record per workspace, created automati
 | `id` | UUID | PK, default `gen_random_uuid()` | |
 | `workspace_id` | UUID | FK → `workspaces.id`, UNIQUE, NOT NULL | One settings record per workspace |
 | `currency` | VARCHAR(3) | NOT NULL, default `'USD'` | ISO 4217 currency code |
-| `default_hourly_rate` | DECIMAL(10,2) | nullable | Default hourly rate for new invoices |
+| `default_hourly_rate` | DECIMAL(10,2) | nullable | Nullable workspace billing default for invoice creation |
+| `time_zone` | VARCHAR(64) | NOT NULL, default `'UTC'` | IANA time-zone identifier for workspace calendar periods |
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
+
+**Notes:**
+
+- `default_hourly_rate` is a default only. Invoice creation copies the selected hourly rate into `invoices.hourly_rate`; later workspace setting changes do not retroactively update existing invoices.
+- `time_zone` defines how workspace calendar periods such as days, weeks, report ranges, and invoice date ranges are interpreted. Stored timestamps remain timestamptz values.
 
 **Indexes:**
 - `workspace_settings_workspace_id_unique` UNIQUE on `workspace_id`
@@ -327,7 +333,7 @@ Billing record generated from time entries. MVP: data only, no document generati
 | `status` | VARCHAR(20) | NOT NULL, default `'draft'` | `'draft'`, `'sent'`, `'paid'` |
 | `date_from` | DATE | NOT NULL | Start of billing period |
 | `date_to` | DATE | NOT NULL | End of billing period |
-| `hourly_rate` | DECIMAL(10,2) | NOT NULL | Rate per hour |
+| `hourly_rate` | DECIMAL(10,2) | NOT NULL | Rate per hour (snapshot from user input or `workspace_settings.default_hourly_rate`) |
 | `currency` | VARCHAR(3) | NOT NULL | ISO 4217 currency code (snapshot from `workspace_settings` at creation) |
 | `discount_percent` | DECIMAL(5,2) | NOT NULL, default `0` | Optional discount (0–100) |
 | `total_hours` | DECIMAL(10,2) | NOT NULL, default `0` | Aggregated from time entries |
@@ -339,7 +345,7 @@ Billing record generated from time entries. MVP: data only, no document generati
 
 **Indexes:** `invoices_workspace_id_idx` on `workspace_id`
 
-**Note:** Invoice stores `total_hours` and `total_amount` as snapshot values at creation time. Individual time entries are linked back to the invoice via `time_entries.invoice_id`. If time entries are edited after invoice creation, the invoice totals are **not** automatically recalculated — this is an explicit MVP limitation.
+**Note:** Invoice stores `hourly_rate`, `currency`, `total_hours`, and `total_amount` as snapshot values at creation time. Individual time entries are linked back to the invoice via `time_entries.invoice_id`. If time entries are edited after invoice creation, the invoice totals are **not** automatically recalculated — this is an explicit MVP limitation.
 
 ---
 
@@ -412,7 +418,7 @@ All enums are stored as `VARCHAR` with application-level validation via Zod sche
 On first deployment, a seed migration creates:
 
 1. **Default workspace** — `name: "Default Workspace"`
-2. **Default workspace settings** — `currency: "USD"`, `default_hourly_rate: null`
+2. **Default workspace settings** — `currency: "USD"`, `default_hourly_rate: null`, `time_zone: "UTC"`
 3. **Initial admin user** — seeded with a preconfigured email and Firebase UID. This admin is the first user in the system.
 
 **Post-deployment flow:**

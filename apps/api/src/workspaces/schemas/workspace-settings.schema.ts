@@ -21,6 +21,7 @@ export const workspaceSettings = pgTable(
       scale: 2,
       mode: 'number',
     }),
+    timeZone: varchar('time_zone', { length: 64 }).default('UTC').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

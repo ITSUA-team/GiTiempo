@@ -7,4 +7,5 @@ export * from "./contracts/workspace-invites.js";
 export * from "./contracts/projects.js";
 export * from "./contracts/tasks.js";
 export * from "./contracts/time-entries.js";
+export * from "./contracts/reports.js";
 export * from "./contracts/github.js";

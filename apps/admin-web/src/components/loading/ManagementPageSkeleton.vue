@@ -2,7 +2,7 @@
 import { SurfaceCard } from '@gitiempo/web-shared';
 import Skeleton from 'primevue/skeleton';
 
-type ManagementPageSkeletonVariant = 'members' | 'projects';
+type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports';
 
 const props = defineProps<{
   variant: ManagementPageSkeletonVariant;
@@ -12,14 +12,26 @@ const skeletonConfig = {
   members: {
     actionWidth: '8.5rem',
     descriptionWidth: '24rem',
+    filterCount: 0,
+    statCount: 3,
     tableActionWidth: undefined,
     tableHeaderWidths: ['120px', '160px', '140px', '200px'],
   },
   projects: {
     actionWidth: '7.5rem',
     descriptionWidth: '22rem',
+    filterCount: 0,
+    statCount: 3,
     tableActionWidth: '16rem',
     tableHeaderWidths: ['140px', '220px', '120px', '120px', '150px'],
+  },
+  reports: {
+    actionWidth: '6.875rem',
+    descriptionWidth: '28rem',
+    filterCount: 4,
+    statCount: 4,
+    tableActionWidth: '17.5rem',
+    tableHeaderWidths: ['180px', '140px', '140px'],
   },
 } as const;
 </script>
@@ -51,9 +63,33 @@ const skeletonConfig = {
         />
       </div>
 
-      <div class="grid gap-4 sm:grid-cols-3">
+      <div
+        v-if="skeletonConfig[props.variant].filterCount > 0"
+        class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]"
+      >
+        <div
+          v-for="index in skeletonConfig[props.variant].filterCount"
+          :key="`filter-${index}`"
+          class="flex flex-col gap-1.5"
+        >
+          <Skeleton
+            width="5rem"
+            height="0.875rem"
+            border-radius="4px"
+          />
+          <Skeleton
+            height="2.375rem"
+            border-radius="6px"
+          />
+        </div>
+      </div>
+
+      <div
+        class="grid gap-4"
+        :class="props.variant === 'reports' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'"
+      >
         <Skeleton
-          v-for="index in 3"
+          v-for="index in skeletonConfig[props.variant].statCount"
           :key="index"
           height="6rem"
           border-radius="8px"
@@ -87,8 +123,26 @@ const skeletonConfig = {
             border-radius="4px"
           />
           <Skeleton
-            v-for="width in skeletonConfig[props.variant].tableHeaderWidths"
-            :key="width"
+            v-for="(width, widthIndex) in skeletonConfig[props.variant].tableHeaderWidths"
+            :key="`${width}-${widthIndex}`"
+            :width="width"
+            height="0.75rem"
+            border-radius="4px"
+          />
+        </div>
+
+        <div
+          v-if="props.variant === 'reports'"
+          class="border-divider flex h-[44px] items-center gap-3 border-b px-3"
+        >
+          <Skeleton
+            class="flex-1"
+            height="0.75rem"
+            border-radius="4px"
+          />
+          <Skeleton
+            v-for="(width, widthIndex) in skeletonConfig[props.variant].tableHeaderWidths"
+            :key="`filter-${width}-${widthIndex}`"
             :width="width"
             height="0.75rem"
             border-radius="4px"
@@ -160,7 +214,7 @@ const skeletonConfig = {
             </div>
           </template>
 
-          <template v-else>
+          <template v-else-if="props.variant === 'projects'">
             <div class="flex flex-1 items-center">
               <Skeleton
                 width="60%"
@@ -204,6 +258,37 @@ const skeletonConfig = {
               />
               <Skeleton
                 width="3.5rem"
+                height="0.8rem"
+                border-radius="4px"
+              />
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="flex flex-1 items-center">
+              <Skeleton
+                width="45%"
+                height="0.875rem"
+                border-radius="4px"
+              />
+            </div>
+            <div class="w-[180px]">
+              <Skeleton
+                width="55%"
+                height="0.8rem"
+                border-radius="4px"
+              />
+            </div>
+            <div class="w-[140px]">
+              <Skeleton
+                width="50%"
+                height="0.8rem"
+                border-radius="4px"
+              />
+            </div>
+            <div class="w-[140px]">
+              <Skeleton
+                width="50%"
                 height="0.8rem"
                 border-radius="4px"
               />

@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed, markRaw, watch } from "vue";
+import {
+  ChartBarSquareIcon,
+  Cog6ToothIcon,
+  DocumentTextIcon,
+  FolderIcon,
+  Squares2X2Icon,
+  UsersIcon,
+} from '@heroicons/vue/24/outline';
 import { RouterView, useRoute } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
@@ -14,6 +22,12 @@ import { useAuthStore } from "@/stores/auth";
 const route = useRoute();
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
+const dashboardIcon = markRaw(Squares2X2Icon);
+const reportsIcon = markRaw(ChartBarSquareIcon);
+const invoicesIcon = markRaw(DocumentTextIcon);
+const membersIcon = markRaw(UsersIcon);
+const projectsIcon = markRaw(FolderIcon);
+const settingsIcon = markRaw(Cog6ToothIcon);
 const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: import.meta.env.VITE_USER_APP_URL,
   fallbackPath: "/login",
@@ -22,12 +36,12 @@ const userWorkspaceHref = getCounterpartWorkspaceHref({
 let workspaceNameRequestToken: string | null = null;
 
 const navItems = computed(() => [
-  { label: "Dashboard", name: routeNames.dashboard },
-  { label: "Reports", name: routeNames.reports },
-  { label: "Invoices", name: routeNames.invoices },
-  { label: "Members", name: routeNames.members },
-  { label: "Projects", name: routeNames.projects },
-  { label: "Settings", name: routeNames.settings },
+  { icon: dashboardIcon, label: "Dashboard", name: routeNames.dashboard },
+  { icon: reportsIcon, label: "Reports", name: routeNames.reports },
+  { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
+  { icon: membersIcon, label: "Members", name: routeNames.members },
+  { icon: projectsIcon, label: "Projects", name: routeNames.projects },
+  { icon: settingsIcon, label: "Settings", name: routeNames.settings },
 ]);
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.

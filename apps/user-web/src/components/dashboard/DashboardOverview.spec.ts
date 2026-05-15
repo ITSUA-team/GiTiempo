@@ -1,0 +1,196 @@
+// @vitest-environment jsdom
+
+import { mount } from "@vue/test-utils";
+import { computed, shallowRef } from "vue";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const pageState = shallowRef<"empty" | "loading" | "ready" | "request-error">("ready");
+const requestErrorMessage = shallowRef<string | null>(null);
+const retryLoadOverview = vi.fn(async () => undefined);
+const routerPush = vi.fn(async () => undefined);
+
+vi.mock("vue-router", async () => {
+  const actual = await vi.importActual("vue-router");
+
+  return {
+    ...actual,
+    useRouter: () => ({ push: routerPush }),
+  };
+});
+
+vi.mock("@/composables/useDashboardOverview", () => ({
+  useDashboardOverview: () => ({
+    dashboardStats: computed(() => [
+      { description: "1 project tracked today", label: "Today", value: "6h 40m" },
+      { description: "4 entries tracked this week", label: "This Week", value: "28h 15m" },
+      { description: "2 projects received tracked time", label: "Projects This Week", value: "2" },
+    ]),
+    pageState,
+    recentEntryRows: computed(() => [
+      {
+        durationLabel: "1h 10m",
+        id: "entry-1",
+        isHighlighted: true,
+        projectName: "Billing API",
+        taskTitle: "Fix export column order",
+        timeRangeLabel: "09:00 - 10:10",
+      },
+      {
+        durationLabel: "00:40:00",
+        id: "entry-2",
+        isHighlighted: false,
+        projectName: "Project Orion",
+        taskTitle: "Improve reports filters",
+        timeRangeLabel: "10:20 - Running",
+      },
+    ]),
+    requestErrorMessage,
+    retryLoadOverview,
+    weeklyFocus: computed(() => ({
+      project: {
+        description: "3h 45m tracked across 4 entries",
+        entryCount: 4,
+        label: "Top Project",
+        shareLabel: "42% of your tracked time this week",
+        sharePercent: 42,
+        title: "Admin Web",
+      },
+      task: {
+        description: "Project Orion • 2h 10m tracked",
+        entryCount: 3,
+        label: "Top Task",
+        shareLabel: "3 entries contributed to this focus",
+        sharePercent: 24,
+        title: "Improve reports filters",
+      },
+    })),
+  }),
+}));
+
+describe("DashboardOverview", () => {
+  beforeEach(() => {
+    pageState.value = "ready";
+    requestErrorMessage.value = null;
+    retryLoadOverview.mockClear();
+    routerPush.mockClear();
+  });
+
+  async function mountOverview() {
+    const DashboardOverview = (await import("./DashboardOverview.vue")).default;
+
+    return mount(DashboardOverview, {
+      global: {
+        stubs: {
+          Button: {
+            props: ["label", "ariaLabel"],
+            emits: ["click"],
+            template:
+              '<button type="button" :aria-label="ariaLabel ?? label" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          Column: {
+            props: ["header"],
+            template: '<div />',
+          },
+          DataTable: {
+            props: ["value"],
+            template: `
+              <div data-testid="recent-entries-table">
+                <div v-for="entry in value" :key="entry.id" data-testid="recent-entry-row">
+                  <slot name="body" :data="entry" />
+                </div>
+                <slot />
+              </div>
+            `,
+          },
+          PageHeader: {
+            props: ["title", "subtitle"],
+            template: '<header><h1>{{ title }}</h1><p>{{ subtitle }}</p></header>',
+          },
+          ProgressBar: {
+            props: ["value"],
+            template: '<div>{{ value }}</div>',
+          },
+          Skeleton: { template: "<div />" },
+          StatCard: {
+            props: ["label", "value", "description"],
+            template: '<article><h3>{{ label }}</h3><p>{{ value }}</p><small>{{ description }}</small></article>',
+          },
+          SurfaceCard: {
+            template: '<section data-testid="surface-card"><slot /></section>',
+          },
+          Tag: {
+            props: ["value"],
+            template: '<span>{{ value }}</span>',
+          },
+          DashboardOverviewLoading: {
+            template: `
+              <div data-testid="dashboard-loading-state">
+                <div data-testid="dashboard-loading-stats" />
+                <div data-testid="dashboard-loading-focus" />
+                <div data-testid="dashboard-loading-recent-entries" />
+              </div>
+            `,
+          },
+        },
+      },
+    });
+  }
+
+  it("renders the populated dashboard overview without page-level timer controls", async () => {
+    const wrapper = await mountOverview();
+
+    expect(wrapper.text()).toContain("Dashboard");
+    expect(wrapper.text()).toContain("6h 40m");
+    expect(wrapper.text()).toContain("Admin Web");
+    expect(wrapper.text()).toContain("Improve reports filters");
+    expect(wrapper.text()).toContain("42");
+    expect(wrapper.text()).toContain("Top Focus This Week");
+    expect(wrapper.text()).toContain("Recent Time Entries");
+    expect(wrapper.text()).toContain("View all");
+    expect(
+      wrapper.findAll('button[aria-label="Start"], button[aria-label="Start timer"], button[aria-label="Stop"], button[aria-label="Stop timer"]'),
+    ).toHaveLength(0);
+
+    await wrapper.get("button").trigger("click");
+
+    expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
+  });
+
+  it("renders the loading skeleton state", async () => {
+    pageState.value = "loading";
+
+    const wrapper = await mountOverview();
+
+    expect(wrapper.find('[data-testid="dashboard-loading-state"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="dashboard-loading-stats"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="dashboard-loading-focus"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="dashboard-loading-recent-entries"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="dashboard-ready-state"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="dashboard-empty-state"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="dashboard-request-error"]').exists()).toBe(false);
+  });
+
+  it("renders distinct request-error and empty states", async () => {
+    pageState.value = "request-error";
+    requestErrorMessage.value = "network down";
+    const errorWrapper = await mountOverview();
+
+    expect(errorWrapper.text()).toContain("Could not load dashboard overview");
+    expect(errorWrapper.text()).toContain("network down");
+
+    await errorWrapper.get("button").trigger("click");
+
+    expect(retryLoadOverview).toHaveBeenCalledTimes(1);
+
+    pageState.value = "empty";
+    requestErrorMessage.value = null;
+    const emptyWrapper = await mountOverview();
+
+    expect(emptyWrapper.text()).toContain("No recent time activity yet");
+    expect(emptyWrapper.text()).not.toContain("Could not load dashboard overview");
+
+    await emptyWrapper.get("button").trigger("click");
+
+    expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
+  });
+});

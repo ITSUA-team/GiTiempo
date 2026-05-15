@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import {
+  ArchiveBoxIcon,
+  ArrowUturnLeftIcon,
+  PencilSquareIcon,
+} from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 import type {
   ProjectListResponse,
@@ -7,12 +12,12 @@ import type {
 } from '@gitiempo/shared';
 import {
   ManagementTableEmptyState,
+  ManagementTableRowAction,
   ManagementTableShell,
-  managementTableActionPt,
   managementTableColumnPt,
+  SectionHeader,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
-import Button from 'primevue/button';
 import Column from 'primevue/column';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
@@ -148,26 +153,27 @@ function formatSource(source: string): string {
 </script>
 
 <template>
-  <div class="mb-4 flex items-center justify-between">
-    <h2 class="text-text-dark text-lg font-semibold">
-      Projects Table
-    </h2>
-    <div class="flex flex-col gap-1.5">
-      <label
-        id="member-filter-label"
-        class="text-text-muted text-[12px] font-medium"
-      >Assigned member</label>
-      <Select
-        v-model="selectedMemberId"
-        :options="memberFilterOptions"
-        aria-labelledby="member-filter-label"
-        option-label="label"
-        option-value="value"
-        placeholder="All members"
-        show-clear
-        class="w-[260px]"
-      />
-    </div>
+  <div class="mb-4">
+    <SectionHeader title="Projects Table">
+      <template #actions>
+        <div class="flex flex-col gap-1.5">
+          <label
+            id="member-filter-label"
+            class="text-text-muted text-[12px] font-medium"
+          >Assigned member</label>
+          <Select
+            v-model="selectedMemberId"
+            :options="memberFilterOptions"
+            aria-labelledby="member-filter-label"
+            option-label="label"
+            option-value="value"
+            placeholder="All members"
+            show-clear
+            class="w-[260px]"
+          />
+        </div>
+      </template>
+    </SectionHeader>
   </div>
 
   <ManagementTableShell
@@ -254,24 +260,26 @@ function formatSource(source: string): string {
       <template #body="{ data }">
         <div class="flex items-center justify-end gap-2">
           <template v-if="data.isActive">
-            <Button
+            <ManagementTableRowAction
+              :data-testid="`project-edit-${data.id}`"
+              :icon="PencilSquareIcon"
               label="Edit"
-              variant="link"
-              :pt="managementTableActionPt.brand"
               @click="handleEdit(data)"
             />
-            <Button
+            <ManagementTableRowAction
+              :data-testid="`project-archive-${data.id}`"
+              :icon="ArchiveBoxIcon"
               label="Archive"
-              variant="link"
-              :pt="managementTableActionPt.destructive"
+              tone="destructive"
               @click="confirmArchive(data)"
             />
           </template>
           <template v-else>
-            <Button
+            <ManagementTableRowAction
+              :data-testid="`project-unarchive-${data.id}`"
+              :icon="ArrowUturnLeftIcon"
               label="Unarchive"
-              variant="link"
-              :pt="managementTableActionPt.muted"
+              tone="muted"
               @click="handleUnarchive(data)"
             />
           </template>

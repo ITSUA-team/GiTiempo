@@ -56,6 +56,7 @@ const settingsResponse = {
   currency: 'USD',
   defaultHourlyRate: 120,
   id: '22222222-2222-4222-8222-222222222222',
+  timeZone: 'UTC',
   updatedAt: '2026-05-01T10:00:00.000Z',
   workspaceId: '11111111-1111-4111-8111-111111111111',
 };

@@ -5,10 +5,13 @@
 
 ## Dashboard
 
-- Active Timer widget: full-width `<Card>` showing task, project, elapsed time, and stop action.
+- Initial page load uses a skeleton that approximates the dashboard header, weekly insight/stat surfaces, and recent entries table before rendering empty states.
+- Weekly focus insight: full-width `<Card>` highlighting `Top Project This Week` and `Top Task This Week` using the user's current-week tracked entries.
+- Weekly focus insight values should show the winning project/task labels plus tracked-duration context, and may include a compact relative-share indicator when it improves scannability.
 - Recent Time Entries: `<DataTable>` with last 10 entries.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
+- Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar only.
 
 ## Global Top-Bar Timer
 
@@ -31,6 +34,7 @@
 
 ## Time Entries Page
 
+- Initial page load uses a skeleton matching the header action row, filters, grouped entry cards, and pagination region.
 - Header actions include a primary PrimeVue `<Button>` labeled `+ New time entry` in the same row as the page title. It opens the shared manual time-entry PrimeVue `<Dialog>` without a preset day.
 - Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup.
 - The task lookup placeholder copy is `Search tasks`.
@@ -50,6 +54,7 @@
 
 ## Projects Page
 
+- Initial page load uses a skeleton matching the header action row, search row, and grouped project sections.
 - Header actions include a primary PrimeVue `<Button>` labeled `+ New task` in the same row as the page title.
 - The page uses the same high-level structure as Time Entries: page header row, grouped content sections, and a card/table shell for each group.
 - A filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`.
@@ -76,6 +81,7 @@
 
 ## Profile Page
 
+- Initial page load uses a skeleton matching the profile form and GitHub connection card before rendering disconnected, empty, or request-error states.
 - Editable display name backed by `PATCH /users/me`.
 - Display-name input is enabled and prefilled from the current user profile.
 - `Save changes` persists the latest valid display name and `Cancel` restores the latest persisted value.
@@ -97,9 +103,10 @@
 
 ## Error Pages
 
-- 404 Not Found renders inside the authenticated app shell when the user reaches an unknown `user-web` route.
-- 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, primary action `Back to dashboard`, and secondary action `Go back`.
-- 403 Forbidden renders inside the authenticated app shell when the current user is signed in but lacks access to the requested page or workspace resource.
+- 404 Not Found renders as a standalone route-level page outside the authenticated app shell when the user reaches an unknown `user-web` route.
+- Standalone `user-web` 403/404 pages do not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, and primary action `Back to dashboard`.
+- The 404 secondary action `Go back` renders only when the browser history contains a prior entry for the current tab. When no prior history entry exists, omit the secondary action entirely.
+- 403 Forbidden renders as a standalone route-level page outside the authenticated app shell when the current user is signed in but lacks access to the requested page or workspace resource.
 - 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current workspace role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace is available.
-- Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the page content area; request errors stay scoped to the feature surface that failed.
-- Do not hide the shell navigation on authenticated 403/404 pages; users should retain normal workspace navigation and the top-bar timer surface.
+- Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the full route surface; request errors stay scoped to the feature surface that failed.
