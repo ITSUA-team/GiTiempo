@@ -35,7 +35,10 @@ import SettingsView from './SettingsView.vue';
 
 function createDeferred<T>() {
   // eslint-disable-next-line no-unused-vars
-  const deferred = {} as { promise: Promise<T>; resolve: (..._args: [T]) => void };
+  const deferred = {} as {
+    promise: Promise<T>;
+    resolve: (..._args: [T]) => void;
+  };
 
   deferred.promise = new Promise<T>((resolve) => {
     deferred.resolve = resolve;
@@ -126,14 +129,18 @@ describe('SettingsView', () => {
     const wrapper = mountSettingsView();
 
     expect(wrapper.find('[aria-label="Loading settings"]').exists()).toBe(true);
-    expect(wrapper.findAll('[data-testid="skeleton"]').length).toBeGreaterThan(0);
+    expect(wrapper.findAll('[data-testid="skeleton"]').length).toBeGreaterThan(
+      0,
+    );
     expect(wrapper.text()).not.toContain('Workspace name');
 
     workspaceRequest.resolve(workspaceResponse);
     settingsRequest.resolve(settingsResponse);
     await flushPromises();
 
-    expect(wrapper.find('[aria-label="Loading settings"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Loading settings"]').exists()).toBe(
+      false,
+    );
     expect(wrapper.text()).toContain('Settings');
     expect(wrapper.text()).toContain(
       'Configure workspace defaults, billing preferences, and organization details.',
@@ -148,19 +155,20 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Legal entity');
     expect(wrapper.text()).toContain('Tax ID');
     expect(
-      (wrapper.get<HTMLInputElement>('#settings-workspace-name').element).value,
+      wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
     ).toBe('GiTiempo Studio');
     expect(
-      (wrapper.get<HTMLInputElement>('#settings-invoice-prefix').element).disabled,
+      wrapper.get<HTMLInputElement>('#settings-invoice-prefix').element
+        .disabled,
     ).toBe(true);
     expect(
-      (wrapper.get<HTMLInputElement>('#settings-payment-terms').element).disabled,
+      wrapper.get<HTMLInputElement>('#settings-payment-terms').element.disabled,
     ).toBe(true);
     expect(
-      (wrapper.get<HTMLInputElement>('#settings-legal-entity').element).disabled,
+      wrapper.get<HTMLInputElement>('#settings-legal-entity').element.disabled,
     ).toBe(true);
     expect(
-      (wrapper.get<HTMLInputElement>('#settings-tax-id').element).disabled,
+      wrapper.get<HTMLInputElement>('#settings-tax-id').element.disabled,
     ).toBe(true);
   });
 
@@ -228,7 +236,7 @@ describe('SettingsView', () => {
       ?.trigger('click');
 
     expect(
-      (wrapper.get<HTMLInputElement>('#settings-workspace-name').element).value,
+      wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
     ).toBe('GiTiempo Studio');
     expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
     expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();

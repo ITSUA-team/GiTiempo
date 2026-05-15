@@ -3,7 +3,7 @@ withDefaults(
   defineProps<{
     description?: string;
     title: string;
-    variant?: "page" | "section";
+    variant?: "page" | "section" | "stats";
   }>(),
   {
     description: undefined,
@@ -13,8 +13,36 @@ withDefaults(
 </script>
 
 <template>
+  <div
+    v-if="variant === 'stats'"
+    class="flex flex-col gap-6"
+  >
+    <div class="flex items-center justify-between">
+      <div class="flex flex-col gap-1.5">
+        <h1 class="text-text-dark text-[28px] font-semibold">
+          {{ title }}
+        </h1>
+        <p
+          v-if="description"
+          class="text-text-muted text-sm font-normal"
+        >
+          {{ description }}
+        </p>
+      </div>
+      <div>
+        <slot name="actions" />
+      </div>
+    </div>
+    <div
+      v-if="$slots.stats"
+      class="flex h-24 gap-4"
+    >
+      <slot name="stats" />
+    </div>
+  </div>
+
   <header
-    v-if="variant === 'page'"
+    v-else-if="variant === 'page'"
     class="flex flex-col gap-1.5"
   >
     <h1 class="text-text-dark text-2xl font-semibold">
