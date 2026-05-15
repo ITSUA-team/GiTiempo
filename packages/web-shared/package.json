@@ -12,6 +12,10 @@
       "types": "./src/auth/index.ts",
       "default": "./src/auth/index.ts"
     },
+    "./browser-history": {
+      "types": "./src/browser-history.ts",
+      "default": "./src/browser-history.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "default": "./src/components/index.ts"
