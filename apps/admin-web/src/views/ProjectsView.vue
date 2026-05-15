@@ -8,7 +8,6 @@ import type {
 } from '@gitiempo/shared';
 import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
-import ConfirmDialog from 'primevue/confirmdialog';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import ProjectsTable from '@/components/ProjectsTable.vue';
@@ -113,8 +112,6 @@ onMounted(fetchAll);
 
 <template>
   <div class="flex flex-col gap-6">
-    <ConfirmDialog />
-
     <template v-if="loading && !initialLoaded">
       <ManagementPageSkeleton variant="projects" />
     </template>

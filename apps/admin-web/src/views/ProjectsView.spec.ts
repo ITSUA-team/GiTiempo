@@ -45,11 +45,6 @@ vi.mock('@/composables/useToasts', () => ({
 
 import ProjectsView from './ProjectsView.vue';
 
-const ConfirmDialogStub = {
-  name: 'ConfirmDialog',
-  template: '<div data-testid="confirm-dialog" />',
-};
-
 const ProjectsTableStub = {
   name: 'ProjectsTable',
   props: {
@@ -77,7 +72,6 @@ function mountProjectsView() {
     global: {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
-        ConfirmDialog: ConfirmDialogStub,
         ProjectsTable: ProjectsTableStub,
         Skeleton: SkeletonStub,
       },
