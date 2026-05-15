@@ -49,5 +49,5 @@
 
 ## 8. Regression Cleanup
 
-- [ ] 8.1 Narrow `useDashboardOverview` to a read-only client dependency for `listOwnEntries` so task update/delete client additions do not force unrelated dashboard specs to mock mutation methods.
-- [ ] 8.2 Update `useDashboardOverview.spec.ts` to type its client mock against that narrow dependency and rerun `pnpm --filter user-web typecheck`.
+- [x] 8.1 Narrow `useDashboardOverview` to a read-only client dependency for `listOwnEntries` so task update/delete client additions do not force unrelated dashboard specs to mock mutation methods.
+- [x] 8.2 Update `useDashboardOverview.spec.ts` to type its client mock against that narrow dependency and rerun `pnpm --filter user-web typecheck`.

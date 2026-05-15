@@ -10,6 +10,8 @@ import { useDashboardOverview } from "@/composables/useDashboardOverview";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
 
+type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
+
 function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
   return {
     createdAt: "2026-04-21T09:00:00.000Z",
@@ -50,38 +52,11 @@ function createOwnEntriesResponse(
   return { items, meta };
 }
 
-function createClientMock(): TimeEntriesClient & {
-  createManualEntry: ReturnType<typeof vi.fn<TimeEntriesClient["createManualEntry"]>>;
-  createTask: ReturnType<typeof vi.fn<TimeEntriesClient["createTask"]>>;
-  deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient["deleteEntry"]>>;
-  getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
+function createClientMock(): DashboardOverviewClient & {
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
-  listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
-  listVisibleProjects: ReturnType<typeof vi.fn<TimeEntriesClient["listVisibleProjects"]>>;
-  startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
-  stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
-  updateEntry: ReturnType<typeof vi.fn<TimeEntriesClient["updateEntry"]>>;
 } {
   return {
-    createManualEntry: vi.fn(async () => createEntry()),
-    createTask: vi.fn(async () => ({
-      createdAt: "2026-04-21T09:00:00.000Z",
-      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9501",
-      isActive: true,
-      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9101",
-      status: "open",
-      title: "Task",
-      updatedAt: "2026-04-21T09:00:00.000Z",
-      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
-    })),
-    deleteEntry: vi.fn(async () => undefined),
-    getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
-    listProjectTasks: vi.fn(async () => []),
-    listVisibleProjects: vi.fn(async () => []),
-    startTimer: vi.fn(async () => createEntry({ endedAt: null, durationSeconds: null })),
-    stopTimer: vi.fn(async () => createEntry()),
-    updateEntry: vi.fn(async () => createEntry()),
   };
 }
 
