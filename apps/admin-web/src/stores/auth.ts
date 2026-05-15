@@ -22,13 +22,14 @@ export const useAuthStore = defineStore("auth", () => {
   const bootstrapComplete = shallowRef(false);
   const isBootstrapping = shallowRef(false);
   const profile = shallowRef<UserResponse | null>(null);
+  const currentWorkspaceName = shallowRef("Workspace Admin");
   const isSubmitting = shallowRef(false);
 
   let bootstrapPromise: Promise<void> | null = null;
 
   const isAuthenticated = computed(() => accessToken.value !== null);
   const displayName = computed(() => profile.value?.displayName ?? "Admin User");
-  const workspaceName = computed(() => "Workspace Admin");
+  const workspaceName = computed(() => currentWorkspaceName.value);
   const userInitials = computed(() => {
     const source =
       profile.value?.displayName?.trim() ||
@@ -46,7 +47,12 @@ export const useAuthStore = defineStore("auth", () => {
   function clearSession(): void {
     accessToken.value = null;
     profile.value = null;
+    currentWorkspaceName.value = "Workspace Admin";
     clearRefreshToken();
+  }
+
+  function setWorkspaceName(name: string): void {
+    currentWorkspaceName.value = name;
   }
 
   async function loadCurrentUser(nextAccessToken: string): Promise<void> {
@@ -177,6 +183,7 @@ export const useAuthStore = defineStore("auth", () => {
     loginWithGoogle,
     logout,
     profile,
+    setWorkspaceName,
     userInitials,
     workspaceName,
   };
