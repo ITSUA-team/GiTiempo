@@ -1,9 +1,9 @@
 ## 1. Preparation And Design Parity
 
-- [ ] 1.1 Re-read `docs/ui/INDEX.md`, `docs/ui/pages-admin.md`, `docs/ui/components.md`, and `apps/admin-web/AGENTS.md` before implementation.
-- [ ] 1.2 Re-inspect `GITiempo.pen` frame `bCRah` (`Admin Dashboard`) and record a parity checklist for shell state, header copy, stat card labels/count/density, recent activity surface, table/list density, spacing, radii, typography, and responsive adaptation.
-- [ ] 1.3 Inspect existing dashboard placeholder, Reports/Members/Projects page patterns, skeletons, request-error states, toasts, auth store access token usage, and existing admin clients.
-- [ ] 1.4 Confirm no implementation task requires edits to `apps/api`, `packages/shared`, migrations, seeds, or OpenAPI artifacts; use only existing endpoints.
+- [x] 1.1 Re-read `docs/ui/INDEX.md`, `docs/ui/pages-admin.md`, `docs/ui/components.md`, and `apps/admin-web/AGENTS.md` before implementation.
+- [x] 1.2 Re-inspect `GITiempo.pen` frame `bCRah` (`Admin Dashboard`) and record a parity checklist for shell state, header copy, stat card labels/count/density, recent activity surface, table/list density, spacing, radii, typography, and responsive adaptation.
+- [x] 1.3 Inspect existing dashboard placeholder, Reports/Members/Projects page patterns, skeletons, request-error states, toasts, auth store access token usage, and existing admin clients.
+- [x] 1.4 Confirm no implementation task requires edits to `apps/api`, `packages/shared`, migrations, seeds, or OpenAPI artifacts; use only existing endpoints.
 
 ### Design Parity Checklist
 
@@ -19,34 +19,34 @@
 
 ## 2. Dashboard Data Boundary
 
-- [ ] 2.1 Add or extend admin-web-local dashboard data mapping that loads data through existing clients only: `adminMembersClient`, `adminProjectsClient`, and `adminReportsClient`.
-- [ ] 2.2 Derive stat card view models from existing responses without new API fields or fabricated values.
-- [ ] 2.3 Derive recent activity rows from current endpoint timestamps such as member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and report row timing fields where available.
-- [ ] 2.4 Add a focused `useAdminDashboardPage` composable or equivalent state module that exposes initial loading, request error, retry, stats, activity rows, and empty-state flags.
-- [ ] 2.5 Add tests for successful load, failed initial load with retry, empty derived activity, role/token absence behavior, stat derivation, and newest-first activity sorting.
+- [x] 2.1 Add or extend admin-web-local dashboard data mapping that loads data through existing clients only: `adminMembersClient`, `adminProjectsClient`, and `adminReportsClient`.
+- [x] 2.2 Derive stat card view models from existing responses without new API fields or fabricated values.
+- [x] 2.3 Derive recent activity rows from current endpoint timestamps such as member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and report row timing fields where available.
+- [x] 2.4 Add a focused `useAdminDashboardPage` composable or equivalent state module that exposes initial loading, request error, retry, stats, activity rows, and empty-state flags.
+- [x] 2.5 Add tests for successful load, failed initial load with retry, empty derived activity, role/token absence behavior, stat derivation, and newest-first activity sorting.
 
 ## 3. Admin Dashboard UI
 
-- [ ] 3.1 Replace `apps/admin-web/src/views/DashboardView.vue` placeholder with a thin composition surface that uses the dashboard state and focused UI leaves.
-- [ ] 3.2 Reuse `StatsHeader` and `StatCard` from `@gitiempo/web-shared` where compatible with `bCRah`.
-- [ ] 3.3 Add a dashboard skeleton using PrimeVue `<Skeleton>` that approximates the final header, stat card row, recent activity card, and table rows.
-- [ ] 3.4 Add a request-error surface with retry affordance and toast feedback; do not render empty/default dashboard content after failed required requests.
-- [ ] 3.5 Add a Recent Activity component using PrimeVue `DataTable` and `Column`, not raw table or flex-only feed markup.
-- [ ] 3.6 Use PrimeVue `Tag` or token-backed indicators for activity type/status styling and avoid custom raw status pills.
-- [ ] 3.7 Add a true empty state for successful loads with no derived activity rows.
-- [ ] 3.8 Keep all styling token-based through Tailwind utilities and PrimeVue `pt` overrides; do not use raw hex classes, deep selectors, or raw standard controls.
-- [ ] 3.9 Adapt dashboard layout responsively for mobile while preserving the stat hierarchy and recent activity readability.
+- [x] 3.1 Replace `apps/admin-web/src/views/DashboardView.vue` placeholder with a thin composition surface that uses the dashboard state and focused UI leaves.
+- [x] 3.2 Reuse `StatsHeader` and `StatCard` from `@gitiempo/web-shared` where compatible with `bCRah`.
+- [x] 3.3 Add a dashboard skeleton using PrimeVue `<Skeleton>` that approximates the final header, stat card row, recent activity card, and table rows.
+- [x] 3.4 Add a request-error surface with retry affordance and toast feedback; do not render empty/default dashboard content after failed required requests.
+- [x] 3.5 Add a Recent Activity component using PrimeVue `DataTable` and `Column`, not raw table or flex-only feed markup.
+- [x] 3.6 Use PrimeVue `Tag` or token-backed indicators for activity type/status styling and avoid custom raw status pills.
+- [x] 3.7 Add a true empty state for successful loads with no derived activity rows.
+- [x] 3.8 Keep all styling token-based through Tailwind utilities and PrimeVue `pt` overrides; do not use raw hex classes, deep selectors, or raw standard controls.
+- [x] 3.9 Adapt dashboard layout responsively for mobile while preserving the stat hierarchy and recent activity readability.
 
 ## 4. Documentation And Specs
 
-- [ ] 4.1 Update `docs/ui/pages-admin.md` Dashboard guidance with implemented current-API metrics, Recent Activity DataTable behavior, no-API-change scope, skeleton first-load treatment, and invoice/API compromise.
-- [ ] 4.2 Ensure OpenSpec deltas remain aligned with the final implementation scope before marking tasks complete.
-- [ ] 4.3 Document any PrimeVue-only or API-scope compromises in the final implementation review.
+- [x] 4.1 Update `docs/ui/pages-admin.md` Dashboard guidance with implemented current-API metrics, Recent Activity DataTable behavior, no-API-change scope, skeleton first-load treatment, and invoice/API compromise.
+- [x] 4.2 Ensure OpenSpec deltas remain aligned with the final implementation scope before marking tasks complete.
+- [x] 4.3 Document any PrimeVue-only or API-scope compromises in the final implementation review.
 
 ## 5. Verification
 
-- [ ] 5.1 Run focused admin-web tests for dashboard data mapping, composable, and view/table behavior.
-- [ ] 5.2 Run `pnpm --filter admin-web lint` and fix new Vue/Tailwind/order warnings introduced by this change.
-- [ ] 5.3 Run `pnpm --filter admin-web typecheck`.
-- [ ] 5.4 Perform final design parity review against `GITiempo.pen` frame `bCRah`, explicitly documenting the invoice/API compromise and any PrimeVue-only compromise.
-- [ ] 5.5 Run `pnpm exec openspec validate add-admin-dashboard-page --strict` and fix validation issues.
+- [x] 5.1 Run focused admin-web tests for dashboard data mapping, composable, and view/table behavior.
+- [x] 5.2 Run `pnpm --filter admin-web lint` and fix new Vue/Tailwind/order warnings introduced by this change.
+- [x] 5.3 Run `pnpm --filter admin-web typecheck`.
+- [x] 5.4 Perform final design parity review against `GITiempo.pen` frame `bCRah`, explicitly documenting the invoice/API compromise and any PrimeVue-only compromise.
+- [x] 5.5 Run `pnpm exec openspec validate add-admin-dashboard-page --strict` and fix validation issues.

@@ -6,8 +6,13 @@
 ## Dashboard
 
 - Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity table.
-- Four summary stat cards.
-- Recent activity feed using the same DataTable patterns as user pages.
+- Four summary stat cards use existing API-backed workspace metrics only: Active Members, Hours This Week, Pending Invites, and Active Projects.
+- Hours This Week is derived from the reports/time endpoint for the current week; member, invite, and project metrics are derived from existing members, invites, projects, and project management-summary endpoints.
+- The approved design's Open Invoices metric is deferred until an invoice API/contract exists; do not display fabricated invoice totals or invoice activity.
+- Recent Activity uses PrimeVue `DataTable` and `Column` with compact row templates, newest-first ordering, PrimeVue `Tag` type labels, and token-backed activity indicators.
+- Recent Activity rows are derived from current timestamps such as member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and report row timing fields; successful loads with no derived rows render an empty state instead of default activity.
+- Request failures render the standard retryable request-error surface and toast feedback; do not collapse failed required requests into empty/default dashboard content.
+- Dashboard implementation is admin-web only and must not require new dashboard, invoice, activity, aggregate, backend, shared contract, database, seed, migration, or OpenAPI changes.
 
 ## Reports Page
 

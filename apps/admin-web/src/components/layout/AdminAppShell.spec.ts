@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
+import ToastService from "primevue/toastservice";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 import AdminAppShell from "./AdminAppShell.vue";
@@ -43,7 +44,7 @@ describe("AdminAppShell", () => {
             },
           },
         },
-        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
       },
     });
     const workspaceLink = wrapper.get(
