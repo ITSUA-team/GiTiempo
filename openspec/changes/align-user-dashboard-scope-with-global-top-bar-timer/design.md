@@ -11,13 +11,12 @@ Affected frontend scope is `apps/user-web`, following `apps/user-web/AGENTS.md`:
 - Align the `user-pages` spec with the approved global top-bar timer ownership model.
 - Make the dashboard requirement testable as a dashboard overview page: header, loading skeleton, weekly focus insight, recent time entries, empty/error states, and optional stats cards.
 - Explicitly prevent duplicate dashboard page-content timer controls from being reintroduced.
-- Keep future implementation bounded to frontend dashboard view work and existing API/contract consumption.
+- Keep implementation bounded to frontend dashboard view work and existing API/contract consumption.
 
 **Non-Goals:**
 
 - Do not change backend endpoint shapes or add dashboard aggregate endpoints in this change.
 - Do not change the top-bar timer behavior except to reference it as the owner of timer controls.
-- Do not implement the dashboard UI in this proposal change.
 - Do not alter the approved `.pen` design or UI docs.
 
 ## Decisions
@@ -34,8 +33,12 @@ Affected frontend scope is `apps/user-web`, following `apps/user-web/AGENTS.md`:
    - Rationale: Existing endpoints provide current timer (`GET /time-entries/current`) and own entries (`GET /time-entries`) used by top-bar and dashboard surfaces. If implementation later proves that accurate weekly aggregation needs a new endpoint, that should be a separate scope/significant change.
    - Alternative considered: add a dashboard summary endpoint now. This was rejected because the present change is source-of-truth alignment, not an API expansion.
 
+4. **Weekly dashboard summaries load all current-week own-entry pages before deriving aggregates.**
+   - Rationale: `Weekly focus` and week-level stats are defined over the user's current-week tracked entries, while `GET /time-entries` remains paginated. Implementations in this change should request the full current-week own-entry result set via repeated page loads and only then compute weekly focus/stat surfaces.
+   - Alternative considered: derive weekly focus from the first page or from the recent 10-entry dashboard list. This was rejected because it would produce incorrect summaries and drift from the UI docs.
+
 ## Risks / Trade-offs
 
-- **Risk:** Dashboard implementation may compute weekly focus from a limited paginated entry set and produce inaccurate summaries. → **Mitigation:** Tasks should require an explicit data strategy review during implementation and defer any new aggregate API to a separate proposal if needed.
+- **Risk:** Dashboard implementation may compute weekly focus from a limited paginated entry set and produce inaccurate summaries. → **Mitigation:** This change fixes the accepted data strategy to load all current-week own-entry pages before deriving dashboard aggregates; if that becomes too expensive in practice, stop and propose a dedicated aggregate endpoint separately.
 - **Risk:** The approved `.pen` screen primarily shows a populated desktop state, while docs define loading and empty behavior. → **Mitigation:** Use shared loading, empty, and request-error patterns from UI docs when the design lacks a specific visual state.
 - **Risk:** Existing tests or assumptions may still look for dashboard-local timer controls. → **Mitigation:** Update tests to assert top-bar ownership and absence of dashboard page-content timer controls.

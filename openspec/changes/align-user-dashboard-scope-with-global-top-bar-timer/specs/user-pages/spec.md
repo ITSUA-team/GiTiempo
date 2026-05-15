@@ -5,7 +5,7 @@ The user dashboard SHALL render an authenticated overview page for the user's re
 
 #### Scenario: Dashboard renders approved overview content
 - **WHEN** the dashboard loads successfully
-- **THEN** the page shows the dashboard header, weekly focus insight, recent time-entry activity, and any approved summary stat surfaces
+- **THEN** the page shows the dashboard header, weekly focus insight with `Top Project This Week` and `Top Task This Week`, recent time-entry activity for the latest 10 entries, and any approved summary stat surfaces
 - **AND** the page content does not show separate timer start or stop controls
 
 #### Scenario: Dashboard with running timer

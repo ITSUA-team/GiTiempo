@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { SectionHeader } from "@gitiempo/web-shared";
+
 const props = defineProps<{
   subtitle: string;
   title: string;
@@ -6,12 +8,9 @@ const props = defineProps<{
 </script>
 
 <template>
-  <header class="flex flex-col gap-1.5">
-    <h1 class="text-text-dark text-2xl font-semibold">
-      {{ props.title }}
-    </h1>
-    <p class="text-text-muted text-sm">
-      {{ props.subtitle }}
-    </p>
-  </header>
+  <SectionHeader
+    :description="props.subtitle"
+    :title="props.title"
+    variant="page"
+  />
 </template>

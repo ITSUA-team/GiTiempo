@@ -15,6 +15,7 @@ import {
   ManagementTableRowAction,
   ManagementTableShell,
   managementTableColumnPt,
+  SectionHeader,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
@@ -152,26 +153,27 @@ function formatSource(source: string): string {
 </script>
 
 <template>
-  <div class="mb-4 flex items-center justify-between">
-    <h2 class="text-text-dark text-lg font-semibold">
-      Projects Table
-    </h2>
-    <div class="flex flex-col gap-1.5">
-      <label
-        id="member-filter-label"
-        class="text-text-muted text-[12px] font-medium"
-      >Assigned member</label>
-      <Select
-        v-model="selectedMemberId"
-        :options="memberFilterOptions"
-        aria-labelledby="member-filter-label"
-        option-label="label"
-        option-value="value"
-        placeholder="All members"
-        show-clear
-        class="w-[260px]"
-      />
-    </div>
+  <div class="mb-4">
+    <SectionHeader title="Projects Table">
+      <template #actions>
+        <div class="flex flex-col gap-1.5">
+          <label
+            id="member-filter-label"
+            class="text-text-muted text-[12px] font-medium"
+          >Assigned member</label>
+          <Select
+            v-model="selectedMemberId"
+            :options="memberFilterOptions"
+            aria-labelledby="member-filter-label"
+            option-label="label"
+            option-value="value"
+            placeholder="All members"
+            show-clear
+            class="w-[260px]"
+          />
+        </div>
+      </template>
+    </SectionHeader>
   </div>
 
   <ManagementTableShell
