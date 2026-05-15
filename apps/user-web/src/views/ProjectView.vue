@@ -52,54 +52,7 @@ const {
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
     <ConfirmDialog />
 
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <PageHeader
-        subtitle="Create, update, and organize tasks across your visible projects."
-        title="Projects"
-      />
-
-      <Button
-        data-testid="projects-header-create"
-        label="+ New task"
-        :disabled="!canCreateTasks"
-        @click="openCreateDialog()"
-      />
-    </div>
-
-    <SurfaceCard
-      border
-      body-class="flex flex-col gap-3"
-      padding-class="p-4"
-    >
-      <div class="flex max-w-[360px] flex-col gap-1.5">
-        <label
-          for="projects-search"
-          class="text-text-dark text-[13px] font-medium"
-        >
-          Search
-        </label>
-        <AutoComplete
-          input-id="projects-search"
-          option-label="label"
-          placeholder="Search projects or tasks"
-          :model-value="selectedSearchValue"
-          :suggestions="searchSuggestions"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
-          fluid
-          :min-length="0"
-          @complete="handleSearchComplete($event.query)"
-          @update:model-value="setSearchValue(($event ?? null) as ProjectsSearchSuggestion | string | null)"
-        />
-      </div>
-    </SurfaceCard>
-
-    <SurfaceCard
-      v-if="pageState === 'loading'"
-      border
-      body-class="flex flex-col gap-5"
-    >
+    <template v-if="pageState === 'loading'">
       <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-2">
           <Skeleton
@@ -151,7 +104,7 @@ const {
             />
           </div>
 
-          <div class="border-divider flex flex-col rounded-lg border">
+          <div class="border-divider bg-surface flex flex-col rounded-lg border">
             <Skeleton
               width="100%"
               height="2.75rem"
@@ -167,68 +120,107 @@ const {
           </div>
         </div>
       </div>
-    </SurfaceCard>
+    </template>
 
-    <SurfaceCard
-      v-else-if="pageState === 'request-error'"
-      border
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
-      data-testid="projects-request-error"
-    >
-      <div class="flex flex-col gap-1">
-        <h2 class="text-text-dark text-lg font-semibold">
-          Could not load projects
-        </h2>
-        <p class="text-text-muted text-sm">
-          {{ requestErrorMessage }}
-        </p>
+    <template v-else>
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <PageHeader
+          subtitle="Create, update, and organize tasks across your visible projects."
+          title="Projects"
+        />
+
+        <Button
+          data-testid="projects-header-create"
+          label="+ New task"
+          :disabled="!canCreateTasks"
+          @click="openCreateDialog()"
+        />
       </div>
-      <Button
-        label="Retry"
-        severity="secondary"
-        variant="outlined"
-        @click="void retryLoadPage()"
-      />
-    </SurfaceCard>
 
-    <SurfaceCard
-      v-else-if="pageState === 'empty'"
-      border
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
-      data-testid="projects-empty-state"
-    >
-      <div class="flex flex-col gap-1">
-        <h2 class="text-text-dark text-lg font-semibold">
-          No projects or tasks match this view
-        </h2>
-        <p class="text-text-muted text-sm">
-          Clear the search or create a new task in one of your visible projects.
-        </p>
+      <div class="flex max-w-[360px] flex-col gap-1.5">
+        <label
+          for="projects-search"
+          class="text-text-dark text-[13px] font-medium"
+        >
+          Search
+        </label>
+        <AutoComplete
+          input-id="projects-search"
+          option-label="label"
+          placeholder="Search projects or tasks"
+          :model-value="selectedSearchValue"
+          :suggestions="searchSuggestions"
+          complete-on-focus
+          dropdown
+          dropdown-mode="blank"
+          fluid
+          :min-length="0"
+          @complete="handleSearchComplete($event.query)"
+          @update:model-value="setSearchValue(($event ?? null) as ProjectsSearchSuggestion | string | null)"
+        />
       </div>
-      <Button
-        label="+ New task"
-        :disabled="!canCreateTasks"
-        @click="openCreateDialog()"
-      />
-    </SurfaceCard>
 
-    <div
-      v-else
-      class="flex flex-col gap-5"
-      data-testid="projects-groups"
-    >
-      <ProjectsTaskSection
-        v-for="group in filteredProjectGroups"
-        :key="group.project.id"
-        :format-updated-label="formatUpdatedLabel"
-        :is-deleting-task-id="isDeletingTaskId"
-        :project="group.project"
-        :tasks="group.tasks"
-        @add-task="openCreateDialog"
-        @delete-task="requestDeleteTask"
-        @edit-task="openEditDialog"
-      />
-    </div>
+      <SurfaceCard
+        v-if="pageState === 'request-error'"
+        border
+        body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
+        data-testid="projects-request-error"
+      >
+        <div class="flex flex-col gap-1">
+          <h2 class="text-text-dark text-lg font-semibold">
+            Could not load projects
+          </h2>
+          <p class="text-text-muted text-sm">
+            {{ requestErrorMessage }}
+          </p>
+        </div>
+        <Button
+          label="Retry"
+          severity="secondary"
+          variant="outlined"
+          @click="void retryLoadPage()"
+        />
+      </SurfaceCard>
+
+      <SurfaceCard
+        v-else-if="pageState === 'empty'"
+        border
+        body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
+        data-testid="projects-empty-state"
+      >
+        <div class="flex flex-col gap-1">
+          <h2 class="text-text-dark text-lg font-semibold">
+            No projects or tasks match this view
+          </h2>
+          <p class="text-text-muted text-sm">
+            Clear the search or create a new task in one of your visible projects.
+          </p>
+        </div>
+        <Button
+          label="+ New task"
+          :disabled="!canCreateTasks"
+          @click="openCreateDialog()"
+        />
+      </SurfaceCard>
+
+      <div
+        v-else
+        class="flex flex-col gap-5"
+        data-testid="projects-groups"
+      >
+        <ProjectsTaskSection
+          v-for="group in filteredProjectGroups"
+          :key="group.project.id"
+          :format-updated-label="formatUpdatedLabel"
+          :is-deleting-task-id="isDeletingTaskId"
+          :project="group.project"
+          :tasks="group.tasks"
+          @add-task="openCreateDialog"
+          @delete-task="requestDeleteTask"
+          @edit-task="openEditDialog"
+        />
+      </div>
+    </template>
 
     <ProjectTaskDialog
       :errors="dialogErrors"

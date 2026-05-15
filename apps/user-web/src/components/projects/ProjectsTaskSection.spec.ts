@@ -124,8 +124,8 @@ describe("ProjectsTaskSection", () => {
     expect(columns[1]?.props("style")).toEqual({ width: "8.125rem" });
     expect(columns[2]?.props("style")).toEqual({ width: "10.625rem" });
     expect(columns[3]?.props("style")).toEqual({ width: "8.75rem" });
-    expect(columns[3]?.props("header")).toBe("Actions");
-    expect(wrapper.html()).toContain("table-layout: fixed");
+    expect(columns[3]?.props("header")).toBeNull();
+    expect(wrapper.html()).toContain("table-fixed");
   });
 
   it("uses the shared management empty state for projects without active tasks", () => {

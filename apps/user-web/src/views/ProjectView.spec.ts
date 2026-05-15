@@ -170,6 +170,7 @@ describe("ProjectView", () => {
 
     expect(loadingWrapper.findAll('[data-testid="projects-skeleton"]').length).toBeGreaterThan(0);
     expect(loadingWrapper.text()).not.toContain("Loading your projects.");
+    expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(false);
 
     pageState.value = "request-error";
     requestErrorMessage.value = "network down";

@@ -100,8 +100,10 @@ describe("ProjectTaskDialog", () => {
     });
 
     const selects = wrapper.findAll("select");
+    const projectField = wrapper.get('[role="textbox"][aria-readonly="true"]');
 
     expect(selects).toHaveLength(1);
+    expect(projectField.attributes("aria-labelledby")).toBe("project-task-project-label");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Save changes");
   });

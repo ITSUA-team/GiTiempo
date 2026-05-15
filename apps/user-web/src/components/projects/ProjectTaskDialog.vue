@@ -109,14 +109,18 @@ const titleModel = computed({
 
       <div class="flex flex-col gap-1">
         <label
-          for="project-task-project"
+          id="project-task-project-label"
+          :for="props.mode === 'edit' ? undefined : 'project-task-project'"
           class="text-text-dark text-[13px] font-medium"
         >
           Project
         </label>
         <div
           v-if="props.mode === 'edit'"
+          aria-labelledby="project-task-project-label"
           class="border-divider bg-surface text-text-dark flex h-[38px] items-center rounded-md border px-3 text-sm"
+          role="textbox"
+          aria-readonly="true"
         >
           {{ selectedProjectName }}
         </div>

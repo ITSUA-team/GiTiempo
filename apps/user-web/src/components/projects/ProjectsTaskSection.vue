@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import Button from "primevue/button";
 import Column from "primevue/column";
-import DataTable from "primevue/datatable";
 import Tag from "primevue/tag";
 import {
   PencilSquareIcon,
@@ -11,7 +10,9 @@ import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import {
   ManagementTableEmptyState,
   ManagementTableRowAction,
-  SurfaceCard,
+  ManagementTableShell,
+  managementTableColumnPt,
+  type ManagementTableColumn,
 } from "@gitiempo/web-shared";
 
 interface ProjectsTaskSectionProps {
@@ -33,6 +34,13 @@ const emit = defineEmits<{
 const statusColumnWidth = "8.125rem";
 const updatedColumnWidth = "10.625rem";
 const actionsColumnWidth = "8.75rem";
+
+const columns = [
+  { key: "task", label: "Task", width: "fill" },
+  { key: "status", label: "Status", width: 130 },
+  { key: "updated", label: "Updated", width: 170 },
+  { key: "actions", label: "Actions", width: 140, align: "end" },
+] satisfies ManagementTableColumn[];
 
 function formatTaskCount(count: number): string {
   return `${count} active task${count === 1 ? "" : "s"}`;
@@ -76,89 +84,80 @@ function getStatusPt(task: TaskResponse) {
       />
     </div>
 
-    <SurfaceCard
-      body-class="overflow-x-auto"
-      border
-      padding-class="p-0"
+    <ManagementTableShell
+      body-row-class="h-[52px] bg-transparent hover:bg-app-bg"
+      :columns="columns"
+      data-key="id"
+      header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
+      :loading="false"
+      shell-class="border-divider overflow-hidden rounded-lg border bg-surface"
+      table-class="min-w-[740px] w-full table-fixed border-collapse"
+      table-container-class="overflow-auto rounded-none border-none"
+      :value="props.tasks"
     >
-      <DataTable
-        data-key="id"
-        :pt="{
-          bodyCell: 'px-3 py-0',
-          bodyRow: 'h-[52px] border-b border-divider last:border-b-0 hover:bg-app-bg',
-          columnHeaderContent: 'justify-start',
-          headerCell: 'bg-app-bg border-b border-divider px-3 py-3 text-[13px] font-medium text-text-muted',
-          table: 'w-full',
-        }"
-        class="w-full"
-        row-hover
-        table-style="min-width: 740px; table-layout: fixed"
-        :value="props.tasks"
-      >
-        <template #empty>
-          <ManagementTableEmptyState
-            description="Add a task to start tracking work for this project."
-            title="No active tasks yet"
-          />
+      <template #empty>
+        <ManagementTableEmptyState
+          description="Add a task to start tracking work for this project."
+          title="No active tasks yet"
+        />
+      </template>
+
+      <Column :pt="managementTableColumnPt">
+        <template #body="slotProps">
+          <div class="text-text-dark truncate text-sm font-medium">
+            {{ slotProps.data.title }}
+          </div>
         </template>
+      </Column>
 
-        <Column header="Task">
-          <template #body="slotProps">
-            <div class="text-text-dark truncate text-sm font-medium">
-              {{ slotProps.data.title }}
-            </div>
-          </template>
-        </Column>
+      <Column
+        :pt="managementTableColumnPt"
+        :style="{ width: statusColumnWidth }"
+      >
+        <template #body="slotProps">
+          <div>
+            <Tag
+              :pt="getStatusPt(slotProps.data)"
+              :value="getStatusLabel(slotProps.data)"
+            />
+          </div>
+        </template>
+      </Column>
 
-        <Column
-          header="Status"
-          :style="{ width: statusColumnWidth }"
-        >
-          <template #body="slotProps">
-            <div>
-              <Tag
-                :pt="getStatusPt(slotProps.data)"
-                :value="getStatusLabel(slotProps.data)"
-              />
-            </div>
-          </template>
-        </Column>
+      <Column
+        :pt="managementTableColumnPt"
+        :style="{ width: updatedColumnWidth }"
+      >
+        <template #body="slotProps">
+          <div class="text-text-muted text-[13px]">
+            {{ props.formatUpdatedLabel(slotProps.data.updatedAt) }}
+          </div>
+        </template>
+      </Column>
 
-        <Column
-          header="Updated"
-          :style="{ width: updatedColumnWidth }"
-        >
-          <template #body="slotProps">
-            <div class="text-text-muted text-[13px]">
-              {{ props.formatUpdatedLabel(slotProps.data.updatedAt) }}
-            </div>
-          </template>
-        </Column>
-
-        <Column
-          header="Actions"
-          :style="{ width: actionsColumnWidth }"
-        >
-          <template #body="slotProps">
-            <div class="flex items-center justify-end gap-2">
-              <ManagementTableRowAction
-                data-testid="project-task-edit"
-                :icon="PencilSquareIcon"
-                label="Edit"
-                @click="emit('editTask', slotProps.data)"
-              />
-              <ManagementTableRowAction
-                data-testid="project-task-delete"
-                :icon="TrashIcon"
-                label="Delete"
-                :loading="props.isDeletingTaskId === slotProps.data.id"
-                tone="destructive"
-                @click="emit('deleteTask', slotProps.data)"
-              />
-            </div>
-          </template>
-        </Column>
-      </DataTable>
-    </SurfaceCard>
+      <Column
+        :pt="managementTableColumnPt"
+        :style="{ width: actionsColumnWidth }"
+      >
+        <template #body="slotProps">
+          <div class="flex items-center justify-end gap-2">
+            <ManagementTableRowAction
+              data-testid="project-task-edit"
+              :icon="PencilSquareIcon"
+              label="Edit"
+              @click="emit('editTask', slotProps.data)"
+            />
+            <ManagementTableRowAction
+              data-testid="project-task-delete"
+              :icon="TrashIcon"
+              label="Delete"
+              :loading="props.isDeletingTaskId === slotProps.data.id"
+              tone="destructive"
+              @click="emit('deleteTask', slotProps.data)"
+            />
+          </div>
+        </template>
+      </Column>
+    </ManagementTableShell>
   </section>
 </template>
