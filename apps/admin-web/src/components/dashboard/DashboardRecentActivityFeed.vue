@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ManagementTableEmptyState } from '@gitiempo/web-shared';
+import { EmptyStateBlock } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
 import type {
@@ -41,10 +41,10 @@ function getDotClass(type: AdminDashboardActivityType): string {
       Recent Activity
     </h2>
 
-    <ManagementTableEmptyState
+    <EmptyStateBlock
       v-if="rows.length === 0"
       title="No recent activity"
-      description="Workspace events will appear here after members, projects, invites, or tracked time update."
+      description="Workspace events will appear here after allowed activity is recorded."
     />
 
     <ul
@@ -65,6 +65,7 @@ function getDotClass(type: AdminDashboardActivityType): string {
           :aria-label="`${row.typeLabel} activity`"
         />
         <span class="text-text-dark min-w-0 flex-1 truncate text-[13px] font-normal">
+          <span class="sr-only">{{ row.typeLabel }} activity: </span>
           {{ row.activity }}
         </span>
         <span class="text-text-muted shrink-0 text-xs font-normal">

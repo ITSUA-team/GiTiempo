@@ -41,11 +41,11 @@ import Skeleton from 'primevue/skeleton';
           border-radius="6px"
         />
 
-        <div class="border-divider overflow-hidden rounded-[6px] border">
+        <div class="flex flex-col">
           <div
             v-for="index in 5"
             :key="index"
-            class="border-divider flex h-12 items-center gap-3 px-3"
+            class="border-divider flex min-h-12 items-center gap-3 py-3"
             :class="index > 1 ? 'border-t' : undefined"
           >
             <Skeleton
@@ -58,12 +58,7 @@ import Skeleton from 'primevue/skeleton';
               border-radius="4px"
             />
             <Skeleton
-              width="5rem"
-              height="1.375rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="5rem"
+              width="4.5rem"
               height="0.75rem"
               border-radius="4px"
             />

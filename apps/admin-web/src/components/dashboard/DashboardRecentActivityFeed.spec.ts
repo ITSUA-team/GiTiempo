@@ -62,6 +62,7 @@ describe('DashboardRecentActivityFeed', () => {
     expect(wrapper.find('[data-tooltip="Member activity"]').exists()).toBe(true);
     expect(wrapper.find('[data-tooltip-position="top"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="Time activity"]').exists()).toBe(true);
+    expect(wrapper.find('.sr-only').text()).toBe('Member activity:');
   });
 
   it('shows a PrimeVue view-all activity button when more rows are available', async () => {
@@ -99,7 +100,7 @@ describe('DashboardRecentActivityFeed', () => {
 
     expect(wrapper.text()).toContain('No recent activity');
     expect(wrapper.text()).toContain(
-      'Workspace events will appear here after members, projects, invites, or tracked time update.',
+      'Workspace events will appear here after allowed activity is recorded.',
     );
   });
 });
