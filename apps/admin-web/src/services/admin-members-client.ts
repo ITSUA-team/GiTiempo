@@ -21,7 +21,7 @@ import {
 
 interface AdminMembersClientOptions {
 	apiBaseUrl: string | undefined;
-	fetchFn: typeof fetch;
+	fetchFn?: typeof fetch;
 }
 
 /* eslint-disable no-unused-vars */
@@ -112,5 +112,4 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 export const adminMembersClient = createAdminMembersClient({
 	apiBaseUrl,
-	fetchFn: fetch,
 });
