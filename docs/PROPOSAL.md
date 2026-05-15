@@ -96,7 +96,7 @@ A Chrome extension adds **Start/Stop Timer** and other controls directly onto Gi
 - Display running timer indicator
 - **Auto-create project and task** — if the issue or its project/repo does not yet exist in the application, the extension's API call creates them automatically before starting the timer
 
-**Prerequisite:** The user must have connected their GitHub account in their profile.
+For MVP timer start from GitHub issue pages, the extension uses issue-page metadata plus workspace auth. A connected GitHub account is not required for the start/stop timer flow itself.
 
 ## User Roles
 
