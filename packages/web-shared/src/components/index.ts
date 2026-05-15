@@ -14,6 +14,7 @@ export {
   managementTableColumnPt,
 } from "./management-table";
 export { default as PlaceholderPage } from "./PlaceholderPage.vue";
+export { default as SectionHeader } from "./SectionHeader.vue";
 export { default as RouteErrorPanel } from "./RouteErrorPanel.vue";
 export { default as StatCard } from "./StatCard.vue";
 export { default as StatsHeader } from "./StatsHeader.vue";

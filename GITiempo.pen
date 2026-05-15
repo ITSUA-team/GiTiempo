@@ -406,7 +406,6 @@
                   "id": "1CIrX",
                   "name": "header",
                   "width": "fill_container",
-                  "justifyContent": "space_between",
                   "alignItems": "center",
                   "children": [
                     {
@@ -432,27 +431,6 @@
                           "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "GLkTg",
-                      "fill": "$color-brand",
-                      "cornerRadius": "$radius-sm",
-                      "padding": [
-                        10,
-                        16
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "UD58z",
-                          "fill": "$color-surface",
-                          "content": "Start Timer",
-                          "fontFamily": "Inter",
-                          "fontSize": 14,
-                          "fontWeight": "600"
                         }
                       ]
                     }
@@ -620,11 +598,11 @@
                 },
                 {
                   "type": "frame",
-                  "id": "QqibB",
-                  "name": "activeTimer",
+                  "id": "uZu1D",
+                  "name": "weeklyTopSummary",
                   "width": "fill_container",
-                  "fill": "$color-surface",
-                  "cornerRadius": "$radius-lg",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
                   "effect": {
                     "type": "shadow",
                     "shadowType": "outer",
@@ -641,31 +619,31 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "BYEc9",
+                      "id": "z2Dmtz",
                       "width": "fill_container",
                       "justifyContent": "space_between",
                       "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
-                          "id": "IHFrH",
+                          "id": "GETwG",
                           "layout": "vertical",
                           "gap": 6,
                           "children": [
                             {
                               "type": "text",
-                              "id": "DXIdi",
-                              "fill": "$color-text-dark",
-                              "content": "Active Timer",
+                              "id": "IokL5",
+                              "fill": "#1A1A1A",
+                              "content": "Top Focus This Week",
                               "fontFamily": "Inter",
                               "fontSize": 18,
                               "fontWeight": "600"
                             },
                             {
                               "type": "text",
-                              "id": "TUZ9U",
-                              "fill": "$color-text-muted",
-                              "content": "Current task linked to GitHub issue and project.",
+                              "id": "gKYkP",
+                              "fill": "#666666",
+                              "content": "Your strongest project and task based on this week's tracked entries.",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "normal"
@@ -674,9 +652,9 @@
                         },
                         {
                           "type": "frame",
-                          "id": "ORKPj",
-                          "fill": "$color-status-active-bg",
-                          "cornerRadius": "$radius-sm",
+                          "id": "L1ppa1",
+                          "fill": "#F4F4F5",
+                          "cornerRadius": 6,
                           "padding": [
                             6,
                             10
@@ -684,9 +662,9 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "UjDE9",
-                              "fill": "$color-status-active-text",
-                              "content": "Running",
+                              "id": "gGnBL",
+                              "fill": "#5D2B85",
+                              "content": "This week",
                               "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "600"
@@ -697,97 +675,177 @@
                     },
                     {
                       "type": "frame",
-                      "id": "LOQK3",
+                      "id": "k8MPw2",
                       "width": "fill_container",
-                      "justifyContent": "space_between",
-                      "alignItems": "end",
+                      "gap": 16,
                       "children": [
                         {
                           "type": "frame",
-                          "id": "AJfwN",
+                          "id": "Q7WdNC",
+                          "width": "fill_container",
+                          "fill": "#F4F4F5",
+                          "cornerRadius": 8,
                           "layout": "vertical",
-                          "gap": 8,
+                          "gap": 14,
+                          "padding": 16,
                           "children": [
                             {
-                              "type": "text",
-                              "id": "qHBAG",
-                              "fill": "$color-text-dark",
-                              "content": "Issue #184 Improve reports filters",
-                              "fontFamily": "Inter",
-                              "fontSize": 16,
-                              "fontWeight": "600"
+                              "type": "frame",
+                              "id": "wJjoP",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "smGt9",
+                                  "fill": "#666666",
+                                  "content": "Top Project",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "HRv2z",
+                                  "fill": "#1A1A1A",
+                                  "content": "Admin Web",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 22,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "O8G8Y9",
+                                  "fill": "#666666",
+                                  "content": "3h 45m tracked across 4 entries",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             },
                             {
-                              "type": "text",
-                              "id": "ZzR00",
-                              "fill": "$color-text-muted",
-                              "content": "Project Orion / Admin Web",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "Y974R",
-                          "fill": "$color-brand",
-                          "content": "01:42:18",
-                          "fontFamily": "Inter",
-                          "fontSize": 40,
-                          "fontWeight": "600"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "yio2N",
-                      "width": "fill_container",
-                      "gap": 12,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "mwrHD",
-                          "fill": "$color-brand",
-                          "cornerRadius": "$radius-sm",
-                          "padding": [
-                            10,
-                            16
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "c0fa7",
-                              "fill": "$color-surface",
-                              "content": "Stop Timer",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "600"
+                              "type": "frame",
+                              "id": "RYkYt",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "jBo4W",
+                                  "width": "fill_container",
+                                  "height": 8,
+                                  "fill": "#E8E1F5",
+                                  "cornerRadius": 999,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "OxXDt",
+                                      "width": 206,
+                                      "height": 8,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 999
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "s8OSy",
+                                  "fill": "#666666",
+                                  "content": "42% of your completed time this week",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
                         {
                           "type": "frame",
-                          "id": "AgrwY",
-                          "fill": "$color-surface",
-                          "cornerRadius": "$radius-sm",
-                          "stroke": {
-                            "thickness": 1,
-                            "fill": "$color-divider"
-                          },
-                          "padding": [
-                            10,
-                            16
-                          ],
+                          "id": "XgvZE",
+                          "width": "fill_container",
+                          "fill": "#F4F4F5",
+                          "cornerRadius": 8,
+                          "layout": "vertical",
+                          "gap": 14,
+                          "padding": 16,
                           "children": [
                             {
-                              "type": "text",
-                              "id": "BBHaR",
-                              "fill": "$color-text-dark",
-                              "content": "View Details",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
+                              "type": "frame",
+                              "id": "EqCgm",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "X8IRN",
+                                  "fill": "#666666",
+                                  "content": "Top Task",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Z0Z2Y",
+                                  "fill": "#1A1A1A",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Improve reports filters",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 22,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "O2GWe0",
+                                  "fill": "#666666",
+                                  "content": "Project Orion • 2h 10m tracked",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MWS9Z",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "tDpod",
+                                  "width": "fill_container",
+                                  "height": 8,
+                                  "fill": "#E8E1F5",
+                                  "cornerRadius": 999,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "np1vZ",
+                                      "width": 144,
+                                      "height": 8,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 999
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "q1GbV",
+                                  "fill": "#666666",
+                                  "content": "Most repeated task context this week",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         }
