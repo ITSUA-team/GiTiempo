@@ -11,7 +11,7 @@ import type {
   WorkspaceMemberResponse,
 } from '@gitiempo/shared';
 import {
-  ManagementTableEmptyState,
+  EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
   SectionHeader,
@@ -282,7 +282,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     </template>
 
     <template #empty>
-      <ManagementTableEmptyState
+      <EmptyStateBlock
         title="No members found"
         description="Invite members to get started."
       />

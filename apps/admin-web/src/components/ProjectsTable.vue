@@ -11,7 +11,7 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import {
-  ManagementTableEmptyState,
+  EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
   managementTableColumnPt,
@@ -297,7 +297,7 @@ function formatSource(source: string): string {
     </template>
 
     <template #empty>
-      <ManagementTableEmptyState
+      <EmptyStateBlock
         title="No projects found"
         description="No projects match the current filter, or none have been created yet."
       />

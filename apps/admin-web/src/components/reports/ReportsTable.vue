@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  ManagementTableEmptyState,
+  EmptyStateBlock,
   ManagementTableShell,
   managementTableColumnPt,
   SectionHeader,
@@ -168,7 +168,7 @@ const filterSelectPt = {
       </Column>
 
       <template #empty>
-        <ManagementTableEmptyState
+        <EmptyStateBlock
           title="No report rows found"
           description="No matching report rows are available for the current filters."
         />

@@ -5,9 +5,16 @@
 
 ## Dashboard
 
-- Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity table.
-- Four summary stat cards.
-- Recent activity feed using the same DataTable patterns as user pages.
+- Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity feed.
+- Four summary stat cards use existing API-backed workspace metrics only. Admin users see Active Members, Hours This Week, Pending Invites, and Active Projects. PM users use PM-safe project/report metrics only and must not call member or invite management clients.
+- Hours This Week is derived from the reports/time endpoint using a frontend-supplied local-week window: local Monday at `00:00:00.000` through the current request time, converted to ISO timestamps. Member, invite, and project metrics are derived only from endpoints allowed for the current role.
+- The approved design's Open Invoices metric is deferred until an invoice API/contract exists; do not display fabricated invoice totals or invoice activity.
+- Recent Activity uses the approved feed layout with compact rows, newest-first ordering, token-backed circular activity indicators, activity copy, and relative time.
+- Recent Activity rows are derived from current timestamps such as member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and report row timing fields; successful loads with no derived rows render an empty state instead of default activity.
+- Recent Activity previews the first five rows; when more than five rows are available, render a PrimeVue `Button` labeled `View all activity` that expands the feed locally and can collapse back to the five-row preview.
+- Activity type labels are not rendered as visible tags; expose the type on the circular indicator with the same PrimeVue `v-tooltip` treatment used by navigation and with `aria-label`.
+- Request failures render the standard retryable request-error surface and toast feedback; do not collapse failed required requests into empty/default dashboard content.
+- Dashboard implementation is admin-web only and must not require new dashboard, invoice, activity, aggregate, backend, shared contract, database, seed, migration, or OpenAPI changes.
 
 ## Reports Page
 
