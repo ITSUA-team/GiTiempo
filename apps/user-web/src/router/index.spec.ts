@@ -14,6 +14,8 @@ import {
   type AuthRuntime,
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
+import ForbiddenView from "@/views/ForbiddenView.vue";
+import NotFoundView from "@/views/NotFoundView.vue";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
@@ -69,6 +71,67 @@ describe("app router auth guards", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.query.redirect).toBe("/time-entries");
+  });
+
+  it("defines standalone authenticated 403 and 404 routes outside the app shell", () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const forbiddenRoute = router.resolve("/403");
+    const notFoundRoute = router.resolve("/missing-page");
+
+    expect(forbiddenRoute.name).toBe(routeNames.forbidden);
+    expect(forbiddenRoute.meta.requiresAuth).toBe(true);
+    expect(forbiddenRoute.matched).toHaveLength(1);
+    expect(forbiddenRoute.matched[0]?.components?.default).toBe(ForbiddenView);
+    expect(notFoundRoute.name).toBe(routeNames.notFound);
+    expect(notFoundRoute.meta.requiresAuth).toBe(true);
+    expect(notFoundRoute.matched).toHaveLength(1);
+    expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
+  });
+
+  it("redirects anonymous users from unknown routes to login", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthRuntimeForTesting(createRuntimeMock());
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/missing-page");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.query.redirect).toBe("/missing-page");
+  });
+
+  it("renders the authenticated not-found route after bootstrap succeeds", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        refreshSession: async () => ({
+          accessToken: "access-token",
+          accessTokenExpiresIn: 900,
+          refreshToken: "refresh-token-next",
+        }),
+      }),
+    );
+    setRefreshToken("refresh-token");
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/missing-page");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.notFound);
   });
 
   it("redirects to login after bootstrap rejects a persisted refresh token", async () => {
