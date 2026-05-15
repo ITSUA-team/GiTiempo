@@ -218,7 +218,7 @@ The current web frontend baseline includes:
 
 **Pages:**
 
-- Dashboard — active timer, recent time entries
+- Dashboard — weekly top task/project insight, summary stats, recent time entries
 - Global top-bar timer — task selector dialog (visible project → task), start/stop
 - Time Entries — list, edit, delete own entries
 - Projects — visible projects grouped with active task create, update, frontend search, and conditional hard-delete flows

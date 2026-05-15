@@ -5,11 +5,13 @@
 
 ## Dashboard
 
-- Initial page load uses a skeleton that approximates the dashboard header, timer/stat surfaces, and recent entries table before rendering empty states.
-- Active Timer widget: full-width `<Card>` showing task, project, elapsed time, and stop action.
+- Initial page load uses a skeleton that approximates the dashboard header, weekly insight/stat surfaces, and recent entries table before rendering empty states.
+- Weekly focus insight: full-width `<Card>` highlighting `Top Project This Week` and `Top Task This Week` using the user's current-week tracked entries.
+- Weekly focus insight values should show the winning project/task labels plus tracked-duration context, and may include a compact relative-share indicator when it improves scannability.
 - Recent Time Entries: `<DataTable>` with last 10 entries.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
+- Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar only.
 
 ## Global Top-Bar Timer
 
