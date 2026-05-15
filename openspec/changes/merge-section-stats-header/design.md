@@ -27,11 +27,14 @@ The affected frontend surfaces are shared Vue components in `packages/web-shared
 - Preserve the current `StatsHeader` DOM shape inside the new `SectionHeader` variant.
   - Rationale: this minimizes page-level visual churn and keeps existing desktop layouts stable.
   - Alternative considered: make page header stats a generic `variant="page"` slot. Rejected because stat rows need a distinct vertical spacing pattern.
-- Update admin page imports and usage directly.
-  - Rationale: all `StatsHeader` consumers are known, and removing the export prevents new usage from drifting back to the deprecated component.
+- Keep `SectionHeader` variants semantic.
+  - Rationale: `page` and `section` variants own title/description/action alignment without rendering a stat-card row; `stats` is reserved for pages that provide stat-card summary content below the title/action row.
+  - Alternative considered: use `variant="stats"` for action-only page headers. Rejected because it makes the variant name misleading and can leave hidden empty-row behavior unclear.
+- Update admin page imports and user page-header wrappers/usages directly.
+  - Rationale: all current `StatsHeader` and page-header action consumers are known, and removing the export prevents new usage from drifting back to the deprecated component.
 
 ## Risks / Trade-offs
 
-- Stats variant increases `SectionHeader` responsibility slightly → Keep the API narrow: only `variant`, `actions`, and `stats` slots.
-- Removing `StatsHeader` can break missed imports → Search all app and shared code for `StatsHeader`, then run admin/user/web-shared typechecks.
+- Stats variant increases `SectionHeader` responsibility slightly → Keep the API narrow: only `variant`, `actions`, and `stats` slots, with `stats` limited to the stats variant.
+- Removing `StatsHeader` can break missed imports → Search all app and shared code for `StatsHeader`, then run admin/user/web-shared lint and typechecks.
 - Visual drift on management pages → Preserve current classes and verify against docs-defined header/stat-card structure; no PrimeVue-specific compromise is expected.
