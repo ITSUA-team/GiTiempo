@@ -12,7 +12,9 @@ import type { Pinia } from "pinia";
 
 import AppShell from "@/components/layout/AppShell.vue";
 import DashboardView from "@/views/DashboardView.vue";
+import ForbiddenView from "@/views/ForbiddenView.vue";
 import LoginView from "@/views/LoginView.vue";
+import NotFoundView from "@/views/NotFoundView.vue";
 import ProfileView from "@/views/ProfileView.vue";
 import ProjectView from "@/views/ProjectView.vue";
 import TimeEntriesView from "@/views/TimeEntriesView.vue";
@@ -21,7 +23,9 @@ import { useAuthStore } from "@/stores/auth";
 
 export const routeNames = {
   dashboard: "dashboard",
+  forbidden: "forbidden",
   login: "login",
+  notFound: "not-found",
   profile: "profile",
   project: "project",
   timeEntries: "time-entries",
@@ -68,7 +72,7 @@ const routes: RouteRecordRaw[] = [
         component: TimeEntriesView,
       },
       {
-        path: "projects/:projectId",
+        path: "projects",
         name: routeNames.project,
         component: ProjectView,
       },
@@ -78,6 +82,22 @@ const routes: RouteRecordRaw[] = [
         component: ProfileView,
       },
     ],
+  },
+  {
+    path: "/403",
+    name: routeNames.forbidden,
+    component: ForbiddenView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/:pathMatch(.*)*",
+    name: routeNames.notFound,
+    component: NotFoundView,
+    meta: {
+      requiresAuth: true,
+    },
   },
 ];
 

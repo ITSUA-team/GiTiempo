@@ -218,7 +218,7 @@ The current web frontend baseline includes:
 
 **Pages:**
 
-- Dashboard — active timer, recent time entries
+- Dashboard — weekly top task/project insight, summary stats, recent time entries
 - Global top-bar timer — task selector dialog (visible project → task), start/stop
 - Time Entries — list, edit, delete own entries
 - Projects — visible projects grouped with active task create, update, frontend search, and conditional hard-delete flows
@@ -233,7 +233,7 @@ The current web frontend baseline includes:
 - Invoices — create, view status, list (PM: assigned projects only)
 - Members — invite, manage roles, assign users to projects (Admin only)
 - Projects — manage project visibility, member assignments, and assigned-member filtering (Admin only)
-- Settings — workspace config: name, currency, default hourly rate (Admin only)
+- Settings — workspace config: name, currency, default hourly rate, time zone (Admin only)
 
 ### 3.3 Shared UI Patterns
 

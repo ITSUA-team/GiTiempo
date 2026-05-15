@@ -13,6 +13,7 @@ import {
 	type WorkspaceMemberResponse,
 } from '@gitiempo/shared';
 import {
+	getDefaultFetchFn,
 	getRequestUrl,
 	getResponseErrorMessage,
 	requestJson,
@@ -20,7 +21,7 @@ import {
 
 interface AdminMembersClientOptions {
 	apiBaseUrl: string | undefined;
-	fetchFn: typeof fetch;
+	fetchFn?: typeof fetch;
 }
 
 /* eslint-disable no-unused-vars */
@@ -42,7 +43,7 @@ export interface AdminMembersClient {
 
 export function createAdminMembersClient({
 	apiBaseUrl,
-	fetchFn = fetch,
+	fetchFn = getDefaultFetchFn(),
 }: AdminMembersClientOptions): AdminMembersClient {
 	return {
 		createInvite(accessToken, input) {
@@ -111,5 +112,4 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 export const adminMembersClient = createAdminMembersClient({
 	apiBaseUrl,
-	fetchFn: fetch,
 });

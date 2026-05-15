@@ -23,6 +23,42 @@ The user and admin SPAs SHALL use the same top-level shell pattern with top bar,
 - THEN the left side displays the product identity and workspace name
 - AND the right side displays user identity actions
 
+### Requirement: Standalone Authenticated Error Routes
+
+The shared application shell MUST allow route-level 403 and 404 pages in `user-web` and `admin-web` to render as standalone authenticated error surfaces outside the shell chrome.
+
+#### Scenario: Authenticated error route bypasses shell chrome
+
+- WHEN an authenticated user reaches a route-level 403 or 404 page in either SPA
+- THEN the route may render without the shared top bar, sidebar, or shell main-content container
+- AND the standalone error page remains distinct from feature-level empty or request-error states rendered inside normal product pages
+
+### Requirement: User-Web Top-Bar Timer Center Region
+
+The authenticated user-web shell MUST reserve the top-bar center region for the compact timer surface while preserving the shared shell pattern and keeping admin-web unaffected.
+
+#### Scenario: User-web top bar shows compact timer center content
+
+- GIVEN the authenticated user-web shell is rendered
+- WHEN the top bar is shown
+- THEN the left side displays the product identity and workspace name
+- AND the center region displays the compact top-bar timer surface
+- AND the right side displays counterpart workspace and user identity controls
+
+#### Scenario: Admin-web top bar has no timer center content
+
+- GIVEN the authenticated admin-web shell is rendered
+- WHEN the top bar is shown
+- THEN the shell does not render a compact timer surface
+- AND the existing admin-web top-bar identity and counterpart workspace controls remain available
+
+#### Scenario: Compact timer fits top-bar height
+
+- GIVEN the user-web top bar uses the documented `h-16` shell height
+- WHEN the compact timer renders in running, idle, loading, error, or disabled state
+- THEN the timer surface remains compact enough to fit the top bar
+- AND smaller widths truncate task context text before removing the elapsed time value or timer action
+
 ### Requirement: Responsive Navigation Adjustment
 
 The frontend MUST adapt shell navigation for mobile and tablet breakpoints.

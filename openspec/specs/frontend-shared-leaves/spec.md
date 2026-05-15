@@ -104,6 +104,27 @@ The frontend codebase SHALL review repeated user/admin presentational micro-bloc
 - **THEN** that scaffold should be considered for extraction into a shared prop-driven Vue component
 - **AND** app-specific route ownership and copy remain in the consuming app
 
+### Requirement: Shared Stat Card Surface Is Extractable
+
+The frontend codebase SHALL place the documented stat-card surface in `@gitiempo/web-shared` once a second admin or user page renders it through the same prop-driven contract.
+
+#### Scenario: Stat card is shared across management pages
+
+- **WHEN** more than one route renders the same compact label-plus-value stat card surface
+- **THEN** the stat card is implemented as a shared prop-driven Vue component in `@gitiempo/web-shared`
+- **AND** consumers do not maintain parallel app-local stat cards with the same markup
+
+### Requirement: Shared Management Table Chrome Is Extractable
+
+The frontend codebase SHALL place repeated boxed management-table chrome in `@gitiempo/web-shared` once a second admin page renders the same chrome around its table.
+
+#### Scenario: Management table chrome is shared across admin pages
+
+- **WHEN** `admin-web` renders more than one page with the same boxed management table chrome
+- **THEN** the chrome is implemented as a shared prop-driven Vue component in `@gitiempo/web-shared`
+- **AND** product-specific columns, filters, and per-row content stay in the consuming page
+- **AND** consumers do not maintain a parallel app-local copy of the chrome
+
 ### Requirement: Shared Authenticated Header Chrome Is Extractable
 
 The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/web-shared` when the user/admin header structure is identical and all app-specific orchestration can remain local.
@@ -120,7 +141,14 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 - **THEN** the shared header renders the counterpart workspace link, display name, and avatar
 - **AND** it does not render a shared settings/profile action
 
-### Requirement: Shared Authenticated Navigation Uses User-Web Text-Only Base
+#### Scenario: User-web owns header center timer content
+
+- **WHEN** `user-web` needs to render the compact top-bar timer in the shared header center region
+- **THEN** the shared header allows app-owned center content without owning timer state, API calls, or task-picker behavior
+- **AND** `admin-web` can keep the same shared header without rendering a top-bar timer
+- **AND** the shared header layout remains stable when the center region is empty
+
+### Requirement: Shared Authenticated Navigation Uses Compact Icon-Only Base
 
 The frontend codebase SHALL extract authenticated shell navigation into `@gitiempo/web-shared` when the user/admin nav structure can be shared without moving route ownership or active-state logic out of the apps.
 
@@ -130,11 +158,24 @@ The frontend codebase SHALL extract authenticated shell navigation into `@gitiem
 - **THEN** each app still defines its own nav item list, route names, optional route targets, and active-state logic
 - **AND** the shared component owns only presentational sidebar/mobile nav rendering
 
-#### Scenario: Shared navigation uses text-only user-web visual language
+#### Scenario: Shared navigation uses icon-only visual language with accessible labels
 
 - **WHEN** the shared authenticated navigation is rendered in either SPA
-- **THEN** it uses the current `user-web` text-only nav styling as the base for both sidebar and mobile navigation
-- **AND** it does not render per-item icons in either app
+- **THEN** it uses compact icon-only navigation items as the shared base for both sidebar and mobile navigation
+- **AND** each nav item exposes a tooltip and accessible label that conveys the destination
+- **AND** it does not require visible per-item text in the shared navigation surface
+
+#### Scenario: Shared navigation uses compact desktop and tablet sidebar width
+
+- **WHEN** the shared authenticated navigation is rendered on desktop or tablet layouts
+- **THEN** the sidebar uses a compact width suitable for icon-only navigation
+- **AND** the compact width remains consistent with the shared icon-only item presentation
+
+#### Scenario: Mobile navigation preserves icon-only accessibility
+
+- **WHEN** the shared authenticated navigation is rendered on mobile layouts
+- **THEN** the mobile navigation still presents icon-only items with accessible labels
+- **AND** the mobile experience preserves clear item identification for assistive technology
 
 ### Requirement: Shared Header Markup Uses Documented Tailwind Utilities
 

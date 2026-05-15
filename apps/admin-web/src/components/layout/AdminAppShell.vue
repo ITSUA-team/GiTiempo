@@ -1,28 +1,47 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, markRaw, watch } from "vue";
+import {
+  ChartBarSquareIcon,
+  Cog6ToothIcon,
+  DocumentTextIcon,
+  FolderIcon,
+  Squares2X2Icon,
+  UsersIcon,
+} from '@heroicons/vue/24/outline';
 import { RouterView, useRoute } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
 
+import { useToasts } from "@/composables/useToasts";
 import { routeNames } from "@/router";
+import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
 const authStore = useAuthStore();
+const { errorToast } = useToasts();
+const dashboardIcon = markRaw(Squares2X2Icon);
+const reportsIcon = markRaw(ChartBarSquareIcon);
+const invoicesIcon = markRaw(DocumentTextIcon);
+const membersIcon = markRaw(UsersIcon);
+const projectsIcon = markRaw(FolderIcon);
+const settingsIcon = markRaw(Cog6ToothIcon);
 const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: import.meta.env.VITE_USER_APP_URL,
   fallbackPath: "/login",
 });
 
+let workspaceNameRequestToken: string | null = null;
+
 const navItems = computed(() => [
-  { label: "Dashboard", name: routeNames.dashboard },
-  { label: "Reports", name: routeNames.reports },
-  { label: "Invoices", name: routeNames.invoices },
-  { label: "Members", name: routeNames.members },
-  { label: "Projects", name: routeNames.projects },
-  { label: "Settings", name: routeNames.settings },
+  { icon: dashboardIcon, label: "Dashboard", name: routeNames.dashboard },
+  { icon: reportsIcon, label: "Reports", name: routeNames.reports },
+  { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
+  { icon: membersIcon, label: "Members", name: routeNames.members },
+  { icon: projectsIcon, label: "Projects", name: routeNames.projects },
+  { icon: settingsIcon, label: "Settings", name: routeNames.settings },
 ]);
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
@@ -35,6 +54,30 @@ const activeName = computed(() => {
 
   return name;
 });
+
+watch(
+  () => authStore.accessToken,
+  async (accessToken) => {
+    if (!accessToken || workspaceNameRequestToken === accessToken) return;
+
+    workspaceNameRequestToken = accessToken;
+
+    try {
+      const workspace = await adminSettingsClient.getWorkspace(accessToken);
+      authStore.setWorkspaceName(workspace.name);
+    } catch (error) {
+      workspaceNameRequestToken = null;
+      const message =
+        error instanceof Error ? error.message : "Could not load workspace name.";
+
+      errorToast(message, {
+        error,
+        logContext: { action: "load-workspace-name", feature: "admin-shell" },
+      });
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

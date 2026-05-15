@@ -76,6 +76,37 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("builds the full list query combinations used by the time entries page", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        items: [],
+        meta: { limit: 20, page: 2, total: 0, totalPages: 0 },
+      }),
+    );
+    const client = createTimeEntriesClient({ fetchFn });
+
+    await client.listOwnEntries("access-token", {
+      dateFrom: "2026-04-01T00:00:00.000Z",
+      dateTo: "2026-04-22T00:00:00.000Z",
+      limit: 20,
+      page: 2,
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      search: "deploy",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/time-entries?page=2&limit=20&dateFrom=2026-04-01T00%3A00%3A00.000Z&dateTo=2026-04-22T00%3A00%3A00.000Z&projectId=018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f&taskId=018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001&search=deploy",
+      {
+        body: undefined,
+        headers: {
+          Authorization: "Bearer access-token",
+        },
+        method: "GET",
+      },
+    );
+  });
+
   it("loads project tasks from the selected project path", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse([
@@ -143,6 +174,85 @@ describe("createTimeEntriesClient", () => {
         method: "POST",
       },
     );
+  });
+
+  it("updates an existing task and parses the response", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        createdAt: "2026-04-20T12:00:00.000Z",
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        isActive: true,
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        status: "closed",
+        title: "Review PM scope rules",
+        updatedAt: "2026-04-21T10:00:00.000Z",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+      }),
+    );
+    const client = createTimeEntriesClient({ fetchFn });
+
+    const task = await client.updateTask(
+      "access-token",
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      {
+        status: "closed",
+        title: "Review PM scope rules",
+      },
+    );
+
+    expect(task.status).toBe("closed");
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      {
+        body: JSON.stringify({
+          title: "Review PM scope rules",
+          status: "closed",
+        }),
+        headers: {
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      },
+    );
+  });
+
+  it("handles task deletion with the no-content contract", async () => {
+    const fetchFn = vi.fn(async () => noContentResponse());
+    const client = createTimeEntriesClient({ fetchFn });
+
+    await expect(
+      client.deleteTask(
+        "access-token",
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      ),
+    ).resolves.toBeUndefined();
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      {
+        headers: {
+          Authorization: "Bearer access-token",
+        },
+        method: "DELETE",
+      },
+    );
+  });
+
+  it("propagates task deletion errors using repository messages", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse(
+        { message: "Task has related time entries" },
+        { status: 409 },
+      ),
+    );
+    const client = createTimeEntriesClient({ fetchFn });
+
+    await expect(
+      client.deleteTask(
+        "access-token",
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      ),
+    ).rejects.toThrow("Task has related time entries");
   });
 
   it("posts timer start requests with the selected task payload", async () => {
@@ -354,6 +464,61 @@ describe("createTimeEntriesClient", () => {
       "/time-entries/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
       {
         body: JSON.stringify({ description: "Updated", isBillable: false }),
+        headers: {
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      },
+    );
+  });
+
+  it("patches completed entries with a selected task id", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        createdAt: "2026-04-21T10:30:00.000Z",
+        description: "Updated",
+        durationSeconds: 5400,
+        endedAt: "2026-04-21T10:30:00.000Z",
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
+        isBillable: false,
+        project: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          name: "Project Orion",
+        },
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        source: "manual",
+        startedAt: "2026-04-21T09:00:00.000Z",
+        task: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9009",
+          title: "Reassigned task",
+        },
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9009",
+        updatedAt: "2026-04-21T10:30:00.000Z",
+        user: {
+          avatarUrl: null,
+          displayName: "Alexey Tsukanov",
+          email: "alexey@example.com",
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        },
+        userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+      }),
+    );
+    const client = createTimeEntriesClient({ fetchFn });
+
+    await client.updateEntry(
+      "access-token",
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
+      {
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9009",
+      },
+    );
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/time-entries/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
+      {
+        body: JSON.stringify({ taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9009" }),
         headers: {
           Authorization: "Bearer access-token",
           "Content-Type": "application/json",

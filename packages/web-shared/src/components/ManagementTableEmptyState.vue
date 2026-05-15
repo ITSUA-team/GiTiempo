@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import EmptyStateBlock from './EmptyStateBlock.vue';
+
 defineProps<{
   description: string;
   title: string;
@@ -6,8 +8,8 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex flex-col items-center gap-2 py-10">
-    <span class="text-text-dark text-[14px] font-semibold">{{ title }}</span>
-    <span class="text-text-muted text-[13px]">{{ description }}</span>
-  </div>
+  <EmptyStateBlock
+    :title="title"
+    :description="description"
+  />
 </template>
