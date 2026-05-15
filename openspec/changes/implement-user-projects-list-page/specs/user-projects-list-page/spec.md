@@ -136,3 +136,12 @@ The Projects list page MUST render loading, empty, and request-error states dist
 - **THEN** the page renders a request-error state
 - **AND** the page does not collapse the failure into empty-data messaging
 - **AND** the page provides retryable feedback for the failed load
+
+### Requirement: User Projects Client Boundary Regression Safety
+Extending the user-web time/task client for Projects page task update and delete operations MUST NOT force unrelated read-only feature modules to depend on the full mutable task-management client surface.
+
+#### Scenario: Dashboard overview keeps a read-only client dependency
+- **GIVEN** the dashboard overview feature only reads own time entries
+- **WHEN** the Projects page adds task update and delete methods to the existing time/task client
+- **THEN** the dashboard overview composable depends on a narrow read-only client boundary for its required entry-list operation
+- **AND** dashboard overview specs do not need to mock unrelated task mutation methods such as `updateTask` or `deleteTask`

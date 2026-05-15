@@ -34,20 +34,38 @@ Each member-facing product page in the user-web app MUST assume an authenticated
 
 ### Requirement: User Dashboard Overview
 
-The user dashboard SHALL expose the active timer state and recent time-entry activity.
+The user dashboard SHALL provide an authenticated overview page focused on weekly insight, recent entries, and optional summary stats, while relying on the global top-bar timer for timer controls.
 
-#### Scenario: Dashboard with running timer
+#### Scenario: Dashboard renders approved overview content
 
-- GIVEN the user has a running timer
 - WHEN the dashboard loads
-- THEN the page shows the active timer widget prominently
-- AND the page includes the stop action for that timer
+- THEN the page shows weekly insight content and recent time-entry activity
+- AND the page may include optional stats cards or panels when data is available
+- AND the page does not render a page-content timer widget or stop control
+
+#### Scenario: Running timer ownership stays in global top bar
+
+- GIVEN the authenticated user has a running timer
+- WHEN the dashboard loads
+- THEN the dashboard does not provide timer stop controls in page content
+- AND the running timer is managed through the global top-bar timer surface
+
+#### Scenario: Dashboard shows initial skeleton loading
+
+- WHEN the dashboard data request is pending
+- THEN the page renders the approved skeleton loading state for the overview surface
 
 #### Scenario: Dashboard with no recent data
 
 - GIVEN the user has no recent time entries or active timer
 - WHEN the dashboard loads
 - THEN the dashboard uses the shared empty-state pattern for the missing sections
+
+#### Scenario: Dashboard request failure stays distinct
+
+- WHEN the dashboard data request fails
+- THEN the page renders the approved request-failure state for the overview surface
+- AND the failure is surfaced without turning the page into a timer-control surface
 
 ### Requirement: Global Top-Bar Timer
 

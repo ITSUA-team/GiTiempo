@@ -56,6 +56,10 @@ Affected instructions:
    - Rationale: The existing `updateTaskSchema` does not support `projectId`, so update mode must not imply task-moving behavior.
    - Alternative considered: add task-moving support to `PATCH /tasks/:id`. Rejected because it expands contract and service scope beyond this change.
 
+8. **Use narrow feature client ports for unrelated read-only modules.**
+   - Rationale: Extending `time-entries-client.ts` with task update/delete is the right transport change for the Projects page, but unrelated features such as dashboard overview should not accept the full mutable `TimeEntriesClient` when they only need `listOwnEntries`. A feature-local read port, or an equivalent narrow `Pick`, keeps mocks and tests aligned with the real dependency surface.
+   - Alternative considered: add no-op `updateTask`/`deleteTask` mocks to dashboard overview specs. Rejected as the primary architecture because it couples read-only dashboard behavior to unrelated Projects page task mutations.
+
 ## Risks / Trade-offs
 
 - [Risk] Loading tasks per project can produce multiple requests on workspaces with many visible projects. → Mitigation: load active visible projects only, keep request state explicit, and consider future batching only if performance data shows a need.
@@ -63,14 +67,16 @@ Affected instructions:
 - [Risk] The existing `time-entries-client` name may become broader than time entries after task update/delete additions. → Mitigation: keep changes minimal for this feature; if naming becomes confusing, perform a focused client rename/extraction within the same bounded task rather than adding a duplicate client.
 - [Risk] PrimeVue `DataTable`/`Dialog` structure may differ slightly from static Pencil frames. → Mitigation: use PrimeVue for standard controls and document any PrimeVue-only parity compromise during final review.
 - [Risk] The existing task-list endpoint returns more data than the Projects page should show. → Mitigation: keep frontend filtering explicit in one page-state module and cover it with focused tests.
+- [Risk] Extending the broad time/task client can break unrelated feature specs that typed mocks as the full client. → Mitigation: narrow unrelated composable dependency ports to the methods they actually use, starting with dashboard overview's read-only entry-list dependency.
 
 ## Migration Plan
 
 1. Update user-web routing/navigation to use `/projects` for the Projects list and remove the placeholder `projects/:projectId` route.
 2. Extend the existing client methods and page state, then render the approved UI and dialogs.
 3. Keep inactive project/task filtering local to the Projects page state module.
-4. Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck && pnpm --filter user-web test`.
-5. Rollback strategy: revert the route/navigation/page/client changes as one feature change if needed.
+4. Narrow unrelated read-only composable client dependencies that were accidentally coupled to the expanded time/task client surface.
+5. Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck && pnpm --filter user-web test`.
+6. Rollback strategy: revert the route/navigation/page/client changes as one feature change if needed.
 
 ## Resolved Decisions
 
