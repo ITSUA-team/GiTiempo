@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import DataTable from 'primevue/datatable';
 
-export interface ManagementTableColumn {
-  key: string;
-  label: string;
-  width?: number | 'fill';
-  align?: 'start' | 'end';
-}
+import type { ManagementTableColumn } from './management-table';
 
 defineProps<{
   columns: ManagementTableColumn[];
@@ -33,6 +28,16 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       >
         {{ col.label }}
       </div>
+    </div>
+
+    <div
+      v-if="$slots.filters"
+      class="border-divider bg-surface text-text-muted flex h-[44px] items-center font-sans text-[12px] font-normal"
+    >
+      <slot
+        name="filters"
+        :columns="columns"
+      />
     </div>
 
     <DataTable

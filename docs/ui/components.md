@@ -133,7 +133,7 @@ Use `<DataTable>` and `<Column>`.
 - Right align numeric columns.
 - Table row actions are icon-only in both SPAs. Do not render visible action text such as `Edit`, `Delete`, or `View` inside action cells.
 - Use the former action text as both the PrimeVue tooltip copy and the accessible label, e.g. an edit icon button with tooltip `Edit`.
-- Use Brand Purple for non-destructive action icons and Destructive red for delete/remove icons.
+- Use Brand Purple for primary non-destructive action icons, Text Muted for secondary non-destructive actions such as `Unarchive`, and Destructive red for delete/remove/archive icons.
 - Keep row action columns compact, right-aligned, and visually secondary to the row content.
 
 ```vue
@@ -194,15 +194,19 @@ Use `<Avatar>`.
 
 ### Loading States
 
-Use `<Skeleton>` for inline placeholders and `<ProgressSpinner>` for full-page loads.
+Use `<Skeleton>` for inline placeholders and page-level first-load placeholders. Reserve `<ProgressSpinner>` for small indeterminate regions where a skeleton cannot match the final structure.
 
 - Table/list loading: render skeleton rows sized like final content.
-- Full page loading: centered spinner.
+- Page loading: render a skeleton that approximates the final header, controls, cards, and primary content regions.
+- Do not render empty states until the first required request has completed successfully.
+- Keep request-error states distinct from empty states and include a retry affordance where retry is available.
 - Button loading: `<Button loading>`.
 
 ```vue
-<div v-if="loading" class="flex h-full items-center justify-center">
-  <ProgressSpinner strokeWidth="3" style="width:40px;height:40px" />
+<div v-if="loading" class="flex flex-col gap-4">
+  <Skeleton width="14rem" height="2rem" />
+  <Skeleton height="8rem" />
+  <Skeleton height="16rem" />
 </div>
 ```
 

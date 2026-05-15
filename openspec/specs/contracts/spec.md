@@ -94,6 +94,20 @@ The shared contracts SHALL define stable workspace and workspace-settings shapes
 - **WHEN** frontend or backend code consumes the response
 - **THEN** the payload matches the shared workspace contract for that endpoint
 
+#### Scenario: Workspace settings response includes time zone
+
+- **GIVEN** the backend returns workspace settings data
+- **WHEN** frontend or backend code consumes the response
+- **THEN** the payload includes `timeZone` as a valid IANA time-zone identifier
+- **AND** the payload includes the existing `currency` and `defaultHourlyRate` fields
+
+#### Scenario: Workspace settings update validates time zone
+
+- **GIVEN** a client constructs a workspace settings update payload
+- **WHEN** the payload includes `timeZone`
+- **THEN** the shared schema accepts valid IANA time-zone identifiers
+- **AND** the shared schema rejects invalid time-zone identifiers
+
 ### Requirement: Shared Workspace Member Contract
 
 The shared contracts SHALL define stable shapes for listing workspace members and changing member roles.
@@ -261,7 +275,7 @@ The shared contracts SHALL define stable time-entry response shapes for backend 
 - **AND** includes pagination metadata
 
 ### Requirement: Shared Time Entry Request Validation
-The shared contracts SHALL define validation rules for manual entry creation, entry updates, timer actions, Chrome Extension timer starts, and list filters including task-title search.
+The shared contracts SHALL define validation rules for manual entry creation, entry updates including optional task reassignment, timer actions, Chrome Extension timer starts, and list filters including task-title search.
 
 #### Scenario: Manual create request uses shared schema
 - **GIVEN** a client constructs a manual time-entry create request
@@ -272,8 +286,15 @@ The shared contracts SHALL define validation rules for manual entry creation, en
 #### Scenario: Time entry update request uses shared schema
 - **GIVEN** a client constructs a time-entry update request
 - **WHEN** the request payload is validated
-- **THEN** the payload requires at least one mutable time-entry field
+- **THEN** the payload accepts optional task identifier, start time, end time, description, and billable fields
+- **AND** requires at least one mutable time-entry field
 - **AND** rejects unknown additional fields
+
+#### Scenario: Time entry update can change task only by identifier
+- **GIVEN** a client constructs a time-entry update request that moves an entry to another task
+- **WHEN** the request payload is validated
+- **THEN** the payload accepts a valid `taskId`
+- **AND** does not accept embedded task or project objects
 
 #### Scenario: Timer start request uses shared schema
 - **GIVEN** a client constructs a timer start request
@@ -301,6 +322,60 @@ The shared contracts SHALL define the supported time-entry source values.
 - **GIVEN** code validates a time-entry source
 - **WHEN** the value is checked against the shared source contract
 - **THEN** only `web`, `extension`, and `manual` are valid
+
+### Requirement: Shared Time Report Request Contract
+
+The shared contracts SHALL define validation rules for time-report query parameters used by backend DTOs and frontend clients.
+
+#### Scenario: Time report query accepts shared filters
+- **GIVEN** a client constructs a time-report query
+- **WHEN** the query is validated
+- **THEN** the query accepts shared pagination fields, `dateFrom`, `dateTo`, `projectId`, `userId`, `groupBy`, `search`, `sortBy`, and `sortOrder`
+- **AND** rejects invalid filter values
+
+#### Scenario: Time report query supports report group values
+- **GIVEN** a client constructs a time-report query with `groupBy`
+- **WHEN** the query is validated
+- **THEN** only `project`, `task`, and `user` are valid report group values
+
+#### Scenario: Time report query supports export reuse
+- **GIVEN** a client constructs a time-report export query
+- **WHEN** the query is validated
+- **THEN** the export query uses the same filter, grouping, search, and sorting contract as the JSON report query
+
+### Requirement: Shared Time Report Response Contract
+
+The shared contracts SHALL define stable response shapes for JSON time reports so backend responses and frontend consumers agree on summary, row, and pagination fields.
+
+#### Scenario: Time report response uses shared schema
+- **GIVEN** the backend returns a JSON time report
+- **WHEN** frontend or backend code consumes the response
+- **THEN** the payload matches the shared time-report response contract
+- **AND** includes the effective date window, group mode, summary totals, aggregate rows, and pagination metadata
+
+#### Scenario: Time report summary uses shared schema
+- **GIVEN** the backend returns a JSON time report
+- **WHEN** the report contains matching completed entries
+- **THEN** the summary includes `totalSeconds`, `billableSeconds`, `nonBillableSeconds`, `entryCount`, and `billableShare`
+- **AND** `billableShare` is either `null` or a number from 0 through 1
+
+#### Scenario: Project report row uses shared schema
+- **GIVEN** the backend returns a project-grouped time report
+- **WHEN** frontend or backend code consumes a row
+- **THEN** the row identifies its group as `project`
+- **AND** includes project context and aggregate timing fields
+
+#### Scenario: Task report row uses shared schema
+- **GIVEN** the backend returns a task-grouped time report
+- **WHEN** frontend or backend code consumes a row
+- **THEN** the row identifies its group as `task`
+- **AND** includes task context, parent project context, and aggregate timing fields
+
+#### Scenario: User report row uses shared schema
+- **GIVEN** the backend returns a user-grouped time report
+- **WHEN** frontend or backend code consumes a row
+- **THEN** the row identifies its group as `user`
+- **AND** includes user context and aggregate timing fields
 
 ### Requirement: Shared GitHub Connection Status Contract
 
