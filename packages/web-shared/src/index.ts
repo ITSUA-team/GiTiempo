@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./browser-history";
 export * from "./feedback";
 export * from "./components";
 export * from "./session-storage";

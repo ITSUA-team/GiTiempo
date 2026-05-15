@@ -14,6 +14,8 @@ import {
   type AuthRuntime,
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
+import ForbiddenView from "@/views/ForbiddenView.vue";
+import NotFoundView from "@/views/NotFoundView.vue";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
@@ -71,7 +73,7 @@ describe("app router auth guards", () => {
     expect(router.currentRoute.value.query.redirect).toBe("/time-entries");
   });
 
-  it("defines 403 and authenticated 404 routes inside the app shell", () => {
+  it("defines standalone authenticated 403 and 404 routes outside the app shell", () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -82,10 +84,12 @@ describe("app router auth guards", () => {
 
     expect(forbiddenRoute.name).toBe(routeNames.forbidden);
     expect(forbiddenRoute.meta.requiresAuth).toBe(true);
-    expect(forbiddenRoute.matched).toHaveLength(2);
+    expect(forbiddenRoute.matched).toHaveLength(1);
+    expect(forbiddenRoute.matched[0]?.components?.default).toBe(ForbiddenView);
     expect(notFoundRoute.name).toBe(routeNames.notFound);
     expect(notFoundRoute.meta.requiresAuth).toBe(true);
-    expect(notFoundRoute.matched).toHaveLength(2);
+    expect(notFoundRoute.matched).toHaveLength(1);
+    expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
   });
 
   it("redirects anonymous users from unknown routes to login", async () => {

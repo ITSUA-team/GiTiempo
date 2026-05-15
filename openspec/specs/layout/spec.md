@@ -23,6 +23,16 @@ The user and admin SPAs SHALL use the same top-level shell pattern with top bar,
 - THEN the left side displays the product identity and workspace name
 - AND the right side displays user identity actions
 
+### Requirement: Standalone Authenticated Error Routes
+
+The shared application shell MUST allow route-level 403 and 404 pages in `user-web` and `admin-web` to render as standalone authenticated error surfaces outside the shell chrome.
+
+#### Scenario: Authenticated error route bypasses shell chrome
+
+- WHEN an authenticated user reaches a route-level 403 or 404 page in either SPA
+- THEN the route may render without the shared top bar, sidebar, or shell main-content container
+- AND the standalone error page remains distinct from feature-level empty or request-error states rendered inside normal product pages
+
 ### Requirement: User-Web Top-Bar Timer Center Region
 
 The authenticated user-web shell MUST reserve the top-bar center region for the compact timer surface while preserving the shared shell pattern and keeping admin-web unaffected.

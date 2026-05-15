@@ -14,6 +14,8 @@ import {
   type AuthRuntime,
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
+import ForbiddenView from "@/views/ForbiddenView.vue";
+import NotFoundView from "@/views/NotFoundView.vue";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
@@ -72,7 +74,7 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.settings)).toBe(true);
   });
 
-  it("mounts documented admin pages inside the authenticated shell while keeping login guest-only", () => {
+  it("mounts documented admin product pages inside the shell while keeping standalone error routes outside it", () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -85,8 +87,6 @@ describe("admin router", () => {
       { path: "/members", name: routeNames.members },
       { path: "/projects", name: routeNames.projects },
       { path: "/settings", name: routeNames.settings },
-      { path: "/403", name: routeNames.forbidden },
-      { path: "/missing-page", name: routeNames.notFound },
     ] as const;
 
     for (const route of protectedRoutes) {
@@ -100,6 +100,22 @@ describe("admin router", () => {
       expect(resolved.matched[0]?.meta.requiresAuth).toBe(true);
       expect(resolved.matched[1]?.name).toBe(route.name);
     }
+
+    const forbiddenRoute = router.resolve("/403");
+
+    expect(forbiddenRoute.name).toBe(routeNames.forbidden);
+    expect(forbiddenRoute.meta.requiresAuth).toBe(true);
+    expect(forbiddenRoute.meta.guestOnly).toBeUndefined();
+    expect(forbiddenRoute.matched).toHaveLength(1);
+    expect(forbiddenRoute.matched[0]?.components?.default).toBe(ForbiddenView);
+
+    const notFoundRoute = router.resolve("/missing-page");
+
+    expect(notFoundRoute.name).toBe(routeNames.notFound);
+    expect(notFoundRoute.meta.requiresAuth).toBe(true);
+    expect(notFoundRoute.meta.guestOnly).toBeUndefined();
+    expect(notFoundRoute.matched).toHaveLength(1);
+    expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
 
     const loginRoute = router.resolve("/login");
 

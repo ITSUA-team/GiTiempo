@@ -81,17 +81,23 @@ const routes: RouteRecordRaw[] = [
         name: routeNames.profile,
         component: ProfileView,
       },
-      {
-        path: "403",
-        name: routeNames.forbidden,
-        component: ForbiddenView,
-      },
-      {
-        path: ":pathMatch(.*)*",
-        name: routeNames.notFound,
-        component: NotFoundView,
-      },
     ],
+  },
+  {
+    path: "/403",
+    name: routeNames.forbidden,
+    component: ForbiddenView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/:pathMatch(.*)*",
+    name: routeNames.notFound,
+    component: NotFoundView,
+    meta: {
+      requiresAuth: true,
+    },
   },
 ];
 
