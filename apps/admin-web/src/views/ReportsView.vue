@@ -121,7 +121,7 @@ async function handleExport(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 p-6">
+  <div class="flex flex-col gap-6">
     <template v-if="isInitialLoading">
       <ManagementPageSkeleton variant="reports" />
     </template>
