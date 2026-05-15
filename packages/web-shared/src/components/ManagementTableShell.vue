@@ -10,7 +10,9 @@ withDefaults(
     dataKey: string;
     headerClass?: string;
     loading: boolean;
+    rowClass?: ((data: unknown) => string | string[] | Record<string, boolean>) | undefined;
     shellClass?: string;
+    showHeader?: boolean;
     tableClass?: string;
     tableContainerClass?: string;
     value: unknown[];
@@ -19,7 +21,9 @@ withDefaults(
     bodyRowClass: 'h-[56px] bg-transparent hover:bg-transparent',
     headerClass:
       'border-divider bg-app-bg text-text-dark flex h-[44px] items-center border-b font-sans text-[13px] font-semibold',
+    rowClass: undefined,
     shellClass: 'border-divider overflow-hidden rounded-[6px] border',
+    showHeader: true,
     tableClass: 'w-full table-fixed border-collapse',
     tableContainerClass: 'overflow-visible rounded-none border-none',
   },
@@ -30,7 +34,10 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
 
 <template>
   <div :class="shellClass">
-    <div :class="headerClass">
+    <div
+      v-if="showHeader"
+      :class="headerClass"
+    >
       <div
         v-for="col in columns"
         :key="col.key"
@@ -61,6 +68,7 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       :loading="loading"
       :show-headers="false"
       :data-key="dataKey"
+      :row-class="rowClass"
       :pt="{
         root: { class: 'border-none bg-transparent' },
         tableContainer: { class: tableContainerClass },
