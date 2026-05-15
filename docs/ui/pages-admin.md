@@ -5,12 +5,14 @@
 
 ## Dashboard
 
-- Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity table.
+- Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity feed.
 - Four summary stat cards use existing API-backed workspace metrics only: Active Members, Hours This Week, Pending Invites, and Active Projects.
 - Hours This Week is derived from the reports/time endpoint for the current week; member, invite, and project metrics are derived from existing members, invites, projects, and project management-summary endpoints.
 - The approved design's Open Invoices metric is deferred until an invoice API/contract exists; do not display fabricated invoice totals or invoice activity.
-- Recent Activity uses PrimeVue `DataTable` and `Column` with compact row templates, newest-first ordering, PrimeVue `Tag` type labels, and token-backed activity indicators.
+- Recent Activity uses the approved feed layout with compact rows, newest-first ordering, token-backed circular activity indicators, activity copy, and relative time.
 - Recent Activity rows are derived from current timestamps such as member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and report row timing fields; successful loads with no derived rows render an empty state instead of default activity.
+- Recent Activity previews the first five rows; when more than five rows are available, render a PrimeVue `Button` labeled `View all activity` that expands the feed locally and can collapse back to the five-row preview.
+- Activity type labels are not rendered as visible tags; expose the type on the circular indicator with the same PrimeVue `v-tooltip` treatment used by navigation and with `aria-label`.
 - Request failures render the standard retryable request-error surface and toast feedback; do not collapse failed required requests into empty/default dashboard content.
 - Dashboard implementation is admin-web only and must not require new dashboard, invoice, activity, aggregate, backend, shared contract, database, seed, migration, or OpenAPI changes.
 

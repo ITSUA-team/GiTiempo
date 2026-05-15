@@ -248,6 +248,37 @@ describe('useAdminDashboardPage', () => {
     expect(dashboard.loadError.value).toBe('Sign in to view the dashboard.');
   });
 
+  it('previews five activity rows and expands when more rows are available', async () => {
+    const clients = createDashboardClients({
+      invites: Array.from({ length: 6 }, (_, index) =>
+        createInvite(
+          `invite-${index + 1}`,
+          `2026-05-13T10:0${index}:00.000Z`,
+        ),
+      ),
+      members: [],
+      projects: [],
+      report: createReport([]),
+    });
+    const dashboard = mountDashboard(clients);
+
+    await flushPromises();
+
+    expect(dashboard.hasMoreActivity.value).toBe(true);
+    expect(dashboard.showAllActivity.value).toBe(false);
+    expect(dashboard.activityRows.value).toHaveLength(5);
+
+    dashboard.toggleActivityRows();
+
+    expect(dashboard.showAllActivity.value).toBe(true);
+    expect(dashboard.activityRows.value).toHaveLength(6);
+
+    dashboard.toggleActivityRows();
+
+    expect(dashboard.showAllActivity.value).toBe(false);
+    expect(dashboard.activityRows.value).toHaveLength(5);
+  });
+
   it('exposes a successful empty activity state distinctly', async () => {
     const clients = createDashboardClients({
       invites: [],

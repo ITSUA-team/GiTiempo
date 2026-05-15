@@ -23,12 +23,12 @@ import Skeleton from 'primevue/skeleton';
         />
       </div>
 
-      <div class="grid auto-rows-[108px] gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Skeleton
           v-for="index in 4"
           :key="index"
-          height="100%"
-          border-radius="10px"
+          height="6rem"
+          border-radius="8px"
         />
       </div>
     </div>

@@ -37,22 +37,23 @@ The admin Dashboard summary cards MUST be derived from currently available works
 - **THEN** the Dashboard does not display fabricated open invoice totals or invoice activity as real data
 - **AND** any invoice-related card or activity remains inactive/future-labeled until a separate API change provides data
 
-### Requirement: Admin Dashboard Recent Activity Uses PrimeVue DataTable
+### Requirement: Admin Dashboard Recent Activity Uses Design Feed
 
-The admin Dashboard recent activity surface MUST render as a PrimeVue table while preserving the approved design's compact activity hierarchy.
+The admin Dashboard recent activity surface MUST render as a compact feed matching the approved design.
 
-#### Scenario: Recent activity table renders derived rows
+#### Scenario: Recent activity feed renders derived rows
 
 - **WHEN** dashboard data loads successfully and activity-like data is available
-- **THEN** Recent Activity renders with PrimeVue `DataTable` and `Column`
+- **THEN** Recent Activity renders feed rows with circular type indicators, activity text, and relative or formatted time information
 - **AND** rows are derived from current endpoint data such as member activity, invite creation, project updates, and report/time timestamps
 - **AND** rows are sorted newest first and limited to the dashboard's compact recent activity surface
-- **AND** rows include activity text and relative or formatted time information
+- **AND** visible type/status labels are not rendered as tags or table columns
+- **AND** circular indicators expose their activity type with the same PrimeVue tooltip treatment used by navigation and accessible label text
 
 #### Scenario: Recent activity empty state is distinct
 
 - **WHEN** dashboard data loads successfully but no activity rows can be derived
-- **THEN** the Recent Activity table area renders the shared empty-state treatment
+- **THEN** the Recent Activity feed area renders the shared empty-state treatment
 - **AND** it does not render a request-error message or fabricated activity rows
 
 ### Requirement: Admin Dashboard Handles Async States
@@ -62,7 +63,7 @@ The admin Dashboard page MUST keep loading, request-error, and empty states visu
 #### Scenario: Initial loading renders dashboard skeleton
 
 - **WHEN** required dashboard data is still loading for the first time
-- **THEN** the page renders PrimeVue Skeleton placeholders matching the dashboard header, four stat cards, and recent activity table
+- **THEN** the page renders PrimeVue Skeleton placeholders matching the dashboard header, four stat cards, and recent activity feed
 - **AND** it does not render empty dashboard copy before the first required requests complete
 
 #### Scenario: Request failure remains retryable
@@ -80,5 +81,5 @@ The admin Dashboard implementation MUST use project-standard PrimeVue and shared
 
 - **WHEN** the Dashboard is implemented
 - **THEN** it reuses existing shared stat/header leaves such as `StatsHeader` and `StatCard` when their structure fits the approved design
-- **AND** it uses PrimeVue components for tables, tags, buttons, and skeletons
+- **AND** it uses PrimeVue components where appropriate for buttons and skeletons
 - **AND** it uses token-backed Tailwind utilities and PrimeVue `pt` overrides instead of raw hex classes, deep selectors, or raw standard app controls

@@ -5,9 +5,9 @@ The admin Dashboard route still renders a placeholder even though the approved `
 ## What Changes
 
 - Replace `apps/admin-web/src/views/DashboardView.vue` with a functional dashboard inside the authenticated admin shell.
-- Analyze `GITiempo.pen` frame `bCRah` and use it as the parity reference for header copy, four stat cards, recent activity card, table/list density, spacing, radii, typography, and responsive behavior.
+- Analyze `GITiempo.pen` frame `bCRah` and use it as the parity reference for header copy, four stat cards, recent activity card, feed density, spacing, radii, typography, and responsive behavior.
 - Reuse existing shared UI leaves where they fit, especially `StatsHeader` and `StatCard` from `@gitiempo/web-shared`.
-- Build the Recent Activity surface with PrimeVue `DataTable`/`Column` patterns and token-backed Tailwind styling rather than custom table markup.
+- Build the Recent Activity surface as the approved compact feed with token-backed circular indicators and PrimeVue buttons for available actions.
 - Use only existing endpoints and frontend clients for dashboard data; do not modify `apps/api`, shared contracts, database schema, migrations, seeds, or OpenAPI artifacts.
 - Add admin-web-local state mapping, request-error, empty, and skeleton states for the dashboard page.
 
@@ -15,7 +15,7 @@ The admin Dashboard route still renders a placeholder even though the approved `
 
 ### New Capabilities
 
-- `admin-dashboard-page`: Defines the admin-web Dashboard page behavior, design-parity requirements, current-API data mapping, loading/error states, and recent activity table behavior.
+- `admin-dashboard-page`: Defines the admin-web Dashboard page behavior, design-parity requirements, current-API data mapping, loading/error states, and recent activity feed behavior.
 
 ### Modified Capabilities
 
@@ -23,7 +23,7 @@ The admin Dashboard route still renders a placeholder even though the approved `
 
 ## Impact
 
-- Affected frontend app: `apps/admin-web` dashboard route, dashboard-local composable/client integration, table/loading components, and tests.
+- Affected frontend app: `apps/admin-web` dashboard route, dashboard-local composable/client integration, feed/loading components, and tests.
 - Affected shared frontend usage: reuse existing `@gitiempo/web-shared` stat/header components; no new shared extraction unless an existing stable leaf is clearly reused.
 - Affected docs/specs: `docs/ui/pages-admin.md` and this OpenSpec change.
 - Not affected: `apps/api`, `packages/shared` contracts, database schema/migrations/seeds, generated OpenAPI artifacts, and new backend dashboard endpoints.

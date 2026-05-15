@@ -19,6 +19,7 @@ const dashboardMocks = vi.hoisted(() => ({
   },
   refresh: vi.fn(),
   state: undefined as unknown,
+  toggleActivityRows: vi.fn(),
 }));
 
 vi.mock('@/composables/useAdminDashboardPage', () => ({
@@ -66,11 +67,14 @@ function createDashboardState({
 } = {}) {
   return {
     activityRows: shallowRef(activityRows),
+    hasMoreActivity: shallowRef(false),
     isInitialLoading: shallowRef(isInitialLoading),
     loadError: shallowRef(loadError),
     loading: shallowRef(loading),
     refresh: dashboardMocks.refresh,
+    showAllActivity: shallowRef(false),
     stats: shallowRef(stats),
+    toggleActivityRows: dashboardMocks.toggleActivityRows,
   };
 }
 
@@ -79,10 +83,11 @@ const DashboardPageSkeletonStub = {
   template: '<div data-testid="dashboard-skeleton" />',
 };
 
-const DashboardRecentActivityTableStub = {
-  name: 'DashboardRecentActivityTable',
-  props: ['rows'],
-  template: '<div data-testid="activity-table">{{ rows.length }} rows</div>',
+const DashboardRecentActivityFeedStub = {
+  name: 'DashboardRecentActivityFeed',
+  props: ['canViewAll', 'expanded', 'rows'],
+  emits: ['toggleViewAll'],
+  template: '<div data-testid="activity-table">{{ rows.length }} rows | canViewAll={{ canViewAll }} | expanded={{ expanded }}<button data-testid="toggle-activity" @click="$emit(\'toggleViewAll\')">toggle</button></div>',
 };
 
 function mountDashboardView() {
@@ -97,7 +102,7 @@ function mountDashboardView() {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
         DashboardPageSkeleton: DashboardPageSkeletonStub,
-        DashboardRecentActivityTable: DashboardRecentActivityTableStub,
+        DashboardRecentActivityFeed: DashboardRecentActivityFeedStub,
       },
     },
   });
@@ -107,6 +112,7 @@ describe('DashboardView', () => {
   beforeEach(() => {
     dashboardMocks.errorToast.mockClear();
     dashboardMocks.refresh.mockClear();
+    dashboardMocks.toggleActivityRows.mockClear();
     dashboardMocks.state = createDashboardState();
   });
 
@@ -161,5 +167,26 @@ describe('DashboardView', () => {
       error,
       logContext: { action: 'load-dashboard', feature: 'dashboard' },
     });
+  });
+
+  it('passes the view-all activity state and toggle action to the activity table', async () => {
+    dashboardMocks.state = {
+      ...createDashboardState(),
+      hasMoreActivity: shallowRef(true),
+      showAllActivity: shallowRef(false),
+    };
+
+    const wrapper = mountDashboardView();
+
+    expect(wrapper.get('[data-testid="activity-table"]').text()).toContain(
+      'canViewAll=true',
+    );
+    expect(wrapper.get('[data-testid="activity-table"]').text()).toContain(
+      'expanded=false',
+    );
+
+    await wrapper.get('[data-testid="toggle-activity"]').trigger('click');
+
+    expect(dashboardMocks.toggleActivityRows).toHaveBeenCalledTimes(1);
   });
 });

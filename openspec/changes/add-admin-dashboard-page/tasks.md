@@ -13,9 +13,9 @@
 - Current API metrics: derive Active Members from members, Hours This Week from reports/time, Active Projects from projects summary/list, and choose a fourth current-API metric such as Pending Invites or an explicitly inactive Open Invoices future metric.
 - API-scope compromise: do not invent invoice totals or invoice activity while no invoice endpoint exists.
 - Recent Activity: render a `Recent Activity` card below stats with 20px padding, 16px internal gap, compact rows, newest-first ordering, and activity/time information.
-- Table requirement: implement Recent Activity with PrimeVue `DataTable` and `Column`, preserving the design's compact feed hierarchy through row templates and token styling.
-- Loading: use a structured PrimeVue Skeleton matching the header, four stat cards, and Recent Activity table before rendering empty or default states.
-- Mobile: stack stat cards and make the activity table horizontally safe or responsive while preserving information hierarchy.
+- Feed requirement: implement Recent Activity with compact design feed rows, circular token-backed indicators, activity text, and time copy.
+- Loading: use a structured PrimeVue Skeleton matching the header, four stat cards, and Recent Activity feed before rendering empty or default states.
+- Mobile: stack stat cards and keep the activity feed readable while preserving information hierarchy.
 
 ## 2. Dashboard Data Boundary
 
@@ -29,23 +29,23 @@
 
 - [x] 3.1 Replace `apps/admin-web/src/views/DashboardView.vue` placeholder with a thin composition surface that uses the dashboard state and focused UI leaves.
 - [x] 3.2 Reuse `StatsHeader` and `StatCard` from `@gitiempo/web-shared` where compatible with `bCRah`.
-- [x] 3.3 Add a dashboard skeleton using PrimeVue `<Skeleton>` that approximates the final header, stat card row, recent activity card, and table rows.
+- [x] 3.3 Add a dashboard skeleton using PrimeVue `<Skeleton>` that approximates the final header, stat card row, recent activity card, and feed rows.
 - [x] 3.4 Add a request-error surface with retry affordance and toast feedback; do not render empty/default dashboard content after failed required requests.
-- [x] 3.5 Add a Recent Activity component using PrimeVue `DataTable` and `Column`, not raw table or flex-only feed markup.
-- [x] 3.6 Use PrimeVue `Tag` or token-backed indicators for activity type/status styling and avoid custom raw status pills.
+- [x] 3.5 Add a Recent Activity component using compact design feed rows rather than a table.
+- [x] 3.6 Use token-backed circular indicators for activity type/status styling and avoid visible label tags.
 - [x] 3.7 Add a true empty state for successful loads with no derived activity rows.
 - [x] 3.8 Keep all styling token-based through Tailwind utilities and PrimeVue `pt` overrides; do not use raw hex classes, deep selectors, or raw standard controls.
 - [x] 3.9 Adapt dashboard layout responsively for mobile while preserving the stat hierarchy and recent activity readability.
 
 ## 4. Documentation And Specs
 
-- [x] 4.1 Update `docs/ui/pages-admin.md` Dashboard guidance with implemented current-API metrics, Recent Activity DataTable behavior, no-API-change scope, skeleton first-load treatment, and invoice/API compromise.
+- [x] 4.1 Update `docs/ui/pages-admin.md` Dashboard guidance with implemented current-API metrics, Recent Activity feed behavior, no-API-change scope, skeleton first-load treatment, and invoice/API compromise.
 - [x] 4.2 Ensure OpenSpec deltas remain aligned with the final implementation scope before marking tasks complete.
 - [x] 4.3 Document any PrimeVue-only or API-scope compromises in the final implementation review.
 
 ## 5. Verification
 
-- [x] 5.1 Run focused admin-web tests for dashboard data mapping, composable, and view/table behavior.
+- [x] 5.1 Run focused admin-web tests for dashboard data mapping, composable, and view/feed behavior.
 - [x] 5.2 Run `pnpm --filter admin-web lint` and fix new Vue/Tailwind/order warnings introduced by this change.
 - [x] 5.3 Run `pnpm --filter admin-web typecheck`.
 - [x] 5.4 Perform final design parity review against `GITiempo.pen` frame `bCRah`, explicitly documenting the invoice/API compromise and any PrimeVue-only compromise.

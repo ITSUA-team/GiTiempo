@@ -11,11 +11,11 @@ Required implementation references are `docs/ui/INDEX.md`, `docs/ui/pages-admin.
 **Goals:**
 
 - Replace the admin Dashboard placeholder with a functional dashboard page in the authenticated shell.
-- Match `bCRah` for page header copy, stat-card count and density, card spacing/radii/shadow, Recent Activity section hierarchy, and responsive adaptation.
+- Match `bCRah` for page header copy, stat-card count and density, card spacing/radii/shadow, Recent Activity feed hierarchy, and responsive adaptation.
 - Reuse `StatsHeader` and `StatCard` from `@gitiempo/web-shared` for the page header and stat row when their structure fits the approved design.
-- Render Recent Activity with PrimeVue `DataTable` and `Column` using established table token styling rather than custom table/feed markup.
+- Render Recent Activity as the approved compact feed with token-backed circular indicators, activity copy, and time copy.
 - Load dashboard data from existing endpoints only and keep request-error, empty, and loading states distinct.
-- Use PrimeVue `Skeleton` for an initial page skeleton matching the header, stat cards, and recent activity table.
+- Use PrimeVue `Skeleton` for an initial page skeleton matching the header, stat cards, and recent activity feed.
 
 **Non-Goals:**
 
@@ -39,15 +39,15 @@ Required implementation references are `docs/ui/INDEX.md`, `docs/ui/pages-admin.
 
    Alternative considered: hardcode design invoice values. Rejected because it would misrepresent persisted data.
 
-3. Build Recent Activity as a PrimeVue DataTable from derived current data.
+3. Build Recent Activity as the approved compact feed from derived current data.
 
-   The design shows a feed list with colored markers and relative timestamps. The requested implementation should render the surface as a table using PrimeVue `DataTable`/`Column`, with columns such as Activity and Time, optional Type/status tag, and row templates that preserve the design's marker/status intent through PrimeVue `Tag` or token-styled indicators. Data can be derived from available timestamps: member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and time report row `lastStartedAt`/`firstStartedAt` where present.
+   The design shows a feed list with colored markers and relative timestamps. The implementation renders compact feed rows with a circular activity-type indicator, activity text, and time copy. Visible type labels are intentionally omitted; each circle exposes the type through the same PrimeVue tooltip treatment used by navigation and accessible label text. Data can be derived from available timestamps: member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and time report row `lastStartedAt`/`firstStartedAt` where present.
 
-   Alternative considered: copy the design as raw flex feed rows. Rejected because the user requested a table and project docs require PrimeVue DataTable for app tables.
+   Alternative considered: keep the PrimeVue DataTable compromise. Rejected after user feedback because the approved design is a feed, not a table.
 
 4. Keep route view thin and page-specific state testable.
 
-   `DashboardView.vue` should compose a dashboard composable and focused UI leaves rather than owning all request orchestration and DataTable markup directly. This keeps loading, retry, empty, derivation, and role-scope behavior easy to test.
+   `DashboardView.vue` should compose a dashboard composable and focused UI leaves rather than owning all request orchestration and feed markup directly. This keeps loading, retry, empty, derivation, and role-scope behavior easy to test.
 
    Alternative considered: implement all dashboard behavior in `DashboardView.vue`. Rejected because this route has multiple endpoint lifecycles and derived state.
 
@@ -61,7 +61,7 @@ Required implementation references are `docs/ui/INDEX.md`, `docs/ui/pages-admin.
 - Design includes invoice activity/metric but no invoice API exists -> Do not submit or display invented invoice data; document the API-scope compromise and use only current API-backed data or an inactive future metric.
 - Multiple requests can fail independently -> Treat dashboard initial load as a required data load; show request-error with retry and toast feedback instead of mixing partial default values with loaded data.
 - Derived activity can be sparse -> Show a distinct empty state after successful loads when no current data can produce activity rows.
-- Table layout may differ from the feed mockup -> Preserve the design's visual hierarchy with DataTable row templates, token styling, and compact density while documenting any PrimeVue-only compromise.
+- Feed activity is derived rather than a true audit stream -> Preserve the design's visual hierarchy with compact rows, token styling, and newest-first ordering while documenting the current API scope.
 
 ## Migration Plan
 

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { StatCard, StatsHeader } from '@gitiempo/web-shared';
+import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
 
 import DashboardPageSkeleton from '@/components/dashboard/DashboardPageSkeleton.vue';
-import DashboardRecentActivityTable from '@/components/dashboard/DashboardRecentActivityTable.vue';
+import DashboardRecentActivityFeed from '@/components/dashboard/DashboardRecentActivityFeed.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useAdminDashboardPage } from '@/composables/useAdminDashboardPage';
 import { useToasts } from '@/composables/useToasts';
@@ -14,11 +14,14 @@ const { errorToast } = useToasts();
 
 const {
   activityRows,
+  hasMoreActivity,
   isInitialLoading,
   loadError,
   loading,
   refresh,
+  showAllActivity,
   stats,
+  toggleActivityRows,
 } = useAdminDashboardPage({
   accessToken: computed(() => authStore.accessToken),
   onError(message, error, action) {
@@ -50,7 +53,7 @@ const {
         description="Workspace overview with key metrics and recent activity."
       />
 
-      <div class="grid auto-rows-[108px] gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           v-for="stat in stats"
           :key="stat.label"
@@ -60,7 +63,14 @@ const {
         />
       </div>
 
-      <DashboardRecentActivityTable :rows="activityRows" />
+      <SurfaceCard padding-class="p-5">
+        <DashboardRecentActivityFeed
+          :rows="activityRows"
+          :can-view-all="hasMoreActivity"
+          :expanded="showAllActivity"
+          @toggle-view-all="toggleActivityRows"
+        />
+      </SurfaceCard>
     </template>
   </div>
 </template>

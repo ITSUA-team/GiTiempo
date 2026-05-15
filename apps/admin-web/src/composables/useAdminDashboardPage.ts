@@ -38,6 +38,7 @@ interface UseAdminDashboardPageOptions {
 }
 
 const dashboardPageLimit = 100;
+const activityPreviewLimit = 5;
 const missingTokenMessage = 'Sign in to view the dashboard.';
 
 function getErrorMessage(error: unknown): string {
@@ -53,7 +54,8 @@ export function useAdminDashboardPage({
   reportsClient = adminReportsClient,
 }: UseAdminDashboardPageOptions) {
   const stats = shallowRef<AdminDashboardStatCard[]>([]);
-  const activityRows = shallowRef<AdminDashboardActivityRow[]>([]);
+  const allActivityRows = shallowRef<AdminDashboardActivityRow[]>([]);
+  const showAllActivity = shallowRef(false);
   const loading = shallowRef(true);
   const initialLoaded = shallowRef(false);
   const loadError = shallowRef<string | null>(null);
@@ -66,7 +68,15 @@ export function useAdminDashboardPage({
       initialLoaded.value &&
       !loading.value &&
       loadError.value === null &&
-      activityRows.value.length === 0,
+      allActivityRows.value.length === 0,
+  );
+  const hasMoreActivity = computed(
+    () => allActivityRows.value.length > activityPreviewLimit,
+  );
+  const activityRows = computed(() =>
+    showAllActivity.value
+      ? allActivityRows.value
+      : allActivityRows.value.slice(0, activityPreviewLimit),
   );
 
   async function loadDashboard(action: string): Promise<void> {
@@ -76,7 +86,8 @@ export function useAdminDashboardPage({
 
     if (!token) {
       stats.value = [];
-      activityRows.value = [];
+      allActivityRows.value = [];
+      showAllActivity.value = false;
       loadError.value = missingTokenMessage;
       initialLoaded.value = true;
       loading.value = false;
@@ -118,7 +129,14 @@ export function useAdminDashboardPage({
       };
 
       stats.value = deriveDashboardStats(dashboardData, requestedAt);
-      activityRows.value = deriveDashboardActivityRows(dashboardData, requestedAt);
+      allActivityRows.value = deriveDashboardActivityRows(
+        dashboardData,
+        requestedAt,
+        Number.POSITIVE_INFINITY,
+      );
+      if (!hasMoreActivity.value) {
+        showAllActivity.value = false;
+      }
       initialLoaded.value = true;
     } catch (error) {
       if (currentRequestId !== requestId) {
@@ -139,16 +157,28 @@ export function useAdminDashboardPage({
     await loadDashboard(initialLoaded.value ? 'refresh-dashboard' : 'load-dashboard');
   }
 
+  function toggleActivityRows(): void {
+    if (!hasMoreActivity.value) {
+      showAllActivity.value = false;
+      return;
+    }
+
+    showAllActivity.value = !showAllActivity.value;
+  }
+
   onMounted(refresh);
 
   return {
     activityRows,
+    hasMoreActivity,
     initialLoaded,
     isActivityEmpty,
     isInitialLoading,
     loadError,
     loading,
     refresh,
+    showAllActivity,
     stats,
+    toggleActivityRows,
   };
 }
