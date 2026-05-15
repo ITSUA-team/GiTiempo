@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { SurfaceCard } from '@gitiempo/web-shared';
+import { SectionHeader, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
 import SettingsForm from '@/components/settings/SettingsForm.vue';
@@ -29,19 +29,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-6 p-6">
     <SettingsPageSkeleton v-if="loading && !initialLoaded" />
 
     <template v-else>
-      <header class="flex flex-col gap-1.5">
-        <h1 class="text-text-dark text-[28px] font-semibold">
-          Settings
-        </h1>
-        <p class="text-text-muted text-sm font-normal">
-          Configure workspace defaults, billing preferences, and organization
-          details.
-        </p>
-      </header>
+      <SectionHeader
+        title="Settings"
+        description="Configure workspace defaults, billing preferences, and organization details."
+        variant="stats"
+      />
 
       <SurfaceCard
         v-if="requestError && !loading"

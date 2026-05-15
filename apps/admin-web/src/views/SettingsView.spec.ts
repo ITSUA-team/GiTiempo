@@ -34,17 +34,15 @@ vi.mock('@/composables/useToasts', () => ({
 import SettingsView from './SettingsView.vue';
 
 function createDeferred<T>() {
-  // eslint-disable-next-line no-unused-vars
-  const deferred = {} as {
-    promise: Promise<T>;
-    resolve: (..._args: [T]) => void;
+  let resolveDeferred = (value: T): void => {
+    void value;
   };
 
-  deferred.promise = new Promise<T>((resolve) => {
-    deferred.resolve = resolve;
+  const promise = new Promise<T>((resolve) => {
+    resolveDeferred = resolve;
   });
 
-  return deferred;
+  return { promise, resolve: resolveDeferred };
 }
 
 const workspaceResponse = {
