@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import DataTable from 'primevue/datatable';
 
+import type { DataTableProps } from 'primevue/datatable';
+
 import type { ManagementTableColumn } from './management-table';
 
 withDefaults(
@@ -10,7 +12,7 @@ withDefaults(
     dataKey: string;
     headerClass?: string;
     loading: boolean;
-    rowClass?: ((data: unknown) => string | string[] | Record<string, boolean>) | undefined;
+    rowClass?: DataTableProps['rowClass'];
     shellClass?: string;
     showHeader?: boolean;
     tableClass?: string;
