@@ -13,9 +13,11 @@ import type { Pinia } from 'pinia';
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
 import AddProjectMockView from '@/views/AddProjectView.vue';
 import DashboardView from '@/views/DashboardView.vue';
+import ForbiddenView from '@/views/ForbiddenView.vue';
 import InvoicesView from '@/views/InvoicesView.vue';
 import LoginView from '@/views/LoginView.vue';
 import MembersView from '@/views/MembersView.vue';
+import NotFoundView from '@/views/NotFoundView.vue';
 import ProjectsView from '@/views/ProjectsView.vue';
 import ReportsView from '@/views/ReportsView.vue';
 import SettingsView from '@/views/SettingsView.vue';
@@ -25,9 +27,11 @@ import { useAuthStore } from '@/stores/auth';
 export const routeNames = {
   addProject: 'admin-add-project',
   dashboard: 'admin-dashboard',
+  forbidden: 'admin-forbidden',
   invoices: 'admin-invoices',
   login: 'admin-login',
   members: 'admin-members',
+  notFound: 'admin-not-found',
   projects: 'admin-projects',
   reports: 'admin-reports',
   settings: 'admin-settings',
@@ -95,6 +99,22 @@ const routes: RouteRecordRaw[] = [
         component: SettingsView,
       },
     ],
+  },
+  {
+    path: '/403',
+    name: routeNames.forbidden,
+    component: ForbiddenView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: routeNames.notFound,
+    component: NotFoundView,
+    meta: {
+      requiresAuth: true,
+    },
   },
 ];
 
