@@ -221,7 +221,7 @@ export function useProjectsPage(options: UseProjectsPageOptions = {}) {
   );
   const dialogSubtitle = computed(() => {
     if (dialogMode.value === "edit") {
-      return "Update the selected task using the shared popup layout.";
+      return "Update the selected task details.";
     }
 
     if (dialogProjectId.value) {

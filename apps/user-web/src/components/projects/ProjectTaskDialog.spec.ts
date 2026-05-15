@@ -52,8 +52,9 @@ function mountDialog(
             '<button :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Dialog: {
+          props: ["closable", "dismissableMask"],
           template:
-            '<div><slot name="header" /><slot /><slot name="footer" /></div>',
+            '<div :data-closable="closable" :data-dismissable-mask="dismissableMask"><slot name="header" /><slot /><slot name="footer" /></div>',
         },
         InputText: {
           props: ["modelValue"],
@@ -114,5 +115,14 @@ describe("ProjectTaskDialog", () => {
 
     expect(wrapper.emitted("close")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("save")?.length).toBeGreaterThan(0);
+  });
+
+  it("keeps the dialog shell non-closable while saving", () => {
+    const wrapper = mountDialog({ isSaving: true });
+
+    const dialogShell = wrapper.get("div[data-closable][data-dismissable-mask]");
+
+    expect(dialogShell.attributes("data-closable")).toBe("false");
+    expect(dialogShell.attributes("data-dismissable-mask")).toBe("false");
   });
 });

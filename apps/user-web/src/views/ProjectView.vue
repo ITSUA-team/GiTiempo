@@ -2,7 +2,7 @@
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import ConfirmDialog from "primevue/confirmdialog";
-import ProgressSpinner from "primevue/progressspinner";
+import Skeleton from "primevue/skeleton";
 import { SurfaceCard } from "@gitiempo/web-shared";
 
 import PageHeader from "@/components/layout/PageHeader.vue";
@@ -54,7 +54,7 @@ const {
 
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <PageHeader
-        subtitle="Manage tasks across your visible projects with shared create and update dialogs."
+        subtitle="Create, update, and organize tasks across your visible projects."
         title="Projects"
       />
 
@@ -98,15 +98,75 @@ const {
     <SurfaceCard
       v-if="pageState === 'loading'"
       border
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3"
+      body-class="flex flex-col gap-5"
     >
-      <ProgressSpinner
-        stroke-width="3"
-        style="width:32px;height:32px"
-      />
-      <p class="text-text-muted text-sm">
-        Loading your projects.
-      </p>
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex flex-col gap-2">
+          <Skeleton
+            width="8rem"
+            height="1.5rem"
+          />
+          <Skeleton
+            width="18rem"
+            height="1rem"
+          />
+        </div>
+        <Skeleton
+          width="7.5rem"
+          height="2.5rem"
+        />
+      </div>
+
+      <div class="flex max-w-[360px] flex-col gap-1.5">
+        <Skeleton
+          width="4rem"
+          height="1rem"
+        />
+        <Skeleton
+          width="100%"
+          height="2.75rem"
+        />
+      </div>
+
+      <div class="flex flex-col gap-5">
+        <div
+          v-for="index in 2"
+          :key="index"
+          class="flex flex-col gap-2.5"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex flex-col gap-2">
+              <Skeleton
+                width="10rem"
+                height="1.25rem"
+              />
+              <Skeleton
+                width="6rem"
+                height="0.875rem"
+              />
+            </div>
+            <Skeleton
+              width="6.5rem"
+              height="2rem"
+            />
+          </div>
+
+          <div class="border-divider flex flex-col rounded-lg border">
+            <Skeleton
+              width="100%"
+              height="2.75rem"
+            />
+            <Skeleton
+              width="100%"
+              height="3.25rem"
+            />
+            <Skeleton
+              width="100%"
+              height="3.25rem"
+            />
+          </div>
+        </div>
+      </div>
     </SurfaceCard>
 
     <SurfaceCard

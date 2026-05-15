@@ -121,7 +121,7 @@ describe("ProjectView", () => {
               '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
           },
           ConfirmDialog: { template: "<div />" },
-          ProgressSpinner: { template: "<div />" },
+          Skeleton: { template: '<div data-testid="projects-skeleton" />' },
           ProjectTaskDialog: {
             emits: ["close", "save", "update:projectId", "update:status", "update:title"],
             template: '<div data-testid="project-task-dialog" />',
@@ -168,7 +168,8 @@ describe("ProjectView", () => {
     pageState.value = "loading";
     const loadingWrapper = await mountView();
 
-    expect(loadingWrapper.text()).toContain("Loading your projects.");
+    expect(loadingWrapper.findAll('[data-testid="projects-skeleton"]').length).toBeGreaterThan(0);
+    expect(loadingWrapper.text()).not.toContain("Loading your projects.");
 
     pageState.value = "request-error";
     requestErrorMessage.value = "network down";

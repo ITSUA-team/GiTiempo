@@ -66,6 +66,7 @@ const titleModel = computed({
 
 <template>
   <Dialog
+    :closable="!props.isSaving"
     modal
     :dismissable-mask="!props.isSaving"
     :draggable="false"
@@ -76,7 +77,11 @@ const titleModel = computed({
       footer: 'px-6 pb-6 pt-0',
     }"
     :visible="props.isOpen"
-    @update:visible="emit('close')"
+    @update:visible="(nextVisible) => {
+      if (!nextVisible && !props.isSaving) {
+        emit('close');
+      }
+    }"
   >
     <template #header>
       <div class="flex flex-col gap-1">
