@@ -52,9 +52,17 @@ export function validateAdminSettingsForm(
 	const defaultHourlyRate = form.defaultHourlyRate;
 	const timeZone = form.timeZone.trim();
 
-	const workspaceResult = updateWorkspaceSchema.safeParse({ name: workspaceName });
-	if (!workspaceResult.success) {
-		errors.workspaceName = workspaceResult.error.issues[0]?.message;
+	if (!workspaceName) {
+		errors.workspaceName = 'Workspace name is required.';
+	} else {
+		const workspaceResult = updateWorkspaceSchema.safeParse({ name: workspaceName });
+		if (!workspaceResult.success) {
+			errors.workspaceName = workspaceResult.error.issues[0]?.message;
+		}
+	}
+
+	if (defaultHourlyRate !== null && defaultHourlyRate < 0) {
+		errors.defaultHourlyRate = 'Default hourly rate cannot be negative.';
 	}
 
 	const settingsResult = updateWorkspaceSettingsSchema.safeParse({
