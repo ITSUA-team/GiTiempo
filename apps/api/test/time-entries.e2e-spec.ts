@@ -60,6 +60,7 @@ describe('Time entries (e2e)', () => {
         and(
           eq(tasks.workspaceId, workspaceId),
           eq(tasks.projectId, platformProjectId),
+          eq(tasks.title, 'Set up API project foundation'),
         ),
       )
       .limit(1);

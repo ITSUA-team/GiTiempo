@@ -40,7 +40,7 @@ const navItems = computed(() => [
     icon: projectsIcon,
     label: "Projects",
     name: routeNames.project,
-    to: { name: routeNames.project, params: { projectId: "workspace-alpha" } },
+    to: { name: routeNames.project },
   },
   {
     icon: profileIcon,

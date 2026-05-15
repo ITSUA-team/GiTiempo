@@ -2,10 +2,14 @@
 import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import Button from "primevue/button";
 import Column from "primevue/column";
-import DataTable from "primevue/datatable";
 
 import type { TimeEntryResponse } from "@gitiempo/shared";
-import { ManagementTableRowAction, SurfaceCard } from "@gitiempo/web-shared";
+import {
+  ManagementTableRowAction,
+  ManagementTableShell,
+  managementTableColumnPt,
+  type ManagementTableColumn,
+} from "@gitiempo/web-shared";
 
 import type { TimeEntriesDayGroup } from "@/composables/useTimeEntriesPage";
 
@@ -30,8 +34,16 @@ const timeColumnWidth = '10rem';
 const durationColumnWidth = '7rem';
 const actionsColumnWidth = '7rem';
 
+const columns = [
+  { key: 'task', label: 'Task', width: 'fill' },
+  { key: 'project', label: 'Project', width: 192 },
+  { key: 'time', label: 'Time', width: 160 },
+  { key: 'duration', label: 'Duration', width: 112 },
+  { key: 'actions', label: 'Actions', width: 112, align: 'end' },
+] satisfies ManagementTableColumn[];
+
 function getEntryRowClass(entry: TimeEntryResponse): string {
-  return entry.endedAt === null ? "bg-accent-tint" : "bg-surface";
+  return entry.endedAt === null ? "bg-accent-tint" : "bg-surface hover:bg-app-bg";
 }
 </script>
 
@@ -50,105 +62,99 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
       />
     </div>
 
-    <SurfaceCard
-      body-class="overflow-x-auto"
-      border
-      padding-class="p-0"
+    <ManagementTableShell
+      body-row-class="h-[52px]"
+      :columns="columns"
+      data-key="id"
+      header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
+      :loading="false"
+      :row-class="(entry) => getEntryRowClass(entry as TimeEntryResponse)"
+      shell-class="border-divider overflow-hidden rounded-lg border bg-surface"
+      :show-header="props.showHeader"
+      table-class="min-w-[740px] w-full table-fixed border-collapse"
+      table-container-class="overflow-auto rounded-none border-none"
+      :value="props.group.items"
     >
-      <DataTable
-        :pt="{
-          bodyCell: 'px-3 py-0',
-          bodyRow: 'h-[52px]',
-          columnHeaderContent: 'justify-start',
-          headerCell: 'bg-app-bg border-b border-divider px-3 py-3 text-[13px] font-medium text-text-muted',
-          table: 'w-full',
-        }"
-        :row-class="getEntryRowClass"
-        :show-headers="props.showHeader"
-        :value="props.group.items"
-        class="w-full"
-        data-key="id"
-        row-hover
-        table-style="min-width: 740px; table-layout: fixed"
-      >
-        <Column header="Task">
-          <template #body="{ data: entry }">
-            <div class="flex min-w-0 flex-col">
-              <p class="text-text-dark truncate text-sm font-medium">
-                {{ entry.task.title }}
-              </p>
-              <p
-                v-if="entry.description"
-                class="text-text-muted truncate text-xs"
-              >
-                {{ entry.description }}
-              </p>
-            </div>
-          </template>
-        </Column>
-
-        <Column
-          header="Project"
-          :style="{ width: projectColumnWidth }"
-        >
-          <template #body="{ data: entry }">
+      <Column :pt="managementTableColumnPt">
+        <template #body="{ data: entry }">
+          <div class="flex min-w-0 flex-col">
             <p class="text-text-dark truncate text-sm font-medium">
-              {{ entry.project.name }}
+              {{ entry.task.title }}
             </p>
-          </template>
-        </Column>
-
-        <Column
-          header="Time"
-          :style="{ width: timeColumnWidth }"
-        >
-          <template #body="{ data: entry }">
-            <p class="text-text-dark text-sm font-medium">
-              {{ props.formatTimeRange(entry) }}
+            <p
+              v-if="entry.description"
+              class="text-text-muted truncate text-xs"
+            >
+              {{ entry.description }}
             </p>
-          </template>
-        </Column>
+          </div>
+        </template>
+      </Column>
 
-        <Column
-          header="Duration"
-          :style="{ width: durationColumnWidth }"
-        >
-          <template #body="{ data: entry }">
-            <p class="text-text-dark text-sm font-medium tabular-nums">
-              {{ props.formatDuration(entry) }}
+      <Column
+        :pt="managementTableColumnPt"
+        :style="{ width: projectColumnWidth }"
+      >
+        <template #body="{ data: entry }">
+          <p class="text-text-dark truncate text-sm font-medium">
+            {{ entry.project.name }}
+          </p>
+        </template>
+      </Column>
+
+      <Column
+        :pt="managementTableColumnPt"
+        :style="{ width: timeColumnWidth }"
+      >
+        <template #body="{ data: entry }">
+          <p class="text-text-dark text-sm font-medium">
+            {{ props.formatTimeRange(entry) }}
+          </p>
+        </template>
+      </Column>
+
+      <Column
+        :pt="managementTableColumnPt"
+        :style="{ width: durationColumnWidth }"
+      >
+        <template #body="{ data: entry }">
+          <p class="text-text-dark text-sm font-medium tabular-nums">
+            {{ props.formatDuration(entry) }}
+          </p>
+        </template>
+      </Column>
+
+      <Column
+        :pt="managementTableColumnPt"
+        :style="{ width: actionsColumnWidth }"
+      >
+        <template #body="{ data: entry }">
+          <div class="flex items-center justify-end gap-2">
+            <p
+              v-if="entry.endedAt === null"
+              class="text-text-muted text-xs"
+            >
+              Stop from the top bar
             </p>
-          </template>
-        </Column>
-
-        <Column :style="{ width: actionsColumnWidth }">
-          <template #body="{ data: entry }">
-            <div class="flex items-center justify-end gap-2">
-              <p
-                v-if="entry.endedAt === null"
-                class="text-text-muted text-xs"
-              >
-                Stop from the top bar
-              </p>
-              <template v-else>
-                <ManagementTableRowAction
-                  :data-testid="`time-entry-edit-${entry.id}`"
-                  :icon="PencilSquareIcon"
-                  label="Edit"
-                  @click="emit('editEntry', entry)"
-                />
-                <ManagementTableRowAction
-                  :data-testid="`time-entry-delete-${entry.id}`"
-                  :icon="TrashIcon"
-                  label="Delete"
-                  :loading="props.isDeletingEntry === entry.id"
-                  tone="destructive"
-                  @click="emit('deleteEntry', entry)"
-                />
-              </template>
-            </div>
-          </template>
-        </Column>
-      </DataTable>
-    </SurfaceCard>
+            <template v-else>
+              <ManagementTableRowAction
+                :data-testid="`time-entry-edit-${entry.id}`"
+                :icon="PencilSquareIcon"
+                label="Edit"
+                @click="emit('editEntry', entry)"
+              />
+              <ManagementTableRowAction
+                :data-testid="`time-entry-delete-${entry.id}`"
+                :icon="TrashIcon"
+                label="Delete"
+                :loading="props.isDeletingEntry === entry.id"
+                tone="destructive"
+                @click="emit('deleteEntry', entry)"
+              />
+            </template>
+          </div>
+        </template>
+      </Column>
+    </ManagementTableShell>
   </section>
 </template>

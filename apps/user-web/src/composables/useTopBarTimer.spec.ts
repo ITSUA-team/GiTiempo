@@ -93,6 +93,7 @@ function createClientMock(): TimeEntriesClient & {
   createManualEntry: ReturnType<typeof vi.fn<TimeEntriesClient["createManualEntry"]>>;
   createTask: ReturnType<typeof vi.fn<TimeEntriesClient["createTask"]>>;
   deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient["deleteEntry"]>>;
+  deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
@@ -100,6 +101,7 @@ function createClientMock(): TimeEntriesClient & {
   startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
   stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
   updateEntry: ReturnType<typeof vi.fn<TimeEntriesClient["updateEntry"]>>;
+  updateTask: ReturnType<typeof vi.fn<TimeEntriesClient["updateTask"]>>;
 } {
   return {
     createManualEntry: vi.fn(async () => createCompletedEntry()),
@@ -107,6 +109,7 @@ function createClientMock(): TimeEntriesClient & {
       createTask("task-new", projectId, input.title),
     ),
     deleteEntry: vi.fn(async () => undefined),
+    deleteTask: vi.fn(async () => undefined),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTasks: vi.fn(async () => []),
@@ -114,6 +117,7 @@ function createClientMock(): TimeEntriesClient & {
     startTimer: vi.fn(async () => createRunningEntry()),
     stopTimer: vi.fn(async () => createCompletedEntry()),
     updateEntry: vi.fn(async () => createCompletedEntry()),
+    updateTask: vi.fn(async () => createTask("task-1", "project-1", "Updated task")),
   };
 }
 

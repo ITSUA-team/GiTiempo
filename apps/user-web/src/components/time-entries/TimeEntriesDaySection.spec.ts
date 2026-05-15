@@ -153,7 +153,7 @@ describe('TimeEntriesDaySection', () => {
     expect(columns[2]?.props('style')).toEqual({ width: '10rem' });
     expect(columns[3]?.props('style')).toEqual({ width: '7rem' });
     expect(columns[4]?.props('style')).toEqual({ width: '7rem' });
-    expect(wrapper.html()).toContain('table-layout: fixed');
+    expect(wrapper.html()).toContain('table-fixed');
   });
 
   it('keeps the destructive action in a loading-disabled state during deletion', () => {

@@ -148,7 +148,7 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 - **AND** `admin-web` can keep the same shared header without rendering a top-bar timer
 - **AND** the shared header layout remains stable when the center region is empty
 
-### Requirement: Shared Authenticated Navigation Uses User-Web Text-Only Base
+### Requirement: Shared Authenticated Navigation Uses Compact Icon-Only Base
 
 The frontend codebase SHALL extract authenticated shell navigation into `@gitiempo/web-shared` when the user/admin nav structure can be shared without moving route ownership or active-state logic out of the apps.
 
@@ -158,11 +158,24 @@ The frontend codebase SHALL extract authenticated shell navigation into `@gitiem
 - **THEN** each app still defines its own nav item list, route names, optional route targets, and active-state logic
 - **AND** the shared component owns only presentational sidebar/mobile nav rendering
 
-#### Scenario: Shared navigation uses text-only user-web visual language
+#### Scenario: Shared navigation uses icon-only visual language with accessible labels
 
 - **WHEN** the shared authenticated navigation is rendered in either SPA
-- **THEN** it uses the current `user-web` text-only nav styling as the base for both sidebar and mobile navigation
-- **AND** it does not render per-item icons in either app
+- **THEN** it uses compact icon-only navigation items as the shared base for both sidebar and mobile navigation
+- **AND** each nav item exposes a tooltip and accessible label that conveys the destination
+- **AND** it does not require visible per-item text in the shared navigation surface
+
+#### Scenario: Shared navigation uses compact desktop and tablet sidebar width
+
+- **WHEN** the shared authenticated navigation is rendered on desktop or tablet layouts
+- **THEN** the sidebar uses a compact width suitable for icon-only navigation
+- **AND** the compact width remains consistent with the shared icon-only item presentation
+
+#### Scenario: Mobile navigation preserves icon-only accessibility
+
+- **WHEN** the shared authenticated navigation is rendered on mobile layouts
+- **THEN** the mobile navigation still presents icon-only items with accessible labels
+- **AND** the mobile experience preserves clear item identification for assistive technology
 
 ### Requirement: Shared Header Markup Uses Documented Tailwind Utilities
 

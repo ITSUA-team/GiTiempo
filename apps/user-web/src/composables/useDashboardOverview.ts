@@ -9,6 +9,8 @@ import {
 } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
 
+type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
+
 export type DashboardPageState = "empty" | "loading" | "ready" | "request-error";
 
 export interface DashboardStat {
@@ -43,7 +45,7 @@ export interface DashboardRecentEntryRow {
 interface UseDashboardOverviewOptions {
   authStore?: ReturnType<typeof useAuthStore>;
   clearIntervalFn?: typeof clearInterval;
-  client?: TimeEntriesClient;
+  client?: DashboardOverviewClient;
   now?: () => number;
   setIntervalFn?: typeof setInterval;
   toast?: ToastLike;
@@ -57,7 +59,7 @@ interface FocusAccumulator {
   title: string;
 }
 
-const defaultClient = createTimeEntriesClient({
+const defaultClient: DashboardOverviewClient = createTimeEntriesClient({
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
 });
 

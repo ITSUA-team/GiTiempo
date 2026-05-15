@@ -11,6 +11,7 @@ import {
 	type UpdateProjectInput,
 } from '@gitiempo/shared';
 import {
+  getDefaultFetchFn,
 	getRequestUrl,
 	getResponseErrorMessage,
 	requestJson,
@@ -20,7 +21,7 @@ import {
 
 interface AdminProjectsClientOptions {
 	apiBaseUrl: string | undefined;
-	fetchFn: typeof fetch;
+	fetchFn?: typeof fetch;
 }
 
 export interface AdminProjectsClient {
@@ -51,7 +52,7 @@ export interface AdminProjectsClient {
 
 export function createAdminProjectsClient({
 	apiBaseUrl,
-	fetchFn = fetch,
+	fetchFn = getDefaultFetchFn(),
 }: AdminProjectsClientOptions): AdminProjectsClient {
 	return {
 		async assignMember(accessToken, projectId, userId) {
@@ -141,5 +142,4 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
 export const adminProjectsClient = createAdminProjectsClient({
 	apiBaseUrl,
-	fetchFn: fetch,
 });

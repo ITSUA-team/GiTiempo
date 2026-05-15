@@ -4,7 +4,7 @@ import {
   type UpdateUserInput,
   type UserResponse,
 } from "@gitiempo/shared";
-import { requestJson } from "../http";
+import { getDefaultFetchFn, requestJson } from "../http";
 
 /* eslint-disable no-unused-vars */
 
@@ -25,7 +25,7 @@ export interface CurrentUserClient {
 
 export function createCurrentUserClient({
   apiBaseUrl,
-  fetchFn = fetch,
+  fetchFn = getDefaultFetchFn(),
 }: CurrentUserClientOptions = {}): CurrentUserClient {
   return {
     getCurrentUser(accessToken) {

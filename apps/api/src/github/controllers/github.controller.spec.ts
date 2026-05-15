@@ -8,6 +8,11 @@ describe('GithubController', () => {
   const githubService = {
     connectionStatus: vi.fn(),
     authUrl: vi.fn(),
+    listOwners: vi.fn(),
+    listRepositories: vi.fn(),
+    listProjects: vi.fn(),
+    listRepositoryIssues: vi.fn(),
+    listProjectIssues: vi.fn(),
     completeCallback: vi.fn(),
     disconnect: vi.fn(),
   };
@@ -42,6 +47,83 @@ describe('GithubController', () => {
 
     await expect(controller.authUrl(user)).resolves.toBe(response);
     expect(githubService.authUrl).toHaveBeenCalledWith(user);
+  });
+
+  it('GET /github/owners delegates to service', async () => {
+    const query = { type: 'all' as const };
+    const response = { items: [] };
+    githubService.listOwners.mockResolvedValue(response);
+
+    await expect(controller.listOwners(user, query)).resolves.toBe(response);
+    expect(githubService.listOwners).toHaveBeenCalledWith(user, query);
+  });
+
+  it('GET /github/repos delegates to service', async () => {
+    const query = { ownerType: 'personal' as const, limit: 30 };
+    const response = {
+      items: [],
+      pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
+    };
+    githubService.listRepositories.mockResolvedValue(response);
+
+    await expect(controller.listRepositories(user, query)).resolves.toBe(
+      response,
+    );
+    expect(githubService.listRepositories).toHaveBeenCalledWith(user, query);
+  });
+
+  it('GET /github/projects delegates to service', async () => {
+    const query = {
+      ownerType: 'organization' as const,
+      owner: 'octo',
+      limit: 30,
+    };
+    const response = {
+      items: [],
+      pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
+    };
+    githubService.listProjects.mockResolvedValue(response);
+
+    await expect(controller.listProjects(user, query)).resolves.toBe(response);
+    expect(githubService.listProjects).toHaveBeenCalledWith(user, query);
+  });
+
+  it('GET /github/repos/:owner/:repo/issues delegates to service', async () => {
+    const query = { state: 'all' as const, limit: 30, q: 'timer' };
+    const response = {
+      items: [],
+      pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
+    };
+    githubService.listRepositoryIssues.mockResolvedValue(response);
+
+    await expect(
+      controller.listRepositoryIssues(user, 'octo', 'repo', query),
+    ).resolves.toBe(response);
+    expect(githubService.listRepositoryIssues).toHaveBeenCalledWith(
+      user,
+      'octo',
+      'repo',
+      query,
+    );
+  });
+
+  it('GET /github/projects/:projectId/issues delegates to service', async () => {
+    const query = { state: 'open' as const, limit: 30 };
+    const response = {
+      items: [],
+      pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
+      skipped: { pullRequests: 0, draftIssues: 0, redacted: 0, unknown: 0 },
+    };
+    githubService.listProjectIssues.mockResolvedValue(response);
+
+    await expect(
+      controller.listProjectIssues(user, 'PVT_kwDO', query),
+    ).resolves.toBe(response);
+    expect(githubService.listProjectIssues).toHaveBeenCalledWith(
+      user,
+      'PVT_kwDO',
+      query,
+    );
   });
 
   it('GET /github/callback redirects to service URL', async () => {
