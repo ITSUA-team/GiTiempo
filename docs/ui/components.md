@@ -7,15 +7,15 @@
 
 ### Color Rules
 
-| Token name | CSS variable | Tailwind utility | Hex | Usage |
-|---|---|---|---|---|
-| Brand Purple | `--color-brand` | `bg-brand` / `text-brand` | `#5D2B85` | Primary accent, folder icons, active states, filled buttons |
-| Accent Tint | `--color-accent-tint` | `bg-accent-tint` | `#E8E1F5` | Active row backgrounds, tag fills, hover states |
-| Surface | `--color-surface` | `bg-surface` | `#FFFFFF` | Cards and container backgrounds |
-| App Background | `--color-app-bg` | `bg-app-bg` | `#F4F4F5` | Main application canvas |
-| Text Dark | `--color-text-dark` | `text-text-dark` | `#1A1A1A` | Headings and primary copy |
-| Text Muted | `--color-text-muted` | `text-text-muted` | `#666666` | Secondary info and metadata |
-| Dividers | `--color-divider` | `border-divider` | `#EEEEEE` | Borders and separators |
+| Token name     | CSS variable          | Tailwind utility          | Hex       | Usage                                                       |
+| -------------- | --------------------- | ------------------------- | --------- | ----------------------------------------------------------- |
+| Brand Purple   | `--color-brand`       | `bg-brand` / `text-brand` | `#5D2B85` | Primary accent, folder icons, active states, filled buttons |
+| Accent Tint    | `--color-accent-tint` | `bg-accent-tint`          | `#E8E1F5` | Active row backgrounds, tag fills, hover states             |
+| Surface        | `--color-surface`     | `bg-surface`              | `#FFFFFF` | Cards and container backgrounds                             |
+| App Background | `--color-app-bg`      | `bg-app-bg`               | `#F4F4F5` | Main application canvas                                     |
+| Text Dark      | `--color-text-dark`   | `text-text-dark`          | `#1A1A1A` | Headings and primary copy                                   |
+| Text Muted     | `--color-text-muted`  | `text-text-muted`         | `#666666` | Secondary info and metadata                                 |
+| Dividers       | `--color-divider`     | `border-divider`          | `#EEEEEE` | Borders and separators                                      |
 
 - Never use Brand Purple as a large background area.
 - Accent Tint is the only permitted purple-tinted background surface.
@@ -25,15 +25,15 @@
 
 ### Typography
 
-| Role | Font | Weight | Size | Tailwind classes |
-|---|---|---|---|---|
-| Font family | Inter | — | — | `font-sans` |
-| H1 | Inter | 600 | 24px | `text-2xl font-semibold` |
-| H2 | Inter | 600 | 18px | `text-lg font-semibold` |
-| H3 | Inter | 600 | 16px | `text-base font-semibold` |
-| Primary body / labels | Inter | 500 | 14px | `text-sm font-medium` |
-| Secondary body / metadata | Inter | 400 | 13px | `text-[13px] font-normal` |
-| Captions / helper | Inter | 400 | 12px | `text-xs font-normal` |
+| Role                      | Font  | Weight | Size | Tailwind classes          |
+| ------------------------- | ----- | ------ | ---- | ------------------------- |
+| Font family               | Inter | —      | —    | `font-sans`               |
+| H1                        | Inter | 600    | 24px | `text-2xl font-semibold`  |
+| H2                        | Inter | 600    | 18px | `text-lg font-semibold`   |
+| H3                        | Inter | 600    | 16px | `text-base font-semibold` |
+| Primary body / labels     | Inter | 500    | 14px | `text-sm font-medium`     |
+| Secondary body / metadata | Inter | 400    | 13px | `text-[13px] font-normal` |
+| Captions / helper         | Inter | 400    | 12px | `text-xs font-normal`     |
 
 - Weight 600 is for headings, active nav labels, and key numeric values.
 - Weight 500 is the default for interactive UI.
@@ -45,14 +45,14 @@
 - Common spacing: `gap-4` / `p-4`.
 - Section spacing: `gap-6` / `gap-8`.
 
-| Context | Token | Class |
-|---|---|---|
-| Buttons, inputs, tags | `--radius-sm` | `rounded-sm` |
-| Dropdowns, tooltips | `--radius-md` | `rounded-md` |
-| Cards, panels, modals | `--radius-lg` | `rounded-lg` |
-| Cards, panels | `--shadow-card` | `shadow-card` |
-| Popovers, dropdowns | `--shadow-popover` | `shadow-popover` |
-| Modals, dialogs | `--shadow-modal` | `shadow-modal` |
+| Context               | Token              | Class            |
+| --------------------- | ------------------ | ---------------- |
+| Buttons, inputs, tags | `--radius-sm`      | `rounded-sm`     |
+| Dropdowns, tooltips   | `--radius-md`      | `rounded-md`     |
+| Cards, panels, modals | `--radius-lg`      | `rounded-lg`     |
+| Cards, panels         | `--shadow-card`    | `shadow-card`    |
+| Popovers, dropdowns   | `--shadow-popover` | `shadow-popover` |
+| Modals, dialogs       | `--shadow-modal`   | `shadow-modal`   |
 
 ## PrimeVue Styling Rule
 
@@ -68,13 +68,13 @@ When the same PrimeVue-based UI block is used by both `apps/user-web` and `apps/
 
 Use PrimeVue `<Button>`. Do not recreate app buttons with raw HTML unless the surface is explicitly non-PrimeVue, such as the extension popup.
 
-| Variant | PrimeVue props | Usage |
-|---|---|---|
-| Primary | default button styling | Main actions |
-| Secondary | `severity="secondary" variant="outlined"` | Alternative actions |
-| Ghost | `variant="text"` | Low-emphasis actions |
-| Destructive | `severity="danger" variant="outlined"` | Delete and disconnect |
-| Disabled | `disabled` | Unavailable action |
+| Variant     | PrimeVue props                            | Usage                 |
+| ----------- | ----------------------------------------- | --------------------- |
+| Primary     | default button styling                    | Main actions          |
+| Secondary   | `severity="secondary" variant="outlined"` | Alternative actions   |
+| Ghost       | `variant="text"`                          | Low-emphasis actions  |
+| Destructive | `severity="danger" variant="outlined"`    | Delete and disconnect |
+| Disabled    | `disabled`                                | Unavailable action    |
 
 - Heights: `h-8`, `h-9`, `h-10` depending on density.
 - Minimum touch target: 44x44px via padding.
@@ -109,11 +109,11 @@ Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<Select>`, `<Au
 - Do not duplicate the same Zod schema in both apps; extract it to `@gitiempo/shared` when it is contract-facing or `@gitiempo/web-shared` when it is frontend-only.
 
 ```typescript
-const result = emailPasswordSignInSchema.safeParse({ email, password })
+const result = emailPasswordSignInSchema.safeParse({ email, password });
 
 if (!result.success) {
   // Show field-level errors through PrimeVue invalid/helper UI.
-  return
+  return;
 }
 ```
 
@@ -140,7 +140,8 @@ Use `<DataTable>` and `<Column>`.
 <DataTable
   :value="entries"
   :pt="{
-    headerCell: 'bg-app-bg text-[13px] font-medium uppercase tracking-wide text-text-dark',
+    headerCell:
+      'bg-app-bg text-[13px] font-medium uppercase tracking-wide text-text-dark',
     bodyRow: 'border-b border-divider h-12 hover:bg-app-bg',
     bodyCell: 'text-sm',
   }"
@@ -154,12 +155,12 @@ Use `<Tag>` for status labels and `<Badge>` for counts.
 - Default tag style: `bg-accent-tint text-brand rounded-sm px-2 py-0.5 text-xs font-medium`.
 - Map status styling through preset severity variants.
 
-| Status | PrimeVue severity | Background | Text |
-|---|---|---|---|
-| Running / Active | `success` | `bg-status-active-bg` | `text-status-active-text` |
-| Completed | default | `bg-accent-tint` | `text-brand` |
-| Pending / Draft | `warn` | `bg-status-warn-bg` | `text-status-warn-text` |
-| Error | `danger` | `bg-status-error-bg` | `text-status-error-text` |
+| Status           | PrimeVue severity | Background            | Text                      |
+| ---------------- | ----------------- | --------------------- | ------------------------- |
+| Running / Active | `success`         | `bg-status-active-bg` | `text-status-active-text` |
+| Completed        | default           | `bg-accent-tint`      | `text-brand`              |
+| Pending / Draft  | `warn`            | `bg-status-warn-bg`   | `text-status-warn-text`   |
+| Error            | `danger`          | `bg-status-error-bg`  | `text-status-error-text`  |
 
 ### Avatars
 
@@ -194,15 +195,19 @@ Use `<Avatar>`.
 
 ### Loading States
 
-Use `<Skeleton>` for inline placeholders and `<ProgressSpinner>` for full-page loads.
+Use `<Skeleton>` for inline placeholders and page-level first-load placeholders. Reserve `<ProgressSpinner>` for small indeterminate regions where a skeleton cannot match the final structure.
 
 - Table/list loading: render skeleton rows sized like final content.
-- Full page loading: centered spinner.
+- Structured content-rich first loads may use PrimeVue `<Skeleton>` placeholders instead of a spinner when the skeleton mirrors the final header, card, field rows, and action layout.
+- Full page loading: centered spinner for generic indeterminate page loads where a structured skeleton is not more accurate.
+- Request-error states must remain distinct from empty states and default form values; do not show empty/default content after a failed required request.
 - Button loading: `<Button loading>`.
 
 ```vue
-<div v-if="loading" class="flex h-full items-center justify-center">
-  <ProgressSpinner strokeWidth="3" style="width:40px;height:40px" />
+<div v-if="loading" class="flex flex-col gap-4">
+  <Skeleton width="14rem" height="2rem" />
+  <Skeleton height="8rem" />
+  <Skeleton height="16rem" />
 </div>
 ```
 

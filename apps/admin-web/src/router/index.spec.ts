@@ -14,6 +14,8 @@ import {
   type AuthRuntime,
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
+import ForbiddenView from "@/views/ForbiddenView.vue";
+import NotFoundView from "@/views/NotFoundView.vue";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
@@ -66,11 +68,13 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.reports)).toBe(true);
     expect(router.hasRoute(routeNames.invoices)).toBe(true);
     expect(router.hasRoute(routeNames.members)).toBe(true);
+    expect(router.hasRoute(routeNames.forbidden)).toBe(true);
+    expect(router.hasRoute(routeNames.notFound)).toBe(true);
     expect(router.hasRoute(routeNames.projects)).toBe(true);
     expect(router.hasRoute(routeNames.settings)).toBe(true);
   });
 
-  it("mounts documented admin pages inside the authenticated shell while keeping login guest-only", () => {
+  it("mounts documented admin product pages inside the shell while keeping standalone error routes outside it", () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -97,6 +101,22 @@ describe("admin router", () => {
       expect(resolved.matched[1]?.name).toBe(route.name);
     }
 
+    const forbiddenRoute = router.resolve("/403");
+
+    expect(forbiddenRoute.name).toBe(routeNames.forbidden);
+    expect(forbiddenRoute.meta.requiresAuth).toBe(true);
+    expect(forbiddenRoute.meta.guestOnly).toBeUndefined();
+    expect(forbiddenRoute.matched).toHaveLength(1);
+    expect(forbiddenRoute.matched[0]?.components?.default).toBe(ForbiddenView);
+
+    const notFoundRoute = router.resolve("/missing-page");
+
+    expect(notFoundRoute.name).toBe(routeNames.notFound);
+    expect(notFoundRoute.meta.requiresAuth).toBe(true);
+    expect(notFoundRoute.meta.guestOnly).toBeUndefined();
+    expect(notFoundRoute.matched).toHaveLength(1);
+    expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
+
     const loginRoute = router.resolve("/login");
 
     expect(loginRoute.name).toBe(routeNames.login);
@@ -120,6 +140,46 @@ describe("admin router", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.login);
     expect(router.currentRoute.value.query.redirect).toBe("/reports");
+  });
+
+  it("redirects anonymous users from unknown routes to login", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/missing-page");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.query.redirect).toBe("/missing-page");
+  });
+
+  it("renders the authenticated not-found route after bootstrap succeeds", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRefreshToken("refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        refreshSession: async () => ({
+          accessToken: "access-token",
+          accessTokenExpiresIn: 900,
+          refreshToken: "refresh-token-next",
+        }),
+      }),
+    );
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/missing-page");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.notFound);
   });
 
   it("redirects to login after bootstrap rejects a persisted refresh token", async () => {

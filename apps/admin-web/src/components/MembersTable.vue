@@ -14,6 +14,7 @@ import {
   ManagementTableEmptyState,
   ManagementTableRowAction,
   ManagementTableShell,
+  SectionHeader,
   formatWorkspaceRole,
   managementTableColumnPt,
 } from '@gitiempo/web-shared';
@@ -158,9 +159,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 
 <template>
   <div class="mb-4">
-    <h2 class="text-text-dark text-lg font-semibold">
-      Members Table
-    </h2>
+    <SectionHeader title="Members Table" />
   </div>
 
   <ManagementTableShell

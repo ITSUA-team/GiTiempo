@@ -187,12 +187,14 @@ async function main(): Promise<void> {
         workspaceId: DEFAULT_WORKSPACE_ID,
         currency: 'USD',
         defaultHourlyRate: 100,
+        timeZone: 'UTC',
       })
       .onConflictDoUpdate({
         target: workspaceSettings.workspaceId,
         set: {
           currency: 'USD',
           defaultHourlyRate: 100,
+          timeZone: 'UTC',
           updatedAt: new Date(),
         },
       });

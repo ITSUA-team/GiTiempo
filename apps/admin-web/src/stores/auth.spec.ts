@@ -193,6 +193,7 @@ describe("useAuthStore", () => {
 
     const authStore = useAuthStore();
     authStore.accessToken = "current-access-token";
+    authStore.setWorkspaceName("Updated Workspace");
 
     await authStore.logout();
 
@@ -201,8 +202,19 @@ describe("useAuthStore", () => {
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.accessToken).toBeNull();
     expect(authStore.profile).toBeNull();
+    expect(authStore.workspaceName).toBe("Workspace Admin");
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
+  });
+
+  it("updates the workspace label from workspace settings flows", () => {
+    const authStore = useAuthStore();
+
+    expect(authStore.workspaceName).toBe("Workspace Admin");
+
+    authStore.setWorkspaceName("Updated Workspace");
+
+    expect(authStore.workspaceName).toBe("Updated Workspace");
   });
 
   it("clears tokens on logout even when API logout fails", async () => {
