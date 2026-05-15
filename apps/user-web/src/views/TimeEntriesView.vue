@@ -76,18 +76,18 @@ const {
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
     <ConfirmDialog />
 
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <PageHeader
-        subtitle="Review tracked time, add manual entries, and edit entries in a shared dialog."
-        title="Time Entries"
-      />
-
-      <Button
-        data-testid="time-entries-header-create"
-        label="+ New time entry"
-        @click="void openCreateDialog()"
-      />
-    </div>
+    <PageHeader
+      subtitle="Review tracked time, add manual entries, and edit entries in a shared dialog."
+      title="Time Entries"
+    >
+      <template #actions>
+        <Button
+          data-testid="time-entries-header-create"
+          label="+ New time entry"
+          @click="void openCreateDialog()"
+        />
+      </template>
+    </PageHeader>
 
     <SurfaceCard
       body-class="flex flex-col gap-3"

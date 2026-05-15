@@ -11,6 +11,13 @@ const props = defineProps<{
   <SectionHeader
     :description="props.subtitle"
     :title="props.title"
-    variant="page"
-  />
+    variant="stats"
+  >
+    <template
+      v-if="$slots.actions"
+      #actions
+    >
+      <slot name="actions" />
+    </template>
+  </SectionHeader>
 </template>
