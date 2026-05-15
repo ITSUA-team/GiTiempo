@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
+import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 
 import DashboardPageSkeleton from '@/components/dashboard/DashboardPageSkeleton.vue';
 import DashboardRecentActivityFeed from '@/components/dashboard/DashboardRecentActivityFeed.vue';
@@ -49,9 +49,10 @@ const {
     </template>
 
     <template v-else>
-      <StatsHeader
+      <SectionHeader
         title="Dashboard"
         description="Workspace overview with key metrics and recent activity."
+        variant="page"
       />
 
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
