@@ -101,9 +101,10 @@
 
 ## Error Pages
 
-- 404 Not Found renders inside the authenticated app shell when the user reaches an unknown `user-web` route.
-- 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, primary action `Back to dashboard`, and secondary action `Go back`.
-- 403 Forbidden renders inside the authenticated app shell when the current user is signed in but lacks access to the requested page or workspace resource.
+- 404 Not Found renders as a standalone route-level page outside the authenticated app shell when the user reaches an unknown `user-web` route.
+- Standalone `user-web` 403/404 pages do not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, and primary action `Back to dashboard`.
+- The 404 secondary action `Go back` renders only when the browser history contains a prior entry for the current tab. When no prior history entry exists, omit the secondary action entirely.
+- 403 Forbidden renders as a standalone route-level page outside the authenticated app shell when the current user is signed in but lacks access to the requested page or workspace resource.
 - 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current workspace role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace is available.
-- Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the page content area; request errors stay scoped to the feature surface that failed.
-- Do not hide the shell navigation on authenticated 403/404 pages; users should retain normal workspace navigation and the top-bar timer surface.
+- Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the full route surface; request errors stay scoped to the feature surface that failed.
