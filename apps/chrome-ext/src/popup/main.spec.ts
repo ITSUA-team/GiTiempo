@@ -286,6 +286,26 @@ describe("popup app", () => {
 
     expect(document.body.textContent).toContain("Stop Timer");
     expect(document.body.textContent).toContain("01:00:00");
+    expect(document.body.textContent).toContain("Project Orion / octo/repo");
+  });
+
+  it("adds explicit focus-visible styles to popup primary actions", async () => {
+    const runtimeClient = createRuntimeClient({
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+    });
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+      pageContextResolver: async () => supportedContext(),
+    });
+
+    await app.load();
+
+    expect(
+      document
+        .querySelector<HTMLButtonElement>('[data-action="start-timer"]')
+        ?.className,
+    ).toContain("focus-visible:outline-brand");
   });
 
   it("starts a timer from the supported popup state", async () => {

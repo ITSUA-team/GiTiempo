@@ -14,6 +14,11 @@ import { formatElapsedTime } from "@/lib/time";
 
 interface InjectedAppOptions {
   clearIntervalFn?: typeof clearInterval;
+  doc?: Document;
+  matchMediaFn?: (query: string) => Pick<MediaQueryList, "matches"> & {
+    addEventListener?: (type: "change", listener: EventListener) => void;
+    removeEventListener?: (type: "change", listener: EventListener) => void;
+  };
   now?: () => number;
   pageContext: SupportedGitHubIssueContext;
   root: HTMLElement;
@@ -25,6 +30,40 @@ interface InjectedState {
   actionErrorMessage: string | null;
   isLoading: boolean;
   snapshot: RuntimeSnapshot | null;
+  theme: "dark" | "light";
+}
+
+const injectedActionButtonClass =
+  "cursor-pointer rounded-sm px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+const injectedTextActionClass =
+  "text-brand cursor-pointer rounded-sm bg-transparent text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+
+function createFallbackMediaQuery(): Pick<MediaQueryList, "matches"> & {
+  addEventListener?: (type: "change", listener: EventListener) => void;
+  removeEventListener?: (type: "change", listener: EventListener) => void;
+} {
+  return {
+    addEventListener: () => undefined,
+    matches: false,
+    removeEventListener: () => undefined,
+  };
+}
+
+function resolveGitHubColorMode(
+  doc: Document,
+  matchMediaFn: InjectedAppOptions["matchMediaFn"],
+): "dark" | "light" {
+  const colorMode = doc.documentElement.getAttribute("data-color-mode");
+
+  if (colorMode === "dark") {
+    return "dark";
+  }
+
+  if (colorMode === "light") {
+    return "light";
+  }
+
+  return matchMediaFn?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function renderInjectedBody(
@@ -32,11 +71,13 @@ function renderInjectedBody(
   state: InjectedState,
   nowMs: number,
 ): string {
+  const headlineTextClass = state.theme === "dark" ? "text-white" : "text-text-dark";
+  const mutedTextClass = state.theme === "dark" ? "text-white/70" : "text-text-muted";
   const issueHeader = `
     <div class="flex items-start justify-between gap-3">
       <div>
-        <p class="m-0 text-xs font-medium text-white/70">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold text-white">${escapeHtml(pageContext.issueTitle)}</p>
+        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
       </div>
       ${state.snapshot?.currentTimer ? '<span class="bg-status-active-bg text-status-active-text rounded-sm px-2 py-1 text-xs font-semibold">Running</span>' : ""}
     </div>
@@ -45,7 +86,7 @@ function renderInjectedBody(
   if (state.isLoading || state.snapshot === null) {
     return `
       ${issueHeader}
-      <p class="m-0 text-sm text-white/70">Checking your GiTiempo timer state.</p>
+      <p class="m-0 text-sm ${mutedTextClass}">Checking your GiTiempo timer state.</p>
     `;
   }
 
@@ -53,8 +94,8 @@ function renderInjectedBody(
     return `
       ${issueHeader}
       <div class="flex items-center justify-between gap-3">
-        <p class="m-0 text-sm text-white/70">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p>
-        <button type="button" data-action="retry" class="text-brand cursor-pointer bg-transparent text-sm font-semibold">Retry</button>
+        <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p>
+        <button type="button" data-action="retry" class="${injectedTextActionClass}">Retry</button>
       </div>
     `;
   }
@@ -63,8 +104,8 @@ function renderInjectedBody(
     return `
       ${issueHeader}
       <div class="flex items-center justify-between gap-3">
-        <p class="m-0 text-sm text-white/70">Sign in to GiTiempo to start tracking this issue.</p>
-        <button type="button" data-action="open-extension" class="bg-brand cursor-pointer rounded-sm px-4 py-2 text-sm font-semibold text-white">Open extension</button>
+        <p class="m-0 text-sm ${mutedTextClass}">Sign in to GiTiempo to start tracking this issue.</p>
+        <button type="button" data-action="open-extension" class="bg-brand text-white ${injectedActionButtonClass}">Open extension</button>
       </div>
     `;
   }
@@ -74,7 +115,7 @@ function renderInjectedBody(
       ${issueHeader}
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
-        <button type="button" data-action="stop-timer" class="bg-destructive cursor-pointer rounded-sm px-4 py-2 text-sm font-semibold text-white">Stop Timer</button>
+        <button type="button" data-action="stop-timer" class="bg-destructive text-white ${injectedActionButtonClass}">Stop Timer</button>
       </div>
     `;
   }
@@ -82,31 +123,60 @@ function renderInjectedBody(
   return `
     ${issueHeader}
     <div class="flex items-center justify-between gap-3">
-      <p class="m-0 text-sm text-white/70">Start tracking directly from this GitHub issue.</p>
-      <button type="button" data-action="start-timer" class="bg-brand cursor-pointer rounded-sm px-4 py-2 text-sm font-semibold text-white">Start Timer</button>
+      <p class="m-0 text-sm ${mutedTextClass}">Start tracking directly from this GitHub issue.</p>
+      <button type="button" data-action="start-timer" class="bg-brand text-white ${injectedActionButtonClass}">Start Timer</button>
     </div>
   `;
 }
 
 export function createInjectedIssueApp({
   clearIntervalFn = clearInterval,
+  doc,
+  matchMediaFn,
   now = () => Date.now(),
   pageContext,
   root,
   runtimeClient = createRuntimeClient(),
   setIntervalFn = setInterval,
 }: InjectedAppOptions) {
+  const ownerDocument = doc ?? root.ownerDocument;
+  const resolveMatchMedia =
+    matchMediaFn ??
+    ((query: string) =>
+      ownerDocument.defaultView?.matchMedia(query) ?? createFallbackMediaQuery());
   const state: InjectedState = {
     actionErrorMessage: null,
     isLoading: true,
     snapshot: null,
+    theme: "light",
   };
 
   let intervalHandle: ReturnType<typeof setInterval> | null = null;
+  const themeMediaQuery = resolveMatchMedia("(prefers-color-scheme: dark)");
   const unsubscribe = runtimeClient.onSnapshotUpdated((snapshot) => {
     state.snapshot = snapshot;
     render();
   });
+
+  function syncTheme(): void {
+    state.theme = resolveGitHubColorMode(ownerDocument, resolveMatchMedia);
+  }
+
+  const handleThemeChange: EventListener = () => {
+    syncTheme();
+    render();
+  };
+
+  const themeObserver = new MutationObserver(() => {
+    handleThemeChange(new Event("change"));
+  });
+
+  themeObserver.observe(ownerDocument.documentElement, {
+    attributeFilter: ["data-color-mode", "data-dark-theme", "data-light-theme"],
+    attributes: true,
+  });
+
+  themeMediaQuery.addEventListener?.("change", handleThemeChange);
 
   function syncTicker(): void {
     if (intervalHandle) {
@@ -145,8 +215,9 @@ export function createInjectedIssueApp({
   }
 
   function render(): void {
+    syncTheme();
     root.innerHTML = `
-      <div class="mx-auto w-full max-w-[1280px] pt-4 text-white">
+      <div class="mx-auto w-full max-w-[1280px] pt-4">
         <section class="flex w-full flex-col gap-4 p-5">
           ${renderInjectedBody(pageContext, state, now())}
         </section>
@@ -212,6 +283,8 @@ export function createInjectedIssueApp({
   return {
     destroy() {
       unsubscribe();
+      themeObserver.disconnect();
+      themeMediaQuery.removeEventListener?.("change", handleThemeChange);
 
       if (intervalHandle) {
         clearIntervalFn(intervalHandle);
@@ -246,6 +319,11 @@ export function mountInjectedIssueControl(
   shadowRoot.append(style, root);
 
   const app = createInjectedIssueApp({
+    doc,
+    matchMediaFn: (query: string) =>
+      typeof doc.defaultView?.matchMedia === "function"
+        ? doc.defaultView.matchMedia(query)
+        : createFallbackMediaQuery(),
     pageContext,
     root,
     runtimeClient,

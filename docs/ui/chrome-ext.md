@@ -29,6 +29,7 @@
 ### Authenticated, No Active Timer
 
 - Show detected issue context.
+- Keep the branded header and allow a compact GiTiempo badge in the trailing header slot when popup user initials are not available locally.
 - Full-width Start Timer button.
 - Link to open the full User SPA.
 - Keep the issue context card visible above the actions.
@@ -36,6 +37,7 @@
 ### Authenticated, Unsupported Page
 
 - Keep the branded popup shell visible.
+- Keep the same branded header treatment as the authenticated no-timer popup state.
 - Show concise guidance: `Open a GitHub issue page to start a timer.`
 - Disable or hide Start Timer because issue metadata is unavailable.
 - Keep a link to open the full User SPA.
@@ -45,11 +47,13 @@
 - Elapsed time: `text-2xl font-semibold text-brand`.
 - Task name.
 - Project/repository context.
+- Use the branded header without introducing a user badge if popup user-profile data is unavailable.
 - Full-width destructive stop button.
 
 ### Error Or Disconnected
 
 - Inline muted message.
+- Keep the branded header visible without requiring a user badge.
 - Retry action link.
 
 ## Injected GitHub Issue Page UI
@@ -57,7 +61,7 @@
 - The injected control appears on `github.com/<owner>/<repo>/issues/<number>` pages.
 - Insert it at the start of the page `main` content container so it reads as a page-local timer surface rather than a floating unrelated widget.
 - Keep the injected control visually lighter than the popup shell: no standalone `bg-surface` card, border, or shadow wrapper.
-- Use GitHub-page-friendly light text treatment for the injected issue header and helper copy, while keeping action colors aligned with extension tokens such as `bg-brand`, `text-brand`, and `bg-destructive`.
+- Match the injected issue header and helper-copy text color to the active GitHub page theme: use light text treatment on GitHub dark mode and dark/muted token text on GitHub light mode, while keeping action colors aligned with extension tokens such as `bg-brand`, `text-brand`, and `bg-destructive`.
 
 ### Injected Idle State
 

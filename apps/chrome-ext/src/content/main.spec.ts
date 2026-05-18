@@ -3,6 +3,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RuntimeClient, RuntimeMutationResult, RuntimeSnapshot } from "@/lib/runtime";
 import { bootstrapInjectedIssueControl, mountInjectedIssueControl } from "./main";
 
+function createMatchMediaController(initialMatches = false) {
+  let matches = initialMatches;
+  const listeners = new Set<EventListener>();
+
+  return {
+    setMatches(nextMatches: boolean) {
+      matches = nextMatches;
+
+      for (const listener of listeners) {
+        listener(new Event("change"));
+      }
+    },
+    stub: vi.fn(() => ({
+      addEventListener: (_type: "change", listener: EventListener) => {
+        listeners.add(listener);
+      },
+      get matches() {
+        return matches;
+      },
+      removeEventListener: (_type: "change", listener: EventListener) => {
+        listeners.delete(listener);
+      },
+    })),
+  };
+}
+
 function currentTimer(): RuntimeSnapshot["currentTimer"] {
   return {
     createdAt: "2026-04-21T09:00:00.000Z",
@@ -77,6 +103,7 @@ function createRuntimeClient(overrides?: {
 
 describe("injected issue control", () => {
   beforeEach(() => {
+    document.documentElement.setAttribute("data-color-mode", "light");
     document.body.innerHTML = `
       <main>
         <div id="partial-discussion-header">
@@ -117,8 +144,26 @@ describe("injected issue control", () => {
     expect(root.textContent).toContain(
       "Sign in to GiTiempo to start tracking this issue.",
     );
+    expect(root.innerHTML).toContain("text-text-dark");
     root.querySelector<HTMLButtonElement>('[data-action="open-extension"]')!.click();
     expect(runtimeClient.openExtension).toHaveBeenCalledOnce();
+  });
+
+  it("renders white snippet text on GitHub dark pages", async () => {
+    document.documentElement.setAttribute("data-color-mode", "dark");
+
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient(),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.innerHTML).toContain("text-white");
+    expect(root.innerHTML).toContain("text-white/70");
   });
 
   it("starts a timer from the idle injected state", async () => {
@@ -226,6 +271,32 @@ describe("injected issue control", () => {
     expect(root.textContent).toContain("#200");
 
     app.destroy();
+  });
+
+  it("updates snippet text classes when GitHub theme changes without reload", async () => {
+    const matchMediaController = createMatchMediaController(false);
+
+    window.matchMedia = matchMediaController.stub as unknown as typeof window.matchMedia;
+
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient(),
+    )!;
+
+    await mounted.load();
+
+    let root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.innerHTML).toContain("text-text-dark");
+
+    document.documentElement.setAttribute("data-color-mode", "dark");
+    await Promise.resolve();
+
+    root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    expect(root.innerHTML).toContain("text-white");
+
+    mounted.destroy();
   });
 
   it("unmounts and cleans up when GitHub navigates to an unsupported page in the same tab", async () => {

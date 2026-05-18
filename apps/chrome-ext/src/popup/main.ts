@@ -34,7 +34,22 @@ interface PopupState {
 
 const config = getExtensionConfig();
 
-function renderBrandHeader(showAvatar: boolean): string {
+const popupPrimaryButtonClass =
+  "bg-brand w-full rounded-sm px-4 py-3 text-sm font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60";
+const popupSecondaryButtonClass =
+  "border-brand text-brand w-full rounded-sm border px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60";
+const popupTextActionClass =
+  "text-brand rounded-sm bg-transparent text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+const popupLinkActionClass =
+  "text-brand rounded-sm text-center text-[13px] font-semibold no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+
+function renderBrandHeader({
+  badgeLabel,
+  showBadge,
+}: {
+  badgeLabel?: string;
+  showBadge: boolean;
+}): string {
   return `
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
@@ -44,7 +59,7 @@ function renderBrandHeader(showAvatar: boolean): string {
           <p class="m-0 text-xs text-text-muted">GitHub timer</p>
         </div>
       </div>
-      ${showAvatar ? '<div class="bg-accent-tint text-brand flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold">GT</div>' : ""}
+      ${showBadge ? `<div class="bg-accent-tint text-brand flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold">${escapeHtml(badgeLabel ?? "GT")}</div>` : ""}
     </div>
   `;
 }
@@ -62,7 +77,7 @@ function renderIssueCard(pageContext: SupportedGitHubIssueContext): string {
 function renderPopupBody(state: PopupState, nowMs: number): string {
   if (state.isLoading || state.snapshot === null) {
     return `
-      ${renderBrandHeader(false)}
+      ${renderBrandHeader({ showBadge: false })}
       <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <p class="m-0 text-lg font-semibold text-text-dark">Loading extension state</p>
         <p class="m-0 text-sm text-text-muted">Checking your session and timer context.</p>
@@ -73,24 +88,24 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
   if (!state.snapshot.authenticated) {
     return `
       <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader(false)}
+        ${renderBrandHeader({ showBadge: false })}
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <p class="m-0 text-lg font-semibold text-text-dark">Sign in to continue</p>
           <p class="m-0 max-w-[220px] text-sm text-text-muted">Connect your workspace account to start tracking time.</p>
           ${state.errorMessage ? `<p class="m-0 text-sm text-destructive">${escapeHtml(state.errorMessage)}</p>` : ""}
-          <button data-action="google-sign-in" class="bg-brand w-full rounded-sm px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" ${state.isSubmitting ? "disabled" : ""}>Sign in with Google</button>
-          <button data-action="toggle-email" class="border-brand text-brand w-full rounded-sm border px-4 py-3 text-sm font-semibold disabled:opacity-60" ${state.isSubmitting ? "disabled" : ""}>Sign in with email</button>
+          <button data-action="google-sign-in" class="${popupPrimaryButtonClass}" ${state.isSubmitting ? "disabled" : ""}>Sign in with Google</button>
+          <button data-action="toggle-email" class="${popupSecondaryButtonClass}" ${state.isSubmitting ? "disabled" : ""}>Sign in with email</button>
           ${state.showEmailForm ? `
             <form data-form="email-sign-in" class="flex w-full flex-col gap-3 text-left">
               <label class="flex flex-col gap-1 text-sm font-medium text-text-dark">
                 <span>Email</span>
-                <input data-field="email" type="email" value="${escapeHtml(state.email)}" class="border-divider rounded-sm border px-3 py-2 text-sm text-text-dark" />
+                <input data-field="email" type="email" autocomplete="email" value="${escapeHtml(state.email)}" class="border-divider rounded-sm border px-3 py-2 text-sm text-text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" />
               </label>
               <label class="flex flex-col gap-1 text-sm font-medium text-text-dark">
                 <span>Password</span>
-                <input data-field="password" type="password" value="${escapeHtml(state.password)}" class="border-divider rounded-sm border px-3 py-2 text-sm text-text-dark" />
+                <input data-field="password" type="password" autocomplete="current-password" value="${escapeHtml(state.password)}" class="border-divider rounded-sm border px-3 py-2 text-sm text-text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" />
               </label>
-              <button class="bg-brand rounded-sm px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" ${state.isSubmitting ? "disabled" : ""}>Continue with email</button>
+              <button class="${popupPrimaryButtonClass}" ${state.isSubmitting ? "disabled" : ""}>Continue with email</button>
             </form>
           ` : ""}
         </div>
@@ -106,29 +121,33 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
     return `
       <div class="flex h-full flex-col gap-6">
-        ${renderBrandHeader(true)}
+        ${renderBrandHeader({ showBadge: false })}
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
           <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
           <p class="m-0 text-lg font-semibold text-text-dark">Connection lost</p>
           <p class="m-0 max-w-[220px] text-sm text-text-muted">${escapeHtml(message)}</p>
-          <button data-action="retry" class="text-brand bg-transparent text-sm font-semibold">Retry connection</button>
+          <button data-action="retry" class="${popupTextActionClass}">Retry connection</button>
         </div>
       </div>
     `;
   }
 
   if (state.snapshot.currentTimer) {
+    const runningContext = state.pageContext?.kind === "supported"
+      ? `${state.snapshot.currentTimer.project.name} / ${state.pageContext.githubRepo}`
+      : state.snapshot.currentTimer.project.name;
+
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader(true)}
+        ${renderBrandHeader({ showBadge: false })}
         <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
           <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
           <p class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
           <p class="m-0 text-sm font-medium text-text-dark">${escapeHtml(state.snapshot.currentTimer.task.title)}</p>
-          <p class="m-0 text-xs text-text-muted">${escapeHtml(state.snapshot.currentTimer.project.name)} / ${escapeHtml(state.snapshot.currentTimer.task.title)}</p>
+          <p class="m-0 text-xs text-text-muted">${escapeHtml(runningContext)}</p>
         </div>
         <div class="mt-auto flex flex-col gap-3">
-          <button data-action="stop-timer" class="w-full rounded-sm bg-destructive px-4 py-3 text-sm font-semibold text-white">Stop Timer</button>
+          <button data-action="stop-timer" class="w-full rounded-sm bg-destructive px-4 py-3 text-sm font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Stop Timer</button>
         </div>
       </div>
     `;
@@ -137,11 +156,11 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
   if (state.pageContext?.kind === "supported") {
     return `
       <div class="flex h-full flex-col gap-5">
-        ${renderBrandHeader(true)}
+        ${renderBrandHeader({ showBadge: true })}
         ${renderIssueCard(state.pageContext)}
         <div class="mt-auto flex flex-col gap-3">
-          <button data-action="start-timer" class="bg-brand w-full rounded-sm px-4 py-3 text-sm font-semibold text-white">Start Timer</button>
-          <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="text-brand text-center text-[13px] font-semibold no-underline">Open full workspace in GiTiempo</a>
+          <button data-action="start-timer" class="${popupPrimaryButtonClass}">Start Timer</button>
+          <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="${popupLinkActionClass}">Open full workspace in GiTiempo</a>
         </div>
       </div>
     `;
@@ -149,14 +168,14 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
 
   return `
     <div class="flex h-full flex-col gap-5">
-      ${renderBrandHeader(true)}
+      ${renderBrandHeader({ showBadge: true })}
       <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
         <p class="m-0 text-xs font-medium text-text-muted">GitHub issue required</p>
         <p class="m-0 text-lg font-semibold text-text-dark">Open a GitHub issue page to start a timer.</p>
         <p class="m-0 text-xs text-text-muted">Timer start is unavailable on this tab.</p>
       </div>
       <div class="mt-auto flex flex-col gap-3">
-        <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="bg-brand rounded-sm px-4 py-3 text-center text-sm font-semibold text-white no-underline">Open GiTiempo workspace</a>
+        <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="bg-brand rounded-sm px-4 py-3 text-center text-sm font-semibold text-white no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Open GiTiempo workspace</a>
         <p class="m-0 text-center text-[13px] font-semibold text-brand">Navigate to github.com/&lt;owner&gt;/&lt;repo&gt;/issues/&lt;number&gt;.</p>
       </div>
     </div>
