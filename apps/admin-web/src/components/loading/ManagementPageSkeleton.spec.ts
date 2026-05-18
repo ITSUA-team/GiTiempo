@@ -38,4 +38,11 @@ describe('ManagementPageSkeleton', () => {
     expect(wrapper.findAll('article')).toHaveLength(4);
     expect(wrapper.find('.hidden.sm\\:block').exists()).toBe(true);
   });
+
+  it('uses mobile card skeletons for projects loading state', () => {
+    const wrapper = mountSkeleton('projects');
+
+    expect(wrapper.findAll('article')).toHaveLength(4);
+    expect(wrapper.find('.hidden.sm\\:block').exists()).toBe(true);
+  });
 });

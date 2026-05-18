@@ -190,9 +190,9 @@ const filterSelectPt = {
       class="hidden sm:block"
       header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[720px] items-center border-b font-sans text-[13px] font-semibold"
       shell-class="border-divider overflow-x-auto rounded-[6px] border"
+      single-scroll
       table-class="min-w-[720px] w-full table-fixed border-collapse"
       table-container-class="overflow-visible rounded-none border-none"
-      :table-container-style="{ overflow: 'visible' }"
     >
       <template #filters>
         <div class="flex min-w-[720px] flex-1 items-center">

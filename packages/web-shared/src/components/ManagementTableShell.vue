@@ -2,7 +2,6 @@
 import DataTable from 'primevue/datatable';
 
 import type { DataTableProps } from 'primevue/datatable';
-import type { StyleValue } from 'vue';
 
 import type { ManagementTableColumn } from './management-table';
 
@@ -16,9 +15,9 @@ withDefaults(
     rowClass?: DataTableProps['rowClass'];
     shellClass?: string;
     showHeader?: boolean;
+    singleScroll?: boolean;
     tableClass?: string;
     tableContainerClass?: string;
-    tableContainerStyle?: StyleValue;
     value: unknown[];
   }>(),
   {
@@ -28,9 +27,9 @@ withDefaults(
     rowClass: undefined,
     shellClass: 'border-divider overflow-hidden rounded-[6px] border',
     showHeader: true,
+    singleScroll: false,
     tableClass: 'w-full table-fixed border-collapse',
     tableContainerClass: 'overflow-visible rounded-none border-none',
-    tableContainerStyle: undefined,
   },
 );
 
@@ -76,7 +75,10 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       :row-class="rowClass"
       :pt="{
         root: { class: 'border-none bg-transparent' },
-        tableContainer: { class: tableContainerClass, style: tableContainerStyle },
+        tableContainer: {
+          class: tableContainerClass,
+          style: singleScroll ? { overflow: 'visible' } : undefined,
+        },
         table: { class: tableClass },
         bodyRow: { class: bodyRowClass },
         rowExpansion: { style: 'height: auto;' },

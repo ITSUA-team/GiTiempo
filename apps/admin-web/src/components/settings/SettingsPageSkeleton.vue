@@ -5,10 +5,12 @@ import Skeleton from 'primevue/skeleton';
 
 <template>
   <div
-    aria-label="Loading settings"
+    aria-busy="true"
     class="flex flex-col gap-6"
     role="status"
   >
+    <span class="sr-only">Loading settings</span>
+
     <div class="flex flex-col gap-1.5">
       <Skeleton
         width="9rem"

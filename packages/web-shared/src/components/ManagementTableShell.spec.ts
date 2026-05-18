@@ -6,14 +6,14 @@ import { describe, expect, it } from 'vitest';
 import ManagementTableShell from './ManagementTableShell.vue';
 
 describe('ManagementTableShell', () => {
-  it('passes table container classes and styles to the PrimeVue table container', () => {
+  it('can disable the PrimeVue internal scroll container for single-scroll tables', () => {
     const wrapper = mount(ManagementTableShell, {
       props: {
         columns: [{ key: 'name', label: 'Name', width: 'fill' }],
         dataKey: 'id',
         loading: false,
+        singleScroll: true,
         tableContainerClass: 'overflow-visible rounded-none border-none',
-        tableContainerStyle: { overflow: 'visible' },
         value: [{ id: 'row-1', name: 'Example' }],
       },
       global: {

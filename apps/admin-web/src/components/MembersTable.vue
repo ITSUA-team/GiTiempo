@@ -273,9 +273,9 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     class="hidden sm:block"
     header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[880px] items-center border-b font-sans text-[13px] font-semibold"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
+    single-scroll
     table-class="min-w-[880px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
-    :table-container-style="{ overflow: 'visible' }"
   >
     <!-- Member: avatar + name + email -->
     <Column :pt="managementTableColumnPt">
