@@ -3,6 +3,38 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RuntimeClient, RuntimeMutationResult, RuntimeSnapshot } from "@/lib/runtime";
 import { bootstrapInjectedIssueControl, mountInjectedIssueControl } from "./main";
 
+function currentTimer(): RuntimeSnapshot["currentTimer"] {
+  return {
+    createdAt: "2026-04-21T09:00:00.000Z",
+    description: null,
+    durationSeconds: null,
+    endedAt: null,
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    isBillable: true,
+    project: {
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      name: "Project Orion",
+    },
+    projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    source: "extension",
+    startedAt: "2026-04-21T09:00:00.000Z",
+    task: {
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      title: "Improve reports filters",
+    },
+    taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    updatedAt: "2026-04-21T09:00:00.000Z",
+    user: {
+      avatarUrl: null,
+      displayName: "Alexey Tsukanov",
+      email: "alexey@example.com",
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+    },
+    userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+    workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+  };
+}
+
 function supportedContext() {
   return {
     githubRepo: "octo/repo",
@@ -116,29 +148,7 @@ describe("injected issue control", () => {
       createRuntimeClient({
         snapshot: {
           authenticated: true,
-          currentTimer: {
-            createdAt: "2026-04-21T09:00:00.000Z",
-            description: null,
-            durationSeconds: null,
-            endedAt: null,
-            id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
-            isBillable: true,
-            project: { id: "1", name: "Project Orion" },
-            projectId: "1",
-            source: "extension",
-            startedAt: "2026-04-21T09:00:00.000Z",
-            task: { id: "2", title: "Improve reports filters" },
-            taskId: "2",
-            updatedAt: "2026-04-21T09:00:00.000Z",
-            user: {
-              avatarUrl: null,
-              displayName: "Alexey Tsukanov",
-              email: "alexey@example.com",
-              id: "3",
-            },
-            userId: "3",
-            workspaceId: "4",
-          },
+          currentTimer: currentTimer(),
           errorMessage: null,
         },
       }),
@@ -164,29 +174,7 @@ describe("injected issue control", () => {
       createRuntimeClient({
         snapshot: {
           authenticated: true,
-          currentTimer: {
-            createdAt: "2026-04-21T09:00:00.000Z",
-            description: null,
-            durationSeconds: null,
-            endedAt: null,
-            id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
-            isBillable: true,
-            project: { id: "1", name: "Project Orion" },
-            projectId: "1",
-            source: "extension",
-            startedAt: "2026-04-21T09:00:00.000Z",
-            task: { id: "2", title: "Improve reports filters" },
-            taskId: "2",
-            updatedAt: "2026-04-21T09:00:00.000Z",
-            user: {
-              avatarUrl: null,
-              displayName: "Alexey Tsukanov",
-              email: "alexey@example.com",
-              id: "3",
-            },
-            userId: "3",
-            workspaceId: "4",
-          },
+          currentTimer: currentTimer(),
           errorMessage: null,
         },
         stopTimer,
@@ -236,6 +224,39 @@ describe("injected issue control", () => {
     root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
     expect(root.textContent).toContain("Fix billing regression");
     expect(root.textContent).toContain("#200");
+
+    app.destroy();
+  });
+
+  it("unmounts and cleans up when GitHub navigates to an unsupported page in the same tab", async () => {
+    window.history.replaceState({}, "", "https://github.com/octo/repo/issues/184");
+    document.body.innerHTML = `
+      <main>
+        <div id="partial-discussion-header">
+          <div class="gh-header-actions"></div>
+        </div>
+      </main>
+    `;
+    document.title = "Improve reports filters";
+
+    const unsubscribe = vi.fn();
+    const runtimeClient = createRuntimeClient();
+
+    runtimeClient.onSnapshotUpdated = vi.fn(() => unsubscribe);
+
+    const app = bootstrapInjectedIssueControl(document, window, runtimeClient);
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).not.toBeNull();
+
+    window.history.pushState({}, "", "https://github.com/octo/repo/pulls/200");
+    document.body.querySelector("main")!.append(document.createElement("div"));
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).toBeNull();
+    expect(unsubscribe).toHaveBeenCalledOnce();
 
     app.destroy();
   });

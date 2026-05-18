@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createExtensionApiClient } from "./api";
 import { getExtensionConfig } from "./config";
+import { EXTENSION_SESSION_STORAGE_KEY } from "./session";
 import type { StorageAreaLike } from "./session";
 
 function jsonResponse(body: unknown, init: { status?: number } = {}): Response {
@@ -11,22 +12,28 @@ function jsonResponse(body: unknown, init: { status?: number } = {}): Response {
   });
 }
 
-function createStorage(initialData?: Record<string, unknown>): StorageAreaLike {
+function createStorage(initialData?: Record<string, unknown>): {
+  data: Record<string, unknown>;
+  storage: StorageAreaLike;
+} {
   const data = { ...(initialData ?? {}) };
 
   return {
-    async get() {
-      return data;
-    },
-    async remove(keys) {
-      const values = Array.isArray(keys) ? keys : [keys];
+    data,
+    storage: {
+      async get() {
+        return data;
+      },
+      async remove(keys) {
+        const values = Array.isArray(keys) ? keys : [keys];
 
-      for (const key of values) {
-        delete data[key];
-      }
-    },
-    async set(items) {
-      Object.assign(data, items);
+        for (const key of values) {
+          delete data[key];
+        }
+      },
+      async set(items) {
+        Object.assign(data, items);
+      },
     },
   };
 }
@@ -51,10 +58,11 @@ describe("createExtensionApiClient", () => {
         refreshToken: "refresh-token",
       }),
     );
+    const { data, storage } = createStorage();
     const client = createExtensionApiClient({
       config: createTestConfig(),
       fetchFn,
-      storage: createStorage(),
+      storage,
     });
 
     await expect(client.loginWithFirebaseToken("firebase-id-token")).resolves.toEqual(
@@ -69,20 +77,28 @@ describe("createExtensionApiClient", () => {
       headers: { "Content-Type": "application/json" },
       method: "POST",
     });
+    expect(data).toEqual({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
   });
 
   it("requests the current timer with an authorization header", async () => {
     const fetchFn = vi.fn(async () => jsonResponse({ timeEntry: null }));
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
     const client = createExtensionApiClient({
       config: createTestConfig(),
       fetchFn,
-      storage: createStorage({
-        "gitiempo.extension.session": {
-          accessToken: "access-token",
-          accessTokenExpiresIn: 900,
-          refreshToken: "refresh-token",
-        },
-      }),
+      storage,
     });
 
     await client.getCurrentTimer();
@@ -125,16 +141,17 @@ describe("createExtensionApiClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
     const client = createExtensionApiClient({
       config: createTestConfig(),
       fetchFn,
-      storage: createStorage({
-        "gitiempo.extension.session": {
-          accessToken: "access-token",
-          accessTokenExpiresIn: 900,
-          refreshToken: "refresh-token",
-        },
-      }),
+      storage,
     });
 
     await client.startTimerFromGitHub({
@@ -174,16 +191,17 @@ describe("createExtensionApiClient", () => {
         }),
       )
       .mockResolvedValueOnce(jsonResponse({ timeEntry: null }));
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
     const client = createExtensionApiClient({
       config: createTestConfig(),
       fetchFn,
-      storage: createStorage({
-        "gitiempo.extension.session": {
-          accessToken: "access-token",
-          accessTokenExpiresIn: 900,
-          refreshToken: "refresh-token",
-        },
-      }),
+      storage,
     });
 
     await expect(client.getCurrentTimer()).resolves.toEqual({ timeEntry: null });
@@ -207,11 +225,18 @@ describe("createExtensionApiClient", () => {
         method: "GET",
       },
     );
+    expect(data).toEqual({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token-next",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token-next",
+      },
+    });
   });
 
   it("clears the local session when refresh fails", async () => {
-    const storage = createStorage({
-      "gitiempo.extension.session": {
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
         accessToken: "access-token",
         accessTokenExpiresIn: 900,
         refreshToken: "refresh-token",
@@ -234,8 +259,8 @@ describe("createExtensionApiClient", () => {
   });
 
   it("clears the local session when refresh throws before returning a response", async () => {
-    const storage = createStorage({
-      "gitiempo.extension.session": {
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
         accessToken: "access-token",
         accessTokenExpiresIn: 900,
         refreshToken: "refresh-token",

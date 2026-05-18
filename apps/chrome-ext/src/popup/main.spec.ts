@@ -4,6 +4,38 @@ import type { PageContext } from "@/lib/github-context";
 import type { RuntimeClient, RuntimeMutationResult, RuntimeSnapshot } from "@/lib/runtime";
 import { createPopupApp } from "./main";
 
+function currentTimer(): RuntimeSnapshot["currentTimer"] {
+  return {
+    createdAt: "2026-04-21T09:00:00.000Z",
+    description: null,
+    durationSeconds: null,
+    endedAt: null,
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    isBillable: true,
+    project: {
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      name: "Project Orion",
+    },
+    projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    source: "extension",
+    startedAt: "2026-04-21T09:00:00.000Z",
+    task: {
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      title: "Improve reports filters",
+    },
+    taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    updatedAt: "2026-04-21T09:00:00.000Z",
+    user: {
+      avatarUrl: null,
+      displayName: "Alexey Tsukanov",
+      email: "alexey@example.com",
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+    },
+    userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+    workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+  };
+}
+
 function createRuntimeClient(overrides?: {
   exchangeFirebaseToken?: RuntimeClient["exchangeFirebaseToken"];
   snapshot?: RuntimeSnapshot;
@@ -93,6 +125,30 @@ describe("popup app", () => {
     expect(exchangeFirebaseToken).toHaveBeenCalledWith("firebase-google-token");
   });
 
+  it("shows a retryable error and re-enables actions after Google sign-in fails", async () => {
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient(),
+      pageContextResolver: async () => ({ kind: "unsupported" }),
+      signInWithGoogleFn: vi.fn(async () => {
+        throw new Error("Google popup blocked");
+      }),
+    });
+
+    await app.load();
+    document
+      .querySelector<HTMLButtonElement>('[data-action="google-sign-in"]')!
+      .click();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.body.textContent).toContain("Google popup blocked");
+    expect(
+      document.querySelector<HTMLButtonElement>('[data-action="google-sign-in"]')?.disabled,
+    ).toBe(false);
+  });
+
   it("submits email sign-in through Firebase and exchanges the token", async () => {
     const exchangeFirebaseToken = vi.fn(async () => ({
       authenticated: true,
@@ -136,6 +192,47 @@ describe("popup app", () => {
     expect(exchangeFirebaseToken).toHaveBeenCalledWith("firebase-email-token");
   });
 
+  it("shows a retryable error and keeps the email form usable after email sign-in fails", async () => {
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient: createRuntimeClient(),
+      pageContextResolver: async () => ({ kind: "unsupported" }),
+      signInWithEmailPasswordFn: vi.fn(async () => {
+        throw new Error("Invalid email or password");
+      }),
+    });
+
+    await app.load();
+    document
+      .querySelector<HTMLButtonElement>('[data-action="toggle-email"]')!
+      .click();
+    document.querySelector<HTMLInputElement>('[data-field="email"]')!.value =
+      "alexey@example.com";
+    document
+      .querySelector<HTMLInputElement>('[data-field="email"]')!
+      .dispatchEvent(new Event("input", { bubbles: true }));
+    document.querySelector<HTMLInputElement>('[data-field="password"]')!.value =
+      "bad-password";
+    document
+      .querySelector<HTMLInputElement>('[data-field="password"]')!
+      .dispatchEvent(new Event("input", { bubbles: true }));
+    document
+      .querySelector<HTMLFormElement>('[data-form="email-sign-in"]')!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const submitButton = document.querySelector<HTMLButtonElement>(
+      '[data-form="email-sign-in"] button',
+    );
+
+    expect(document.body.textContent).toContain("Invalid email or password");
+    expect(document.querySelector('[data-form="email-sign-in"]')).not.toBeNull();
+    expect(submitButton).not.toBeNull();
+    expect(submitButton?.disabled).toBe(false);
+  });
+
   it("renders the authenticated no-timer popup state on supported issue pages", async () => {
     const runtimeClient = createRuntimeClient({
       snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
@@ -174,29 +271,7 @@ describe("popup app", () => {
     const runtimeClient = createRuntimeClient({
       snapshot: {
         authenticated: true,
-        currentTimer: {
-          createdAt: "2026-04-21T09:00:00.000Z",
-          description: null,
-          durationSeconds: null,
-          endedAt: null,
-          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
-          isBillable: true,
-          project: { id: "1", name: "Project Orion" },
-          projectId: "1",
-          source: "extension",
-          startedAt: "2026-04-21T09:00:00.000Z",
-          task: { id: "2", title: "Improve reports filters" },
-          taskId: "2",
-          updatedAt: "2026-04-21T09:00:00.000Z",
-          user: {
-            avatarUrl: null,
-            displayName: "Alexey Tsukanov",
-            email: "alexey@example.com",
-            id: "3",
-          },
-          userId: "3",
-          workspaceId: "4",
-        },
+        currentTimer: currentTimer(),
         errorMessage: null,
       },
     });
@@ -247,29 +322,7 @@ describe("popup app", () => {
     const runtimeClient = createRuntimeClient({
       snapshot: {
         authenticated: true,
-        currentTimer: {
-          createdAt: "2026-04-21T09:00:00.000Z",
-          description: null,
-          durationSeconds: null,
-          endedAt: null,
-          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
-          isBillable: true,
-          project: { id: "1", name: "Project Orion" },
-          projectId: "1",
-          source: "extension",
-          startedAt: "2026-04-21T09:00:00.000Z",
-          task: { id: "2", title: "Improve reports filters" },
-          taskId: "2",
-          updatedAt: "2026-04-21T09:00:00.000Z",
-          user: {
-            avatarUrl: null,
-            displayName: "Alexey Tsukanov",
-            email: "alexey@example.com",
-            id: "3",
-          },
-          userId: "3",
-          workspaceId: "4",
-        },
+        currentTimer: currentTimer(),
         errorMessage: null,
       },
       stopTimer,
