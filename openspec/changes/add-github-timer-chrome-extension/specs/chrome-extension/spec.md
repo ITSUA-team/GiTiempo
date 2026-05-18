@@ -144,9 +144,17 @@ The extension SHALL inject a page-local timer control into supported GitHub issu
 - **THEN** the extension calls `POST /time-entries/timer/start-from-github` with `githubRepo`, `issueNumber`, and `issueTitle`
 - **AND** the control transitions to a running state after success
 
-#### Scenario: Injected control shows current timer state without destructive stop
+#### Scenario: Injected running control stops timer for the matching GitHub issue
+- **GIVEN** the user is authenticated
+- **AND** the API reports a running timer with stable GitHub issue linkage matching the current page
+- **WHEN** the user clicks `Stop Timer` in the injected control
+- **THEN** the extension calls `POST /time-entries/timer/stop`
+- **AND** the control returns to an idle state after success
+
+#### Scenario: Injected control shows running timer elsewhere without destructive stop
 - **GIVEN** the user is authenticated
 - **AND** the API reports a running timer
+- **AND** that running timer either belongs to a different GitHub issue or has no stable GitHub issue linkage
 - **WHEN** the injected control renders
 - **THEN** it shows the authoritative running-timer context reported by the backend
 - **AND** it does not infer current-issue ownership from matching display text alone

@@ -19,6 +19,7 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
     projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
     source: "extension",
     startedAt: "2026-04-21T09:00:00.000Z",
+    githubIssue: null,
     task: {
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       title: "Improve reports filters",

@@ -72,25 +72,23 @@ function renderInjectedBody(
 ): string {
   const headlineTextClass = state.theme === "dark" ? "text-white" : "text-text-dark";
   const mutedTextClass = state.theme === "dark" ? "text-white/70" : "text-text-muted";
-  const issueHeader = `
-    <div class="flex items-start justify-between gap-3">
+
+  if (state.isLoading || state.snapshot === null) {
+    return `
       <div>
         <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
         <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
       </div>
-    </div>
-  `;
-
-  if (state.isLoading || state.snapshot === null) {
-    return `
-      ${issueHeader}
       <p class="m-0 text-sm ${mutedTextClass}">Checking your GiTiempo timer state.</p>
     `;
   }
 
   if (state.actionErrorMessage || state.snapshot.errorMessage) {
     return `
-      ${issueHeader}
+      <div>
+        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p>
         <button type="button" data-action="retry" class="${injectedTextActionClass}">Retry</button>
@@ -100,7 +98,10 @@ function renderInjectedBody(
 
   if (!state.snapshot.authenticated) {
     return `
-      ${issueHeader}
+      <div>
+        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-sm ${mutedTextClass}">Sign in to GiTiempo to start tracking this issue.</p>
         <button type="button" data-action="open-extension" class="bg-brand text-white ${injectedActionButtonClass}">Open extension</button>
@@ -109,13 +110,36 @@ function renderInjectedBody(
   }
 
   const currentTimer = state.snapshot.currentTimer;
+  const isCurrentIssueTimer = currentTimer
+    ? currentTimer.githubIssue?.githubRepo === pageContext.githubRepo
+      && currentTimer.githubIssue.issueNumber === pageContext.issueNumber
+    : false;
+
+  if (currentTimer && isCurrentIssueTimer) {
+    return `
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+          <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+        </div>
+        <span class="bg-status-active-bg text-status-active-text rounded-sm px-2 py-1 text-xs font-semibold">Running</span>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
+        <button type="button" data-action="stop-timer" class="bg-destructive text-white ${injectedActionButtonClass}">Stop Timer</button>
+      </div>
+    `;
+  }
 
   if (currentTimer) {
     return `
-      ${issueHeader}
+      <div>
+        <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+        <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+      </div>
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-1">
-          <p class="m-0 text-sm font-semibold ${headlineTextClass}">Timer currently running</p>
+          <p class="m-0 text-sm font-semibold ${headlineTextClass}">Timer running elsewhere</p>
           <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(currentTimer.task.title)} · ${escapeHtml(currentTimer.project.name)}</p>
           <p class="m-0 text-xs ${mutedTextClass}">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
         </div>
@@ -125,7 +149,10 @@ function renderInjectedBody(
   }
 
   return `
-    ${issueHeader}
+    <div>
+      <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+      <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
+    </div>
     <div class="flex items-center justify-between gap-3">
       <p class="m-0 text-sm ${mutedTextClass}">Start tracking directly from this GitHub issue.</p>
       <button type="button" data-action="start-timer" class="bg-brand text-white ${injectedActionButtonClass}">Start Timer</button>

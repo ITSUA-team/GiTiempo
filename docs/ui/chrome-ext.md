@@ -71,11 +71,10 @@
 
 ### Injected Running State
 
-- Show a compact current-timer indicator with live `HH:MM:SS`.
+- Show a compact running indicator with live `HH:MM:SS`.
 - Keep the same GitHub issue context visible.
-- Show the authoritative task and project context reported by the backend.
-- Do not infer that the current GitHub issue owns the timer from matching display text alone.
-- Guide the user to `Open extension` for timer management instead of showing a destructive inline stop action.
+- When the backend current-timer response includes stable GitHub issue linkage matching the current page, show a destructive `Stop Timer` action.
+- When the backend reports a current timer for another issue or without stable GitHub linkage, show the authoritative task/project context and guide the user to `Open extension` for global timer management.
 
 ### Injected Error State
 

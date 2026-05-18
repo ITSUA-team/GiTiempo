@@ -35,7 +35,7 @@
 - [x] 5.1 Implement content-script mounting on supported GitHub issue pages at the start of the page `main` content container.
 - [x] 5.2 Implement injected idle state with detected repository, issue number/title, and primary `Start Timer` action.
 - [x] 5.3 Implement injected auth-missing state that replaces timer start with `Open extension` or equivalent sign-in guidance.
-- [x] 5.4 Implement injected current-timer state with live `HH:MM:SS`, issue context, and non-destructive popup/workspace guidance.
+- [x] 5.4 Implement injected current-timer state with live `HH:MM:SS`, issue context, and a destructive `Stop Timer` action only when stable GitHub issue linkage matches the current page.
 - [x] 5.5 Implement injected error state that preserves issue context and shows concise error copy plus retry.
 - [x] 5.6 Add focused content-script/injected-control tests for mount behavior, state rendering, start/stop actions, and retryable failures.
 
@@ -51,7 +51,7 @@
 
 - [x] 7.1 Lock the approved MV3 auth mechanism in implementation and verification: Google sign-in must use the extension-owned web-auth flow, email sign-in must stay inside the popup-owned auth boundary, and the manifest/Firebase prerequisites must be verified with focused tests.
 - [x] 7.2 Verify the injected GitHub issue control mounts at the start of the page `main` content container and update tests/implementation if any legacy header/action placement remains.
-- [x] 7.3 Remove inferred same-issue destructive behavior from the injected control until the current-timer contract exposes stable GitHub issue linkage, and test the non-destructive current-timer state instead.
+- [x] 7.3 Add stable GitHub issue linkage to the current-timer contract, use it to restore same-issue inline `Stop Timer`, and keep non-destructive fallback behavior for unrelated or unlinked timers.
 
 Design parity review note:
 - Docs and approved extension frames were reviewed together. No PrimeVue-driven compromises were required because the extension stays Tailwind-only. The popup header uses a static GiTiempo badge instead of a user-specific avatar from the `.pen` reference because the MVP docs require the branded shell and state copy, but they do not require fetching profile data for the extension popup.

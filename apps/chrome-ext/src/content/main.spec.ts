@@ -46,6 +46,7 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
     projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
     source: "extension",
     startedAt: "2026-04-21T09:00:00.000Z",
+    githubIssue: null,
     task: {
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       title: "Improve reports filters",
@@ -60,6 +61,42 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
     },
     userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
     workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+  };
+}
+
+function currentIssueTimer(): NonNullable<RuntimeSnapshot["currentTimer"]> {
+  const timer = currentTimer();
+
+  if (!timer) {
+    throw new Error("Expected current timer fixture.");
+  }
+
+  return {
+    ...timer,
+    githubIssue: {
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+    },
+    project: {
+      ...timer.project,
+      name: "octo/repo",
+    },
+  };
+}
+
+function otherIssueTimer(): NonNullable<RuntimeSnapshot["currentTimer"]> {
+  const timer = currentTimer();
+
+  if (!timer) {
+    throw new Error("Expected current timer fixture.");
+  }
+
+  return {
+    ...timer,
+    githubIssue: {
+      githubRepo: "octo/repo",
+      issueNumber: 999,
+    },
   };
 }
 
@@ -195,7 +232,7 @@ describe("injected issue control", () => {
       createRuntimeClient({
         snapshot: {
           authenticated: true,
-          currentTimer: currentTimer(),
+          currentTimer: currentIssueTimer(),
           errorMessage: null,
         },
       }),
@@ -205,12 +242,34 @@ describe("injected issue control", () => {
 
     const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
 
-    expect(root.textContent).toContain("Timer currently running");
-    expect(root.textContent).not.toContain("Stop Timer");
-    expect(root.textContent).toContain("Open extension");
+    expect(root.textContent).toContain("Running");
+    expect(root.textContent).toContain("Stop Timer");
   });
 
-  it("renders a non-destructive current-timer state without a stop action", async () => {
+  it("renders a running-elsewhere state without a stop action", async () => {
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          currentTimer: otherIssueTimer(),
+          errorMessage: null,
+        },
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.textContent).toContain("Timer running elsewhere");
+    expect(root.textContent).not.toContain("Stop Timer");
+    expect(root.textContent).toContain("Open extension");
+    expect(root.textContent).toContain("Project Orion");
+  });
+
+  it("keeps the current timer non-destructive when github issue linkage is unavailable", async () => {
     const mounted = mountInjectedIssueControl(
       document,
       supportedContext(),
@@ -227,10 +286,9 @@ describe("injected issue control", () => {
 
     const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
 
-    expect(root.textContent).toContain("Timer currently running");
+    expect(root.textContent).toContain("Timer running elsewhere");
     expect(root.textContent).not.toContain("Stop Timer");
     expect(root.textContent).toContain("Open extension");
-    expect(root.textContent).toContain("Project Orion");
   });
 
   it("renders retryable errors without dropping the issue context", async () => {
@@ -245,7 +303,7 @@ describe("injected issue control", () => {
       createRuntimeClient({
         snapshot: {
           authenticated: true,
-          currentTimer: currentTimer(),
+          currentTimer: currentIssueTimer(),
           errorMessage: null,
         },
         stopTimer,
@@ -256,12 +314,12 @@ describe("injected issue control", () => {
 
     const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
 
-    root.querySelector<HTMLButtonElement>('[data-action="open-extension"]')!.click();
+    root.querySelector<HTMLButtonElement>('[data-action="stop-timer"]')!.click();
     await Promise.resolve();
 
     expect(root.textContent).toContain("Improve reports filters");
-    expect(root.textContent).not.toContain("Timer stop failed");
-    expect(stopTimer).not.toHaveBeenCalled();
+    expect(root.textContent).toContain("Timer stop failed");
+    expect(root.textContent).toContain("Retry");
   });
 
   it("remounts when GitHub navigates to another issue in the same tab", async () => {

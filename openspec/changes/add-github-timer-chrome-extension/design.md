@@ -77,10 +77,10 @@ Affected areas:
    - Rationale: the backend already exposes refresh-token exchange, and one retry reduces unnecessary sign-in prompts without hiding expired-session failures.
    - Alternative considered: require re-authentication on every `401`. Rejected because it creates avoidable friction for a timer surface that users may leave running for long sessions.
 
-10. **Treat running timer state as authoritative and non-destructive in the injected control until stable GitHub issue linkage exists.**
-   - Decision: the injected GitHub issue-page control does not show an inline destructive `Stop Timer` action for backend-reported current timer state. The current timer contract does not expose stable GitHub issue linkage, so the issue page UI must not infer ownership from display fields such as project name or task title. When a current timer exists, the injected control renders a non-destructive current-timer state with the authoritative timer context and guidance to open the popup or workspace for timer management.
-   - Rationale: `POST /time-entries/timer/stop` stops the user's current timer globally, and the current timer payload is not sufficient to prove that the current issue owns that timer.
-   - Alternative considered: infer same-issue ownership from project/task display text and show `Stop Timer` inline. Rejected because renamed issues, duplicate titles, or unrelated tasks can lead to a destructive action on the wrong page.
+10. **Treat running timer state as authoritative and issue-scoped only when stable GitHub issue linkage is present.**
+   - Decision: the injected GitHub issue-page control shows a destructive `Stop Timer` action only when the backend-reported current timer includes stable GitHub issue linkage that matches the current page. When a current timer exists for another issue, or when the current timer has no GitHub issue linkage, the injected control renders a non-destructive running-elsewhere state with the authoritative timer context and guidance to open the popup or workspace instead of exposing an unlabeled global stop action.
+   - Rationale: `POST /time-entries/timer/stop` stops the user's current timer globally, so the issue page UI must not infer current-issue ownership from display fields such as project name or task title alone.
+   - Alternative considered: keep all injected current-timer UI non-destructive. Rejected because the API can expose stable issue linkage from the existing GitHub task mapping, allowing same-issue stop behavior without heuristic matching.
 
 ## Risks / Trade-offs
 
@@ -89,7 +89,7 @@ Affected areas:
 - **Content script and popup can show stale timer state** → Reconcile through current-timer fetch on mount and after start/stop actions; broadcast successful mutations to other extension surfaces.
 - **MV3 auth details can drift from manifest/Firebase config** → Keep the approved Google/email auth mechanism, required permissions, and redirect/origin assumptions explicit in the change artifacts and verify them with focused auth-boundary tests.
 - **Shared token imports may pull too much SPA styling** → Import only the shared token CSS path required for Tailwind utilities; do not import PrimeVue or SPA bootstrap CSS.
-- **Stop timer endpoint is global to the current user timer** → Render the current issue context clearly, keep injected current-timer UI non-destructive until stable issue linkage exists, and refresh authoritative current timer state after start failures or popup-managed stop actions.
+- **Stop timer endpoint is global to the current user timer** → Render the current issue context clearly, show destructive controls only when stable GitHub issue linkage matches the current page, and refresh authoritative current timer state after stop/start failures.
 - **Popup and injected variants can drift over time** → Keep `docs/ui/chrome-ext.md` and `GITiempo.pen` synchronized before implementation and perform final parity review against both, especially where the injected control intentionally diverges from the popup card shell.
 
 ## Migration Plan
