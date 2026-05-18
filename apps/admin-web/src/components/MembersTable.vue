@@ -275,6 +275,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     table-class="min-w-[880px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
+    :table-container-style="{ overflow: 'visible' }"
   >
     <!-- Member: avatar + name + email -->
     <Column :pt="managementTableColumnPt">

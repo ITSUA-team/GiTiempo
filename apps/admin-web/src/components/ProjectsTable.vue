@@ -291,6 +291,7 @@ function formatSource(source: string): string {
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     table-class="min-w-[1010px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
+    :table-container-style="{ overflow: 'visible' }"
   >
     <Column :pt="managementTableColumnPt">
       <template #body="{ data }">

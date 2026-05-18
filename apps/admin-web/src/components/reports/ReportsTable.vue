@@ -192,6 +192,7 @@ const filterSelectPt = {
       shell-class="border-divider overflow-x-auto rounded-[6px] border"
       table-class="min-w-[720px] w-full table-fixed border-collapse"
       table-container-class="overflow-visible rounded-none border-none"
+      :table-container-style="{ overflow: 'visible' }"
     >
       <template #filters>
         <div class="flex min-w-[720px] flex-1 items-center">

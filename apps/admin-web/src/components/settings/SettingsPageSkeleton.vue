@@ -23,7 +23,10 @@ import Skeleton from 'primevue/skeleton';
     </div>
 
     <div class="flex w-full max-w-[620px] flex-col gap-2">
-      <SurfaceCard padding-class="p-5">
+      <SurfaceCard
+        class="w-full"
+        padding-class="p-5"
+      >
         <div class="flex flex-col gap-5">
           <section class="flex flex-col gap-3">
             <Skeleton
@@ -137,17 +140,22 @@ import Skeleton from 'primevue/skeleton';
         </div>
       </SurfaceCard>
 
-      <div class="flex justify-end gap-2.5 pt-2">
-        <Skeleton
-          width="5.5rem"
-          height="2.75rem"
-          border-radius="6px"
-        />
-        <Skeleton
-          width="8.5rem"
-          height="2.75rem"
-          border-radius="6px"
-        />
+      <div
+        data-testid="settings-skeleton-actions"
+        class="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:justify-end"
+      >
+        <div class="w-full sm:w-[5.5rem]">
+          <Skeleton
+            height="2.75rem"
+            border-radius="6px"
+          />
+        </div>
+        <div class="w-full sm:w-[8.5rem]">
+          <Skeleton
+            height="2.75rem"
+            border-radius="6px"
+          />
+        </div>
       </div>
     </div>
   </div>
