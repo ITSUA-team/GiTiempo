@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 
 import { flushPromises, mount } from '@vue/test-utils';
+import type { ProjectListResponse, WorkspaceMemberListResponse } from '@gitiempo/shared';
+import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
-import { describe, expect, it, vi } from 'vitest';
+import MultiSelect from 'primevue/multiselect';
+import Select from 'primevue/select';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const confirmationMock = vi.hoisted(() => ({
   requireConfirmation: vi.fn(),
@@ -30,61 +34,171 @@ vi.mock('@/services/admin-members-client', () => ({
 
 import MembersTable from './MembersTable.vue';
 
-describe('MembersTable', () => {
-  it('renders icon-only assign, edit, and remove row actions with accessible labels', () => {
-    const pinia = createPinia();
-    setActivePinia(pinia);
+function createMembers(): WorkspaceMemberListResponse {
+  const now = new Date();
+  const older = new Date(now);
+  older.setDate(older.getDate() - 10);
 
-    const wrapper = mount(MembersTable, {
-      props: {
-        currentUserId: 'current-user',
-        loading: false,
-        members: [
-          {
-            avatarUrl: null,
-            displayName: 'Pat PM',
-            email: 'pat@example.com',
-            id: 'member-1',
-            joinedAt: '2026-05-01T10:00:00.000Z',
-            lastActiveAt: '2026-05-02T11:00:00.000Z',
-            projectsAssignedCount: 2,
-            role: 'pm',
-            userId: 'user-2',
-            workspaceId: 'workspace-1',
-          },
-        ],
-        projects: [
-          {
-            color: null,
-            createdAt: '2026-05-01T10:00:00.000Z',
-            description: null,
-            id: 'project-1',
-            isActive: true,
-            members: [],
-            name: 'Project Orion',
-            source: 'manual',
-            totalHours: 12,
-            updatedAt: '2026-05-01T10:00:00.000Z',
-            visibility: 'public',
-            workspaceId: 'workspace-1',
-          },
-        ],
-      },
-      global: {
-        directives: {
-          tooltip: {
-            mounted(el, binding) {
-              el.setAttribute('data-tooltip', String(binding.value));
-            },
+  return [
+    {
+      avatarUrl: null,
+      displayName: 'Pat PM',
+      email: 'pat@example.com',
+      id: 'member-1',
+      joinedAt: '2026-05-01T10:00:00.000Z',
+      lastActiveAt: now.toISOString(),
+      projectsAssignedCount: 1,
+      role: 'pm',
+      userId: 'user-2',
+      workspaceId: 'workspace-1',
+    },
+    {
+      avatarUrl: null,
+      displayName: 'Alex Admin',
+      email: 'alex@example.com',
+      id: 'member-2',
+      joinedAt: '2026-05-01T10:00:00.000Z',
+      lastActiveAt: null,
+      projectsAssignedCount: 1,
+      role: 'admin',
+      userId: 'user-1',
+      workspaceId: 'workspace-1',
+    },
+    {
+      avatarUrl: null,
+      displayName: 'Nina Keller',
+      email: 'nina@example.com',
+      id: 'member-3',
+      joinedAt: '2026-05-01T10:00:00.000Z',
+      lastActiveAt: older.toISOString(),
+      projectsAssignedCount: 1,
+      role: 'member',
+      userId: 'user-3',
+      workspaceId: 'workspace-1',
+    },
+  ];
+}
+
+function createProjects(): ProjectListResponse {
+  return [
+    {
+      color: null,
+      createdAt: '2026-05-01T10:00:00.000Z',
+      description: null,
+      id: 'project-1',
+      isActive: true,
+      members: [
+        {
+          avatarUrl: null,
+          displayName: 'Pat PM',
+          email: 'pat@example.com',
+          role: 'pm',
+          userId: 'user-2',
+        },
+        {
+          avatarUrl: null,
+          displayName: 'Alex Admin',
+          email: 'alex@example.com',
+          role: 'admin',
+          userId: 'user-1',
+        },
+      ],
+      name: 'Project Orion',
+      source: 'manual',
+      totalHours: 12,
+      updatedAt: '2026-05-01T10:00:00.000Z',
+      visibility: 'public',
+      workspaceId: 'workspace-1',
+    },
+    {
+      color: null,
+      createdAt: '2026-05-01T10:00:00.000Z',
+      description: null,
+      id: 'project-2',
+      isActive: true,
+      members: [
+        {
+          avatarUrl: null,
+          displayName: 'Nina Keller',
+          email: 'nina@example.com',
+          role: 'member',
+          userId: 'user-3',
+        },
+      ],
+      name: 'Billing API',
+      source: 'manual',
+      totalHours: 8,
+      updatedAt: '2026-05-01T10:00:00.000Z',
+      visibility: 'private',
+      workspaceId: 'workspace-1',
+    },
+  ];
+}
+
+function mountMembersTable(options: {
+  currentUserId?: string | null;
+  members?: WorkspaceMemberListResponse;
+  projects?: ProjectListResponse;
+} = {}) {
+  const pinia = createPinia();
+  setActivePinia(pinia);
+
+  return mount(MembersTable, {
+    props: {
+      currentUserId: options.currentUserId ?? 'current-user',
+      loading: false,
+      members: options.members ?? createMembers(),
+      projects: options.projects ?? createProjects(),
+    },
+    global: {
+      directives: {
+        tooltip: {
+          mounted(el, binding) {
+            el.setAttribute('data-tooltip', String(binding.value));
           },
         },
-        plugins: [pinia, PrimeVue],
-        stubs: {
-          MemberAssignPmPanel: { template: '<div />' },
-          MemberEditForm: { template: '<div />' },
-        },
       },
+      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      stubs: {
+        MemberAssignPmPanel: { template: '<div data-testid="assign-panel" />' },
+        MemberEditForm: { template: '<div data-testid="edit-panel" />' },
+      },
+    },
+  });
+}
+
+function expectMemberCards(wrapper: ReturnType<typeof mountMembersTable>, names: string[]) {
+  const cards = wrapper.findAll('[data-testid="member-mobile-card"]');
+  expect(cards).toHaveLength(names.length);
+
+  for (const name of names) {
+    expect(cards.some((card) => card.text().includes(name))).toBe(true);
+  }
+}
+
+describe('MembersTable', () => {
+  beforeEach(() => {
+    confirmationMock.requireConfirmation.mockReset();
+    toastMock.errorToast.mockReset();
+    toastMock.successToast.mockReset();
+
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        matches: false,
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
     });
+  });
+
+  it('renders icon-only assign, edit, and remove row actions with accessible labels', () => {
+    const wrapper = mountMembersTable({ members: [createMembers()[0]!], projects: [createProjects()[0]!] });
 
     const assignButton = wrapper.get('[data-testid="member-assign-pm-member-1"]');
     const editButton = wrapper.get('[data-testid="member-edit-member-1"]');
@@ -100,60 +214,58 @@ describe('MembersTable', () => {
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(1);
   });
 
-  it('preserves assign, edit, and remove flows behind the icon-only actions', async () => {
-    const pinia = createPinia();
-    setActivePinia(pinia);
+  it('filters members by global search, column filters, project, role, and activity', async () => {
+    const wrapper = mountMembersTable();
 
-    const wrapper = mount(MembersTable, {
-      props: {
-        currentUserId: 'current-user',
-        loading: false,
-        members: [
-          {
-            avatarUrl: null,
-            displayName: 'Pat PM',
-            email: 'pat@example.com',
-            id: 'member-1',
-            joinedAt: '2026-05-01T10:00:00.000Z',
-            lastActiveAt: '2026-05-02T11:00:00.000Z',
-            projectsAssignedCount: 2,
-            role: 'pm',
-            userId: 'user-2',
-            workspaceId: 'workspace-1',
-          },
-        ],
-        projects: [
-          {
-            color: null,
-            createdAt: '2026-05-01T10:00:00.000Z',
-            description: null,
-            id: 'project-1',
-            isActive: true,
-            members: [],
-            name: 'Project Orion',
-            source: 'manual',
-            totalHours: 12,
-            updatedAt: '2026-05-01T10:00:00.000Z',
-            visibility: 'public',
-            workspaceId: 'workspace-1',
-          },
-        ],
-      },
-      global: {
-        directives: {
-          tooltip: {
-            mounted(el, binding) {
-              el.setAttribute('data-tooltip', String(binding.value));
-            },
-          },
-        },
-        plugins: [pinia, PrimeVue],
-        stubs: {
-          MemberAssignPmPanel: { template: '<div data-testid="assign-panel" />' },
-          MemberEditForm: { template: '<div data-testid="edit-panel" />' },
-        },
-      },
-    });
+    expect(wrapper.get('input[aria-label="Search members"]').attributes('placeholder')).toBe(
+      'Search members',
+    );
+    expect(
+      wrapper.get('input[aria-label="Filter members by name or email"]').attributes('placeholder'),
+    ).toBe('Filter name or email');
+    expect(wrapper.text()).toContain('All roles');
+    expect(wrapper.text()).toContain('All projects');
+    expect(wrapper.text()).toContain('Any activity');
+    expectMemberCards(wrapper, ['Pat PM', 'Alex Admin', 'Nina Keller']);
+
+    await wrapper.get('input[aria-label="Search members"]').setValue('orion');
+    expectMemberCards(wrapper, ['Pat PM', 'Alex Admin']);
+
+    await wrapper.get('input[aria-label="Search members"]').setValue('');
+    await wrapper.get('input[aria-label="Filter members by name or email"]').setValue('nina');
+    expectMemberCards(wrapper, ['Nina Keller']);
+
+    await wrapper.get('input[aria-label="Filter members by name or email"]').setValue('');
+    const memberSelectFilters = wrapper.findAllComponents(Select);
+    const roleFilter = memberSelectFilters[0];
+    expect(roleFilter).toBeDefined();
+    await roleFilter!.vm.$emit('update:modelValue', 'admin');
+    await wrapper.vm.$nextTick();
+    expectMemberCards(wrapper, ['Alex Admin']);
+
+    await roleFilter!.vm.$emit('update:modelValue', null);
+    await wrapper.vm.$nextTick();
+    const projectFilter = wrapper.findAllComponents(MultiSelect)[0];
+    expect(projectFilter).toBeDefined();
+    await projectFilter!.vm.$emit('update:modelValue', ['project-2']);
+    await wrapper.vm.$nextTick();
+    expectMemberCards(wrapper, ['Nina Keller']);
+
+    await projectFilter!.vm.$emit('update:modelValue', []);
+    await wrapper.vm.$nextTick();
+    const activityFilter = memberSelectFilters[1];
+    expect(activityFilter).toBeDefined();
+    await activityFilter!.vm.$emit('update:modelValue', 'inactive');
+    await wrapper.vm.$nextTick();
+    expectMemberCards(wrapper, ['Alex Admin']);
+
+    await activityFilter!.vm.$emit('update:modelValue', 'any');
+    await wrapper.vm.$nextTick();
+    expectMemberCards(wrapper, ['Pat PM', 'Alex Admin', 'Nina Keller']);
+  });
+
+  it('preserves assign, edit, and remove flows behind the icon-only actions', async () => {
+    const wrapper = mountMembersTable({ members: [createMembers()[0]!], projects: [createProjects()[0]!] });
 
     await wrapper.get('[data-testid="member-assign-pm-member-1"]').trigger('click');
     expect(wrapper.find('[data-testid="assign-panel"]').exists()).toBe(true);
@@ -165,5 +277,17 @@ describe('MembersTable', () => {
     await flushPromises();
 
     expect(confirmationMock.requireConfirmation).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides an expanded member panel when filters exclude that row', async () => {
+    const wrapper = mountMembersTable();
+
+    await wrapper.get('[data-testid="member-assign-pm-member-1"]').trigger('click');
+    expect(wrapper.find('[data-testid="assign-panel"]').exists()).toBe(true);
+
+    await wrapper.get('input[aria-label="Search members"]').setValue('nina');
+
+    expectMemberCards(wrapper, ['Nina Keller']);
+    expect(wrapper.find('[data-testid="assign-panel"]').exists()).toBe(false);
   });
 });
