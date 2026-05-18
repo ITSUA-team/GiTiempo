@@ -11,7 +11,7 @@ const props = defineProps<{
 const skeletonConfig = {
   members: {
     actionWidth: '8.5rem',
-    descriptionWidth: '24rem',
+    descriptionWidth: 'min(100%, 24rem)',
     filterCount: 0,
     statCount: 3,
     tableActionWidth: undefined,
@@ -19,7 +19,7 @@ const skeletonConfig = {
   },
   projects: {
     actionWidth: '7.5rem',
-    descriptionWidth: '22rem',
+    descriptionWidth: 'min(100%, 22rem)',
     filterCount: 0,
     statCount: 3,
     tableActionWidth: '16rem',
@@ -27,7 +27,7 @@ const skeletonConfig = {
   },
   reports: {
     actionWidth: '6.875rem',
-    descriptionWidth: '28rem',
+    descriptionWidth: 'min(100%, 28rem)',
     filterCount: 4,
     statCount: 4,
     tableActionWidth: '17.5rem',
@@ -38,13 +38,15 @@ const skeletonConfig = {
 
 <template>
   <div
-    aria-label="Loading page content"
+    aria-busy="true"
     class="flex flex-col gap-6"
     role="status"
   >
+    <span class="sr-only">Loading page content</span>
+
     <div class="flex flex-col gap-6">
-      <div class="flex items-center justify-between">
-        <div class="flex flex-col gap-1.5">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 flex-col gap-1.5">
           <Skeleton
             width="10rem"
             height="2rem"
@@ -86,7 +88,7 @@ const skeletonConfig = {
 
       <div
         class="grid gap-4"
-        :class="props.variant === 'reports' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'"
+        :class="props.variant === 'reports' ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-3'"
       >
         <Skeleton
           v-for="index in skeletonConfig[props.variant].statCount"
@@ -100,7 +102,7 @@ const skeletonConfig = {
     <SurfaceCard padding-class="p-5">
       <div
         class="mb-4"
-        :class="skeletonConfig[props.variant].tableActionWidth ? 'flex items-center justify-between' : undefined"
+        :class="skeletonConfig[props.variant].tableActionWidth ? 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between' : undefined"
       >
         <Skeleton
           width="8rem"
@@ -115,7 +117,141 @@ const skeletonConfig = {
         />
       </div>
 
-      <div class="border-divider overflow-hidden rounded-[6px] border">
+      <div
+        v-if="props.variant === 'members'"
+        class="flex flex-col gap-3 sm:hidden"
+      >
+        <article
+          v-for="index in 4"
+          :key="`member-mobile-${index}`"
+          class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
+        >
+          <div class="flex items-start gap-3">
+            <Skeleton
+              width="2.25rem"
+              height="2.25rem"
+              border-radius="9999px"
+            />
+            <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+              <Skeleton
+                width="70%"
+                height="0.95rem"
+                border-radius="4px"
+              />
+              <Skeleton
+                width="85%"
+                height="0.75rem"
+                border-radius="4px"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <Skeleton
+                width="2.5rem"
+                height="0.7rem"
+                border-radius="4px"
+              />
+              <Skeleton
+                width="4rem"
+                height="0.85rem"
+                border-radius="4px"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Skeleton
+                width="3.5rem"
+                height="0.7rem"
+                border-radius="4px"
+              />
+              <Skeleton
+                width="5rem"
+                height="0.85rem"
+                border-radius="4px"
+              />
+            </div>
+            <div class="col-span-2 flex flex-col gap-1.5">
+              <Skeleton
+                width="4.5rem"
+                height="0.7rem"
+                border-radius="4px"
+              />
+              <Skeleton
+                width="6rem"
+                height="0.85rem"
+                border-radius="4px"
+              />
+            </div>
+          </div>
+
+          <div class="border-divider flex justify-end gap-2 border-t pt-3">
+            <Skeleton
+              v-for="actionIndex in 3"
+              :key="`member-action-${index}-${actionIndex}`"
+              width="2rem"
+              height="2rem"
+              border-radius="9999px"
+            />
+          </div>
+        </article>
+      </div>
+
+      <div
+        v-else-if="props.variant === 'reports'"
+        class="flex flex-col gap-3 sm:hidden"
+      >
+        <article
+          v-for="index in 4"
+          :key="`report-mobile-${index}`"
+          class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
+        >
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <Skeleton
+              width="75%"
+              height="0.95rem"
+              border-radius="4px"
+            />
+            <Skeleton
+              width="55%"
+              height="0.75rem"
+              border-radius="4px"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <Skeleton
+                width="2.5rem"
+                height="0.7rem"
+                border-radius="4px"
+              />
+              <Skeleton
+                width="4.5rem"
+                height="0.85rem"
+                border-radius="4px"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Skeleton
+                width="3.5rem"
+                height="0.7rem"
+                border-radius="4px"
+              />
+              <Skeleton
+                width="4.5rem"
+                height="0.85rem"
+                border-radius="4px"
+              />
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div
+        class="border-divider overflow-hidden rounded-[6px] border"
+        :class="props.variant === 'members' || props.variant === 'reports' ? 'hidden sm:block' : undefined"
+      >
         <div class="bg-app-bg border-divider flex h-[44px] items-center gap-3 border-b px-3">
           <Skeleton
             class="flex-1"
