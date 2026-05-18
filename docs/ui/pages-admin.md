@@ -5,9 +5,16 @@
 
 ## Dashboard
 
-- Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity table.
-- Four summary stat cards.
-- Recent activity feed using the same DataTable patterns as user pages.
+- Initial page load uses a skeleton matching the dashboard header, summary cards, and recent activity feed.
+- Four summary stat cards use existing API-backed workspace metrics only. Admin users see Active Members, Hours This Week, Pending Invites, and Active Projects. PM users use PM-safe project/report metrics only and must not call member or invite management clients.
+- Hours This Week is derived from the reports/time endpoint using a frontend-supplied local-week window: local Monday at `00:00:00.000` through the current request time, converted to ISO timestamps. Member, invite, and project metrics are derived only from endpoints allowed for the current role.
+- The approved design's Open Invoices metric is deferred until an invoice API/contract exists; do not display fabricated invoice totals or invoice activity.
+- Recent Activity uses the approved feed layout with compact rows, newest-first ordering, token-backed circular activity indicators, activity copy, and relative time.
+- Recent Activity rows are derived from current timestamps such as member `lastActiveAt`, invite `createdAt`, project `updatedAt`, and report row timing fields; successful loads with no derived rows render an empty state instead of default activity.
+- Recent Activity previews the first five rows; when more than five rows are available, render a PrimeVue `Button` labeled `View all activity` that expands the feed locally and can collapse back to the five-row preview.
+- Activity type labels are not rendered as visible tags; expose the type on the circular indicator with the same PrimeVue `v-tooltip` treatment used by navigation and with `aria-label`.
+- Request failures render the standard retryable request-error surface and toast feedback; do not collapse failed required requests into empty/default dashboard content.
+- Dashboard implementation is admin-web only and must not require new dashboard, invoice, activity, aggregate, backend, shared contract, database, seed, migration, or OpenAPI changes.
 
 ## Reports Page
 
@@ -50,12 +57,12 @@
 - Single-column workspace settings form inside the authenticated admin shell.
 - Header copy: `Settings` with `Configure workspace defaults, billing preferences, and organization details.`
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
-- Current persisted API-supported fields are `Workspace name`, `Default hourly rate`, and `Currency` only.
+- Current persisted API-supported fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
-- Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint; this page must not require API, shared contract, database, seed, migration, or OpenAPI changes.
+- Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
 - Initial load reads workspace identity from `/workspace` and workspace settings from `/workspace/settings`.
 - The authenticated admin shell header reads `/workspace` by default for the visible workspace label; Settings save updates that label from the authoritative workspace response.
-- Save sends workspace name changes to `/workspace` and currency/default hourly rate changes to `/workspace/settings`; unchanged resources are not patched only to satisfy schemas.
+- Save sends workspace name changes to `/workspace` and currency/default hourly rate/time zone changes to `/workspace/settings`; unchanged resources are not patched only to satisfy schemas.
 - `Cancel` restores the latest loaded or saved values without sending a request.
 - Use a structured PrimeVue Skeleton first-load state that mirrors the implemented header, card, field rows, and action row.
 - Keep failed initial requests distinct from empty/default settings: show a request-error surface with retry and toast feedback instead of rendering default form values.

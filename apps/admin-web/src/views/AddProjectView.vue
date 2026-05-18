@@ -120,7 +120,7 @@ onMounted(loadMembers);
 </script>
 
 <template>
-  <div class="flex flex-col gap-5 p-6">
+  <div class="flex flex-col gap-5">
     <div>
       <Button
         label="← Back to projects"

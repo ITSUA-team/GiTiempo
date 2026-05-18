@@ -5,9 +5,8 @@ import type {
   WorkspaceInviteListResponse,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
-import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
+import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
-import ConfirmDialog from 'primevue/confirmdialog';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
@@ -108,9 +107,7 @@ onMounted(fetchAll);
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 p-6">
-    <ConfirmDialog />
-
+  <div class="flex flex-col gap-6">
     <template v-if="loading && !initialLoaded">
       <ManagementPageSkeleton variant="members" />
     </template>
@@ -124,9 +121,10 @@ onMounted(fetchAll);
     </template>
 
     <template v-else>
-      <StatsHeader
+      <SectionHeader
         title="Members"
         description="Manage team roles, project assignments, and member activity."
+        variant="stats"
       >
         <template #actions>
           <Button
@@ -148,7 +146,7 @@ onMounted(fetchAll);
             :value="pmsAssigned"
           />
         </template>
-      </StatsHeader>
+      </SectionHeader>
 
       <SurfaceCard padding-class="p-5">
         <MembersTable

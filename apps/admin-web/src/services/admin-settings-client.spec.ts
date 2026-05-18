@@ -101,18 +101,24 @@ describe('createAdminSettingsClient', () => {
 				...settingsResponse,
 				currency: 'EUR',
 				defaultHourlyRate: null,
+				timeZone: 'Europe/Kyiv',
 			}),
 		);
 
 		const result = await client.updateWorkspaceSettings('access-token', {
 			currency: 'EUR',
 			defaultHourlyRate: null,
+			timeZone: 'Europe/Kyiv',
 		});
 
 		expect(fetchFn).toHaveBeenCalledWith(
 			'https://api.example.test/workspace/settings',
 			expect.objectContaining({
-				body: JSON.stringify({ currency: 'EUR', defaultHourlyRate: null }),
+				body: JSON.stringify({
+					currency: 'EUR',
+					defaultHourlyRate: null,
+					timeZone: 'Europe/Kyiv',
+				}),
 				headers: expect.objectContaining({
 					Authorization: 'Bearer access-token',
 					'Content-Type': 'application/json',
@@ -122,6 +128,7 @@ describe('createAdminSettingsClient', () => {
 		);
 		expect(result.currency).toBe('EUR');
 		expect(result.defaultHourlyRate).toBeNull();
+		expect(result.timeZone).toBe('Europe/Kyiv');
 	});
 
 	it('rejects invalid response shapes', async () => {
