@@ -112,6 +112,7 @@ describe('ProjectsTable', () => {
     expect(archiveButton.text()).toBe('');
     expect(unarchiveButton.attributes('aria-label')).toBe('Unarchive');
     expect(unarchiveButton.text()).toBe('');
+    expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(2);
   });
 
   it('preserves edit, archive, and unarchive flows behind the icon-only actions', async () => {

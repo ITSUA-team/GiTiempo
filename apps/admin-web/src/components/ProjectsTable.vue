@@ -15,7 +15,6 @@ import {
   ManagementTableRowAction,
   ManagementTableShell,
   managementTableColumnPt,
-  SectionHeader,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
@@ -153,27 +152,132 @@ function formatSource(source: string): string {
 </script>
 
 <template>
-  <div class="mb-4">
-    <SectionHeader title="Projects Table">
-      <template #actions>
-        <div class="flex flex-col gap-1.5">
-          <label
-            id="member-filter-label"
-            class="text-text-muted text-[12px] font-medium"
-          >Assigned member</label>
-          <Select
-            v-model="selectedMemberId"
-            :options="memberFilterOptions"
-            aria-labelledby="member-filter-label"
-            option-label="label"
-            option-value="value"
-            placeholder="All members"
-            show-clear
-            class="w-[260px]"
+  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <h2 class="text-text-dark text-lg font-semibold">
+      Projects Table
+    </h2>
+
+    <div class="flex flex-col gap-1.5 sm:w-[260px]">
+      <label
+        id="member-filter-label"
+        class="text-text-muted text-[12px] font-medium"
+      >Assigned member</label>
+      <Select
+        v-model="selectedMemberId"
+        :options="memberFilterOptions"
+        aria-labelledby="member-filter-label"
+        option-label="label"
+        option-value="value"
+        placeholder="All members"
+        show-clear
+        class="w-full"
+      />
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-3 sm:hidden">
+    <template v-if="filteredProjects.length > 0">
+      <article
+        v-for="project in filteredProjects"
+        :key="project.id"
+        data-testid="project-mobile-card"
+        class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3
+              class="truncate text-[15px] font-semibold"
+              :class="project.isActive ? 'text-text-dark' : 'text-text-muted'"
+            >
+              {{ project.name }}
+            </h3>
+            <p class="text-text-muted text-[13px]">
+              {{ formatSource(project.source) }}
+            </p>
+          </div>
+
+          <template v-if="project.isActive">
+            <Tag
+              v-if="project.visibility === 'public'"
+              value="Public"
+              :pt="{
+                root: 'inline-flex shrink-0 items-center rounded-[6px] bg-accent-tint px-2 py-1 text-[12px] font-semibold leading-none text-brand',
+              }"
+            />
+            <Tag
+              v-else
+              value="Private"
+              :pt="{
+                root: 'inline-flex shrink-0 items-center rounded-[6px] bg-status-warn-bg px-2 py-1 text-[12px] font-semibold leading-none text-status-warn-text',
+              }"
+            />
+          </template>
+          <Tag
+            v-else
+            :value="project.visibility === 'public' ? 'Public' : 'Private'"
+            :pt="{
+              root: 'inline-flex shrink-0 items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
+              label: 'text-text-muted',
+            }"
           />
         </div>
-      </template>
-    </SectionHeader>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Assigned members</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ project.members.length }} members
+            </span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Hours</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ project.totalHours }}h
+            </span>
+          </div>
+        </div>
+
+        <div class="border-divider flex justify-end gap-2 border-t pt-3">
+          <template v-if="project.isActive">
+            <ManagementTableRowAction
+              :data-testid="`project-mobile-edit-${project.id}`"
+              :icon="PencilSquareIcon"
+              label="Edit"
+              @click="handleEdit(project)"
+            />
+            <ManagementTableRowAction
+              :data-testid="`project-mobile-archive-${project.id}`"
+              :icon="ArchiveBoxIcon"
+              label="Archive"
+              tone="destructive"
+              @click="confirmArchive(project)"
+            />
+          </template>
+          <ManagementTableRowAction
+            v-else
+            :data-testid="`project-mobile-unarchive-${project.id}`"
+            :icon="ArrowUturnLeftIcon"
+            label="Unarchive"
+            tone="muted"
+            @click="handleUnarchive(project)"
+          />
+        </div>
+
+        <ProjectEditForm
+          v-if="expandedRows[project.id]"
+          :project="project"
+          :all-members="members"
+          @saved="handleEditSaved(project)"
+          @cancelled="handleEditCancelled(project)"
+        />
+      </article>
+    </template>
+
+    <EmptyStateBlock
+      v-else-if="!loading"
+      title="No projects found"
+      description="No projects match the current filter, or none have been created yet."
+    />
   </div>
 
   <ManagementTableShell
@@ -182,6 +286,11 @@ function formatSource(source: string): string {
     :value="filteredProjects"
     :loading="loading"
     data-key="id"
+    class="hidden sm:block"
+    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[1010px] items-center border-b font-sans text-[13px] font-semibold"
+    shell-class="border-divider overflow-x-auto rounded-[6px] border"
+    table-class="min-w-[1010px] w-full table-fixed border-collapse"
+    table-container-class="overflow-visible rounded-none border-none"
   >
     <Column :pt="managementTableColumnPt">
       <template #body="{ data }">

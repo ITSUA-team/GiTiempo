@@ -70,11 +70,12 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
-    const columnFilters = wrapper.findAllComponents(Select);
-    expect(columnFilters).toHaveLength(4);
-    expect(columnFilters.every((filter) => filter.props('disabled') !== true)).toBe(
+    const filterControls = wrapper.findAllComponents(Select);
+    expect(filterControls).toHaveLength(8);
+    expect(filterControls.every((filter) => filter.props('disabled') !== true)).toBe(
       true,
     );
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(1);
 
     const search = wrapper.get('input[aria-label="Search report rows"]');
     await search.setValue('orion');

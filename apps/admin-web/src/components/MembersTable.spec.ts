@@ -97,6 +97,7 @@ describe('MembersTable', () => {
     expect(editButton.text()).toBe('');
     expect(removeButton.attributes('aria-label')).toBe('Remove');
     expect(removeButton.text()).toBe('');
+    expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(1);
   });
 
   it('preserves assign, edit, and remove flows behind the icon-only actions', async () => {

@@ -14,7 +14,6 @@ import {
   EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
-  SectionHeader,
   formatWorkspaceRole,
   managementTableColumnPt,
 } from '@gitiempo/web-shared';
@@ -159,7 +158,110 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 
 <template>
   <div class="mb-4">
-    <SectionHeader title="Members Table" />
+    <h2 class="text-text-dark text-lg font-semibold">
+      Members Table
+    </h2>
+  </div>
+
+  <div class="flex flex-col gap-3 sm:hidden">
+    <template v-if="members.length > 0">
+      <article
+        v-for="member in members"
+        :key="member.id"
+        data-testid="member-mobile-card"
+        class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
+      >
+        <div class="flex items-start gap-3">
+          <Avatar
+            :image="member.avatarUrl ?? undefined"
+            :label="!member.avatarUrl ? getInitials(member) : undefined"
+            shape="circle"
+            class="size-9 shrink-0"
+            :pt="{
+              root: 'bg-accent-tint text-brand text-[13px] font-semibold',
+            }"
+          />
+          <div class="min-w-0 flex-1">
+            <h3 class="text-text-dark truncate text-[15px] font-semibold">
+              {{ member.displayName ?? member.email }}
+            </h3>
+            <p
+              v-if="member.displayName"
+              class="text-text-muted truncate text-[12px]"
+            >
+              {{ member.email }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Role</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ formatWorkspaceRole(member.role) }}
+            </span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Projects</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ formatProjectsAssigned(member) }}
+            </span>
+          </div>
+          <div class="col-span-2 flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Last active</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ formatLastActive(member.lastActiveAt) }}
+            </span>
+          </div>
+        </div>
+
+        <div
+          v-if="!isSelf(member)"
+          class="border-divider flex justify-end gap-2 border-t pt-3"
+        >
+          <ManagementTableRowAction
+            v-if="member.role !== 'admin'"
+            :data-testid="`member-mobile-assign-pm-${member.id}`"
+            :icon="UserPlusIcon"
+            label="Assign PM"
+            @click="toggleExpansion(member, 'assign')"
+          />
+          <ManagementTableRowAction
+            :data-testid="`member-mobile-edit-${member.id}`"
+            :icon="PencilSquareIcon"
+            label="Edit"
+            @click="toggleExpansion(member, 'edit')"
+          />
+          <ManagementTableRowAction
+            :data-testid="`member-mobile-remove-${member.id}`"
+            :icon="TrashIcon"
+            label="Remove"
+            tone="destructive"
+            @click="handleRemove(member)"
+          />
+        </div>
+
+        <MemberAssignPmPanel
+          v-if="expansionMode[member.id] === 'assign' && expandedRows[member.id]"
+          :member="member"
+          :projects="projects"
+          @saved="handleAssignSaved(member)"
+          @cancelled="collapseRow(member)"
+        />
+        <MemberEditForm
+          v-else-if="expansionMode[member.id] === 'edit' && expandedRows[member.id]"
+          :member="member"
+          @saved="handleEditSaved(member)"
+          @cancelled="collapseRow(member)"
+        />
+      </article>
+    </template>
+
+    <EmptyStateBlock
+      v-else-if="!loading"
+      title="No members found"
+      description="Invite members to get started."
+    />
   </div>
 
   <ManagementTableShell
@@ -168,6 +270,11 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     :value="members"
     :loading="loading"
     data-key="id"
+    class="hidden sm:block"
+    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[880px] items-center border-b font-sans text-[13px] font-semibold"
+    shell-class="border-divider overflow-x-auto rounded-[6px] border"
+    table-class="min-w-[880px] w-full table-fixed border-collapse"
+    table-container-class="overflow-visible rounded-none border-none"
   >
     <!-- Member: avatar + name + email -->
     <Column :pt="managementTableColumnPt">
