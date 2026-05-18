@@ -57,9 +57,9 @@ Affected areas:
    - Alternative considered: issue fetch calls directly from UI components/content scripts. Rejected because it duplicates error parsing and makes state behavior harder to test.
 
 6. **Inject a self-contained page-local control and reconcile state through extension messaging.**
-   - Decision: the content script owns GitHub page detection and DOM insertion, while API calls can run through a shared extension runtime boundary so popup and injected control see consistent timer/auth state.
+   - Decision: the content script owns GitHub page detection and DOM insertion at the start of the GitHub page `main` container, while API calls can run through a shared extension runtime boundary so popup and injected control see consistent timer/auth state.
    - Rationale: GitHub page DOM is outside the app; a small injected root with explicit mount/unmount behavior minimizes collision with GitHub markup.
-   - Alternative considered: floating overlay. Rejected because docs require placement near issue header/content actions so the control reads as page-local.
+   - Alternative considered: placement near issue header/content actions. Rejected because a stable `main` prepend target is simpler to verify across GitHub issue layouts while still reading as page-local content.
 
 7. **Treat documented and approved UI as the parity checklist.**
    - Decision: match `GITiempo.pen` for desktop popup and injected states, including popup unauthenticated, no-timer, running, unsupported-page, error/disconnected, and injected idle, auth-missing, running, and error variants.

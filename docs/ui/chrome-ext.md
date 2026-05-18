@@ -54,7 +54,7 @@
 ## Injected GitHub Issue Page UI
 
 - The injected control appears on `github.com/<owner>/<repo>/issues/<number>` pages.
-- Place it near the issue header/content actions so it reads as a page-local timer surface rather than a floating unrelated widget.
+- Insert it at the start of the page `main` content container so it reads as a page-local timer surface rather than a floating unrelated widget.
 - Match the extension token language: `bg-surface`, `border-divider`, `text-text-dark`, `text-text-muted`, `bg-brand`, `text-brand`, `text-destructive`.
 
 ### Injected Idle State

@@ -98,6 +98,12 @@ The extension SHALL detect supported GitHub issue pages and derive the local tim
 ### Requirement: Injected Issue Control Manages Timer State
 The extension SHALL inject a page-local timer control into supported GitHub issue pages and keep its state aligned with the authenticated user's current timer.
 
+#### Scenario: Injected control mounts at the start of main content
+- **GIVEN** the active tab is a supported GitHub issue page
+- **WHEN** the content script mounts the injected control
+- **THEN** it inserts the control at the start of the page `main` content container
+- **AND** the control remains page-local rather than rendering as a floating overlay
+
 #### Scenario: Injected idle control starts timer
 - **GIVEN** the user is authenticated
 - **AND** the GitHub issue page has no running timer for the current user
