@@ -29,6 +29,7 @@ function getFirebaseAuth() {
 
 function getGoogleOAuthClientId(): string {
   const manifest = chrome.runtime.getManifest();
+  const configuredClientId = extensionConfig.googleOAuthClientId.trim();
 
   if (!manifest.permissions?.includes("identity")) {
     throw new Error(
@@ -41,6 +42,12 @@ function getGoogleOAuthClientId(): string {
   if (!clientId) {
     throw new Error(
       "Google sign-in is unavailable because the extension OAuth client is not configured.",
+    );
+  }
+
+  if (clientId !== configuredClientId) {
+    throw new Error(
+      "Google sign-in is unavailable because the extension OAuth client configuration is inconsistent.",
     );
   }
 

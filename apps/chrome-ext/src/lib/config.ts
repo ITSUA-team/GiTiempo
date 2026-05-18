@@ -5,6 +5,7 @@ export interface ExtensionConfig {
     authDomain: string;
     projectId: string;
   } | null;
+  googleOAuthClientId: string;
   userSpaUrl: string;
 }
 
@@ -15,6 +16,7 @@ interface ExtensionEnv {
   VITE_EXTENSION_FIREBASE_API_KEY?: string;
   VITE_EXTENSION_FIREBASE_AUTH_DOMAIN?: string;
   VITE_EXTENSION_FIREBASE_PROJECT_ID?: string;
+  VITE_EXTENSION_GOOGLE_CLIENT_ID?: string;
   VITE_EXTENSION_USER_SPA_URL?: string;
 }
 
@@ -88,6 +90,12 @@ export function getExtensionConfig(
     "test-project",
     relaxed,
   );
+  const googleOAuthClientId = getRequiredEnvValue(
+    env.VITE_EXTENSION_GOOGLE_CLIENT_ID,
+    "VITE_EXTENSION_GOOGLE_CLIENT_ID",
+    "test-google-client-id.apps.googleusercontent.com",
+    relaxed,
+  );
 
   return {
     apiBaseUrl,
@@ -96,6 +104,7 @@ export function getExtensionConfig(
       authDomain: firebaseAuthDomain,
       projectId: firebaseProjectId,
     },
+    googleOAuthClientId,
     userSpaUrl,
   };
 }

@@ -6,10 +6,14 @@ function normalizeBaseUrl(value: string | undefined): string {
   return value?.trim().replace(/\/$/, "") || "http://localhost:3000";
 }
 
-function normalizeOptionalEnvValue(value: string | undefined): string | null {
+function getRequiredEnvValue(value: string | undefined, key: string): string {
   const trimmed = value?.trim() ?? "";
 
-  return trimmed.length > 0 ? trimmed : null;
+  if (!trimmed) {
+    throw new Error(`Missing required extension environment variable: ${key}`);
+  }
+
+  return trimmed;
 }
 
 function createManifestPlugin(mode: string): Plugin {
@@ -21,7 +25,10 @@ function createManifestPlugin(mode: string): Plugin {
       const apiOrigin = new URL(
         normalizeBaseUrl(env.VITE_EXTENSION_API_BASE_URL),
       ).origin;
-      const googleClientId = normalizeOptionalEnvValue(env.EXTENSION_GOOGLE_CLIENT_ID);
+      const googleClientId = getRequiredEnvValue(
+        env.VITE_EXTENSION_GOOGLE_CLIENT_ID,
+        "VITE_EXTENSION_GOOGLE_CLIENT_ID",
+      );
 
       this.emitFile({
         type: "asset",
@@ -35,14 +42,10 @@ function createManifestPlugin(mode: string): Plugin {
               "Track GiTiempo timers directly from GitHub issue pages.",
             permissions: ["identity", "storage", "tabs"],
             host_permissions: [`${apiOrigin}/*`, "https://github.com/*"],
-            ...(googleClientId
-              ? {
-                  oauth2: {
-                    client_id: googleClientId,
-                    scopes: ["openid", "email", "profile"],
-                  },
-                }
-              : {}),
+            oauth2: {
+              client_id: googleClientId,
+              scopes: ["openid", "email", "profile"],
+            },
             action: {
               default_popup: "popup.html",
             },

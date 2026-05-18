@@ -36,6 +36,7 @@ vi.mock("./config", () => ({
       authDomain: "gitiempo.firebaseapp.com",
       projectId: "gitiempo",
     },
+    googleOAuthClientId: "google-client-id.apps.googleusercontent.com",
     userSpaUrl: "http://localhost:5173/login",
   }),
   hasFirebaseConfig: () => true,
@@ -114,6 +115,23 @@ describe("extension firebase auth", () => {
 
     await expect(signInWithGoogle()).rejects.toThrow(
       "Google sign-in is unavailable because the extension OAuth client is not configured.",
+    );
+    expect(signInWithCredential).not.toHaveBeenCalled();
+  });
+
+  it("fails explicitly when the manifest OAuth client drifts from extension config", async () => {
+    setChromeRuntime({
+      launchWebAuthFlow: vi.fn(),
+      manifest: {
+        oauth2: { client_id: "different-client-id.apps.googleusercontent.com" },
+        permissions: ["identity", "storage", "tabs"],
+      },
+    });
+
+    const { signInWithGoogle } = await import("./firebase");
+
+    await expect(signInWithGoogle()).rejects.toThrow(
+      "Google sign-in is unavailable because the extension OAuth client configuration is inconsistent.",
     );
     expect(signInWithCredential).not.toHaveBeenCalled();
   });

@@ -13,7 +13,7 @@ Manifest V3 extension for starting and stopping GiTiempo timers from GitHub issu
 
 Copy `.env.example` and set all extension environment values before building the extension.
 Production builds fail fast when any required `VITE_EXTENSION_*` value is missing.
-Google sign-in also requires `EXTENSION_GOOGLE_CLIENT_ID` so the manifest can expose the MV3 OAuth client for `chrome.identity.launchWebAuthFlow`.
+Google sign-in requires `VITE_EXTENSION_GOOGLE_CLIENT_ID` so both the runtime config and generated manifest stay aligned for `chrome.identity.launchWebAuthFlow`.
 
 ## Load Unpacked
 

@@ -25,5 +25,5 @@ GiTiempo has approved product, UI, and backend support for tracking time from Gi
 - Shared frontend/theme usage: extension imports shared Tailwind token CSS from `packages/web-config` but does not load PrimeVue.
 - API consumption: existing `GET /time-entries/current`, `POST /time-entries/timer/start-from-github`, and `POST /time-entries/timer/stop` endpoints are consumed; no backend contract change is expected.
 - Auth/session: extension stores JWT tokens in `chrome.storage`, supports Google and email Firebase sign-in, reuses the existing Firebase-to-backend login direction, and attempts one refresh-token recovery before returning to sign-in.
-- Timer semantics: the injected control treats backend current-timer state as authoritative and distinguishes between a timer running for the current GitHub issue and a timer running elsewhere so it does not present an unlabeled global stop action from an unrelated issue page.
+- Timer semantics: the injected control treats backend current-timer state as authoritative and keeps injected timer management non-destructive until the current-timer contract exposes stable GitHub issue linkage, so it does not present an unlabeled global stop action from issue-page display text alone.
 - Verification: extension lint/typecheck/test/build plus existing shared package checks when shared leaves are changed.

@@ -11,6 +11,7 @@ describe("getExtensionConfig", () => {
         authDomain: "test-project.firebaseapp.com",
         projectId: "test-project",
       },
+      googleOAuthClientId: "test-google-client-id.apps.googleusercontent.com",
       userSpaUrl: "http://localhost:5173/login",
     });
   });
@@ -20,6 +21,7 @@ describe("getExtensionConfig", () => {
     "VITE_EXTENSION_FIREBASE_API_KEY",
     "VITE_EXTENSION_FIREBASE_AUTH_DOMAIN",
     "VITE_EXTENSION_FIREBASE_PROJECT_ID",
+    "VITE_EXTENSION_GOOGLE_CLIENT_ID",
     "VITE_EXTENSION_USER_SPA_URL",
   ])("throws when required production env %s is missing", (missingKey) => {
     const env = {
@@ -28,6 +30,7 @@ describe("getExtensionConfig", () => {
       VITE_EXTENSION_FIREBASE_API_KEY: "firebase-api-key",
       VITE_EXTENSION_FIREBASE_AUTH_DOMAIN: "project.firebaseapp.com",
       VITE_EXTENSION_FIREBASE_PROJECT_ID: "project-id",
+      VITE_EXTENSION_GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
       VITE_EXTENSION_USER_SPA_URL: "https://app.example.com/login/",
     } satisfies Record<string, string>;
 
@@ -46,6 +49,7 @@ describe("getExtensionConfig", () => {
         VITE_EXTENSION_FIREBASE_API_KEY: "firebase-api-key",
         VITE_EXTENSION_FIREBASE_AUTH_DOMAIN: "project.firebaseapp.com",
         VITE_EXTENSION_FIREBASE_PROJECT_ID: "project-id",
+        VITE_EXTENSION_GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
         VITE_EXTENSION_USER_SPA_URL: "https://app.example.com/login/",
       }),
     ).toEqual({
@@ -55,6 +59,7 @@ describe("getExtensionConfig", () => {
         authDomain: "project.firebaseapp.com",
         projectId: "project-id",
       },
+      googleOAuthClientId: "google-client-id.apps.googleusercontent.com",
       userSpaUrl: "https://app.example.com/login",
     });
   });

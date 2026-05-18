@@ -78,7 +78,6 @@ function renderInjectedBody(
         <p class="m-0 text-xs font-medium ${mutedTextClass}">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
         <p class="m-0 mt-1 text-lg font-semibold ${headlineTextClass}">${escapeHtml(pageContext.issueTitle)}</p>
       </div>
-      ${state.snapshot?.currentTimer ? '<span class="bg-status-active-bg text-status-active-text rounded-sm px-2 py-1 text-xs font-semibold">Running</span>' : ""}
     </div>
   `;
 
@@ -110,26 +109,13 @@ function renderInjectedBody(
   }
 
   const currentTimer = state.snapshot.currentTimer;
-  const isCurrentIssueTimer = currentTimer
-    ? isTimerRunningForIssue(currentTimer, pageContext)
-    : false;
-
-  if (currentTimer && isCurrentIssueTimer) {
-    return `
-      ${issueHeader}
-      <div class="flex items-center justify-between gap-3">
-        <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
-        <button type="button" data-action="stop-timer" class="bg-destructive text-white ${injectedActionButtonClass}">Stop Timer</button>
-      </div>
-    `;
-  }
 
   if (currentTimer) {
     return `
       ${issueHeader}
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-col gap-1">
-          <p class="m-0 text-sm font-semibold ${headlineTextClass}">Timer running elsewhere</p>
+          <p class="m-0 text-sm font-semibold ${headlineTextClass}">Timer currently running</p>
           <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(currentTimer.task.title)} · ${escapeHtml(currentTimer.project.name)}</p>
           <p class="m-0 text-xs ${mutedTextClass}">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
         </div>
@@ -145,15 +131,6 @@ function renderInjectedBody(
       <button type="button" data-action="start-timer" class="bg-brand text-white ${injectedActionButtonClass}">Start Timer</button>
     </div>
   `;
-}
-
-function isTimerRunningForIssue(
-  currentTimer: NonNullable<RuntimeSnapshot["currentTimer"]>,
-  pageContext: SupportedGitHubIssueContext,
-): boolean {
-  return currentTimer.source === "extension"
-    && currentTimer.project.name === pageContext.githubRepo
-    && currentTimer.task.title === pageContext.issueTitle;
 }
 
 export function createInjectedIssueApp({
