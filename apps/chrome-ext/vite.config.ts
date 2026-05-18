@@ -55,7 +55,10 @@ function createManifestPlugin(mode: string): Plugin {
             },
             content_scripts: [
               {
-                matches: ["https://github.com/*/*/issues/*"],
+                matches: [
+                  "https://github.com/*/*/issues/*",
+                  "https://github.com/*/*/pull/*",
+                ],
                 js: ["content.js"],
                 run_at: "document_idle",
               },

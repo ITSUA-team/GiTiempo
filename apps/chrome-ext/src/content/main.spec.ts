@@ -405,13 +405,48 @@ describe("injected issue control", () => {
 
     expect(document.getElementById("gitiempo-extension-root")).not.toBeNull();
 
-    window.history.pushState({}, "", "https://github.com/octo/repo/pulls/200");
+    window.history.pushState({}, "", "https://github.com/octo/repo/pull/200");
     document.body.querySelector("main")!.append(document.createElement("div"));
 
     await Promise.resolve();
 
     expect(document.getElementById("gitiempo-extension-root")).toBeNull();
     expect(unsubscribe).toHaveBeenCalledOnce();
+
+    app.destroy();
+  });
+
+  it("mounts after GitHub navigates from a pull request to an issue in the same tab", async () => {
+    window.history.replaceState({}, "", "https://github.com/octo/repo/pull/200");
+    document.body.innerHTML = `
+      <main>
+        <div id="partial-discussion-header">
+          <div class="gh-header-actions"></div>
+        </div>
+      </main>
+    `;
+    document.title = "Unsupported pull request";
+
+    const app = bootstrapInjectedIssueControl(
+      document,
+      window,
+      createRuntimeClient(),
+    );
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).toBeNull();
+
+    document.title = "Fix billing regression";
+    window.history.pushState({}, "", "https://github.com/octo/repo/issues/200");
+    document.body.querySelector("main")!.append(document.createElement("div"));
+
+    await Promise.resolve();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.textContent).toContain("Fix billing regression");
+    expect(root.textContent).toContain("#200");
 
     app.destroy();
   });
