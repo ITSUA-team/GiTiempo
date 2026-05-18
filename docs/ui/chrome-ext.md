@@ -55,7 +55,8 @@
 
 - The injected control appears on `github.com/<owner>/<repo>/issues/<number>` pages.
 - Insert it at the start of the page `main` content container so it reads as a page-local timer surface rather than a floating unrelated widget.
-- Match the extension token language: `bg-surface`, `border-divider`, `text-text-dark`, `text-text-muted`, `bg-brand`, `text-brand`, `text-destructive`.
+- Keep the injected control visually lighter than the popup shell: no standalone `bg-surface` card, border, or shadow wrapper.
+- Use GitHub-page-friendly light text treatment for the injected issue header and helper copy, while keeping action colors aligned with extension tokens such as `bg-brand`, `text-brand`, and `bg-destructive`.
 
 ### Injected Idle State
 

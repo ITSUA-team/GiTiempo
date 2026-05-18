@@ -49,3 +49,4 @@
 
 Design parity review note:
 - Docs and approved extension frames were reviewed together. No PrimeVue-driven compromises were required because the extension stays Tailwind-only. The popup header uses a static GiTiempo badge instead of a user-specific avatar from the `.pen` reference because the MVP docs require the branded shell and state copy, but they do not require fetching profile data for the extension popup.
+- The injected GitHub issue-page control intentionally uses a lighter inline shell than the popup and no longer renders as a standalone card. Source-of-truth docs were updated to reflect that page-local presentation.

@@ -62,7 +62,7 @@ Affected areas:
    - Alternative considered: placement near issue header/content actions. Rejected because a stable `main` prepend target is simpler to verify across GitHub issue layouts while still reading as page-local content.
 
 7. **Treat documented and approved UI as the parity checklist.**
-   - Decision: match `GITiempo.pen` for desktop popup and injected states, including popup unauthenticated, no-timer, running, unsupported-page, error/disconnected, and injected idle, auth-missing, running, and error variants.
+   - Decision: match `GITiempo.pen` for desktop popup and injected states, including popup unauthenticated, no-timer, running, unsupported-page, error/disconnected, and injected idle, auth-missing, running, and error variants. The injected GitHub control stays page-local and intentionally drops the standalone card shell so it reads as inline issue-page UI rather than a popup surface clone.
    - Rationale: repo guidance makes docs and approved design the source of truth for behavior and parity.
    - Alternative considered: derive missing injected states only from docs. Rejected after the approved `.pen` was updated to include those variants explicitly.
 
@@ -83,7 +83,7 @@ Affected areas:
 - **Content script and popup can show stale timer state** → Reconcile through current-timer fetch on mount and after start/stop actions; broadcast successful mutations to other extension surfaces.
 - **Shared token imports may pull too much SPA styling** → Import only the shared token CSS path required for Tailwind utilities; do not import PrimeVue or SPA bootstrap CSS.
 - **Stop timer endpoint is global to the current user timer** → Render the current issue context clearly and refresh authoritative current timer state after stop/start failures.
-- **Popup and injected variants can drift over time** → Keep `docs/ui/chrome-ext.md` and `GITiempo.pen` synchronized before implementation and perform final parity review against both.
+- **Popup and injected variants can drift over time** → Keep `docs/ui/chrome-ext.md` and `GITiempo.pen` synchronized before implementation and perform final parity review against both, especially where the injected control intentionally diverges from the popup card shell.
 
 ## Migration Plan
 

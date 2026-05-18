@@ -35,8 +35,8 @@ function renderInjectedBody(
   const issueHeader = `
     <div class="flex items-start justify-between gap-3">
       <div>
-        <p class="m-0 text-xs font-medium text-text-muted">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
-        <p class="m-0 mt-1 text-lg font-semibold text-text-dark">${escapeHtml(pageContext.issueTitle)}</p>
+        <p class="m-0 text-xs font-medium text-white/70">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
+        <p class="m-0 mt-1 text-lg font-semibold text-white">${escapeHtml(pageContext.issueTitle)}</p>
       </div>
       ${state.snapshot?.currentTimer ? '<span class="rounded-sm bg-[#e8f5e9] px-2 py-1 text-xs font-semibold text-[#2e7d32]">Running</span>' : ""}
     </div>
@@ -45,7 +45,7 @@ function renderInjectedBody(
   if (state.isLoading || state.snapshot === null) {
     return `
       ${issueHeader}
-      <p class="m-0 text-sm text-text-muted">Checking your GiTiempo timer state.</p>
+      <p class="m-0 text-sm text-white/70">Checking your GiTiempo timer state.</p>
     `;
   }
 
@@ -53,8 +53,8 @@ function renderInjectedBody(
     return `
       ${issueHeader}
       <div class="flex items-center justify-between gap-3">
-        <p class="m-0 text-sm text-text-muted">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p>
-        <button type="button" data-action="retry" class="text-brand bg-transparent text-sm font-semibold">Retry</button>
+        <p class="m-0 text-sm text-white/70">${escapeHtml(state.actionErrorMessage ?? state.snapshot.errorMessage ?? "Unable to update timer state.")}</p>
+        <button type="button" data-action="retry" class="text-brand cursor-pointer bg-transparent text-sm font-semibold">Retry</button>
       </div>
     `;
   }
@@ -63,8 +63,8 @@ function renderInjectedBody(
     return `
       ${issueHeader}
       <div class="flex items-center justify-between gap-3">
-        <p class="m-0 text-sm text-text-muted">Sign in to GiTiempo to start tracking this issue.</p>
-        <button type="button" data-action="open-extension" class="bg-brand rounded-sm px-4 py-2 text-sm font-semibold text-white">Open extension</button>
+        <p class="m-0 text-sm text-white/70">Sign in to GiTiempo to start tracking this issue.</p>
+        <button type="button" data-action="open-extension" class="bg-brand cursor-pointer rounded-sm px-4 py-2 text-sm font-semibold text-white">Open extension</button>
       </div>
     `;
   }
@@ -74,7 +74,7 @@ function renderInjectedBody(
       ${issueHeader}
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
-        <button type="button" data-action="stop-timer" class="rounded-sm bg-destructive px-4 py-2 text-sm font-semibold text-white">Stop Timer</button>
+        <button type="button" data-action="stop-timer" class="bg-destructive cursor-pointer rounded-sm px-4 py-2 text-sm font-semibold text-white">Stop Timer</button>
       </div>
     `;
   }
@@ -82,8 +82,8 @@ function renderInjectedBody(
   return `
     ${issueHeader}
     <div class="flex items-center justify-between gap-3">
-      <p class="m-0 text-sm text-text-muted">Start tracking directly from this GitHub issue.</p>
-      <button type="button" data-action="start-timer" class="bg-brand rounded-sm px-4 py-2 text-sm font-semibold text-white">Start Timer</button>
+      <p class="m-0 text-sm text-white/70">Start tracking directly from this GitHub issue.</p>
+      <button type="button" data-action="start-timer" class="bg-brand cursor-pointer rounded-sm px-4 py-2 text-sm font-semibold text-white">Start Timer</button>
     </div>
   `;
 }
@@ -146,8 +146,8 @@ export function createInjectedIssueApp({
 
   function render(): void {
     root.innerHTML = `
-      <div class="mx-auto w-full max-w-[1280px] px-6 pt-4 text-white">
-        <section class="bg-surface border-divider shadow-card flex w-full max-w-[760px] flex-col gap-4 rounded-lg border p-5">
+      <div class="mx-auto w-full max-w-[1280px] pt-4 text-white">
+        <section class="flex w-full flex-col gap-4 p-5">
           ${renderInjectedBody(pageContext, state, now())}
         </section>
       </div>
