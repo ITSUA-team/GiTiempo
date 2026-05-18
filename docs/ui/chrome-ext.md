@@ -22,7 +22,8 @@
 
 - Product logo.
 - Heading: `text-lg font-semibold text-text-dark`.
-- Primary sign-in button using brand tokens.
+- Primary `Sign in with Google` button using brand tokens.
+- Secondary `Sign in with email` action using the same popup shell and token language.
 
 ### Authenticated, No Active Timer
 
@@ -30,6 +31,13 @@
 - Full-width Start Timer button.
 - Link to open the full User SPA.
 - Keep the issue context card visible above the actions.
+
+### Authenticated, Unsupported Page
+
+- Keep the branded popup shell visible.
+- Show concise guidance: `Open a GitHub issue page to start a timer.`
+- Disable or hide Start Timer because issue metadata is unavailable.
+- Keep a link to open the full User SPA.
 
 ### Authenticated, Timer Running
 
@@ -53,7 +61,7 @@
 
 - Show repository and issue number/title detected from the current page.
 - Show one primary `Start Timer` action.
-- If auth is missing, replace the primary action with `Open extension` or equivalent sign-in guidance.
+- If auth is missing, keep issue context visible, replace the primary action with `Open extension`, and show helper copy: `Sign in to GiTiempo to start tracking this issue.`
 
 ### Injected Running State
 
@@ -65,4 +73,4 @@
 
 - Keep the issue context visible so the user knows what page the action applies to.
 - Show concise inline error copy.
-- Show a retry action without replacing the entire issue-page control shell.
+- Show a `Retry` action without replacing the entire issue-page control shell.

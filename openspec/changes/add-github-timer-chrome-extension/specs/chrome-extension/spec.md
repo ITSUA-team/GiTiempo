@@ -50,9 +50,17 @@ The extension SHALL authenticate users through Firebase and the existing backend
 
 #### Scenario: User signs in from popup
 - **GIVEN** the user is unauthenticated in the extension
-- **WHEN** the user completes the popup sign-in flow
+- **WHEN** the user completes either Google sign-in or email sign-in from the popup
 - **THEN** the extension exchanges the Firebase identity with the backend auth API
 - **AND** it stores the resulting GiTiempo access and refresh tokens in `chrome.storage`
+
+#### Scenario: Expired access token refreshes once
+- **GIVEN** an extension session has an access token and refresh token in `chrome.storage`
+- **AND** an authenticated GiTiempo API request returns `401`
+- **WHEN** the extension handles the failed request
+- **THEN** it attempts one `/auth/refresh` exchange with the stored refresh token
+- **AND** a successful refresh stores the new token pair and retries the original request once
+- **AND** a failed refresh clears the extension session and returns the user to the unauthenticated popup state
 
 #### Scenario: API request includes access token
 - **GIVEN** a GiTiempo access token is available in extension storage
@@ -85,6 +93,7 @@ The extension SHALL detect supported GitHub issue pages and derive the local tim
 - **WHEN** the popup or content script evaluates page context
 - **THEN** timer start actions that require issue metadata are unavailable
 - **AND** the user receives concise guidance that a GitHub issue page is required
+- **AND** the popup keeps its branded shell and may keep a link to the full GiTiempo workspace
 
 ### Requirement: Injected Issue Control Manages Timer State
 The extension SHALL inject a page-local timer control into supported GitHub issue pages and keep its state aligned with the authenticated user's current timer.

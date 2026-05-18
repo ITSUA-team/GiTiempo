@@ -46,20 +46,35 @@ Affected areas:
    - Rationale: SPA auth helpers assume web app storage/runtime, while extension storage and service-worker messaging are different boundaries.
    - Alternative considered: copy a SPA auth store. Rejected because route/app state, Pinia, and localStorage assumptions do not belong in a content-script/popup runtime.
 
-4. **Centralize API calls in an extension-owned client that validates known contract shapes.**
+4. **Support both Google and email sign-in in the extension MVP.**
+   - Decision: the unauthenticated popup offers `Sign in with Google` as the primary action and `Sign in with email` as the secondary action. Both methods authenticate through Firebase before exchanging the Firebase ID token with the existing backend `/auth/login` endpoint.
+   - Rationale: both sign-in methods are already part of the workspace auth model, and supporting both avoids blocking users whose workspace identity is email/password based.
+   - Alternative considered: Google-only MVP. Rejected because the approved extension scope is an additive timer surface for existing workspace users, not a new auth policy.
+
+5. **Centralize API calls in an extension-owned client that validates known contract shapes.**
    - Decision: create a small extension API client for current timer, start-from-GitHub, and stop timer requests, using existing shared Zod schemas/types where they are browser-safe.
    - Rationale: request path, auth headers, payload shape, and error parsing are high-risk integration points and need focused tests.
    - Alternative considered: issue fetch calls directly from UI components/content scripts. Rejected because it duplicates error parsing and makes state behavior harder to test.
 
-5. **Inject a self-contained page-local control and reconcile state through extension messaging.**
+6. **Inject a self-contained page-local control and reconcile state through extension messaging.**
    - Decision: the content script owns GitHub page detection and DOM insertion, while API calls can run through a shared extension runtime boundary so popup and injected control see consistent timer/auth state.
    - Rationale: GitHub page DOM is outside the app; a small injected root with explicit mount/unmount behavior minimizes collision with GitHub markup.
    - Alternative considered: floating overlay. Rejected because docs require placement near issue header/content actions so the control reads as page-local.
 
-6. **Treat documented and approved UI as the parity checklist, with missing injected states implemented from docs.**
-   - Decision: match `GITiempo.pen` for available desktop popup/injected states and use `docs/ui/chrome-ext.md` for injected auth-missing and error states that are not fully represented in the current `.pen` screen.
-   - Rationale: repo guidance makes docs source of truth when design is incomplete or ambiguous.
-   - Alternative considered: delay implementation until every state has a `.pen` frame. Rejected because docs already define behavior and the missing states are straightforward variants of the approved shell.
+7. **Treat documented and approved UI as the parity checklist.**
+   - Decision: match `GITiempo.pen` for desktop popup and injected states, including popup unauthenticated, no-timer, running, unsupported-page, error/disconnected, and injected idle, auth-missing, running, and error variants.
+   - Rationale: repo guidance makes docs and approved design the source of truth for behavior and parity.
+   - Alternative considered: derive missing injected states only from docs. Rejected after the approved `.pen` was updated to include those variants explicitly.
+
+8. **Use explicit extension environment configuration.**
+   - Decision: the extension config module reads `VITE_EXTENSION_API_BASE_URL`, `VITE_EXTENSION_FIREBASE_API_KEY`, `VITE_EXTENSION_FIREBASE_AUTH_DOMAIN`, `VITE_EXTENSION_FIREBASE_PROJECT_ID`, and `VITE_EXTENSION_USER_SPA_URL` from the extension build environment and validates that required values are present.
+   - Rationale: the extension runs outside the SPA runtime, so API, Firebase, and workspace links must be configured at the extension package boundary.
+   - Alternative considered: reuse User SPA environment names directly. Rejected because extension deployment and Chrome runtime constraints may differ from the SPA.
+
+9. **Refresh access tokens once before returning to sign-in.**
+   - Decision: the extension stores both access and refresh tokens in `chrome.storage`. When an authenticated API request returns `401`, the API/session boundary attempts one `/auth/refresh` call, retries the original request after a successful refresh, and clears the session plus returns to the unauthenticated state if refresh fails.
+   - Rationale: the backend already exposes refresh-token exchange, and one retry reduces unnecessary sign-in prompts without hiding expired-session failures.
+   - Alternative considered: require re-authentication on every `401`. Rejected because it creates avoidable friction for a timer surface that users may leave running for long sessions.
 
 ## Risks / Trade-offs
 
@@ -68,7 +83,7 @@ Affected areas:
 - **Content script and popup can show stale timer state** → Reconcile through current-timer fetch on mount and after start/stop actions; broadcast successful mutations to other extension surfaces.
 - **Shared token imports may pull too much SPA styling** → Import only the shared token CSS path required for Tailwind utilities; do not import PrimeVue or SPA bootstrap CSS.
 - **Stop timer endpoint is global to the current user timer** → Render the current issue context clearly and refresh authoritative current timer state after stop/start failures.
-- **Missing approved `.pen` variants for some injected states** → Preserve the documented shell, hierarchy, token language, and action hierarchy; call out any remaining design gaps after implementation.
+- **Popup and injected variants can drift over time** → Keep `docs/ui/chrome-ext.md` and `GITiempo.pen` synchronized before implementation and perform final parity review against both.
 
 ## Migration Plan
 
@@ -79,6 +94,4 @@ Affected areas:
 
 ## Open Questions
 
-- Which exact Firebase extension sign-in method should ship first: popup-window Google sign-in only, email/password, or both?
-- What production environment variables/URLs should the extension package use for API base URL, Firebase config, and User SPA link?
-- Should the extension proactively refresh JWT access tokens, or initially require re-authentication when the API returns unauthorized?
+- None for the MVP implementation scope.

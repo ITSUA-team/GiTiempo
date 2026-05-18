@@ -7,10 +7,11 @@
 
 ## 2. Shared Extension Runtime Boundaries
 
-- [ ] 2.1 Implement extension configuration for API base URL, Firebase config, User SPA URL, and extension environment defaults.
+- [ ] 2.1 Implement extension configuration for `VITE_EXTENSION_API_BASE_URL`, `VITE_EXTENSION_FIREBASE_API_KEY`, `VITE_EXTENSION_FIREBASE_AUTH_DOMAIN`, `VITE_EXTENSION_FIREBASE_PROJECT_ID`, `VITE_EXTENSION_USER_SPA_URL`, and extension environment defaults.
 - [ ] 2.2 Implement `chrome.storage` session helpers for GiTiempo access/refresh tokens with focused tests.
-- [ ] 2.3 Implement extension auth flow that signs in through Firebase and exchanges identity with the existing backend auth API.
+- [ ] 2.3 Implement extension auth flow that supports both Google sign-in and email sign-in through Firebase, then exchanges identity with the existing backend auth API.
 - [ ] 2.4 Implement extension message/event helpers so popup, content script, and background runtime can reconcile auth and timer state.
+- [ ] 2.5 Implement one-shot `/auth/refresh` retry behavior for authenticated API `401` responses, clearing the extension session when refresh fails.
 
 ## 3. Timer API Client And Context Parsing
 
@@ -26,7 +27,8 @@
 - [ ] 4.3 Implement authenticated/no-active-timer popup state with detected issue context, full-width `Start Timer`, and User SPA link.
 - [ ] 4.4 Implement running-timer popup state with live elapsed time, task/project or repository context, and destructive `Stop Timer` action.
 - [ ] 4.5 Implement popup error/disconnected state with concise copy and retry action.
-- [ ] 4.6 Add focused popup tests for each user-visible state and start/stop/retry interactions.
+- [ ] 4.6 Implement authenticated unsupported-page popup state with branded shell, `Open a GitHub issue page to start a timer.` guidance, no available Start Timer action, and User SPA link.
+- [ ] 4.7 Add focused popup tests for Google sign-in, email sign-in, unsupported-page state, each user-visible timer state, and start/stop/retry interactions.
 
 ## 5. Injected GitHub Issue Control
 
