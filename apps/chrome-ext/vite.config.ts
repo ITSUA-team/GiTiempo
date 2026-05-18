@@ -6,6 +6,12 @@ function normalizeBaseUrl(value: string | undefined): string {
   return value?.trim().replace(/\/$/, "") || "http://localhost:3000";
 }
 
+function normalizeOptionalEnvValue(value: string | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function createManifestPlugin(mode: string): Plugin {
   return {
     apply: "build",
@@ -15,6 +21,7 @@ function createManifestPlugin(mode: string): Plugin {
       const apiOrigin = new URL(
         normalizeBaseUrl(env.VITE_EXTENSION_API_BASE_URL),
       ).origin;
+      const googleClientId = normalizeOptionalEnvValue(env.EXTENSION_GOOGLE_CLIENT_ID);
 
       this.emitFile({
         type: "asset",
@@ -26,8 +33,16 @@ function createManifestPlugin(mode: string): Plugin {
             version: "0.0.0",
             description:
               "Track GiTiempo timers directly from GitHub issue pages.",
-            permissions: ["storage", "tabs"],
+            permissions: ["identity", "storage", "tabs"],
             host_permissions: [`${apiOrigin}/*`, "https://github.com/*"],
+            ...(googleClientId
+              ? {
+                  oauth2: {
+                    client_id: googleClientId,
+                    scopes: ["openid", "email", "profile"],
+                  },
+                }
+              : {}),
             action: {
               default_popup: "popup.html",
             },

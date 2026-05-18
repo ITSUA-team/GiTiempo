@@ -14,8 +14,8 @@ Affected areas:
 
 **Goals:**
 - Scaffold a workspace-managed Manifest V3 extension app under `apps/chrome-ext`.
-- Implement the popup states documented in `docs/ui/chrome-ext.md` and approved in `GITiempo.pen`: unauthenticated, authenticated/no active timer, running timer, and error/disconnected.
-- Implement an injected GitHub issue-page timer control for `github.com/<owner>/<repo>/issues/<number>` with idle, auth-missing, running, and error states.
+- Implement the popup states documented in `docs/ui/chrome-ext.md` and approved in `GITiempo.pen`: unauthenticated, authenticated/no active timer, authenticated/unsupported-page, running timer, and error/disconnected.
+- Implement an injected GitHub issue-page timer control for `github.com/<owner>/<repo>/issues/<number>` with idle, auth-missing, running-for-this-issue, running-elsewhere, and error states.
 - Parse GitHub issue context from the URL and page DOM, then submit `githubRepo`, `issueNumber`, and `issueTitle` to `POST /time-entries/timer/start-from-github`.
 - Support stopping the current timer through `POST /time-entries/timer/stop` and current-timer reconciliation through `GET /time-entries/current`.
 - Reuse shared design tokens while keeping the extension Tailwind-only and PrimeVue-free.
@@ -46,9 +46,10 @@ Affected areas:
    - Rationale: SPA auth helpers assume web app storage/runtime, while extension storage and service-worker messaging are different boundaries.
    - Alternative considered: copy a SPA auth store. Rejected because route/app state, Pinia, and localStorage assumptions do not belong in a content-script/popup runtime.
 
-4. **Support both Google and email sign-in in the extension MVP.**
-   - Decision: the unauthenticated popup offers `Sign in with Google` as the primary action and `Sign in with email` as the secondary action. Both methods authenticate through Firebase before exchanging the Firebase ID token with the existing backend `/auth/login` endpoint.
-   - Rationale: both sign-in methods are already part of the workspace auth model, and supporting both avoids blocking users whose workspace identity is email/password based.
+4. **Support both Google and email sign-in in the extension MVP through MV3-compatible flows.**
+   - Decision: the unauthenticated popup offers `Sign in with Google` as the primary action and `Sign in with email` as the secondary action. Google sign-in uses an extension-owned OAuth launch based on `chrome.identity.launchWebAuthFlow` and the extension redirect URI, while email sign-in stays inside the popup with an extension-owned email/password form. Both methods authenticate with Firebase, then exchange the Firebase ID token with the existing backend `/auth/login` endpoint.
+   - Rationale: both sign-in methods are already part of the workspace auth model, and Chrome extension runtime constraints require an explicit MV3-compatible flow instead of assuming normal SPA popup/redirect behavior.
+   - Implementation notes: the manifest/runtime must include the Chrome extension permissions needed for identity and storage behavior, and Firebase configuration must allow the extension origin/redirect path used by the MV3 flow.
    - Alternative considered: Google-only MVP. Rejected because the approved extension scope is an additive timer surface for existing workspace users, not a new auth policy.
 
 5. **Centralize API calls in an extension-owned client that validates known contract shapes.**
@@ -67,7 +68,7 @@ Affected areas:
    - Alternative considered: derive missing injected states only from docs. Rejected after the approved `.pen` was updated to include those variants explicitly.
 
 8. **Use explicit extension environment configuration.**
-   - Decision: the extension config module reads `VITE_EXTENSION_API_BASE_URL`, `VITE_EXTENSION_FIREBASE_API_KEY`, `VITE_EXTENSION_FIREBASE_AUTH_DOMAIN`, `VITE_EXTENSION_FIREBASE_PROJECT_ID`, and `VITE_EXTENSION_USER_SPA_URL` from the extension build environment and validates that required values are present.
+   - Decision: the extension config module reads `VITE_EXTENSION_API_BASE_URL`, `VITE_EXTENSION_FIREBASE_API_KEY`, `VITE_EXTENSION_FIREBASE_AUTH_DOMAIN`, `VITE_EXTENSION_FIREBASE_PROJECT_ID`, and `VITE_EXTENSION_USER_SPA_URL` from the extension build environment and validates that required values are present. `VITE_EXTENSION_API_BASE_URL` is the fully qualified runtime base URL and must already include any deployment-specific reverse-proxy path prefix such as `/api` when one exists.
    - Rationale: the extension runs outside the SPA runtime, so API, Firebase, and workspace links must be configured at the extension package boundary.
    - Alternative considered: reuse User SPA environment names directly. Rejected because extension deployment and Chrome runtime constraints may differ from the SPA.
 
@@ -76,13 +77,19 @@ Affected areas:
    - Rationale: the backend already exposes refresh-token exchange, and one retry reduces unnecessary sign-in prompts without hiding expired-session failures.
    - Alternative considered: require re-authentication on every `401`. Rejected because it creates avoidable friction for a timer surface that users may leave running for long sessions.
 
+10. **Treat running timer state as authoritative and issue-scoped before showing destructive actions in the injected control.**
+   - Decision: the injected GitHub issue-page control shows a destructive `Stop Timer` action only when the backend-reported current timer corresponds to the same GitHub issue context as the current page. When a current timer exists for a different task or issue, the injected control renders a non-destructive running-elsewhere state with the authoritative timer context and guidance to open the popup or workspace instead of exposing an unlabeled global stop action.
+   - Rationale: `POST /time-entries/timer/stop` stops the user's current timer globally, so the issue page UI must not imply that every running timer belongs to the current issue.
+   - Alternative considered: always show `Stop Timer` whenever any current timer exists. Rejected because it risks stopping unrelated work from the wrong issue page.
+
 ## Risks / Trade-offs
 
 - **GitHub DOM selectors may change** → Keep URL parsing independent from DOM extraction, use resilient title fallbacks, and test parser behavior separately from DOM insertion.
 - **Chrome extension auth flows differ from normal web auth** → Keep auth storage and Firebase login code extension-owned, with tests around storage transitions and missing/expired token behavior.
 - **Content script and popup can show stale timer state** → Reconcile through current-timer fetch on mount and after start/stop actions; broadcast successful mutations to other extension surfaces.
+- **MV3 auth details can drift from manifest/Firebase config** → Keep the approved Google/email auth mechanism, required permissions, and redirect/origin assumptions explicit in the change artifacts and verify them with focused auth-boundary tests.
 - **Shared token imports may pull too much SPA styling** → Import only the shared token CSS path required for Tailwind utilities; do not import PrimeVue or SPA bootstrap CSS.
-- **Stop timer endpoint is global to the current user timer** → Render the current issue context clearly and refresh authoritative current timer state after stop/start failures.
+- **Stop timer endpoint is global to the current user timer** → Render the current issue context clearly, distinguish same-issue vs elsewhere-running timers before showing destructive controls, and refresh authoritative current timer state after stop/start failures.
 - **Popup and injected variants can drift over time** → Keep `docs/ui/chrome-ext.md` and `GITiempo.pen` synchronized before implementation and perform final parity review against both, especially where the injected control intentionally diverges from the popup card shell.
 
 ## Migration Plan

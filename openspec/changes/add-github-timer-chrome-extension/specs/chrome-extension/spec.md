@@ -37,6 +37,15 @@ The extension popup SHALL render the documented fixed-size GiTiempo popup states
 - **AND** it shows a full-width `Start Timer` action
 - **AND** it shows a link to open the full GiTiempo workspace
 
+#### Scenario: Popup shows authenticated unsupported-page guidance
+- **GIVEN** the user is authenticated
+- **AND** the active browser tab is not a supported GitHub issue page
+- **WHEN** the user opens the extension popup
+- **THEN** the popup keeps the branded shell visible
+- **AND** it shows concise guidance that a GitHub issue page is required to start a timer
+- **AND** it does not show an available `Start Timer` action
+- **AND** it shows a link to open the full GiTiempo workspace
+
 #### Scenario: Popup shows running timer
 - **GIVEN** the user is authenticated
 - **AND** the API reports a currently running timer
@@ -59,6 +68,24 @@ The extension SHALL authenticate users through Firebase and the existing backend
 - **WHEN** the user completes either Google sign-in or email sign-in from the popup
 - **THEN** the extension exchanges the Firebase identity with the backend auth API
 - **AND** it stores the resulting GiTiempo access and refresh tokens in `chrome.storage`
+
+#### Scenario: Google sign-in uses MV3-compatible extension auth flow
+- **GIVEN** the user chooses `Sign in with Google` from the popup
+- **WHEN** the extension starts the identity-provider flow
+- **THEN** it uses an extension-owned MV3-compatible web auth flow with the extension redirect URI
+- **AND** it does not assume SPA popup or redirect behavior that is unavailable to the extension runtime
+
+#### Scenario: Email sign-in stays inside the popup boundary
+- **GIVEN** the user chooses `Sign in with email` from the popup
+- **WHEN** the user submits email/password credentials
+- **THEN** the extension completes Firebase email sign-in inside the popup-owned auth boundary
+- **AND** it exchanges the resulting Firebase identity with the backend auth API
+
+#### Scenario: Missing extension auth prerequisites fail explicitly
+- **GIVEN** the extension auth flow is initialized without required identity permissions, redirect configuration, or Firebase origin support
+- **WHEN** the user attempts to sign in
+- **THEN** the extension fails with explicit recoverable auth error copy
+- **AND** it does not silently fall back to an incomplete auth flow
 
 #### Scenario: Expired access token refreshes once
 - **GIVEN** an extension session has an access token and refresh token in `chrome.storage`
@@ -119,10 +146,19 @@ The extension SHALL inject a page-local timer control into supported GitHub issu
 
 #### Scenario: Injected running control stops timer
 - **GIVEN** the user is authenticated
-- **AND** the API reports a running timer
+- **AND** the API reports a running timer for the same GitHub issue context as the current page
 - **WHEN** the user clicks `Stop Timer` in the injected control
 - **THEN** the extension calls `POST /time-entries/timer/stop`
 - **AND** the control returns to an idle state after success
+
+#### Scenario: Injected control shows running timer elsewhere without destructive stop
+- **GIVEN** the user is authenticated
+- **AND** the API reports a running timer
+- **AND** that running timer does not correspond to the current GitHub issue context
+- **WHEN** the injected control renders
+- **THEN** it shows the authoritative running-timer context as running elsewhere
+- **AND** it does not show a destructive `Stop Timer` action as if the current issue owned that timer
+- **AND** it guides the user to open the popup or workspace for global timer management
 
 #### Scenario: Injected control preserves issue context on error
 - **GIVEN** the injected control fails to start, stop, or refresh timer state

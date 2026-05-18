@@ -32,7 +32,7 @@
 
 ## 5. Injected GitHub Issue Control
 
-- [x] 5.1 Implement content-script mounting on supported GitHub issue pages near the issue header/content actions.
+- [x] 5.1 Implement content-script mounting on supported GitHub issue pages at the start of the page `main` content container.
 - [x] 5.2 Implement injected idle state with detected repository, issue number/title, and primary `Start Timer` action.
 - [x] 5.3 Implement injected auth-missing state that replaces timer start with `Open extension` or equivalent sign-in guidance.
 - [x] 5.4 Implement injected running state with live `HH:MM:SS`, issue context, and destructive `Stop Timer` action.
@@ -46,6 +46,12 @@
 - [x] 6.3 Run extension `typecheck`, `test`, and `build` commands and fix failures.
 - [x] 6.4 If `packages/web-config` or shared frontend leaves change, run the required affected shared/frontend verification commands.
 - [x] 6.5 Perform a design parity review against `docs/ui/chrome-ext.md` and `GITiempo.pen`, documenting any docs-over-design or PrimeVue-free extension compromises.
+
+## 7. Follow-Up Clarifications
+
+- [x] 7.1 Lock the approved MV3 auth mechanism in implementation and verification: Google sign-in must use the extension-owned web-auth flow, email sign-in must stay inside the popup-owned auth boundary, and the manifest/Firebase prerequisites must be verified with focused tests.
+- [x] 7.2 Verify the injected GitHub issue control mounts at the start of the page `main` content container and update tests/implementation if any legacy header/action placement remains.
+- [x] 7.3 Implement and test separate injected states for `running for this issue` versus `running elsewhere`, ensuring the issue page never shows an unlabeled global `Stop Timer` action for a timer owned by another task or issue.
 
 Design parity review note:
 - Docs and approved extension frames were reviewed together. No PrimeVue-driven compromises were required because the extension stays Tailwind-only. The popup header uses a static GiTiempo badge instead of a user-specific avatar from the `.pen` reference because the MVP docs require the branded shell and state copy, but they do not require fetching profile data for the extension popup.

@@ -5,24 +5,26 @@ import { bootstrapInjectedIssueControl, mountInjectedIssueControl } from "./main
 
 function createMatchMediaController(initialMatches = false) {
   let matches = initialMatches;
-  const listeners = new Set<EventListener>();
+  const listeners = new Set<() => void>();
 
   return {
     setMatches(nextMatches: boolean) {
       matches = nextMatches;
 
       for (const listener of listeners) {
-        listener(new Event("change"));
+        listener();
       }
     },
     stub: vi.fn(() => ({
-      addEventListener: (_type: "change", listener: EventListener) => {
+      addEventListener: (...args: unknown[]) => {
+        const listener = args[1] as () => void;
         listeners.add(listener);
       },
       get matches() {
         return matches;
       },
-      removeEventListener: (_type: "change", listener: EventListener) => {
+      removeEventListener: (...args: unknown[]) => {
+        const listener = args[1] as () => void;
         listeners.delete(listener);
       },
     })),
@@ -58,6 +60,26 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
     },
     userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
     workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+  };
+}
+
+function currentIssueTimer(): NonNullable<RuntimeSnapshot["currentTimer"]> {
+  const timer = currentTimer();
+
+  if (!timer) {
+    throw new Error("Expected current timer fixture.");
+  }
+
+  return {
+    ...timer,
+    project: {
+      ...timer.project,
+      name: "octo/repo",
+    },
+    task: {
+      ...timer.task,
+      title: "Improve reports filters",
+    },
   };
 }
 
@@ -193,7 +215,7 @@ describe("injected issue control", () => {
       createRuntimeClient({
         snapshot: {
           authenticated: true,
-          currentTimer: currentTimer(),
+          currentTimer: currentIssueTimer(),
           errorMessage: null,
         },
       }),
@@ -205,6 +227,29 @@ describe("injected issue control", () => {
 
     expect(root.textContent).toContain("Stop Timer");
     expect(root.textContent).toContain("Running");
+  });
+
+  it("renders a running-elsewhere state without a stop action", async () => {
+    const mounted = mountInjectedIssueControl(
+      document,
+      supportedContext(),
+      createRuntimeClient({
+        snapshot: {
+          authenticated: true,
+          currentTimer: currentTimer(),
+          errorMessage: null,
+        },
+      }),
+    )!;
+
+    await mounted.load();
+
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.textContent).toContain("Timer running elsewhere");
+    expect(root.textContent).not.toContain("Stop Timer");
+    expect(root.textContent).toContain("Open extension");
+    expect(root.textContent).toContain("Project Orion");
   });
 
   it("renders retryable errors without dropping the issue context", async () => {
@@ -219,7 +264,7 @@ describe("injected issue control", () => {
       createRuntimeClient({
         snapshot: {
           authenticated: true,
-          currentTimer: currentTimer(),
+          currentTimer: currentIssueTimer(),
           errorMessage: null,
         },
         stopTimer,

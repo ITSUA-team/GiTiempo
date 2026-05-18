@@ -5,9 +5,9 @@ GiTiempo has approved product, UI, and backend support for tracking time from Gi
 ## What Changes
 
 - Add a Manifest V3 Chrome extension app under `apps/chrome-ext`.
-- Add a lightweight Tailwind-only popup with unauthenticated, authenticated/no-timer, running-timer, and error/disconnected states matching the approved `.pen` design and `docs/ui/chrome-ext.md`.
-- Add a content script for `github.com/<owner>/<repo>/issues/<number>` pages that detects issue metadata and injects a page-local GiTiempo timer control near the GitHub issue header/actions.
-- Add extension auth/session handling that supports Google and email Firebase sign-in, exchanges credentials through the existing auth flow, stores JWT tokens in `chrome.storage`, refreshes access tokens once on `401`, and attaches the access token to API requests.
+- Add a lightweight Tailwind-only popup with unauthenticated, authenticated/no-timer, authenticated/unsupported-page, running-timer, and error/disconnected states matching the approved `.pen` design and `docs/ui/chrome-ext.md`.
+- Add a content script for `github.com/<owner>/<repo>/issues/<number>` pages that detects issue metadata and injects a page-local GiTiempo timer control at the start of the GitHub issue page `main` container.
+- Add extension auth/session handling that supports Google and email Firebase sign-in through MV3-compatible extension flows, exchanges credentials through the existing auth flow, stores JWT tokens in `chrome.storage`, refreshes access tokens once on `401`, and attaches the access token to API requests.
 - Add extension timer API integration using existing endpoints for current timer lookup, GitHub issue timer start, and timer stop.
 - Add focused tests/build verification for URL parsing, issue metadata extraction, API payloads, token storage, popup state rendering, and injected control state behavior.
 
@@ -25,4 +25,5 @@ GiTiempo has approved product, UI, and backend support for tracking time from Gi
 - Shared frontend/theme usage: extension imports shared Tailwind token CSS from `packages/web-config` but does not load PrimeVue.
 - API consumption: existing `GET /time-entries/current`, `POST /time-entries/timer/start-from-github`, and `POST /time-entries/timer/stop` endpoints are consumed; no backend contract change is expected.
 - Auth/session: extension stores JWT tokens in `chrome.storage`, supports Google and email Firebase sign-in, reuses the existing Firebase-to-backend login direction, and attempts one refresh-token recovery before returning to sign-in.
+- Timer semantics: the injected control treats backend current-timer state as authoritative and distinguishes between a timer running for the current GitHub issue and a timer running elsewhere so it does not present an unlabeled global stop action from an unrelated issue page.
 - Verification: extension lint/typecheck/test/build plus existing shared package checks when shared leaves are changed.

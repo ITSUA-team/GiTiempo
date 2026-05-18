@@ -15,10 +15,7 @@ import { formatElapsedTime } from "@/lib/time";
 interface InjectedAppOptions {
   clearIntervalFn?: typeof clearInterval;
   doc?: Document;
-  matchMediaFn?: (query: string) => Pick<MediaQueryList, "matches"> & {
-    addEventListener?: (type: "change", listener: EventListener) => void;
-    removeEventListener?: (type: "change", listener: EventListener) => void;
-  };
+  matchMediaFn?: typeof window.matchMedia;
   now?: () => number;
   pageContext: SupportedGitHubIssueContext;
   root: HTMLElement;
@@ -38,14 +35,16 @@ const injectedActionButtonClass =
 const injectedTextActionClass =
   "text-brand cursor-pointer rounded-sm bg-transparent text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
-function createFallbackMediaQuery(): Pick<MediaQueryList, "matches"> & {
-  addEventListener?: (type: "change", listener: EventListener) => void;
-  removeEventListener?: (type: "change", listener: EventListener) => void;
-} {
+function createFallbackMediaQuery(): MediaQueryList {
   return {
     addEventListener: () => undefined,
+    addListener: () => undefined,
+    dispatchEvent: () => true,
     matches: false,
+    media: "",
+    onchange: null,
     removeEventListener: () => undefined,
+    removeListener: () => undefined,
   };
 }
 
@@ -110,12 +109,31 @@ function renderInjectedBody(
     `;
   }
 
-  if (state.snapshot.currentTimer) {
+  const currentTimer = state.snapshot.currentTimer;
+  const isCurrentIssueTimer = currentTimer
+    ? isTimerRunningForIssue(currentTimer, pageContext)
+    : false;
+
+  if (currentTimer && isCurrentIssueTimer) {
     return `
       ${issueHeader}
       <div class="flex items-center justify-between gap-3">
-        <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
+        <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
         <button type="button" data-action="stop-timer" class="bg-destructive text-white ${injectedActionButtonClass}">Stop Timer</button>
+      </div>
+    `;
+  }
+
+  if (currentTimer) {
+    return `
+      ${issueHeader}
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-1">
+          <p class="m-0 text-sm font-semibold ${headlineTextClass}">Timer running elsewhere</p>
+          <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(currentTimer.task.title)} · ${escapeHtml(currentTimer.project.name)}</p>
+          <p class="m-0 text-xs ${mutedTextClass}">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
+        </div>
+        <button type="button" data-action="open-extension" class="bg-brand text-white ${injectedActionButtonClass}">Open extension</button>
       </div>
     `;
   }
@@ -127,6 +145,15 @@ function renderInjectedBody(
       <button type="button" data-action="start-timer" class="bg-brand text-white ${injectedActionButtonClass}">Start Timer</button>
     </div>
   `;
+}
+
+function isTimerRunningForIssue(
+  currentTimer: NonNullable<RuntimeSnapshot["currentTimer"]>,
+  pageContext: SupportedGitHubIssueContext,
+): boolean {
+  return currentTimer.source === "extension"
+    && currentTimer.project.name === pageContext.githubRepo
+    && currentTimer.task.title === pageContext.issueTitle;
 }
 
 export function createInjectedIssueApp({
@@ -162,13 +189,13 @@ export function createInjectedIssueApp({
     state.theme = resolveGitHubColorMode(ownerDocument, resolveMatchMedia);
   }
 
-  const handleThemeChange: EventListener = () => {
+  const handleThemeChange = () => {
     syncTheme();
     render();
   };
 
   const themeObserver = new MutationObserver(() => {
-    handleThemeChange(new Event("change"));
+    handleThemeChange();
   });
 
   themeObserver.observe(ownerDocument.documentElement, {
