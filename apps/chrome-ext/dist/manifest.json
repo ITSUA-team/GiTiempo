@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "GiTiempo",
+  "version": "0.0.0",
+  "description": "Track GiTiempo timers directly from GitHub issue pages.",
+  "permissions": [
+    "identity",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://github.com/*"
+  ],
+  "oauth2": {
+    "client_id": "VITE_EXTENSION_GOOGLE_CLIENT_ID",
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*/*/issues/*",
+        "https://github.com/*/*/pull/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
