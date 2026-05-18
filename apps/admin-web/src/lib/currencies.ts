@@ -1,4 +1,4 @@
-export const CurrencyCode = {
+export const SettingsCurrencyOptionCode = {
 	USD: 'USD',
 	EUR: 'EUR',
 	GBP: 'GBP',
@@ -6,9 +6,11 @@ export const CurrencyCode = {
 	AUD: 'AUD',
 } as const;
 
-export const DEFAULT_CURRENCY = CurrencyCode.USD;
+export const DEFAULT_SETTINGS_CURRENCY = SettingsCurrencyOptionCode.USD;
 
-export const CURRENCY_OPTIONS = Object.values(CurrencyCode).map((currency) => ({
+export const SETTINGS_CURRENCY_OPTIONS = Object.values(
+	SettingsCurrencyOptionCode,
+).map((currency) => ({
 	label: currency,
 	value: currency,
 }));
