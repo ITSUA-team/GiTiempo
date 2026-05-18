@@ -584,7 +584,10 @@ describe('Time entries (e2e)', () => {
       .get('/time-entries/current')
       .set('Authorization', bearer(otherMemberToken));
     expect(current.status).toBe(200);
-    expect(current.body.timeEntry.githubIssue).toEqual({ githubRepo, issueNumber });
+    expect(current.body.timeEntry.githubIssue).toEqual({
+      githubRepo,
+      issueNumber,
+    });
 
     const [projectRef] = await db
       .select()

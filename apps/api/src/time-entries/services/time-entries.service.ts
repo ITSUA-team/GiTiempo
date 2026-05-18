@@ -343,7 +343,7 @@ export class TimeEntriesService {
 
   private parseGitHubIssueExternalKey(
     externalKey: string | null,
-  ): TimeEntryResponse["githubIssue"] {
+  ): TimeEntryResponse['githubIssue'] {
     if (!externalKey) {
       return null;
     }
