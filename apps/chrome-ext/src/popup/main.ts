@@ -301,7 +301,7 @@ export function createPopupApp({
 
   function render(): void {
     root.innerHTML = `
-      <div class="bg-surface text-text-dark flex h-[480px] w-[320px] flex-col p-5">
+      <div class="bg-surface text-text-dark flex min-h-[480px] w-[320px] flex-col p-5">
         ${renderPopupBody(state, now())}
       </div>
     `;
