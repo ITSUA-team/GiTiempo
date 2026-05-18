@@ -9,6 +9,7 @@
 - Keep popup bundle lightweight.
 - Reuse the same design tokens by importing the shared theme CSS into the extension build.
 - The extension has two surfaces: the popup and the injected timer control on GitHub issue pages.
+- Use shared token utilities for status colors instead of raw hex classes in extension markup.
 
 ## Popup Layout
 

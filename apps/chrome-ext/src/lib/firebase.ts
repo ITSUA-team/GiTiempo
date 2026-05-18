@@ -9,19 +9,10 @@ import {
 import { getExtensionConfig, hasFirebaseConfig } from "./config";
 
 const extensionConfig = getExtensionConfig();
-const firebaseApp = (() => {
-  if (!hasFirebaseConfig(extensionConfig)) {
-    return null;
-  }
-
-  const firebaseConfig = extensionConfig.firebase;
-
-  if (!firebaseConfig) {
-    return null;
-  }
-
-  return initializeApp(firebaseConfig);
-})();
+const firebaseConfig = extensionConfig.firebase;
+const firebaseApp = hasFirebaseConfig(extensionConfig) && firebaseConfig
+  ? initializeApp(firebaseConfig)
+  : null;
 
 function getFirebaseAuth() {
   if (!firebaseApp) {

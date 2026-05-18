@@ -11,7 +11,8 @@ Manifest V3 extension for starting and stopping GiTiempo timers from GitHub issu
 
 ## Environment
 
-Copy `.env.example` and set the Firebase and API values before building the extension.
+Copy `.env.example` and set all extension environment values before building the extension.
+Production builds fail fast when any required `VITE_EXTENSION_*` value is missing.
 
 ## Load Unpacked
 

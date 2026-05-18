@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RuntimeClient, RuntimeMutationResult, RuntimeSnapshot } from "@/lib/runtime";
-import { mountInjectedIssueControl } from "./main";
+import { bootstrapInjectedIssueControl, mountInjectedIssueControl } from "./main";
 
 function supportedContext() {
   return {
@@ -203,5 +203,40 @@ describe("injected issue control", () => {
     expect(root.textContent).toContain("Improve reports filters");
     expect(root.textContent).toContain("Timer stop failed");
     expect(root.textContent).toContain("Retry");
+  });
+
+  it("remounts when GitHub navigates to another issue in the same tab", async () => {
+    window.history.replaceState({}, "", "https://github.com/octo/repo/issues/184");
+    document.body.innerHTML = `
+      <main>
+        <div id="partial-discussion-header">
+          <div class="gh-header-actions"></div>
+        </div>
+      </main>
+    `;
+    document.title = "Improve reports filters";
+
+    const runtimeClient = createRuntimeClient();
+    const app = bootstrapInjectedIssueControl(document, window, runtimeClient);
+
+    await Promise.resolve();
+
+    let root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.textContent).toContain("Improve reports filters");
+
+    document.title = "Fix billing regression";
+    window.history.pushState({}, "", "https://github.com/octo/repo/issues/200");
+    document.body
+      .querySelector("main")!
+      .append(document.createElement("div"));
+
+    await Promise.resolve();
+
+    root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    expect(root.textContent).toContain("Fix billing regression");
+    expect(root.textContent).toContain("#200");
+
+    app.destroy();
   });
 });

@@ -38,7 +38,7 @@ function renderInjectedBody(
         <p class="m-0 text-xs font-medium text-white/70">${escapeHtml(pageContext.githubRepo)} · #${pageContext.issueNumber}</p>
         <p class="m-0 mt-1 text-lg font-semibold text-white">${escapeHtml(pageContext.issueTitle)}</p>
       </div>
-      ${state.snapshot?.currentTimer ? '<span class="rounded-sm bg-[#e8f5e9] px-2 py-1 text-xs font-semibold text-[#2e7d32]">Running</span>' : ""}
+      ${state.snapshot?.currentTimer ? '<span class="bg-status-active-bg text-status-active-text rounded-sm px-2 py-1 text-xs font-semibold">Running</span>' : ""}
     </div>
   `;
 
@@ -260,16 +260,60 @@ export function mountInjectedIssueControl(
   };
 }
 
-if (typeof chrome !== "undefined") {
-  const pageContext = resolveGitHubIssueContext(document, window.location.href);
+export function bootstrapInjectedIssueControl(
+  doc: Document,
+  win: Window,
+  runtimeClient = createRuntimeClient(),
+): { destroy(): void } {
+  let mountedApp: { destroy(): void; load(): Promise<void> } | null = null;
+  let currentUrl = "";
 
-  if (pageContext.kind === "supported") {
-    const mountedApp = mountInjectedIssueControl(document, pageContext);
+  function syncToLocation(): void {
+    const nextUrl = win.location.href;
+
+    if (nextUrl === currentUrl && mountedApp) {
+      return;
+    }
+
+    currentUrl = nextUrl;
+    mountedApp?.destroy();
+    mountedApp = null;
+
+    const pageContext = resolveGitHubIssueContext(doc, nextUrl);
+
+    if (pageContext.kind !== "supported") {
+      return;
+    }
+
+    mountedApp = mountInjectedIssueControl(doc, pageContext, runtimeClient);
 
     if (mountedApp) {
       void mountedApp.load();
     }
   }
+
+  const observer = new MutationObserver(() => {
+    syncToLocation();
+  });
+
+  syncToLocation();
+  observer.observe(doc.documentElement, { childList: true, subtree: true });
+  win.addEventListener("popstate", syncToLocation);
+  win.addEventListener("hashchange", syncToLocation);
+
+  return {
+    destroy() {
+      observer.disconnect();
+      win.removeEventListener("popstate", syncToLocation);
+      win.removeEventListener("hashchange", syncToLocation);
+      mountedApp?.destroy();
+      mountedApp = null;
+    },
+  };
+}
+
+if (typeof chrome !== "undefined") {
+  bootstrapInjectedIssueControl(document, window);
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if ((message as { type?: string }).type === "page-context/get") {

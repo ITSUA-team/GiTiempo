@@ -92,25 +92,30 @@ export function createExtensionApiClient({
   async function refreshSession(
     refreshToken: string,
   ): Promise<TokenPairResponse | null> {
-    const response = await fetchFn(getRequestUrl(config, "/auth/refresh"), {
-      body: JSON.stringify(refreshRequestSchema.parse({ refreshToken })),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-    });
-    const body = await parseJsonResponse(response);
+    try {
+      const response = await fetchFn(getRequestUrl(config, "/auth/refresh"), {
+        body: JSON.stringify(refreshRequestSchema.parse({ refreshToken })),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = await parseJsonResponse(response);
 
-    if (!response.ok) {
+      if (!response.ok) {
+        await clearStoredSession(storage);
+        return null;
+      }
+
+      const tokenPair = tokenPairResponseSchema.parse(body);
+
+      await setStoredSession(tokenPair, storage);
+
+      return tokenPair;
+    } catch {
       await clearStoredSession(storage);
       return null;
     }
-
-    const tokenPair = tokenPairResponseSchema.parse(body);
-
-    await setStoredSession(tokenPair, storage);
-
-    return tokenPair;
   }
 
   async function requestWithAuth<TResponse>(options: {

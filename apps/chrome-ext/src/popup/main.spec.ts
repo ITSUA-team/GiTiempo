@@ -290,4 +290,28 @@ describe("popup app", () => {
     expect(document.body.textContent).toContain("Timer stop failed");
     expect(document.body.textContent).toContain("Retry connection");
   });
+
+  it("shows the retryable error state after a rejected start action", async () => {
+    const runtimeClient = createRuntimeClient({
+      snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      startTimer: vi.fn(async () => {
+        throw new Error("Runtime unavailable");
+      }),
+    });
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+      pageContextResolver: async () => supportedContext(),
+    });
+
+    await app.load();
+    document
+      .querySelector<HTMLButtonElement>('[data-action="start-timer"]')!
+      .click();
+
+    await Promise.resolve();
+
+    expect(document.body.textContent).toContain("Runtime unavailable");
+    expect(document.body.textContent).toContain("Retry connection");
+  });
 });

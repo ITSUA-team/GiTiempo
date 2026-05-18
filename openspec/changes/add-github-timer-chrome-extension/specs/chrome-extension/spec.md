@@ -8,6 +8,12 @@ The system SHALL provide a Chrome extension app that builds as a Manifest V3 bro
 - **THEN** it produces a Manifest V3 extension bundle with popup, content script, and background or service-worker entries
 - **AND** the manifest includes host permissions required for GitHub issue-page injection and GiTiempo API access
 
+#### Scenario: Missing required extension environment fails fast
+- **GIVEN** the extension build or startup environment is missing any required `VITE_EXTENSION_*` value
+- **WHEN** the extension configuration is initialized outside relaxed local test or dev mode
+- **THEN** initialization fails with an explicit configuration error
+- **AND** the extension does not silently fall back to incomplete production auth or API settings
+
 #### Scenario: Extension remains PrimeVue-free
 - **WHEN** extension UI bundles are built
 - **THEN** they use Tailwind-backed project tokens for styling

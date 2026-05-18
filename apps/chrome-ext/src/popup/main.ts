@@ -108,7 +108,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
       <div class="flex h-full flex-col gap-6">
         ${renderBrandHeader(true)}
         <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <div class="bg-[#ffebee] text-destructive flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
+          <div class="bg-status-error-bg text-status-error-text flex h-[72px] w-[72px] items-center justify-center rounded-full text-xl font-semibold">!</div>
           <p class="m-0 text-lg font-semibold text-text-dark">Connection lost</p>
           <p class="m-0 max-w-[220px] text-sm text-text-muted">${escapeHtml(message)}</p>
           <button data-action="retry" class="text-brand bg-transparent text-sm font-semibold">Retry connection</button>
@@ -122,7 +122,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
       <div class="flex h-full flex-col gap-5">
         ${renderBrandHeader(true)}
         <div class="bg-app-bg flex flex-col items-center gap-3 rounded-lg p-5 text-center">
-          <div class="flex items-center rounded-sm bg-[#e8f5e9] px-3 py-1 text-xs font-semibold text-[#2e7d32]">Running timer</div>
+          <div class="bg-status-active-bg text-status-active-text flex items-center rounded-sm px-3 py-1 text-xs font-semibold">Running timer</div>
           <p class="m-0 text-2xl font-semibold text-brand">${formatElapsedTime(state.snapshot.currentTimer.startedAt, nowMs)}</p>
           <p class="m-0 text-sm font-medium text-text-dark">${escapeHtml(state.snapshot.currentTimer.task.title)}</p>
           <p class="m-0 text-xs text-text-muted">${escapeHtml(state.snapshot.currentTimer.project.name)} / ${escapeHtml(state.snapshot.currentTimer.task.title)}</p>
@@ -366,18 +366,30 @@ export function createPopupApp({
       return;
     }
 
-    const result = await runtimeClient.startTimer(state.pageContext);
+    try {
+      const result = await runtimeClient.startTimer(state.pageContext);
 
-    state.snapshot = result.snapshot;
-    state.errorMessage = result.ok ? null : result.errorMessage ?? "Unable to start timer.";
+      state.snapshot = result.snapshot;
+      state.errorMessage = result.ok ? null : result.errorMessage ?? "Unable to start timer.";
+    } catch (error) {
+      state.errorMessage =
+        error instanceof Error ? error.message : "Unable to start timer.";
+    }
+
     render();
   }
 
   async function handleStopTimer(): Promise<void> {
-    const result = await runtimeClient.stopTimer();
+    try {
+      const result = await runtimeClient.stopTimer();
 
-    state.snapshot = result.snapshot;
-    state.errorMessage = result.ok ? null : result.errorMessage ?? "Unable to stop timer.";
+      state.snapshot = result.snapshot;
+      state.errorMessage = result.ok ? null : result.errorMessage ?? "Unable to stop timer.";
+    } catch (error) {
+      state.errorMessage =
+        error instanceof Error ? error.message : "Unable to stop timer.";
+    }
+
     render();
   }
 

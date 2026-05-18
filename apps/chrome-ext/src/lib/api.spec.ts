@@ -33,10 +33,11 @@ function createStorage(initialData?: Record<string, unknown>): StorageAreaLike {
 
 function createTestConfig() {
   return getExtensionConfig({
+    MODE: "test",
     VITE_EXTENSION_API_BASE_URL: "http://localhost:3000",
-    VITE_EXTENSION_FIREBASE_API_KEY: "",
-    VITE_EXTENSION_FIREBASE_AUTH_DOMAIN: "",
-    VITE_EXTENSION_FIREBASE_PROJECT_ID: "",
+    VITE_EXTENSION_FIREBASE_API_KEY: "test-firebase-api-key",
+    VITE_EXTENSION_FIREBASE_AUTH_DOMAIN: "test-project.firebaseapp.com",
+    VITE_EXTENSION_FIREBASE_PROJECT_ID: "test-project",
     VITE_EXTENSION_USER_SPA_URL: "http://localhost:5173/login",
   });
 }
@@ -220,6 +221,30 @@ describe("createExtensionApiClient", () => {
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, { status: 401 }))
       .mockResolvedValueOnce(jsonResponse({ message: "Expired refresh" }, { status: 401 }));
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+
+    await expect(client.stopTimer()).rejects.toThrow(
+      "Your session has expired. Please sign in again.",
+    );
+    await expect(storage.get()).resolves.toEqual({});
+  });
+
+  it("clears the local session when refresh throws before returning a response", async () => {
+    const storage = createStorage({
+      "gitiempo.extension.session": {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, { status: 401 }))
+      .mockRejectedValueOnce(new Error("Network error"));
     const client = createExtensionApiClient({
       config: createTestConfig(),
       fetchFn,
