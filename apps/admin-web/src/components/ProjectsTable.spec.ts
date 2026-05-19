@@ -3,7 +3,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const confirmationMock = vi.hoisted(() => ({
   requireConfirmation: vi.fn(),
@@ -32,7 +32,27 @@ vi.mock('@/services/admin-projects-client', () => ({
 
 import ProjectsTable from './ProjectsTable.vue';
 
+function mockMatchMedia(matches = false): void {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
+}
+
 describe('ProjectsTable', () => {
+  beforeEach(() => {
+    mockMatchMedia();
+  });
+
   it('renders icon-only edit, archive, and unarchive row actions with accessible labels', () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -112,7 +132,55 @@ describe('ProjectsTable', () => {
     expect(archiveButton.text()).toBe('');
     expect(unarchiveButton.attributes('aria-label')).toBe('Unarchive');
     expect(unarchiveButton.text()).toBe('');
-    expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
+  });
+
+  it('renders the mobile loading shell without desktop actions on small viewports', () => {
+    mockMatchMedia(true);
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const wrapper = mount(ProjectsTable, {
+      props: {
+        loading: true,
+        members: [],
+        projects: [
+          {
+            color: null,
+            createdAt: '2026-05-01T10:00:00.000Z',
+            description: null,
+            id: 'project-active',
+            isActive: true,
+            members: [],
+            name: 'Project Orion',
+            source: 'manual',
+            totalHours: 12,
+            updatedAt: '2026-05-01T10:00:00.000Z',
+            visibility: 'public',
+            workspaceId: 'workspace-1',
+          },
+        ],
+      },
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute('data-tooltip', String(binding.value));
+            },
+          },
+        },
+        plugins: [pinia, PrimeVue],
+        stubs: {
+          ProjectEditForm: { template: '<div />' },
+          Select: { template: '<select />' },
+        },
+      },
+    });
+
+    expect(wrapper.findAll('[data-testid="projects-mobile-loading-card"]')).toHaveLength(3);
+    expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="project-edit-project-active"]')).toHaveLength(0);
   });
 
   it('preserves edit, archive, and unarchive flows behind the icon-only actions', async () => {

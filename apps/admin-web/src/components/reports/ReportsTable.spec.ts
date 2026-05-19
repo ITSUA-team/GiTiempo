@@ -71,16 +71,51 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
     const filterControls = wrapper.findAllComponents(Select);
-    expect(filterControls).toHaveLength(8);
+    expect(filterControls).toHaveLength(4);
     expect(filterControls.every((filter) => filter.props('disabled') !== true)).toBe(
       true,
     );
-    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(1);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
 
     const search = wrapper.get('input[aria-label="Search report rows"]');
     await search.setValue('orion');
 
     expect(filters.global).toBe('orion');
+  });
+
+  it('renders mobile filters and loading cards without desktop table controls', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        matches: true,
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    });
+
+    const filters = createDefaultReportTableFilters();
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters,
+        loading: true,
+        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
+        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        rows,
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+      },
+    });
+
+    expect(wrapper.findAllComponents(Select)).toHaveLength(4);
+    expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
+    expect(wrapper.text()).not.toContain('2h 00m');
   });
 
   it('shows selected filter labels in the table filter row', () => {

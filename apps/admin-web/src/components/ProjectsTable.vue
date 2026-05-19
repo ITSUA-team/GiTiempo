@@ -19,11 +19,14 @@ import {
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
+import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
+import MobileRecordCard from '@/components/mobile/MobileRecordCard.vue';
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
 import { useConfirmation } from '@/composables/useConfirmation';
+import { useIsMobileViewport } from '@/composables/useIsMobileViewport';
 import { useToasts } from '@/composables/useToasts';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -43,6 +46,7 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
+const isMobileViewport = useIsMobileViewport();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
 
@@ -176,13 +180,62 @@ function formatSource(source: string): string {
     </SectionHeader>
   </div>
 
-  <div class="flex flex-col gap-3 sm:hidden">
-    <template v-if="filteredProjects.length > 0">
-      <article
+  <div
+    v-if="isMobileViewport"
+    class="flex flex-col gap-3"
+  >
+    <template v-if="loading">
+      <MobileRecordCard
+        v-for="index in 3"
+        :key="index"
+        data-testid="projects-mobile-loading-card"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton
+              width="9rem"
+              height="1rem"
+            />
+            <Skeleton
+              width="5rem"
+              height="0.875rem"
+            />
+          </div>
+          <Skeleton
+            width="4.5rem"
+            height="1.5rem"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-2">
+            <Skeleton
+              width="6rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="5rem"
+              height="0.875rem"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <Skeleton
+              width="3rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="4rem"
+              height="0.875rem"
+            />
+          </div>
+        </div>
+      </MobileRecordCard>
+    </template>
+
+    <template v-else-if="filteredProjects.length > 0">
+      <MobileRecordCard
         v-for="project in filteredProjects"
         :key="project.id"
         data-testid="project-mobile-card"
-        class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -238,7 +291,7 @@ function formatSource(source: string): string {
           </div>
         </div>
 
-        <div class="border-divider flex justify-end gap-2 border-t pt-3">
+        <template #actions>
           <template v-if="project.isActive">
             <ManagementTableRowAction
               :data-testid="`project-mobile-edit-${project.id}`"
@@ -262,7 +315,7 @@ function formatSource(source: string): string {
             tone="muted"
             @click="handleUnarchive(project)"
           />
-        </div>
+        </template>
 
         <ProjectEditForm
           v-if="expandedRows[project.id]"
@@ -271,23 +324,23 @@ function formatSource(source: string): string {
           @saved="handleEditSaved(project)"
           @cancelled="handleEditCancelled(project)"
         />
-      </article>
+      </MobileRecordCard>
     </template>
 
     <EmptyStateBlock
-      v-else-if="!loading"
+      v-else
       title="No projects found"
       description="No projects match the current filter, or none have been created yet."
     />
   </div>
 
   <ManagementTableShell
+    v-else
     v-model:expanded-rows="expandedRows"
     :columns="columns"
     :value="filteredProjects"
     :loading="loading"
     data-key="id"
-    class="hidden sm:block"
     header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[1010px] items-center border-b font-sans text-[13px] font-semibold"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll

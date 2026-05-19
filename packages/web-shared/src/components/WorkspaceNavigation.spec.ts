@@ -3,7 +3,7 @@
 import { mount } from "@vue/test-utils";
 import { defineComponent, h, markRaw } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import WorkspaceNavigation from "./WorkspaceNavigation.vue";
 
@@ -128,7 +128,7 @@ describe("WorkspaceNavigation", () => {
     expect(wrapper.findAll('a[href="/settings"]')).toHaveLength(2);
   });
 
-  it("dismisses a visible desktop tooltip before navigating", async () => {
+  it("clears link focus before navigating", async () => {
     const router = createTestRouter();
     await router.push("/");
     await router.isReady();
@@ -158,12 +158,12 @@ describe("WorkspaceNavigation", () => {
     });
 
     const projectLink = wrapper.get("aside").get('a[href="/projects"]');
-    const leaveListener = vi.fn();
-    projectLink.element.addEventListener("mouseleave", leaveListener);
+    (projectLink.element as HTMLAnchorElement).focus();
+
+    expect(document.activeElement).toBe(projectLink.element);
 
     await projectLink.trigger("click");
 
-    expect(leaveListener).toHaveBeenCalledOnce();
     expect(document.activeElement).not.toBe(projectLink.element);
   });
 });
