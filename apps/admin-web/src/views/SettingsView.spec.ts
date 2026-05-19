@@ -67,6 +67,16 @@ const SkeletonStub = {
   template: '<div data-testid="skeleton" />',
 };
 
+const SettingsPageSkeletonStub = {
+  name: 'SettingsPageSkeleton',
+  template: `
+    <div role="status" aria-busy="true">
+      <div data-testid="skeleton" />
+      <div data-testid="skeleton" />
+    </div>
+  `,
+};
+
 function mountSettingsView() {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -79,6 +89,7 @@ function mountSettingsView() {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
         Skeleton: SkeletonStub,
+        SettingsPageSkeleton: SettingsPageSkeletonStub,
       },
     },
   });

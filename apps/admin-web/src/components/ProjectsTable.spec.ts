@@ -3,6 +3,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import { defineComponent } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const confirmationMock = vi.hoisted(() => ({
@@ -31,6 +32,16 @@ vi.mock('@/services/admin-projects-client', () => ({
 }));
 
 import ProjectsTable from './ProjectsTable.vue';
+
+const SelectStub = defineComponent({
+  props: {
+    placeholder: {
+      default: undefined,
+      type: String,
+    },
+  },
+  template: '<div data-testid="select-stub">{{ placeholder }}</div>',
+});
 
 function mockMatchMedia(matches = false): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -116,7 +127,7 @@ describe('ProjectsTable', () => {
         plugins: [pinia, PrimeVue],
         stubs: {
           ProjectEditForm: { template: '<div />' },
-          Select: { template: '<select />' },
+          Select: SelectStub,
         },
       },
     });
@@ -173,7 +184,7 @@ describe('ProjectsTable', () => {
         plugins: [pinia, PrimeVue],
         stubs: {
           ProjectEditForm: { template: '<div />' },
-          Select: { template: '<select />' },
+          Select: SelectStub,
         },
       },
     });
@@ -250,7 +261,7 @@ describe('ProjectsTable', () => {
         plugins: [pinia, PrimeVue],
         stubs: {
           ProjectEditForm: { template: '<div data-testid="project-edit-form" />' },
-          Select: { template: '<select />' },
+          Select: SelectStub,
         },
       },
     });
