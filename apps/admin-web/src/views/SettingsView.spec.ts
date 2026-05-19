@@ -67,6 +67,16 @@ const SkeletonStub = {
   template: '<div data-testid="skeleton" />',
 };
 
+const SettingsPageSkeletonStub = {
+  name: 'SettingsPageSkeleton',
+  template: `
+    <div role="status" aria-busy="true">
+      <div data-testid="skeleton" />
+      <div data-testid="skeleton" />
+    </div>
+  `,
+};
+
 function mountSettingsView() {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -79,6 +89,7 @@ function mountSettingsView() {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
         Skeleton: SkeletonStub,
+        SettingsPageSkeleton: SettingsPageSkeletonStub,
       },
     },
   });
@@ -126,7 +137,7 @@ describe('SettingsView', () => {
 
     const wrapper = mountSettingsView();
 
-    expect(wrapper.find('[aria-label="Loading settings"]').exists()).toBe(true);
+    expect(wrapper.get('[role="status"]').attributes('aria-busy')).toBe('true');
     expect(wrapper.findAll('[data-testid="skeleton"]').length).toBeGreaterThan(
       0,
     );
@@ -136,9 +147,7 @@ describe('SettingsView', () => {
     settingsRequest.resolve(settingsResponse);
     await flushPromises();
 
-    expect(wrapper.find('[aria-label="Loading settings"]').exists()).toBe(
-      false,
-    );
+    expect(wrapper.find('[role="status"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('Settings');
     expect(wrapper.text()).toContain(
       'Configure workspace defaults, billing preferences, and organization details.',

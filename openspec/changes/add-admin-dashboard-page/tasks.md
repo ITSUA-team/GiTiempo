@@ -28,7 +28,7 @@
 ## 3. Admin Dashboard UI
 
 - [x] 3.1 Replace `apps/admin-web/src/views/DashboardView.vue` placeholder with a thin composition surface that uses the dashboard state and focused UI leaves.
-- [x] 3.2 Reuse `StatsHeader` and `StatCard` from `@gitiempo/web-shared` where compatible with `bCRah`.
+- [x] 3.2 Reuse `SectionHeader` and `StatCard` from `@gitiempo/web-shared` where compatible with `bCRah`.
 - [x] 3.3 Add a dashboard skeleton using PrimeVue `<Skeleton>` that approximates the final header, stat card row, recent activity card, and feed rows.
 - [x] 3.4 Add a request-error surface with retry affordance and toast feedback; do not render empty/default dashboard content after failed required requests.
 - [x] 3.5 Add a Recent Activity component using compact design feed rows rather than a table.

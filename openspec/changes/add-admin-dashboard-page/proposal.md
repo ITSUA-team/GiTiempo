@@ -6,7 +6,7 @@ The admin Dashboard route still renders a placeholder even though the approved `
 
 - Replace `apps/admin-web/src/views/DashboardView.vue` with a functional dashboard inside the authenticated admin shell.
 - Analyze `GITiempo.pen` frame `bCRah` and use it as the parity reference for header copy, four stat cards, recent activity card, feed density, spacing, radii, typography, and responsive behavior.
-- Reuse existing shared UI leaves where they fit, especially `StatsHeader` and `StatCard` from `@gitiempo/web-shared`.
+- Reuse existing shared UI leaves where they fit, especially `SectionHeader` and `StatCard` from `@gitiempo/web-shared`.
 - Build the Recent Activity surface as the approved compact feed with token-backed circular indicators and PrimeVue buttons for available actions.
 - Use only existing endpoints and frontend clients for dashboard data; do not modify `apps/api`, shared contracts, database schema, migrations, seeds, or OpenAPI artifacts.
 - Keep dashboard data loading role-aware: admins may use member/invite management data, while PMs use only project and report endpoints that are already PM-safe.

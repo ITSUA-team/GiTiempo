@@ -137,18 +137,20 @@ onMounted(fetchAll);
           />
         </template>
         <template #stats>
-          <StatCard
-            label="Active Projects"
-            :value="summary.activeProjects"
-          />
-          <StatCard
-            label="Private"
-            :value="summary.privateProjects"
-          />
-          <StatCard
-            label="Public"
-            :value="summary.publicProjects"
-          />
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard
+              label="Active Projects"
+              :value="summary.activeProjects"
+            />
+            <StatCard
+              label="Private"
+              :value="summary.privateProjects"
+            />
+            <StatCard
+              label="Public"
+              :value="summary.publicProjects"
+            />
+          </div>
         </template>
       </SectionHeader>
 

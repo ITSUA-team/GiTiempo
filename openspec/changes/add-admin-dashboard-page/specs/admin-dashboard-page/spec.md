@@ -118,6 +118,6 @@ The admin Dashboard implementation MUST use project-standard PrimeVue and shared
 #### Scenario: Dashboard reuses shared stat leaves and token styling
 
 - **WHEN** the Dashboard is implemented
-- **THEN** it reuses existing shared stat/header leaves such as `StatsHeader` and `StatCard` when their structure fits the approved design
+- **THEN** it reuses existing shared stat/header leaves such as `SectionHeader` and `StatCard` when their structure fits the approved design
 - **AND** it uses PrimeVue components where appropriate for buttons and skeletons
 - **AND** it uses token-backed Tailwind utilities and PrimeVue `pt` overrides instead of raw hex classes, deep selectors, or raw standard app controls
