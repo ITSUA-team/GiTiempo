@@ -3,7 +3,7 @@
 import { mount } from "@vue/test-utils";
 import { defineComponent, h, markRaw } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import WorkspaceNavigation from "./WorkspaceNavigation.vue";
 
@@ -158,12 +158,10 @@ describe("WorkspaceNavigation", () => {
     });
 
     const projectLink = wrapper.get("aside").get('a[href="/projects"]');
-    (projectLink.element as HTMLAnchorElement).focus();
-
-    expect(document.activeElement).toBe(projectLink.element);
+    const blurSpy = vi.spyOn(projectLink.element as HTMLAnchorElement, "blur");
 
     await projectLink.trigger("click");
 
-    expect(document.activeElement).not.toBe(projectLink.element);
+    expect(blurSpy).toHaveBeenCalledOnce();
   });
 });
