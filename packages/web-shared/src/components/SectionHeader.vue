@@ -17,7 +17,13 @@ withDefaults(
     v-if="variant === 'stats'"
     class="flex flex-col gap-6"
   >
-    <div class="flex items-center justify-between">
+    <header
+      :class="
+        $slots.actions
+          ? 'flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'
+          : 'flex flex-col gap-1.5'
+      "
+    >
       <div class="flex flex-col gap-1.5">
         <h1 class="text-text-dark text-[28px] font-semibold">
           {{ title }}
@@ -29,13 +35,11 @@ withDefaults(
           {{ description }}
         </p>
       </div>
-      <div>
-        <slot name="actions" />
-      </div>
-    </div>
+      <slot name="actions" />
+    </header>
     <div
       v-if="$slots.stats"
-      class="flex h-24 gap-4"
+      class="w-full"
     >
       <slot name="stats" />
     </div>

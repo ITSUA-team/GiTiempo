@@ -138,7 +138,7 @@ async function handleExport(): Promise<void> {
       <SectionHeader
         title="Reports"
         description="Live project and member reporting within the current PM scope."
-        variant="page"
+        variant="stats"
       >
         <template #actions>
           <Button
@@ -148,6 +148,30 @@ async function handleExport(): Promise<void> {
             :loading="exporting"
             @click="handleExport"
           />
+        </template>
+        <template #stats>
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="Tracked Hours"
+              :value="totalHoursLabel"
+              :description="trackedHoursDescription"
+            />
+            <StatCard
+              label="Billable"
+              :value="billableShareLabel"
+              description="Within PM scope"
+            />
+            <StatCard
+              label="Avg per Member"
+              :value="avgPerMemberLabel"
+              description="Weekly average"
+            />
+            <StatCard
+              label="Top Project"
+              :value="summary.topProjectName"
+              :description="topProjectDescription"
+            />
+          </div>
         </template>
       </SectionHeader>
 
@@ -160,29 +184,6 @@ async function handleExport(): Promise<void> {
         :member-options="memberOptions"
         :disabled="loading"
       />
-
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Tracked Hours"
-          :value="totalHoursLabel"
-          :description="trackedHoursDescription"
-        />
-        <StatCard
-          label="Billable"
-          :value="billableShareLabel"
-          description="Within PM scope"
-        />
-        <StatCard
-          label="Avg per Member"
-          :value="avgPerMemberLabel"
-          description="Weekly average"
-        />
-        <StatCard
-          label="Top Project"
-          :value="summary.topProjectName"
-          :description="topProjectDescription"
-        />
-      </div>
 
       <SurfaceCard padding-class="p-5">
         <ReportsTable
