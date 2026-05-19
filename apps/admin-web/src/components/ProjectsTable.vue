@@ -14,6 +14,7 @@ import {
   EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
+  SectionHeader,
   managementTableColumnPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -152,27 +153,27 @@ function formatSource(source: string): string {
 </script>
 
 <template>
-  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-    <h2 class="text-text-dark text-lg font-semibold">
-      Projects Table
-    </h2>
-
-    <div class="flex flex-col gap-1.5 sm:w-[260px]">
-      <label
-        id="member-filter-label"
-        class="text-text-muted text-[12px] font-medium"
-      >Assigned member</label>
-      <Select
-        v-model="selectedMemberId"
-        :options="memberFilterOptions"
-        aria-labelledby="member-filter-label"
-        option-label="label"
-        option-value="value"
-        placeholder="All members"
-        show-clear
-        class="w-full"
-      />
-    </div>
+  <div class="mb-4">
+    <SectionHeader title="Projects Table">
+      <template #actions>
+        <div class="flex flex-col gap-1.5 sm:w-[260px]">
+          <label
+            id="member-filter-label"
+            class="text-text-muted text-[12px] font-medium"
+          >Assigned member</label>
+          <Select
+            v-model="selectedMemberId"
+            :options="memberFilterOptions"
+            aria-labelledby="member-filter-label"
+            option-label="label"
+            option-value="value"
+            placeholder="All members"
+            show-clear
+            class="w-full"
+          />
+        </div>
+      </template>
+    </SectionHeader>
   </div>
 
   <div class="flex flex-col gap-3 sm:hidden">

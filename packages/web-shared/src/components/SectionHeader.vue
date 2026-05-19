@@ -72,7 +72,7 @@ withDefaults(
 
   <div
     v-else-if="$slots.actions"
-    class="flex items-start justify-between gap-4"
+    class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
   >
     <div class="flex flex-col gap-1.5">
       <h2 class="text-text-dark text-lg font-semibold">
