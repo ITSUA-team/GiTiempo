@@ -1,3 +1,6 @@
+import type { MultiSelectPassThroughOptions } from 'primevue/multiselect';
+import type { SelectPassThroughOptions } from 'primevue/select';
+
 export interface ManagementTableColumn {
   key: string;
   label: string;
@@ -36,11 +39,20 @@ export const managementTableColumnPt = {
 
 export const managementTableFilterInputClass = 'h-[34px] w-full rounded-[6px] text-[12px]';
 
+const managementTableFilterDropdownRootClass =
+  'h-[34px] w-full items-center rounded-[6px] font-sans text-[12px]';
+const managementTableFilterDropdownLabelClass =
+  'flex h-full items-center py-0 font-sans text-[12px] font-normal leading-none text-text-muted';
+
 export const managementTableFilterSelectPt = {
-  root: { class: 'h-[34px] w-full items-center rounded-[6px] font-sans text-[12px]' },
+  root: { class: managementTableFilterDropdownRootClass },
+  label: { class: managementTableFilterDropdownLabelClass },
+} satisfies SelectPassThroughOptions;
+
+export const managementTableFilterMultiSelectPt = {
+  root: { class: managementTableFilterDropdownRootClass },
   labelContainer: { class: 'flex h-full items-center' },
   label: {
-    class:
-      'flex h-full items-center py-0 font-sans text-[12px] font-normal leading-none text-text-muted',
+    class: managementTableFilterDropdownLabelClass,
   },
-} as const;
+} satisfies MultiSelectPassThroughOptions;

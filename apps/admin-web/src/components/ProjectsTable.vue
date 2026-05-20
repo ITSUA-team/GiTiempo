@@ -17,6 +17,7 @@ import {
   SectionHeader,
   managementTableColumnPt,
   managementTableFilterInputClass,
+  managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -397,7 +398,7 @@ watch(filteredProjects, (projects) => {
           show-clear
           :max-selected-labels="1"
           selected-items-label="{0} members"
-          :pt="managementTableFilterSelectPt"
+          :pt="managementTableFilterMultiSelectPt"
         />
       </div>
     </div>
@@ -607,7 +608,7 @@ watch(filteredProjects, (projects) => {
             show-clear
             :max-selected-labels="1"
             selected-items-label="{0} members"
-            :pt="managementTableFilterSelectPt"
+            :pt="managementTableFilterMultiSelectPt"
           />
         </div>
 

@@ -19,6 +19,7 @@ import {
   formatWorkspaceRole,
   managementTableColumnPt,
   managementTableFilterInputClass,
+  managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
@@ -437,7 +438,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         show-clear
         :max-selected-labels="1"
         selected-items-label="{0} projects"
-        :pt="managementTableFilterSelectPt"
+        :pt="managementTableFilterMultiSelectPt"
       />
     </div>
   </div>
@@ -652,7 +653,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
             show-clear
             :max-selected-labels="1"
             selected-items-label="{0} projects"
-            :pt="managementTableFilterSelectPt"
+            :pt="managementTableFilterMultiSelectPt"
           />
         </div>
 
