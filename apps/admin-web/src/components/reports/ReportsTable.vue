@@ -4,6 +4,7 @@ import {
   ManagementTableShell,
   SectionHeader,
   managementTableColumnPt,
+  managementTableFilterSelectPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
@@ -54,10 +55,6 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
   { label: 'Non-billable', value: 'withoutBillable' },
 ];
 
-const filterSelectPt = {
-  root: { class: 'h-[34px] w-full rounded-[6px] text-[12px]' },
-  label: { class: 'flex items-center py-0 text-[12px] font-normal' },
-} as const;
 </script>
 
 <template>
@@ -93,7 +90,7 @@ const filterSelectPt = {
             option-value="value"
             placeholder="All projects"
             show-clear
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -110,7 +107,7 @@ const filterSelectPt = {
             option-value="value"
             placeholder="All members"
             show-clear
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -126,7 +123,7 @@ const filterSelectPt = {
               :options="hoursFilterOptions"
               option-label="label"
               option-value="value"
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
 
@@ -141,7 +138,7 @@ const filterSelectPt = {
               :options="billableFilterOptions"
               option-label="label"
               option-value="value"
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
         </div>
@@ -252,7 +249,7 @@ const filterSelectPt = {
               option-value="value"
               placeholder="All projects"
               show-clear
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
 
@@ -265,7 +262,7 @@ const filterSelectPt = {
               option-value="value"
               placeholder="All members"
               show-clear
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
 
@@ -276,7 +273,7 @@ const filterSelectPt = {
               aria-label="Filter report rows by hours"
               option-label="label"
               option-value="value"
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
           <div class="w-[140px] px-3 text-right">
@@ -286,7 +283,7 @@ const filterSelectPt = {
               aria-label="Filter report rows by billable hours"
               option-label="label"
               option-value="value"
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
         </div>

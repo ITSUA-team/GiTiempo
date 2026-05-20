@@ -33,3 +33,14 @@ export const managementTableColumnPt = {
     class: 'border-0 border-t border-divider px-3 py-0 align-middle font-sans',
   },
 } as const;
+
+export const managementTableFilterInputClass = 'h-[34px] w-full rounded-[6px] text-[12px]';
+
+export const managementTableFilterSelectPt = {
+  root: { class: 'h-[34px] w-full items-center rounded-[6px] font-sans text-[12px]' },
+  labelContainer: { class: 'flex h-full items-center' },
+  label: {
+    class:
+      'flex h-full items-center py-0 font-sans text-[12px] font-normal leading-none text-text-muted',
+  },
+} as const;

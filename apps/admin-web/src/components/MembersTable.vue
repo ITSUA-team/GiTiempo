@@ -18,6 +18,8 @@ import {
   SectionHeader,
   formatWorkspaceRole,
   managementTableColumnPt,
+  managementTableFilterInputClass,
+  managementTableFilterSelectPt,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
@@ -101,17 +103,6 @@ const lastActiveFilterOptions: FilterOption<MemberLastActiveFilter>[] = [
   { label: 'Active this week', value: 'thisWeek' },
   { label: 'No activity', value: 'inactive' },
 ];
-
-const filterSelectPt = {
-  root: { class: 'h-[34px] w-full items-center rounded-[6px] font-sans text-[12px]' },
-  labelContainer: { class: 'flex h-full items-center' },
-  label: {
-    class:
-      'flex h-full items-center py-0 font-sans text-[12px] font-normal leading-none text-text-muted',
-  },
-} as const;
-
-const filterInputClass = 'h-[34px] w-full rounded-[6px] text-[12px]';
 
 const projectFilterOptions = computed<FilterOption[]>(() =>
   [...props.projects]
@@ -409,7 +400,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           option-value="value"
           placeholder="All roles"
           show-clear
-          :pt="filterSelectPt"
+          :pt="managementTableFilterSelectPt"
         />
       </div>
 
@@ -424,7 +415,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           :options="lastActiveFilterOptions"
           option-label="label"
           option-value="value"
-          :pt="filterSelectPt"
+          :pt="managementTableFilterSelectPt"
         />
       </div>
     </div>
@@ -446,7 +437,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         show-clear
         :max-selected-labels="1"
         selected-items-label="{0} projects"
-        :pt="filterSelectPt"
+        :pt="managementTableFilterSelectPt"
       />
     </div>
   </div>
@@ -630,7 +621,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           <InputText
             v-model="filters.memberQuery"
             aria-label="Filter members by name or email"
-            :class="filterInputClass"
+            :class="managementTableFilterInputClass"
             placeholder="Filter name or email"
           />
         </div>
@@ -644,7 +635,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
             option-value="value"
             placeholder="All roles"
             show-clear
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -661,7 +652,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
             show-clear
             :max-selected-labels="1"
             selected-items-label="{0} projects"
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -672,7 +663,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
             aria-label="Filter members by last active"
             option-label="label"
             option-value="value"
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 

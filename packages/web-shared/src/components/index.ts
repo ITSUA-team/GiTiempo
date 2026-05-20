@@ -13,6 +13,8 @@ export {
   getManagementTableActionIconClass,
   getManagementTableActionRootClass,
   managementTableColumnPt,
+  managementTableFilterInputClass,
+  managementTableFilterSelectPt,
 } from "./management-table";
 export { default as PlaceholderPage } from "./PlaceholderPage.vue";
 export { default as SectionHeader } from "./SectionHeader.vue";

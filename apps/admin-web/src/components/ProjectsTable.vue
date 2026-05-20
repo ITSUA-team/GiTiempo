@@ -16,6 +16,8 @@ import {
   ManagementTableShell,
   SectionHeader,
   managementTableColumnPt,
+  managementTableFilterInputClass,
+  managementTableFilterSelectPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
@@ -103,17 +105,6 @@ const visibilityFilterOptions: FilterOption<ProjectResponse['visibility']>[] = [
   { label: 'Public', value: 'public' },
   { label: 'Private', value: 'private' },
 ];
-
-const filterSelectPt = {
-  root: { class: 'h-[34px] w-full items-center rounded-[6px] font-sans text-[12px]' },
-  labelContainer: { class: 'flex h-full items-center' },
-  label: {
-    class:
-      'flex h-full items-center py-0 font-sans text-[12px] font-normal leading-none text-text-muted',
-  },
-} as const;
-
-const filterInputClass = 'h-[34px] w-full rounded-[6px] text-[12px]';
 
 const memberFilterOptions = computed<FilterOption[]>(() =>
   props.members
@@ -351,7 +342,7 @@ watch(filteredProjects, (projects) => {
           option-value="value"
           placeholder="All sources"
           show-clear
-          :pt="filterSelectPt"
+          :pt="managementTableFilterSelectPt"
         />
       </div>
 
@@ -368,7 +359,7 @@ watch(filteredProjects, (projects) => {
           option-value="value"
           placeholder="All"
           show-clear
-          :pt="filterSelectPt"
+          :pt="managementTableFilterSelectPt"
         />
       </div>
     </div>
@@ -385,7 +376,7 @@ watch(filteredProjects, (projects) => {
           :options="hoursFilterOptions"
           option-label="label"
           option-value="value"
-          :pt="filterSelectPt"
+          :pt="managementTableFilterSelectPt"
         />
       </div>
 
@@ -406,7 +397,7 @@ watch(filteredProjects, (projects) => {
           show-clear
           :max-selected-labels="1"
           selected-items-label="{0} members"
-          :pt="filterSelectPt"
+          :pt="managementTableFilterSelectPt"
         />
       </div>
     </div>
@@ -585,7 +576,7 @@ watch(filteredProjects, (projects) => {
           <InputText
             v-model="filters.projectQuery"
             aria-label="Filter projects by name"
-            :class="filterInputClass"
+            :class="managementTableFilterInputClass"
             placeholder="Filter project"
           />
         </div>
@@ -599,7 +590,7 @@ watch(filteredProjects, (projects) => {
             option-value="value"
             placeholder="All sources"
             show-clear
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -616,7 +607,7 @@ watch(filteredProjects, (projects) => {
             show-clear
             :max-selected-labels="1"
             selected-items-label="{0} members"
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -627,7 +618,7 @@ watch(filteredProjects, (projects) => {
             aria-label="Filter projects by hours"
             option-label="label"
             option-value="value"
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -640,7 +631,7 @@ watch(filteredProjects, (projects) => {
             option-value="value"
             placeholder="All"
             show-clear
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
