@@ -22,8 +22,13 @@ User-web table/list surfaces currently rely on fixed-width desktop tables with h
 
 ### Modified Capabilities
 
-- `user-pages`: Add mobile adaptive rendering requirements for user dashboard recent entries, project task rows, and time-entry rows while preserving existing desktop row content and actions.
+- `user-pages`: Add mobile adaptive rendering requirements for user dashboard recent entries and time-entry rows while preserving existing desktop row content and actions.
+- `user-projects-list-page`: Add mobile adaptive rendering requirements for project task rows while preserving existing desktop row content and actions.
 - `frontend-shared-leaves`: Allow the proven admin mobile viewport/card primitives to become shared leaves used by both SPAs when the behavior remains presentational and identical.
+
+## Dependencies
+
+- Archive/apply `implement-user-projects-list-page` before archiving this change so the Projects-page baseline capability exists before its responsive refinements land.
 
 ## Impact
 

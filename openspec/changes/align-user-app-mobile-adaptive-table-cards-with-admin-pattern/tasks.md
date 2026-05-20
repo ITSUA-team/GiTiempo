@@ -32,7 +32,9 @@
 
 - [x] 5.1 Perform a desktop parity review against `GITiempo.pen` frames `obxTM`, `R2FI0`, and `yAu6B` and confirm desktop table behavior did not regress.
 - [x] 5.2 Perform a mobile adaptation review against `docs/ui/layout.md`, `docs/ui/components.md`, the user-page specs, and the admin mobile pattern; document any PrimeVue-only compromise.
-- [x] 5.3 Run `pnpm --filter user-web lint` and fix all new warnings/errors.
-- [x] 5.4 Run `pnpm --filter user-web typecheck` and fix all type errors.
-- [x] 5.5 Run `pnpm --filter user-web test` and fix regressions in component/view tests.
-- [x] 5.6 If `packages/web-shared` changes, run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`, then fix regressions.
+- [x] 5.3 Update `docs/ui/pages-user.md` so Dashboard recent entries, Projects task sections, and Time Entries day groups explicitly document the desktop-table/mobile-card split below `640px`.
+- [x] 5.4 Run `pnpm --filter user-web lint` and fix all new warnings/errors.
+- [x] 5.5 Run `pnpm --filter user-web typecheck` and fix all type errors.
+- [x] 5.6 Run `pnpm --filter user-web test` and fix regressions in component/view tests.
+- [x] 5.7 If `packages/web-shared` changes, run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`, then fix regressions.
+- [x] 5.8 Attach the recorded `.pen` parity checklist, any PrimeVue-only compromises, and the exact verification commands/results to `verification.md` before archiving this change.
