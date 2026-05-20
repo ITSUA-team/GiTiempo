@@ -14,6 +14,10 @@ The Members page MUST render report-style table discovery controls that filter l
 - **WHEN** the user enters global search text or selects role, assigned-project, or last-active filters
 - **THEN** visible member rows and mobile cards are limited to loaded members matching all active filters
 - **AND** global search matches member display name, email, formatted role, assigned project labels or counts, and formatted last-active text
+- **AND** last-active filter options are `Any activity`, `Active today`, `Active this week`, and `No activity`
+- **AND** `Active today` uses the current browser-local calendar day
+- **AND** `Active this week` includes valid `lastActiveAt` values from browser-local Monday `00:00` through the current time
+- **AND** `No activity` includes members with missing or invalid `lastActiveAt`
 - **AND** clearing active filters restores all loaded members allowed by the page's role scope
 - **AND** no member-list API request is required solely for table filtering
 

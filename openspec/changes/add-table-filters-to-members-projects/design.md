@@ -37,7 +37,25 @@ Current implementation state:
 
 Members and Projects tables will keep their own typed filter state and derive filtered rows with `computed` values. This matches the Reports page approach, keeps table search independent from backend scope, and avoids changing API contracts.
 
+Project fit: `docs/ui/components.md` allows native PrimeVue DataTable filters by default, but explicitly treats local computed filtering as the accepted equivalent when a table uses the shared `ManagementTableShell` with custom headers and hidden native DataTable headers.
+
 Alternative considered: use PrimeVue DataTable built-in filtering. This does not fit the current `ManagementTableShell` architecture because the app renders custom header and filter rows while hiding PrimeVue's native headers.
+
+### Define concrete filter option semantics
+
+Members last-active options use browser-local time:
+
+- `Any activity`: no last-active restriction.
+- `Active today`: valid `lastActiveAt` on the current browser-local calendar day.
+- `Active this week`: valid `lastActiveAt` from browser-local Monday `00:00` through the current time.
+- `No activity`: missing or invalid `lastActiveAt`.
+
+Projects hours options use each loaded row's `totalHours` value:
+
+- `Any`: no hours restriction.
+- `Tracked`: `totalHours > 0`.
+- `40h+`: `totalHours >= 40`.
+- `No hours`: `totalHours === 0`.
 
 ### Reuse the existing management-table filter row
 

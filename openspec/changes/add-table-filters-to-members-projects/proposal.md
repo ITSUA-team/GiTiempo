@@ -24,6 +24,6 @@ The approved admin Members and Projects designs include the same table discovery
 ## Impact
 
 - Affected app code: `apps/admin-web/src/components/MembersTable.vue`, `apps/admin-web/src/components/ProjectsTable.vue`, and focused component tests.
-- Affected shared UI surface: uses the existing `ManagementTableShell` filters slot from `@gitiempo/web-shared`; no shared component API change is expected unless implementation discovers a small reusable filter helper is warranted.
+- Affected shared UI surface: uses the existing `ManagementTableShell` filters slot from `@gitiempo/web-shared`; no shared component API change is expected unless implementation discovers a small reusable filter helper is warranted. If shared frontend code is touched, run the required `@gitiempo/web-shared`, `admin-web`, and `user-web` lint/typecheck verification.
 - Affected design references: `GITiempo.pen` screens `Admin Reports`, `Admin Members`, and `Admin Projects`.
 - APIs/contracts: no backend, OpenAPI, database, or shared contract changes are expected; filters operate over already-loaded frontend data.
