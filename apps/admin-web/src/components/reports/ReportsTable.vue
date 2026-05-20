@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import {
-  ManagementTableEmptyState,
+  EmptyStateBlock,
   ManagementTableShell,
-  managementTableColumnPt,
   SectionHeader,
+  managementTableColumnPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
+import MobileRecordCard from '@/components/mobile/MobileRecordCard.vue';
+import { useIsMobileViewport } from '@/composables/useIsMobileViewport';
 import {
   formatReportDuration,
   type ReportBillableFilter,
@@ -29,6 +32,7 @@ defineProps<{
 }>();
 
 const filters = defineModel<ReportTableFilters>('filters', { required: true });
+const isMobileViewport = useIsMobileViewport();
 
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
@@ -74,18 +78,17 @@ const filterSelectPt = {
       </SectionHeader>
     </div>
 
-    <ManagementTableShell
-      :columns="columns"
-      :value="rows"
-      :loading="loading"
-      data-key="id"
-    >
-      <template #filters>
-        <div class="min-w-0 flex-1 px-3">
+    <template v-if="isMobileViewport">
+      <div class="mb-4 grid gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="mobile-report-project-filter"
+            class="text-text-muted text-[12px] font-medium"
+          >Project</label>
           <Select
+            id="mobile-report-project-filter"
             v-model="filters.projectId"
             :options="projectOptions"
-            aria-label="Filter report rows by project"
             option-label="label"
             option-value="value"
             placeholder="All projects"
@@ -94,11 +97,15 @@ const filterSelectPt = {
           />
         </div>
 
-        <div class="w-[180px] px-3">
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="mobile-report-member-filter"
+            class="text-text-muted text-[12px] font-medium"
+          >Member</label>
           <Select
+            id="mobile-report-member-filter"
             v-model="filters.memberId"
             :options="memberOptions"
-            aria-label="Filter report rows by member"
             option-label="label"
             option-value="value"
             placeholder="All members"
@@ -107,26 +114,182 @@ const filterSelectPt = {
           />
         </div>
 
-        <div class="w-[140px] px-3 text-right">
-          <Select
-            v-model="filters.hours"
-            :options="hoursFilterOptions"
-            aria-label="Filter report rows by hours"
-            option-label="label"
-            option-value="value"
-            :pt="filterSelectPt"
-          />
-        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="mobile-report-hours-filter"
+              class="text-text-muted text-[12px] font-medium"
+            >Hours</label>
+            <Select
+              id="mobile-report-hours-filter"
+              v-model="filters.hours"
+              :options="hoursFilterOptions"
+              option-label="label"
+              option-value="value"
+              :pt="filterSelectPt"
+            />
+          </div>
 
-        <div class="w-[140px] px-3 text-right">
-          <Select
-            v-model="filters.billable"
-            :options="billableFilterOptions"
-            aria-label="Filter report rows by billable hours"
-            option-label="label"
-            option-value="value"
-            :pt="filterSelectPt"
-          />
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="mobile-report-billable-filter"
+              class="text-text-muted text-[12px] font-medium"
+            >Billable</label>
+            <Select
+              id="mobile-report-billable-filter"
+              v-model="filters.billable"
+              :options="billableFilterOptions"
+              option-label="label"
+              option-value="value"
+              :pt="filterSelectPt"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <template v-if="loading">
+          <MobileRecordCard
+            v-for="index in 3"
+            :key="index"
+            data-testid="reports-mobile-loading-card"
+          >
+            <div class="flex min-w-0 flex-col gap-2">
+              <Skeleton
+                width="9rem"
+                height="1rem"
+              />
+              <Skeleton
+                width="6rem"
+                height="0.875rem"
+              />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-2">
+                <Skeleton
+                  width="3rem"
+                  height="0.75rem"
+                />
+                <Skeleton
+                  width="4.5rem"
+                  height="0.875rem"
+                />
+              </div>
+              <div class="flex flex-col gap-2">
+                <Skeleton
+                  width="4rem"
+                  height="0.75rem"
+                />
+                <Skeleton
+                  width="4.5rem"
+                  height="0.875rem"
+                />
+              </div>
+            </div>
+          </MobileRecordCard>
+        </template>
+
+        <template v-else-if="rows.length > 0">
+          <MobileRecordCard
+            v-for="row in rows"
+            :key="row.id"
+            data-testid="report-mobile-card"
+          >
+            <div class="min-w-0">
+              <h3 class="text-text-dark truncate text-[15px] font-semibold">
+                {{ row.projectName }}
+              </h3>
+              <p class="text-text-muted truncate text-[13px]">
+                {{ row.memberName }}
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <span class="text-text-muted text-xs">Hours</span>
+                <span class="text-text-dark text-[13px] font-semibold">
+                  {{ formatReportDuration(row.totalSeconds) }}
+                </span>
+              </div>
+              <div class="flex flex-col gap-1">
+                <span class="text-text-muted text-xs">Billable</span>
+                <span class="text-text-dark text-[13px] font-semibold">
+                  {{ formatReportDuration(row.billableSeconds) }}
+                </span>
+              </div>
+            </div>
+          </MobileRecordCard>
+        </template>
+
+        <EmptyStateBlock
+          v-else
+          title="No report rows found"
+          description="No matching report rows are available for the current filters."
+        />
+      </div>
+    </template>
+
+    <ManagementTableShell
+      v-else
+      :columns="columns"
+      :value="rows"
+      :loading="loading"
+      data-key="id"
+      header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[720px] items-center border-b font-sans text-[13px] font-semibold"
+      shell-class="border-divider overflow-x-auto rounded-[6px] border"
+      single-scroll
+      table-class="min-w-[720px] w-full table-fixed border-collapse"
+      table-container-class="overflow-visible rounded-none border-none"
+    >
+      <template #filters>
+        <div class="flex min-w-[720px] flex-1 items-center">
+          <div class="min-w-0 flex-1 px-3">
+            <Select
+              v-model="filters.projectId"
+              :options="projectOptions"
+              aria-label="Filter report rows by project"
+              option-label="label"
+              option-value="value"
+              placeholder="All projects"
+              show-clear
+              :pt="filterSelectPt"
+            />
+          </div>
+
+          <div class="w-[180px] px-3">
+            <Select
+              v-model="filters.memberId"
+              :options="memberOptions"
+              aria-label="Filter report rows by member"
+              option-label="label"
+              option-value="value"
+              placeholder="All members"
+              show-clear
+              :pt="filterSelectPt"
+            />
+          </div>
+
+          <div class="w-[140px] px-3 text-right">
+            <Select
+              v-model="filters.hours"
+              :options="hoursFilterOptions"
+              aria-label="Filter report rows by hours"
+              option-label="label"
+              option-value="value"
+              :pt="filterSelectPt"
+            />
+          </div>
+
+          <div class="w-[140px] px-3 text-right">
+            <Select
+              v-model="filters.billable"
+              :options="billableFilterOptions"
+              aria-label="Filter report rows by billable hours"
+              option-label="label"
+              option-value="value"
+              :pt="filterSelectPt"
+            />
+          </div>
         </div>
       </template>
 
@@ -168,7 +331,7 @@ const filterSelectPt = {
       </Column>
 
       <template #empty>
-        <ManagementTableEmptyState
+        <EmptyStateBlock
           title="No report rows found"
           description="No matching report rows are available for the current filters."
         />

@@ -15,6 +15,7 @@ withDefaults(
     rowClass?: DataTableProps['rowClass'];
     shellClass?: string;
     showHeader?: boolean;
+    singleScroll?: boolean;
     tableClass?: string;
     tableContainerClass?: string;
     value: unknown[];
@@ -26,6 +27,7 @@ withDefaults(
     rowClass: undefined,
     shellClass: 'border-divider overflow-hidden rounded-[6px] border',
     showHeader: true,
+    singleScroll: false,
     tableClass: 'w-full table-fixed border-collapse',
     tableContainerClass: 'overflow-visible rounded-none border-none',
   },
@@ -73,7 +75,10 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       :row-class="rowClass"
       :pt="{
         root: { class: 'border-none bg-transparent' },
-        tableContainer: { class: tableContainerClass },
+        tableContainer: {
+          class: tableContainerClass,
+          style: singleScroll ? { overflow: 'visible' } : undefined,
+        },
         table: { class: tableClass },
         bodyRow: { class: bodyRowClass },
         rowExpansion: { style: 'height: auto;' },

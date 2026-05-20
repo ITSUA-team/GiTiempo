@@ -63,6 +63,7 @@ describe('useAdminSettingsPage', () => {
 		expect(page.form.workspaceName).toBe('GiTiempo Studio');
 		expect(page.form.defaultHourlyRate).toBe(120);
 		expect(page.form.currency).toBe('USD');
+		expect(page.form.timeZone).toBe('UTC');
 		expect(page.initialLoaded.value).toBe(true);
 		expect(page.requestError.value).toBeNull();
 		expect(authStore.setWorkspaceName).toHaveBeenCalledWith('GiTiempo Studio');
@@ -113,10 +114,12 @@ describe('useAdminSettingsPage', () => {
 
 		page.form.workspaceName = 'Draft Name';
 		page.form.defaultHourlyRate = null;
+		page.form.timeZone = 'Europe/Kyiv';
 		page.resetForm();
 
 		expect(page.form.workspaceName).toBe('GiTiempo Studio');
 		expect(page.form.defaultHourlyRate).toBe(120);
+		expect(page.form.timeZone).toBe('UTC');
 		expect(client.updateWorkspace).not.toHaveBeenCalled();
 		expect(client.updateWorkspaceSettings).not.toHaveBeenCalled();
 	});
@@ -149,6 +152,7 @@ describe('useAdminSettingsPage', () => {
 				...settingsResponse,
 				currency: 'EUR',
 				defaultHourlyRate: null,
+				timeZone: 'Europe/Kyiv',
 			}),
 		});
 		const { page } = createSubject(client);
@@ -156,12 +160,14 @@ describe('useAdminSettingsPage', () => {
 
 		page.form.currency = 'EUR';
 		page.form.defaultHourlyRate = null;
+		page.form.timeZone = 'Europe/Kyiv';
 
 		await expect(page.saveSettings()).resolves.toBe(true);
 		expect(client.updateWorkspace).not.toHaveBeenCalled();
 		expect(client.updateWorkspaceSettings).toHaveBeenCalledWith('access-token', {
 			currency: 'EUR',
 			defaultHourlyRate: null,
+			timeZone: 'Europe/Kyiv',
 		});
 	});
 
@@ -197,12 +203,14 @@ describe('useAdminSettingsPage', () => {
 
 		page.form.workspaceName = ' ';
 		page.form.defaultHourlyRate = -1;
+		page.form.timeZone = 'Not/AZone';
 
 		await expect(page.saveSettings()).resolves.toBe(false);
 		expect(page.fieldErrors.workspaceName).toBe('Workspace name is required.');
 		expect(page.fieldErrors.defaultHourlyRate).toBe(
 			'Default hourly rate cannot be negative.',
 		);
+		expect(page.fieldErrors.timeZone).toBe('Invalid time zone');
 		expect(client.updateWorkspace).not.toHaveBeenCalled();
 		expect(client.updateWorkspaceSettings).not.toHaveBeenCalled();
 	});

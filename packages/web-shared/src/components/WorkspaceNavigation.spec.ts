@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
-import { defineComponent, h } from "vue";
+import { defineComponent, h, markRaw } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import WorkspaceNavigation from "./WorkspaceNavigation.vue";
 
@@ -85,7 +85,7 @@ describe("WorkspaceNavigation", () => {
     expect(activeLink.classes()).toContain("text-brand");
   });
 
-  it("renders all provided items in mobile navigation", async () => {
+  it("renders all provided items in mobile navigation without tap-triggered tooltips", async () => {
     const router = createTestRouter();
     await router.push("/");
     await router.isReady();
@@ -123,8 +123,45 @@ describe("WorkspaceNavigation", () => {
 
     expect(dashboardLinks).toHaveLength(2);
     expect(dashboardLinks[1]?.attributes("aria-current")).toBe("page");
-    expect(dashboardLinks[1]?.attributes("data-tooltip")).toBe("Dashboard");
+    expect(dashboardLinks[1]?.attributes("data-tooltip")).toBeUndefined();
     expect(wrapper.get("nav.fixed").classes()).toContain("inset-x-0");
     expect(wrapper.findAll('a[href="/settings"]')).toHaveLength(2);
+  });
+
+  it("clears link focus before navigating", async () => {
+    const router = createTestRouter();
+    await router.push("/");
+    await router.isReady();
+
+    const wrapper = mount(WorkspaceNavigation, {
+      props: {
+        activeName: "dashboard",
+        items: [
+          {
+            icon: markRaw(TestIcon),
+            label: "Projects",
+            name: "project",
+            to: { name: "project" },
+          },
+        ],
+      },
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute("data-tooltip", String(binding.value));
+            },
+          },
+        },
+        plugins: [router],
+      },
+    });
+
+    const projectLink = wrapper.get("aside").get('a[href="/projects"]');
+    const blurSpy = vi.spyOn(projectLink.element as HTMLAnchorElement, "blur");
+
+    await projectLink.trigger("click");
+
+    expect(blurSpy).toHaveBeenCalledOnce();
   });
 });

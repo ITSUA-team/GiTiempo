@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from 'vue';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
-import { StatCard, StatsHeader, SurfaceCard } from '@gitiempo/web-shared';
+import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
@@ -121,7 +121,7 @@ async function handleExport(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 p-6">
+  <div class="flex flex-col gap-6">
     <template v-if="isInitialLoading">
       <ManagementPageSkeleton variant="reports" />
     </template>
@@ -135,9 +135,10 @@ async function handleExport(): Promise<void> {
     </template>
 
     <template v-else>
-      <StatsHeader
+      <SectionHeader
         title="Reports"
         description="Live project and member reporting within the current PM scope."
+        variant="stats"
       >
         <template #actions>
           <Button
@@ -148,7 +149,31 @@ async function handleExport(): Promise<void> {
             @click="handleExport"
           />
         </template>
-      </StatsHeader>
+        <template #stats>
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="Tracked Hours"
+              :value="totalHoursLabel"
+              :description="trackedHoursDescription"
+            />
+            <StatCard
+              label="Billable"
+              :value="billableShareLabel"
+              description="Within PM scope"
+            />
+            <StatCard
+              label="Avg per Member"
+              :value="avgPerMemberLabel"
+              description="Weekly average"
+            />
+            <StatCard
+              label="Top Project"
+              :value="summary.topProjectName"
+              :description="topProjectDescription"
+            />
+          </div>
+        </template>
+      </SectionHeader>
 
       <ReportsFilterForm
         v-model:project-id="reportProjectId"
@@ -159,29 +184,6 @@ async function handleExport(): Promise<void> {
         :member-options="memberOptions"
         :disabled="loading"
       />
-
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Tracked Hours"
-          :value="totalHoursLabel"
-          :description="trackedHoursDescription"
-        />
-        <StatCard
-          label="Billable"
-          :value="billableShareLabel"
-          description="Within PM scope"
-        />
-        <StatCard
-          label="Avg per Member"
-          :value="avgPerMemberLabel"
-          description="Weekly average"
-        />
-        <StatCard
-          label="Top Project"
-          :value="summary.topProjectName"
-          :description="topProjectDescription"
-        />
-      </div>
 
       <SurfaceCard padding-class="p-5">
         <ReportsTable
