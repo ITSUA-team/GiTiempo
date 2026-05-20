@@ -36,6 +36,7 @@ describe('InviteDeliveryService', () => {
 
       await service.deliver({
         email: 'test@example.com',
+        passwordSetupUrl: 'https://firebase.test/reset',
         token: 'secret-token',
         workspaceName: 'Test Workspace',
       });
@@ -58,6 +59,7 @@ describe('InviteDeliveryService', () => {
 
       await service.deliver({
         email: 'test@example.com',
+        passwordSetupUrl: 'https://firebase.test/reset',
         token: 'secret-token',
         workspaceName: 'Test Workspace',
       });
@@ -66,6 +68,7 @@ describe('InviteDeliveryService', () => {
         expect.objectContaining({
           event: 'invites.delivery.console_fallback',
           email: 'test@example.com',
+          passwordSetupUrl: 'https://firebase.test/reset',
         }),
       );
       expect(sendMailMock).not.toHaveBeenCalled();
@@ -81,13 +84,17 @@ describe('InviteDeliveryService', () => {
 
     await service.deliver({
       email: 'test@example.com',
+      passwordSetupUrl: 'https://firebase.test/reset',
       token: 'secret-token',
       workspaceName: 'Test Workspace',
     });
 
     expect(logSpy).not.toHaveBeenCalled();
     expect(sendMailMock).toHaveBeenCalledWith(
-      expect.objectContaining({ to: 'test@example.com' }),
+      expect.objectContaining({
+        to: 'test@example.com',
+        text: expect.stringContaining('https://firebase.test/reset'),
+      }),
     );
   });
 });

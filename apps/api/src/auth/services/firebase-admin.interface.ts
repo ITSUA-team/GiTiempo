@@ -11,6 +11,12 @@ export interface DecodedFirebaseToken {
   email_verified?: boolean;
 }
 
+export interface InvitedFirebaseUser {
+  uid: string;
+  email: string;
+  isExistingUser: boolean;
+}
+
 /**
  * DI contract for verifying Firebase ID tokens. A real implementation
  * wraps `firebase-admin`; a fake implementation accepts deterministic
@@ -18,6 +24,8 @@ export interface DecodedFirebaseToken {
  */
 export interface FirebaseAdminService {
   verifyIdToken(idToken: string): Promise<DecodedFirebaseToken>;
+  getOrCreateInvitedUserByEmail(email: string): Promise<InvitedFirebaseUser>;
+  generatePasswordSetupLink(email: string): Promise<string>;
 }
 
 /** Nest DI token. */

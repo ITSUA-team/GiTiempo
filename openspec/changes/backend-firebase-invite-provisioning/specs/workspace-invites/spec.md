@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Admin Can Manage Workspace Invites
-The system MUST allow admins to list, create, and cancel workspace invites. Creating an invite SHALL prepare backend-provisioned Firebase onboarding for the invited email before delivery completes.
+The system MUST allow admins to list, create, and cancel workspace invites. Creating an invite SHALL prepare backend-provisioned Firebase onboarding and app-targeted password setup for the invited email before delivery completes.
 
 #### Scenario: Admin lists invites
 - **GIVEN** the requester is an admin member of the current workspace
@@ -13,6 +13,7 @@ The system MUST allow admins to list, create, and cancel workspace invites. Crea
 - **WHEN** the requester submits a valid invite request with email and role
 - **THEN** the system creates a pending invite for that workspace
 - **AND** prepares Firebase password setup/reset onboarding for the invited email before sending the invite message
+- **AND** the password setup action link targets the User SPA and preserves invite-token return context
 
 #### Scenario: Duplicate pending invite is rejected
 - **GIVEN** the requester is an admin member of the current workspace
@@ -53,20 +54,20 @@ The system SHALL allow a pending invite to create application membership when it
 - **THEN** the system rejects the request (410 Gone) and does not create membership
 
 ### Requirement: Invite Delivery Supports SMTP And Console Fallback
-The system MUST support SMTP invite delivery and an environment-controlled console fallback mode. Console fallback mode MUST be disabled by default and MUST NOT be active in production, regardless of environment variable configuration. Delivery content SHALL include invite acceptance and Firebase password setup/reset guidance.
+The system MUST support SMTP invite delivery and an environment-controlled console fallback mode. Console fallback mode MUST be disabled by default and MUST NOT be active in production, regardless of environment variable configuration. Delivery content SHALL include invite acceptance and app-hosted Firebase password setup/reset guidance.
 
 #### Scenario: SMTP delivery sends invite message
 - **GIVEN** SMTP delivery is configured and console fallback is disabled
 - **WHEN** an admin creates an invite
 - **THEN** the system sends the invite through the configured SMTP transport
-- **AND** the message includes invite acceptance and password setup/reset guidance
+- **AND** the message includes invite acceptance and app-hosted password setup/reset guidance
 
 #### Scenario: Console fallback logs invite delivery
 - **GIVEN** console fallback mode is enabled
 - **AND** the application is not running in production mode
 - **WHEN** an admin creates an invite
 - **THEN** the system records the invite delivery in application logs instead of using SMTP
-- **AND** the log entry includes invite acceptance and password setup/reset link information for local testing
+- **AND** the log entry includes invite acceptance and app-hosted password setup/reset link information for local testing
 
 #### Scenario: Console fallback is blocked in production
 - **GIVEN** the application is running in production mode
@@ -86,7 +87,7 @@ The system MUST cancel (expire) a pending invite when Firebase onboarding prepar
 #### Scenario: Firebase onboarding preparation failure expires the invite
 - **GIVEN** an admin creates an invite for an email
 - **AND** the invite is persisted as pending
-- **WHEN** Firebase user provisioning or password setup/reset link generation throws an error
+- **WHEN** Firebase user provisioning, action-code setting, or password setup/reset link generation throws an error
 - **THEN** the system transitions the invite to expired status
 - **AND** the system returns a delivery or provisioning error to the caller
 
@@ -102,7 +103,7 @@ The system MUST cancel (expire) a pending invite when Firebase onboarding prepar
 The system MUST require invite acceptance to use a Firebase ID token from a completed Firebase sign-in rather than a browser-created account credential payload.
 
 #### Scenario: Invite accepted after email password sign-in
-- **GIVEN** an invitee has set a password through Firebase password setup/reset
+- **GIVEN** an invitee has set a password through the app-hosted Firebase password setup route
 - **AND** the invitee signs in with Firebase email/password for the invited email
 - **WHEN** the invitee submits the invite token and Firebase ID token to `POST /invites/accept`
 - **THEN** the system verifies the token and applies the existing invite acceptance rules

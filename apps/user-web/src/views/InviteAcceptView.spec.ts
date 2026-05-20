@@ -20,6 +20,7 @@ import {
   setWorkspaceInvitesClientForTesting,
   type WorkspaceInvitesClient,
 } from "@/services/workspace-invites-client";
+import { useAuthStore } from "@/stores/auth";
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 
 function createFirebaseError(code: string, message = code): Error & { code: string } {
@@ -99,10 +100,6 @@ async function mountInviteAcceptView(
   };
 }
 
-async function switchToSignInMode(wrapper: Awaited<ReturnType<typeof mountInviteAcceptView>>["wrapper"]) {
-  await wrapper.get('[data-testid="invite-accept-mode-switch"]').trigger("click");
-}
-
 describe("InviteAcceptView", () => {
   beforeEach(() => {
     clearRefreshToken();
@@ -111,6 +108,7 @@ describe("InviteAcceptView", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     clearRefreshToken();
     resetAuthRuntimeForTesting();
     resetWorkspaceInvitesClientForTesting();
@@ -126,106 +124,37 @@ describe("InviteAcceptView", () => {
     expect(wrapper.find('[data-testid="invite-accept-email"]').exists()).toBe(false);
   });
 
-  it("renders create-account mode by default", async () => {
+  it("clears an empty token query and keeps the invalid-link state", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+
+    const { router, wrapper } = await mountInviteAcceptView(
+      "/invites/accept?token=%20%20%20",
+    );
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Invalid invite link");
+    expect(router.currentRoute.value.fullPath).toBe("/invites/accept");
+  });
+
+  it("renders the sign-in form by default", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
 
     const { wrapper } = await mountInviteAcceptView();
 
-    expect(wrapper.text()).toContain("Create account");
-    expect(wrapper.find('[data-testid="invite-accept-confirm-password"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="invite-accept-mode-switch"]').text()).toContain(
-      "Already have an account? Sign in",
-    );
-  });
-
-  it("creates the Firebase account, accepts the invite, and redirects to the dashboard", async () => {
-    const createAccountWithEmailPassword = vi.fn(
-      async () => "firebase-created-account-token",
-    );
-    const acceptInvite = vi.fn(async () => undefined);
-    setAuthRuntimeForTesting(createRuntimeMock({ createAccountWithEmailPassword }));
-    setWorkspaceInvitesClientForTesting(
-      createWorkspaceInvitesClientMock({ acceptInvite }),
-    );
-    const { router, wrapper } = await mountInviteAcceptView();
-
-    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
-      "alexey@example.com",
-    );
-    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
-      "password123",
-    );
-    await wrapper.get('[data-testid="invite-accept-confirm-password"]').setValue(
-      "password123",
-    );
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-
-    expect(createAccountWithEmailPassword).toHaveBeenCalledWith(
-      "alexey@example.com",
-      "password123",
-    );
-    expect(acceptInvite).toHaveBeenCalledWith({
-      firebaseIdToken: "firebase-created-account-token",
-      token: "invite-token",
-    });
-    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
-  });
-
-  it("switches to sign-in mode when the Firebase account already exists", async () => {
-    setAuthRuntimeForTesting(
-      createRuntimeMock({
-        createAccountWithEmailPassword: async () => {
-          throw createFirebaseError("auth/email-already-in-use");
-        },
-      }),
-    );
-    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
-    const { wrapper } = await mountInviteAcceptView();
-
-    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
-      "alexey@example.com",
-    );
-    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
-      "password123",
-    );
-    await wrapper.get('[data-testid="invite-accept-confirm-password"]').setValue(
-      "password123",
-    );
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-
-    expect(wrapper.text()).toContain(
-      "An account already exists for this email. Sign in instead.",
-    );
-    expect(wrapper.find('[data-testid="invite-accept-confirm-password"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("Accept invite");
+    expect(wrapper.find('[data-testid="invite-accept-confirm-password"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="invite-accept-mode-switch"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="invite-accept-submit"]').text()).toContain(
+      "Accept invite",
+    );
+    expect(wrapper.text()).toContain(
+      "Need a password setup link? Check your invite email or ask an admin to resend the invite.",
+    );
   });
 
-  it("shows weak-password validation before calling Firebase account creation", async () => {
-    const createAccountWithEmailPassword = vi.fn(
-      async () => "firebase-created-account-token",
-    );
-    setAuthRuntimeForTesting(createRuntimeMock({ createAccountWithEmailPassword }));
-    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
-    const { wrapper } = await mountInviteAcceptView();
-
-    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
-      "alexey@example.com",
-    );
-    await wrapper.get('[data-testid="invite-accept-password"]').setValue("short");
-    await wrapper.get('[data-testid="invite-accept-confirm-password"]').setValue(
-      "short",
-    );
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-
-    expect(createAccountWithEmailPassword).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain("Password must be at least 6 characters.");
-  });
-
-  it("accepts the invite in sign-in mode and redirects to the dashboard", async () => {
+  it("accepts the invite after email/password sign-in and redirects to the dashboard", async () => {
     const signInWithEmailPassword = vi.fn(async () => "firebase-email-token");
     const acceptInvite = vi.fn(async () => undefined);
     setAuthRuntimeForTesting(createRuntimeMock({ signInWithEmailPassword }));
@@ -234,7 +163,6 @@ describe("InviteAcceptView", () => {
     );
     const { router, wrapper } = await mountInviteAcceptView();
 
-    await switchToSignInMode(wrapper);
     await wrapper.get('[data-testid="invite-accept-email"]').setValue(
       "alexey@example.com",
     );
@@ -255,8 +183,148 @@ describe("InviteAcceptView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
-  it("keeps sign-in mode visible for invite email mismatch so the user can retry", async () => {
-    setAuthRuntimeForTesting(createRuntimeMock());
+  it("accepts the invite with Google and redirects to the dashboard", async () => {
+    const signInWithGoogle = vi.fn(async () => "firebase-google-token");
+    const acceptInvite = vi.fn(async () => undefined);
+    setAuthRuntimeForTesting(createRuntimeMock({ signInWithGoogle }));
+    setWorkspaceInvitesClientForTesting(
+      createWorkspaceInvitesClientMock({ acceptInvite }),
+    );
+    const { router, wrapper } = await mountInviteAcceptView();
+
+    await wrapper.get('[data-testid="invite-accept-google"]').trigger("click");
+    await flushPromises();
+
+    expect(signInWithGoogle).toHaveBeenCalled();
+    expect(acceptInvite).toHaveBeenCalledWith({
+      firebaseIdToken: "firebase-google-token",
+      token: "invite-token",
+    });
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("shows invalid credentials guidance inline", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithEmailPassword: async () => {
+          throw createFirebaseError("auth/invalid-credential");
+        },
+      }),
+    );
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+    const { wrapper } = await mountInviteAcceptView();
+
+    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
+      "alexey@example.com",
+    );
+    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "Could not sign in with that email and password.",
+    );
+  });
+
+  it("shows password setup guidance when Firebase has no password sign-in yet", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithEmailPassword: async () => {
+          throw createFirebaseError("auth/user-not-found");
+        },
+      }),
+    );
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+    const { wrapper } = await mountInviteAcceptView();
+
+    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
+      "alexey@example.com",
+    );
+    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "No Firebase password is set for this invited email yet.",
+    );
+  });
+
+  it("shows disabled-account guidance inline", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithEmailPassword: async () => {
+          throw createFirebaseError("auth/user-disabled");
+        },
+      }),
+    );
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+    const { wrapper } = await mountInviteAcceptView();
+
+    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
+      "alexey@example.com",
+    );
+    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "This Firebase account is disabled. Ask an admin for help.",
+    );
+  });
+
+  it("shows too-many-requests guidance inline", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithEmailPassword: async () => {
+          throw createFirebaseError("auth/too-many-requests");
+        },
+      }),
+    );
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+    const { wrapper } = await mountInviteAcceptView();
+
+    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
+      "alexey@example.com",
+    );
+    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "Too many attempts. Wait a moment, then try again.",
+    );
+  });
+
+  it("shows Google popup cancellation inline", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithGoogle: async () => {
+          throw createFirebaseError("auth/popup-closed-by-user");
+        },
+      }),
+    );
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+    const { wrapper } = await mountInviteAcceptView();
+
+    await wrapper.get('[data-testid="invite-accept-google"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "Google sign-in was cancelled. Try again when you are ready.",
+    );
+  });
+
+  it("keeps the form visible for invite email mismatch so the user can retry", async () => {
+    const signOutIdentityProvider = vi.fn(async () => undefined);
+    setAuthRuntimeForTesting(createRuntimeMock({ signOutIdentityProvider }));
     setWorkspaceInvitesClientForTesting(
       createWorkspaceInvitesClientMock({
         acceptInvite: async () => {
@@ -266,7 +334,6 @@ describe("InviteAcceptView", () => {
     );
     const { router, wrapper } = await mountInviteAcceptView();
 
-    await switchToSignInMode(wrapper);
     await wrapper.get('[data-testid="invite-accept-email"]').setValue(
       "other@example.com",
     );
@@ -276,14 +343,16 @@ describe("InviteAcceptView", () => {
     await wrapper.get("form").trigger("submit");
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Invite email does not match identity");
-    expect(wrapper.find('[data-testid="invite-accept-confirm-password"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain(
+      "Invite email does not match identity. Sign out and retry with the invited email account.",
+    );
+    expect(signOutIdentityProvider).toHaveBeenCalled();
     expect(router.currentRoute.value.fullPath).toBe(
       "/invites/accept?token=invite-token",
     );
   });
 
-  it("shows invalid-link recovery when account creation succeeded but invite acceptance is terminal", async () => {
+  it("shows invalid-link recovery for terminal invite failures and clears the token", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     setWorkspaceInvitesClientForTesting(
       createWorkspaceInvitesClientMock({
@@ -300,58 +369,12 @@ describe("InviteAcceptView", () => {
     await wrapper.get('[data-testid="invite-accept-password"]').setValue(
       "password123",
     );
-    await wrapper.get('[data-testid="invite-accept-confirm-password"]').setValue(
-      "password123",
-    );
     await wrapper.get("form").trigger("submit");
     await flushPromises();
 
     expect(wrapper.text()).toContain("Invalid invite link");
-    expect(wrapper.text()).toContain(
-      "Your account was created, but workspace access was not granted.",
-    );
+    expect(wrapper.text()).toContain("Invite has expired");
     expect(router.currentRoute.value.fullPath).toBe("/invites/accept");
-  });
-
-  it("keeps a recovery state when account creation succeeded but invite acceptance has a retryable failure", async () => {
-    setAuthRuntimeForTesting(createRuntimeMock());
-    setWorkspaceInvitesClientForTesting(
-      createWorkspaceInvitesClientMock({
-        acceptInvite: async () => {
-          throw new Error("Temporary outage");
-        },
-      }),
-    );
-    const { wrapper } = await mountInviteAcceptView();
-
-    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
-      "alexey@example.com",
-    );
-    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
-      "password123",
-    );
-    await wrapper.get('[data-testid="invite-accept-confirm-password"]').setValue(
-      "password123",
-    );
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-
-    expect(wrapper.text()).toContain(
-      "Your account was created, but workspace access could not be granted yet. Temporary outage",
-    );
-    expect(wrapper.find('[data-testid="invite-accept-confirm-password"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain("Accept invite");
-  });
-
-  it("accepts the invite with Google and redirects to the dashboard", async () => {
-    setAuthRuntimeForTesting(createRuntimeMock());
-    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
-    const { router, wrapper } = await mountInviteAcceptView();
-
-    await wrapper.get('[data-testid="invite-accept-google"]').trigger("click");
-    await flushPromises();
-
-    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
   it("shows the already-member state and clears the query token", async () => {
@@ -371,14 +394,61 @@ describe("InviteAcceptView", () => {
     await wrapper.get('[data-testid="invite-accept-password"]').setValue(
       "password123",
     );
-    await wrapper.get('[data-testid="invite-accept-confirm-password"]').setValue(
-      "password123",
-    );
     await wrapper.get("form").trigger("submit");
     await flushPromises();
 
     expect(wrapper.text()).toContain("Workspace access already exists");
     expect(wrapper.find('[data-testid="invite-accept-sign-in"]').exists()).toBe(true);
+    expect(router.currentRoute.value.fullPath).toBe("/invites/accept");
+  });
+
+  it("keeps a recovery state when Firebase sign-in succeeded but invite acceptance failed", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    setWorkspaceInvitesClientForTesting(
+      createWorkspaceInvitesClientMock({
+        acceptInvite: async () => {
+          throw new Error("Temporary outage");
+        },
+      }),
+    );
+    const { router, wrapper } = await mountInviteAcceptView();
+
+    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
+      "alexey@example.com",
+    );
+    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "Firebase sign-in succeeded, but workspace access was not created yet. Temporary outage",
+    );
+    expect(router.currentRoute.value.fullPath).toBe(
+      "/invites/accept?token=invite-token",
+    );
+  });
+
+  it("shows a recovery state when workspace access was created but app sign-in failed", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    setWorkspaceInvitesClientForTesting(createWorkspaceInvitesClientMock());
+    const { router, wrapper } = await mountInviteAcceptView();
+    const loginWithFirebaseToken = vi
+      .spyOn(useAuthStore(), "loginWithFirebaseToken")
+      .mockRejectedValueOnce(new Error("Session exchange failed"));
+
+    await wrapper.get('[data-testid="invite-accept-email"]').setValue(
+      "alexey@example.com",
+    );
+    await wrapper.get('[data-testid="invite-accept-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-email-token");
+    expect(wrapper.text()).toContain("Workspace access created. Sign in to continue.");
     expect(router.currentRoute.value.fullPath).toBe("/invites/accept");
   });
 });

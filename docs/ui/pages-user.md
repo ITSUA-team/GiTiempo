@@ -123,6 +123,24 @@
 - Use PrimeVue controls for inputs, buttons, inline messages, loading affordances, and toast feedback where applicable.
 - Query-driven invite accept flows must test missing token, success redirect after email/password sign-in, success redirect after Google sign-in, invalid credentials, missing password setup guidance, email mismatch retry, invalid/expired/already-used link handling, already-member handling, sign-in-succeeded-but-accept-failed recovery, and URL cleanup after terminal outcomes.
 
+## Invite Password Setup Page
+
+- `/invites/password-setup?mode=resetPassword&oobCode=...&continueUrl=...` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
+- The invite password setup page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- Use the approved `Invite Password Setup` `.pen` screen as the desktop parity source.
+- The page handles Firebase password reset/setup action links in app UI while still using Firebase Auth as the password authority.
+- The page MUST NOT send raw passwords to GiTiempo APIs. Password validation and reset confirmation happen only through the Firebase browser SDK with `verifyPasswordResetCode` and `confirmPasswordReset`.
+- The page reads the Firebase `oobCode` from the action link and validates it before showing the password form.
+- If the action link contains a `continueUrl`, preserve its invite token and use it as the post-success return target. The expected success target is `/invites/accept?token=...`.
+- Initial state: keep the panel shape stable while validating the action code and show copy `Checking password setup link...`.
+- Valid-code state: show title `Set your password`, helper copy explaining that the user is setting a Firebase password for the invited email, the verified email as a soft accent notice, then fields ordered `New password`, `Confirm password`, followed by the primary action `Save password`.
+- Password fields use PrimeVue `<Password>` and must have visible labels. Confirm password must match before calling Firebase.
+- Success state copy is `Password saved. Return to your invite to sign in and accept access.` with primary action `Continue to invite`.
+- Invalid or expired action-code state title is `Password setup link expired` with helper copy explaining that the link is invalid, expired, or already used, and a primary action `Back to invite` when an invite token is available or `Go to login` otherwise.
+- Firebase reset errors stay inline in the panel. Required mapped cases: invalid/expired action code, weak password, mismatched confirmation, too many requests, and network failure.
+- While reset confirmation is in progress, keep the panel shape stable, show loading on `Save password`, and prevent duplicate submissions.
+- Query-driven password setup flows must test missing `oobCode`, invalid/expired code, valid code render, weak password, confirm-password mismatch, successful password save, invite-token preservation from `continueUrl`, success redirect to invite accept, and fallback login action when no invite token is available.
+
 ## Cross-App Navigation
 
 - The user SPA should expose a visible entry point to the admin workspace when the admin SPA is available.

@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import type {
   DecodedFirebaseToken,
   FirebaseAdminService,
+  InvitedFirebaseUser,
 } from './firebase-admin.interface';
 
 /**
@@ -18,6 +19,8 @@ import type {
  */
 @Injectable()
 export class FakeFirebaseAdminService implements FirebaseAdminService {
+  private readonly invitedUsers = new Map<string, InvitedFirebaseUser>();
+
   async verifyIdToken(idToken: string): Promise<DecodedFirebaseToken> {
     if (typeof idToken !== 'string' || !idToken.startsWith('test:')) {
       throw new UnauthorizedException('Unauthorized');
@@ -33,4 +36,31 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
       email_verified: true,
     };
   }
+
+  async getOrCreateInvitedUserByEmail(
+    email: string,
+  ): Promise<InvitedFirebaseUser> {
+    const normalizedEmail = normalizeEmail(email);
+    const existingUser = this.invitedUsers.get(normalizedEmail);
+    if (existingUser) {
+      return { ...existingUser, isExistingUser: true };
+    }
+
+    const createdUser = {
+      uid: `fake-firebase-${this.invitedUsers.size + 1}`,
+      email: normalizedEmail,
+      isExistingUser: false,
+    } satisfies InvitedFirebaseUser;
+    this.invitedUsers.set(normalizedEmail, createdUser);
+    return createdUser;
+  }
+
+  async generatePasswordSetupLink(email: string): Promise<string> {
+    const normalizedEmail = normalizeEmail(email);
+    return `https://firebase.test/reset?email=${encodeURIComponent(normalizedEmail)}`;
+  }
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
 }

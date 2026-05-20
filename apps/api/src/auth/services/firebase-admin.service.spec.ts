@@ -4,7 +4,15 @@ import type { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation';
 
 const verifyIdToken = vi.fn();
-const getAuth = vi.fn(() => ({ verifyIdToken }));
+const getUserByEmail = vi.fn();
+const createUser = vi.fn();
+const generatePasswordResetLink = vi.fn();
+const getAuth = vi.fn(() => ({
+  verifyIdToken,
+  getUserByEmail,
+  createUser,
+  generatePasswordResetLink,
+}));
 const initializeApp = vi.fn(() => ({ name: 'gitiempo-api' }));
 const cert = vi.fn((opts: unknown) => opts);
 const getApps = vi.fn(() => [] as Array<{ name: string }>);
@@ -105,5 +113,107 @@ describe('RealFirebaseAdminService', () => {
     await expect(svc.verifyIdToken('t')).rejects.toThrow(
       /Firebase Admin credentials/,
     );
+  });
+
+  it('reuses an existing invited Firebase user by email', async () => {
+    getUserByEmail.mockResolvedValueOnce({
+      uid: 'existing-user',
+      email: 'invitee@example.com',
+    });
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      svc.getOrCreateInvitedUserByEmail('invitee@example.com'),
+    ).resolves.toEqual({
+      uid: 'existing-user',
+      email: 'invitee@example.com',
+      isExistingUser: true,
+    });
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  it('creates an invited Firebase user when none exists yet', async () => {
+    getUserByEmail.mockRejectedValueOnce({ code: 'auth/user-not-found' });
+    createUser.mockResolvedValueOnce({
+      uid: 'created-user',
+      email: 'invitee@example.com',
+    });
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      svc.getOrCreateInvitedUserByEmail('invitee@example.com'),
+    ).resolves.toEqual({
+      uid: 'created-user',
+      email: 'invitee@example.com',
+      isExistingUser: false,
+    });
+    expect(createUser).toHaveBeenCalledWith({
+      email: 'invitee@example.com',
+      emailVerified: false,
+    });
+  });
+
+  it('maps provisioning failures to a generic error', async () => {
+    getUserByEmail.mockRejectedValueOnce(new Error('boom'));
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      svc.getOrCreateInvitedUserByEmail('invitee@example.com'),
+    ).rejects.toThrow('Failed to provision invited Firebase user');
+  });
+
+  it('generates a Firebase password setup link', async () => {
+    generatePasswordResetLink.mockResolvedValueOnce(
+      'https://firebase.test/reset',
+    );
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      svc.generatePasswordSetupLink('invitee@example.com'),
+    ).resolves.toBe('https://firebase.test/reset');
+    expect(generatePasswordResetLink).toHaveBeenCalledWith(
+      'invitee@example.com',
+    );
+  });
+
+  it('maps password setup link failures to a generic error', async () => {
+    generatePasswordResetLink.mockRejectedValueOnce(
+      new Error('invalid continue url'),
+    );
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      svc.generatePasswordSetupLink('invitee@example.com'),
+    ).rejects.toThrow('Failed to generate Firebase password setup link');
   });
 });

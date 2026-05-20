@@ -1,11 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { getAuth, type UserRecord } from 'firebase-admin/auth';
 import type { Env } from '../../config/env.validation';
 import type {
   DecodedFirebaseToken,
   FirebaseAdminService,
+  InvitedFirebaseUser,
 } from './firebase-admin.interface';
 
 const APP_NAME = 'gitiempo-api';
@@ -39,6 +40,36 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     }
   }
 
+  async getOrCreateInvitedUserByEmail(
+    email: string,
+  ): Promise<InvitedFirebaseUser> {
+    const auth = getAuth(this.getApp());
+
+    try {
+      const user = await auth.getUserByEmail(email);
+      return this.toInvitedUser(user, true);
+    } catch (error) {
+      if (!isFirebaseAuthError(error, 'auth/user-not-found')) {
+        throw new Error('Failed to provision invited Firebase user');
+      }
+    }
+
+    try {
+      const user = await auth.createUser({ email, emailVerified: false });
+      return this.toInvitedUser(user, false);
+    } catch {
+      throw new Error('Failed to provision invited Firebase user');
+    }
+  }
+
+  async generatePasswordSetupLink(email: string): Promise<string> {
+    try {
+      return await getAuth(this.getApp()).generatePasswordResetLink(email);
+    } catch {
+      throw new Error('Failed to generate Firebase password setup link');
+    }
+  }
+
   private getApp(): App {
     if (this.app) return this.app;
     const existing = getApps().find((a) => a.name === APP_NAME);
@@ -69,4 +100,24 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     );
     return this.app;
   }
+
+  private toInvitedUser(
+    user: UserRecord,
+    isExistingUser: boolean,
+  ): InvitedFirebaseUser {
+    return {
+      uid: user.uid,
+      email: user.email ?? '',
+      isExistingUser,
+    };
+  }
+}
+
+function isFirebaseAuthError(error: unknown, code: string): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === code
+  );
 }

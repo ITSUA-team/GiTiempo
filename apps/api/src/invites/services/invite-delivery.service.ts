@@ -5,6 +5,7 @@ import type { Env } from '../../config/env.validation';
 
 export interface DeliverInviteInput {
   email: string;
+  passwordSetupUrl: string;
   token: string;
   workspaceName: string;
 }
@@ -27,6 +28,7 @@ export class InviteDeliveryService {
         event: 'invites.delivery.console_fallback',
         email: input.email,
         inviteUrl,
+        passwordSetupUrl: input.passwordSetupUrl,
       });
       return;
     }
@@ -45,7 +47,12 @@ export class InviteDeliveryService {
       text: [
         `You've been invited to ${input.workspaceName}.`,
         '',
+        'If this is your first time, set your Firebase password before accepting the invite:',
+        input.passwordSetupUrl,
+        '',
         `Accept your invite: ${inviteUrl}`,
+        '',
+        'Workspace access is created after you sign in with the invited email and accept the invite.',
       ].join('\n'),
     });
   }

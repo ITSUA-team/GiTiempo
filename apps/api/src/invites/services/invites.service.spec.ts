@@ -59,6 +59,8 @@ function makeService(options: { firebaseEmail: string }) {
     transaction: vi.fn((callback) => callback(tx)),
   };
   const firebase = {
+    generatePasswordSetupLink: vi.fn(),
+    getOrCreateInvitedUserByEmail: vi.fn(),
     verifyIdToken: vi.fn().mockResolvedValue({
       uid: acceptedUser.firebaseUid,
       email: options.firebaseEmail,
@@ -75,6 +77,7 @@ function makeService(options: { firebaseEmail: string }) {
       delivery as never,
     ),
     db,
+    firebase,
     usersService,
     insertMembershipValues,
     updateInviteWhere,
@@ -119,7 +122,12 @@ describe('InvitesService', () => {
 });
 
 describe('InvitesService createInvite', () => {
-  function makeCreateEnv(options?: { deliveryError?: boolean }) {
+  function makeCreateEnv(options?: {
+    deliveryError?: boolean;
+    linkError?: boolean;
+    reuseExistingUser?: boolean;
+    provisioningError?: boolean;
+  }) {
     const updateSetWhere = vi.fn().mockResolvedValue(undefined);
 
     const emptyLimit = vi.fn().mockResolvedValue([]);
@@ -166,20 +174,41 @@ describe('InvitesService createInvite', () => {
         ? vi.fn().mockRejectedValue(new Error('SMTP failed'))
         : vi.fn().mockResolvedValue(undefined),
     };
+    const firebase = {
+      generatePasswordSetupLink: options?.linkError
+        ? vi
+            .fn()
+            .mockRejectedValue(
+              new Error('Failed to generate Firebase password setup link'),
+            )
+        : vi.fn().mockResolvedValue('https://firebase.test/reset'),
+      getOrCreateInvitedUserByEmail: options?.provisioningError
+        ? vi
+            .fn()
+            .mockRejectedValue(
+              new Error('Failed to provision invited Firebase user'),
+            )
+        : vi.fn().mockResolvedValue({
+            uid: 'firebase-invitee',
+            email: 'user@example.com',
+            isExistingUser: options?.reuseExistingUser ?? false,
+          }),
+      verifyIdToken: vi.fn(),
+    };
     const usersService = makeUsersService();
 
     const service = new InvitesService(
       db as never,
-      { verifyIdToken: vi.fn() } as never,
+      firebase as never,
       usersService as never,
       delivery as never,
     );
 
-    return { service, db, delivery, updateSetWhere };
+    return { service, db, delivery, firebase, updateSetWhere };
   }
 
   it('expires invite when delivery fails', async () => {
-    const { service, delivery, updateSetWhere } = makeCreateEnv({
+    const { service, delivery, firebase, updateSetWhere } = makeCreateEnv({
       deliveryError: true,
     });
 
@@ -191,21 +220,82 @@ describe('InvitesService createInvite', () => {
     ).rejects.toThrow('SMTP failed');
 
     expect(delivery.deliver).toHaveBeenCalled();
+    expect(firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
+      'user@example.com',
+    );
+    expect(firebase.generatePasswordSetupLink).toHaveBeenCalledWith(
+      'user@example.com',
+    );
     expect(updateSetWhere).toHaveBeenCalled();
   });
 
   it('allows retry after previous delivery failure expired the invite', async () => {
-    const { service, delivery } = makeCreateEnv();
+    const { service, delivery, firebase } = makeCreateEnv();
 
     const result = await service.createInvite('workspace-1', 'admin-1', {
       email: 'user@example.com',
       role: 'member',
     });
 
+    expect(firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
+      'user@example.com',
+    );
+    expect(firebase.generatePasswordSetupLink).toHaveBeenCalledWith(
+      'user@example.com',
+    );
     expect(delivery.deliver).toHaveBeenCalled();
     expect(result).toMatchObject({
       email: 'user@example.com',
       status: 'pending',
     });
+  });
+
+  it('reuses an existing Firebase user before invite delivery', async () => {
+    const { service, firebase, delivery } = makeCreateEnv({
+      reuseExistingUser: true,
+    });
+
+    await service.createInvite('workspace-1', 'admin-1', {
+      email: 'user@example.com',
+      role: 'member',
+    });
+
+    expect(firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
+      'user@example.com',
+    );
+    expect(delivery.deliver).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'user@example.com',
+        passwordSetupUrl: 'https://firebase.test/reset',
+      }),
+    );
+  });
+
+  it('expires invite when Firebase provisioning fails', async () => {
+    const { service, updateSetWhere } = makeCreateEnv({
+      provisioningError: true,
+    });
+
+    await expect(
+      service.createInvite('workspace-1', 'admin-1', {
+        email: 'user@example.com',
+        role: 'member',
+      }),
+    ).rejects.toThrow('Failed to provision invited Firebase user');
+
+    expect(updateSetWhere).toHaveBeenCalled();
+  });
+
+  it('expires invite when password setup link generation fails', async () => {
+    const { service, updateSetWhere } = makeCreateEnv({ linkError: true });
+
+    await expect(
+      service.createInvite('workspace-1', 'admin-1', {
+        email: 'user@example.com',
+        role: 'member',
+      }),
+    ).rejects.toThrow('Failed to generate Firebase password setup link');
+
+    expect(updateSetWhere).toHaveBeenCalled();
   });
 });

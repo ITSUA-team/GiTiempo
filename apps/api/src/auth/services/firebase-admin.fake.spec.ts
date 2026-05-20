@@ -47,4 +47,30 @@ describe('FakeFirebaseAdminService', () => {
       fake.verifyIdToken(undefined as unknown as string),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('reuses an invited Firebase user by normalized email', async () => {
+    const first = await fake.getOrCreateInvitedUserByEmail(
+      'Invitee@Example.com',
+    );
+    const second = await fake.getOrCreateInvitedUserByEmail(
+      'invitee@example.com',
+    );
+
+    expect(first).toEqual({
+      uid: 'fake-firebase-1',
+      email: 'invitee@example.com',
+      isExistingUser: false,
+    });
+    expect(second).toEqual({
+      uid: 'fake-firebase-1',
+      email: 'invitee@example.com',
+      isExistingUser: true,
+    });
+  });
+
+  it('generates a deterministic password setup link', async () => {
+    await expect(
+      fake.generatePasswordSetupLink('Invitee@Example.com'),
+    ).resolves.toBe('https://firebase.test/reset?email=invitee%40example.com');
+  });
 });

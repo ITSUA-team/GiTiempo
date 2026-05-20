@@ -1,11 +1,40 @@
 ## ADDED Requirements
 
+### Requirement: Invite Password Setup Uses Firebase Action Codes
+The user-web invite password setup page MUST handle Firebase password setup/reset action links in app UI while keeping raw passwords out of GiTiempo APIs.
+
+#### Scenario: Password setup link is valid
+- **GIVEN** the invitee opens the User SPA password setup route from an invite email Firebase action link
+- **AND** the link contains a valid Firebase password reset `oobCode`
+- **WHEN** the page verifies the action code
+- **THEN** it shows the invited email and a password setup form with New password and Confirm password fields
+- **AND** it preserves the invite token from the action link return context
+
+#### Scenario: Password setup succeeds
+- **GIVEN** the password setup page has verified the action code
+- **WHEN** the invitee submits a valid matching password and confirmation
+- **THEN** the page confirms the new password directly with Firebase Auth
+- **AND** the page does not send the raw password to GiTiempo APIs
+- **AND** the page shows success copy and returns the invitee to `/invites/accept?token=<token>`
+
+#### Scenario: Password setup link is invalid or expired
+- **GIVEN** the invitee opens the User SPA password setup route with a missing, invalid, expired, or already-used action code
+- **WHEN** the page attempts to verify the action code
+- **THEN** it shows the invalid-link state instead of the password form
+- **AND** it offers a primary action back to the invite when token context exists or to login otherwise
+
+#### Scenario: Password setup validation fails
+- **GIVEN** the password setup page has verified the action code
+- **WHEN** Firebase rejects the reset confirmation or the local confirmation does not match
+- **THEN** the page keeps the form visible
+- **AND** it maps weak password, mismatched confirmation, too many requests, network failure, and expired action-code errors inline
+
 ### Requirement: Invite Accept Uses Sign-In Based Acceptance
 The user-web invite accept page MUST authenticate invited users through Firebase sign-in before accepting the invite, and MUST NOT create Firebase email/password accounts in the browser for invite onboarding.
 
 #### Scenario: Email password invite acceptance succeeds
 - **GIVEN** the invite accept page is opened with a valid invite token
-- **AND** the invitee has set a password through the invite email's Firebase password setup/reset link
+- **AND** the invitee has set a password through the app-hosted Firebase password setup route opened from the invite email
 - **WHEN** the invitee signs in with the invited email and password
 - **THEN** the page submits `POST /invites/accept` with the invite token and Firebase ID token
 - **AND** after success the page creates the normal app API session with the same Firebase identity token
@@ -29,7 +58,7 @@ The user-web invite accept page MUST authenticate invited users through Firebase
 #### Scenario: Invitee needs password setup
 - **GIVEN** the invite accept page is opened with a valid invite token
 - **WHEN** the invitee cannot sign in because no password has been set
-- **THEN** the page shows inline guidance to use the password setup/reset link from the invite email or ask an admin to resend the invite
+- **THEN** the page shows inline guidance to use the password setup link from the invite email or ask an admin to resend the invite
 - **AND** the page preserves the invite token state
 
 #### Scenario: Sign-in succeeds but invite acceptance fails

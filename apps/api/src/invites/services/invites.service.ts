@@ -92,8 +92,12 @@ export class InvitesService {
     if (!row) throw new Error('Failed to create invite');
 
     try {
+      await this.firebase.getOrCreateInvitedUserByEmail(email);
+      const passwordSetupUrl =
+        await this.firebase.generatePasswordSetupLink(email);
       await this.delivery.deliver({
         email,
+        passwordSetupUrl,
         token,
         workspaceName: workspace.name,
       });
