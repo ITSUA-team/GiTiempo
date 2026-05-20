@@ -188,6 +188,8 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | DELETE | `/invites/:id`    | JWT  | Admin | Cancel pending invite                                                |
 | POST   | `/invites/accept` | None | —     | Accept invite by token: `{ token: string, firebaseIdToken: string }` |
 
+`POST /invites/accept` returns `204 No Content` on success. Expected frontend-visible failure messages include `Invite not found` (`404`), `Invite has expired` (`410`), `Invite cannot be accepted` (`409`), `Invite email does not match identity` (`403`), and `User is already a workspace member` (`409`). The User SPA invite accept page must call this endpoint before calling normal app login for a first-time invited user.
+
 ---
 
 ## 14. Workspace Settings

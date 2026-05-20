@@ -74,6 +74,8 @@ User → Firebase Auth (Google SSO or email/password) on frontend
 
 **Onboarding model:** Application access is invite-only. New users are added exclusively through the invite-acceptance flow (`POST /invites/accept`). The login endpoint does not create users or memberships - it only issues sessions for users who already have an existing local user record and an active workspace membership.
 
+**Invite accept page flow:** Invite emails link to the User SPA at `/invites/accept?token=<invite-token>`. This route is unauthenticated and outside the authenticated app shell. The page asks the invitee to authenticate with Firebase using the email address that received the invite, submits `POST /invites/accept` with the invite token and Firebase ID token, then creates the normal app API session with that same Firebase ID token after the invite acceptance returns `204 No Content`. Missing, expired, reused, or unknown invite tokens are terminal link errors; email mismatch is retryable with the correct identity.
+
 **Token lifecycle:**
 
 | Token              | Lifetime   | Storage                                               |

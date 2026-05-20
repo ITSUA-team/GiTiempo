@@ -96,6 +96,29 @@
 - Disconnect confirmation and callback notifications should use standard PrimeVue `<ConfirmDialog>` and `<Toast>` components; do not invent custom dialog or toast patterns for this page.
 - Sign out action at the bottom using a ghost/destructive treatment.
 
+## Invite Accept Page
+
+- `/invites/accept?token=...` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
+- The invite accept page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- Use the approved `Invite Accept` `.pen` screen as the desktop parity source.
+- The left brand panel explains the invite-only onboarding flow: use invited email, accept invite, continue to dashboard.
+- The main panel title is `Accept invitation` with helper copy explaining that the user must authenticate with the invited email to join the workspace.
+- If the `token` query parameter is present, show the soft accent token notice `Invite token detected from the email link.`
+- If the `token` query parameter is missing or empty, do not show the sign-in form. Render the invalid-link state with title `Invalid invite link`, helper copy that the link is missing or malformed, and a primary action to go to the login page.
+- The default form supports email/password Firebase sign-in with fields ordered `Email`, then `Password`, followed by the primary action `Accept invite`.
+- The secondary action is `Continue with Google`; it uses the same invite token and accepts the invite after Firebase returns an identity token.
+- The page MUST submit `POST /invites/accept` with `{ token, firebaseIdToken }` before trying to create an app API session for a first-time invited user.
+- After `POST /invites/accept` returns `204`, the page signs in to the normal app session with the same Firebase identity token, then redirects to the dashboard.
+- While acceptance is in progress, keep the panel shape stable, show a loading state on the active action, and prevent duplicate submissions.
+- Success state copy is `Workspace access created. Redirecting to dashboard.` and may be brief because successful users are redirected.
+- API errors stay inline in the panel and use the backend error message when available. Required mapped cases: `Invite not found`, `Invite has expired`, `Invite cannot be accepted`, `Invite email does not match identity`, and `User is already a workspace member`.
+- For expired, missing, already-used, or not-found invite failures, show the invalid-link state and a login-page action instead of leaving the user on a retry-only form.
+- For email mismatch, keep the form visible, show the exact mismatch message inline, and allow the user to retry with the correct account.
+- For already-member, show a success-adjacent state that explains access already exists and offers the primary action `Sign in`.
+- Keep route-level invite errors distinct from authenticated in-shell request errors.
+- Use PrimeVue controls for inputs, buttons, inline messages, loading affordances, and toast feedback where applicable.
+- Query-driven invite accept flows must test missing token, success redirect, email mismatch retry, invalid/expired/already-used link handling, already-member handling, and URL cleanup after terminal outcomes.
+
 ## Cross-App Navigation
 
 - The user SPA should expose a visible entry point to the admin workspace when the admin SPA is available.
