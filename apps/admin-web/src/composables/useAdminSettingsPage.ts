@@ -12,6 +12,7 @@ import {
 	DEFAULT_SETTINGS_CURRENCY,
 	SETTINGS_CURRENCY_OPTIONS,
 } from '@/lib/currencies';
+import { getSettingsTimeZoneOptions } from '@/lib/time-zones';
 import {
 	getWorkspaceSettingsUpdatePayload,
 	getWorkspaceUpdatePayload,
@@ -128,8 +129,10 @@ export function useAdminSettingsPage(
 			: [
 					{ label: form.currency, value: form.currency },
 					...SETTINGS_CURRENCY_OPTIONS,
-				];
+			];
 	});
+
+	const timeZoneOptions = computed(() => getSettingsTimeZoneOptions(form.timeZone));
 
 	async function loadSettings(action = 'load-settings'): Promise<void> {
 		const token = authStore.accessToken;
@@ -258,6 +261,7 @@ export function useAdminSettingsPage(
 		saveSettings,
 		saving,
 		settings,
+		timeZoneOptions,
 		workspace,
 	};
 }

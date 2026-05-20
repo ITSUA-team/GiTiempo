@@ -171,6 +171,27 @@ describe('useAdminSettingsPage', () => {
 		});
 	});
 
+	it('saves time zone-only changes without sending unchanged settings fields', async () => {
+		const client = createClient({
+			updateWorkspaceSettings: vi.fn().mockResolvedValue({
+				...settingsResponse,
+				timeZone: 'Europe/Kyiv',
+			}),
+		});
+		const { page } = createSubject(client);
+		await page.loadSettings();
+
+		page.form.timeZone = 'Europe/Kyiv';
+
+		await expect(page.saveSettings()).resolves.toBe(true);
+		expect(client.updateWorkspace).not.toHaveBeenCalled();
+		expect(client.updateWorkspaceSettings).toHaveBeenCalledWith('access-token', {
+			timeZone: 'Europe/Kyiv',
+		});
+		expect(page.form.timeZone).toBe('Europe/Kyiv');
+		expect(page.isDirty.value).toBe(false);
+	});
+
 	it('saves workspace and settings changes together', async () => {
 		const client = createClient({
 			updateWorkspace: vi.fn().mockResolvedValue({
@@ -224,10 +245,10 @@ describe('useAdminSettingsPage', () => {
 		const { page, toasts } = createSubject(client);
 		await page.loadSettings();
 
-		page.form.currency = 'EUR';
+		page.form.timeZone = 'Europe/Kyiv';
 
 		await expect(page.saveSettings()).resolves.toBe(false);
-		expect(page.form.currency).toBe('EUR');
+		expect(page.form.timeZone).toBe('Europe/Kyiv');
 		expect(page.isDirty.value).toBe(true);
 		expect(toasts.errorToast).toHaveBeenCalledWith(
 			'Could not save settings',

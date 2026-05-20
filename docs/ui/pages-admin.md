@@ -57,13 +57,13 @@
 - Single-column workspace settings form inside the authenticated admin shell.
 - Header copy: `Settings` with `Configure workspace defaults, billing preferences, and organization details.`
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
-- Current editable settings fields are `Workspace name`, `Default hourly rate`, and `Currency`.
-- `Time zone` remains API-supported but is deferred from the current Settings UI until the field design and option source are accepted.
+- Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
+- `Time zone` uses a full-width PrimeVue `<Select>` below the Default hourly rate + Currency row, enables filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated IANA fallback list that includes `UTC` and `Europe/Kyiv`.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
 - Initial load reads workspace identity from `/workspace` and workspace settings from `/workspace/settings`.
 - The authenticated admin shell header reads `/workspace` by default for the visible workspace label; Settings save updates that label from the authoritative workspace response.
-- Save sends workspace name changes to `/workspace` and currency/default hourly rate changes to `/workspace/settings`; unchanged resources are not patched only to satisfy schemas.
+- Save sends workspace name changes to `/workspace` and currency/default hourly rate/time zone changes to `/workspace/settings`; unchanged resources are not patched only to satisfy schemas.
 - `Cancel` restores the latest loaded or saved values without sending a request.
 - Use a structured PrimeVue Skeleton first-load state that mirrors the implemented header, card, field rows, and action row.
 - Keep failed initial requests distinct from empty/default settings: show a request-error surface with retry and toast feedback instead of rendering default form values.

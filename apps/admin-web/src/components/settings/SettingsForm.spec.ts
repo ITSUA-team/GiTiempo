@@ -1,0 +1,153 @@
+import { mount } from '@vue/test-utils';
+import { describe, expect, it } from 'vitest';
+
+import SettingsForm from './SettingsForm.vue';
+
+const SelectStub = {
+	emits: ['update:modelValue'],
+	props: [
+		'filter',
+		'inputId',
+		'invalid',
+		'modelValue',
+		'optionLabel',
+		'optionValue',
+		'options',
+	],
+	template: `
+		<select
+			:id="inputId"
+			:aria-invalid="invalid ? 'true' : undefined"
+			:data-filter="filter === false || filter === undefined ? 'false' : 'true'"
+			:value="modelValue"
+			@change="$emit('update:modelValue', $event.target.value)"
+		>
+			<option
+				v-for="option in options"
+				:key="option[optionValue]"
+				:value="option[optionValue]"
+			>
+				{{ option[optionLabel] }}
+			</option>
+		</select>
+	`,
+};
+
+const InputTextStub = {
+	emits: ['update:modelValue'],
+	props: ['disabled', 'id', 'modelValue'],
+	template:
+		'<input :id="id" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+};
+
+const InputNumberStub = {
+	emits: ['update:modelValue'],
+	props: ['inputId', 'modelValue'],
+	template:
+		'<input :id="inputId" :value="modelValue ?? \'\'" @input="$emit(\'update:modelValue\', $event.target.value ? Number($event.target.value) : null)" />',
+};
+
+const ButtonStub = {
+	emits: ['click'],
+	props: ['disabled', 'label', 'type'],
+	template:
+		'<button :disabled="disabled" :type="type || \'button\'" @click="$emit(\'click\', $event)">{{ label }}</button>',
+};
+
+const stubs = {
+	Button: ButtonStub,
+	InputNumber: InputNumberStub,
+	InputText: InputTextStub,
+	Message: { template: '<small><slot /></small>' },
+	Select: SelectStub,
+	SurfaceCard: { template: '<section><slot /></section>' },
+};
+
+function createProps(overrides: Record<string, unknown> = {}) {
+	return {
+		canSave: true,
+		currency: 'USD',
+		currencyOptions: [
+			{ label: 'USD', value: 'USD' },
+			{ label: 'EUR', value: 'EUR' },
+		],
+		defaultHourlyRate: 120,
+		fieldErrors: {},
+		isDirty: true,
+		saving: false,
+		timeZone: 'UTC',
+		timeZoneOptions: [
+			{ label: 'UTC', value: 'UTC' },
+			{ label: 'Europe/Kyiv', value: 'Europe/Kyiv' },
+		],
+		workspaceName: 'GiTiempo Studio',
+		...overrides,
+	};
+}
+
+describe('SettingsForm', () => {
+	it('renders the time zone selector below the rate and currency row', () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps(),
+		});
+
+		const timeZone = wrapper.get<HTMLSelectElement>('#settings-time-zone');
+
+		expect(wrapper.get('label[for="settings-time-zone"]').text()).toBe(
+			'Time zone',
+		);
+		expect(timeZone.classes()).toEqual(
+			expect.arrayContaining(['h-[38px]', 'w-full']),
+		);
+		expect(timeZone.attributes('data-filter')).toBe('true');
+		expect(timeZone.text()).toContain('UTC');
+		expect(timeZone.text()).toContain('Europe/Kyiv');
+	});
+
+	it('emits time zone updates from the selector', async () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps(),
+		});
+
+		await wrapper.get('#settings-time-zone').setValue('Europe/Kyiv');
+
+		expect(wrapper.emitted('update:timeZone')).toEqual([['Europe/Kyiv']]);
+	});
+
+	it('renders time zone validation feedback through the existing error pattern', () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps({
+				fieldErrors: { timeZone: 'Invalid time zone' },
+			}),
+		});
+
+		expect(wrapper.get('#settings-time-zone').attributes('aria-invalid')).toBe(
+			'true',
+		);
+		expect(wrapper.text()).toContain('Invalid time zone');
+	});
+
+	it('keeps save and cancel controlled by dirty and save state', async () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps({ canSave: false, isDirty: false }),
+		});
+
+		const buttons = wrapper.findAll('button');
+		const cancel = buttons.find((button) => button.text() === 'Cancel');
+		const save = buttons.find((button) => button.text() === 'Save Settings');
+
+		expect(cancel?.attributes('disabled')).toBeDefined();
+		expect(save?.attributes('disabled')).toBeDefined();
+
+		await wrapper.setProps({ canSave: true, isDirty: true });
+		await cancel?.trigger('click');
+		await save?.trigger('click');
+
+		expect(wrapper.emitted('cancel')).toHaveLength(1);
+		expect(wrapper.emitted('save')).toHaveLength(1);
+	});
+});
