@@ -12067,7 +12067,7 @@
                     "blur": 3
                   },
                   "layout": "vertical",
-                  "gap": 20,
+                  "gap": 12,
                   "padding": 20,
                   "children": [
                     {
@@ -12232,6 +12232,65 @@
                                       "fontWeight": "500"
                                     }
                                   ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WbvVx",
+                          "name": "timeZoneField",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "HACKP",
+                              "fill": "$color-text-dark",
+                              "content": "Time zone",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "D8tci",
+                              "name": "timeZoneSelect",
+                              "width": "fill_container",
+                              "height": 38,
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$color-divider"
+                              },
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pwSBl",
+                                  "fill": "$color-text-dark",
+                                  "content": "Europe/Kyiv",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon_font",
+                                  "id": "OfY9h",
+                                  "name": "Time zone dropdown icon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "iconFontName": "chevron-down",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$color-text-muted"
                                 }
                               ]
                             }
