@@ -54,8 +54,8 @@ Alternative considered: patch the existing helper file to consume API rows. Reje
 
 ## Risks / Trade-offs
 
-- Project time-entry loading can issue multiple requests for all-project table scope -> keep the bounded visible-project behavior and page through project entries with the existing max page size.
-- Table filter changes can trigger extra requests if wired incorrectly -> keep member search/filter table-local and debounce only table project/date refreshes.
+- Backend report table loading can require multiple scoped report requests to preserve project-member row identity -> keep requests bounded to visible project/report scope and ignore stale responses.
+- Setup control changes can accidentally refresh the loaded table if wired incorrectly -> keep project, member, date range, and group-by setup controls export-only; table search and column filters remain local discovery controls and must not call report endpoints.
 - Local docs currently describe frontend CSV generation -> update the Reports page docs/spec language in this change so implementation and documentation remain aligned.
 - Export filename depends on response headers -> fall back to a deterministic `time-report.csv` filename if the header is unavailable.
 
