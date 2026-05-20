@@ -23,14 +23,6 @@ interface AdminSettingsValidationResult {
 	values: AdminSettingsFormValues | null;
 }
 
-export const ADMIN_SETTINGS_CURRENCY_OPTIONS = [
-	{ label: 'USD', value: 'USD' },
-	{ label: 'EUR', value: 'EUR' },
-	{ label: 'GBP', value: 'GBP' },
-	{ label: 'CAD', value: 'CAD' },
-	{ label: 'AUD', value: 'AUD' },
-] as const;
-
 export function toAdminSettingsFormValues(
 	workspace: WorkspaceResponse,
 	settings: WorkspaceSettingsResponse,

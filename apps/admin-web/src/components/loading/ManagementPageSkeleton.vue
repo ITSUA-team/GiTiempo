@@ -2,6 +2,9 @@
 import { SurfaceCard } from '@gitiempo/web-shared';
 import Skeleton from 'primevue/skeleton';
 
+import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
+import ManagementMobileCardSkeleton from '@/components/loading/ManagementMobileCardSkeleton.vue';
+
 type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports';
 
 const props = defineProps<{
@@ -14,8 +17,8 @@ const skeletonConfig = {
     descriptionWidth: 'min(100%, 24rem)',
     filterCount: 0,
     statCount: 3,
-    tableActionWidth: undefined,
-    tableHeaderWidths: ['120px', '160px', '140px', '200px'],
+    tableActionWidth: '17.5rem',
+    tableHeaderWidths: ['120px', '220px', '140px', '150px'],
   },
   projects: {
     actionWidth: '7.5rem',
@@ -121,199 +124,36 @@ const skeletonConfig = {
         v-if="props.variant === 'members'"
         class="flex flex-col gap-3 sm:hidden"
       >
-        <article
+        <ManagementMobileCardSkeleton
           v-for="index in 4"
           :key="`member-mobile-${index}`"
-          class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
-        >
-          <div class="flex items-start gap-3">
-            <Skeleton
-              width="2.25rem"
-              height="2.25rem"
-              border-radius="9999px"
-            />
-            <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Skeleton
-                width="70%"
-                height="0.95rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="85%"
-                height="0.75rem"
-                border-radius="4px"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div class="flex flex-col gap-1.5">
-              <Skeleton
-                width="2.5rem"
-                height="0.7rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="4rem"
-                height="0.85rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Skeleton
-                width="3.5rem"
-                height="0.7rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="5rem"
-                height="0.85rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="col-span-2 flex flex-col gap-1.5">
-              <Skeleton
-                width="4.5rem"
-                height="0.7rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="6rem"
-                height="0.85rem"
-                border-radius="4px"
-              />
-            </div>
-          </div>
-
-          <div class="border-divider flex justify-end gap-2 border-t pt-3">
-            <Skeleton
-              v-for="actionIndex in 3"
-              :key="`member-action-${index}-${actionIndex}`"
-              width="2rem"
-              height="2rem"
-              border-radius="9999px"
-            />
-          </div>
-        </article>
+          :index="index"
+          variant="members"
+        />
       </div>
 
       <div
         v-else-if="props.variant === 'projects'"
         class="flex flex-col gap-3 sm:hidden"
       >
-        <article
+        <ManagementMobileCardSkeleton
           v-for="index in 4"
           :key="`project-mobile-${index}`"
-          class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Skeleton
-                width="70%"
-                height="0.95rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="45%"
-                height="0.75rem"
-                border-radius="4px"
-              />
-            </div>
-            <Skeleton
-              width="4.25rem"
-              height="1.5rem"
-              border-radius="6px"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div class="flex flex-col gap-1.5">
-              <Skeleton
-                width="6rem"
-                height="0.7rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="4.5rem"
-                height="0.85rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Skeleton
-                width="2.5rem"
-                height="0.7rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="3.5rem"
-                height="0.85rem"
-                border-radius="4px"
-              />
-            </div>
-          </div>
-
-          <div class="border-divider flex justify-end gap-2 border-t pt-3">
-            <Skeleton
-              v-for="actionIndex in 2"
-              :key="`project-action-${index}-${actionIndex}`"
-              width="2rem"
-              height="2rem"
-              border-radius="9999px"
-            />
-          </div>
-        </article>
+          :index="index"
+          variant="projects"
+        />
       </div>
 
       <div
         v-else-if="props.variant === 'reports'"
         class="flex flex-col gap-3 sm:hidden"
       >
-        <article
+        <ManagementMobileCardSkeleton
           v-for="index in 4"
           :key="`report-mobile-${index}`"
-          class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
-        >
-          <div class="flex min-w-0 flex-col gap-1.5">
-            <Skeleton
-              width="75%"
-              height="0.95rem"
-              border-radius="4px"
-            />
-            <Skeleton
-              width="55%"
-              height="0.75rem"
-              border-radius="4px"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div class="flex flex-col gap-1.5">
-              <Skeleton
-                width="2.5rem"
-                height="0.7rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="4.5rem"
-                height="0.85rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Skeleton
-                width="3.5rem"
-                height="0.7rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="4.5rem"
-                height="0.85rem"
-                border-radius="4px"
-              />
-            </div>
-          </div>
-        </article>
+          :index="index"
+          variant="reports"
+        />
       </div>
 
       <div
@@ -335,7 +175,7 @@ const skeletonConfig = {
         </div>
 
         <div
-          v-if="props.variant === 'reports'"
+          v-if="skeletonConfig[props.variant].tableHeaderWidths.length > 0"
           class="border-divider flex h-[44px] items-center gap-3 border-b px-3"
         >
           <Skeleton
@@ -352,152 +192,11 @@ const skeletonConfig = {
           />
         </div>
 
-        <div
+        <ManagementDesktopRowSkeleton
           v-for="index in 6"
           :key="index"
-          class="border-divider flex h-[56px] items-center gap-3 border-t px-3"
-        >
-          <template v-if="props.variant === 'members'">
-            <div class="flex flex-1 items-center gap-3">
-              <Skeleton
-                width="2rem"
-                height="2rem"
-                border-radius="9999px"
-              />
-              <div class="flex flex-col gap-1.5">
-                <Skeleton
-                  width="8rem"
-                  height="0.875rem"
-                  border-radius="4px"
-                />
-                <Skeleton
-                  width="10rem"
-                  height="0.75rem"
-                  border-radius="4px"
-                />
-              </div>
-            </div>
-            <div class="w-[120px]">
-              <Skeleton
-                width="4rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[160px]">
-              <Skeleton
-                width="5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[140px]">
-              <Skeleton
-                width="5.5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="flex w-[200px] justify-end gap-2">
-              <Skeleton
-                width="4rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="2.5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="3rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-          </template>
-
-          <template v-else-if="props.variant === 'projects'">
-            <div class="flex flex-1 items-center">
-              <Skeleton
-                width="60%"
-                height="0.875rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[140px]">
-              <Skeleton
-                width="70%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[220px]">
-              <Skeleton
-                width="50%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[120px]">
-              <Skeleton
-                width="40%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[120px]">
-              <Skeleton
-                width="3.5rem"
-                height="1.4rem"
-                border-radius="6px"
-              />
-            </div>
-            <div class="flex w-[150px] justify-end gap-2">
-              <Skeleton
-                width="2.5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-              <Skeleton
-                width="3.5rem"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-          </template>
-
-          <template v-else>
-            <div class="flex flex-1 items-center">
-              <Skeleton
-                width="45%"
-                height="0.875rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[180px]">
-              <Skeleton
-                width="55%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[140px]">
-              <Skeleton
-                width="50%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-            <div class="w-[140px]">
-              <Skeleton
-                width="50%"
-                height="0.8rem"
-                border-radius="4px"
-              />
-            </div>
-          </template>
-        </div>
+          :variant="props.variant"
+        />
       </div>
     </SurfaceCard>
   </div>

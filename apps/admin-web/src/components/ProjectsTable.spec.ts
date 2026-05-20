@@ -36,6 +36,22 @@ vi.mock('@/services/admin-projects-client', () => ({
 
 import ProjectsTable from './ProjectsTable.vue';
 
+function mockMatchMedia(matches = false): void {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
+}
+
 function createMembers(): WorkspaceMemberListResponse {
   return [
     {
@@ -162,6 +178,7 @@ function createProjects(): ProjectListResponse {
 }
 
 function mountProjectsTable(options: {
+  loading?: boolean;
   members?: WorkspaceMemberListResponse;
   projects?: ProjectListResponse;
 } = {}) {
@@ -170,7 +187,7 @@ function mountProjectsTable(options: {
 
   return mount(ProjectsTable, {
     props: {
-      loading: false,
+      loading: options.loading ?? false,
       members: options.members ?? createMembers(),
       projects: options.projects ?? createProjects(),
     },
@@ -190,12 +207,15 @@ function mountProjectsTable(options: {
   });
 }
 
-function expectProjectCards(wrapper: ReturnType<typeof mountProjectsTable>, names: string[]) {
-  const cards = wrapper.findAll('[data-testid="project-mobile-card"]');
-  expect(cards).toHaveLength(names.length);
+function expectVisibleProjects(wrapper: ReturnType<typeof mountProjectsTable>, names: string[]) {
+  const allNames = createProjects().map((project) => project.name);
 
   for (const name of names) {
-    expect(cards.some((card) => card.text().includes(name))).toBe(true);
+    expect(wrapper.text()).toContain(name);
+  }
+
+  for (const name of allNames.filter((projectName) => !names.includes(projectName))) {
+    expect(wrapper.text()).not.toContain(name);
   }
 }
 
@@ -205,20 +225,7 @@ describe('ProjectsTable', () => {
     toastMock.errorToast.mockReset();
     toastMock.successToast.mockReset();
     projectClientMock.updateProject.mockReset();
-
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        addEventListener: vi.fn(),
-        addListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-        matches: false,
-        media: query,
-        onchange: null,
-        removeEventListener: vi.fn(),
-        removeListener: vi.fn(),
-      })),
-    });
+    mockMatchMedia();
   });
 
   it('renders icon-only edit, archive, and unarchive row actions with accessible labels', () => {
@@ -238,7 +245,7 @@ describe('ProjectsTable', () => {
     expect(archiveButton.text()).toBe('');
     expect(unarchiveButton.attributes('aria-label')).toBe('Unarchive');
     expect(unarchiveButton.text()).toBe('');
-    expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
   });
 
   it('filters projects by global search, project, source, assigned member, hours, and visibility', async () => {
@@ -254,7 +261,7 @@ describe('ProjectsTable', () => {
     expect(wrapper.text()).toContain('All members');
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('All');
-    expectProjectCards(wrapper, [
+    expectVisibleProjects(wrapper, [
       'Project Orion',
       'Billing API',
       'Dev Portal',
@@ -262,11 +269,11 @@ describe('ProjectsTable', () => {
     ]);
 
     await wrapper.get('input[aria-label="Search projects"]').setValue('archived');
-    expectProjectCards(wrapper, ['Legacy Project']);
+    expectVisibleProjects(wrapper, ['Legacy Project']);
 
     await wrapper.get('input[aria-label="Search projects"]').setValue('');
     await wrapper.get('input[aria-label="Filter projects by name"]').setValue('billing');
-    expectProjectCards(wrapper, ['Billing API']);
+    expectVisibleProjects(wrapper, ['Billing API']);
 
     await wrapper.get('input[aria-label="Filter projects by name"]').setValue('');
     const projectSelectFilters = wrapper.findAllComponents(Select);
@@ -274,7 +281,7 @@ describe('ProjectsTable', () => {
     expect(sourceFilter).toBeDefined();
     await sourceFilter!.vm.$emit('update:modelValue', 'manual');
     await wrapper.vm.$nextTick();
-    expectProjectCards(wrapper, ['Billing API', 'Dev Portal', 'Legacy Project']);
+    expectVisibleProjects(wrapper, ['Billing API', 'Dev Portal', 'Legacy Project']);
 
     await sourceFilter!.vm.$emit('update:modelValue', null);
     await wrapper.vm.$nextTick();
@@ -282,32 +289,46 @@ describe('ProjectsTable', () => {
     expect(memberFilter).toBeDefined();
     await memberFilter!.vm.$emit('update:modelValue', ['user-3']);
     await wrapper.vm.$nextTick();
-    expectProjectCards(wrapper, ['Billing API']);
+    expectVisibleProjects(wrapper, ['Billing API']);
 
     await memberFilter!.vm.$emit('update:modelValue', []);
     await wrapper.vm.$nextTick();
-    const hoursFilter = projectSelectFilters[2];
+    const hoursFilter = projectSelectFilters[1];
     expect(hoursFilter).toBeDefined();
     await hoursFilter!.vm.$emit('update:modelValue', 'zero');
     await wrapper.vm.$nextTick();
-    expectProjectCards(wrapper, ['Dev Portal']);
+    expectVisibleProjects(wrapper, ['Dev Portal']);
 
     await hoursFilter!.vm.$emit('update:modelValue', 'any');
     await wrapper.vm.$nextTick();
-    const visibilityFilter = projectSelectFilters[1];
+    const visibilityFilter = projectSelectFilters[2];
     expect(visibilityFilter).toBeDefined();
     await visibilityFilter!.vm.$emit('update:modelValue', 'private');
     await wrapper.vm.$nextTick();
-    expectProjectCards(wrapper, ['Billing API', 'Legacy Project']);
+    expectVisibleProjects(wrapper, ['Billing API', 'Legacy Project']);
 
     await visibilityFilter!.vm.$emit('update:modelValue', null);
     await wrapper.vm.$nextTick();
-    expectProjectCards(wrapper, [
+    expectVisibleProjects(wrapper, [
       'Project Orion',
       'Billing API',
       'Dev Portal',
       'Legacy Project',
     ]);
+  });
+
+  it('renders the mobile loading shell without desktop actions on small viewports', () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountProjectsTable({
+      loading: true,
+      members: [],
+      projects: [createProjects()[0]!],
+    });
+
+    expect(wrapper.findAll('[data-testid="projects-mobile-loading-card"]')).toHaveLength(3);
+    expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="project-edit-project-active"]')).toHaveLength(0);
   });
 
   it('preserves edit, archive, and unarchive flows behind the icon-only actions', async () => {
@@ -344,7 +365,7 @@ describe('ProjectsTable', () => {
 
     await wrapper.get('input[aria-label="Search projects"]').setValue('billing');
 
-    expectProjectCards(wrapper, ['Billing API']);
+    expectVisibleProjects(wrapper, ['Billing API']);
     expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(false);
   });
 });

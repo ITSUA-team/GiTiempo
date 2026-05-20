@@ -26,7 +26,10 @@ import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
+import Skeleton from 'primevue/skeleton';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
+import MobileRecordCard from '@/components/mobile/MobileRecordCard.vue';
+import { useIsMobileViewport } from '@/composables/useIsMobileViewport';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import { useConfirmation } from '@/composables/useConfirmation';
 import { adminMembersClient } from '@/services/admin-members-client';
@@ -64,6 +67,7 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
+const isMobileViewport = useIsMobileViewport();
 
 const expandedRows = ref<Record<string, boolean>>({});
 const expansionMode = ref<Record<string, 'assign' | 'edit'>>({});
@@ -373,7 +377,10 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     </IconField>
   </div>
 
-  <div class="mb-4 grid gap-3 sm:hidden">
+  <div
+    v-if="isMobileViewport"
+    class="mb-4 grid gap-3"
+  >
     <div class="flex flex-col gap-1.5">
       <label
         for="mobile-member-name-filter"
@@ -443,13 +450,72 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     </div>
   </div>
 
-  <div class="flex flex-col gap-3 sm:hidden">
-    <template v-if="filteredMembers.length > 0">
-      <article
+  <div
+    v-if="isMobileViewport"
+    class="flex flex-col gap-3"
+  >
+    <template v-if="loading">
+      <MobileRecordCard
+        v-for="index in 3"
+        :key="index"
+        data-testid="members-mobile-loading-card"
+      >
+        <div class="flex items-start gap-3">
+          <Skeleton
+            shape="circle"
+            size="2.25rem"
+          />
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton
+              width="9rem"
+              height="1rem"
+            />
+            <Skeleton
+              width="7rem"
+              height="0.75rem"
+            />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-2">
+            <Skeleton
+              width="3rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="4.5rem"
+              height="0.875rem"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <Skeleton
+              width="4rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="5rem"
+              height="0.875rem"
+            />
+          </div>
+          <div class="col-span-2 flex flex-col gap-2">
+            <Skeleton
+              width="4.5rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="6rem"
+              height="0.875rem"
+            />
+          </div>
+        </div>
+      </MobileRecordCard>
+    </template>
+
+    <template v-else-if="filteredMembers.length > 0">
+      <MobileRecordCard
         v-for="member in filteredMembers"
         :key="member.id"
         data-testid="member-mobile-card"
-        class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
       >
         <div class="flex items-start gap-3">
           <Avatar
@@ -495,9 +561,9 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           </div>
         </div>
 
-        <div
+        <template
           v-if="!isSelf(member)"
-          class="border-divider flex justify-end gap-2 border-t pt-3"
+          #actions
         >
           <ManagementTableRowAction
             v-if="member.role !== 'admin'"
@@ -519,7 +585,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
             tone="destructive"
             @click="handleRemove(member)"
           />
-        </div>
+        </template>
 
         <MemberAssignPmPanel
           v-if="expansionMode[member.id] === 'assign' && expandedRows[member.id]"
@@ -534,23 +600,23 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           @saved="handleEditSaved(member)"
           @cancelled="collapseRow(member)"
         />
-      </article>
+      </MobileRecordCard>
     </template>
 
     <EmptyStateBlock
-      v-else-if="!loading"
+      v-else
       title="No members found"
       :description="membersEmptyDescription"
     />
   </div>
 
   <ManagementTableShell
+    v-else
     v-model:expanded-rows="expandedRows"
     :columns="columns"
     :value="filteredMembers"
     :loading="loading"
     data-key="id"
-    class="hidden sm:block"
     header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[930px] items-center border-b font-sans text-[13px] font-semibold"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll

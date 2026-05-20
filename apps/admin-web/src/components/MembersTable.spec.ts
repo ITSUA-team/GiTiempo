@@ -34,6 +34,22 @@ vi.mock('@/services/admin-members-client', () => ({
 
 import MembersTable from './MembersTable.vue';
 
+function mockMatchMedia(matches = false): void {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
+}
+
 function createMembers(): WorkspaceMemberListResponse {
   const now = new Date();
   const older = new Date(now);
@@ -137,6 +153,7 @@ function createProjects(): ProjectListResponse {
 
 function mountMembersTable(options: {
   currentUserId?: string | null;
+  loading?: boolean;
   members?: WorkspaceMemberListResponse;
   projects?: ProjectListResponse;
 } = {}) {
@@ -146,7 +163,7 @@ function mountMembersTable(options: {
   return mount(MembersTable, {
     props: {
       currentUserId: options.currentUserId ?? 'current-user',
-      loading: false,
+      loading: options.loading ?? false,
       members: options.members ?? createMembers(),
       projects: options.projects ?? createProjects(),
     },
@@ -167,12 +184,15 @@ function mountMembersTable(options: {
   });
 }
 
-function expectMemberCards(wrapper: ReturnType<typeof mountMembersTable>, names: string[]) {
-  const cards = wrapper.findAll('[data-testid="member-mobile-card"]');
-  expect(cards).toHaveLength(names.length);
+function expectVisibleMembers(wrapper: ReturnType<typeof mountMembersTable>, names: string[]) {
+  const allNames = createMembers().map((member) => member.displayName ?? member.email);
 
   for (const name of names) {
-    expect(cards.some((card) => card.text().includes(name))).toBe(true);
+    expect(wrapper.text()).toContain(name);
+  }
+
+  for (const name of allNames.filter((memberName) => !names.includes(memberName))) {
+    expect(wrapper.text()).not.toContain(name);
   }
 }
 
@@ -181,20 +201,7 @@ describe('MembersTable', () => {
     confirmationMock.requireConfirmation.mockReset();
     toastMock.errorToast.mockReset();
     toastMock.successToast.mockReset();
-
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        addEventListener: vi.fn(),
-        addListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-        matches: false,
-        media: query,
-        onchange: null,
-        removeEventListener: vi.fn(),
-        removeListener: vi.fn(),
-      })),
-    });
+    mockMatchMedia();
   });
 
   it('renders icon-only assign, edit, and remove row actions with accessible labels', () => {
@@ -211,7 +218,7 @@ describe('MembersTable', () => {
     expect(editButton.text()).toBe('');
     expect(removeButton.attributes('aria-label')).toBe('Remove');
     expect(removeButton.text()).toBe('');
-    expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(1);
+    expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);
   });
 
   it('filters members by global search, column filters, project, role, and activity', async () => {
@@ -226,14 +233,14 @@ describe('MembersTable', () => {
     expect(wrapper.text()).toContain('All roles');
     expect(wrapper.text()).toContain('All projects');
     expect(wrapper.text()).toContain('Any activity');
-    expectMemberCards(wrapper, ['Pat PM', 'Alex Admin', 'Nina Keller']);
+    expectVisibleMembers(wrapper, ['Pat PM', 'Alex Admin', 'Nina Keller']);
 
     await wrapper.get('input[aria-label="Search members"]').setValue('orion');
-    expectMemberCards(wrapper, ['Pat PM', 'Alex Admin']);
+    expectVisibleMembers(wrapper, ['Pat PM', 'Alex Admin']);
 
     await wrapper.get('input[aria-label="Search members"]').setValue('');
     await wrapper.get('input[aria-label="Filter members by name or email"]').setValue('nina');
-    expectMemberCards(wrapper, ['Nina Keller']);
+    expectVisibleMembers(wrapper, ['Nina Keller']);
 
     await wrapper.get('input[aria-label="Filter members by name or email"]').setValue('');
     const memberSelectFilters = wrapper.findAllComponents(Select);
@@ -241,7 +248,7 @@ describe('MembersTable', () => {
     expect(roleFilter).toBeDefined();
     await roleFilter!.vm.$emit('update:modelValue', 'admin');
     await wrapper.vm.$nextTick();
-    expectMemberCards(wrapper, ['Alex Admin']);
+    expectVisibleMembers(wrapper, ['Alex Admin']);
 
     await roleFilter!.vm.$emit('update:modelValue', null);
     await wrapper.vm.$nextTick();
@@ -249,7 +256,7 @@ describe('MembersTable', () => {
     expect(projectFilter).toBeDefined();
     await projectFilter!.vm.$emit('update:modelValue', ['project-2']);
     await wrapper.vm.$nextTick();
-    expectMemberCards(wrapper, ['Nina Keller']);
+    expectVisibleMembers(wrapper, ['Nina Keller']);
 
     await projectFilter!.vm.$emit('update:modelValue', []);
     await wrapper.vm.$nextTick();
@@ -257,11 +264,25 @@ describe('MembersTable', () => {
     expect(activityFilter).toBeDefined();
     await activityFilter!.vm.$emit('update:modelValue', 'inactive');
     await wrapper.vm.$nextTick();
-    expectMemberCards(wrapper, ['Alex Admin']);
+    expectVisibleMembers(wrapper, ['Alex Admin']);
 
     await activityFilter!.vm.$emit('update:modelValue', 'any');
     await wrapper.vm.$nextTick();
-    expectMemberCards(wrapper, ['Pat PM', 'Alex Admin', 'Nina Keller']);
+    expectVisibleMembers(wrapper, ['Pat PM', 'Alex Admin', 'Nina Keller']);
+  });
+
+  it('renders mobile cards and a loading shell only on mobile viewports', () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountMembersTable({
+      loading: true,
+      members: [createMembers()[0]!],
+      projects: [],
+    });
+
+    expect(wrapper.findAll('[data-testid="members-mobile-loading-card"]')).toHaveLength(3);
+    expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="member-edit-member-1"]')).toHaveLength(0);
   });
 
   it('preserves assign, edit, and remove flows behind the icon-only actions', async () => {
@@ -287,7 +308,7 @@ describe('MembersTable', () => {
 
     await wrapper.get('input[aria-label="Search members"]').setValue('nina');
 
-    expectMemberCards(wrapper, ['Nina Keller']);
+    expectVisibleMembers(wrapper, ['Nina Keller']);
     expect(wrapper.find('[data-testid="assign-panel"]').exists()).toBe(false);
   });
 });

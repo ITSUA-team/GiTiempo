@@ -52,18 +52,20 @@ const {
       <SectionHeader
         title="Dashboard"
         description="Workspace overview with key metrics and recent activity."
-        variant="page"
-      />
-
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          v-for="stat in stats"
-          :key="stat.label"
-          :label="stat.label"
-          :value="stat.value"
-          :description="stat.description"
-        />
-      </div>
+        variant="stats"
+      >
+        <template #stats>
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              v-for="stat in stats"
+              :key="stat.label"
+              :label="stat.label"
+              :value="stat.value"
+              :description="stat.description"
+            />
+          </div>
+        </template>
+      </SectionHeader>
 
       <SurfaceCard padding-class="p-5">
         <DashboardRecentActivityFeed
