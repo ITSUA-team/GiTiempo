@@ -2,9 +2,11 @@
 withDefaults(
   defineProps<{
     as?: string;
+    tone?: 'default' | 'highlighted';
   }>(),
   {
     as: 'article',
+    tone: 'default',
   },
 );
 </script>
@@ -12,7 +14,8 @@ withDefaults(
 <template>
   <component
     :is="as"
-    class="border-divider bg-surface flex flex-col gap-3 rounded-lg border p-4"
+    class="border-divider flex flex-col gap-3 rounded-lg border p-4"
+    :class="tone === 'highlighted' ? 'bg-accent-tint' : 'bg-surface'"
   >
     <slot />
 
