@@ -2,6 +2,7 @@
 import {
   EmptyStateBlock,
   ManagementTableShell,
+  SectionHeader,
   managementTableColumnPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -61,20 +62,20 @@ const filterSelectPt = {
 
 <template>
   <div>
-    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h2 class="text-text-dark text-lg font-semibold">
-        Results
-      </h2>
-
-      <IconField class="w-full sm:w-[280px]">
-        <InputIcon class="pi pi-search text-text-muted" />
-        <InputText
-          v-model="filters.global"
-          aria-label="Search report rows"
-          class="h-[38px] w-full rounded-[6px] text-[14px]"
-          placeholder="Search report rows"
-        />
-      </IconField>
+    <div class="mb-4">
+      <SectionHeader title="Results">
+        <template #actions>
+          <IconField class="w-full sm:w-[280px]">
+            <InputIcon class="pi pi-search text-text-muted" />
+            <InputText
+              v-model="filters.global"
+              aria-label="Search report rows"
+              class="h-[38px] w-full rounded-[6px] text-[14px]"
+              placeholder="Search report rows"
+            />
+          </IconField>
+        </template>
+      </SectionHeader>
     </div>
 
     <template v-if="isMobileViewport">

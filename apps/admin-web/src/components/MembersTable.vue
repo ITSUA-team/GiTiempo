@@ -15,6 +15,7 @@ import {
   EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
+  SectionHeader,
   formatWorkspaceRole,
   managementTableColumnPt,
 } from '@gitiempo/web-shared';
@@ -361,20 +362,20 @@ function handleRemove(member: WorkspaceMemberResponse): void {
 </script>
 
 <template>
-  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <h2 class="text-text-dark text-lg font-semibold">
-      Members Table
-    </h2>
-
-    <IconField class="w-full sm:w-[280px]">
-      <InputIcon class="pi pi-search text-text-muted" />
-      <InputText
-        v-model="filters.global"
-        aria-label="Search members"
-        class="h-[38px] w-full rounded-[6px] text-[14px]"
-        placeholder="Search members"
-      />
-    </IconField>
+  <div class="mb-4">
+    <SectionHeader title="Members Table">
+      <template #actions>
+        <IconField class="w-full sm:w-[280px]">
+          <InputIcon class="pi pi-search text-text-muted" />
+          <InputText
+            v-model="filters.global"
+            aria-label="Search members"
+            class="h-[38px] w-full rounded-[6px] text-[14px]"
+            placeholder="Search members"
+          />
+        </IconField>
+      </template>
+    </SectionHeader>
   </div>
 
   <div
