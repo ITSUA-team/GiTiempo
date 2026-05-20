@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
+import type { TaskResponse } from "@gitiempo/shared";
 import PrimeVue from "primevue/config";
 import { beforeEach, describe, expect, it } from "vitest";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
@@ -84,7 +85,7 @@ describe("ProjectsTaskSection", () => {
   it("renders mobile cards with accessible icon-only actions on small viewports", async () => {
     mockMatchMedia(true);
 
-    const tasks = [
+    const tasks: TaskResponse[] = [
       {
         createdAt: "2026-04-20T12:00:00.000Z",
         id: "task-1",
@@ -105,7 +106,7 @@ describe("ProjectsTaskSection", () => {
         updatedAt: "2026-04-22T15:30:00.000Z",
         workspaceId: "workspace-1",
       },
-    ] as const;
+    ];
 
     const wrapper = mount(ProjectsTaskSection, {
       props: {

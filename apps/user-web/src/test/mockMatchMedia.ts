@@ -1,6 +1,8 @@
 import { vi } from 'vitest';
 
-type MatchMediaListener = (event: MediaQueryListEvent) => void;
+// eslint-disable-next-line no-unused-vars
+type MatchMediaChangeHandler = (event: MediaQueryListEvent) => void;
+type MatchMediaListener = MatchMediaChangeHandler;
 
 export function mockMatchMedia(matches = false) {
   const changeListeners = new Set<MatchMediaListener>();
@@ -20,7 +22,7 @@ export function mockMatchMedia(matches = false) {
       return currentMatches;
     },
     media: '',
-    onchange: null as ((event: MediaQueryListEvent) => void) | null,
+    onchange: null as MatchMediaChangeHandler | null,
     removeEventListener: vi.fn((event: string, listener: MatchMediaListener) => {
       if (event === 'change') {
         changeListeners.delete(listener);

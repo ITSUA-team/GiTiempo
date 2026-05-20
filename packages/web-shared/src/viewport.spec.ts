@@ -6,14 +6,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsMobileViewport } from './viewport';
 
-type MatchMediaListener = (event: MediaQueryListEvent) => void;
+// eslint-disable-next-line no-unused-vars
+type MatchMediaChangeHandler = (event: MediaQueryListEvent) => void;
+type MatchMediaListener = MatchMediaChangeHandler;
 type MockMediaQueryList = {
   addEventListener?: ReturnType<typeof vi.fn>;
   addListener: ReturnType<typeof vi.fn>;
   dispatchEvent: ReturnType<typeof vi.fn>;
   matches: boolean;
   media: string;
-  onchange: ((event: MediaQueryListEvent) => void) | null;
+  onchange: MatchMediaChangeHandler | null;
   removeEventListener?: ReturnType<typeof vi.fn>;
   removeListener: ReturnType<typeof vi.fn>;
 };
@@ -40,7 +42,7 @@ function installMatchMedia(matches = false, legacy = false) {
     dispatchEvent: vi.fn(),
     matches,
     media: '',
-    onchange: null as ((event: MediaQueryListEvent) => void) | null,
+    onchange: null as MatchMediaChangeHandler | null,
     removeListener: vi.fn((listener: MatchMediaListener) => {
       listeners.delete(listener);
     }),
