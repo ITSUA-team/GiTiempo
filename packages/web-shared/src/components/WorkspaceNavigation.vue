@@ -18,11 +18,9 @@ function isActive(name: string): boolean {
   return props.activeName === name;
 }
 
-function dismissTooltip(event: MouseEvent): void {
+function clearLinkFocus(event: MouseEvent): void {
   if (!(event.currentTarget instanceof HTMLElement)) return;
 
-  event.currentTarget.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
-  event.currentTarget.dispatchEvent(new MouseEvent("pointerleave", { bubbles: true }));
   event.currentTarget.blur();
 }
 </script>
@@ -45,7 +43,7 @@ function dismissTooltip(event: MouseEvent): void {
             ? 'border-brand bg-accent-tint text-brand border-l-[3px] font-semibold'
             : 'text-text-muted hover:bg-app-bg',
         ]"
-        @click="dismissTooltip"
+        @click="clearLinkFocus"
       >
         <component
           :is="item.icon"
@@ -72,7 +70,7 @@ function dismissTooltip(event: MouseEvent): void {
           ? 'border-brand bg-accent-tint text-brand'
           : 'text-text-muted hover:bg-app-bg border-transparent',
       ]"
-      @click="dismissTooltip"
+      @click="clearLinkFocus"
     >
       <component
         :is="item.icon"

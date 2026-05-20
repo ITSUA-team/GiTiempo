@@ -128,7 +128,7 @@ describe("WorkspaceNavigation", () => {
     expect(wrapper.findAll('a[href="/settings"]')).toHaveLength(2);
   });
 
-  it("dismisses a visible desktop tooltip and clears link focus before navigating", async () => {
+  it("clears link focus before navigating", async () => {
     const router = createTestRouter();
     await router.push("/");
     await router.isReady();
@@ -158,13 +158,10 @@ describe("WorkspaceNavigation", () => {
     });
 
     const projectLink = wrapper.get("aside").get('a[href="/projects"]');
-    const leaveListener = vi.fn();
     const blurSpy = vi.spyOn(projectLink.element as HTMLAnchorElement, "blur");
-    projectLink.element.addEventListener("mouseleave", leaveListener);
 
     await projectLink.trigger("click");
 
-    expect(leaveListener).toHaveBeenCalledOnce();
     expect(blurSpy).toHaveBeenCalledOnce();
     expect(document.activeElement).not.toBe(projectLink.element);
   });
