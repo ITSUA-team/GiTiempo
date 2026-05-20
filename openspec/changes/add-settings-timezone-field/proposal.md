@@ -19,6 +19,7 @@ The Settings page currently omits the workspace time zone even though the worksp
 ### Modified Capabilities
 
 - `admin-pages`: Settings page requirements now include an editable time-zone selector sourced from existing API-supported workspace settings.
+- Archive sequencing: `add-admin-settings-page` introduces the Settings-specific `admin-settings-page` capability and MUST be archived before this change. If this change is archived first, add the equivalent Time zone delta for `admin-settings-page` before archiving to avoid final spec drift.
 
 ## Impact
 

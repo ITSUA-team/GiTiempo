@@ -37,10 +37,7 @@ import Skeleton from 'primevue/skeleton';
               border-radius="6px"
             />
 
-            <div
-              data-testid="settings-skeleton-time-zone"
-              class="flex flex-col gap-1.5"
-            >
+            <div class="flex flex-col gap-1.5">
               <Skeleton
                 width="7.5rem"
                 height="0.875rem"
@@ -78,7 +75,10 @@ import Skeleton from 'primevue/skeleton';
               </div>
             </div>
 
-            <div class="flex flex-col gap-1.5">
+            <div
+              data-testid="settings-skeleton-time-zone"
+              class="flex flex-col gap-1.5"
+            >
               <Skeleton
                 width="5rem"
                 height="0.875rem"

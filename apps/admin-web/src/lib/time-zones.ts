@@ -1,3 +1,5 @@
+import { updateWorkspaceSettingsSchema } from '@gitiempo/shared';
+
 export interface SettingsTimeZoneOption {
 	label: string;
 	value: string;
@@ -36,17 +38,8 @@ const FALLBACK_TIME_ZONES = [
 	'Europe/Warsaw',
 ] as const;
 
-const TIME_ZONE_NAME_PATTERN = /^(?:UTC|[A-Za-z_]+(?:\/[A-Za-z0-9_+.-]+)+)$/;
-
 function isValidTimeZoneName(timeZone: string): boolean {
-	if (!TIME_ZONE_NAME_PATTERN.test(timeZone)) return false;
-
-	try {
-		new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date(0));
-		return true;
-	} catch {
-		return false;
-	}
+	return updateWorkspaceSettingsSchema.safeParse({ timeZone }).success;
 }
 
 function getRuntimeTimeZones(): string[] | null {
