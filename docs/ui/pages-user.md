@@ -101,23 +101,28 @@
 - `/invites/accept?token=...` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
 - The invite accept page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
 - Use the approved `Invite Accept` `.pen` screen as the desktop parity source.
-- The left brand panel explains the invite-only onboarding flow: use invited email, accept invite, continue to dashboard.
-- The main panel title is `Accept invitation` with helper copy explaining that the user must authenticate with the invited email to join the workspace.
+- The left brand panel explains the invite-only onboarding flow: use invited email, create or sign in to a Firebase identity, accept invite, continue to dashboard.
+- The default main panel title is `Create account` with helper copy explaining that the user should create an account with the invited email to join the workspace.
 - If the `token` query parameter is present, show the soft accent token notice `Invite token detected from the email link.`
 - If the `token` query parameter is missing or empty, do not show the sign-in form. Render the invalid-link state with title `Invalid invite link`, helper copy that the link is missing or malformed, and a primary action to go to the login page.
-- The default form supports email/password Firebase sign-in with fields ordered `Email`, then `Password`, followed by the primary action `Accept invite`.
-- The secondary action is `Continue with Google`; it uses the same invite token and accepts the invite after Firebase returns an identity token.
-- The page MUST submit `POST /invites/accept` with `{ token, firebaseIdToken }` before trying to create an app API session for a first-time invited user.
+- The default form supports Firebase email/password account creation with fields ordered `Email`, `Password`, then `Confirm password`, followed by the primary action `Create account`.
+- The default create-account flow MUST use the Firebase client SDK to create the email/password account, then use the resulting Firebase ID token for invite acceptance.
+- The secondary account action is `Already have an account? Sign in`; it switches the same panel to email/password sign-in mode without dropping the invite token.
+- Sign-in mode uses fields ordered `Email`, then `Password`, followed by the primary action `Accept invite`, and includes `Create account instead` as the secondary mode switch.
+- `Continue with Google` may remain available as an alternative sign-in action; it uses the same invite token and accepts the invite after Firebase returns an identity token.
+- The page MUST submit `POST /invites/accept` with `{ token, firebaseIdToken }` after Firebase account creation or Firebase sign-in, before trying to create an app API session for a first-time invited user.
 - After `POST /invites/accept` returns `204`, the page signs in to the normal app session with the same Firebase identity token, then redirects to the dashboard.
 - While acceptance is in progress, keep the panel shape stable, show a loading state on the active action, and prevent duplicate submissions.
 - Success state copy is `Workspace access created. Redirecting to dashboard.` and may be brief because successful users are redirected.
 - API errors stay inline in the panel and use the backend error message when available. Required mapped cases: `Invite not found`, `Invite has expired`, `Invite cannot be accepted`, `Invite email does not match identity`, and `User is already a workspace member`.
+- Firebase account-creation errors stay inline in the panel. Required mapped cases: duplicate email switches to sign-in guidance while preserving the invite token, weak password keeps the create-account form visible, invalid email marks the email field, and too-many-requests keeps the form visible with retry guidance.
+- If Firebase account creation succeeds but `POST /invites/accept` fails, do not silently discard the state. Keep the panel in a recovery state that explains that the Firebase account exists but workspace access was not created, and offer the correct next action based on the backend error: retry for transient failures, switch account for email mismatch, or go to login/request a fresh invite for terminal invite failures.
 - For expired, missing, already-used, or not-found invite failures, show the invalid-link state and a login-page action instead of leaving the user on a retry-only form.
 - For email mismatch, keep the form visible, show the exact mismatch message inline, and allow the user to retry with the correct account.
 - For already-member, show a success-adjacent state that explains access already exists and offers the primary action `Sign in`.
 - Keep route-level invite errors distinct from authenticated in-shell request errors.
 - Use PrimeVue controls for inputs, buttons, inline messages, loading affordances, and toast feedback where applicable.
-- Query-driven invite accept flows must test missing token, success redirect, email mismatch retry, invalid/expired/already-used link handling, already-member handling, and URL cleanup after terminal outcomes.
+- Query-driven invite accept flows must test missing token, account-creation success redirect, duplicate-email sign-in fallback, weak-password validation, success redirect after sign-in, email mismatch retry, invalid/expired/already-used link handling, already-member handling, account-created-but-accept-failed recovery, and URL cleanup after terminal outcomes.
 
 ## Cross-App Navigation
 

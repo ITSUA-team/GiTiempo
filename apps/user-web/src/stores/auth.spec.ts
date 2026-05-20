@@ -129,6 +129,20 @@ describe("useAuthStore", () => {
     expect(authStore.profile?.email).toBe("alexey@example.com");
   });
 
+  it("logs in with a Firebase token and persists the token pair", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+
+    const authStore = useAuthStore();
+
+    await authStore.loginWithFirebaseToken("firebase-id-token");
+
+    expect(authStore.isAuthenticated).toBe(true);
+    expect(authStore.accessToken).toBe("access-token");
+    expect(getRefreshToken()).toBe("refresh-token-next");
+    expect(authStore.profile?.email).toBe("alexey@example.com");
+    expect(authStore.bootstrapComplete).toBe(true);
+  });
+
   it("clears stale local session state when login exchange fails", async () => {
     setRefreshToken("stale-refresh-token");
     setAuthRuntimeForTesting(

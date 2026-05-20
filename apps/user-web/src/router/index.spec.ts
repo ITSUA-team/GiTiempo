@@ -15,6 +15,7 @@ import {
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
 import ForbiddenView from "@/views/ForbiddenView.vue";
+import InviteAcceptView from "@/views/InviteAcceptView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
@@ -90,6 +91,20 @@ describe("app router auth guards", () => {
     expect(notFoundRoute.meta.requiresAuth).toBe(true);
     expect(notFoundRoute.matched).toHaveLength(1);
     expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
+  });
+
+  it("defines the standalone guest invite accept route outside the app shell", () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const inviteAcceptRoute = router.resolve("/invites/accept?token=invite-token");
+
+    expect(inviteAcceptRoute.name).toBe(routeNames.inviteAccept);
+    expect(inviteAcceptRoute.meta.guestOnly).toBe(true);
+    expect(inviteAcceptRoute.matched).toHaveLength(1);
+    expect(inviteAcceptRoute.matched[0]?.components?.default).toBe(InviteAcceptView);
   });
 
   it("redirects anonymous users from unknown routes to login", async () => {

@@ -20039,7 +20039,7 @@
                   "fill": "$color-text-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Sign in with the email address that received the invitation. GiTiempo will create your workspace membership after the invite is accepted.",
+                  "content": "Create an account with the email address that received the invitation, or sign in if you already have one. GiTiempo creates workspace access after the invite is accepted.",
                   "fontFamily": "Inter",
                   "fontSize": 16,
                   "fontWeight": "normal"
@@ -20102,7 +20102,7 @@
                               "fill": "$color-text-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Authenticate with the account that received the invite.",
+                              "content": "Create an account with the invited email, or sign in if the account already exists.",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "normal"
@@ -20161,7 +20161,7 @@
                               "fill": "$color-text-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "The app creates membership before starting a normal session.",
+                              "content": "The backend verifies the invite token and email before creating membership.",
                               "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "normal"
@@ -20252,7 +20252,7 @@
                   "type": "text",
                   "id": "j0dw1",
                   "fill": "$color-text-muted",
-                  "content": "Uses approved invite token",
+                  "content": "Creates Firebase account first",
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "500"
@@ -20262,7 +20262,7 @@
                   "id": "d0TZMb",
                   "name": "loginSwitch",
                   "fill": "#5D2B85",
-                  "content": "Already accepted? Sign in from the regular login page.",
+                  "content": "Already have an account? Sign in from this invite page.",
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "500"
@@ -20279,7 +20279,7 @@
           "height": "fill_container",
           "fill": "$color-app-bg",
           "layout": "vertical",
-          "padding": 48,
+          "padding": 40,
           "justifyContent": "center",
           "alignItems": "center",
           "children": [
@@ -20288,11 +20288,12 @@
               "id": "saV1H",
               "name": "acceptPanelDefault",
               "width": "fill_container",
+              "height": 760,
               "fill": "$color-surface",
               "cornerRadius": "$radius-lg",
               "layout": "vertical",
-              "gap": 18,
-              "padding": 24,
+              "gap": 14,
+              "padding": 20,
               "children": [
                 {
                   "type": "frame",
@@ -20306,7 +20307,7 @@
                       "type": "text",
                       "id": "m3ad3l",
                       "fill": "$color-text-dark",
-                      "content": "Accept invitation",
+                      "content": "Create account",
                       "fontFamily": "Inter",
                       "fontSize": 28,
                       "fontWeight": "600"
@@ -20317,7 +20318,7 @@
                       "fill": "$color-text-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Authenticate with the invited email to join the workspace.",
+                      "content": "Set a password for the invited email to join the workspace.",
                       "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "normal"
@@ -20453,6 +20454,53 @@
                 },
                 {
                   "type": "frame",
+                  "id": "oMPjz",
+                  "name": "confirmPasswordField",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "yoFY7",
+                      "fill": "$color-text-dark",
+                      "content": "Confirm password",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "u16Cmn",
+                      "width": "fill_container",
+                      "height": 42,
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$color-divider"
+                      },
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "D2wzT",
+                          "fill": "$color-text-dark",
+                          "content": "••••••••••",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "YNTNV",
                   "name": "inlineErrorExample",
                   "width": "fill_container",
@@ -20466,7 +20514,7 @@
                       "type": "text",
                       "id": "i5F09s",
                       "fill": "$color-status-error-text",
-                      "content": "Example error state",
+                      "content": "Existing account",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "600"
@@ -20475,7 +20523,7 @@
                       "type": "text",
                       "id": "qvWGS",
                       "fill": "$color-status-error-text",
-                      "content": "Invite email does not match identity.",
+                      "content": "An account already exists for this email. Sign in instead.",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -20488,7 +20536,7 @@
                   "name": "actions",
                   "width": "fill_container",
                   "layout": "vertical",
-                  "gap": 12,
+                  "gap": 8,
                   "children": [
                     {
                       "type": "frame",
@@ -20498,8 +20546,8 @@
                       "fill": "$color-brand",
                       "cornerRadius": "$radius-sm",
                       "padding": [
-                        12,
-                        16
+                        10,
+                        14
                       ],
                       "justifyContent": "center",
                       "children": [
@@ -20507,7 +20555,7 @@
                           "type": "text",
                           "id": "lRmZU",
                           "fill": "$color-surface",
-                          "content": "Accept invite",
+                          "content": "Create account",
                           "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "600"
@@ -20517,7 +20565,7 @@
                     {
                       "type": "frame",
                       "id": "H35wM",
-                      "name": "googleAccept",
+                      "name": "signInSwitch",
                       "width": "fill_container",
                       "fill": "$color-surface",
                       "cornerRadius": "$radius-sm",
@@ -20526,14 +20574,42 @@
                         "fill": "$color-divider"
                       },
                       "padding": [
-                        12,
-                        16
+                        10,
+                        14
                       ],
                       "justifyContent": "center",
                       "children": [
                         {
                           "type": "text",
                           "id": "AcIh6",
+                          "fill": "$color-text-dark",
+                          "content": "Already have an account? Sign in",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NITX5",
+                      "name": "googleAlternative",
+                      "width": "fill_container",
+                      "fill": "$color-surface",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$color-divider"
+                      },
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "C3BkO8",
                           "fill": "$color-text-dark",
                           "content": "Continue with Google",
                           "fontFamily": "Inter",
@@ -20550,7 +20626,7 @@
                   "fill": "$color-text-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "States: accepting, accepted, invalid link, expired link, email mismatch, already member.",
+                  "content": "States: creating account, accepting, accepted, duplicate email sign-in fallback, weak password, invalid link, expired link, email mismatch, already member, account-created accept failure.",
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"

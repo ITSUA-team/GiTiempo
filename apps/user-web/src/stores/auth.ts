@@ -98,17 +98,23 @@ export const useAuthStore = defineStore("auth", () => {
     return bootstrapPromise;
   }
 
-  async function loginWithEmailPassword(
-    email: string,
-    password: string,
+  async function runLoginFlow(
+    getFirebaseIdToken: () => Promise<string>,
   ): Promise<void> {
+    try {
+      const firebaseIdToken = await getFirebaseIdToken();
+      await loginWithFirebaseToken(firebaseIdToken);
+    } catch (error) {
+      clearSession();
+      bootstrapComplete.value = true;
+      throw error;
+    }
+  }
+
+  async function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
     isSubmitting.value = true;
 
     try {
-      const firebaseIdToken = await getAuthRuntime().signInWithEmailPassword(
-        email,
-        password,
-      );
       const tokenPair =
         await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
 
@@ -124,24 +130,17 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function loginWithEmailPassword(
+    email: string,
+    password: string,
+  ): Promise<void> {
+    await runLoginFlow(() =>
+      getAuthRuntime().signInWithEmailPassword(email, password),
+    );
+  }
+
   async function loginWithGoogle(): Promise<void> {
-    isSubmitting.value = true;
-
-    try {
-      const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
-      const tokenPair =
-        await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
-
-      applyTokenPair(accessToken, tokenPair);
-      await loadCurrentUser(tokenPair.accessToken);
-      bootstrapComplete.value = true;
-    } catch (error) {
-      clearSession();
-      bootstrapComplete.value = true;
-      throw error;
-    } finally {
-      isSubmitting.value = false;
-    }
+    await runLoginFlow(() => getAuthRuntime().signInWithGoogle());
   }
 
   async function logout(): Promise<void> {
@@ -194,6 +193,7 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated,
     isBootstrapping,
     isSubmitting,
+    loginWithFirebaseToken,
     loginWithEmailPassword,
     loginWithGoogle,
     logout,
