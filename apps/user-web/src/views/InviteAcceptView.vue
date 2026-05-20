@@ -1,24 +1,42 @@
 <script setup lang="ts">
+import { computed, nextTick, onMounted, shallowRef, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { z } from "zod";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Message from "primevue/message";
 import Password from "primevue/password";
+import { useToast } from "primevue/usetoast";
 import {
   createAppToast,
   emailPasswordSignInSchema,
   getErrorMessage,
 } from "@gitiempo/web-shared";
-import { computed, onMounted, shallowRef, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { useToast } from "primevue/usetoast";
 
 import { routeNames } from "@/router";
 import { getAuthRuntime } from "@/services/auth-runtime";
 import { getWorkspaceInvitesClient } from "@/services/workspace-invites-client";
 import { useAuthStore } from "@/stores/auth";
 
-type TerminalState = "already-member" | "invalid-link";
+type AuthMode = "create-account" | "sign-in";
 type SubmitAction = "email" | "google";
+type TerminalState = "already-member" | "invalid-link";
+
+const createAccountSchema = z
+  .object({
+    email: z.string().trim().pipe(z.email("Enter a valid email address.")),
+    password: z.string().min(6, "Password must be at least 6 characters."),
+    confirmPassword: z.string().min(1, "Confirm your password."),
+  })
+  .superRefine(({ confirmPassword, password }, ctx) => {
+    if (password !== confirmPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Passwords do not match.",
+        path: ["confirmPassword"],
+      });
+    }
+  });
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -26,10 +44,13 @@ const router = useRouter();
 const toast = useToast();
 const appToast = createAppToast(toast);
 
+const authMode = shallowRef<AuthMode>("create-account");
 const email = shallowRef("");
 const password = shallowRef("");
+const confirmPassword = shallowRef("");
 const emailErrorMessage = shallowRef<string | null>(null);
 const passwordErrorMessage = shallowRef<string | null>(null);
+const confirmPasswordErrorMessage = shallowRef<string | null>(null);
 const inlineErrorMessage = shallowRef<string | null>(null);
 const activeAction = shallowRef<SubmitAction | null>(null);
 const isRedirecting = shallowRef(false);
@@ -38,13 +59,21 @@ const terminalMessage = shallowRef<string | null>(null);
 const passwordInputProps: Record<string, string> = {
   "data-testid": "invite-accept-password",
 };
+const confirmPasswordInputProps: Record<string, string> = {
+  "data-testid": "invite-accept-confirm-password",
+};
+
+let suppressFeedbackReset = false;
+
 const inviteSteps = [
   {
-    description: "Authenticate with the account that received the invite.",
+    description:
+      "Create an account with the invited email, or sign in if the account already exists.",
     title: "Use invited email",
   },
   {
-    description: "The app creates membership before starting a normal session.",
+    description:
+      "The backend verifies the invite token and email before creating membership.",
     title: "Accept invite",
   },
   {
@@ -58,6 +87,7 @@ const inviteToken = computed(() => {
 
   return typeof token === "string" ? token.trim() : "";
 });
+const isCreateAccountMode = computed(() => authMode.value === "create-account");
 const isBusy = computed(
   () => activeAction.value !== null || isRedirecting.value || authStore.isSubmitting,
 );
@@ -68,6 +98,22 @@ const panelState = computed<"already-member" | "form" | "invalid-link">(() => {
 
   return inviteToken.value ? "form" : "invalid-link";
 });
+const panelTitle = computed(() =>
+  isCreateAccountMode.value ? "Create account" : "Accept invite",
+);
+const panelDescription = computed(() =>
+  isCreateAccountMode.value
+    ? "Set a password for the invited email to join the workspace."
+    : "Authenticate with the invited email to join the workspace.",
+);
+const primaryActionLabel = computed(() =>
+  isCreateAccountMode.value ? "Create account" : "Accept invite",
+);
+const modeSwitchLabel = computed(() =>
+  isCreateAccountMode.value
+    ? "Already have an account? Sign in"
+    : "Create account instead",
+);
 const invalidLinkCopy = computed(() => {
   if (terminalMessage.value) {
     return `${terminalMessage.value} Return to the login page and request a fresh invite if needed.`;
@@ -76,9 +122,14 @@ const invalidLinkCopy = computed(() => {
   return "This invite link is missing or malformed. Return to the login page and request a fresh invite if needed.";
 });
 
-watch([email, password], () => {
+watch([authMode, email, password, confirmPassword], () => {
+  if (suppressFeedbackReset) {
+    return;
+  }
+
   emailErrorMessage.value = null;
   passwordErrorMessage.value = null;
+  confirmPasswordErrorMessage.value = null;
   inlineErrorMessage.value = null;
 });
 
@@ -87,6 +138,19 @@ onMounted(() => {
     void clearInviteQuery();
   }
 });
+
+function getFirebaseErrorCode(error: unknown): string | null {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return error.code;
+  }
+
+  return null;
+}
 
 function goToLogin(): void {
   void router.push({ name: routeNames.login });
@@ -98,9 +162,61 @@ async function clearInviteQuery(): Promise<void> {
   }
 }
 
-function validateCredentials(): boolean {
+function resetFieldErrors(): void {
   emailErrorMessage.value = null;
   passwordErrorMessage.value = null;
+  confirmPasswordErrorMessage.value = null;
+}
+
+function switchAuthMode(nextMode: AuthMode, clearPasswords = true): void {
+  suppressFeedbackReset = true;
+  authMode.value = nextMode;
+  terminalState.value = null;
+  terminalMessage.value = null;
+  resetFieldErrors();
+
+  if (clearPasswords) {
+    password.value = "";
+    confirmPassword.value = "";
+  }
+
+  void nextTick(() => {
+    suppressFeedbackReset = false;
+  });
+}
+
+function validateCreateAccount(): boolean {
+  resetFieldErrors();
+
+  const parsed = createAccountSchema.safeParse({
+    confirmPassword: confirmPassword.value,
+    email: email.value,
+    password: password.value,
+  });
+
+  if (parsed.success) {
+    return true;
+  }
+
+  for (const issue of parsed.error.issues) {
+    if (issue.path[0] === "email") {
+      emailErrorMessage.value = issue.message;
+    }
+
+    if (issue.path[0] === "password") {
+      passwordErrorMessage.value = issue.message;
+    }
+
+    if (issue.path[0] === "confirmPassword") {
+      confirmPasswordErrorMessage.value = issue.message;
+    }
+  }
+
+  return false;
+}
+
+function validateSignIn(): boolean {
+  resetFieldErrors();
 
   const parsed = emailPasswordSignInSchema.safeParse({
     email: email.value,
@@ -132,15 +248,28 @@ async function signOutIdentityProvider(): Promise<void> {
   }
 }
 
-async function handleInviteFailure(error: unknown): Promise<void> {
+async function handleInviteFailure(
+  error: unknown,
+  { accountCreated = false }: { accountCreated?: boolean } = {},
+): Promise<void> {
   const message = getErrorMessage(error, "Could not accept invitation.");
 
-  await signOutIdentityProvider();
+  if (!accountCreated) {
+    await signOutIdentityProvider();
+  }
 
   if (message === "Invite email does not match identity") {
-    inlineErrorMessage.value = message;
+    if (accountCreated) {
+      switchAuthMode("sign-in");
+      inlineErrorMessage.value =
+        "The account was created, but the invite email does not match identity. Sign in with the invited account.";
+      await signOutIdentityProvider();
+    } else {
+      inlineErrorMessage.value = message;
+    }
+
     appToast.showErrorToast({
-      detail: message,
+      detail: inlineErrorMessage.value ?? message,
       error,
       logContext: { action: "accept-invite", feature: "invite-accept" },
       summary: "Could not accept invite",
@@ -154,10 +283,17 @@ async function handleInviteFailure(error: unknown): Promise<void> {
     message === "Invite cannot be accepted"
   ) {
     terminalState.value = "invalid-link";
-    terminalMessage.value = message;
+    terminalMessage.value = accountCreated
+      ? `${message}. Your account was created, but workspace access was not granted.`
+      : message;
     await clearInviteQuery();
+
+    if (accountCreated) {
+      await signOutIdentityProvider();
+    }
+
     appToast.showErrorToast({
-      detail: message,
+      detail: terminalMessage.value,
       error,
       logContext: { action: "accept-invite", feature: "invite-accept" },
       summary: "Invite link is not usable",
@@ -167,18 +303,33 @@ async function handleInviteFailure(error: unknown): Promise<void> {
 
   if (message === "User is already a workspace member") {
     terminalState.value = "already-member";
-    terminalMessage.value = null;
+    terminalMessage.value = accountCreated
+      ? "Your account already has workspace access. Sign in to continue."
+      : null;
     await clearInviteQuery();
+
+    if (accountCreated) {
+      await signOutIdentityProvider();
+    }
+
     appToast.showInfoToast(
       "Workspace access already exists",
-      "Sign in to continue to your dashboard.",
+      terminalMessage.value ?? "Sign in to continue to your dashboard.",
     );
     return;
   }
 
-  inlineErrorMessage.value = message;
+  if (accountCreated) {
+    switchAuthMode("sign-in");
+    inlineErrorMessage.value =
+      `Your account was created, but workspace access could not be granted yet. ${message}`;
+    await signOutIdentityProvider();
+  } else {
+    inlineErrorMessage.value = message;
+  }
+
   appToast.showErrorToast({
-    detail: message,
+    detail: inlineErrorMessage.value ?? message,
     error,
     logContext: { action: "accept-invite", feature: "invite-accept" },
     summary: "Could not accept invite",
@@ -188,6 +339,7 @@ async function handleInviteFailure(error: unknown): Promise<void> {
 async function completeInviteAcceptance(
   firebaseIdToken: string,
   action: SubmitAction,
+  { accountCreated = false }: { accountCreated?: boolean } = {},
 ): Promise<void> {
   activeAction.value = action;
   inlineErrorMessage.value = null;
@@ -227,17 +379,86 @@ async function completeInviteAcceptance(
       return;
     }
 
-    await handleInviteFailure(error);
+    await handleInviteFailure(error, { accountCreated });
   } finally {
     activeAction.value = null;
     isRedirecting.value = false;
   }
 }
 
-async function handleEmailAccept(): Promise<void> {
-  if (!inviteToken.value || !validateCredentials()) {
+function handleAccountCreationError(error: unknown): void {
+  const code = getFirebaseErrorCode(error);
+
+  if (code === "auth/email-already-in-use") {
+    switchAuthMode("sign-in");
+    inlineErrorMessage.value = "An account already exists for this email. Sign in instead.";
+    appToast.showInfoToast("Account already exists", inlineErrorMessage.value);
     return;
   }
+
+  if (code === "auth/weak-password") {
+    passwordErrorMessage.value = "Password must be at least 6 characters.";
+  }
+
+  if (code === "auth/invalid-email") {
+    emailErrorMessage.value = "Enter a valid email address.";
+  }
+
+  if (code === "auth/too-many-requests") {
+    inlineErrorMessage.value = "Too many attempts. Please wait and try again.";
+  }
+
+  if (code === "auth/network-request-failed") {
+    inlineErrorMessage.value =
+      "Could not create account because the network request failed. Please try again.";
+  }
+
+  const detail =
+    inlineErrorMessage.value ??
+    passwordErrorMessage.value ??
+    emailErrorMessage.value ??
+    getErrorMessage(error, "Could not create account.");
+
+  appToast.showErrorToast({
+    detail,
+    error,
+    logContext: { action: "create-account", feature: "invite-accept" },
+    summary: "Could not create account",
+  });
+}
+
+async function handleCreateAccountAccept(): Promise<void> {
+  if (!inviteToken.value || !validateCreateAccount()) {
+    return;
+  }
+
+  activeAction.value = "email";
+  inlineErrorMessage.value = null;
+  terminalState.value = null;
+  terminalMessage.value = null;
+
+  try {
+    const firebaseIdToken = await getAuthRuntime().createAccountWithEmailPassword(
+      email.value,
+      password.value,
+    );
+    await completeInviteAcceptance(firebaseIdToken, "email", { accountCreated: true });
+  } catch (error) {
+    handleAccountCreationError(error);
+  } finally {
+    if (!isRedirecting.value) {
+      activeAction.value = null;
+    }
+  }
+}
+
+async function handleEmailAccept(): Promise<void> {
+  if (!inviteToken.value || !validateSignIn()) {
+    return;
+  }
+
+  activeAction.value = "email";
+  inlineErrorMessage.value = null;
 
   try {
     const firebaseIdToken = await getAuthRuntime().signInWithEmailPassword(
@@ -257,7 +478,20 @@ async function handleEmailAccept(): Promise<void> {
       logContext: { action: "sign-in", feature: "invite-accept" },
       summary: "Could not sign in",
     });
+  } finally {
+    if (!isRedirecting.value) {
+      activeAction.value = null;
+    }
   }
+}
+
+async function handlePrimarySubmit(): Promise<void> {
+  if (isCreateAccountMode.value) {
+    await handleCreateAccountAccept();
+    return;
+  }
+
+  await handleEmailAccept();
 }
 
 async function handleGoogleAccept(): Promise<void> {
@@ -272,10 +506,7 @@ async function handleGoogleAccept(): Promise<void> {
     const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
     await completeInviteAcceptance(firebaseIdToken, "google");
   } catch (error) {
-    const message = getErrorMessage(
-      error,
-      "Could not authenticate with Google.",
-    );
+    const message = getErrorMessage(error, "Could not authenticate with Google.");
     inlineErrorMessage.value = message;
     appToast.showErrorToast({
       detail: message,
@@ -318,8 +549,9 @@ async function handleGoogleAccept(): Promise<void> {
             Join your team workspace.
           </h1>
           <p class="text-text-muted max-w-[34rem] text-base leading-7">
-            Sign in with the email address that received the invitation. GiTiempo
-            will create your workspace membership after the invite is accepted.
+            Create an account with the email address that received the invitation,
+            or sign in if you already have one. GiTiempo creates workspace access
+            after the invite is accepted.
           </p>
 
           <div class="flex flex-col gap-2.5">
@@ -347,28 +579,28 @@ async function handleGoogleAccept(): Promise<void> {
 
         <div class="text-text-muted flex flex-wrap gap-4 text-xs font-medium">
           <span>Invite-only onboarding</span>
-          <span>Uses approved invite token</span>
+          <span>Creates Firebase account first</span>
           <button
             type="button"
             class="text-brand text-left transition hover:underline"
             @click="goToLogin"
           >
-            Already accepted? Sign in from the regular login page.
+            Already have an account? Sign in from this invite page.
           </button>
         </div>
       </section>
 
       <section
-        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
+        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-10 lg:py-10"
       >
-        <div class="bg-surface shadow-card flex w-full flex-col gap-[18px] rounded-lg p-6">
+        <div class="bg-surface shadow-card flex w-full flex-col gap-3.5 rounded-lg p-5">
           <template v-if="panelState === 'form'">
             <div class="flex flex-col gap-1.5">
               <h2 class="text-text-dark text-[28px] font-semibold">
-                Accept invitation
+                {{ panelTitle }}
               </h2>
               <p class="text-text-muted text-sm">
-                Authenticate with the invited email to join the workspace.
+                {{ panelDescription }}
               </p>
             </div>
 
@@ -381,7 +613,7 @@ async function handleGoogleAccept(): Promise<void> {
 
             <form
               class="flex flex-col gap-4"
-              @submit.prevent="handleEmailAccept"
+              @submit.prevent="handlePrimarySubmit"
             >
               <div class="flex flex-col gap-1">
                 <label
@@ -422,7 +654,7 @@ async function handleGoogleAccept(): Promise<void> {
                 <Password
                   v-model="password"
                   input-id="invite-accept-password"
-                  autocomplete="current-password"
+                  :autocomplete="isCreateAccountMode ? 'new-password' : 'current-password'"
                   placeholder="••••••••••"
                   :feedback="false"
                   :toggle-mask="false"
@@ -442,26 +674,63 @@ async function handleGoogleAccept(): Promise<void> {
                 </Message>
               </div>
 
-              <p
+              <div
+                v-if="isCreateAccountMode"
+                class="flex flex-col gap-1"
+              >
+                <label
+                  for="invite-accept-confirm-password"
+                  class="text-text-dark text-[13px] font-medium"
+                >
+                  Confirm password
+                </label>
+                <Password
+                  v-model="confirmPassword"
+                  input-id="invite-accept-confirm-password"
+                  autocomplete="new-password"
+                  placeholder="••••••••••"
+                  :feedback="false"
+                  :toggle-mask="false"
+                  :invalid="!!confirmPasswordErrorMessage"
+                  fluid
+                  input-class="h-[42px] w-full"
+                  :input-props="confirmPasswordInputProps"
+                />
+                <Message
+                  v-if="confirmPasswordErrorMessage"
+                  severity="error"
+                  size="small"
+                  variant="simple"
+                  class="text-xs"
+                >
+                  {{ confirmPasswordErrorMessage }}
+                </Message>
+              </div>
+
+              <Message
                 v-if="inlineErrorMessage"
-                class="border-destructive/20 bg-destructive/5 text-destructive rounded-sm border px-3 py-2 text-sm"
+                severity="error"
+                size="small"
+                class="text-sm"
                 data-testid="invite-accept-error"
               >
                 {{ inlineErrorMessage }}
-              </p>
+              </Message>
 
-              <p
+              <Message
                 v-if="isRedirecting"
-                class="rounded-sm border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+                severity="success"
+                size="small"
+                class="text-sm"
               >
                 Workspace access created. Redirecting to dashboard.
-              </p>
+              </Message>
 
-              <div class="flex flex-col gap-3 pt-1">
+              <div class="flex flex-col gap-2 pt-1">
                 <Button
                   type="submit"
-                  label="Accept invite"
-                  class="h-11"
+                  :label="primaryActionLabel"
+                  class="h-10"
                   :loading="activeAction === 'email' || isRedirecting"
                   :disabled="isBusy"
                   data-testid="invite-accept-submit"
@@ -469,10 +738,21 @@ async function handleGoogleAccept(): Promise<void> {
 
                 <Button
                   type="button"
+                  :label="modeSwitchLabel"
+                  severity="secondary"
+                  variant="outlined"
+                  class="h-10"
+                  :disabled="isBusy"
+                  data-testid="invite-accept-mode-switch"
+                  @click="switchAuthMode(isCreateAccountMode ? 'sign-in' : 'create-account')"
+                />
+
+                <Button
+                  type="button"
                   label="Continue with Google"
                   severity="secondary"
                   variant="outlined"
-                  class="h-11"
+                  class="h-10"
                   :loading="activeAction === 'google' && !isRedirecting"
                   :disabled="isBusy"
                   data-testid="invite-accept-google"
@@ -494,7 +774,7 @@ async function handleGoogleAccept(): Promise<void> {
 
             <Button
               label="Sign in"
-              class="h-11"
+              class="h-10"
               data-testid="invite-accept-sign-in"
               @click="goToLogin"
             />
@@ -512,7 +792,7 @@ async function handleGoogleAccept(): Promise<void> {
 
             <Button
               label="Go to login"
-              class="h-11"
+              class="h-10"
               data-testid="invite-accept-login"
               @click="goToLogin"
             />

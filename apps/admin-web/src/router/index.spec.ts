@@ -29,6 +29,7 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   };
 
   return {
+    createAccountWithEmailPassword: async () => "firebase-created-account-token",
     getCurrentUser: async () => currentUser,
     loginWithFirebaseToken: async () => ({
       accessToken: "access-token",
