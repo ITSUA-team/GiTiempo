@@ -58,8 +58,12 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
             '<button :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Dialog: {
+          props: {
+            blockScroll: { type: Boolean },
+            pt: { type: Object, required: true },
+          },
           template:
-            '<div><slot name="header" /><slot /><slot name="footer" /></div>',
+            '<div data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-content-class="pt.content" :data-footer-class="pt.footer" :data-root-class="pt.root"><slot name="header" /><slot /><slot name="footer" /></div>',
         },
         InputText: {
           props: ["modelValue", "disabled", "invalid"],
@@ -150,5 +154,35 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.text()).toContain("Task title is required.");
     expect(confirmButton?.attributes("disabled")).toBeDefined();
+  });
+
+  it("uses mobile-friendly dialog sizing, scrolling, and stacked action rows", () => {
+    const wrapper = mountDialog();
+    const dialog = wrapper.get('[data-testid="timer-task-dialog"]');
+    const createTaskActions = wrapper.get(
+      '[data-testid="top-bar-timer-create-task-actions"]',
+    );
+    const footer = wrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]');
+    const createTaskButton = wrapper
+      .findAll("button")
+      .find((button) => button.text() === "Create task");
+    const confirmButton = wrapper
+      .findAll("button")
+      .find((button) => button.text() === "Use selected task");
+
+    expect(dialog.attributes("data-block-scroll")).toBe("true");
+    expect(dialog.attributes("data-root-class")).toContain(
+      "w-[calc(100vw-1rem)]",
+    );
+    expect(dialog.attributes("data-root-class")).toContain(
+      "sm:w-[min(560px,calc(100vw-2rem))]",
+    );
+    expect(dialog.attributes("data-content-class")).toContain("overflow-y-auto");
+    expect(createTaskActions.classes()).toContain("flex-col");
+    expect(createTaskActions.classes()).toContain("sm:flex-row");
+    expect(footer.classes()).toContain("flex-col");
+    expect(footer.classes()).toContain("sm:flex-row");
+    expect(createTaskButton?.classes()).toContain("w-full");
+    expect(confirmButton?.classes()).toContain("w-full");
   });
 });

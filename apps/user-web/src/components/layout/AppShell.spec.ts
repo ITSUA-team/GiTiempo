@@ -65,7 +65,8 @@ describe("AppShell", () => {
     expect(workspaceLink.text()).toBe("Admin workspace");
     expect(wrapper.find('[aria-label="Open profile settings"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="dashboard-overview"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="top-bar-timer"]')).toHaveLength(1);
     expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Time Entries"]')).toHaveLength(2);
     expect(profileLinks).toHaveLength(2);

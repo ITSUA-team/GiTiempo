@@ -32,10 +32,13 @@ describe("WorkspaceHeader", () => {
       "Admin workspace",
     );
     expect(wrapper.findAll("[aria-label]")).toHaveLength(1);
+    expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(
+      false,
+    );
     expect(wrapper.text()).not.toContain("Running timer");
   });
 
-  it("renders app-owned center slot content", () => {
+  it("renders app-owned center slot content in the responsive center row", () => {
     const wrapper = mount(WorkspaceHeader, {
       props: baseProps,
       slots: {
@@ -47,9 +50,13 @@ describe("WorkspaceHeader", () => {
       },
     });
 
+    const centerRow = wrapper.get('[data-testid="workspace-header-center-row"]');
     const centerSlot = wrapper.get('[data-testid="header-center-slot"]');
 
+    expect(centerRow.classes()).toContain("row-start-2");
+    expect(centerRow.classes()).toContain("sm:row-start-1");
     expect(centerSlot.text()).toBe("Running timer");
+    expect(wrapper.findAll('[data-testid="header-center-slot"]')).toHaveLength(1);
     expect(wrapper.text()).toContain("Alexey Tsukanov");
   });
 });

@@ -18,7 +18,7 @@
 ## Global Top-Bar Timer
 
 - There is no dedicated Timer page in the authenticated `user-web` MVP navigation.
-- Authenticated top bar: every authenticated `user-web` page shows the compact timer surface.
+- Authenticated shell: every authenticated `user-web` page shows the compact timer surface on tablet and desktop, and the selected full-width mobile timer strip below `640px`.
 - Running top-bar state: show live `HH:MM:SS`, current `Project / Task`, clickable task information, and a stop action.
 - Not-running top-bar state: show the last tracked task context, clickable task information, and a start action that creates a new time entry for that task.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
@@ -28,6 +28,8 @@
 - While the top-bar timer summary is loading, keep the layout visible and disable the action.
 - If the top-bar timer summary fails to load, keep the layout visible in a disabled fallback state and surface the failure through toast feedback.
 - Clicking the task information field opens the centered task-picker dialog.
+- On mobile, the Start/Stop action and Change task affordance live in the left side of the strip so they remain reachable when the profile menu opens from the top-right identity area.
+- On mobile, task status, running elapsed time, and `Project / Task` context render as right-side metadata; the Change action remains the guaranteed task-picker entry point if metadata is partially covered.
 - The task-picker dialog uses visible Project -> Task selection only.
 - The dialog also supports creating a new task inside the currently selected visible project.
 - The dialog does not support creating a new project.

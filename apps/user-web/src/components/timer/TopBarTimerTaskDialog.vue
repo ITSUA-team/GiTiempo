@@ -58,13 +58,14 @@ const createTaskTitleModel = computed({
 <template>
   <Dialog
     modal
+    block-scroll
     :dismissable-mask="true"
     :draggable="false"
     :pt="{
-      root: 'w-[min(560px,calc(100vw-2rem))] rounded-lg border border-divider',
-      header: 'px-6 pt-6 pb-0',
-      content: 'px-6 pb-6 pt-4',
-      footer: 'px-6 pb-6 pt-0',
+      root: 'max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-divider sm:w-[min(560px,calc(100vw-2rem))]',
+      header: 'px-4 pt-4 pb-0 sm:px-6 sm:pt-6',
+      content: 'max-h-[calc(100vh-13rem)] overflow-y-auto px-4 pb-4 pt-4 sm:px-6 sm:pb-6',
+      footer: 'px-4 pb-4 pt-0 sm:px-6 sm:pb-6',
     }"
     :visible="props.isOpen"
     @update:visible="emit('close')"
@@ -202,12 +203,16 @@ const createTaskTitleModel = computed({
             </small>
           </div>
 
-          <div class="flex items-center justify-between gap-3">
+          <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            data-testid="top-bar-timer-create-task-actions"
+          >
             <p class="text-text-muted text-xs">
               {{ props.selectedProjectId ? 'The new task is created in the selected project only.' : 'Select a project first.' }}
             </p>
             <Button
               type="button"
+              class="w-full sm:w-auto"
               severity="secondary"
               :disabled="props.isCreateTaskDisabled"
               label="Create task"
@@ -220,9 +225,13 @@ const createTaskTitleModel = computed({
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
+      <div
+        class="flex flex-col gap-2 sm:flex-row sm:justify-end"
+        data-testid="top-bar-timer-task-dialog-footer"
+      >
         <Button
           type="button"
+          class="w-full sm:w-auto"
           label="Cancel"
           severity="secondary"
           text
@@ -230,6 +239,7 @@ const createTaskTitleModel = computed({
         />
         <Button
           type="button"
+          class="w-full sm:w-auto"
           :disabled="props.isConfirmSelectionDisabled"
           label="Use selected task"
           @click="emit('confirm')"

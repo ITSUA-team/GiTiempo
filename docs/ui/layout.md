@@ -14,7 +14,7 @@ User SPA and Admin SPA share the same shell:
 ### Top Bar
 
 - Left: product logo and workspace name.
-- Center: every authenticated `user-web` page top bar shows the compact timer surface. This requirement does not apply to `admin-web`.
+- Center: every authenticated `user-web` page top bar shows the compact timer surface on tablet and desktop. Below `640px`, the same timer ownership moves into a full-width strip directly below the mobile top row. This requirement does not apply to `admin-web`.
 - The task information field inside the compact timer surface is always clickable and opens the centered task-picker dialog.
 - Running state: show live `HH:MM:SS`, current `Project / Task`, clickable task information, and a single stop action.
 - Not-running state: show the last tracked task context, clickable task information, and a start action that creates a new time entry for that task.
@@ -22,6 +22,8 @@ User SPA and Admin SPA share the same shell:
 - If there is no eligible last tracked task context, keep the same compact surface, keep the task information field clickable, and disable the start action.
 - While the timer summary is still loading, keep the compact surface rendered with a disabled action.
 - If the timer summary fails to load, keep the compact surface rendered in a disabled fallback state and surface the failure through the standard toast flow.
+- Mobile timer strip: place the Start/Stop action and Change task action in a left-side vertical stack, and render timer status, elapsed running time, and `Project / Task` metadata on the right.
+- The mobile timer actions must remain outside the top-right profile menu area; if the profile menu overlaps any timer content, only non-critical task metadata may be covered.
 - Right: counterpart workspace link, user avatar, and display name.
 - When both SPAs exist, include a visible cross-link to the counterpart workspace in the top-right identity area so users can move between user-web and admin-web without changing URLs manually.
 

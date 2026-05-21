@@ -172,6 +172,7 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - The create-task form uses a single required task-title field backed by the existing task-create contract.
 - When task creation succeeds, keep the dialog open with the new task selected and let the user confirm with `Use selected task`.
 - The dialog must clearly separate task selection from task creation so the user always knows whether they are picking an existing task or creating a new one.
+- On mobile, keep the task-picker dialog near full width, block background scroll, make the dialog content scrollable, and stack create/confirm action rows so Project -> Task selection remains usable in the mobile timer flow.
 - Loading, empty, validation-error, and request-error states must stay distinct.
 - The dialog must not include manual interval entry controls; manual entry remains on Time Entries only.
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
