@@ -5,8 +5,8 @@ The authenticated top-bar profile area currently exposes identity and sign-out a
 ## What Changes
 
 - Add a profile/avatar dropdown to authenticated shell headers in both `user-web` and `admin-web`.
-- Show two menu actions in the dropdown: `Settings` and `Sign out`.
-- Route `Settings` to the app-appropriate settings/profile destination.
+- Show two menu actions in the dropdown: user-web uses `Profile` with the profile nav icon plus `Sign out`, and admin-web uses `Settings` plus `Sign out`.
+- Route the first action to the app-appropriate settings/profile destination.
 - Run `Sign out` through each app's existing logout cleanup flow and redirect to that app's login route.
 - Preserve existing top-bar layout behavior, including the user-web compact timer center region and admin-web scope display.
 

@@ -61,6 +61,8 @@ describe("AppShell", () => {
               "counterpartHref",
               "counterpartLabel",
               "displayName",
+              "settingsIcon",
+              "settingsLabel",
               "settingsTo",
               "userInitials",
               "workspaceName",
@@ -70,7 +72,8 @@ describe("AppShell", () => {
               <header>
                 <a :href="counterpartHref">{{ counterpartLabel }}</a>
                 <slot name="center" />
-                <RouterLink data-testid="profile-menu-settings" :to="settingsTo">Settings</RouterLink>
+                <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
+                <RouterLink data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
                 <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
               </header>
             `,
@@ -86,6 +89,8 @@ describe("AppShell", () => {
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
 
     expect(workspaceLink.text()).toBe("Admin workspace");
+    expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
+    expect(settingsLink.text()).toBe("Profile");
     expect(settingsLink.attributes("href")).toBe("/profile");
     expect(wrapper.find('[data-testid="dashboard-overview"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);

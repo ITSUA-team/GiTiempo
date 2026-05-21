@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef, useTemplateRef } from "vue";
+import { computed, shallowRef, useTemplateRef, type Component } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import { RouterLink } from "vue-router";
 import Avatar from "primevue/avatar";
@@ -15,6 +15,8 @@ const props = withDefaults(
     counterpartLabel: string;
     displayName: string;
     productName?: string;
+    settingsIcon?: Component;
+    settingsLabel?: string;
     settingsTo: RouteLocationRaw;
     userInitials: string;
     workspaceName: string;
@@ -22,6 +24,8 @@ const props = withDefaults(
   }>(),
   {
     productName: "GiTiempo",
+    settingsIcon: undefined,
+    settingsLabel: "Settings",
     workspaceShortName: "GT",
   },
 );
@@ -54,7 +58,7 @@ const profileAvatarRootClass = computed(() =>
 const profileMenuItems = computed(() => [
   {
     key: "settings",
-    label: "Settings",
+    label: props.settingsLabel,
     route: props.settingsTo,
   },
   {
@@ -187,8 +191,15 @@ function handleSettingsClick(
                 class="bg-app-bg text-text-muted flex size-7 items-center justify-center rounded-sm"
                 aria-hidden="true"
               >
-                <svg
+                <component
+                  :is="props.settingsIcon"
+                  v-if="props.settingsIcon"
                   class="size-4"
+                />
+                <svg
+                  v-else
+                  class="size-4"
+                  data-testid="profile-menu-settings-icon"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"

@@ -4,7 +4,13 @@
 import { mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
 import { afterEach, describe, expect, it } from "vitest";
-import { defineComponent, h, shallowRef, type PropType } from "vue";
+import {
+  defineComponent,
+  h,
+  shallowRef,
+  type Component,
+  type PropType,
+} from "vue";
 import type { RouteLocationRaw } from "vue-router";
 
 import WorkspaceHeader from "./WorkspaceHeader.vue";
@@ -16,6 +22,11 @@ const baseProps = {
   settingsTo: "/profile",
   userInitials: "AT",
   workspaceName: "Workspace Alpha",
+};
+
+type HeaderProps = typeof baseProps & {
+  settingsIcon?: Component;
+  settingsLabel?: string;
 };
 
 type TestMenuItem = {
@@ -64,6 +75,13 @@ const AvatarStub = defineComponent({
   setup(props, { attrs }) {
     return () =>
       h("span", { ...attrs, class: [attrs.class, props.pt?.root?.class] }, props.label);
+  },
+});
+
+const ProfileIconStub = defineComponent({
+  name: "ProfileIconStub",
+  setup() {
+    return () => h("svg", { "data-testid": "custom-profile-icon" });
   },
 });
 
@@ -152,11 +170,18 @@ const RouterLinkStub = defineComponent({
 });
 
 function mountHeader(
-  options: { attachTo?: HTMLElement; slots?: Record<string, string> } = {},
+  options: {
+    attachTo?: HTMLElement;
+    props?: Partial<HeaderProps>;
+    slots?: Record<string, string>;
+  } = {},
 ) {
   return mount(WorkspaceHeader, {
     attachTo: options.attachTo,
-    props: baseProps,
+    props: {
+      ...baseProps,
+      ...options.props,
+    },
     slots: options.slots,
     global: {
       plugins: [PrimeVue],
@@ -241,5 +266,21 @@ describe("WorkspaceHeader", () => {
     expect(trigger.attributes("aria-expanded")).toBe("false");
     expect(trigger.classes()).toContain("border-transparent");
     expect(avatar.classes()).not.toContain("ring-brand");
+  });
+
+  it("renders an app-provided profile action label and icon", async () => {
+    const wrapper = mountHeader({
+      props: {
+        settingsIcon: ProfileIconStub,
+        settingsLabel: "Profile",
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-trigger"]').trigger("click");
+
+    const profileLink = wrapper.get('[data-testid="profile-menu-settings"]');
+
+    expect(profileLink.text()).toContain("Profile");
+    expect(wrapper.find('[data-testid="custom-profile-icon"]').exists()).toBe(true);
   });
 });
