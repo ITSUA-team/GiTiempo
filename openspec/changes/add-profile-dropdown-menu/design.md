@@ -45,7 +45,7 @@ Alternative considered: custom absolute-positioned markup. That would make keybo
 
 ### Preserve Design Tokens And Current Header Layout
 
-The trigger and menu should use existing token utilities for surface, divider, text, destructive color, radius, and shadow. The dropdown should visually match the approved `.pen` menu: compact width around the design's 264px surface, two 44px rows, a divider, muted settings icon treatment, and destructive sign-out treatment.
+The trigger and menu should use existing token utilities for surface, divider, text, destructive color, radius, and shadow. The dropdown should visually match the approved `.pen` menu: compact width around the design's 264px surface, two 44px rows, a divider, muted settings icon treatment, destructive sign-out treatment, and a visible top offset from the profile trigger using the shared spacing scale, e.g. `mt-3` / 12px.
 
 Alternative considered: raw hex or component-local CSS values. That conflicts with the repo's token-based UI rules and would make theme maintenance harder.
 

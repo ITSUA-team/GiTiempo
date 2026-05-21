@@ -9,6 +9,7 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **GIVEN** an authenticated user-web page is rendered with the shared shell
 - **WHEN** the user activates the top-bar profile/avatar trigger
 - **THEN** a dropdown menu opens below the trigger and aligned with the top-right identity area
+- **AND** the dropdown has a visible spacing gap from the profile/avatar trigger
 - **AND** the menu contains `Settings` and `Sign out` actions in that order
 - **AND** the existing user-web top-bar timer and counterpart admin workspace link remain visible
 
@@ -17,6 +18,7 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **GIVEN** an authenticated admin-web page is rendered with the shared shell
 - **WHEN** the user activates the top-bar profile/avatar trigger
 - **THEN** a dropdown menu opens below the trigger and aligned with the top-right identity area
+- **AND** the dropdown has a visible spacing gap from the profile/avatar trigger
 - **AND** the menu contains `Settings` and `Sign out` actions in that order
 - **AND** the existing admin-web workspace/scope identity and counterpart user workspace link remain visible
 
