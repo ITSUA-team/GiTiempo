@@ -62,12 +62,45 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     }
   }
 
-  async generatePasswordSetupLink(email: string): Promise<string> {
+  async generatePasswordSetupLink(
+    email: string,
+    continueUrl: string,
+  ): Promise<string> {
     try {
-      return await getAuth(this.getApp()).generatePasswordResetLink(email);
+      const resetLink = await getAuth(this.getApp()).generatePasswordResetLink(
+        email,
+        { url: continueUrl },
+      );
+
+      return this.buildPasswordSetupUrl(resetLink, continueUrl);
     } catch {
       throw new Error('Failed to generate Firebase password setup link');
     }
+  }
+
+  private buildPasswordSetupUrl(
+    resetLink: string,
+    continueUrl: string,
+  ): string {
+    const firebaseActionUrl = new URL(resetLink);
+    const passwordSetupUrl = new URL(
+      '/invites/password-setup',
+      this.getUserSpaUrl(),
+    );
+
+    for (const [key, value] of firebaseActionUrl.searchParams.entries()) {
+      passwordSetupUrl.searchParams.set(key, value);
+    }
+
+    if (!passwordSetupUrl.searchParams.has('continueUrl')) {
+      passwordSetupUrl.searchParams.set('continueUrl', continueUrl);
+    }
+
+    return passwordSetupUrl.toString();
+  }
+
+  private getUserSpaUrl(): string {
+    return this.config.get('USER_SPA_URL', { infer: true });
   }
 
   private getApp(): App {

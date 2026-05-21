@@ -31,6 +31,15 @@ function makeUsersService() {
   };
 }
 
+function makeConfig() {
+  return {
+    get: vi.fn((key: string) => {
+      if (key === 'USER_SPA_URL') return 'http://localhost:5173';
+      return undefined;
+    }),
+  };
+}
+
 function selectRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
@@ -68,11 +77,13 @@ function makeService(options: { firebaseEmail: string }) {
     }),
   };
   const usersService = makeUsersService();
+  const config = makeConfig();
   const delivery = { deliver: vi.fn() };
   return {
     service: new InvitesService(
       db as never,
       firebase as never,
+      config as never,
       usersService as never,
       delivery as never,
     ),
@@ -196,10 +207,12 @@ describe('InvitesService createInvite', () => {
       verifyIdToken: vi.fn(),
     };
     const usersService = makeUsersService();
+    const config = makeConfig();
 
     const service = new InvitesService(
       db as never,
       firebase as never,
+      config as never,
       usersService as never,
       delivery as never,
     );
@@ -225,6 +238,7 @@ describe('InvitesService createInvite', () => {
     );
     expect(firebase.generatePasswordSetupLink).toHaveBeenCalledWith(
       'user@example.com',
+      'http://localhost:5173/invites/accept?token=new-token',
     );
     expect(updateSetWhere).toHaveBeenCalled();
   });
@@ -242,6 +256,7 @@ describe('InvitesService createInvite', () => {
     );
     expect(firebase.generatePasswordSetupLink).toHaveBeenCalledWith(
       'user@example.com',
+      'http://localhost:5173/invites/accept?token=new-token',
     );
     expect(delivery.deliver).toHaveBeenCalled();
     expect(result).toMatchObject({
@@ -266,6 +281,7 @@ describe('InvitesService createInvite', () => {
     expect(delivery.deliver).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'user@example.com',
+        inviteUrl: 'http://localhost:5173/invites/accept?token=new-token',
         passwordSetupUrl: 'https://firebase.test/reset',
       }),
     );

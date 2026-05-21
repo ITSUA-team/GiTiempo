@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import ForbiddenView from "@/views/ForbiddenView.vue";
 import InviteAcceptView from "@/views/InviteAcceptView.vue";
+import InvitePasswordSetupView from "@/views/InvitePasswordSetupView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
@@ -106,6 +107,24 @@ describe("app router auth guards", () => {
     expect(inviteAcceptRoute.meta.guestOnly).toBe(true);
     expect(inviteAcceptRoute.matched).toHaveLength(1);
     expect(inviteAcceptRoute.matched[0]?.components?.default).toBe(InviteAcceptView);
+  });
+
+  it("defines the standalone guest password setup route outside the app shell", () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const passwordSetupRoute = router.resolve(
+      "/invites/password-setup?mode=resetPassword&oobCode=test-code",
+    );
+
+    expect(passwordSetupRoute.name).toBe(routeNames.invitePasswordSetup);
+    expect(passwordSetupRoute.meta.guestOnly).toBe(true);
+    expect(passwordSetupRoute.matched).toHaveLength(1);
+    expect(passwordSetupRoute.matched[0]?.components?.default).toBe(
+      InvitePasswordSetupView,
+    );
   });
 
   it("redirects anonymous users from unknown routes to login", async () => {

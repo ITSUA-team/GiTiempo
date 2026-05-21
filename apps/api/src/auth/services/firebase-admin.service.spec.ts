@@ -182,21 +182,30 @@ describe('RealFirebaseAdminService', () => {
 
   it('generates a Firebase password setup link', async () => {
     generatePasswordResetLink.mockResolvedValueOnce(
-      'https://firebase.test/reset',
+      'https://firebase.test/reset?mode=resetPassword&oobCode=test-code',
     );
     const svc = new RealFirebaseAdminService(
       makeConfig({
         FIREBASE_PROJECT_ID: 'p',
         FIREBASE_CLIENT_EMAIL: 'x@y.z',
         FIREBASE_PRIVATE_KEY: 'KEY',
+        USER_SPA_URL: 'http://localhost:5173',
       }),
     );
 
     await expect(
-      svc.generatePasswordSetupLink('invitee@example.com'),
-    ).resolves.toBe('https://firebase.test/reset');
+      svc.generatePasswordSetupLink(
+        'invitee@example.com',
+        'http://localhost:5173/invites/accept?token=invite-token',
+      ),
+    ).resolves.toBe(
+      'http://localhost:5173/invites/password-setup?mode=resetPassword&oobCode=test-code&continueUrl=http%3A%2F%2Flocalhost%3A5173%2Finvites%2Faccept%3Ftoken%3Dinvite-token',
+    );
     expect(generatePasswordResetLink).toHaveBeenCalledWith(
       'invitee@example.com',
+      {
+        url: 'http://localhost:5173/invites/accept?token=invite-token',
+      },
     );
   });
 
@@ -209,11 +218,15 @@ describe('RealFirebaseAdminService', () => {
         FIREBASE_PROJECT_ID: 'p',
         FIREBASE_CLIENT_EMAIL: 'x@y.z',
         FIREBASE_PRIVATE_KEY: 'KEY',
+        USER_SPA_URL: 'http://localhost:5173',
       }),
     );
 
     await expect(
-      svc.generatePasswordSetupLink('invitee@example.com'),
+      svc.generatePasswordSetupLink(
+        'invitee@example.com',
+        'http://localhost:5173/invites/accept?token=invite-token',
+      ),
     ).rejects.toThrow('Failed to generate Firebase password setup link');
   });
 });

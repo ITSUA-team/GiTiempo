@@ -70,7 +70,12 @@ describe('FakeFirebaseAdminService', () => {
 
   it('generates a deterministic password setup link', async () => {
     await expect(
-      fake.generatePasswordSetupLink('Invitee@Example.com'),
-    ).resolves.toBe('https://firebase.test/reset?email=invitee%40example.com');
+      fake.generatePasswordSetupLink(
+        'Invitee@Example.com',
+        'http://localhost:5173/invites/accept?token=invite-token',
+      ),
+    ).resolves.toBe(
+      'http://localhost:5173/invites/password-setup?mode=resetPassword&oobCode=fake-reset-invitee%40example.com&continueUrl=http%3A%2F%2Flocalhost%3A5173%2Finvites%2Faccept%3Ftoken%3Dinvite-token',
+    );
   });
 });

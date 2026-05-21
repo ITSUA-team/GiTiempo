@@ -25,7 +25,10 @@ export interface InvitedFirebaseUser {
 export interface FirebaseAdminService {
   verifyIdToken(idToken: string): Promise<DecodedFirebaseToken>;
   getOrCreateInvitedUserByEmail(email: string): Promise<InvitedFirebaseUser>;
-  generatePasswordSetupLink(email: string): Promise<string>;
+  generatePasswordSetupLink(
+    email: string,
+    continueUrl: string,
+  ): Promise<string>;
 }
 
 /** Nest DI token. */

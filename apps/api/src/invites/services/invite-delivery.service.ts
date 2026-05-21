@@ -5,8 +5,8 @@ import type { Env } from '../../config/env.validation';
 
 export interface DeliverInviteInput {
   email: string;
+  inviteUrl: string;
   passwordSetupUrl: string;
-  token: string;
   workspaceName: string;
 }
 
@@ -17,7 +17,6 @@ export class InviteDeliveryService {
   constructor(private readonly config: ConfigService<Env, true>) {}
 
   async deliver(input: DeliverInviteInput): Promise<void> {
-    const inviteUrl = this.buildInviteUrl(input.token);
     const isProduction = process.env.NODE_ENV === 'production';
     const consoleFallback =
       !isProduction &&
@@ -27,7 +26,7 @@ export class InviteDeliveryService {
       this.logger.log({
         event: 'invites.delivery.console_fallback',
         email: input.email,
-        inviteUrl,
+        inviteUrl: input.inviteUrl,
         passwordSetupUrl: input.passwordSetupUrl,
       });
       return;
@@ -47,12 +46,13 @@ export class InviteDeliveryService {
       text: [
         `You've been invited to ${input.workspaceName}.`,
         '',
-        'If this is your first time, set your Firebase password before accepting the invite:',
+        'Open this app-hosted password setup link if you need to set or reset your Firebase password:',
         input.passwordSetupUrl,
         '',
-        `Accept your invite: ${inviteUrl}`,
+        'After saving your password, return to this invite accept page:',
+        input.inviteUrl,
         '',
-        'Workspace access is created after you sign in with the invited email and accept the invite.',
+        'Sign in with the invited email, then accept the invite to create workspace access.',
       ].join('\n'),
     });
   }
@@ -62,12 +62,5 @@ export class InviteDeliveryService {
     const pass = this.config.get('SMTP_PASSWORD', { infer: true });
     if (!user || !pass) return undefined;
     return { user, pass };
-  }
-
-  private buildInviteUrl(token: string): string {
-    const baseUrl = this.config.get('USER_SPA_URL', { infer: true });
-    const url = new URL('/invites/accept', baseUrl);
-    url.searchParams.set('token', token);
-    return url.toString();
   }
 }

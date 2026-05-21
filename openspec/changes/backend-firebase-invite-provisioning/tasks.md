@@ -26,20 +26,20 @@
 - [x] 4.3 Regenerate `packages/shared/openapi.json` with the repo-approved workflow only if API shapes change.
 - [x] 4.4 Update or remove tests that mocked invite self-signup so they reflect sign-in-based invite acceptance.
 
-## 5. Verification And Review
+## 5. App-Hosted Password Setup Update
 
-- [x] 5.1 Run API verification: `pnpm --filter @gitiempo/api lint`, `pnpm --filter @gitiempo/api typecheck`, and `pnpm --filter @gitiempo/api test`.
-- [x] 5.2 Run user-web verification: `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
-- [x] 5.3 If shared frontend/runtime code changes, run admin-web verification: `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`.
-- [x] 5.4 If shared contracts change, run the required shared package build/tests and OpenAPI export workflow.
-- [x] 5.5 Perform final design parity review against `GITiempo.pen` and document any PrimeVue-only compromises.
+- [x] 5.1 Update backend Firebase password setup link generation to use Firebase action-code settings that open the User SPA password setup route and preserve invite-token return context.
+- [x] 5.2 Update invite delivery text and console fallback logging to identify the app-hosted password setup link and the invite accept return path.
+- [x] 5.3 Add focused backend tests for action-code settings, continue URL generation, link-generation failure compensation, and console/SMTP content.
+- [x] 5.4 Add the standalone `user-web` invite password setup route and page using Firebase `verifyPasswordResetCode` and `confirmPasswordReset` without sending raw passwords to GiTiempo APIs.
+- [x] 5.5 Add password setup page tests for missing action code, invalid/expired code, valid code render, weak password, confirm-password mismatch, success, invite-token preservation, and fallback navigation.
+- [x] 5.6 Re-run API and user-web verification after implementation; run admin-web verification only if shared frontend/runtime helpers change.
+- [x] 5.7 Perform design parity review against the `Invite Password Setup` `.pen` screen and document any PrimeVue-only compromises.
 
-## 6. App-Hosted Password Setup Update
+## 6. Verification And Review
 
-- [ ] 6.1 Update backend Firebase password setup link generation to use Firebase action-code settings that open the User SPA password setup route and preserve invite-token return context.
-- [ ] 6.2 Update invite delivery text and console fallback logging to identify the app-hosted password setup link and the invite accept return path.
-- [ ] 6.3 Add focused backend tests for action-code settings, continue URL generation, link-generation failure compensation, and console/SMTP content.
-- [ ] 6.4 Add the standalone `user-web` invite password setup route and page using Firebase `verifyPasswordResetCode` and `confirmPasswordReset` without sending raw passwords to GiTiempo APIs.
-- [ ] 6.5 Add password setup page tests for missing action code, invalid/expired code, valid code render, weak password, confirm-password mismatch, success, invite-token preservation, and fallback navigation.
-- [ ] 6.6 Re-run API and user-web verification after implementation; run admin-web verification only if shared frontend/runtime helpers change.
-- [ ] 6.7 Perform design parity review against the `Invite Password Setup` `.pen` screen and document any PrimeVue-only compromises.
+- [x] 6.1 Run API verification: `pnpm --filter @gitiempo/api lint`, `pnpm --filter @gitiempo/api typecheck`, and `pnpm --filter @gitiempo/api test`.
+- [x] 6.2 Run user-web verification: `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
+- [x] 6.3 If shared frontend/runtime code changes, run admin-web verification: `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`.
+- [x] 6.4 If shared contracts change, run the required shared package build/tests and OpenAPI export workflow.
+- [x] 6.5 Perform final design parity review against `GITiempo.pen` and document any PrimeVue-only compromises.

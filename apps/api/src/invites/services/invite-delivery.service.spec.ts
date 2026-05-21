@@ -36,8 +36,8 @@ describe('InviteDeliveryService', () => {
 
       await service.deliver({
         email: 'test@example.com',
+        inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
         passwordSetupUrl: 'https://firebase.test/reset',
-        token: 'secret-token',
         workspaceName: 'Test Workspace',
       });
 
@@ -59,8 +59,8 @@ describe('InviteDeliveryService', () => {
 
       await service.deliver({
         email: 'test@example.com',
+        inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
         passwordSetupUrl: 'https://firebase.test/reset',
-        token: 'secret-token',
         workspaceName: 'Test Workspace',
       });
 
@@ -69,6 +69,7 @@ describe('InviteDeliveryService', () => {
           event: 'invites.delivery.console_fallback',
           email: 'test@example.com',
           passwordSetupUrl: 'https://firebase.test/reset',
+          inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
         }),
       );
       expect(sendMailMock).not.toHaveBeenCalled();
@@ -84,8 +85,8 @@ describe('InviteDeliveryService', () => {
 
     await service.deliver({
       email: 'test@example.com',
+      inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
       passwordSetupUrl: 'https://firebase.test/reset',
-      token: 'secret-token',
       workspaceName: 'Test Workspace',
     });
 
@@ -93,7 +94,28 @@ describe('InviteDeliveryService', () => {
     expect(sendMailMock).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'test@example.com',
+        text: expect.stringContaining(
+          'Open this app-hosted password setup link if you need to set or reset your Firebase password:',
+        ),
+      }),
+    );
+    expect(sendMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
         text: expect.stringContaining('https://firebase.test/reset'),
+      }),
+    );
+    expect(sendMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining(
+          'After saving your password, return to this invite accept page:',
+        ),
+      }),
+    );
+    expect(sendMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining(
+          'http://localhost:5173/invites/accept?token=secret-token',
+        ),
       }),
     );
   });

@@ -13,6 +13,7 @@ import {
 } from "@gitiempo/web-shared";
 
 import { routeNames } from "@/router";
+import InviteOnboardingShell from "@/components/invite/InviteOnboardingShell.vue";
 import { getAuthRuntime } from "@/services/auth-runtime";
 import { getWorkspaceInvitesClient } from "@/services/workspace-invites-client";
 import { useAuthStore } from "@/stores/auth";
@@ -53,6 +54,11 @@ const inviteSteps = [
     description: "Accept the invite, then continue straight to your dashboard.",
     title: "Continue to dashboard",
   },
+] as const;
+
+const shellFooterLines = [
+  "Invite-only onboarding",
+  "Backend-provisioned Firebase account",
 ] as const;
 
 const inviteToken = computed(() => {
@@ -359,243 +365,181 @@ async function handleGoogleAccept(): Promise<void> {
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
-    <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
-      <section
-        class="bg-surface flex flex-1 flex-col justify-between px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
+  <InviteOnboardingShell
+    eyebrow="Workspace invitation"
+    title="Join your team workspace."
+    description="Use the password setup link from your invite email if this is your first time, then sign in with the invited email. GiTiempo creates workspace access after the invite is accepted."
+    :steps="inviteSteps"
+    :footer-lines="shellFooterLines"
+    footer-accent="Need a password setup link? Ask an admin to resend the invite."
+  >
+    <template v-if="panelState === 'form'">
+      <div class="flex flex-col gap-1.5">
+        <h2 class="text-text-dark text-[28px] font-semibold">
+          Accept invite
+        </h2>
+        <p class="text-text-muted text-sm leading-6">
+          Sign in with the invited email after setting a password from the
+          invite email if this is your first time.
+        </p>
+      </div>
+
+      <div
+        class="bg-accent-tint text-brand flex items-center gap-2.5 rounded-sm px-3 py-3 text-[13px] font-medium"
       >
-        <div class="flex items-center gap-3">
-          <div
-            class="bg-accent-tint text-brand flex size-10 items-center justify-center rounded-xl text-sm font-semibold"
+        <span aria-hidden="true">@</span>
+        <span>Invite token detected from the email link.</span>
+      </div>
+
+      <form
+        class="flex flex-col gap-4"
+        @submit.prevent="handleEmailAccept"
+      >
+        <div class="flex flex-col gap-1">
+          <label
+            for="invite-accept-email"
+            class="text-text-dark text-[13px] font-medium"
           >
-            GT
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <p class="text-text-dark text-lg font-semibold">
-              GiTiempo
-            </p>
-            <p class="text-text-muted text-[13px]">
-              Workspace invitation
-            </p>
-          </div>
+            Email
+          </label>
+          <InputText
+            id="invite-accept-email"
+            v-model="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@workspace.com"
+            :invalid="!!emailErrorMessage"
+            class="h-[42px] w-full"
+            data-testid="invite-accept-email"
+            fluid
+          />
+          <Message
+            v-if="emailErrorMessage"
+            severity="error"
+            size="small"
+            variant="simple"
+            class="text-xs"
+          >
+            {{ emailErrorMessage }}
+          </Message>
         </div>
 
-        <div class="flex max-w-[520px] flex-col gap-5 py-12 lg:py-0">
-          <h1 class="text-text-dark text-[40px] leading-[1.1] font-semibold">
-            Join your team workspace.
-          </h1>
-          <p class="text-text-muted max-w-[34rem] text-base leading-7">
-            Use the password setup link from your invite email if this is your
-            first time, then sign in with the invited email. GiTiempo creates
-            workspace access after the invite is accepted.
+        <div class="flex flex-col gap-1">
+          <label
+            for="invite-accept-password"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Password
+          </label>
+          <Password
+            v-model="password"
+            input-id="invite-accept-password"
+            autocomplete="current-password"
+            placeholder="••••••••••"
+            :feedback="false"
+            :toggle-mask="false"
+            :invalid="!!passwordErrorMessage"
+            fluid
+            input-class="h-[42px] w-full"
+            :input-props="passwordInputProps"
+          />
+          <Message
+            v-if="passwordErrorMessage"
+            severity="error"
+            size="small"
+            variant="simple"
+            class="text-xs"
+          >
+            {{ passwordErrorMessage }}
+          </Message>
+        </div>
+
+        <Message
+          v-if="inlineErrorMessage"
+          severity="error"
+          size="small"
+          class="text-sm"
+          data-testid="invite-accept-error"
+        >
+          {{ inlineErrorMessage }}
+        </Message>
+
+        <Message
+          v-if="isRedirecting"
+          severity="success"
+          size="small"
+          class="text-sm"
+        >
+          Workspace access created. Redirecting to dashboard.
+        </Message>
+
+        <div class="flex flex-col gap-2 pt-1">
+          <Button
+            type="submit"
+            label="Accept invite"
+            class="h-10"
+            :loading="activeAction === 'email' || isRedirecting"
+            :disabled="isBusy"
+            data-testid="invite-accept-submit"
+          />
+
+          <p
+            class="text-brand text-center text-xs font-medium"
+            data-testid="invite-accept-password-help"
+          >
+            Need a password setup link? Check your invite email or ask an
+            admin to resend the invite.
           </p>
 
-          <div class="flex flex-col gap-2.5">
-            <div
-              v-for="(step, index) in inviteSteps"
-              :key="step.title"
-              class="flex items-center gap-2.5"
-            >
-              <div
-                class="bg-accent-tint text-brand flex size-7 items-center justify-center rounded-full text-[13px] font-semibold"
-              >
-                {{ index + 1 }}
-              </div>
-              <div class="flex flex-col gap-0.5">
-                <p class="text-[15px] font-semibold">
-                  {{ step.title }}
-                </p>
-                <p class="text-text-muted text-[13px]">
-                  {{ step.description }}
-                </p>
-              </div>
-            </div>
-          </div>
+          <Button
+            type="button"
+            label="Continue with Google"
+            severity="secondary"
+            variant="outlined"
+            class="h-10"
+            :loading="activeAction === 'google' && !isRedirecting"
+            :disabled="isBusy"
+            data-testid="invite-accept-google"
+            @click="handleGoogleAccept"
+          />
         </div>
+      </form>
+    </template>
 
-        <div class="flex flex-col gap-1.5 text-xs font-medium">
-          <span class="text-text-muted">Invite-only onboarding</span>
-          <span class="text-text-muted">Backend-provisioned Firebase account</span>
-          <span class="text-brand">
-            Need a password setup link? Ask an admin to resend the invite.
-          </span>
-        </div>
-      </section>
+    <template v-else-if="panelState === 'already-member'">
+      <div class="flex flex-col gap-1.5">
+        <h2 class="text-text-dark text-[28px] font-semibold">
+          Workspace access already exists
+        </h2>
+        <p class="text-text-muted text-sm leading-6">
+          {{ terminalMessage ?? "Your account is already a member of this workspace. Sign in to continue." }}
+        </p>
+      </div>
 
-      <section
-        class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-10 lg:py-10"
-      >
-        <div class="bg-surface shadow-card flex w-full flex-col gap-3.5 rounded-lg p-5">
-          <template v-if="panelState === 'form'">
-            <div class="flex flex-col gap-1.5">
-              <h2 class="text-text-dark text-[28px] font-semibold">
-                Accept invite
-              </h2>
-              <p class="text-text-muted text-sm leading-6">
-                Sign in with the invited email after setting a password from the
-                invite email if this is your first time.
-              </p>
-            </div>
+      <Button
+        label="Sign in"
+        class="h-10"
+        data-testid="invite-accept-sign-in"
+        @click="goToLogin"
+      />
+    </template>
 
-            <div
-              class="bg-accent-tint text-brand flex items-center gap-2.5 rounded-sm px-3 py-3 text-[13px] font-medium"
-            >
-              <span aria-hidden="true">@</span>
-              <span>Invite token detected from the email link.</span>
-            </div>
+    <template v-else>
+      <div class="flex flex-col gap-1.5">
+        <h2 class="text-text-dark text-[28px] font-semibold">
+          Invalid invite link
+        </h2>
+        <p class="text-text-muted text-sm leading-6">
+          {{ invalidLinkCopy }}
+        </p>
+      </div>
 
-            <form
-              class="flex flex-col gap-4"
-              @submit.prevent="handleEmailAccept"
-            >
-              <div class="flex flex-col gap-1">
-                <label
-                  for="invite-accept-email"
-                  class="text-text-dark text-[13px] font-medium"
-                >
-                  Email
-                </label>
-                <InputText
-                  id="invite-accept-email"
-                  v-model="email"
-                  type="email"
-                  autocomplete="email"
-                  placeholder="you@workspace.com"
-                  :invalid="!!emailErrorMessage"
-                  class="h-[42px] w-full"
-                  data-testid="invite-accept-email"
-                  fluid
-                />
-                <Message
-                  v-if="emailErrorMessage"
-                  severity="error"
-                  size="small"
-                  variant="simple"
-                  class="text-xs"
-                >
-                  {{ emailErrorMessage }}
-                </Message>
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <label
-                  for="invite-accept-password"
-                  class="text-text-dark text-[13px] font-medium"
-                >
-                  Password
-                </label>
-                <Password
-                  v-model="password"
-                  input-id="invite-accept-password"
-                  autocomplete="current-password"
-                  placeholder="••••••••••"
-                  :feedback="false"
-                  :toggle-mask="false"
-                  :invalid="!!passwordErrorMessage"
-                  fluid
-                  input-class="h-[42px] w-full"
-                  :input-props="passwordInputProps"
-                />
-                <Message
-                  v-if="passwordErrorMessage"
-                  severity="error"
-                  size="small"
-                  variant="simple"
-                  class="text-xs"
-                >
-                  {{ passwordErrorMessage }}
-                </Message>
-              </div>
-
-              <Message
-                v-if="inlineErrorMessage"
-                severity="error"
-                size="small"
-                class="text-sm"
-                data-testid="invite-accept-error"
-              >
-                {{ inlineErrorMessage }}
-              </Message>
-
-              <Message
-                v-if="isRedirecting"
-                severity="success"
-                size="small"
-                class="text-sm"
-              >
-                Workspace access created. Redirecting to dashboard.
-              </Message>
-
-              <div class="flex flex-col gap-2 pt-1">
-                <Button
-                  type="submit"
-                  label="Accept invite"
-                  class="h-10"
-                  :loading="activeAction === 'email' || isRedirecting"
-                  :disabled="isBusy"
-                  data-testid="invite-accept-submit"
-                />
-
-                <p
-                  class="text-brand text-center text-xs font-medium"
-                  data-testid="invite-accept-password-help"
-                >
-                  Need a password setup link? Check your invite email or ask an
-                  admin to resend the invite.
-                </p>
-
-                <Button
-                  type="button"
-                  label="Continue with Google"
-                  severity="secondary"
-                  variant="outlined"
-                  class="h-10"
-                  :loading="activeAction === 'google' && !isRedirecting"
-                  :disabled="isBusy"
-                  data-testid="invite-accept-google"
-                  @click="handleGoogleAccept"
-                />
-              </div>
-            </form>
-          </template>
-
-          <template v-else-if="panelState === 'already-member'">
-            <div class="flex flex-col gap-1.5">
-              <h2 class="text-text-dark text-[28px] font-semibold">
-                Workspace access already exists
-              </h2>
-              <p class="text-text-muted text-sm leading-6">
-                {{ terminalMessage ?? "Your account is already a member of this workspace. Sign in to continue." }}
-              </p>
-            </div>
-
-            <Button
-              label="Sign in"
-              class="h-10"
-              data-testid="invite-accept-sign-in"
-              @click="goToLogin"
-            />
-          </template>
-
-          <template v-else>
-            <div class="flex flex-col gap-1.5">
-              <h2 class="text-text-dark text-[28px] font-semibold">
-                Invalid invite link
-              </h2>
-              <p class="text-text-muted text-sm leading-6">
-                {{ invalidLinkCopy }}
-              </p>
-            </div>
-
-            <Button
-              label="Go to login"
-              class="h-10"
-              data-testid="invite-accept-login"
-              @click="goToLogin"
-            />
-          </template>
-        </div>
-      </section>
-    </div>
-  </div>
+      <Button
+        label="Go to login"
+        class="h-10"
+        data-testid="invite-accept-login"
+        @click="goToLogin"
+      />
+    </template>
+  </InviteOnboardingShell>
 </template>

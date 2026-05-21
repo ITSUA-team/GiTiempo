@@ -55,9 +55,22 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     return createdUser;
   }
 
-  async generatePasswordSetupLink(email: string): Promise<string> {
+  async generatePasswordSetupLink(
+    email: string,
+    continueUrl: string,
+  ): Promise<string> {
     const normalizedEmail = normalizeEmail(email);
-    return `https://firebase.test/reset?email=${encodeURIComponent(normalizedEmail)}`;
+    const passwordSetupUrl = new URL(
+      'http://localhost:5173/invites/password-setup',
+    );
+    passwordSetupUrl.searchParams.set('mode', 'resetPassword');
+    passwordSetupUrl.searchParams.set(
+      'oobCode',
+      `fake-reset-${normalizedEmail}`,
+    );
+    passwordSetupUrl.searchParams.set('continueUrl', continueUrl);
+
+    return passwordSetupUrl.toString();
   }
 }
 
