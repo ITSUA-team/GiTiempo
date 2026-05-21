@@ -270,7 +270,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('treats atomic rotation loss as reuse and destroys the family', async () => {
+    it('rejects atomic rotation loss without destroying the family', async () => {
       const existingRow = {
         id: 'old-row',
         userId: seedUserRow.id,
@@ -287,7 +287,7 @@ describe('AuthService', () => {
       await expect(service.refresh('some-raw-token')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
-      expect(repo.deleteFamily).toHaveBeenCalledWith('family-race');
+      expect(repo.deleteFamily).not.toHaveBeenCalled();
     });
   });
 

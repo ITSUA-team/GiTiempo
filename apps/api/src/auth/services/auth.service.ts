@@ -167,12 +167,6 @@ export class AuthService {
     });
 
     if (!rotated) {
-      await this.refreshRepo.deleteFamily(row.familyId);
-      this.logger.warn({
-        event: 'auth.refresh.reuse_detected',
-        userId: row.userId,
-        familyId: row.familyId,
-      });
       throw new UnauthorizedException('Unauthorized');
     }
 

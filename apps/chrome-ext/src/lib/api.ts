@@ -66,6 +66,8 @@ export function createExtensionApiClient({
   fetchFn = globalThis.fetch.bind(globalThis),
   storage,
 }: ExtensionApiClientOptions): ExtensionApiClient {
+  let refreshPromise: Promise<TokenPairResponse | null> | null = null;
+
   async function loginWithFirebaseToken(
     firebaseIdToken: string,
   ): Promise<TokenPairResponse> {
@@ -92,30 +94,40 @@ export function createExtensionApiClient({
   async function refreshSession(
     refreshToken: string,
   ): Promise<TokenPairResponse | null> {
-    try {
-      const response = await fetchFn(getRequestUrl(config, "/auth/refresh"), {
-        body: JSON.stringify(refreshRequestSchema.parse({ refreshToken })),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-      const body = await parseJsonResponse(response);
+    if (refreshPromise) {
+      return refreshPromise;
+    }
 
-      if (!response.ok) {
+    refreshPromise = (async () => {
+      try {
+        const response = await fetchFn(getRequestUrl(config, "/auth/refresh"), {
+          body: JSON.stringify(refreshRequestSchema.parse({ refreshToken })),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        });
+        const body = await parseJsonResponse(response);
+
+        if (!response.ok) {
+          await clearStoredSession(storage);
+          return null;
+        }
+
+        const tokenPair = tokenPairResponseSchema.parse(body);
+
+        await setStoredSession(tokenPair, storage);
+
+        return tokenPair;
+      } catch {
         await clearStoredSession(storage);
         return null;
+      } finally {
+        refreshPromise = null;
       }
+    })();
 
-      const tokenPair = tokenPairResponseSchema.parse(body);
-
-      await setStoredSession(tokenPair, storage);
-
-      return tokenPair;
-    } catch {
-      await clearStoredSession(storage);
-      return null;
-    }
+    return refreshPromise;
   }
 
   async function requestWithAuth<TResponse>(options: {

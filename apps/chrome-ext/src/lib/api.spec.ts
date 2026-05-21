@@ -235,6 +235,111 @@ describe("createExtensionApiClient", () => {
     });
   });
 
+  it("shares one refresh request across concurrent 401 retries", async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, { status: 401 }))
+      .mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, { status: 401 }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          accessToken: "access-token-next",
+          accessTokenExpiresIn: 900,
+          refreshToken: "refresh-token-next",
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ timeEntry: null }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          createdAt: "2026-04-21T09:00:00.000Z",
+          description: null,
+          durationSeconds: null,
+          endedAt: null,
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+          isBillable: true,
+          project: { id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f", name: "Project Orion" },
+          projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          source: "extension",
+          startedAt: "2026-04-21T09:00:00.000Z",
+          githubIssue: { githubRepo: "octo/repo", issueNumber: 184 },
+          task: { id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001", title: "Improve reports filters" },
+          taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+          updatedAt: "2026-04-21T09:00:00.000Z",
+          user: {
+            avatarUrl: null,
+            displayName: "Alexey Tsukanov",
+            email: "alexey@example.com",
+            id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+          },
+          userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+          workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+        }),
+      );
+    const { data, storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn,
+      storage,
+    });
+
+    const results = await Promise.all([
+      client.getCurrentTimer(),
+      client.startTimerFromGitHub({
+        githubRepo: "octo/repo",
+        issueNumber: 184,
+        issueTitle: "Improve reports filters",
+        issueUrl: "https://github.com/octo/repo/issues/184",
+        kind: "supported",
+      }),
+    ]);
+
+    expect(results[0]).toEqual({ timeEntry: null });
+    expect(
+      fetchFn.mock.calls.filter(
+        ([url]) => url === "http://localhost:3000/auth/refresh",
+      ),
+    ).toHaveLength(1);
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      4,
+      "http://localhost:3000/time-entries/current",
+      {
+        body: undefined,
+        headers: {
+          Authorization: "Bearer access-token-next",
+        },
+        method: "GET",
+      },
+    );
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      5,
+      "http://localhost:3000/time-entries/timer/start-from-github",
+      {
+        body: JSON.stringify({
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+          issueTitle: "Improve reports filters",
+        }),
+        headers: {
+          Authorization: "Bearer access-token-next",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      },
+    );
+    expect(data).toEqual({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token-next",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token-next",
+      },
+    });
+  });
+
   it("clears the local session when refresh fails", async () => {
     const { storage } = createStorage({
       [EXTENSION_SESSION_STORAGE_KEY]: {
