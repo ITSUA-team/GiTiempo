@@ -230,25 +230,28 @@ const isMobileViewport = useIsMobileViewport();
 
     <template #footer>
       <div
-        class="flex w-full flex-col gap-2 sm:flex-row sm:justify-end"
+        :class="[
+          'flex w-full gap-2',
+          isMobileViewport ? 'flex-col' : 'flex-row justify-end',
+        ]"
         data-testid="top-bar-timer-task-dialog-footer"
       >
         <Button
           type="button"
-          class="w-full sm:order-2 sm:w-auto"
-          :disabled="props.isConfirmSelectionDisabled"
-          :fluid="isMobileViewport"
-          label="Use selected task"
-          @click="emit('confirm')"
-        />
-        <Button
-          type="button"
-          class="w-full sm:order-1 sm:w-auto"
+          :class="isMobileViewport ? 'w-full' : 'w-auto'"
           :fluid="isMobileViewport"
           label="Cancel"
           severity="secondary"
           text
           @click="emit('close')"
+        />
+        <Button
+          type="button"
+          :class="isMobileViewport ? 'w-full' : 'w-auto'"
+          :disabled="props.isConfirmSelectionDisabled"
+          :fluid="isMobileViewport"
+          label="Use selected task"
+          @click="emit('confirm')"
         />
       </div>
     </template>

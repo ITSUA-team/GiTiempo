@@ -191,21 +191,24 @@ describe("TopBarTimerTaskDialog", () => {
     expect(createTaskActions.classes()).toContain("sm:flex-row");
     expect(footer.classes()).toContain("flex-col");
     expect(footer.classes()).toContain("w-full");
-    expect(footer.classes()).toContain("sm:flex-row");
+    expect(footer.classes()).not.toContain("sm:flex-row");
+    expect(footer.classes()).not.toContain("flex-row");
     expect(footerButtons.map((button) => button.text())).toEqual([
-      "Use selected task",
       "Cancel",
+      "Use selected task",
     ]);
     expect(createTaskButton?.classes()).toContain("w-full");
     expect(confirmButton?.classes()).toContain("w-full");
-    expect(confirmButton?.classes()).toContain("sm:order-2");
-    expect(footerButtons[1]?.classes()).toContain("sm:order-1");
+    expect(confirmButton?.classes()).not.toContain("sm:order-2");
+    expect(footerButtons[1]?.classes()).not.toContain("sm:order-1");
     expect(createTaskButton?.attributes("data-fluid")).toBe("true");
     expect(confirmButton?.attributes("data-fluid")).toBe("true");
   });
 
-  it("keeps action buttons intrinsic on tablet and desktop", () => {
+  it("keeps action buttons intrinsic and cancel-first in DOM order on tablet and desktop", () => {
     const wrapper = mountDialog();
+    const footer = wrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]');
+    const footerButtons = footer.findAll("button");
     const createTaskButton = wrapper
       .findAll("button")
       .find((button) => button.text() === "Create task");
@@ -213,7 +216,15 @@ describe("TopBarTimerTaskDialog", () => {
       .findAll("button")
       .find((button) => button.text() === "Use selected task");
 
+    expect(footerButtons.map((button) => button.text())).toEqual([
+      "Cancel",
+      "Use selected task",
+    ]);
+    expect(footer.classes()).toContain("flex-row");
+    expect(footer.classes()).toContain("justify-end");
+    expect(footer.classes()).not.toContain("flex-col");
     expect(createTaskButton?.attributes("data-fluid")).toBe("false");
     expect(confirmButton?.attributes("data-fluid")).toBe("false");
+    expect(confirmButton?.classes()).toContain("w-auto");
   });
 });
