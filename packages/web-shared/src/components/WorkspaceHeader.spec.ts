@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 /* eslint-disable vue/one-component-per-file */
 
-import { mount } from "@vue/test-utils";
+import { mount, type VueWrapper } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
 import { afterEach, describe, expect, it } from "vitest";
-import { defineComponent, h, type Component, type PropType } from "vue";
+import { defineComponent, h, nextTick, type Component, type PropType } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 
 import WorkspaceHeader from "./WorkspaceHeader.vue";
@@ -129,9 +129,17 @@ const RouterLinkStub = defineComponent({
   setup(props, { slots }) {
     const href = typeof props.to === "string" ? props.to : "/settings";
 
-    return () => slots.default?.({ href, navigate: () => undefined });
+    return () =>
+      slots.default?.({
+        href,
+        navigate: (event?: MouseEvent) => {
+          event?.preventDefault();
+        },
+      });
   },
 });
+
+const mountedWrappers: VueWrapper[] = [];
 
 function mountHeader(
   options: {
@@ -140,7 +148,7 @@ function mountHeader(
     slots?: Record<string, string>;
   } = {},
 ) {
-  return mount(WorkspaceHeader, {
+  const wrapper = mount(WorkspaceHeader, {
     attachTo: options.attachTo,
     props: {
       ...baseProps,
@@ -157,10 +165,19 @@ function mountHeader(
       },
     },
   });
+
+  mountedWrappers.push(wrapper);
+
+  return wrapper;
 }
 
 describe("WorkspaceHeader", () => {
   afterEach(() => {
+    for (const wrapper of mountedWrappers) {
+      wrapper.unmount();
+    }
+
+    mountedWrappers.length = 0;
     document.body.innerHTML = "";
   });
 
@@ -239,6 +256,55 @@ describe("WorkspaceHeader", () => {
     expect(trigger.attributes("aria-expanded")).toBe("false");
     expect(trigger.classes()).toContain("border-transparent");
     expect(avatar.classes()).not.toContain("ring-brand");
+  });
+
+  it("closes the profile menu on Escape and restores focus", async () => {
+    const wrapper = mountHeader({ attachTo: document.body });
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+
+    (trigger.element as HTMLElement).focus();
+    await trigger.trigger("click");
+
+    expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(true);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger.element);
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+  });
+
+  it("closes the profile menu on outside click", async () => {
+    const wrapper = mountHeader({ attachTo: document.body });
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+    const outsideButton = document.createElement("button");
+    document.body.append(outsideButton);
+
+    (trigger.element as HTMLElement).focus();
+    await trigger.trigger("click");
+
+    expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(true);
+
+    outsideButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(false);
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+  });
+
+  it("closes the profile menu and restores focus when the settings action runs", async () => {
+    const wrapper = mountHeader({ attachTo: document.body });
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+
+    (trigger.element as HTMLElement).focus();
+    await trigger.trigger("click");
+    await wrapper.get('[data-testid="profile-menu-settings"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger.element);
+    expect(trigger.attributes("aria-expanded")).toBe("false");
   });
 
   it("renders an app-provided profile action label and icon", async () => {

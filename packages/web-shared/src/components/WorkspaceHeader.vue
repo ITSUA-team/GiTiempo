@@ -81,7 +81,7 @@ const profileMenuItems = computed(() => [
 
 function focusProfileTrigger(): void {
   profileMenuRegion.value
-    ?.querySelector<HTMLElement>('[data-testid="profile-menu-trigger"]')
+    ?.querySelector<HTMLElement>('[aria-controls="profile_menu"]')
     ?.focus();
 }
 

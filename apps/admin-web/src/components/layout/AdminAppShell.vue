@@ -94,6 +94,8 @@ watch(
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
       :display-name="authStore.displayName"
+      :settings-icon="settingsIcon"
+      settings-label="Settings"
       :settings-to="{ name: routeNames.settings }"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"
