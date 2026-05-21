@@ -79,6 +79,15 @@ export class RefreshTokenRepository {
     return row ?? null;
   }
 
+  async findById(id: string): Promise<RefreshTokenRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.id, id))
+      .limit(1);
+    return row ?? null;
+  }
+
   /**
    * Soft-revoke a row on rotation. Sets `revoked_at = now()` and links
    * the newly issued row via `replaced_by`.

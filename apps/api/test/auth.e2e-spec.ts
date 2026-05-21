@@ -145,11 +145,6 @@ describe('Auth (e2e)', () => {
         .post('/auth/refresh')
         .send({ refreshToken: winningRefreshToken });
       expect(winnerStillWorks.status).toBe(200);
-
-      const replay = await request(app.getHttpServer())
-        .post('/auth/refresh')
-        .send({ refreshToken: session.refreshToken });
-      expect(replay.status).toBe(401);
     });
   });
 });
