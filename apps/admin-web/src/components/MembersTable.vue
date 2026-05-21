@@ -16,12 +16,14 @@ import {
   EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
+  MobileRecordCard,
   SectionHeader,
   formatWorkspaceRole,
   managementTableColumnPt,
   managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
+  useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
@@ -33,8 +35,6 @@ import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
-import MobileRecordCard from '@/components/mobile/MobileRecordCard.vue';
-import { useIsMobileViewport } from '@/composables/useIsMobileViewport';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import { useConfirmation } from '@/composables/useConfirmation';
 import { adminMembersClient } from '@/services/admin-members-client';

@@ -7,7 +7,9 @@ import type { TimeEntryResponse } from "@gitiempo/shared";
 import {
   ManagementTableRowAction,
   ManagementTableShell,
+  MobileRecordCard,
   managementTableColumnPt,
+  useIsMobileViewport,
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
 
@@ -28,6 +30,7 @@ const emit = defineEmits<{
   deleteEntry: [entry: TimeEntryResponse];
   editEntry: [entry: TimeEntryResponse];
 }>();
+const isMobileViewport = useIsMobileViewport();
 
 const projectColumnWidth = '12rem';
 const timeColumnWidth = '10rem';
@@ -62,7 +65,82 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
       />
     </div>
 
+    <div
+      v-if="isMobileViewport"
+      class="flex flex-col gap-3"
+    >
+      <MobileRecordCard
+        v-for="entry in props.group.items"
+        :key="entry.id"
+        data-testid="time-entry-mobile-card"
+        :tone="entry.endedAt === null ? 'highlighted' : 'default'"
+      >
+        <div class="flex min-w-0 flex-col gap-1">
+          <p class="text-text-dark truncate text-sm font-medium">
+            {{ entry.task.title }}
+          </p>
+          <p
+            v-if="entry.description"
+            class="text-text-muted truncate text-xs"
+          >
+            {{ entry.description }}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex min-w-0 flex-col gap-1">
+            <span class="text-text-muted text-xs">Project</span>
+            <span class="text-text-dark truncate text-[13px] font-medium">
+              {{ entry.project.name }}
+            </span>
+          </div>
+
+          <div class="flex min-w-0 flex-col gap-1 text-right">
+            <span class="text-text-muted text-xs">Duration</span>
+            <span class="text-text-dark text-[13px] font-semibold tabular-nums">
+              {{ props.formatDuration(entry) }}
+            </span>
+          </div>
+
+          <div class="col-span-2 flex min-w-0 flex-col gap-1">
+            <span class="text-text-muted text-xs">Time</span>
+            <span class="text-text-dark text-[13px] font-medium">
+              {{ props.formatTimeRange(entry) }}
+            </span>
+          </div>
+        </div>
+
+        <p
+          v-if="entry.endedAt === null"
+          class="text-text-muted text-xs"
+        >
+          Stop from the top bar
+        </p>
+
+        <template
+          v-if="entry.endedAt !== null"
+          #actions
+        >
+          <ManagementTableRowAction
+            :data-testid="`time-entry-mobile-edit-${entry.id}`"
+            :icon="PencilSquareIcon"
+            label="Edit"
+            @click="emit('editEntry', entry)"
+          />
+          <ManagementTableRowAction
+            :data-testid="`time-entry-mobile-delete-${entry.id}`"
+            :icon="TrashIcon"
+            label="Delete"
+            :loading="props.isDeletingEntry === entry.id"
+            tone="destructive"
+            @click="emit('deleteEntry', entry)"
+          />
+        </template>
+      </MobileRecordCard>
+    </div>
+
     <ManagementTableShell
+      v-else
       body-row-class="h-[52px]"
       :columns="columns"
       data-key="id"

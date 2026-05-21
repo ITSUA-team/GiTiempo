@@ -2,9 +2,11 @@
 import {
   EmptyStateBlock,
   ManagementTableShell,
+  MobileRecordCard,
   SectionHeader,
   managementTableColumnPt,
   managementTableFilterSelectPt,
+  useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
@@ -14,8 +16,6 @@ import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
-import MobileRecordCard from '@/components/mobile/MobileRecordCard.vue';
-import { useIsMobileViewport } from '@/composables/useIsMobileViewport';
 import {
   formatReportDuration,
   type ReportBillableFilter,
