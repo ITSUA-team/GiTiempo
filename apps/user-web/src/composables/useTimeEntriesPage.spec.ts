@@ -50,6 +50,8 @@ function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
 }
 
 function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
+  const { githubIssue = null, ...entryOverrides } = overrides;
+
   return {
     createdAt: "2026-04-21T10:30:00.000Z",
     description: null,
@@ -78,7 +80,8 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
     },
     userId: "user-1",
     workspaceId: "workspace-1",
-    ...overrides,
+    githubIssue,
+    ...entryOverrides,
   };
 }
 
