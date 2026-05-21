@@ -133,8 +133,9 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
   }
 
   if (state.snapshot.currentTimer) {
-    const runningContext = state.pageContext?.kind === "supported"
-      ? `${state.snapshot.currentTimer.project.name} / ${state.pageContext.githubRepo}`
+    const runningRepo = state.snapshot.currentTimer.githubIssue?.githubRepo;
+    const runningContext = runningRepo
+      ? `${state.snapshot.currentTimer.project.name} / ${runningRepo}`
       : state.snapshot.currentTimer.project.name;
 
     return `

@@ -19,7 +19,10 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
     projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
     source: "extension",
     startedAt: "2026-04-21T09:00:00.000Z",
-    githubIssue: null,
+    githubIssue: {
+      githubRepo: "octo/timer-repo",
+      issueNumber: 184,
+    },
     task: {
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       title: "Improve reports filters",
@@ -76,6 +79,16 @@ function supportedContext(): PageContext {
     issueNumber: 184,
     issueTitle: "Improve reports filters",
     issueUrl: "https://github.com/octo/repo/issues/184",
+    kind: "supported",
+  };
+}
+
+function otherSupportedContext(): PageContext {
+  return {
+    githubRepo: "octo/current-page",
+    issueNumber: 999,
+    issueTitle: "Different issue in the active tab",
+    issueUrl: "https://github.com/octo/current-page/issues/999",
     kind: "supported",
   };
 }
@@ -287,7 +300,30 @@ describe("popup app", () => {
 
     expect(document.body.textContent).toContain("Stop Timer");
     expect(document.body.textContent).toContain("01:00:00");
-    expect(document.body.textContent).toContain("Project Orion / octo/repo");
+    expect(document.body.textContent).toContain("Project Orion / octo/timer-repo");
+  });
+
+  it("prefers the running timer repo over the active page repo", async () => {
+    const runtimeClient = createRuntimeClient({
+      snapshot: {
+        authenticated: true,
+        currentTimer: currentTimer(),
+        errorMessage: null,
+      },
+    });
+    const app = createPopupApp({
+      now: () => new Date("2026-04-21T10:00:00.000Z").getTime(),
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+      pageContextResolver: async () => otherSupportedContext(),
+    });
+
+    await app.load();
+
+    expect(document.body.textContent).toContain("Project Orion / octo/timer-repo");
+    expect(document.body.textContent).not.toContain(
+      "Project Orion / octo/current-page",
+    );
   });
 
   it("adds explicit focus-visible styles to popup primary actions", async () => {
