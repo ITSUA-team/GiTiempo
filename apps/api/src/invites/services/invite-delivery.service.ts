@@ -21,13 +21,22 @@ export class InviteDeliveryService {
     const consoleFallback =
       !isProduction &&
       this.config.get('INVITES_EMAIL_CONSOLE_FALLBACK', { infer: true });
+    const showSecrets =
+      !isProduction &&
+      this.config.get('INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS', {
+        infer: true,
+      });
 
     if (consoleFallback) {
       this.logger.log({
         event: 'invites.delivery.console_fallback',
         email: input.email,
-        inviteUrl: input.inviteUrl,
-        passwordSetupUrl: input.passwordSetupUrl,
+        inviteUrl: showSecrets
+          ? input.inviteUrl
+          : sanitizeInviteUrl(input.inviteUrl),
+        passwordSetupUrl: showSecrets
+          ? input.passwordSetupUrl
+          : sanitizePasswordSetupUrl(input.passwordSetupUrl),
       });
       return;
     }
@@ -63,4 +72,22 @@ export class InviteDeliveryService {
     if (!user || !pass) return undefined;
     return { user, pass };
   }
+}
+
+function sanitizeInviteUrl(rawUrl: string): string {
+  const url = new URL(rawUrl);
+  if (url.searchParams.has('token')) {
+    url.searchParams.set('token', '[redacted]');
+  }
+  return url.toString();
+}
+
+function sanitizePasswordSetupUrl(rawUrl: string): string {
+  const url = new URL(rawUrl);
+  for (const key of ['oobCode', 'continueUrl']) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.set(key, '[redacted]');
+    }
+  }
+  return url.toString();
 }

@@ -1,6 +1,5 @@
 import {
   GoogleAuthProvider,
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -13,7 +12,6 @@ import type { CurrentUserClient } from "./current-user-client";
 /* eslint-disable no-unused-vars */
 
 export interface AuthRuntime {
-  createAccountWithEmailPassword(email: string, password: string): Promise<string>;
   getCurrentUser: CurrentUserClient["getCurrentUser"];
   loginWithFirebaseToken: AuthHttpClient["loginWithFirebaseToken"];
   logoutSession: AuthHttpClient["logoutAuthSession"];
@@ -37,19 +35,6 @@ export function createDefaultAuthRuntime({
   getFirebaseAuth,
   hasFirebaseConfig,
 }: DefaultAuthRuntimeOptions): AuthRuntime {
-  async function createAccountWithEmailPassword(
-    email: string,
-    password: string,
-  ): Promise<string> {
-    const userCredential = await createUserWithEmailAndPassword(
-      getFirebaseAuth(),
-      email,
-      password,
-    );
-
-    return userCredential.user.getIdToken();
-  }
-
   async function signInWithEmailPassword(
     email: string,
     password: string,
@@ -82,7 +67,6 @@ export function createDefaultAuthRuntime({
   }
 
   return {
-    createAccountWithEmailPassword,
     getCurrentUser: currentUserClient.getCurrentUser,
     loginWithFirebaseToken: authClient.loginWithFirebaseToken,
     logoutSession: authClient.logoutAuthSession,

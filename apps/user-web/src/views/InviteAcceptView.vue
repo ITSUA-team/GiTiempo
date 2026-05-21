@@ -174,7 +174,7 @@ function mapEmailPasswordErrorMessage(error: unknown): string {
   }
 
   if (code === "auth/user-not-found") {
-    return "No Firebase password is set for this invited email yet. Use the password setup link from the invite email or ask an admin to resend the invite.";
+    return "No Firebase password is set for this invited email yet. Use the password setup link from the invite email or ask an admin to cancel the stale invite and send a fresh one.";
   }
 
   if (
@@ -371,7 +371,7 @@ async function handleGoogleAccept(): Promise<void> {
     description="Use the password setup link from your invite email if this is your first time, then sign in with the invited email. GiTiempo creates workspace access after the invite is accepted."
     :steps="inviteSteps"
     :footer-lines="shellFooterLines"
-    footer-accent="Need a password setup link? Ask an admin to resend the invite."
+    footer-accent="Need a password setup link? Ask an admin to send a fresh invite."
   >
     <template v-if="panelState === 'form'">
       <div class="flex flex-col gap-1.5">
@@ -488,7 +488,7 @@ async function handleGoogleAccept(): Promise<void> {
             data-testid="invite-accept-password-help"
           >
             Need a password setup link? Check your invite email or ask an
-            admin to resend the invite.
+            admin to send a fresh invite.
           </p>
 
           <Button

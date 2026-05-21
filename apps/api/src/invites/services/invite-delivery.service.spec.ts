@@ -9,9 +9,15 @@ vi.mock('nodemailer', () => ({
   },
 }));
 
-function makeService(consoleFallback: boolean) {
+function makeService(
+  consoleFallback: boolean,
+  showSecrets = false,
+) {
   const configGet = vi.fn((key: string) => {
     if (key === 'INVITES_EMAIL_CONSOLE_FALLBACK') return consoleFallback;
+    if (key === 'INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS') {
+      return showSecrets;
+    }
     if (key === 'SMTP_HOST') return 'smtp.example.com';
     if (key === 'SMTP_PORT') return 587;
     if (key === 'EMAIL_FROM') return 'noreply@example.com';
@@ -69,7 +75,44 @@ describe('InviteDeliveryService', () => {
           event: 'invites.delivery.console_fallback',
           email: 'test@example.com',
           passwordSetupUrl: 'https://firebase.test/reset',
+          inviteUrl: 'http://localhost:5173/invites/accept?token=%5Bredacted%5D',
+        }),
+      );
+      expect(logSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({
           inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
+        }),
+      );
+      expect(sendMailMock).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it('allows full invite links in development when the debug flag is true', async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    sendMailMock.mockClear();
+
+    try {
+      const service = makeService(true, true);
+      const logSpy = vi.spyOn(service['logger'], 'log');
+
+      await service.deliver({
+        email: 'test@example.com',
+        inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
+        passwordSetupUrl:
+          'https://firebase.test/reset?mode=resetPassword&oobCode=test-code&continueUrl=http%3A%2F%2Flocalhost%3A5173%2Finvites%2Faccept%3Ftoken%3Dsecret-token',
+        workspaceName: 'Test Workspace',
+      });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'invites.delivery.console_fallback',
+          email: 'test@example.com',
+          inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
+          passwordSetupUrl:
+            'https://firebase.test/reset?mode=resetPassword&oobCode=test-code&continueUrl=http%3A%2F%2Flocalhost%3A5173%2Finvites%2Faccept%3Ftoken%3Dsecret-token',
         }),
       );
       expect(sendMailMock).not.toHaveBeenCalled();

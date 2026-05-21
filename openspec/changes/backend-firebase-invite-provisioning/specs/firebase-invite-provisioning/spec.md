@@ -7,7 +7,8 @@ The system SHALL provision or reuse the invited email's Firebase identity throug
 - **GIVEN** an admin creates an invite for an email that has no Firebase user
 - **WHEN** the system prepares invite delivery
 - **THEN** the system creates a Firebase user for the invited email without receiving or storing a password
-- **AND** the system generates a Firebase password setup/reset action link for that email that opens the User SPA password setup page
+- **AND** the system generates Firebase password setup/reset action parameters for that email
+- **AND** the delivered password setup URL opens the User SPA password setup page while preserving those Firebase action parameters
 - **AND** the action link preserves the invite token as return context
 
 #### Scenario: Invitee already has a Firebase user
@@ -54,8 +55,15 @@ The system SHALL send invite delivery content that tells first-time invitees how
 #### Scenario: Console fallback logs invite delivery
 - **GIVEN** console fallback mode is enabled outside production
 - **WHEN** the system records invite delivery in application logs
-- **THEN** the log entry includes the invite accept URL
-- **AND** the log entry includes password setup/reset link information needed for local testing
+- **THEN** the log entry includes redacted invite and password-setup URL details
+- **AND** the log entry does not expose raw invite tokens, Firebase `oobCode` values, or nested `continueUrl` query values
+
+#### Scenario: Local debug console fallback shows full links
+- **GIVEN** console fallback mode is enabled outside production
+- **AND** an explicit local debug flag for invite email secrets is enabled
+- **WHEN** the system records invite delivery in application logs for manual local testing
+- **THEN** the log entry may include full invite and password-setup URLs
+- **AND** this exception MUST NOT be available in production
 
 ### Requirement: Password Setup Link Preserves Invite Context
 The system SHALL configure Firebase password setup/reset action links so the invitee can return to the same invite after setting a password.
@@ -63,6 +71,16 @@ The system SHALL configure Firebase password setup/reset action links so the inv
 #### Scenario: Action link returns to invite acceptance
 - **GIVEN** an admin creates an invite for a first-time email/password user
 - **WHEN** the system generates the Firebase password setup/reset action link
-- **THEN** the action link opens the User SPA password setup route
+- **THEN** the delivered password setup URL opens the User SPA password setup route
 - **AND** the action link includes return context for `/invites/accept?token=<token>`
 - **AND** completing password setup returns the invitee to the invite accept page with the original token
+
+### Requirement: Provisioned Firebase Identity May Exist Before Membership
+The system SHALL treat a provisioned Firebase identity as separate from GiTiempo workspace access until invite acceptance creates local membership.
+
+#### Scenario: Invite delivery fails after Firebase provisioning
+- **GIVEN** the system has provisioned or reused a Firebase identity for the invited email
+- **AND** invite delivery later fails and the pending invite is expired
+- **WHEN** no local user or membership has been created yet
+- **THEN** the Firebase identity may remain provisioned for later reuse
+- **AND** the invitee still cannot access GiTiempo until `POST /invites/accept` creates local membership

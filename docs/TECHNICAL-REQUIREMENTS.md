@@ -405,8 +405,8 @@ The API requires the following environment variables:
 | `GITHUB_APP_CLIENT_SECRET` | GitHub App client secret                                                                              |
 | `ENCRYPTION_KEY`           | Key for AES-encrypting stored GitHub tokens                                                           |
 | `APP_URL`                  | Public URL of the API (for OAuth callback)                                                            |
-| `USER_WEB_URL`             | Public URL of the User SPA                                                                            |
-| `ADMIN_WEB_URL`            | Public URL of the Admin SPA                                                                           |
+| `USER_SPA_URL`             | Public URL of the User SPA                                                                            |
+| `ADMIN_SPA_URL`            | Public URL of the Admin SPA                                                                           |
 | `SEED_ADMIN_EMAIL`         | Email of the initial admin user (used by seed migration)                                              |
 | `SEED_ADMIN_FIREBASE_UID`  | Firebase UID of the initial admin user                                                                |
 | `SEED_MEMBER_EMAIL`        | Email of an optional seeded member user                                                               |

@@ -58,7 +58,7 @@ The user-web invite accept page MUST authenticate invited users through Firebase
 #### Scenario: Invitee needs password setup
 - **GIVEN** the invite accept page is opened with a valid invite token
 - **WHEN** the invitee cannot sign in because no password has been set
-- **THEN** the page shows inline guidance to use the password setup link from the invite email or ask an admin to resend the invite
+- **THEN** the page shows inline guidance to use the password setup link from the invite email or ask an admin to cancel the stale invite and send a fresh one
 - **AND** the page preserves the invite token state
 
 #### Scenario: Sign-in succeeds but invite acceptance fails

@@ -93,6 +93,10 @@ export const envSchema = z
       .string()
       .default('false')
       .transform((val) => val === 'true'),
+    INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS: z
+      .string()
+      .default('false')
+      .transform((val) => val === 'true'),
 
     // --- Firebase Admin ---
     // Required in non-test environments. In test mode the fake provider is used,

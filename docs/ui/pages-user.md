@@ -107,7 +107,7 @@
 - If the `token` query parameter is missing or empty, do not show the sign-in form. Render the invalid-link state with title `Invalid invite link`, helper copy that the link is missing or malformed, and a primary action to go to the login page.
 - The default form is Firebase email/password sign-in with fields ordered `Email`, then `Password`, followed by the primary action `Accept invite`.
 - The page MUST NOT create Firebase email/password accounts in the browser. First-time email/password invitees use the password setup/reset link sent in the invite email; backend invite delivery owns Firebase Admin SDK user provisioning and password setup/reset link generation.
-- The secondary account action is `Need a password setup link? Check your invite email or ask an admin to resend the invite`; it preserves the invite token and does not expose a browser signup form.
+- The secondary account action is `Need a password setup link? Check your invite email or ask an admin to send a fresh invite`; it preserves the invite token and does not expose a browser signup form.
 - `Continue with Google` may remain available as an alternative sign-in action; it uses the same invite token and accepts the invite after Firebase returns an identity token for the invited email.
 - The page MUST submit `POST /invites/accept` with `{ token, firebaseIdToken }` after Firebase sign-in, before trying to create an app API session for a first-time invited user.
 - After `POST /invites/accept` returns `204`, the page signs in to the normal app session with the same Firebase identity token, then redirects to the dashboard.

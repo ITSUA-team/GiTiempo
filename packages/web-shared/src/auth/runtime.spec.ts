@@ -8,7 +8,6 @@ import {
 } from "./runtime";
 
 const firebaseMocks = vi.hoisted(() => ({
-  createUserWithEmailAndPassword: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   signInWithPopup: vi.fn(),
   signOut: vi.fn(),
@@ -22,7 +21,6 @@ vi.mock("firebase/auth", () => ({
       this.scopes.push(scope);
     }
   },
-  createUserWithEmailAndPassword: firebaseMocks.createUserWithEmailAndPassword,
   signInWithEmailAndPassword: firebaseMocks.signInWithEmailAndPassword,
   signInWithPopup: firebaseMocks.signInWithPopup,
   signOut: firebaseMocks.signOut,
@@ -88,22 +86,6 @@ describe("createDefaultAuthRuntime", () => {
       {},
       "alexey@example.com",
       "password",
-    );
-  });
-
-  it("creates an email/password account and returns the Firebase ID token", async () => {
-    firebaseMocks.createUserWithEmailAndPassword.mockResolvedValueOnce({
-      user: { getIdToken: async () => "created-account-id-token" },
-    });
-    const runtime = createRuntime();
-
-    await expect(
-      runtime.createAccountWithEmailPassword("alexey@example.com", "password123"),
-    ).resolves.toBe("created-account-id-token");
-    expect(firebaseMocks.createUserWithEmailAndPassword).toHaveBeenCalledWith(
-      {},
-      "alexey@example.com",
-      "password123",
     );
   });
 

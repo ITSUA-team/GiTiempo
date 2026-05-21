@@ -39,7 +39,6 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   };
 
   return {
-    createAccountWithEmailPassword: async () => "firebase-created-account-token",
     getCurrentUser: async () => currentUser,
     loginWithFirebaseToken: async () => ({
       accessToken: "access-token",
@@ -150,18 +149,15 @@ describe("InviteAcceptView", () => {
       "Accept invite",
     );
     expect(wrapper.text()).toContain(
-      "Need a password setup link? Check your invite email or ask an admin to resend the invite.",
+      "Need a password setup link? Check your invite email or ask an admin to send a fresh invite.",
     );
   });
 
   it("accepts the invite after email/password sign-in and redirects to the dashboard", async () => {
     const signInWithEmailPassword = vi.fn(async () => "firebase-email-token");
-    const createAccountWithEmailPassword = vi.fn(
-      async () => "firebase-created-account-token",
-    );
     const acceptInvite = vi.fn(async () => undefined);
     setAuthRuntimeForTesting(
-      createRuntimeMock({ createAccountWithEmailPassword, signInWithEmailPassword }),
+      createRuntimeMock({ signInWithEmailPassword }),
     );
     setWorkspaceInvitesClientForTesting(
       createWorkspaceInvitesClientMock({ acceptInvite }),
@@ -187,18 +183,14 @@ describe("InviteAcceptView", () => {
       token: "invite-token",
     });
     expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-email-token");
-    expect(createAccountWithEmailPassword).not.toHaveBeenCalled();
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
   it("accepts the invite with Google and redirects to the dashboard", async () => {
     const signInWithGoogle = vi.fn(async () => "firebase-google-token");
-    const createAccountWithEmailPassword = vi.fn(
-      async () => "firebase-created-account-token",
-    );
     const acceptInvite = vi.fn(async () => undefined);
     setAuthRuntimeForTesting(
-      createRuntimeMock({ createAccountWithEmailPassword, signInWithGoogle }),
+      createRuntimeMock({ signInWithGoogle }),
     );
     setWorkspaceInvitesClientForTesting(
       createWorkspaceInvitesClientMock({ acceptInvite }),
@@ -215,7 +207,6 @@ describe("InviteAcceptView", () => {
       token: "invite-token",
     });
     expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-google-token");
-    expect(createAccountWithEmailPassword).not.toHaveBeenCalled();
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
