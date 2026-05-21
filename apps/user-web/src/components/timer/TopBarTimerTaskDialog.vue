@@ -5,6 +5,7 @@ import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
+import { useIsMobileViewport } from "@gitiempo/web-shared";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -53,6 +54,8 @@ const createTaskTitleModel = computed({
     emit("update:createTaskTitle", value);
   },
 });
+
+const isMobileViewport = useIsMobileViewport();
 </script>
 
 <template>
@@ -204,7 +207,7 @@ const createTaskTitleModel = computed({
           </div>
 
           <div
-            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             data-testid="top-bar-timer-create-task-actions"
           >
             <p class="text-text-muted text-xs">
@@ -215,6 +218,7 @@ const createTaskTitleModel = computed({
               class="w-full sm:w-auto"
               severity="secondary"
               :disabled="props.isCreateTaskDisabled"
+              :fluid="isMobileViewport"
               label="Create task"
               :loading="props.isCreatingTask"
               @click="emit('createTask')"
@@ -226,23 +230,25 @@ const createTaskTitleModel = computed({
 
     <template #footer>
       <div
-        class="flex flex-col gap-2 sm:flex-row sm:justify-end"
+        class="flex w-full flex-col gap-2 sm:flex-row sm:justify-end"
         data-testid="top-bar-timer-task-dialog-footer"
       >
         <Button
           type="button"
-          class="w-full sm:w-auto"
+          class="w-full sm:order-2 sm:w-auto"
+          :disabled="props.isConfirmSelectionDisabled"
+          :fluid="isMobileViewport"
+          label="Use selected task"
+          @click="emit('confirm')"
+        />
+        <Button
+          type="button"
+          class="w-full sm:order-1 sm:w-auto"
+          :fluid="isMobileViewport"
           label="Cancel"
           severity="secondary"
           text
           @click="emit('close')"
-        />
-        <Button
-          type="button"
-          class="w-full sm:w-auto"
-          :disabled="props.isConfirmSelectionDisabled"
-          label="Use selected task"
-          @click="emit('confirm')"
         />
       </div>
     </template>

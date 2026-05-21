@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
+import { mockMatchMedia } from "@/test/mockMatchMedia";
 
 function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialog>["$props"]> = {}) {
   return mount(TopBarTimerTaskDialog, {
@@ -53,9 +54,9 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
     global: {
       stubs: {
         Button: {
-          props: ["disabled", "label"],
+          props: ["disabled", "fluid", "label"],
           template:
-            '<button :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
+            '<button :data-fluid="String(fluid)" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Dialog: {
           props: {
@@ -84,6 +85,10 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
 }
 
 describe("TopBarTimerTaskDialog", () => {
+  beforeEach(() => {
+    mockMatchMedia(false);
+  });
+
   it("emits project and task selection updates", async () => {
     const wrapper = mountDialog();
     const selects = wrapper.findAll("select");
@@ -157,12 +162,15 @@ describe("TopBarTimerTaskDialog", () => {
   });
 
   it("uses mobile-friendly dialog sizing, scrolling, and stacked action rows", () => {
+    mockMatchMedia(true);
+
     const wrapper = mountDialog();
     const dialog = wrapper.get('[data-testid="timer-task-dialog"]');
     const createTaskActions = wrapper.get(
       '[data-testid="top-bar-timer-create-task-actions"]',
     );
     const footer = wrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]');
+    const footerButtons = footer.findAll("button");
     const createTaskButton = wrapper
       .findAll("button")
       .find((button) => button.text() === "Create task");
@@ -179,10 +187,33 @@ describe("TopBarTimerTaskDialog", () => {
     );
     expect(dialog.attributes("data-content-class")).toContain("overflow-y-auto");
     expect(createTaskActions.classes()).toContain("flex-col");
+    expect(createTaskActions.classes()).toContain("w-full");
     expect(createTaskActions.classes()).toContain("sm:flex-row");
     expect(footer.classes()).toContain("flex-col");
+    expect(footer.classes()).toContain("w-full");
     expect(footer.classes()).toContain("sm:flex-row");
+    expect(footerButtons.map((button) => button.text())).toEqual([
+      "Use selected task",
+      "Cancel",
+    ]);
     expect(createTaskButton?.classes()).toContain("w-full");
     expect(confirmButton?.classes()).toContain("w-full");
+    expect(confirmButton?.classes()).toContain("sm:order-2");
+    expect(footerButtons[1]?.classes()).toContain("sm:order-1");
+    expect(createTaskButton?.attributes("data-fluid")).toBe("true");
+    expect(confirmButton?.attributes("data-fluid")).toBe("true");
+  });
+
+  it("keeps action buttons intrinsic on tablet and desktop", () => {
+    const wrapper = mountDialog();
+    const createTaskButton = wrapper
+      .findAll("button")
+      .find((button) => button.text() === "Create task");
+    const confirmButton = wrapper
+      .findAll("button")
+      .find((button) => button.text() === "Use selected task");
+
+    expect(createTaskButton?.attributes("data-fluid")).toBe("false");
+    expect(confirmButton?.attributes("data-fluid")).toBe("false");
   });
 });
