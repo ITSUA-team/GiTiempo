@@ -76,9 +76,12 @@ async function handleSave({
       :initial-values="initialValues"
       @submit="handleSave"
     >
-      <div class="flex items-end gap-2.5">
+      <div
+        data-testid="member-edit-form-layout"
+        class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2.5"
+      >
         <!-- Name (read-only) -->
-        <div class="flex flex-1 flex-col gap-1.5">
+        <div class="flex min-w-0 flex-col gap-1.5 sm:flex-1">
           <label
             for="edit-member-name"
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
@@ -93,7 +96,7 @@ async function handleSave({
         </div>
 
         <!-- Email (read-only) -->
-        <div class="flex flex-1 flex-col gap-1.5">
+        <div class="flex min-w-0 flex-col gap-1.5 sm:flex-1">
           <label
             for="edit-member-email"
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
@@ -107,7 +110,7 @@ async function handleSave({
         </div>
 
         <!-- Role (editable) -->
-        <div class="flex w-[180px] flex-col gap-1.5">
+        <div class="flex min-w-0 flex-col gap-1.5 sm:w-[180px] sm:shrink-0">
           <label
             for="edit-member-role"
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
@@ -122,19 +125,27 @@ async function handleSave({
           />
         </div>
 
-        <Button
-          label="Cancel"
-          severity="secondary"
-          outlined
-          :pt="{ root: { class: 'bg-white' } }"
-          @click="emit('cancelled')"
-        />
-        <Button
-          label="Save"
-          :disabled="saving"
-          :loading="saving"
-          type="submit"
-        />
+        <div
+          data-testid="member-edit-form-actions"
+          class="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-2.5"
+        >
+          <Button
+            label="Cancel"
+            severity="secondary"
+            outlined
+            type="button"
+            class="w-full sm:w-auto"
+            :pt="{ root: { class: 'bg-white' } }"
+            @click="emit('cancelled')"
+          />
+          <Button
+            label="Save"
+            :disabled="saving"
+            :loading="saving"
+            type="submit"
+            class="w-full sm:w-auto"
+          />
+        </div>
       </div>
     </Form>
   </EditFormPanel>

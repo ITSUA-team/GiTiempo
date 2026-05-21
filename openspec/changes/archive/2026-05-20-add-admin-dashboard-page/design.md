@@ -12,7 +12,7 @@ Required implementation references are `docs/ui/INDEX.md`, `docs/ui/pages-admin.
 
 - Replace the admin Dashboard placeholder with a functional dashboard page in the authenticated shell.
 - Match `bCRah` for page header copy, stat-card count and density, card spacing/radii/shadow, Recent Activity feed hierarchy, and responsive adaptation.
-- Reuse `StatsHeader` and `StatCard` from `@gitiempo/web-shared` for the page header and stat row when their structure fits the approved design.
+- Reuse `SectionHeader` and `StatCard` from `@gitiempo/web-shared` for the page header and stat row when their structure fits the approved design.
 - Render Recent Activity as the approved compact feed with token-backed circular indicators, activity copy, and time copy.
 - Load dashboard data from existing endpoints only and keep request-error, empty, and loading states distinct.
 - Use PrimeVue `Skeleton` for an initial page skeleton matching the header, stat cards, and recent activity feed.

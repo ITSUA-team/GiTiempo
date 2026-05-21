@@ -133,18 +133,20 @@ onMounted(fetchAll);
           />
         </template>
         <template #stats>
-          <StatCard
-            label="Active Members"
-            :value="activeMembers"
-          />
-          <StatCard
-            label="Pending Invites"
-            :value="pendingInvites"
-          />
-          <StatCard
-            label="PMs Assigned"
-            :value="pmsAssigned"
-          />
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard
+              label="Active Members"
+              :value="activeMembers"
+            />
+            <StatCard
+              label="Pending Invites"
+              :value="pendingInvites"
+            />
+            <StatCard
+              label="PMs Assigned"
+              :value="pmsAssigned"
+            />
+          </div>
         </template>
       </SectionHeader>
 

@@ -35,18 +35,21 @@ Each admin-facing product page in `admin-web` MUST assume an authenticated shell
 
 ### Requirement: Admin Dashboard Summary
 
-The admin dashboard SHALL summarize workspace state through stat cards and recent activity.
+The admin dashboard MUST summarize workspace state through a design-matched stat header, four role-appropriate summary cards, and a design-matched recent activity feed using only existing API-backed data.
 
 #### Scenario: Dashboard renders summary surfaces
 
 - GIVEN an admin or project manager opens the dashboard
 - WHEN the page renders
-- THEN it shows summary cards for key metrics
-- AND it shows a recent-activity surface using the established table pattern
+- THEN it shows a `Dashboard` header with supporting copy matching the approved Admin Dashboard design
+- AND it shows four summary cards for current workspace metrics derived from endpoints allowed for the authenticated role
+- AND it shows a recent-activity feed matching the approved compact row design
+- AND PM users do not require member or invite management endpoints to render the dashboard
+- AND it does not require backend, shared contract, database, seed, migration, or OpenAPI changes
 
 ### Requirement: Reports Generation And Export
 
-The reports page MUST support report-generation setup controls, scoped report summaries for loaded data, table-only discovery filters, and frontend CSV export while preserving project-scope restrictions for PM users.
+The reports page MUST support report setup controls for backend CSV export, scoped report summaries for loaded data, table-only discovery filters, and backend CSV generation while preserving project-scope restrictions for PM users.
 
 #### Scenario: Reports page renders reporting surface
 
@@ -62,20 +65,18 @@ The reports page MUST support report-generation setup controls, scoped report su
 - **THEN** it shows a loading skeleton that matches the reports header, filter bar, summary cards, and results table structure
 - **AND** it does not render an empty report message before the initial request finishes
 
-#### Scenario: Default all-project report loading is bounded
-
-- **WHEN** the reports page loads the default `All projects` report scope
-- **THEN** it starts from the projects visible through the existing project list endpoint
-- **AND** it fetches time entries only for visible active projects that already report tracked hours
-- **AND** it requests project time-entry pages sequentially with the existing maximum page size until all pages are loaded
-- **AND** stale report responses do not overwrite newer report state
-
-#### Scenario: Header setup controls define CSV generation scope
+#### Scenario: Header setup controls define backend CSV export scope
 
 - **WHEN** the user changes project, member, date range, or group-by values in the header setup controls
 - **THEN** those values are kept as report-generation setup state
 - **AND** currently loaded table rows and summary cards do not change solely because those setup controls changed
-- **AND** activating `Export CSV` builds rows from the current setup state through existing project time-entry endpoints
+- **AND** activating `Export CSV` requests backend CSV generation with the current setup state
+
+#### Scenario: Results table keeps project-member time breakdowns
+
+- **WHEN** report data loads successfully for the table
+- **THEN** rows identify the member, project, tracked hours, and billable hours represented by that row
+- **AND** project rows do not collapse member identity into aggregate placeholder labels
 
 #### Scenario: Date range input uses controlled validation
 
@@ -83,27 +84,26 @@ The reports page MUST support report-generation setup controls, scoped report su
 - **THEN** the page uses a PrimeVue range date picker with manual input disabled
 - **AND** the page shows a validation message if an end-before-start range is represented
 - **AND** an invalid date range does not trigger report fetch or CSV export generation
-- **AND** no backend endpoint or shared contract change is required for date validation semantics
+- **AND** validation remains aligned with the shared report export query contract
 
 #### Scenario: Summary totals reflect loaded report data
 
 - **WHEN** report data loads successfully
-- **THEN** summary totals are derived from the loaded scoped entries
+- **THEN** summary totals are derived from the loaded backend-generated report rows
 - **AND** table-only search or column filters do not recalculate summary cards
-- **AND** header setup control edits do not recalculate summary cards until report data state changes
 
-#### Scenario: PM stays inside assigned scope
+#### Scenario: PM stays inside visible report scope
 
 - **WHEN** a PM uses the reports page
-- **THEN** project and member choices are limited to projects and users visible through the PM's existing project scope
-- **AND** the PM cannot expand filters beyond that assigned scope from the reports UI
-- **AND** PM report generation remains limited to active visible projects returned by existing project visibility rules
+- **THEN** project and member choices are limited to active projects and users visible through the PM's existing report scope
+- **AND** the PM cannot expand filters beyond active public projects plus active private projects assigned to that PM from the reports UI
+- **AND** the existing scoped project and report APIs remain responsible for enforcing PM scope on loaded rows and CSV export
 
 #### Scenario: Admin can explicitly report inactive or empty visible projects
 
 - **WHEN** an admin explicitly selects a project returned by the existing project list endpoint
-- **THEN** report generation may target that selected project even when it is inactive or has zero tracked hours
-- **AND** the default `All projects` scope still excludes inactive projects and projects with zero tracked hours
+- **THEN** the backend CSV export request includes that project filter even when it is inactive or has zero tracked hours
+- **AND** the backend export response determines whether any aggregate rows exist for that selection
 
 #### Scenario: Results table supports discovery controls
 
@@ -111,14 +111,15 @@ The reports page MUST support report-generation setup controls, scoped report su
 - **THEN** it exposes a global search control with placeholder `Search report rows`
 - **AND** it exposes column filters for project, member, hours, and billable columns when matching controls are available
 - **AND** clearing global search or column filters restores the rows loaded for the current report data state and role scope
+- **AND** table-only search and column filters do not call report data endpoints
 
-#### Scenario: Frontend CSV export uses report setup controls
+#### Scenario: CSV export uses backend report endpoint
 
 - **WHEN** the user activates `Export CSV`
-- **THEN** the browser downloads a CSV built from generated rows for the current header setup controls
-- **AND** the export includes the same role scope as the existing project and project time-entry endpoints
+- **THEN** the page requests `GET /reports/time/export` with the current report setup controls
+- **AND** the browser downloads the CSV returned by the backend
 - **AND** table global search and column filters do not change the CSV export scope
-- **AND** the export does not require a backend CSV endpoint
+- **AND** no browser-side report row aggregation or CSV serialization is required
 
 #### Scenario: Report request errors stay distinct from empty results
 
@@ -160,9 +161,9 @@ The members, projects, and settings pages MUST support the documented administra
 
 - GIVEN an admin opens the settings page
 - WHEN the page renders
-- THEN workspace settings are shown in a grouped single-column form layout
-- AND the form includes workspace name, currency, default hourly rate, and time zone fields
-- AND save actions remain discoverable at section level or page bottom
+- THEN workspace settings are shown in a grouped single-column form layout using the current API-supported workspace settings fields
+- AND save actions remain discoverable at the page bottom
+- AND the page uses the approved Settings design as the visual reference without adding unsupported backend fields
 
 ### Requirement: Projects Navigation Item Is Active On Project Subpages
 

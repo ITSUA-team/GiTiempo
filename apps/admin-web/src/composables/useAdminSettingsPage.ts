@@ -9,7 +9,10 @@ import { adminSettingsClient } from '@/services/admin-settings-client';
 import { useAuthStore } from '@/stores/auth';
 import { useToasts } from '@/composables/useToasts';
 import {
-	ADMIN_SETTINGS_CURRENCY_OPTIONS,
+	DEFAULT_SETTINGS_CURRENCY,
+	SETTINGS_CURRENCY_OPTIONS,
+} from '@/lib/currencies';
+import {
 	getWorkspaceSettingsUpdatePayload,
 	getWorkspaceUpdatePayload,
 	toAdminSettingsFormValues,
@@ -38,6 +41,10 @@ interface UseAdminSettingsPageOptions {
 
 function getErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : 'An unexpected error occurred';
+}
+
+function getDefaultTimeZone(): string {
+	return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 }
 
 function assignForm(
@@ -89,9 +96,9 @@ export function useAdminSettingsPage(
 	const requestError = shallowRef<string | null>(null);
 	const fieldErrors = reactive<AdminSettingsFieldErrors>({});
 	const form = reactive<AdminSettingsFormValues>({
-		currency: 'USD',
+		currency: DEFAULT_SETTINGS_CURRENCY,
 		defaultHourlyRate: null,
-		timeZone: 'UTC',
+		timeZone: getDefaultTimeZone(),
 		workspaceName: '',
 	});
 
@@ -112,15 +119,15 @@ export function useAdminSettingsPage(
 	);
 
 	const currencyOptions = computed(() => {
-		const existingOption = ADMIN_SETTINGS_CURRENCY_OPTIONS.some(
+		const existingOption = SETTINGS_CURRENCY_OPTIONS.some(
 			(option) => option.value === form.currency,
 		);
 
 		return existingOption
-			? ADMIN_SETTINGS_CURRENCY_OPTIONS
+			? SETTINGS_CURRENCY_OPTIONS
 			: [
 					{ label: form.currency, value: form.currency },
-					...ADMIN_SETTINGS_CURRENCY_OPTIONS,
+					...SETTINGS_CURRENCY_OPTIONS,
 				];
 	});
 

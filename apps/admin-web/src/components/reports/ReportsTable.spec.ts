@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
+import { defineComponent } from 'vue';
 import PrimeVue from 'primevue/config';
-import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
@@ -9,6 +9,42 @@ import {
   type ReportTableRow,
 } from '@/lib/report-view-model';
 import ReportsTable from './ReportsTable.vue';
+
+const SelectStub = defineComponent({
+  props: {
+    modelValue: {
+      default: undefined,
+      type: [String, Number, Boolean, null],
+    },
+    optionLabel: {
+      default: 'label',
+      type: String,
+    },
+    optionValue: {
+      default: 'value',
+      type: String,
+    },
+    options: {
+      default: () => [],
+      type: Array,
+    },
+    placeholder: {
+      default: undefined,
+      type: String,
+    },
+  },
+  computed: {
+    resolvedLabel(): string | undefined {
+      const options = this.options as Record<string, unknown>[];
+      const match = options.find(
+        (option) => option?.[this.optionValue] === this.modelValue,
+      );
+
+      return (match?.[this.optionLabel] as string | undefined) ?? this.placeholder;
+    },
+  },
+  template: '<div data-testid="select-stub">{{ resolvedLabel }}</div>',
+});
 
 const rows: ReportTableRow[] = [
   {
@@ -55,6 +91,9 @@ describe('ReportsTable', () => {
       },
       global: {
         plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
       },
     });
 
@@ -70,16 +109,95 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
-    const columnFilters = wrapper.findAllComponents(Select);
-    expect(columnFilters).toHaveLength(4);
-    expect(columnFilters.every((filter) => filter.props('disabled') !== true)).toBe(
-      true,
-    );
+    const filterControls = wrapper.findAll('[data-testid="select-stub"]');
+    expect(filterControls).toHaveLength(4);
+    expect(filterControls).toHaveLength(4);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
 
     const search = wrapper.get('input[aria-label="Search report rows"]');
     await search.setValue('orion');
 
     expect(filters.global).toBe('orion');
+  });
+
+  it('renders mobile filters and loading cards without desktop table controls', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        matches: true,
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    });
+
+    const filters = createDefaultReportTableFilters();
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters,
+        loading: true,
+        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
+        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        rows,
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
+    expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
+    expect(wrapper.text()).not.toContain('2h 00m');
+  });
+
+  it('renders non-loading mobile report cards with row values on small viewports', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        matches: true,
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    });
+
+    const filters = createDefaultReportTableFilters();
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters,
+        loading: false,
+        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
+        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        rows,
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
+      },
+    });
+
+    const mobileCards = wrapper.findAll('[data-testid="report-mobile-card"]');
+
+    expect(mobileCards).toHaveLength(1);
+    expect(mobileCards[0]?.text()).toContain('Project Orion');
+    expect(mobileCards[0]?.text()).toContain('Alex Admin');
+    expect(mobileCards[0]?.text()).toContain('2h 00m');
+    expect(mobileCards[0]?.text()).toContain('1h 00m');
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
   });
 
   it('shows selected filter labels in the table filter row', () => {
@@ -99,6 +217,9 @@ describe('ReportsTable', () => {
       },
       global: {
         plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
       },
     });
 
@@ -130,6 +251,9 @@ describe('ReportsTable', () => {
       },
       global: {
         plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
       },
     });
 
@@ -165,6 +289,9 @@ describe('ReportsTable', () => {
       },
       global: {
         plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
       },
     });
 

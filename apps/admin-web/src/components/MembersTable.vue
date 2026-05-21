@@ -14,13 +14,16 @@ import {
   EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
+  MobileRecordCard,
   SectionHeader,
   formatWorkspaceRole,
   managementTableColumnPt,
+  useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
 import Column from 'primevue/column';
+import Skeleton from 'primevue/skeleton';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import { useConfirmation } from '@/composables/useConfirmation';
@@ -44,6 +47,7 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
+const isMobileViewport = useIsMobileViewport();
 
 const expandedRows = ref<Record<string, boolean>>({});
 const expansionMode = ref<Record<string, 'assign' | 'edit'>>({});
@@ -162,12 +166,178 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     <SectionHeader title="Members Table" />
   </div>
 
+  <div
+    v-if="isMobileViewport"
+    class="flex flex-col gap-3"
+  >
+    <template v-if="loading">
+      <MobileRecordCard
+        v-for="index in 3"
+        :key="index"
+        data-testid="members-mobile-loading-card"
+      >
+        <div class="flex items-start gap-3">
+          <Skeleton
+            shape="circle"
+            size="2.25rem"
+          />
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton
+              width="9rem"
+              height="1rem"
+            />
+            <Skeleton
+              width="7rem"
+              height="0.75rem"
+            />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-2">
+            <Skeleton
+              width="3rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="4.5rem"
+              height="0.875rem"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <Skeleton
+              width="4rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="5rem"
+              height="0.875rem"
+            />
+          </div>
+          <div class="col-span-2 flex flex-col gap-2">
+            <Skeleton
+              width="4.5rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="6rem"
+              height="0.875rem"
+            />
+          </div>
+        </div>
+      </MobileRecordCard>
+    </template>
+
+    <template v-else-if="members.length > 0">
+      <MobileRecordCard
+        v-for="member in members"
+        :key="member.id"
+        data-testid="member-mobile-card"
+      >
+        <div class="flex items-start gap-3">
+          <Avatar
+            :image="member.avatarUrl ?? undefined"
+            :label="!member.avatarUrl ? getInitials(member) : undefined"
+            shape="circle"
+            class="size-9 shrink-0"
+            :pt="{
+              root: 'bg-accent-tint text-brand text-[13px] font-semibold',
+            }"
+          />
+          <div class="min-w-0 flex-1">
+            <h3 class="text-text-dark truncate text-[15px] font-semibold">
+              {{ member.displayName ?? member.email }}
+            </h3>
+            <p
+              v-if="member.displayName"
+              class="text-text-muted truncate text-[12px]"
+            >
+              {{ member.email }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Role</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ formatWorkspaceRole(member.role) }}
+            </span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Projects</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ formatProjectsAssigned(member) }}
+            </span>
+          </div>
+          <div class="col-span-2 flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Last active</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ formatLastActive(member.lastActiveAt) }}
+            </span>
+          </div>
+        </div>
+
+        <template
+          v-if="!isSelf(member)"
+          #actions
+        >
+          <ManagementTableRowAction
+            v-if="member.role !== 'admin'"
+            :data-testid="`member-mobile-assign-pm-${member.id}`"
+            :icon="UserPlusIcon"
+            label="Assign PM"
+            @click="toggleExpansion(member, 'assign')"
+          />
+          <ManagementTableRowAction
+            :data-testid="`member-mobile-edit-${member.id}`"
+            :icon="PencilSquareIcon"
+            label="Edit"
+            @click="toggleExpansion(member, 'edit')"
+          />
+          <ManagementTableRowAction
+            :data-testid="`member-mobile-remove-${member.id}`"
+            :icon="TrashIcon"
+            label="Remove"
+            tone="destructive"
+            @click="handleRemove(member)"
+          />
+        </template>
+
+        <MemberAssignPmPanel
+          v-if="expansionMode[member.id] === 'assign' && expandedRows[member.id]"
+          :member="member"
+          :projects="projects"
+          @saved="handleAssignSaved(member)"
+          @cancelled="collapseRow(member)"
+        />
+        <MemberEditForm
+          v-else-if="expansionMode[member.id] === 'edit' && expandedRows[member.id]"
+          :member="member"
+          @saved="handleEditSaved(member)"
+          @cancelled="collapseRow(member)"
+        />
+      </MobileRecordCard>
+    </template>
+
+    <EmptyStateBlock
+      v-else
+      title="No members found"
+      description="Invite members to get started."
+    />
+  </div>
+
   <ManagementTableShell
+    v-else
     v-model:expanded-rows="expandedRows"
     :columns="columns"
     :value="members"
     :loading="loading"
     data-key="id"
+    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[880px] items-center border-b font-sans text-[13px] font-semibold"
+    shell-class="border-divider overflow-x-auto rounded-[6px] border"
+    single-scroll
+    table-class="min-w-[880px] w-full table-fixed border-collapse"
+    table-container-class="overflow-visible rounded-none border-none"
   >
     <!-- Member: avatar + name + email -->
     <Column :pt="managementTableColumnPt">

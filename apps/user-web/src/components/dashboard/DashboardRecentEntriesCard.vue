@@ -2,7 +2,12 @@
 import Button from "primevue/button";
 import Column from "primevue/column";
 import DataTable from "primevue/datatable";
-import { SectionHeader, SurfaceCard } from "@gitiempo/web-shared";
+import {
+  MobileRecordCard,
+  SectionHeader,
+  SurfaceCard,
+  useIsMobileViewport,
+} from "@gitiempo/web-shared";
 
 import type { DashboardRecentEntryRow } from "@/composables/useDashboardOverview";
 
@@ -13,6 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   viewAll: [];
 }>();
+const isMobileViewport = useIsMobileViewport();
 
 const projectColumnWidth = "11rem";
 const rangeColumnWidth = "8rem";
@@ -43,7 +49,48 @@ function getRowClass(entry: DashboardRecentEntryRow): string {
       </template>
     </SectionHeader>
 
-    <div class="border-divider overflow-x-auto rounded-md border">
+    <div
+      v-if="isMobileViewport"
+      class="flex flex-col gap-3"
+    >
+      <MobileRecordCard
+        v-for="entry in props.entries"
+        :key="entry.id"
+        data-testid="dashboard-recent-entry-mobile-card"
+        :tone="entry.isHighlighted ? 'highlighted' : 'default'"
+      >
+        <div class="flex min-w-0 flex-col gap-1">
+          <p class="text-text-dark truncate text-sm font-medium">
+            {{ entry.taskTitle }}
+          </p>
+          <p class="text-text-muted truncate text-[13px]">
+            {{ entry.projectName }}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex min-w-0 flex-col gap-1">
+            <span class="text-text-muted text-xs">Range</span>
+            <span class="text-text-dark truncate text-[13px] font-medium">
+              {{ entry.timeRangeLabel }}
+            </span>
+          </div>
+
+          <div class="flex min-w-0 flex-col gap-1 text-right">
+            <span class="text-text-muted text-xs">Duration</span>
+            <span class="text-text-dark text-[13px] font-semibold tabular-nums">
+              {{ entry.durationLabel }}
+            </span>
+          </div>
+        </div>
+      </MobileRecordCard>
+    </div>
+
+    <div
+      v-else
+      class="border-divider overflow-x-auto rounded-md border"
+      data-testid="dashboard-recent-entries-table"
+    >
       <DataTable
         :pt="{
           bodyCell: 'px-3 py-0',
