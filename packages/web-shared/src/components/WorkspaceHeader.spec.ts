@@ -3,7 +3,7 @@
 
 import { mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { defineComponent, h, shallowRef, type PropType } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 
@@ -25,10 +25,27 @@ type TestMenuItem = {
   separator?: boolean;
 };
 
+type TestPassThrough = {
+  root?: {
+    class?: string;
+  };
+};
+
 const ButtonStub = defineComponent({
   name: "PrimeButtonStub",
-  setup(_, { attrs, slots }) {
-    return () => h("button", attrs, slots.default?.());
+  props: {
+    pt: {
+      default: undefined,
+      type: Object as PropType<TestPassThrough>,
+    },
+  },
+  setup(props, { attrs, slots }) {
+    return () =>
+      h(
+        "button",
+        { ...attrs, class: [attrs.class, props.pt?.root?.class] },
+        slots.default?.(),
+      );
   },
 });
 
@@ -39,9 +56,14 @@ const AvatarStub = defineComponent({
       required: true,
       type: String,
     },
+    pt: {
+      default: undefined,
+      type: Object as PropType<TestPassThrough>,
+    },
   },
   setup(props, { attrs }) {
-    return () => h("span", attrs, props.label);
+    return () =>
+      h("span", { ...attrs, class: [attrs.class, props.pt?.root?.class] }, props.label);
   },
 });
 
@@ -53,12 +75,31 @@ const MenuStub = defineComponent({
       type: Array as PropType<TestMenuItem[]>,
     },
   },
-  setup(props, { attrs, expose, slots }) {
+  emits: ["hide", "show"],
+  setup(props, { attrs, emit, expose, slots }) {
     const isOpen = shallowRef(false);
+    const triggerTarget = shallowRef<HTMLElement | null>(null);
+
+    function closeMenu() {
+      isOpen.value = false;
+      emit("hide");
+      triggerTarget.value?.focus();
+    }
 
     expose({
-      toggle: () => {
+      hide: closeMenu,
+      toggle: (event?: Event) => {
+        if (event?.currentTarget instanceof HTMLElement) {
+          triggerTarget.value = event.currentTarget;
+        }
+
         isOpen.value = !isOpen.value;
+        if (isOpen.value) {
+          emit("show");
+          return;
+        }
+
+        closeMenu();
       },
     });
 
@@ -67,7 +108,7 @@ const MenuStub = defineComponent({
 
       return h(
         "div",
-        attrs,
+        { ...attrs, role: "menu" },
         props.model.map((item, index) => {
           if (item.separator) {
             return h("hr", { key: `separator-${index}` });
@@ -76,7 +117,13 @@ const MenuStub = defineComponent({
           return slots.item?.({
             item,
             props: {
-              action: item.command ? { onClick: item.command } : {},
+              action: {
+                onClick: () => {
+                  item.command?.();
+                  closeMenu();
+                },
+                role: "menuitem",
+              },
             },
           });
         }),
@@ -104,8 +151,11 @@ const RouterLinkStub = defineComponent({
   },
 });
 
-function mountHeader(options: { slots?: Record<string, string> } = {}) {
+function mountHeader(
+  options: { attachTo?: HTMLElement; slots?: Record<string, string> } = {},
+) {
   return mount(WorkspaceHeader, {
+    attachTo: options.attachTo,
     props: baseProps,
     slots: options.slots,
     global: {
@@ -121,6 +171,10 @@ function mountHeader(options: { slots?: Record<string, string> } = {}) {
 }
 
 describe("WorkspaceHeader", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
   it("renders workspace identity and counterpart link without center content", () => {
     const counterpartHref = "https://admin.example.test/login";
     const wrapper = mountHeader();
@@ -153,21 +207,39 @@ describe("WorkspaceHeader", () => {
   });
 
   it("opens the profile menu with settings and sign-out actions", async () => {
-    const wrapper = mountHeader();
+    const wrapper = mountHeader({ attachTo: document.body });
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+    const avatar = wrapper.get('[data-testid="profile-avatar"]');
 
-    await wrapper.get('[aria-label="Open profile menu"]').trigger("click");
+    (trigger.element as HTMLElement).focus();
+
+    expect(document.activeElement).toBe(trigger.element);
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+    expect(trigger.attributes("aria-haspopup")).toBe("menu");
+    expect(trigger.classes()).toContain("border-transparent");
+    expect(avatar.classes()).not.toContain("ring-brand");
+
+    await trigger.trigger("click");
 
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
     const signOutAction = wrapper.get('[data-testid="profile-menu-sign-out"]');
 
-    expect(wrapper.get('[data-testid="profile-menu"]').text()).toContain(
-      "Settings",
-    );
+    expect(trigger.attributes("aria-expanded")).toBe("true");
+    expect(trigger.classes()).toContain("border-divider");
+    expect(avatar.classes()).toContain("ring-brand");
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("role")).toBe("menu");
+    expect(settingsLink.attributes("role")).toBe("menuitem");
+    expect(signOutAction.attributes("role")).toBe("menuitem");
+    expect(wrapper.get('[data-testid="profile-menu"]').text()).toContain("Settings");
     expect(settingsLink.attributes("href")).toBe("/profile");
     expect(signOutAction.text()).toContain("Sign out");
 
     await signOutAction.trigger("click");
 
     expect(wrapper.emitted("signOut")).toHaveLength(1);
+    expect(document.activeElement).toBe(trigger.element);
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+    expect(trigger.classes()).toContain("border-transparent");
+    expect(avatar.classes()).not.toContain("ring-brand");
   });
 });

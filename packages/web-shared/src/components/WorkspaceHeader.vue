@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from "vue";
+import { computed, shallowRef, useTemplateRef } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import { RouterLink } from "vue-router";
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Menu from "primevue/menu";
+import type { MenuMethods } from "primevue/menu";
 
-type ProfileMenuRef = {
-  toggle: CallableFunction;
-};
+type ProfileMenuRef = Pick<MenuMethods, "hide" | "toggle">;
 
 const props = withDefaults(
   defineProps<{
@@ -32,6 +31,25 @@ const emit = defineEmits<{
 }>();
 
 const profileMenu = useTemplateRef<ProfileMenuRef>("profileMenu");
+const isProfileMenuOpen = shallowRef(false);
+
+const profileTriggerRootClass = computed(() =>
+  [
+    "focus-visible:outline-brand flex h-10 items-center gap-3 rounded-lg border px-1.5 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2",
+    isProfileMenuOpen.value
+      ? "border-divider bg-surface"
+      : "border-transparent bg-transparent hover:bg-app-bg",
+  ].join(" "),
+);
+
+const profileAvatarRootClass = computed(() =>
+  [
+    "bg-accent-tint text-xs font-semibold text-brand",
+    isProfileMenuOpen.value ? "ring-2 ring-brand" : "",
+  ]
+    .filter(Boolean)
+    .join(" "),
+);
 
 const profileMenuItems = computed(() => [
   {
@@ -43,7 +61,10 @@ const profileMenuItems = computed(() => [
     separator: true,
   },
   {
-    command: () => emit("signOut"),
+    command: () => {
+      isProfileMenuOpen.value = false;
+      emit("signOut");
+    },
     destructive: true,
     key: "sign-out",
     label: "Sign out",
@@ -52,6 +73,23 @@ const profileMenuItems = computed(() => [
 
 function toggleProfileMenu(event: MouseEvent): void {
   profileMenu.value?.toggle(event);
+}
+
+function handleProfileMenuHide(): void {
+  isProfileMenuOpen.value = false;
+}
+
+function handleProfileMenuShow(): void {
+  isProfileMenuOpen.value = true;
+}
+
+function handleSettingsClick(
+  navigate: CallableFunction,
+  event: MouseEvent,
+): void {
+  navigate(event);
+  profileMenu.value?.hide();
+  isProfileMenuOpen.value = false;
 }
 </script>
 
@@ -91,13 +129,14 @@ function toggleProfileMenu(event: MouseEvent): void {
       <Button
         type="button"
         aria-controls="profile_menu"
+        :aria-expanded="isProfileMenuOpen"
         aria-haspopup="menu"
         aria-label="Open profile menu"
+        data-testid="profile-menu-trigger"
         variant="text"
         :pt="{
           root: {
-            class:
-              'border-divider bg-surface hover:bg-app-bg focus-visible:outline-brand flex h-10 items-center gap-3 rounded-lg border px-1.5 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2',
+            class: profileTriggerRootClass,
           },
         }"
         @click="toggleProfileMenu"
@@ -109,9 +148,12 @@ function toggleProfileMenu(event: MouseEvent): void {
           :label="props.userInitials"
           shape="circle"
           class="size-8"
+          data-testid="profile-avatar"
           aria-hidden="true"
           :pt="{
-            root: 'bg-accent-tint text-xs font-semibold text-brand ring-2 ring-brand',
+            root: {
+              class: profileAvatarRootClass,
+            },
           }"
         />
       </Button>
@@ -124,6 +166,8 @@ function toggleProfileMenu(event: MouseEvent): void {
         aria-label="Profile actions"
         class="border-divider bg-surface shadow-popover mt-3 w-[264px] rounded-lg border p-1.5"
         data-testid="profile-menu"
+        @hide="handleProfileMenuHide"
+        @show="handleProfileMenuShow"
       >
         <template #item="{ item, props: itemProps }">
           <RouterLink
@@ -137,7 +181,7 @@ function toggleProfileMenu(event: MouseEvent): void {
               :href="href"
               class="text-text-dark hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2"
               data-testid="profile-menu-settings"
-              @click="navigate"
+              @click="handleSettingsClick(navigate, $event)"
             >
               <span
                 class="bg-app-bg text-text-muted flex size-7 items-center justify-center rounded-sm"
