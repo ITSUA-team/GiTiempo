@@ -67,6 +67,7 @@ interface TimeEntryResponseRow {
   userEmail: string;
   userDisplayName: string | null;
   userAvatarUrl: string | null;
+  githubIssueExternalKey: string | null;
 }
 
 interface GitHubProjectResult {
@@ -340,6 +341,32 @@ export class TimeEntriesService {
     return result;
   }
 
+  private parseGitHubIssueExternalKey(
+    externalKey: string | null,
+  ): TimeEntryResponse['githubIssue'] {
+    if (!externalKey) {
+      return null;
+    }
+
+    const separatorIndex = externalKey.lastIndexOf('#');
+
+    if (separatorIndex <= 0 || separatorIndex === externalKey.length - 1) {
+      return null;
+    }
+
+    const githubRepo = externalKey.slice(0, separatorIndex);
+    const issueNumber = Number(externalKey.slice(separatorIndex + 1));
+
+    if (!githubRepo || !Number.isInteger(issueNumber) || issueNumber <= 0) {
+      return null;
+    }
+
+    return {
+      githubRepo,
+      issueNumber,
+    };
+  }
+
   private async createRunningEntry(
     user: AuthUser,
     taskId: string,
@@ -406,6 +433,14 @@ export class TimeEntriesService {
       .innerJoin(tasksTable, eq(tasksTable.id, timeEntries.taskId))
       .innerJoin(projectsTable, eq(projectsTable.id, tasksTable.projectId))
       .innerJoin(users, eq(users.id, timeEntries.userId))
+      .leftJoin(
+        taskExternalRefs,
+        and(
+          eq(taskExternalRefs.taskId, tasksTable.id),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+        ),
+      )
       .where(where)
       .orderBy(desc(timeEntries.startedAt), desc(timeEntries.createdAt))
       .limit(limit)
@@ -450,6 +485,14 @@ export class TimeEntriesService {
       .innerJoin(tasksTable, eq(tasksTable.id, timeEntries.taskId))
       .innerJoin(projectsTable, eq(projectsTable.id, tasksTable.projectId))
       .innerJoin(users, eq(users.id, timeEntries.userId))
+      .leftJoin(
+        taskExternalRefs,
+        and(
+          eq(taskExternalRefs.taskId, tasksTable.id),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+        ),
+      )
       .where(and(eq(timeEntries.id, entryId), ...extraConditions))
       .limit(1);
 
@@ -495,6 +538,7 @@ export class TimeEntriesService {
       userEmail: users.email,
       userDisplayName: users.displayName,
       userAvatarUrl: users.avatarUrl,
+      githubIssueExternalKey: taskExternalRefs.externalKey,
     };
   }
 
@@ -527,6 +571,7 @@ export class TimeEntriesService {
         displayName: row.userDisplayName,
         avatarUrl: row.userAvatarUrl,
       },
+      githubIssue: this.parseGitHubIssueExternalKey(row.githubIssueExternalKey),
     };
   }
 

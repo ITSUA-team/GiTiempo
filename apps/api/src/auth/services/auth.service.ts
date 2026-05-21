@@ -132,8 +132,15 @@ export class AuthService {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    // Replay of an already-revoked token → destroy the whole family.
     if (row.revokedAt !== null) {
+      if (row.replacedBy) {
+        const replacement = await this.refreshRepo.findById(row.replacedBy);
+
+        if (replacement && replacement.revokedAt === null) {
+          throw new UnauthorizedException('Unauthorized');
+        }
+      }
+
       await this.refreshRepo.deleteFamily(row.familyId);
       this.logger.warn({
         event: 'auth.refresh.reuse_detected',
@@ -167,12 +174,6 @@ export class AuthService {
     });
 
     if (!rotated) {
-      await this.refreshRepo.deleteFamily(row.familyId);
-      this.logger.warn({
-        event: 'auth.refresh.reuse_detected',
-        userId: row.userId,
-        familyId: row.familyId,
-      });
       throw new UnauthorizedException('Unauthorized');
     }
 

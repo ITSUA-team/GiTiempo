@@ -45,6 +45,7 @@ describe('AuthService', () => {
   let tokens: TokenService;
   let repo: {
     create: ReturnType<typeof vi.fn>;
+    findById: ReturnType<typeof vi.fn>;
     findByHashIncludingRevoked: ReturnType<typeof vi.fn>;
     markRevoked: ReturnType<typeof vi.fn>;
     rotateIfActive: ReturnType<typeof vi.fn>;
@@ -72,6 +73,7 @@ describe('AuthService', () => {
         expiresAt: input.expiresAt,
         createdAt: new Date(),
       })),
+      findById: vi.fn(),
       findByHashIncludingRevoked: vi.fn(),
       markRevoked: vi.fn().mockResolvedValue(undefined),
       rotateIfActive: vi.fn(
@@ -227,6 +229,35 @@ describe('AuthService', () => {
       expect(payload.role).toBe('pm');
     });
 
+    it('rejects a parallel loser that sees a revoked token with an active replacement', async () => {
+      const revokedRow = {
+        id: 'revoked-row',
+        userId: seedUserRow.id,
+        familyId: 'family-parallel',
+        tokenHash: 'abc',
+        replacedBy: 'next-row',
+        revokedAt: new Date(Date.now() - 1_000),
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+      };
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce(revokedRow);
+      repo.findById.mockResolvedValueOnce({
+        id: 'next-row',
+        userId: seedUserRow.id,
+        familyId: 'family-parallel',
+        tokenHash: 'next-hash',
+        replacedBy: null,
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+      });
+
+      await expect(service.refresh('some-raw-token')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      expect(repo.deleteFamily).not.toHaveBeenCalled();
+    });
+
     it('detects reuse of a revoked token and destroys the family', async () => {
       const revokedRow = {
         id: 'revoked-row',
@@ -239,11 +270,43 @@ describe('AuthService', () => {
         createdAt: new Date(),
       };
       repo.findByHashIncludingRevoked.mockResolvedValueOnce(revokedRow);
+      repo.findById.mockResolvedValueOnce({
+        id: 'next-row',
+        userId: seedUserRow.id,
+        familyId: 'family-xyz',
+        tokenHash: 'next-hash',
+        replacedBy: 'later-row',
+        revokedAt: new Date(Date.now() - 500),
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+      });
 
       await expect(service.refresh('some-raw-token')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
       expect(repo.deleteFamily).toHaveBeenCalledWith('family-xyz');
+    });
+
+    it('destroys the family when a revoked token has no replacement row', async () => {
+      const revokedRow = {
+        id: 'revoked-row-no-replacement',
+        userId: seedUserRow.id,
+        familyId: 'family-missing-successor',
+        tokenHash: 'abc',
+        replacedBy: 'missing-row',
+        revokedAt: new Date(Date.now() - 1_000),
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+      };
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce(revokedRow);
+      repo.findById.mockResolvedValueOnce(null);
+
+      await expect(service.refresh('some-raw-token')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      expect(repo.deleteFamily).toHaveBeenCalledWith(
+        'family-missing-successor',
+      );
     });
 
     it('rejects unknown refresh tokens with 401', async () => {
@@ -270,7 +333,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('treats atomic rotation loss as reuse and destroys the family', async () => {
+    it('rejects atomic rotation loss without destroying the family', async () => {
       const existingRow = {
         id: 'old-row',
         userId: seedUserRow.id,
@@ -287,7 +350,7 @@ describe('AuthService', () => {
       await expect(service.refresh('some-raw-token')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
-      expect(repo.deleteFamily).toHaveBeenCalledWith('family-race');
+      expect(repo.deleteFamily).not.toHaveBeenCalled();
     });
   });
 

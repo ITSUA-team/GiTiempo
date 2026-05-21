@@ -252,7 +252,7 @@ The current web frontend baseline includes:
 **Architecture:**
 
 - Manifest V3 extension.
-- Content script injected on `github.com/*/issues/*` pages.
+- Content script injected on `github.com/*/issues/*` pages and pull-request pages so GitHub same-tab navigation can recover when moving from a PR back to an issue.
 - Detects issue from page URL (`org/repo/issues/123`).
 - Authenticates via a popup login flow (Firebase Auth), stores JWT tokens in `chrome.storage`.
 - Sends JWT access token in `Authorization` header on all API requests.
