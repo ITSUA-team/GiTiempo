@@ -4,7 +4,7 @@ description: Project-specific frontend rules for GiTiempo web apps. Use when bui
 license: MIT
 metadata:
   author: OpenCode
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 # GiTiempo Frontend Rules
@@ -59,6 +59,15 @@ Use this skill when:
 - Before marking a UI task complete, perform a final design parity review against the approved `.pen` and identify any remaining deltas explicitly.
 - Mobile can adapt layout for breakpoint constraints, but the same state model, information hierarchy, and design-token language must still hold.
 
+## Responsive Record-List Workflow
+
+- For record-list surfaces that already use a documented desktop table, preserve that desktop/tablet table branch and switch to stacked mobile cards only below `640px`.
+- Use the shared `useIsMobileViewport` helper for the mobile breakpoint check when the task needs distinct desktop/mobile markup branches.
+- Prefer the shared `MobileRecordCard` only as a neutral card shell for mobile record rows. Keep record-specific fields, row states, and action behavior app-local.
+- Preserve row/card parity: mobile cards must expose the same meaningful fields, highlight states, and action affordances as the corresponding desktop rows unless the active spec says otherwise.
+- Do not introduce PrimeVue `responsiveLayout` or another parallel responsive-table convention for surfaces that follow the admin/user record-list pattern.
+- Do not replace desktop tables with cards on tablet or desktop unless the docs or active spec explicitly change the surface model.
+
 ## PrimeVue Exception Protocol
 
 - The only acceptable reason to deviate from the approved `.pen` design is a conflict with required PrimeVue component behavior, accessibility semantics, or stable component structure.
@@ -74,6 +83,7 @@ Use this skill when:
 - If docs define a pattern as shared across pages or apps, treat it as an extraction candidate even if only one concrete implementation currently exists.
 - Prefer extracting the smallest stable leaf. Example: a shared page header component is a good candidate before extracting an entire route section.
 - When a single component renders multiple documented states of the same surface, do not duplicate the same card chrome, heading block, and action-row skeleton across many `v-if` branches unless the structure is materially different. Prefer a small local primitive or state-config-driven render shape so copy-paste drift cannot accumulate.
+- For adaptive record-list work, look for the smallest shared leaf first: viewport helper, neutral card shell, row action primitive, or card skeleton. Do not move product-specific row markup into `packages/web-shared` just to force reuse.
 
 ## Critical Rules
 
@@ -95,6 +105,8 @@ Use this skill when:
 - For frontend API calls that load, mutate, or reconcile user-visible feature state, provide user-visible toast feedback for the outcome. Use success toasts for completed mutations and error toasts for failed reads or writes; inline empty/error UI can complement this but must not be the only feedback channel.
 - Do not treat disabled placeholder controls as satisfying a documented interactive surface. If docs, spec, or tasks say a surface is editable, saveable, confirmable, or otherwise interactive, the shipped UI must perform that behavior or the task must remain explicitly incomplete.
 - When a feature has documented loading, empty, request-error, connected/disconnected, or redirecting states, tests should exercise each user-visible state explicitly instead of inferring coverage from internal refs or a single happy-path flow.
+- When a component renders different desktop and mobile DOM branches, tests must cover both viewport modes explicitly. Assert which branch renders, not just shared text content.
+- For adaptive record-list tests, verify branch-specific behavior such as icon-only action accessibility, running-entry restrictions, highlighted rows/cards, and the absence of desktop table markup on mobile.
 - Destructive actions that require confirmation must have tests for both accepted-success and accepted-failure paths. If cancellation keeps default PrimeVue behavior and no app logic runs on cancel, a dedicated cancel-path test is optional.
 - Do not mount global PrimeVue service hosts such as `<ConfirmDialog>` or `<Toast>` inside leaf presentational components. Keep those hosts at the route, page-shell, layout, or app-shell level unless the component is itself the explicit overlay owner.
 - Query-driven toast flows such as OAuth callbacks, invite accepts, or magic-link results must test both success and error query variants plus URL cleanup after handling.
