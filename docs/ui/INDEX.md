@@ -16,7 +16,7 @@ Read this file first. Load only the linked section files needed for the task.
 - Need shell, sidebar, or responsive behavior: read `layout.md`.
 - Need User SPA screens: read `pages-user.md`.
 - Need Admin SPA screens: read `pages-admin.md`.
-- Need extension popup UI: read `chrome-ext.md`.
+- Need extension popup or injected GitHub issue-page UI: read `chrome-ext.md`.
 - Need dialogs, toasts, pickers, or selectors: read `patterns.md`.
 - Need accessibility constraints: read `accessibility.md`.
 
@@ -69,7 +69,7 @@ Read this file first. Load only the linked section files needed for the task.
 - `layout.md`: App shell, sidebar navigation, breakpoints, page header pattern.
 - `pages-user.md`: Dashboard, timer, time entries, projects, profile.
 - `pages-admin.md`: Dashboard, reports, invoices, members, projects, settings.
-- `chrome-ext.md`: Popup dimensions, states, and constraints.
+- `chrome-ext.md`: Popup dimensions, injected page control states, and extension UI constraints.
 - `patterns.md`: Dialogs, toasts, confirms, date pickers, selectors, duration format.
 - `accessibility.md`: Required accessibility rules and what PrimeVue already covers.
 

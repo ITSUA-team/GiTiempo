@@ -15753,7 +15753,7 @@
       "y": 380,
       "name": "Ext Unauthenticated",
       "width": 320,
-      "height": 320,
+      "height": 480,
       "fill": "$color-surface",
       "cornerRadius": "$radius-lg",
       "effect": {
@@ -15899,7 +15899,7 @@
       "y": 380,
       "name": "Ext No Timer",
       "width": 320,
-      "height": 320,
+      "height": 480,
       "fill": "$color-surface",
       "cornerRadius": "$radius-lg",
       "effect": {
@@ -16070,6 +16070,19 @@
                   "fontWeight": "600"
                 }
               ]
+            },
+            {
+              "type": "text",
+              "id": "TBqu1",
+              "name": "extBspaLink",
+              "fill": "#5D2B85",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Open full workspace in GiTiempo",
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "600"
             }
           ]
         }
@@ -16082,7 +16095,7 @@
       "y": 380,
       "name": "Ext Running",
       "width": 320,
-      "height": 320,
+      "height": 480,
       "fill": "$color-surface",
       "cornerRadius": "$radius-lg",
       "effect": {
@@ -16235,7 +16248,7 @@
               "type": "frame",
               "id": "xDJlM",
               "name": "extCstop",
-              "fill": "$color-brand",
+              "fill": "#D32F2F",
               "cornerRadius": "$radius-sm",
               "padding": [
                 12,
@@ -16267,7 +16280,7 @@
       "y": 380,
       "name": "Ext Error",
       "width": 320,
-      "height": 320,
+      "height": 480,
       "fill": "$color-surface",
       "cornerRadius": "$radius-lg",
       "effect": {
@@ -19617,6 +19630,306 @@
       "width": 280,
       "height": 86,
       "content": "Docs rule: show 'Switch workspace' only when another workspace is available."
+    },
+    {
+      "type": "frame",
+      "id": "NlZcO",
+      "x": 9779,
+      "y": 1100,
+      "name": "GitHub Issue Injected Timer",
+      "width": 760,
+      "fill": "#F4F4F5",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "V5es2",
+          "name": "issueSheetTitle",
+          "fill": "#1A1A1A",
+          "content": "GitHub Issue Page Injected Timer",
+          "fontFamily": "Inter",
+          "fontSize": 22,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "OXvuo",
+          "name": "issueSheetCopy",
+          "fill": "#666666",
+          "content": "Reference for the timer control injected into GitHub issue pages.",
+          "fontFamily": "Inter",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "MzoMz",
+          "name": "Injected Idle",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 10,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#EEEEEE"
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "uv6CX",
+              "name": "idleHeader",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "lfxOO",
+                  "name": "idleHeaderText",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WaNkB",
+                      "fill": "#1A1A1A",
+                      "content": "Issue timer",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "m5B4P",
+                      "fill": "#666666",
+                      "content": "octo-org/admin-web #184",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "uqhqY",
+                  "name": "idleStatus",
+                  "fill": "#F4F4F5",
+                  "cornerRadius": 6,
+                  "padding": [
+                    6,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "G4p5IZ",
+                      "fill": "#666666",
+                      "content": "Idle",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Gkedt",
+              "name": "idleIssueTitle",
+              "fill": "#1A1A1A",
+              "content": "Improve reports filters",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "dapWi",
+              "name": "idleActions",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bKxD4",
+                  "fill": "#666666",
+                  "content": "Ready to start tracking against this issue.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "MtGQc",
+                  "name": "idleStart",
+                  "fill": "#5D2B85",
+                  "cornerRadius": 6,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "GyYuW",
+                      "fill": "#FFFFFF",
+                      "content": "Start Timer",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "oFx1K",
+          "name": "Injected Running",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 10,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#EEEEEE"
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "rF5Xh",
+              "name": "runningHeader",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "IDSyI",
+                  "name": "runningHeaderText",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "d6onS",
+                      "fill": "#1A1A1A",
+                      "content": "Issue timer",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "w9dYkS",
+                      "fill": "#666666",
+                      "content": "octo-org/admin-web #184",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gUUUZ",
+                  "name": "runningStatus",
+                  "fill": "#E8F5E9",
+                  "cornerRadius": 6,
+                  "padding": [
+                    6,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n9x61S",
+                      "fill": "#2E7D32",
+                      "content": "Running",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "uUh72",
+              "name": "runningTime",
+              "fill": "#5D2B85",
+              "content": "01:42:18",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "g7UAK",
+              "name": "runningIssueTitle",
+              "fill": "#1A1A1A",
+              "content": "Improve reports filters",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "NT4sY",
+              "name": "runningActions",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "l4M3u",
+                  "fill": "#666666",
+                  "content": "Tracking time on this issue from the page context.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "wE0KP",
+                  "name": "runningStop",
+                  "fill": "#D32F2F",
+                  "cornerRadius": 6,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sCsz9",
+                      "fill": "#FFFFFF",
+                      "content": "Stop Timer",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {
