@@ -1,6 +1,6 @@
 ## Context
 
-The admin Settings page already loads workspace settings from `/workspace/settings`, and the shared workspace settings contract includes `timeZone` as a valid IANA time-zone identifier. The current Settings UI renders editable Workspace name, Default hourly rate, and Currency, while `docs/ui/pages-admin.md` still says Time zone is API-supported but deferred until field design and option source are accepted.
+The admin Settings page already loads workspace settings from `/workspace/settings`, and the shared workspace settings contract includes `timeZone` as a contract-valid time-zone identifier, including `UTC` and IANA time-zone names. The current Settings UI renders editable Workspace name, Default hourly rate, and Currency, while `docs/ui/pages-admin.md` still says Time zone is API-supported but deferred until field design and option source are accepted.
 
 The existing admin settings form state and validation already carry `timeZone` through the composable layer, but the form surface does not expose an editable control. This change should finish the UI by adding a visible selector that fits the approved `GITiempo.pen` Settings card and uses the existing API/contract boundary rather than introducing backend or shared-contract changes.
 
@@ -10,7 +10,7 @@ The existing admin settings form state and validation already carry `timeZone` t
 
 - Add an editable `Time zone` selector to the Workspace section of the admin Settings card.
 - Keep the selector aligned with the existing 620px Settings card density, labels, 38px PrimeVue control height, bottom Save/Cancel flow, skeleton rhythm, and mobile stacking.
-- Source options from valid IANA time zones, preferring `Intl.supportedValuesOf('timeZone')` when available and falling back to a stable curated list that includes `UTC` and `Europe/Kyiv`.
+- Source options from contract-valid time zones, preferring `Intl.supportedValuesOf('timeZone')` when available and falling back to a stable curated list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`.
 - Include the current persisted time zone in the option list even if it is not present in the runtime/fallback source.
 - Save `timeZone` through the existing `/workspace/settings` update path only when the field changed.
 - Update admin Settings docs/specs so Time zone is no longer described as deferred.
@@ -26,13 +26,13 @@ The existing admin settings form state and validation already carry `timeZone` t
 
 1. Render Time zone as a PrimeVue `Select` in the Workspace section.
 
-   The field should use a real label, `invalid` state, helper/error message, `filter`, and token-backed styling consistent with existing Settings controls. Because IANA identifiers can be long, the selector should render full width below the existing Default hourly rate + Currency row instead of squeezing into the 160px currency column.
+   The field should use a real label, `invalid` state, helper/error message, `filter`, and token-backed styling consistent with existing Settings controls. Because time-zone identifiers can be long, the selector should render full width below the existing Default hourly rate + Currency row instead of squeezing into the 160px currency column.
 
    Alternative considered: use a raw `<select>` for simplicity. Rejected because project UI rules require PrimeVue controls for standard app UI.
 
 2. Keep time-zone option generation admin-web local.
 
-   The option list is browser/UI behavior, not a backend-safe contract. Implement a small admin-web helper that returns `{ label, value }` options, uses `Intl.supportedValuesOf('timeZone')` when available, falls back to a stable curated IANA list, sorts `UTC` first, and appends the persisted value if missing.
+   The option list is browser/UI behavior, not a backend-safe contract. Implement a small admin-web helper that returns `{ label, value }` options, uses `Intl.supportedValuesOf('timeZone')` when available, falls back to a stable curated list with `UTC` and IANA time-zone names, sorts `UTC` first, and appends the persisted value if missing.
 
    Alternative considered: move the option list into `@gitiempo/shared`. Rejected because `@gitiempo/shared` should stay contract-focused and backend-safe; the shared contract already validates the value.
 
