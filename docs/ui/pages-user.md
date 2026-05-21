@@ -8,7 +8,9 @@
 - Initial page load uses a skeleton that approximates the dashboard header, weekly insight/stat surfaces, and recent entries table before rendering empty states.
 - Weekly focus insight: full-width `<Card>` highlighting `Top Project This Week` and `Top Task This Week` using the user's current-week tracked entries.
 - Weekly focus insight values should show the winning project/task labels plus tracked-duration context, and may include a compact relative-share indicator when it improves scannability.
-- Recent Time Entries: `<DataTable>` with last 10 entries.
+- Recent Time Entries: render the existing `<DataTable>` on tablet and desktop, and switch to stacked mobile cards below `640px`.
+- The mobile recent-entry cards keep the same record content as the desktop table: task title, project name, time range, duration, and highlighted running/current-entry state when applicable.
+- The section-level `View all` action remains available in both desktop/table and mobile-card layouts.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
 - Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar only.
@@ -41,8 +43,11 @@
 - The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
 - Entries grouped by day.
 - Each day heading row includes its own PrimeVue `<Button>` labeled `+ New time entry` beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form.
-- Entry row includes task, project, time range, duration, and icon-only edit/delete actions with `Edit` and `Delete` tooltips.
+- At and above `640px`, each day group keeps the existing table layout for entries.
+- Below `640px`, each day group renders stacked mobile cards instead of the fixed-width desktop table.
+- Entry row/card content includes task, project, time range, duration, and icon-only edit/delete actions with `Edit` and `Delete` tooltips for completed entries.
 - Running entry highlighted with `bg-accent-tint`.
+- Running-entry mobile cards keep the same highlight treatment and do not expose edit/delete actions; stopping remains owned by the global top-bar timer.
 - Clicking `Edit` opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
 - Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
 - The shared time-entry dialog uses these fields in both create and edit modes: project `<Select>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
@@ -65,7 +70,9 @@
 - Content is grouped by visible project instead of by day.
 - Each project section header shows the project name on the left and a secondary PrimeVue `<Button>` labeled `+ Add task` on the right.
 - Tasks for that project render beneath the project header inside the same section card.
-- Task rows include task title, status, updated metadata, and icon-only edit/delete actions with `Edit` and `Delete` tooltips.
+- At and above `640px`, each project section keeps the existing task table layout.
+- Below `640px`, each project section renders stacked mobile task cards instead of the fixed-width desktop task table.
+- Task rows/cards include task title, status, updated metadata, and icon-only edit/delete actions with `Edit` and `Delete` tooltips.
 - Clicking `Edit` opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
 - Page-level `+ New task` opens the dialog in create mode with a required project `<Select>`.
