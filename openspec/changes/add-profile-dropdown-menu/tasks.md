@@ -3,7 +3,8 @@
 - [x] 1.1 Review `docs/ui/INDEX.md`, `docs/ui/layout.md`, `docs/ui/patterns.md`, and the approved `GITiempo.pen` frames `User Dashboard - Profile Dropdown Open` and `Admin Dashboard - Profile Dropdown Open`; capture the parity checklist before editing.
 - [x] 1.2 Extend `packages/web-shared/src/components/WorkspaceHeader.vue` with app-provided settings navigation, app-specific first-action label/icon, and a sign-out event while keeping route names and auth stores app-local.
 - [x] 1.3 Implement the profile/avatar trigger and popup menu using PrimeVue menu semantics, token-backed styling, open-only active trigger styling, sticky-header-pinned positioning while scrolling, a visible spacing gap below the trigger, an avatar-aligned caret pointer, and the approved app-specific first action then `Sign out` action order.
-- [x] 1.4 Update `WorkspaceHeader` tests to cover the trigger active state, menu contents, keyboard/focus semantics, first-action label/icon/navigation target, sign-out event emission, and preserved center-slot rendering.
+- [x] 1.4 Add the mobile-only counterpart workspace action at the top of the profile dropdown using the existing counterpart href/label props, while preserving the desktop top-bar workspace link.
+- [x] 1.5 Update `WorkspaceHeader` tests to cover the trigger active state, menu contents, mobile counterpart workspace action, keyboard/focus semantics, first-action label/icon/navigation target, sign-out event emission, and preserved center-slot rendering.
 
 ## 2. App Shell Integration
 
@@ -17,4 +18,4 @@
 - [x] 3.1 Run `pnpm --filter @gitiempo/web-shared lint && pnpm --filter @gitiempo/web-shared typecheck && pnpm --filter @gitiempo/web-shared test`.
 - [x] 3.2 Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck && pnpm --filter user-web test`.
 - [x] 3.3 Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck && pnpm --filter admin-web test`.
-- [x] 3.4 Perform a final design parity review against both approved `.pen` open-state frames and record any PrimeVue-only deviations.
+- [x] 3.4 Perform a final design parity review against both approved `.pen` open-state frames, including the mobile workspace action, and record any PrimeVue-only deviations.

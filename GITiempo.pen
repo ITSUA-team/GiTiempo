@@ -21368,7 +21368,7 @@
                 {
                   "type": "frame",
                   "id": "Djt6I",
-                  "name": "workspaceIconBox",
+                  "name": "profileIconBox",
                   "width": 28,
                   "height": 28,
                   "fill": "$color-accent-tint",
@@ -21380,7 +21380,7 @@
                     {
                       "type": "icon_font",
                       "id": "X9hRIO",
-                      "name": "Workspace switch icon",
+                      "name": "Profile icon",
                       "width": 16,
                       "height": 16,
                       "iconFontName": "arrow-left-right",
@@ -22467,7 +22467,7 @@
                 {
                   "type": "frame",
                   "id": "wJeV9",
-                  "name": "workspaceIconBox",
+                  "name": "settingsIconBox",
                   "width": 28,
                   "height": 28,
                   "fill": "$color-accent-tint",
@@ -22479,7 +22479,7 @@
                     {
                       "type": "icon_font",
                       "id": "OstiW",
-                      "name": "Workspace switch icon",
+                      "name": "Settings icon",
                       "width": 16,
                       "height": 16,
                       "iconFontName": "arrow-left-right",

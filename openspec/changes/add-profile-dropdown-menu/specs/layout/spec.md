@@ -30,6 +30,16 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **AND** the `Settings` action keeps the settings gear icon
 - **AND** the existing admin-web workspace/scope identity and counterpart user workspace link remain visible
 
+#### Scenario: Mobile profile menu exposes counterpart workspace switch
+
+- **GIVEN** an authenticated shell is rendered below the breakpoint where the top-bar counterpart workspace text link is hidden
+- **WHEN** the user activates the top-bar profile/avatar trigger
+- **THEN** the dropdown includes the counterpart workspace action above the app-owned profile/settings action
+- **AND** user-web labels that action `Admin workspace`
+- **AND** admin-web labels that action `User workspace`
+- **AND** the action uses the same configured counterpart workspace href as the desktop top-bar workspace link
+- **AND** the app-owned profile/settings action and `Sign out` action remain available in the same dropdown
+
 #### Scenario: Profile/settings action navigates to app-owned settings surface
 
 - **GIVEN** the profile dropdown menu is open
