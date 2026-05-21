@@ -156,12 +156,18 @@ describe("InviteAcceptView", () => {
 
   it("accepts the invite after email/password sign-in and redirects to the dashboard", async () => {
     const signInWithEmailPassword = vi.fn(async () => "firebase-email-token");
+    const createAccountWithEmailPassword = vi.fn(
+      async () => "firebase-created-account-token",
+    );
     const acceptInvite = vi.fn(async () => undefined);
-    setAuthRuntimeForTesting(createRuntimeMock({ signInWithEmailPassword }));
+    setAuthRuntimeForTesting(
+      createRuntimeMock({ createAccountWithEmailPassword, signInWithEmailPassword }),
+    );
     setWorkspaceInvitesClientForTesting(
       createWorkspaceInvitesClientMock({ acceptInvite }),
     );
     const { router, wrapper } = await mountInviteAcceptView();
+    const loginWithFirebaseToken = vi.spyOn(useAuthStore(), "loginWithFirebaseToken");
 
     await wrapper.get('[data-testid="invite-accept-email"]').setValue(
       "alexey@example.com",
@@ -180,17 +186,25 @@ describe("InviteAcceptView", () => {
       firebaseIdToken: "firebase-email-token",
       token: "invite-token",
     });
+    expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-email-token");
+    expect(createAccountWithEmailPassword).not.toHaveBeenCalled();
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
   it("accepts the invite with Google and redirects to the dashboard", async () => {
     const signInWithGoogle = vi.fn(async () => "firebase-google-token");
+    const createAccountWithEmailPassword = vi.fn(
+      async () => "firebase-created-account-token",
+    );
     const acceptInvite = vi.fn(async () => undefined);
-    setAuthRuntimeForTesting(createRuntimeMock({ signInWithGoogle }));
+    setAuthRuntimeForTesting(
+      createRuntimeMock({ createAccountWithEmailPassword, signInWithGoogle }),
+    );
     setWorkspaceInvitesClientForTesting(
       createWorkspaceInvitesClientMock({ acceptInvite }),
     );
     const { router, wrapper } = await mountInviteAcceptView();
+    const loginWithFirebaseToken = vi.spyOn(useAuthStore(), "loginWithFirebaseToken");
 
     await wrapper.get('[data-testid="invite-accept-google"]').trigger("click");
     await flushPromises();
@@ -200,6 +214,8 @@ describe("InviteAcceptView", () => {
       firebaseIdToken: "firebase-google-token",
       token: "invite-token",
     });
+    expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-google-token");
+    expect(createAccountWithEmailPassword).not.toHaveBeenCalled();
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 

@@ -59,13 +59,17 @@ async function mountInvitePasswordSetupView(initialPath = createDefaultPath()) {
 }
 
 describe("InvitePasswordSetupView", () => {
+  const originalFetch = globalThis.fetch;
+
   beforeEach(() => {
     confirmPasswordReset.mockReset();
     verifyPasswordResetCode.mockReset();
+    globalThis.fetch = vi.fn();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    globalThis.fetch = originalFetch;
   });
 
   it("renders the invalid state when the action code is missing", async () => {
@@ -138,6 +142,72 @@ describe("InvitePasswordSetupView", () => {
     expect(wrapper.text()).toContain("Choose a stronger password and try again.");
   });
 
+  it("shows too-many-requests guidance inline", async () => {
+    verifyPasswordResetCode.mockResolvedValueOnce("invited.user@example.com");
+    confirmPasswordReset.mockRejectedValueOnce(
+      createFirebaseError("auth/too-many-requests"),
+    );
+    const { wrapper } = await mountInvitePasswordSetupView();
+
+    await wrapper.get('[data-testid="invite-password-setup-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get('[data-testid="invite-password-setup-confirm-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "Too many attempts. Wait a moment, then try again.",
+    );
+    expect(wrapper.find('[data-testid="invite-password-setup-submit"]').exists()).toBe(true);
+  });
+
+  it("shows network-failure guidance inline", async () => {
+    verifyPasswordResetCode.mockResolvedValueOnce("invited.user@example.com");
+    confirmPasswordReset.mockRejectedValueOnce(
+      createFirebaseError("auth/network-request-failed"),
+    );
+    const { wrapper } = await mountInvitePasswordSetupView();
+
+    await wrapper.get('[data-testid="invite-password-setup-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get('[data-testid="invite-password-setup-confirm-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "Network error. Check your connection and try again.",
+    );
+    expect(wrapper.find('[data-testid="invite-password-setup-submit"]').exists()).toBe(true);
+  });
+
+  it("shows expired-action-code guidance inline after submit", async () => {
+    verifyPasswordResetCode.mockResolvedValueOnce("invited.user@example.com");
+    confirmPasswordReset.mockRejectedValueOnce(
+      createFirebaseError("auth/expired-action-code"),
+    );
+    const { wrapper } = await mountInvitePasswordSetupView();
+
+    await wrapper.get('[data-testid="invite-password-setup-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get('[data-testid="invite-password-setup-confirm-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      "This password setup link is invalid, expired, or already used. Go back to your invite and ask an admin for a fresh link if needed.",
+    );
+    expect(wrapper.find('[data-testid="invite-password-setup-submit"]').exists()).toBe(true);
+  });
+
   it("preserves the invite token and returns to invite acceptance after success", async () => {
     verifyPasswordResetCode.mockResolvedValueOnce("invited.user@example.com");
     confirmPasswordReset.mockResolvedValueOnce(undefined);
@@ -157,6 +227,7 @@ describe("InvitePasswordSetupView", () => {
       "valid-code",
       "password123",
     );
+    expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain("Password saved");
 
     await wrapper.get('[data-testid="invite-password-setup-success"]').trigger("click");

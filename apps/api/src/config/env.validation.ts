@@ -118,12 +118,17 @@ export const envSchema = z
       }
     }
 
-    if (!env.INVITES_EMAIL_CONSOLE_FALLBACK && !env.SMTP_HOST) {
+    if (
+      (env.NODE_ENV === 'production' || !env.INVITES_EMAIL_CONSOLE_FALLBACK) &&
+      !env.SMTP_HOST
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['SMTP_HOST'],
         message:
-          'SMTP_HOST is required when INVITES_EMAIL_CONSOLE_FALLBACK=false',
+          env.NODE_ENV === 'production'
+            ? 'SMTP_HOST is required when NODE_ENV=production'
+            : 'SMTP_HOST is required when INVITES_EMAIL_CONSOLE_FALLBACK=false',
       });
     }
 
