@@ -167,6 +167,79 @@ describe('MembersTable', () => {
     expect(wrapper.findAll('[data-testid="member-edit-member-1"]')).toHaveLength(0);
   });
 
+  it('renders non-loading mobile cards with shared fields and actions on small viewports', async () => {
+    mockMatchMedia(true);
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const wrapper = mount(MembersTable, {
+      props: {
+        currentUserId: 'current-user',
+        loading: false,
+        members: [
+          {
+            avatarUrl: null,
+            displayName: 'Pat PM',
+            email: 'pat@example.com',
+            id: 'member-1',
+            joinedAt: '2026-05-01T10:00:00.000Z',
+            lastActiveAt: '2026-05-02T11:00:00.000Z',
+            projectsAssignedCount: 2,
+            role: 'pm',
+            userId: 'user-2',
+            workspaceId: 'workspace-1',
+          },
+        ],
+        projects: [
+          {
+            color: null,
+            createdAt: '2026-05-01T10:00:00.000Z',
+            description: null,
+            id: 'project-1',
+            isActive: true,
+            members: [],
+            name: 'Project Orion',
+            source: 'manual',
+            totalHours: 12,
+            updatedAt: '2026-05-01T10:00:00.000Z',
+            visibility: 'public',
+            workspaceId: 'workspace-1',
+          },
+        ],
+      },
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute('data-tooltip', String(binding.value));
+            },
+          },
+        },
+        plugins: [pinia, PrimeVue],
+        stubs: {
+          MemberAssignPmPanel: { template: '<div data-testid="assign-panel" />' },
+          MemberEditForm: { template: '<div data-testid="edit-panel" />' },
+        },
+      },
+    });
+
+    const mobileCards = wrapper.findAll('[data-testid="member-mobile-card"]');
+
+    expect(mobileCards).toHaveLength(1);
+    expect(mobileCards[0]?.text()).toContain('Pat PM');
+    expect(mobileCards[0]?.text()).toContain('pat@example.com');
+    expect(mobileCards[0]?.text()).toContain('PM');
+    expect(mobileCards[0]?.text()).toContain('2 projects');
+    expect(mobileCards[0]?.text()).toContain('May 2, 2026');
+
+    await wrapper.get('[data-testid="member-mobile-assign-pm-member-1"]').trigger('click');
+    expect(wrapper.find('[data-testid="assign-panel"]').exists()).toBe(true);
+
+    expect(wrapper.get('[data-testid="member-mobile-edit-member-1"]').attributes('aria-label')).toBe('Edit');
+    expect(wrapper.get('[data-testid="member-mobile-remove-member-1"]').attributes('aria-label')).toBe('Remove');
+  });
+
   it('preserves assign, edit, and remove flows behind the icon-only actions', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);

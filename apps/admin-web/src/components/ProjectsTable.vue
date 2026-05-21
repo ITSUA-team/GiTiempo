@@ -14,8 +14,10 @@ import {
   EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
+  MobileRecordCard,
   SectionHeader,
   managementTableColumnPt,
+  useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
@@ -23,10 +25,8 @@ import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
-import MobileRecordCard from '@/components/mobile/MobileRecordCard.vue';
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
 import { useConfirmation } from '@/composables/useConfirmation';
-import { useIsMobileViewport } from '@/composables/useIsMobileViewport';
 import { useToasts } from '@/composables/useToasts';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';

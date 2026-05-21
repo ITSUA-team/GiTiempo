@@ -3,6 +3,7 @@ export { default as EditFormPanel } from "./EditFormPanel.vue";
 export { default as EmptyStateBlock } from "./EmptyStateBlock.vue";
 export { default as AuthIntroPanel } from "./AuthIntroPanel.vue";
 export { default as ManagementTableEmptyState } from "./ManagementTableEmptyState.vue";
+export { default as MobileRecordCard } from "./MobileRecordCard.vue";
 export { default as ManagementTableRowAction } from "./ManagementTableRowAction.vue";
 export { default as ManagementTableShell } from "./ManagementTableShell.vue";
 export type {

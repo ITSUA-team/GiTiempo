@@ -194,6 +194,93 @@ describe('ProjectsTable', () => {
     expect(wrapper.findAll('[data-testid="project-edit-project-active"]')).toHaveLength(0);
   });
 
+  it('renders non-loading mobile cards with shared fields and actions on small viewports', async () => {
+    mockMatchMedia(true);
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const wrapper = mount(ProjectsTable, {
+      props: {
+        loading: false,
+        members: [
+          {
+            avatarUrl: null,
+            displayName: 'Alex Admin',
+            email: 'alex@example.com',
+            id: 'member-1',
+            joinedAt: '2026-05-01T10:00:00.000Z',
+            lastActiveAt: null,
+            projectsAssignedCount: 1,
+            role: 'admin',
+            userId: 'user-1',
+            workspaceId: 'workspace-1',
+          },
+        ],
+        projects: [
+          {
+            color: null,
+            createdAt: '2026-05-01T10:00:00.000Z',
+            description: null,
+            id: 'project-active',
+            isActive: true,
+            members: [],
+            name: 'Project Orion',
+            source: 'manual',
+            totalHours: 12,
+            updatedAt: '2026-05-01T10:00:00.000Z',
+            visibility: 'public',
+            workspaceId: 'workspace-1',
+          },
+          {
+            color: null,
+            createdAt: '2026-05-01T10:00:00.000Z',
+            description: null,
+            id: 'project-inactive',
+            isActive: false,
+            members: [],
+            name: 'Legacy Project',
+            source: 'manual',
+            totalHours: 4,
+            updatedAt: '2026-05-01T10:00:00.000Z',
+            visibility: 'private',
+            workspaceId: 'workspace-1',
+          },
+        ],
+      },
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute('data-tooltip', String(binding.value));
+            },
+          },
+        },
+        plugins: [pinia, PrimeVue],
+        stubs: {
+          ProjectEditForm: { template: '<div data-testid="project-edit-form" />' },
+          Select: SelectStub,
+        },
+      },
+    });
+
+    const mobileCards = wrapper.findAll('[data-testid="project-mobile-card"]');
+
+    expect(mobileCards).toHaveLength(2);
+    expect(mobileCards[0]?.text()).toContain('Project Orion');
+    expect(mobileCards[0]?.text()).toContain('Manual');
+    expect(mobileCards[0]?.text()).toContain('Public');
+    expect(mobileCards[0]?.text()).toContain('12h');
+    expect(mobileCards[1]?.text()).toContain('Legacy Project');
+    expect(mobileCards[1]?.text()).toContain('Private');
+
+    await wrapper.get('[data-testid="project-mobile-edit-project-active"]').trigger('click');
+
+    expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="project-mobile-archive-project-active"]').attributes('aria-label')).toBe('Archive');
+    expect(wrapper.get('[data-testid="project-mobile-unarchive-project-inactive"]').attributes('aria-label')).toBe('Unarchive');
+  });
+
   it('preserves edit, archive, and unarchive flows behind the icon-only actions', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
