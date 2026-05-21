@@ -34,6 +34,7 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **WHEN** the user activates `Sign out`
 - **THEN** the current SPA starts its existing logout flow
 - **AND** local session cleanup and guest-route behavior remain governed by the existing auth requirements for that SPA
+- **AND** the user is redirected to that SPA's login route after logout cleanup completes
 
 #### Scenario: Profile menu remains keyboard accessible
 

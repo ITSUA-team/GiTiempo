@@ -13,7 +13,7 @@ Relevant implementation rules come from `docs/ui/INDEX.md`, `docs/ui/layout.md`,
 - Add a profile dropdown to the shared authenticated header used by both SPAs.
 - Keep user-web and admin-web header structure consistent while preserving app-specific center content and workspace cross-links.
 - Navigate `Settings` to the app-owned settings destination: `user-web` uses the existing profile/settings route, and `admin-web` uses the existing settings route.
-- Run `Sign out` through each app's existing auth store logout flow.
+- Run `Sign out` through each app's existing auth store logout flow, then navigate to that app's login route.
 - Match the approved `.pen` dropdown open-state geometry, token language, and action hierarchy on desktop, with responsive behavior that remains usable on smaller screens.
 
 **Non-Goals:**
@@ -33,7 +33,7 @@ Alternative considered: implement separate dropdowns in `AppShell.vue` and `Admi
 
 ### Keep App-Specific Navigation And Logout Wiring In App Shells
 
-`WorkspaceHeader` should accept an app-provided settings route target and emit a sign-out event. `AppShell.vue` maps `Settings` to the user profile/settings route and handles sign-out through `useAuthStore().logout()`. `AdminAppShell.vue` maps `Settings` to the admin settings route and handles sign-out through its auth store logout method.
+`WorkspaceHeader` should accept an app-provided settings route target and emit a sign-out event. `AppShell.vue` maps `Settings` to the user profile/settings route and handles sign-out by awaiting `useAuthStore().logout()` before navigating to the user login route. `AdminAppShell.vue` maps `Settings` to the admin settings route and handles sign-out by awaiting its auth store logout method before navigating to the admin login route.
 
 Alternative considered: have `WorkspaceHeader` import app route names or auth stores directly. That would violate package boundaries because `packages/web-shared` must stay app-agnostic.
 
@@ -51,7 +51,7 @@ Alternative considered: raw hex or component-local CSS values. That conflicts wi
 
 ### Test Shared Behavior And App Wiring Separately
 
-`WorkspaceHeader.spec.ts` should cover rendering, popup trigger/menu items, settings item routing target, and sign-out event emission. `AppShell.spec.ts` and `AdminAppShell.spec.ts` should verify each shell passes the correct settings destination, preserves existing top-bar content, and wires sign-out to the app auth store.
+`WorkspaceHeader.spec.ts` should cover rendering, popup trigger/menu items, settings item routing target, and sign-out event emission. `AppShell.spec.ts` and `AdminAppShell.spec.ts` should verify each shell passes the correct settings destination, preserves existing top-bar content, wires sign-out to the app auth store, and redirects to the app login route after logout.
 
 Alternative considered: only testing the shared component. That would miss the highest-risk behavior: the app-specific settings route and logout wiring.
 

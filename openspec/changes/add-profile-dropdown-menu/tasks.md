@@ -7,10 +7,10 @@
 
 ## 2. App Shell Integration
 
-- [x] 2.1 Wire `apps/user-web/src/components/layout/AppShell.vue` so `Settings` navigates to the existing user profile/settings surface and `Sign out` calls the user auth store logout flow.
-- [x] 2.2 Wire `apps/admin-web/src/components/layout/AdminAppShell.vue` so `Settings` navigates to the existing admin settings surface and `Sign out` calls the admin auth store logout flow.
-- [x] 2.3 Update user shell tests to verify the dropdown wiring while preserving the top-bar timer, counterpart admin workspace link, and shared navigation.
-- [x] 2.4 Update admin shell tests to verify the dropdown wiring while preserving the counterpart user workspace link, workspace name behavior, and shared navigation.
+- [x] 2.1 Wire `apps/user-web/src/components/layout/AppShell.vue` so `Settings` navigates to the existing user profile/settings surface and `Sign out` calls the user auth store logout flow before redirecting to the user login route.
+- [x] 2.2 Wire `apps/admin-web/src/components/layout/AdminAppShell.vue` so `Settings` navigates to the existing admin settings surface and `Sign out` calls the admin auth store logout flow before redirecting to the admin login route.
+- [x] 2.3 Update user shell tests to verify the dropdown wiring and login redirect while preserving the top-bar timer, counterpart admin workspace link, and shared navigation.
+- [x] 2.4 Update admin shell tests to verify the dropdown wiring and login redirect while preserving the counterpart user workspace link, workspace name behavior, and shared navigation.
 
 ## 3. Verification
 
