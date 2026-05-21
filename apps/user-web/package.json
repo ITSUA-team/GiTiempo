@@ -12,13 +12,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^12.4.0",
+    "@date-fns/utc": "^2.1.1",
     "@gitiempo/shared": "workspace:*",
     "@gitiempo/web-config": "workspace:*",
     "@gitiempo/web-shared": "workspace:*",
     "@heroicons/vue": "^2.2.0",
     "@primeuix/themes": "^2.0.3",
     "@vueuse/core": "^14.2.1",
+    "date-fns": "^4.2.1",
+    "firebase": "^12.4.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",
