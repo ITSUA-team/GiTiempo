@@ -4,13 +4,7 @@
 import { mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  defineComponent,
-  h,
-  shallowRef,
-  type Component,
-  type PropType,
-} from "vue";
+import { defineComponent, h, type Component, type PropType } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 
 import WorkspaceHeader from "./WorkspaceHeader.vue";
@@ -93,37 +87,8 @@ const MenuStub = defineComponent({
       type: Array as PropType<TestMenuItem[]>,
     },
   },
-  emits: ["hide", "show"],
-  setup(props, { attrs, emit, expose, slots }) {
-    const isOpen = shallowRef(false);
-    const triggerTarget = shallowRef<HTMLElement | null>(null);
-
-    function closeMenu() {
-      isOpen.value = false;
-      emit("hide");
-      triggerTarget.value?.focus();
-    }
-
-    expose({
-      hide: closeMenu,
-      toggle: (event?: Event) => {
-        if (event?.currentTarget instanceof HTMLElement) {
-          triggerTarget.value = event.currentTarget;
-        }
-
-        isOpen.value = !isOpen.value;
-        if (isOpen.value) {
-          emit("show");
-          return;
-        }
-
-        closeMenu();
-      },
-    });
-
+  setup(props, { attrs, slots }) {
     return () => {
-      if (!isOpen.value) return null;
-
       return h(
         "div",
         { ...attrs, role: "menu" },
@@ -138,7 +103,6 @@ const MenuStub = defineComponent({
               action: {
                 onClick: () => {
                   item.command?.();
-                  closeMenu();
                 },
                 role: "menuitem",
               },
@@ -253,6 +217,15 @@ describe("WorkspaceHeader", () => {
     expect(trigger.classes()).toContain("border-divider");
     expect(avatar.classes()).toContain("ring-brand");
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("role")).toBe("menu");
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "absolute",
+    );
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "right-0",
+    );
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "before:right-5",
+    );
     expect(settingsLink.attributes("role")).toBe("menuitem");
     expect(signOutAction.attributes("role")).toBe("menuitem");
     expect(wrapper.get('[data-testid="profile-menu"]').text()).toContain("Settings");

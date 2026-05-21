@@ -2,7 +2,7 @@
 
 - [x] 1.1 Review `docs/ui/INDEX.md`, `docs/ui/layout.md`, `docs/ui/patterns.md`, and the approved `GITiempo.pen` frames `User Dashboard - Profile Dropdown Open` and `Admin Dashboard - Profile Dropdown Open`; capture the parity checklist before editing.
 - [x] 1.2 Extend `packages/web-shared/src/components/WorkspaceHeader.vue` with app-provided settings navigation, app-specific first-action label/icon, and a sign-out event while keeping route names and auth stores app-local.
-- [x] 1.3 Implement the profile/avatar trigger and popup menu using PrimeVue menu semantics, token-backed styling, open-only active trigger styling, a visible spacing gap below the trigger, and the approved app-specific first action then `Sign out` action order.
+- [x] 1.3 Implement the profile/avatar trigger and popup menu using PrimeVue menu semantics, token-backed styling, open-only active trigger styling, sticky-header-pinned positioning while scrolling, a visible spacing gap below the trigger, an avatar-aligned caret pointer, and the approved app-specific first action then `Sign out` action order.
 - [x] 1.4 Update `WorkspaceHeader` tests to cover the trigger active state, menu contents, keyboard/focus semantics, first-action label/icon/navigation target, sign-out event emission, and preserved center-slot rendering.
 
 ## 2. App Shell Integration

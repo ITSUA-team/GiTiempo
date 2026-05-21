@@ -10,6 +10,8 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **WHEN** the user activates the top-bar profile/avatar trigger
 - **THEN** a dropdown menu opens below the trigger and aligned with the top-right identity area
 - **AND** the dropdown has a visible spacing gap from the profile/avatar trigger
+- **AND** the dropdown remains pinned to the sticky header so it stays visible with the header while the page scrolls
+- **AND** the dropdown includes a small caret/pointer aligned to the profile avatar circle
 - **AND** the profile/avatar trigger shows the rounded border active state only while the dropdown is open
 - **AND** the menu contains `Profile` and `Sign out` actions in that order
 - **AND** the `Profile` action uses the same profile icon family as the user-web profile navigation item
@@ -21,6 +23,8 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **WHEN** the user activates the top-bar profile/avatar trigger
 - **THEN** a dropdown menu opens below the trigger and aligned with the top-right identity area
 - **AND** the dropdown has a visible spacing gap from the profile/avatar trigger
+- **AND** the dropdown remains pinned to the sticky header so it stays visible with the header while the page scrolls
+- **AND** the dropdown includes a small caret/pointer aligned to the profile avatar circle
 - **AND** the profile/avatar trigger shows the rounded border active state only while the dropdown is open
 - **AND** the menu contains `Settings` and `Sign out` actions in that order
 - **AND** the `Settings` action keeps the settings gear icon

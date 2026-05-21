@@ -22,7 +22,7 @@ The authenticated top-bar profile area currently exposes identity and sign-out a
 
 ## Impact
 
-- Affected frontend shell/header code in `apps/user-web` and `apps/admin-web`.
-- May use or extract a shared PrimeVue-based dropdown/menu leaf in `packages/web-shared` if both apps can share the same stable component contract.
+- Affected frontend shell/header code in `apps/user-web`, `apps/admin-web`, and the shared `WorkspaceHeader` component in `packages/web-shared`.
+- Shared header ownership remains limited to the common PrimeVue trigger/dropdown shell; app shells still own route names, first-action targets, auth-store logout, and login redirects.
 - Reuses existing auth logout/session cleanup behavior; no backend API or contract changes are expected.
 - Must match the approved `GITiempo.pen` full-page dropdown-open designs for user and admin dashboard contexts.

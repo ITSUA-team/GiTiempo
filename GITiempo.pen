@@ -20980,6 +20980,22 @@
           ]
         },
         {
+          "type": "rectangle",
+          "id": "XAWjI",
+          "layoutPosition": "absolute",
+          "x": 1228,
+          "y": 72,
+          "name": "profileDropdownPointer",
+          "rotation": 45,
+          "fill": "$color-surface",
+          "width": 12,
+          "height": 12,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$color-divider"
+          }
+        },
+        {
           "type": "frame",
           "id": "m9zva",
           "layoutPosition": "absolute",
@@ -22011,6 +22027,22 @@
               ]
             }
           ]
+        },
+        {
+          "type": "rectangle",
+          "id": "QrjiW",
+          "layoutPosition": "absolute",
+          "x": 1228,
+          "y": 72,
+          "name": "profileDropdownPointer",
+          "rotation": 45,
+          "fill": "$color-surface",
+          "width": 12,
+          "height": 12,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$color-divider"
+          }
         },
         {
           "type": "frame",

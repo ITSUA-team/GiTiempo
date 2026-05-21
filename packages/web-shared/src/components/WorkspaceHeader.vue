@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed, shallowRef, useTemplateRef, type Component } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  shallowRef,
+  useTemplateRef,
+  type Component,
+} from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import { RouterLink } from "vue-router";
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Menu from "primevue/menu";
-import type { MenuMethods } from "primevue/menu";
-
-type ProfileMenuRef = Pick<MenuMethods, "hide" | "toggle">;
 
 const props = withDefaults(
   defineProps<{
@@ -34,7 +38,7 @@ const emit = defineEmits<{
   signOut: [];
 }>();
 
-const profileMenu = useTemplateRef<ProfileMenuRef>("profileMenu");
+const profileMenuRegion = useTemplateRef<HTMLElement>("profileMenuRegion");
 const isProfileMenuOpen = shallowRef(false);
 
 const profileTriggerRootClass = computed(() =>
@@ -66,7 +70,7 @@ const profileMenuItems = computed(() => [
   },
   {
     command: () => {
-      isProfileMenuOpen.value = false;
+      closeProfileMenu({ restoreFocus: true });
       emit("signOut");
     },
     destructive: true,
@@ -75,16 +79,39 @@ const profileMenuItems = computed(() => [
   },
 ]);
 
-function toggleProfileMenu(event: MouseEvent): void {
-  profileMenu.value?.toggle(event);
+function focusProfileTrigger(): void {
+  profileMenuRegion.value
+    ?.querySelector<HTMLElement>('[data-testid="profile-menu-trigger"]')
+    ?.focus();
 }
 
-function handleProfileMenuHide(): void {
+function closeProfileMenu(options: { restoreFocus?: boolean } = {}): void {
   isProfileMenuOpen.value = false;
+
+  if (options.restoreFocus) {
+    focusProfileTrigger();
+  }
 }
 
-function handleProfileMenuShow(): void {
-  isProfileMenuOpen.value = true;
+function toggleProfileMenu(): void {
+  isProfileMenuOpen.value = !isProfileMenuOpen.value;
+}
+
+function handleDocumentClick(event: MouseEvent): void {
+  if (!isProfileMenuOpen.value) return;
+
+  const target = event.target;
+
+  if (target instanceof Node && profileMenuRegion.value?.contains(target)) return;
+
+  closeProfileMenu();
+}
+
+function handleDocumentKeydown(event: KeyboardEvent): void {
+  if (!isProfileMenuOpen.value || event.key !== "Escape") return;
+
+  event.preventDefault();
+  closeProfileMenu({ restoreFocus: true });
 }
 
 function handleSettingsClick(
@@ -92,9 +119,18 @@ function handleSettingsClick(
   event: MouseEvent,
 ): void {
   navigate(event);
-  profileMenu.value?.hide();
-  isProfileMenuOpen.value = false;
+  closeProfileMenu({ restoreFocus: true });
 }
+
+onMounted(() => {
+  document.addEventListener("click", handleDocumentClick);
+  document.addEventListener("keydown", handleDocumentKeydown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleDocumentClick);
+  document.removeEventListener("keydown", handleDocumentKeydown);
+});
 </script>
 
 <template>
@@ -123,7 +159,10 @@ function handleSettingsClick(
       </div>
     </div>
 
-    <div class="flex items-center gap-3">
+    <div
+      ref="profileMenuRegion"
+      class="relative flex items-center gap-3"
+    >
       <a
         :href="props.counterpartHref"
         class="text-brand hidden text-[13px] font-semibold transition hover:underline sm:block"
@@ -163,15 +202,12 @@ function handleSettingsClick(
       </Button>
 
       <Menu
+        v-if="isProfileMenuOpen"
         id="profile_menu"
-        ref="profileMenu"
         :model="profileMenuItems"
-        popup
         aria-label="Profile actions"
-        class="border-divider bg-surface shadow-popover mt-3 w-[264px] rounded-lg border p-1.5"
+        class="border-divider bg-surface shadow-popover before:border-divider before:bg-surface absolute top-full right-0 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
         data-testid="profile-menu"
-        @hide="handleProfileMenuHide"
-        @show="handleProfileMenuShow"
       >
         <template #item="{ item, props: itemProps }">
           <RouterLink

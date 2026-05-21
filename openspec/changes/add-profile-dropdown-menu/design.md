@@ -37,15 +37,15 @@ Alternative considered: implement separate dropdowns in `AppShell.vue` and `Admi
 
 Alternative considered: have `WorkspaceHeader` import app route names or auth stores directly. That would violate package boundaries because `packages/web-shared` must stay app-agnostic.
 
-### Use PrimeVue Popup Menu Semantics
+### Use PrimeVue Menu Semantics In A Header-Local Popup
 
-The dropdown should use PrimeVue's popup menu pattern, triggered from the profile/avatar control. PrimeVue `Menu` supports popup mode, command callbacks, router item templating, and built-in menu keyboard behavior. The trigger should expose an accessible label such as `Open profile menu` and should keep focus/expanded state consistent with the popup.
+The dropdown should use PrimeVue `Menu` item semantics, command callbacks, and router item templating, triggered from the profile/avatar control. To satisfy the sticky-header-pinned requirement, the menu should render as a controlled header-local surface inside the profile region instead of a document-positioned overlay. The trigger should expose an accessible label such as `Open profile menu`, keep `aria-expanded` aligned with open state, close on outside click or `Escape`, and restore focus to the trigger when dismissed through keyboard or menu actions.
 
-Alternative considered: custom absolute-positioned markup. That would make keyboard/focus behavior and ARIA semantics easier to regress, so it should be avoided unless PrimeVue cannot match the approved design closely enough.
+Alternative considered: PrimeVue's default popup overlay positioning and `appendTo` variations. That approach was rejected because it can detach from or disappear under the sticky header constraints. Fully custom menu markup remains rejected because PrimeVue `Menu` can still own the action model and menu semantics while the app controls the header-local placement.
 
 ### Preserve Design Tokens And Current Header Layout
 
-The trigger and menu should use existing token utilities for surface, divider, text, destructive color, radius, and shadow. The dropdown should visually match the approved `.pen` menu: compact width around the design's 264px surface, two 44px rows, a divider, muted profile/settings icon treatment, destructive sign-out treatment, and a visible top offset from the profile trigger using the shared spacing scale, e.g. `mt-3` / 12px. The rounded border around the profile trigger and the brand ring around the avatar are active-open styling only; they MUST appear while the dropdown is open and MUST NOT be shown in the closed state.
+The trigger and menu should use existing token utilities for surface, divider, text, destructive color, radius, and shadow. The dropdown should visually match the approved `.pen` menu: compact width around the design's 264px surface, two 44px rows, a divider, muted profile/settings icon treatment, destructive sign-out treatment, a small caret/pointer aimed at the profile avatar circle, and a visible top offset from the profile trigger using the shared spacing scale, e.g. `mt-3` / 12px. The popup must stay attached to the sticky header instead of document scrolling coordinates so it remains visible with the header while the page scrolls. The rounded border around the profile trigger and the brand ring around the avatar are active-open styling only; they MUST appear while the dropdown is open and MUST NOT be shown in the closed state.
 
 Alternative considered: raw hex or component-local CSS values. That conflicts with the repo's token-based UI rules and would make theme maintenance harder.
 
@@ -57,7 +57,7 @@ Alternative considered: only testing the shared component. That would miss the h
 
 ## Risks / Trade-offs
 
-- PrimeVue popup positioning may differ slightly from the `.pen` absolute coordinates → use PrimeVue's overlay behavior but tune classes/PT so the visual intent, right alignment, and spacing match the design as closely as possible.
+- PrimeVue's default document-positioned popup can conflict with the sticky-header-pinned requirement → render the PrimeVue `Menu` as a controlled header-local surface and tune classes/PT so the visual intent, right alignment, and spacing match the design as closely as possible.
 - Adding a clickable wrapper around the display name/avatar could disrupt current top-bar spacing → preserve the existing grid and right-area gap, and only add trigger styling around the identity group.
 - Header-owned logout creates auth-store wiring in both shells → keep `WorkspaceHeader` store-agnostic and test the app-level event handlers.
 - Mobile space is tighter in the top-right identity area → hide optional display name at small widths as today, keep the avatar trigger available, and ensure the menu remains reachable.
