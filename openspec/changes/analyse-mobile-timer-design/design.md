@@ -11,6 +11,7 @@ Relevant source-of-truth files are `docs/ui/layout.md`, `docs/ui/pages-user.md`,
 - Preserve the current desktop/tablet compact timer behavior in the top-bar center region.
 - Implement the selected mobile timer design from `GITiempo.pen` frame `qTKvU` below `640px`.
 - Keep timer Start/Stop and Change task actions available when the top-right profile menu opens by placing primary timer actions in the left side of the mobile strip.
+- Keep the task-picker dialog usable from the mobile strip with mobile-width sizing, scrollable content, and full-width stacked actions.
 - Preserve existing timer state semantics: loading, no eligible task, idle with last tracked task, running elapsed time, disabled states, and task picker dialog behavior.
 - Add focused tests for mobile and desktop render branches.
 
@@ -47,9 +48,22 @@ Relevant source-of-truth files are `docs/ui/layout.md`, `docs/ui/pages-user.md`,
 
    Alternative considered: Put Start/Stop on the right, matching desktop visual order. Rejected because it can be covered by the profile menu and violates the requirement that features remain allowable.
 
+5. Keep mobile task-picker dialog controls full-width and ordered for the mobile flow.
+
+   Rationale: The mobile `Change` action is the guaranteed task-picker entry point, so the resulting dialog must be usable on a narrow screen. The primary `Use selected task` action should appear before `Cancel` in the mobile stacked footer, while desktop can preserve the conventional cancel-then-primary visual order.
+
+## Design Parity Checklist
+
+- Mobile strip is attached to shell chrome directly below the mobile top row.
+- Primary timer action and Change task action are stacked on the left.
+- Task status, elapsed running time, and `Project / Task` metadata render on the right and may truncate before hiding actions.
+- Mobile strip uses existing token colors, rounded control treatment, and compact typography from `docs/ui/*`.
+- Task-picker dialog remains a PrimeVue `Dialog`, uses visible `Project -> Task` selection only, has scrollable content on mobile, and uses full-width stacked mobile actions with `Use selected task` before `Cancel`.
+
 ## Risks / Trade-offs
 
 - Mobile header height increases when the timer is present -> Keep the expanded height limited to the selected strip and verify authenticated pages still have adequate top spacing.
 - Shared header changes can affect admin-web -> Render the mobile center row only when a center slot exists and verify both web apps if shared header is touched.
 - Task context text may be partially covered by a profile menu -> Keep Start/Stop and Change actions on the left, and keep task-picker access through the left Change action.
+- Task-picker dialog actions can become too narrow on mobile -> Make the mobile footer full width and stack the primary action before cancel.
 - Responsive branches can drift -> Add focused component tests for desktop compact mode and mobile strip mode.

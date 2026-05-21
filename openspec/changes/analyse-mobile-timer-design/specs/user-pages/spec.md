@@ -50,3 +50,16 @@ The user-web authenticated shell MUST expose timer start, stop, and task-context
 - **THEN** a centered task-picker dialog opens
 - **AND** the dialog uses visible Project -> Task selection only
 - **AND** the dialog does not include manual interval entry controls
+
+### Requirement: Top-Bar Timer Task Picker
+
+The user-web top-bar timer task picker MUST remain usable from the mobile timer strip while preserving visible Project -> Task selection and task creation behavior.
+
+#### Scenario: Mobile task picker keeps full-width actions usable
+
+- **GIVEN** the authenticated user opens the task picker from the mobile timer strip Change affordance
+- **WHEN** the task-picker dialog renders below the mobile breakpoint
+- **THEN** the dialog uses a near-full-width mobile layout with scrollable content
+- **AND** the footer actions render as full-width stacked buttons
+- **AND** `Use selected task` appears before `Cancel` in the mobile stacked order
+- **AND** the dialog still separates existing task selection from creating a new task inside the selected visible project
