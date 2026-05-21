@@ -15887,6 +15887,33 @@
                   "fontWeight": "600"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "tQqc9",
+              "name": "extAemailBtn",
+              "fill": "#FFFFFF",
+              "cornerRadius": 6,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#5D2B85"
+              },
+              "padding": [
+                12,
+                18
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "oGXur",
+                  "name": "extAemailBtnText",
+                  "fill": "#5D2B85",
+                  "content": "Sign in with email",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                }
+              ]
             }
           ]
         }
@@ -19926,6 +19953,462 @@
                   ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "M6iIR",
+          "name": "Injected Auth Missing",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 10,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#EEEEEE"
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Q548w",
+              "name": "idleHeader",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "TYPCu",
+                  "name": "idleHeaderText",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ZHmSi",
+                      "fill": "#1A1A1A",
+                      "content": "Issue timer",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "rhkJ2",
+                      "fill": "#666666",
+                      "content": "octo-org/admin-web #184",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MNroi",
+                  "name": "idleStatus",
+                  "fill": "#F4F4F5",
+                  "cornerRadius": 6,
+                  "padding": [
+                    6,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "NUhgn",
+                      "fill": "#666666",
+                      "content": "Sign in",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "IK7Fa",
+              "name": "idleIssueTitle",
+              "fill": "#1A1A1A",
+              "content": "Improve reports filters",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "J9OGnz",
+              "name": "idleActions",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NGzE4",
+                  "fill": "#666666",
+                  "content": "Sign in to GiTiempo to start tracking this issue.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "jUOBP",
+                  "name": "idleStart",
+                  "fill": "#5D2B85",
+                  "cornerRadius": 6,
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "v5j3EY",
+                      "fill": "#FFFFFF",
+                      "content": "Open extension",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "l3CLBR",
+          "name": "Injected Error",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 10,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#EEEEEE"
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Kejmy",
+              "name": "idleHeader",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eFmKH",
+                  "name": "idleHeaderText",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Blmhs",
+                      "fill": "#1A1A1A",
+                      "content": "Issue timer",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "vMVi9",
+                      "fill": "#666666",
+                      "content": "octo-org/admin-web #184",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "vpQXV",
+                  "name": "idleStatus",
+                  "fill": "#FDECEC",
+                  "cornerRadius": 6,
+                  "padding": [
+                    6,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "s1PP6",
+                      "fill": "#D32F2F",
+                      "content": "Error",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "R5ibP",
+              "name": "idleIssueTitle",
+              "fill": "#1A1A1A",
+              "content": "Improve reports filters",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "GH7XL",
+              "name": "idleActions",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "OPw0b",
+                  "fill": "#666666",
+                  "content": "Could not sync timer state. Keep this issue context and retry.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "zRQCu",
+                  "name": "idleStart",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 6,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#5D2B85"
+                  },
+                  "padding": [
+                    10,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Id8y3",
+                      "fill": "#5D2B85",
+                      "content": "Retry",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "X51PWX",
+      "x": 10915,
+      "y": 380,
+      "name": "Ext Unsupported Page",
+      "width": 320,
+      "height": 480,
+      "fill": "$color-surface",
+      "cornerRadius": "$radius-lg",
+      "effect": {
+        "type": "shadow",
+        "shadowType": "outer",
+        "color": "#00000014",
+        "offset": {
+          "x": 0,
+          "y": 1
+        },
+        "blur": 3
+      },
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 20,
+      "children": [
+        {
+          "type": "frame",
+          "id": "iHNdp",
+          "name": "extBbrand",
+          "width": "fill_container",
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "fhqF3",
+              "name": "extBbLeft",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "fa7Zu",
+                  "name": "extBbLogo",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$color-accent-tint",
+                  "cornerRadius": 9,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "yOQsk",
+                      "name": "extBbLogoText",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "omrME",
+                  "name": "extBbText",
+                  "fill": "$color-text-dark",
+                  "content": "GiTiempo",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "j8wEA",
+              "name": "extBavatar",
+              "width": 28,
+              "height": 28,
+              "fill": "$color-accent-tint",
+              "cornerRadius": 14,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "x6DxMn",
+                  "name": "extBavatarText",
+                  "fill": "$color-brand",
+                  "content": "AT",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "o4JxGW",
+          "name": "extBissue",
+          "width": "fill_container",
+          "fill": "$color-app-bg",
+          "cornerRadius": "$radius-lg",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "LQQNO",
+              "name": "extBlabel",
+              "fill": "$color-text-muted",
+              "content": "GitHub issue required",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "ajUab",
+              "name": "extBtitle",
+              "fill": "$color-text-dark",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Open a GitHub issue page to start a timer.",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "RoNsa",
+              "name": "extBmeta",
+              "fill": "$color-text-muted",
+              "content": "Timer start is unavailable on this tab.",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "MwrGM",
+          "name": "extBsp",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "justifyContent": "end",
+          "children": [
+            {
+              "type": "frame",
+              "id": "GjtRL",
+              "name": "extBbtn",
+              "fill": "$color-brand",
+              "cornerRadius": "$radius-sm",
+              "padding": [
+                12,
+                18
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EPjYr",
+                  "name": "extBbtnText",
+                  "fill": "$color-surface",
+                  "content": "Open full workspace",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Z7uNoX",
+              "name": "extBspaLink",
+              "fill": "#5D2B85",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Navigate to github.com/<owner>/<repo>/issues/<number>.",
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "600"
             }
           ]
         }
