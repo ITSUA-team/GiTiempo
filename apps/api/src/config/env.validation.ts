@@ -106,6 +106,18 @@ export const envSchema = z
     FIREBASE_PRIVATE_KEY: firebasePrivateKeySchema.optional(),
   })
   .superRefine((env, ctx) => {
+    if (
+      env.NODE_ENV !== 'development' &&
+      env.INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS'],
+        message:
+          'INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS is only allowed when NODE_ENV=development',
+      });
+    }
+
     if (env.NODE_ENV === 'test') return;
     const required: Array<keyof typeof env> = [
       'FIREBASE_PROJECT_ID',

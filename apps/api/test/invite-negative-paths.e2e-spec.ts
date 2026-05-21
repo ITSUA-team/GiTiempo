@@ -130,11 +130,15 @@ describe('Invite negative paths (e2e)', () => {
 
   describe('POST /invites/accept', () => {
     it('rejects missing firebaseIdToken → 400', async () => {
-      const [row] = await insertInvite(`missing-token-${randomUUID()}@example.com`);
+      const [row] = await insertInvite(
+        `missing-token-${randomUUID()}@example.com`,
+      );
 
-      const res = await request(app.getHttpServer()).post('/invites/accept').send({
-        token: row!.token,
-      });
+      const res = await request(app.getHttpServer())
+        .post('/invites/accept')
+        .send({
+          token: row!.token,
+        });
 
       expect(res.status).toBe(400);
     });
@@ -142,11 +146,13 @@ describe('Invite negative paths (e2e)', () => {
     it('rejects legacy password payload fields → 400', async () => {
       const [row] = await insertInvite(`legacy-${randomUUID()}@example.com`);
 
-      const res = await request(app.getHttpServer()).post('/invites/accept').send({
-        token: row!.token,
-        firebaseIdToken: 'test:legacy:legacy@example.com:Legacy User',
-        password: 'password123',
-      });
+      const res = await request(app.getHttpServer())
+        .post('/invites/accept')
+        .send({
+          token: row!.token,
+          firebaseIdToken: 'test:legacy:legacy@example.com:Legacy User',
+          password: 'password123',
+        });
 
       expect(res.status).toBe(400);
     });
@@ -154,12 +160,14 @@ describe('Invite negative paths (e2e)', () => {
     it('rejects legacy browser account-creation shaped payload → 400', async () => {
       const [row] = await insertInvite(`signup-${randomUUID()}@example.com`);
 
-      const res = await request(app.getHttpServer()).post('/invites/accept').send({
-        token: row!.token,
-        firebaseIdToken: 'test:signup:signup@example.com:Signup User',
-        email: 'signup@example.com',
-        confirmPassword: 'password123',
-      });
+      const res = await request(app.getHttpServer())
+        .post('/invites/accept')
+        .send({
+          token: row!.token,
+          firebaseIdToken: 'test:signup:signup@example.com:Signup User',
+          email: 'signup@example.com',
+          confirmPassword: 'password123',
+        });
 
       expect(res.status).toBe(400);
     });

@@ -20266,7 +20266,7 @@
                   "fill": "#5D2B85",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Need a password setup link? Ask an admin to resend the invite.",
+                  "content": "Need a password setup link? Ask an admin to send a fresh invite.",
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "500"
@@ -21147,7 +21147,7 @@
                       "fill": "$color-status-error-text",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "The setup link is invalid or expired, or the passwords do not match. Ask an admin to resend the invite if needed.",
+                      "content": "The setup link is invalid or expired, or the passwords do not match. Ask an admin to send a fresh invite if needed.",
                       "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"

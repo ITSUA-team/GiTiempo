@@ -17,12 +17,13 @@ export class InviteDeliveryService {
   constructor(private readonly config: ConfigService<Env, true>) {}
 
   async deliver(input: DeliverInviteInput): Promise<void> {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const nodeEnv = this.config.get('NODE_ENV', { infer: true });
+    const isProduction = nodeEnv === 'production';
     const consoleFallback =
       !isProduction &&
       this.config.get('INVITES_EMAIL_CONSOLE_FALLBACK', { infer: true });
     const showSecrets =
-      !isProduction &&
+      nodeEnv === 'development' &&
       this.config.get('INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS', {
         infer: true,
       });

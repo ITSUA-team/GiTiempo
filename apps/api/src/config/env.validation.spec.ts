@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { validate } from './env.validation';
 
-function makeBaseEnv(overrides?: Record<string, unknown>): Record<string, unknown> {
+function makeBaseEnv(
+  overrides?: Record<string, unknown>,
+): Record<string, unknown> {
   return {
     DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/gitiempo',
     JWT_ACCESS_SECRET: 'a'.repeat(32),
     JWT_REFRESH_SECRET: 'b'.repeat(32),
     FIREBASE_PROJECT_ID: 'project-id',
     FIREBASE_CLIENT_EMAIL: 'firebase@example.com',
-    FIREBASE_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\nkey\\n-----END PRIVATE KEY-----',
+    FIREBASE_PRIVATE_KEY:
+      '-----BEGIN PRIVATE KEY-----\\nkey\\n-----END PRIVATE KEY-----',
     USER_SPA_URL: 'https://user.example.com',
     APP_URL: 'https://api.example.com',
     GITHUB_APP_ID: '1',
@@ -32,5 +35,38 @@ describe('validate', () => {
         }),
       ),
     ).toThrow(/SMTP_HOST/);
+  });
+
+  it('rejects invite console secret logging outside development', () => {
+    expect(() =>
+      validate(
+        makeBaseEnv({
+          NODE_ENV: 'test',
+          INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS: 'true',
+        }),
+      ),
+    ).toThrow(/INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS/);
+
+    expect(() =>
+      validate(
+        makeBaseEnv({
+          NODE_ENV: 'production',
+          INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS: 'true',
+        }),
+      ),
+    ).toThrow(/INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS/);
+  });
+
+  it('allows invite console secret logging in development only', () => {
+    expect(
+      validate(
+        makeBaseEnv({
+          NODE_ENV: 'development',
+          INVITES_EMAIL_CONSOLE_FALLBACK: 'true',
+          INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS: 'true',
+          SMTP_HOST: '',
+        }),
+      ).INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS,
+    ).toBe(true);
   });
 });

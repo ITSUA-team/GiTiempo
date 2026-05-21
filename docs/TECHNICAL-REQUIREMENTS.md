@@ -416,4 +416,6 @@ The API requires the following environment variables:
 | `SMTP_USER`                | SMTP username                                                                                         |
 | `SMTP_PASSWORD`            | SMTP password                                                                                         |
 | `EMAIL_FROM`               | From address for outgoing emails                                                                      |
+| `INVITES_EMAIL_CONSOLE_FALLBACK` | Enables non-production console invite delivery fallback when SMTP is unavailable               |
+| `INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS` | Development-only flag that logs full invite/setup URLs for manual local testing       |
 | `LOG_LEVEL`                | Logging level: `error`, `warn`, `info`, `debug` (default: `info`)                                     |

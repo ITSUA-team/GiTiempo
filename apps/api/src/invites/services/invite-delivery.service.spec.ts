@@ -12,8 +12,10 @@ vi.mock('nodemailer', () => ({
 function makeService(
   consoleFallback: boolean,
   showSecrets = false,
+  nodeEnv: 'development' | 'production' | 'test' = 'development',
 ) {
   const configGet = vi.fn((key: string) => {
+    if (key === 'NODE_ENV') return nodeEnv;
     if (key === 'INVITES_EMAIL_CONSOLE_FALLBACK') return consoleFallback;
     if (key === 'INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS') {
       return showSecrets;
@@ -30,95 +32,112 @@ function makeService(
   return new InviteDeliveryService(config);
 }
 
+const inviteUrl = 'http://localhost:5173/invites/accept?token=secret-token';
+const passwordSetupUrl =
+  'https://firebase.test/reset?mode=resetPassword&oobCode=test-code&continueUrl=http%3A%2F%2Flocalhost%3A5173%2Finvites%2Faccept%3Ftoken%3Dsecret-token';
+const redactedInviteUrl =
+  'http://localhost:5173/invites/accept?token=%5Bredacted%5D';
+const redactedPasswordSetupUrl =
+  'https://firebase.test/reset?mode=resetPassword&oobCode=%5Bredacted%5D&continueUrl=%5Bredacted%5D';
+
 describe('InviteDeliveryService', () => {
   it('skips console fallback when NODE_ENV is production even if config is true', async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
     sendMailMock.mockClear();
 
-    try {
-      const service = makeService(true);
-      const logSpy = vi.spyOn(service['logger'], 'log');
+    const service = makeService(true, false, 'production');
+    const logSpy = vi.spyOn(service['logger'], 'log');
 
-      await service.deliver({
-        email: 'test@example.com',
-        inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
-        passwordSetupUrl: 'https://firebase.test/reset',
-        workspaceName: 'Test Workspace',
-      });
+    await service.deliver({
+      email: 'test@example.com',
+      inviteUrl,
+      passwordSetupUrl,
+      workspaceName: 'Test Workspace',
+    });
 
-      expect(logSpy).not.toHaveBeenCalled();
-      expect(sendMailMock).toHaveBeenCalled();
-    } finally {
-      process.env.NODE_ENV = originalEnv;
-    }
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(sendMailMock).toHaveBeenCalled();
   });
 
   it('uses console fallback in development when config is true', async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
     sendMailMock.mockClear();
 
-    try {
-      const service = makeService(true);
-      const logSpy = vi.spyOn(service['logger'], 'log');
+    const service = makeService(true);
+    const logSpy = vi.spyOn(service['logger'], 'log');
 
-      await service.deliver({
+    await service.deliver({
+      email: 'test@example.com',
+      inviteUrl,
+      passwordSetupUrl,
+      workspaceName: 'Test Workspace',
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'invites.delivery.console_fallback',
         email: 'test@example.com',
-        inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
-        passwordSetupUrl: 'https://firebase.test/reset',
-        workspaceName: 'Test Workspace',
-      });
-
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: 'invites.delivery.console_fallback',
-          email: 'test@example.com',
-          passwordSetupUrl: 'https://firebase.test/reset',
-          inviteUrl: 'http://localhost:5173/invites/accept?token=%5Bredacted%5D',
-        }),
-      );
-      expect(logSpy).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
-        }),
-      );
-      expect(sendMailMock).not.toHaveBeenCalled();
-    } finally {
-      process.env.NODE_ENV = originalEnv;
-    }
+        passwordSetupUrl: redactedPasswordSetupUrl,
+        inviteUrl: redactedInviteUrl,
+      }),
+    );
+    expect(logSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        inviteUrl,
+        passwordSetupUrl,
+      }),
+    );
+    expect(sendMailMock).not.toHaveBeenCalled();
   });
 
   it('allows full invite links in development when the debug flag is true', async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
     sendMailMock.mockClear();
 
-    try {
-      const service = makeService(true, true);
-      const logSpy = vi.spyOn(service['logger'], 'log');
+    const service = makeService(true, true);
+    const logSpy = vi.spyOn(service['logger'], 'log');
 
-      await service.deliver({
+    await service.deliver({
+      email: 'test@example.com',
+      inviteUrl,
+      passwordSetupUrl,
+      workspaceName: 'Test Workspace',
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'invites.delivery.console_fallback',
         email: 'test@example.com',
-        inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
-        passwordSetupUrl:
-          'https://firebase.test/reset?mode=resetPassword&oobCode=test-code&continueUrl=http%3A%2F%2Flocalhost%3A5173%2Finvites%2Faccept%3Ftoken%3Dsecret-token',
-        workspaceName: 'Test Workspace',
-      });
+        inviteUrl,
+        passwordSetupUrl,
+      }),
+    );
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
 
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: 'invites.delivery.console_fallback',
-          email: 'test@example.com',
-          inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
-          passwordSetupUrl:
-            'https://firebase.test/reset?mode=resetPassword&oobCode=test-code&continueUrl=http%3A%2F%2Flocalhost%3A5173%2Finvites%2Faccept%3Ftoken%3Dsecret-token',
-        }),
-      );
-      expect(sendMailMock).not.toHaveBeenCalled();
-    } finally {
-      process.env.NODE_ENV = originalEnv;
-    }
+  it('redacts full invite links outside development even when the debug flag is true', async () => {
+    sendMailMock.mockClear();
+
+    const service = makeService(true, true, 'test');
+    const logSpy = vi.spyOn(service['logger'], 'log');
+
+    await service.deliver({
+      email: 'test@example.com',
+      inviteUrl,
+      passwordSetupUrl,
+      workspaceName: 'Test Workspace',
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inviteUrl: redactedInviteUrl,
+        passwordSetupUrl: redactedPasswordSetupUrl,
+      }),
+    );
+    expect(logSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        inviteUrl,
+        passwordSetupUrl,
+      }),
+    );
+    expect(sendMailMock).not.toHaveBeenCalled();
   });
 
   it('uses SMTP when console fallback is false', async () => {
@@ -128,8 +147,8 @@ describe('InviteDeliveryService', () => {
 
     await service.deliver({
       email: 'test@example.com',
-      inviteUrl: 'http://localhost:5173/invites/accept?token=secret-token',
-      passwordSetupUrl: 'https://firebase.test/reset',
+      inviteUrl,
+      passwordSetupUrl,
       workspaceName: 'Test Workspace',
     });
 
@@ -144,7 +163,7 @@ describe('InviteDeliveryService', () => {
     );
     expect(sendMailMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        text: expect.stringContaining('https://firebase.test/reset'),
+        text: expect.stringContaining(passwordSetupUrl),
       }),
     );
     expect(sendMailMock).toHaveBeenCalledWith(
@@ -156,9 +175,7 @@ describe('InviteDeliveryService', () => {
     );
     expect(sendMailMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        text: expect.stringContaining(
-          'http://localhost:5173/invites/accept?token=secret-token',
-        ),
+        text: expect.stringContaining(inviteUrl),
       }),
     );
   });
