@@ -7,6 +7,10 @@ import { getStoredSession } from "@/lib/session";
 
 const config = getExtensionConfig();
 const apiClient = createExtensionApiClient({ config });
+const contentScriptMatches = [
+  "https://github.com/*/*/issues/*",
+  "https://github.com/*/*/pull/*",
+];
 
 async function loadSnapshot(): Promise<RuntimeSnapshot> {
   const session = await getStoredSession();
@@ -38,14 +42,36 @@ async function loadSnapshot(): Promise<RuntimeSnapshot> {
   }
 }
 
-async function broadcastSnapshot(snapshot: RuntimeSnapshot): Promise<void> {
+export async function broadcastSnapshot(snapshot: RuntimeSnapshot): Promise<void> {
+  const event = {
+    type: "runtime/snapshot-updated",
+    snapshot,
+  } as const;
+
   try {
-    await chrome.runtime.sendMessage({
-      type: "runtime/snapshot-updated",
-      snapshot,
-    });
+    await chrome.runtime.sendMessage(event);
   } catch {
     // Snapshot broadcast is best-effort for cross-surface sync.
+  }
+
+  try {
+    const tabs = await chrome.tabs.query({ url: contentScriptMatches });
+
+    await Promise.all(
+      tabs.map(async (tab) => {
+        if (tab.id === undefined) {
+          return;
+        }
+
+        try {
+          await chrome.tabs.sendMessage(tab.id, event);
+        } catch {
+          // Content scripts are injected per-tab, so absent listeners are expected.
+        }
+      }),
+    );
+  } catch {
+    // Tab broadcast is also best-effort.
   }
 }
 

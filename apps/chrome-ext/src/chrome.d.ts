@@ -47,11 +47,14 @@ declare namespace chrome {
       url?: string;
     }
 
+    interface QueryInfo {
+      active?: boolean;
+      currentWindow?: boolean;
+      url?: string | string[];
+    }
+
     function create(options: { url: string }): Promise<void>;
-    function query(options: {
-      active: boolean;
-      currentWindow: boolean;
-    }): Promise<Tab[]>;
+    function query(options: QueryInfo): Promise<Tab[]>;
     function sendMessage(tabId: number, message: unknown): Promise<unknown>;
   }
 }
