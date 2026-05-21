@@ -20,12 +20,12 @@ The members, projects, and settings pages MUST support the documented administra
 - WHEN the page renders
 - THEN workspace settings are shown in a grouped single-column form layout
 - AND the form includes workspace name, currency, default hourly rate, and time zone fields
-- AND the time zone field is an editable selector populated with valid IANA time-zone options and the current persisted time-zone value
+- AND the time zone field is an editable selector populated with contract-valid time-zone options, including `UTC` and IANA time-zone names, and the current persisted time-zone value
 - AND save actions remain discoverable at section level or page bottom
 
 #### Scenario: Workspace settings time zone save
 
-- GIVEN an admin changes the Settings page time zone to a valid IANA time-zone value
+- GIVEN an admin changes the Settings page time zone to a contract-valid time-zone value
 - WHEN the admin saves settings
 - THEN the page submits the changed `timeZone` through the existing workspace settings update boundary
 - AND the saved form reconciles from the authoritative workspace settings response

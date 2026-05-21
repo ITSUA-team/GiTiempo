@@ -6,7 +6,7 @@ The Settings page currently omits the workspace time zone even though the worksp
 
 - Add an editable `Time zone` field to the admin Settings form using a PrimeVue selection control that fits the approved Settings card density.
 - Load, display, dirty-check, validate, cancel, and save `timeZone` alongside the existing current API-supported workspace settings fields.
-- Provide a deterministic time-zone option source for the selector, preferring runtime-supported IANA time zones with a stable fallback list that includes `UTC` and common regional zones such as `Europe/Kyiv`.
+- Provide a deterministic time-zone option source for the selector, preferring runtime-supported time zones with a stable fallback list that includes `UTC` and common IANA regional zones such as `Europe/Kyiv`.
 - Update Settings page documentation/specs so Time zone is no longer deferred from the current UI.
 - Keep the change frontend/admin-web scoped; do not alter backend endpoints, shared contracts, database schema, migrations, seeds, or OpenAPI artifacts.
 
@@ -19,11 +19,11 @@ The Settings page currently omits the workspace time zone even though the worksp
 ### Modified Capabilities
 
 - `admin-pages`: Settings page requirements now include an editable time-zone selector sourced from existing API-supported workspace settings.
-- Archive sequencing: `add-admin-settings-page` introduces the Settings-specific `admin-settings-page` capability and MUST be archived before this change. If this change is archived first, add the equivalent Time zone delta for `admin-settings-page` before archiving to avoid final spec drift.
+- `admin-settings-page`: Settings-specific requirements now include rendering, validating, canceling, and saving the existing API-supported `timeZone` field.
 
 ## Impact
 
 - Affected frontend app: `apps/admin-web` Settings form, settings composable/form mapping, Settings view tests, and admin settings client usage where needed.
-- Affected docs/specs: `docs/ui/pages-admin.md` and this OpenSpec change's `admin-pages` delta.
-- Existing contracts consumed: `packages/shared/src/contracts/workspaces.ts` already validates `timeZone` as a valid IANA time-zone identifier.
+- Affected docs/specs: `docs/ui/pages-admin.md` and this OpenSpec change's `admin-pages` and `admin-settings-page` deltas.
+- Existing contracts consumed: `packages/shared/src/contracts/workspaces.ts` already validates `timeZone` as a contract-valid time-zone identifier, including `UTC` and IANA time-zone names.
 - Not affected: `apps/api`, `packages/shared` contract shape, database schema/migrations/seeds, generated OpenAPI artifacts, auth model, and workspace settings endpoints.
