@@ -44,8 +44,8 @@ defineProps<{
             {{ description }}
           </p>
 
-          <div class="flex flex-col gap-2.5">
-            <div
+          <ol class="flex flex-col gap-2.5">
+            <li
               v-for="(step, index) in steps"
               :key="step.title"
               class="flex items-center gap-2.5"
@@ -63,8 +63,8 @@ defineProps<{
                   {{ step.description }}
                 </p>
               </div>
-            </div>
-          </div>
+            </li>
+          </ol>
         </div>
 
         <div class="flex flex-col gap-1.5 text-xs font-medium">

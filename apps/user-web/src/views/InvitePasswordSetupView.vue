@@ -86,6 +86,11 @@ const invalidActionLabel = computed(() =>
 const successActionLabel = computed(() =>
   hasInviteReturnTarget.value ? "Continue to invite" : "Go to login",
 );
+const successCopy = computed(() =>
+  hasInviteReturnTarget.value
+    ? "Password saved. Return to your invite to sign in and accept access."
+    : "Password saved. Go to login to sign in and continue.",
+);
 const invalidCopy = computed(() =>
   hasInviteReturnTarget.value
     ? "This password setup link is invalid, expired, or already used. Return to your invite and ask an admin for a fresh link if needed."
@@ -393,8 +398,7 @@ async function handleSavePassword(): Promise<void> {
           Password saved
         </h2>
         <p class="text-text-muted text-sm leading-6">
-          Password saved. Return to your invite to sign in and accept
-          access.
+          {{ successCopy }}
         </p>
       </div>
 
