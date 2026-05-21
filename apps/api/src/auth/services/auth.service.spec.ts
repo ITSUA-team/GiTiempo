@@ -304,7 +304,9 @@ describe('AuthService', () => {
       await expect(service.refresh('some-raw-token')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
-      expect(repo.deleteFamily).toHaveBeenCalledWith('family-missing-successor');
+      expect(repo.deleteFamily).toHaveBeenCalledWith(
+        'family-missing-successor',
+      );
     });
 
     it('rejects unknown refresh tokens with 401', async () => {
