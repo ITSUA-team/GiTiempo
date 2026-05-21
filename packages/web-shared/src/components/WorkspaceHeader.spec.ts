@@ -92,23 +92,26 @@ const MenuStub = defineComponent({
       return h(
         "div",
         { ...attrs, role: "menu" },
-        props.model.map((item, index) => {
-          if (item.separator) {
-            return h("hr", { key: `separator-${index}` });
-          }
+        [
+          ...(slots.start?.() ?? []),
+          ...props.model.map((item, index) => {
+            if (item.separator) {
+              return h("hr", { key: `separator-${index}` });
+            }
 
-          return slots.item?.({
-            item,
-            props: {
-              action: {
-                onClick: () => {
-                  item.command?.();
+            return slots.item?.({
+              item,
+              props: {
+                action: {
+                  onClick: () => {
+                    item.command?.();
+                  },
+                  role: "menuitem",
                 },
-                role: "menuitem",
               },
-            },
-          });
-        }),
+            });
+          }),
+        ],
       );
     };
   },
@@ -229,6 +232,7 @@ describe("WorkspaceHeader", () => {
 
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
     const signOutAction = wrapper.get('[data-testid="profile-menu-sign-out"]');
+    const counterpartAction = wrapper.get('[data-testid="profile-menu-counterpart"]');
 
     expect(trigger.attributes("aria-expanded")).toBe("true");
     expect(trigger.classes()).toContain("border-divider");
@@ -245,6 +249,10 @@ describe("WorkspaceHeader", () => {
     );
     expect(settingsLink.attributes("role")).toBe("menuitem");
     expect(signOutAction.attributes("role")).toBe("menuitem");
+    expect(counterpartAction.attributes("role")).toBe("menuitem");
+    expect(counterpartAction.attributes("href")).toBe(baseProps.counterpartHref);
+    expect(counterpartAction.classes()).toContain("sm:hidden");
+    expect(counterpartAction.text()).toContain("Admin workspace");
     expect(wrapper.get('[data-testid="profile-menu"]').text()).toContain("Settings");
     expect(settingsLink.attributes("href")).toBe("/profile");
     expect(signOutAction.text()).toContain("Sign out");
@@ -304,6 +312,25 @@ describe("WorkspaceHeader", () => {
 
     expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(false);
     expect(document.activeElement).toBe(trigger.element);
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+  });
+
+  it("closes the profile menu when the mobile counterpart action runs", async () => {
+    const wrapper = mountHeader({ attachTo: document.body });
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+
+    await trigger.trigger("click");
+    const counterpartAction = wrapper.get('[data-testid="profile-menu-counterpart"]');
+    counterpartAction.element.addEventListener(
+      "click",
+      (event) => event.preventDefault(),
+      { once: true },
+    );
+
+    await counterpartAction.trigger("click");
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(false);
     expect(trigger.attributes("aria-expanded")).toBe("false");
   });
 

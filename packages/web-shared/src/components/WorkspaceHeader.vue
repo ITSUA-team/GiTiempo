@@ -209,6 +209,37 @@ onBeforeUnmount(() => {
         class="border-divider bg-surface shadow-popover before:border-divider before:bg-surface absolute top-full right-0 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
         data-testid="profile-menu"
       >
+        <template #start>
+          <a
+            :href="props.counterpartHref"
+            class="text-brand hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:hidden"
+            data-testid="profile-menu-counterpart"
+            role="menuitem"
+            @click="closeProfileMenu()"
+          >
+            <span
+              class="bg-accent-tint text-brand flex size-7 items-center justify-center rounded-sm"
+              aria-hidden="true"
+            >
+              <svg
+                class="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              >
+                <path d="M8 7h12" />
+                <path d="m16 3 4 4-4 4" />
+                <path d="M16 17H4" />
+                <path d="m8 21-4-4 4-4" />
+              </svg>
+            </span>
+            <span>{{ props.counterpartLabel }}</span>
+          </a>
+        </template>
+
         <template #item="{ item, props: itemProps }">
           <RouterLink
             v-if="item.route"
