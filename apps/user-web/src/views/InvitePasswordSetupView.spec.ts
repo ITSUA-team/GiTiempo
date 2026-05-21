@@ -271,4 +271,53 @@ describe("InvitePasswordSetupView", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.login);
   });
+
+  it("falls back to login navigation for hostile external continueUrl targets", async () => {
+    verifyPasswordResetCode.mockRejectedValueOnce(
+      createFirebaseError("auth/invalid-action-code"),
+    );
+    const continueUrl = encodeURIComponent(
+      "https://evil.example/invites/accept?token=invite-token",
+    );
+    const { router, wrapper } = await mountInvitePasswordSetupView(
+      `/invites/password-setup?mode=resetPassword&oobCode=bad-code&continueUrl=${continueUrl}`,
+    );
+
+    expect(wrapper.get('[data-testid="invite-password-setup-invalid"]').text()).toContain(
+      "Go to login",
+    );
+
+    await wrapper.get('[data-testid="invite-password-setup-invalid"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+  });
+
+  it("falls back to login navigation for hostile external continueUrl targets after success", async () => {
+    verifyPasswordResetCode.mockResolvedValueOnce("invited.user@example.com");
+    confirmPasswordReset.mockResolvedValueOnce(undefined);
+    const continueUrl = encodeURIComponent(
+      "https://evil.example/invites/accept?token=invite-token",
+    );
+    const { router, wrapper } = await mountInvitePasswordSetupView(
+      `/invites/password-setup?mode=resetPassword&oobCode=valid-code&continueUrl=${continueUrl}`,
+    );
+
+    await wrapper.get('[data-testid="invite-password-setup-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get('[data-testid="invite-password-setup-confirm-password"]').setValue(
+      "password123",
+    );
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Password saved");
+
+    await wrapper.get('[data-testid="invite-password-setup-success"]').trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(router.currentRoute.value.fullPath).not.toContain("evil.example");
+  });
 });

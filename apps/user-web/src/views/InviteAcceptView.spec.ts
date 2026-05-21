@@ -163,7 +163,18 @@ describe("InviteAcceptView", () => {
       createWorkspaceInvitesClientMock({ acceptInvite }),
     );
     const { router, wrapper } = await mountInviteAcceptView();
-    const loginWithFirebaseToken = vi.spyOn(useAuthStore(), "loginWithFirebaseToken");
+    let acceptInviteCompleted = false;
+    const authStore = useAuthStore();
+    const originalLoginWithFirebaseToken = authStore.loginWithFirebaseToken.bind(authStore);
+    const loginWithFirebaseToken = vi
+      .spyOn(authStore, "loginWithFirebaseToken")
+      .mockImplementation(async (firebaseIdToken: string) => {
+        expect(acceptInviteCompleted).toBe(true);
+        return originalLoginWithFirebaseToken(firebaseIdToken);
+      });
+    acceptInvite.mockImplementation(async () => {
+      acceptInviteCompleted = true;
+    });
 
     await wrapper.get('[data-testid="invite-accept-email"]').setValue(
       "alexey@example.com",
@@ -196,7 +207,18 @@ describe("InviteAcceptView", () => {
       createWorkspaceInvitesClientMock({ acceptInvite }),
     );
     const { router, wrapper } = await mountInviteAcceptView();
-    const loginWithFirebaseToken = vi.spyOn(useAuthStore(), "loginWithFirebaseToken");
+    let acceptInviteCompleted = false;
+    const authStore = useAuthStore();
+    const originalLoginWithFirebaseToken = authStore.loginWithFirebaseToken.bind(authStore);
+    const loginWithFirebaseToken = vi
+      .spyOn(authStore, "loginWithFirebaseToken")
+      .mockImplementation(async (firebaseIdToken: string) => {
+        expect(acceptInviteCompleted).toBe(true);
+        return originalLoginWithFirebaseToken(firebaseIdToken);
+      });
+    acceptInvite.mockImplementation(async () => {
+      acceptInviteCompleted = true;
+    });
 
     await wrapper.get('[data-testid="invite-accept-google"]').trigger("click");
     await flushPromises();
