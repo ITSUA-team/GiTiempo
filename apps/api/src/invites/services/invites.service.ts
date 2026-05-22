@@ -19,6 +19,7 @@ import {
   FIREBASE_ADMIN,
   type FirebaseAdminService,
 } from '../../auth/services/firebase-admin.interface';
+import { normalizeEmail } from '../../commons/utils/normalize-email';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { Env } from '../../config/env.validation';
@@ -220,8 +221,4 @@ export class InvitesService {
       createdAt: row.createdAt.toISOString(),
     };
   }
-}
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
 }

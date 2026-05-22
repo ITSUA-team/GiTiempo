@@ -14,12 +14,16 @@ import {
 
 import { routeNames } from "@/router";
 import InviteOnboardingShell from "@/components/invite/InviteOnboardingShell.vue";
+import { getFirebaseErrorCode } from "@/lib/firebase-errors";
 import { getAuthRuntime } from "@/services/auth-runtime";
 import { getWorkspaceInvitesClient } from "@/services/workspace-invites-client";
 import { useAuthStore } from "@/stores/auth";
 
 type SubmitAction = "email" | "google";
-type TerminalState = "already-member" | "invalid-link";
+type TerminalState =
+  | "accept-success-login-failed"
+  | "already-member"
+  | "invalid-link";
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -69,7 +73,9 @@ const inviteToken = computed(() => {
 const isBusy = computed(
   () => activeAction.value !== null || isRedirecting.value || authStore.isSubmitting,
 );
-const panelState = computed<"already-member" | "form" | "invalid-link">(() => {
+const panelState = computed<
+  "accept-success-login-failed" | "already-member" | "form" | "invalid-link"
+>(() => {
   if (terminalState.value) {
     return terminalState.value;
   }
@@ -95,19 +101,6 @@ onMounted(() => {
     void clearInviteQuery();
   }
 });
-
-function getFirebaseErrorCode(error: unknown): string | null {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof error.code === "string"
-  ) {
-    return error.code;
-  }
-
-  return null;
-}
 
 function goToLogin(): void {
   void router.push({ name: routeNames.login });
@@ -283,8 +276,9 @@ async function completeInviteAcceptance(
     await router.replace({ name: routeNames.dashboard });
   } catch (error) {
     if (inviteAccepted) {
-      terminalState.value = "already-member";
-      terminalMessage.value = "Workspace access created. Sign in to continue.";
+      terminalState.value = "accept-success-login-failed";
+      terminalMessage.value =
+        "Workspace access was created, but app sign-in did not complete. Sign in again to continue.";
       await clearInviteQuery();
       await signOutIdentityProvider();
       appToast.showErrorToast({
@@ -504,6 +498,24 @@ async function handleGoogleAccept(): Promise<void> {
           />
         </div>
       </form>
+    </template>
+
+    <template v-else-if="panelState === 'accept-success-login-failed'">
+      <div class="flex flex-col gap-1.5">
+        <h2 class="text-text-dark text-[28px] font-semibold">
+          Invite accepted
+        </h2>
+        <p class="text-text-muted text-sm leading-6">
+          {{ terminalMessage }}
+        </p>
+      </div>
+
+      <Button
+        label="Sign in again"
+        class="h-10"
+        data-testid="invite-accept-sign-in-again"
+        @click="goToLogin"
+      />
     </template>
 
     <template v-else-if="panelState === 'already-member'">

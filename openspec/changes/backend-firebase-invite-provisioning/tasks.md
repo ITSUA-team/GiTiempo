@@ -36,10 +36,20 @@
 - [x] 5.6 Re-run API and user-web verification after implementation; run admin-web verification only if shared frontend/runtime helpers change.
 - [x] 5.7 Perform design parity review against the `Invite Password Setup` `.pen` screen and document any PrimeVue-only compromises.
 
-## 6. Verification And Review
+## 6. Follow-Up Corrections
 
-- [x] 6.1 Run API verification: `pnpm --filter @gitiempo/api lint`, `pnpm --filter @gitiempo/api typecheck`, and `pnpm --filter @gitiempo/api test`.
-- [x] 6.2 Run user-web verification: `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
-- [x] 6.3 If shared frontend/runtime code changes, run admin-web verification: `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`.
-- [x] 6.4 If shared contracts change, run the required shared package build/tests and OpenAPI export workflow.
-- [x] 6.5 Perform final design parity review against `GITiempo.pen` and document any PrimeVue-only compromises.
+- [x] 6.1 Update the `frontend-auth` implementation and tests so login submission stays single-flight through Firebase provider sign-in and the follow-up app-session exchange.
+- [x] 6.2 Distinguish the invite-accepted-but-app-sign-in-failed recovery state from the pre-existing already-member terminal state, and add focused invite-accept coverage for that message/state split.
+- [x] 6.3 Tighten backend password-setup URL rewriting so it forwards only the Firebase action parameters required by the User SPA plus invite return context, and add focused provider/service tests for the allowed query set.
+- [x] 6.4 Remove the redundant post-exchange `clearSession` path only if the provider-failure stale-session cleanup remains covered by tests after the auth-flow adjustment.
+- [x] 6.5 Deduplicate the shared Firebase error-code helper in invite views and the backend email-normalization helper if those files are already being touched by the follow-up fixes.
+- [x] 6.6 Re-run the affected API and user-web verification commands after the follow-up fixes land, and run admin-web verification too if shared frontend/runtime code changes.
+
+
+## 7. Verification And Review
+
+- [x] 7.1 Run API verification: `pnpm --filter @gitiempo/api lint`, `pnpm --filter @gitiempo/api typecheck`, and `pnpm --filter @gitiempo/api test`.
+- [x] 7.2 Run user-web verification: `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
+- [x] 7.3 Shared frontend/runtime helpers were not changed, so admin-web verification was not required for this follow-up pass.
+- [x] 7.4 Shared contracts were not changed, so no shared build/tests or OpenAPI export was required for this follow-up pass.
+- [x] 7.5 Perform final design parity review against `GITiempo.pen` and document any PrimeVue-only compromises.

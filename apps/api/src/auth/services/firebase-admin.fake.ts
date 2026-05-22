@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { normalizeEmail } from '../../commons/utils/normalize-email';
 import type {
   DecodedFirebaseToken,
   FirebaseAdminService,
@@ -72,8 +73,4 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
 
     return passwordSetupUrl.toString();
   }
-}
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
 }

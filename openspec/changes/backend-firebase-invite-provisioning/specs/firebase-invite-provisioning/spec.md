@@ -72,6 +72,7 @@ The system SHALL configure Firebase password setup/reset action links so the inv
 - **GIVEN** an admin creates an invite for a first-time email/password user
 - **WHEN** the system generates the Firebase password setup/reset action link
 - **THEN** the delivered password setup URL opens the User SPA password setup route
+- **AND** the app-hosted URL forwards only the Firebase action parameters required by the User SPA password setup page plus the invite return context, rather than mirroring arbitrary Firebase-link query parameters
 - **AND** the action link includes return context for `/invites/accept?token=<token>`
 - **AND** completing password setup returns the invitee to the invite accept page with the original token
 

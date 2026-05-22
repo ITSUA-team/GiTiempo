@@ -67,6 +67,27 @@ The user-web invite accept page MUST authenticate invited users through Firebase
 - **THEN** the page keeps a recovery state explaining that the Firebase account is signed in but workspace access was not created
 - **AND** the page offers the correct next action for retryable, email mismatch, terminal invite, and already-member failures
 
+#### Scenario: Invite acceptance succeeds but app sign-in fails
+- **GIVEN** `POST /invites/accept` succeeds for the presented invite token and Firebase identity
+- **WHEN** the follow-up normal app API session creation fails
+- **THEN** the page clears any partial local app session state
+- **AND** the recovery state explains that workspace access was created but app sign-in did not complete
+- **AND** the page offers a next action to sign in again without implying that the access pre-existed
+
+### Requirement: Auth Submission State Covers The Full Sign-In Attempt
+The user-web auth session layer MUST keep sign-in actions in a submitting state until the identity-provider step and the follow-up app-session exchange have both resolved or failed, so the UI stays single-flight during login.
+
+#### Scenario: Standard login remains single-flight during provider sign-in
+- **WHEN** a user-web login attempt starts with email/password or Google sign-in
+- **THEN** the submitting state stays active while Firebase sign-in is still in progress
+- **AND** the login UI does not allow a second submission during that interval
+
+#### Scenario: Standard login remains single-flight during backend exchange
+- **GIVEN** Firebase sign-in has already returned an identity token
+- **WHEN** the normal app API session exchange is still in progress
+- **THEN** the submitting state stays active until the exchange resolves or fails
+- **AND** a failed attempt still clears stale local session tokens before returning the UI to guest state
+
 #### Scenario: Invite token is missing
 - **GIVEN** the invite accept page is opened without a token query parameter
 - **WHEN** the page renders

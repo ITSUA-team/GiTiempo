@@ -9,6 +9,7 @@ import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
 import { createAppToast, getErrorMessage } from "@gitiempo/web-shared";
 
 import { getFirebaseAuth } from "@/lib/firebase";
+import { getFirebaseErrorCode } from "@/lib/firebase-errors";
 import { routeNames } from "@/router";
 import InviteOnboardingShell from "@/components/invite/InviteOnboardingShell.vue";
 
@@ -131,19 +132,6 @@ function normalizeInviteReturnTarget(rawContinueUrl: string | null): string | nu
   } catch {
     return null;
   }
-}
-
-function getFirebaseErrorCode(error: unknown): string | null {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof error.code === "string"
-  ) {
-    return error.code;
-  }
-
-  return null;
 }
 
 function goToLogin(): void {

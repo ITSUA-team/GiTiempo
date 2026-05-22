@@ -10,7 +10,6 @@ import {
   getRefreshToken,
   setRefreshToken,
 } from "@gitiempo/web-shared/session-storage";
-
 import { getAuthRuntime } from "@/services/auth-runtime";
 
 function applyTokenPair(
@@ -98,29 +97,20 @@ export const useAuthStore = defineStore("auth", () => {
     return bootstrapPromise;
   }
 
-  async function runLoginFlow(
-    getFirebaseIdToken: () => Promise<string>,
-  ): Promise<void> {
-    try {
-      const firebaseIdToken = await getFirebaseIdToken();
-      await loginWithFirebaseToken(firebaseIdToken);
-    } catch (error) {
-      clearSession();
-      bootstrapComplete.value = true;
-      throw error;
-    }
+  async function exchangeFirebaseToken(firebaseIdToken: string): Promise<void> {
+    const tokenPair =
+      await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
+
+    applyTokenPair(accessToken, tokenPair);
+    await loadCurrentUser(tokenPair.accessToken);
+    bootstrapComplete.value = true;
   }
 
-  async function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
+  async function withSubmitting(action: () => Promise<void>): Promise<void> {
     isSubmitting.value = true;
 
     try {
-      const tokenPair =
-        await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
-
-      applyTokenPair(accessToken, tokenPair);
-      await loadCurrentUser(tokenPair.accessToken);
-      bootstrapComplete.value = true;
+      await action();
     } catch (error) {
       clearSession();
       bootstrapComplete.value = true;
@@ -128,6 +118,19 @@ export const useAuthStore = defineStore("auth", () => {
     } finally {
       isSubmitting.value = false;
     }
+  }
+
+  async function runLoginFlow(
+    getFirebaseIdToken: () => Promise<string>,
+  ): Promise<void> {
+    await withSubmitting(async () => {
+      const firebaseIdToken = await getFirebaseIdToken();
+      await exchangeFirebaseToken(firebaseIdToken);
+    });
+  }
+
+  async function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
+    await withSubmitting(() => exchangeFirebaseToken(firebaseIdToken));
   }
 
   async function loginWithEmailPassword(

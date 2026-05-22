@@ -129,6 +129,51 @@ describe("useAuthStore", () => {
     expect(authStore.profile?.email).toBe("alexey@example.com");
   });
 
+  it("keeps submitting state active through provider sign-in and token exchange", async () => {
+    let releaseProviderStep!: () => void;
+    let releaseExchangeStep!: () => void;
+    const providerStep = new Promise<void>((resolve) => {
+      releaseProviderStep = resolve;
+    });
+    const exchangeStep = new Promise<void>((resolve) => {
+      releaseExchangeStep = resolve;
+    });
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        loginWithFirebaseToken: async () => {
+          await exchangeStep;
+          return {
+            accessToken: "access-token",
+            accessTokenExpiresIn: 900,
+            refreshToken: "refresh-token-next",
+          };
+        },
+        signInWithEmailPassword: async () => {
+          await providerStep;
+          return "firebase-email-token";
+        },
+      }),
+    );
+
+    const authStore = useAuthStore();
+    const loginPromise = authStore.loginWithEmailPassword(
+      "alex@example.com",
+      "password123",
+    );
+
+    expect(authStore.isSubmitting).toBe(true);
+
+    releaseProviderStep();
+    await Promise.resolve();
+
+    expect(authStore.isSubmitting).toBe(true);
+
+    releaseExchangeStep();
+    await loginPromise;
+
+    expect(authStore.isSubmitting).toBe(false);
+  });
+
   it("logs in with a Firebase token and persists the token pair", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
 

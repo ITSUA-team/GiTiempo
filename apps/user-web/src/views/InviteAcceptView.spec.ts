@@ -427,6 +427,7 @@ describe("InviteAcceptView", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("Workspace access already exists");
+    expect(wrapper.text()).toContain("Your account already has workspace access.");
     expect(wrapper.find('[data-testid="invite-accept-sign-in"]').exists()).toBe(true);
     expect(router.currentRoute.value.fullPath).toBe("/invites/accept");
   });
@@ -477,7 +478,12 @@ describe("InviteAcceptView", () => {
     await flushPromises();
 
     expect(loginWithFirebaseToken).toHaveBeenCalledWith("firebase-email-token");
-    expect(wrapper.text()).toContain("Workspace access created. Sign in to continue.");
+    expect(wrapper.text()).toContain("Invite accepted");
+    expect(wrapper.text()).toContain(
+      "Workspace access was created, but app sign-in did not complete. Sign in again to continue.",
+    );
+    expect(wrapper.text()).not.toContain("Workspace access already exists");
+    expect(wrapper.find('[data-testid="invite-accept-sign-in-again"]').exists()).toBe(true);
     expect(router.currentRoute.value.fullPath).toBe("/invites/accept");
   });
 });

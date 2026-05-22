@@ -10,6 +10,7 @@ import type {
 } from './firebase-admin.interface';
 
 const APP_NAME = 'gitiempo-api';
+const PASSWORD_SETUP_QUERY_KEYS = ['mode', 'oobCode'] as const;
 
 /**
  * Production Firebase Admin provider. Lazily initializes a single app
@@ -88,13 +89,16 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
       this.getUserSpaUrl(),
     );
 
-    for (const [key, value] of firebaseActionUrl.searchParams.entries()) {
-      passwordSetupUrl.searchParams.set(key, value);
+    for (const key of PASSWORD_SETUP_QUERY_KEYS) {
+      const value = firebaseActionUrl.searchParams.get(key);
+      if (value) {
+        passwordSetupUrl.searchParams.set(key, value);
+      }
     }
 
-    if (!passwordSetupUrl.searchParams.has('continueUrl')) {
-      passwordSetupUrl.searchParams.set('continueUrl', continueUrl);
-    }
+    const inviteReturnUrl =
+      firebaseActionUrl.searchParams.get('continueUrl') ?? continueUrl;
+    passwordSetupUrl.searchParams.set('continueUrl', inviteReturnUrl);
 
     return passwordSetupUrl.toString();
   }
