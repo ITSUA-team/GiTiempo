@@ -31,7 +31,7 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **AND** the menu contains `User workspace`, `Settings`, and `Sign out` actions in that order
 - **AND** the shell navigation does not render a duplicate `Settings` item
 - **AND** the `Settings` action keeps the settings gear icon
-- **AND** the existing admin-web workspace/scope identity remains visible
+- **AND** the admin profile trigger identity text remains visible, including the current admin scope label when the shell renders one, such as `PM scope: Project Orion`
 
 #### Scenario: Profile menu exposes counterpart workspace switch
 

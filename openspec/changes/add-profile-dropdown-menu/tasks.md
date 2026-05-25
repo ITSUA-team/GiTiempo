@@ -20,3 +20,5 @@
 - [x] 3.2 Run `pnpm --filter user-web lint && pnpm --filter user-web typecheck && pnpm --filter user-web test`.
 - [x] 3.3 Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck && pnpm --filter admin-web test`.
 - [x] 3.4 Perform a final design parity review against both approved `.pen` open-state frames, including the dropdown workspace action, and record any PrimeVue-only deviations.
+
+Design parity record: no PrimeVue-only deviations are expected. The user `.pen` open-state frame's standalone `Admin workspace` top-bar text link is treated as stale context and intentionally omitted in favor of the dropdown-only workspace action required by the specs.

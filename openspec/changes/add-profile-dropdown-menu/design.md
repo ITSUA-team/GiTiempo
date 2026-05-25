@@ -2,7 +2,7 @@
 
 Both authenticated SPAs render their header through `packages/web-shared/src/components/WorkspaceHeader.vue`. `apps/user-web/src/components/layout/AppShell.vue` passes the user identity, counterpart admin workspace action, and a center slot for the top-bar timer. `apps/admin-web/src/components/layout/AdminAppShell.vue` passes admin identity and counterpart user workspace action without the timer slot.
 
-The approved design context is in `GITiempo.pen` as the full-page open states `User Dashboard - Profile Dropdown Open` and `Admin Dashboard - Profile Dropdown Open`. The dropdown is anchored below the top-right profile/avatar trigger, preserves the existing top bar, and contains the counterpart workspace action, the app-owned profile/settings action, and destructive `Sign out`; user-web labels the app-owned action `Profile` and uses the profile icon, while admin-web labels it `Settings` and keeps the settings gear icon. The counterpart workspace action lives in the dropdown on all breakpoints, replacing the previous standalone top-bar workspace link.
+The approved design context is in `GITiempo.pen` as the full-page open states `User Dashboard - Profile Dropdown Open` and `Admin Dashboard - Profile Dropdown Open`. The dropdown is anchored below the top-right profile/avatar trigger, preserves the existing top bar, and contains the counterpart workspace action, the app-owned profile/settings action, and destructive `Sign out`; user-web labels the app-owned action `Profile` and uses the profile icon, while admin-web labels it `Settings` and keeps the settings gear icon. The counterpart workspace action lives in the dropdown on all breakpoints, replacing the previous standalone top-bar workspace link. If the user `.pen` frame still shows a standalone `Admin workspace` top-bar text link, treat that element as stale design context and follow this change's specs/docs instead: the user shell MUST NOT render that standalone top-bar link.
 
 Relevant implementation rules come from `docs/ui/INDEX.md`, `docs/ui/layout.md`, `docs/ui/patterns.md`, `apps/user-web/AGENTS.md`, `apps/admin-web/AGENTS.md`, and `packages/web-shared/AGENTS.md`.
 
@@ -64,6 +64,11 @@ Alternative considered: only testing the shared component. That would miss the h
 - Header-owned logout creates auth-store wiring in both shells → keep `WorkspaceHeader` store-agnostic and test the app-level event handlers.
 - Mobile space is tighter in the top-right identity area → hide optional display name at small widths as today, keep the avatar trigger available, and ensure the menu remains reachable.
 - Moving the counterpart workspace action into the dropdown can reduce immediate desktop discoverability → keep it as the first dropdown action with brand treatment and preserve the same configured href/label across both SPAs.
+
+## Design Parity Notes
+
+- PrimeVue-only deviations: none expected. Use PrimeVue `Menu` semantics while matching the approved menu structure, token language, action order, spacing, active trigger styling, and caret positioning as closely as possible.
+- Documented `.pen` override: the user open-state frame's standalone `Admin workspace` top-bar text link is stale and MUST be omitted; the dropdown `Admin workspace` action is the only user-shell counterpart workspace entry point.
 
 ## Migration Plan
 
