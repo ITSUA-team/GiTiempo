@@ -13,18 +13,37 @@ import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Menu from "primevue/menu";
 
+type ProfileMenuItemKey = "workspace" | "settings" | "sign-out";
+
 type ProfileMenuItem = {
   destructive?: boolean;
   href?: string;
-  key: string;
+  key: ProfileMenuItemKey;
   label: string;
   route?: RouteLocationRaw;
 };
 
 type ProfileMenuSlotItem = {
   destructive?: boolean;
-  key?: string;
+  key?: ProfileMenuItemKey;
 };
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled profile menu item key: ${String(value)}`);
+}
+
+function getProfileMenuSlotItem(item: { destructive?: boolean; key?: string }): ProfileMenuSlotItem {
+  switch (item.key) {
+    case "workspace":
+    case "settings":
+    case "sign-out":
+      return { destructive: item.destructive, key: item.key };
+    case undefined:
+      return { destructive: item.destructive };
+    default:
+      throw new Error(`Unhandled profile menu item key: ${item.key}`);
+  }
+}
 
 const props = withDefaults(
   defineProps<{
@@ -141,32 +160,53 @@ function handleSettingsClick(
 }
 
 function getMenuActionClass(item: ProfileMenuSlotItem): string {
-  return [
-    "hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2",
-    item.key === "workspace" ? "text-brand font-semibold" : "",
-    item.key === "settings" ? "text-text-dark font-medium" : "",
-    item.destructive ? "text-destructive font-semibold" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const baseClass =
+    "hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2";
+
+  switch (item.key) {
+    case "workspace":
+      return `${baseClass} text-brand font-semibold`;
+    case "settings":
+      return `${baseClass} text-text-dark font-medium`;
+    case "sign-out":
+      return `${baseClass} text-destructive font-semibold`;
+    case undefined:
+      return baseClass;
+    default:
+      return assertNever(item.key);
+  }
 }
 
 function getMenuIconClass(item: ProfileMenuSlotItem): string {
-  return [
-    "flex size-7 items-center justify-center rounded-sm",
-    item.key === "workspace" ? "bg-accent-tint text-brand" : "",
-    item.key === "settings" ? "bg-app-bg text-text-muted" : "",
-    item.destructive ? "bg-status-error-bg text-destructive" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const baseClass = "flex size-7 items-center justify-center rounded-sm";
+
+  switch (item.key) {
+    case "workspace":
+      return `${baseClass} bg-accent-tint text-brand`;
+    case "settings":
+      return `${baseClass} bg-app-bg text-text-muted`;
+    case "sign-out":
+      return `${baseClass} bg-status-error-bg text-destructive`;
+    case undefined:
+      return baseClass;
+    default:
+      return assertNever(item.key);
+  }
 }
 
 function getMenuActionTestId(item: ProfileMenuSlotItem): string {
-  if (item.key === "workspace") return "profile-menu-counterpart";
-  if (item.key === "settings") return "profile-menu-settings";
-
-  return "profile-menu-sign-out";
+  switch (item.key) {
+    case "workspace":
+      return "profile-menu-counterpart";
+    case "settings":
+      return "profile-menu-settings";
+    case "sign-out":
+      return "profile-menu-sign-out";
+    case undefined:
+      return "profile-menu-item";
+    default:
+      return assertNever(item.key);
+  }
 }
 
 onMounted(() => {
@@ -255,12 +295,12 @@ onBeforeUnmount(() => {
             v-if="item.href"
             v-bind="itemProps.action"
             :href="item.href"
-            :class="getMenuActionClass(item)"
-            :data-testid="getMenuActionTestId(item)"
+            :class="getMenuActionClass(getProfileMenuSlotItem(item))"
+            :data-testid="getMenuActionTestId(getProfileMenuSlotItem(item))"
             @click="closeProfileMenu()"
           >
             <span
-              :class="getMenuIconClass(item)"
+              :class="getMenuIconClass(getProfileMenuSlotItem(item))"
               aria-hidden="true"
             >
               <svg
@@ -290,12 +330,12 @@ onBeforeUnmount(() => {
             <a
               v-bind="itemProps.action"
               :href="href"
-              :class="getMenuActionClass(item)"
-              :data-testid="getMenuActionTestId(item)"
+              :class="getMenuActionClass(getProfileMenuSlotItem(item))"
+              :data-testid="getMenuActionTestId(getProfileMenuSlotItem(item))"
               @click="handleSettingsClick(navigate, $event)"
             >
               <span
-                :class="getMenuIconClass(item)"
+                :class="getMenuIconClass(getProfileMenuSlotItem(item))"
                 aria-hidden="true"
               >
                 <component
@@ -325,11 +365,11 @@ onBeforeUnmount(() => {
           <a
             v-else
             v-bind="itemProps.action"
-            :class="getMenuActionClass(item)"
-            :data-testid="getMenuActionTestId(item)"
+            :class="getMenuActionClass(getProfileMenuSlotItem(item))"
+            :data-testid="getMenuActionTestId(getProfileMenuSlotItem(item))"
           >
             <span
-              :class="getMenuIconClass(item)"
+              :class="getMenuIconClass(getProfileMenuSlotItem(item))"
               aria-hidden="true"
             >
               <svg
