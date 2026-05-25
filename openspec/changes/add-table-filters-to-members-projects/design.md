@@ -1,6 +1,6 @@
 ## Context
 
-This change spans `apps/admin-web`, `apps/user-web`, and `packages/web-shared`. The primary UI feature remains the admin Members/Projects table filter work, but the implementation also consolidates shared management-table filter styling helpers and frontend date-boundary calculations that are now part of the branch. Relevant guidance includes `apps/admin-web/AGENTS.md`, `apps/user-web/AGENTS.md`, `packages/web-shared/AGENTS.md`, `docs/ui/INDEX.md`, `docs/ui/components.md`, and `docs/ui/pages-admin.md`.
+This change spans `apps/admin-web`, `apps/user-web`, and `packages/web-shared`. The primary UI feature remains the admin Members/Projects table filter work, but the implementation also consolidates shared management-table filter styling helpers and frontend date-boundary calculations that are now part of the branch. Relevant guidance includes `apps/admin-web/AGENTS.md`, `apps/user-web/AGENTS.md`, `packages/web-shared/AGENTS.md`, `docs/ui/INDEX.md`, `docs/ui/components.md`, `docs/ui/pages-admin.md`, and `docs/ui/pages-user.md`.
 
 The approved `GITiempo.pen` screens show these parity targets:
 
@@ -91,12 +91,18 @@ Alternative considered: revert the date helper refactor from this change. The im
 
 Project table member filters can use each project row's `members` array. Member table project filters can derive member-to-project assignments from the `projects` prop, which is already loaded for the assignment panel. The visible assignment-count column remains backed by `projectsAssignedCount`.
 
+The Members page treats project membership data as required initial page data for table discovery because the assigned-project filter and global search need project names, not just assignment counts. The page should keep the initial loading surface until members, invites, and projects all resolve. If the project list fails during initial load, the page should show the same retryable Members request-error surface and avoid rendering a partial table with empty project filter options.
+
 Alternative considered: add project assignment details to the member list API. That is unnecessary for this UI change because the page already fetches projects and no contract change is required.
+
+### PrimeVue exception review
+
+No PrimeVue-only compromises are expected for this change. Members, Projects, and Reports table discovery controls use standard PrimeVue inputs/selects/multiselects inside the existing shared management-table chrome, with token-backed Tailwind and `pt` styling for design parity.
 
 ## Risks / Trade-offs
 
 - Local filtering can become expensive for very large workspaces -> Mitigation: keep derivation simple, case-normalized, and computed from existing arrays; revisit backend filtering only when dataset size requires it.
 - Filtered rows with an expanded edit/assignment row can leave stale expansion state hidden -> Mitigation: collapse or reconcile expanded rows when active filters exclude the expanded row.
 - Date-relative Last Active filters can be time-zone sensitive -> Mitigation: define filters using the browser's local day/week semantics and cover deterministic fixture dates in tests.
-- Member assigned-project filters depend on loaded project membership data -> Mitigation: keep the filter disabled or empty only if project data is unavailable; this page already loads projects before rendering the table.
+- Member assigned-project filters depend on loaded project membership data -> Mitigation: treat project data as required initial Members page data; keep the initial loading surface until projects load and render the retryable request-error surface if they fail instead of showing an empty project filter.
 - Date helper normalization can silently shift query boundaries if local and UTC semantics are mixed -> Mitigation: document report/admin local boundaries separately from user-web UTC boundaries and keep targeted date-helper tests for touched report/user surfaces.

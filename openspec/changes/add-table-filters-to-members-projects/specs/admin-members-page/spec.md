@@ -4,16 +4,25 @@
 The Members page MUST render report-style table discovery controls that filter loaded member rows locally without changing backend scope.
 
 #### Scenario: Members table exposes search and column filters
-- **WHEN** workspace member data has loaded
+- **WHEN** workspace member, invite, and project membership data have loaded
 - **THEN** the table card header exposes a global search control with placeholder `Search members`
 - **AND** the desktop table renders a filter row directly below the column header with controls for member name/email, role, assigned projects, and last active
 - **AND** the Actions column does not render a filter control
 - **AND** the mobile card list renders equivalent search and filter controls above the cards
 
+#### Scenario: Members project filters require loaded project membership data
+- **GIVEN** workspace member data has loaded
+- **AND** project membership data is still loading
+- **WHEN** the Members page is still completing its initial load
+- **THEN** the page keeps the initial loading surface instead of rendering the Members table with empty assigned-project filter options
+- **AND** if project membership data fails during initial load, the page renders the retryable Members request-error surface
+- **AND** the table does not imply that loaded members have no assigned projects only because project data is unavailable
+
 #### Scenario: Members filters narrow loaded rows locally
 - **WHEN** the user enters global search text or selects role, assigned-project, or last-active filters
 - **THEN** visible member rows and mobile cards are limited to loaded members matching all active filters
 - **AND** global search matches member display name, email, formatted role, assigned project labels or counts, and formatted last-active text
+- **AND** assigned project labels come from the loaded project membership data used by the Members page
 - **AND** last-active filter options are `Any activity`, `Active today`, `Active this week`, and `No activity`
 - **AND** `Active today` uses the current browser-local calendar day
 - **AND** `Active this week` includes valid `lastActiveAt` values from browser-local Monday `00:00` through the current time
