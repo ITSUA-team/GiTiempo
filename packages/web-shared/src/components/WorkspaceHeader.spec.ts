@@ -25,6 +25,9 @@ type HeaderProps = typeof baseProps & {
 
 type TestMenuItem = {
   command?: () => void;
+  destructive?: boolean;
+  href?: string;
+  key?: string;
   label?: string;
   route?: RouteLocationRaw;
   separator?: boolean;
@@ -91,26 +94,37 @@ const MenuStub = defineComponent({
     return () => {
       return h(
         "div",
-        { ...attrs, role: "menu" },
+        attrs,
         [
-          ...(slots.start?.() ?? []),
-          ...props.model.map((item, index) => {
-            if (item.separator) {
-              return h("hr", { key: `separator-${index}` });
-            }
+          h(
+            "ul",
+            { role: "menu" },
+            props.model.map((item, index) => {
+              if (item.separator) {
+                return h("li", {
+                  key: `separator-${index}`,
+                  role: "separator",
+                });
+              }
 
-            return slots.item?.({
-              item,
-              props: {
-                action: {
-                  onClick: () => {
-                    item.command?.();
+              return h(
+                "li",
+                { key: item.key ?? index, role: "menuitem" },
+                slots.item?.({
+                  item,
+                  props: {
+                    action: {
+                      "data-pc-section": "itemlink",
+                      onClick: () => {
+                        item.command?.();
+                      },
+                      tabindex: "-1",
+                    },
                   },
-                  role: "menuitem",
-                },
-              },
-            });
-          }),
+                }),
+              );
+            }),
+          ),
         ],
       );
     };
@@ -148,9 +162,17 @@ function mountHeader(
   options: {
     attachTo?: HTMLElement;
     props?: Partial<HeaderProps>;
+    stubMenu?: boolean;
     slots?: Record<string, string>;
   } = {},
 ) {
+  const stubs = {
+    Avatar: AvatarStub,
+    Button: ButtonStub,
+    RouterLink: RouterLinkStub,
+    ...(options.stubMenu === false ? {} : { Menu: MenuStub }),
+  };
+
   const wrapper = mount(WorkspaceHeader, {
     attachTo: options.attachTo,
     props: {
@@ -160,12 +182,7 @@ function mountHeader(
     slots: options.slots,
     global: {
       plugins: [PrimeVue],
-      stubs: {
-        Avatar: AvatarStub,
-        Button: ButtonStub,
-        Menu: MenuStub,
-        RouterLink: RouterLinkStub,
-      },
+      stubs,
     },
   });
 
@@ -234,7 +251,9 @@ describe("WorkspaceHeader", () => {
     expect(trigger.attributes("aria-expanded")).toBe("true");
     expect(trigger.classes()).toContain("border-divider");
     expect(avatar.classes()).toContain("ring-brand");
-    expect(wrapper.get('[data-testid="profile-menu"]').attributes("role")).toBe("menu");
+    expect(wrapper.find('[data-testid="profile-menu"] [role="menu"]').exists()).toBe(
+      true,
+    );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
       "absolute",
     );
@@ -244,9 +263,9 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
       "before:right-5",
     );
-    expect(settingsLink.attributes("role")).toBe("menuitem");
-    expect(signOutAction.attributes("role")).toBe("menuitem");
-    expect(counterpartAction.attributes("role")).toBe("menuitem");
+    expect(wrapper.findAll('[data-testid="profile-menu"] [role="menuitem"]')).toHaveLength(
+      3,
+    );
     expect(counterpartAction.attributes("href")).toBe(baseProps.counterpartHref);
     expect(counterpartAction.classes()).not.toContain("sm:hidden");
     expect(counterpartAction.text()).toContain("Admin workspace");
@@ -261,6 +280,31 @@ describe("WorkspaceHeader", () => {
     expect(trigger.attributes("aria-expanded")).toBe("false");
     expect(trigger.classes()).toContain("border-transparent");
     expect(avatar.classes()).not.toContain("ring-brand");
+  });
+
+  it("activates sign out through the real PrimeVue menu keyboard handler", async () => {
+    const wrapper = mountHeader({ attachTo: document.body, stubMenu: false });
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+
+    (trigger.element as HTMLElement).focus();
+    await trigger.trigger("click");
+
+    const menuList = wrapper.get('[data-testid="profile-menu"] [role="menu"]');
+
+    expect(wrapper.findAll('[data-testid="profile-menu"] [role="menuitem"]')).toHaveLength(
+      3,
+    );
+
+    await menuList.trigger("focus");
+    await menuList.trigger("keydown", { code: "ArrowDown" });
+    await menuList.trigger("keydown", { code: "ArrowDown" });
+    await menuList.trigger("keydown", { code: "Enter" });
+    await nextTick();
+
+    expect(wrapper.emitted("signOut")).toHaveLength(1);
+    expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger.element);
+    expect(trigger.attributes("aria-expanded")).toBe("false");
   });
 
   it("closes the profile menu on Escape and restores focus", async () => {

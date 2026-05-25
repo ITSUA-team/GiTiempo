@@ -13,6 +13,19 @@ import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Menu from "primevue/menu";
 
+type ProfileMenuItem = {
+  destructive?: boolean;
+  href?: string;
+  key: string;
+  label: string;
+  route?: RouteLocationRaw;
+};
+
+type ProfileMenuSlotItem = {
+  destructive?: boolean;
+  key?: string;
+};
+
 const props = withDefaults(
   defineProps<{
     counterpartHref: string;
@@ -59,7 +72,12 @@ const profileAvatarRootClass = computed(() =>
     .join(" "),
 );
 
-const profileMenuItems = computed(() => [
+const profileMenuItems = computed<(ProfileMenuItem | { separator: true })[]>(() => [
+  {
+    href: props.counterpartHref,
+    key: "workspace",
+    label: props.counterpartLabel,
+  },
   {
     key: "settings",
     label: props.settingsLabel,
@@ -120,6 +138,35 @@ function handleSettingsClick(
 ): void {
   navigate(event);
   closeProfileMenu({ restoreFocus: true });
+}
+
+function getMenuActionClass(item: ProfileMenuSlotItem): string {
+  return [
+    "hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2",
+    item.key === "workspace" ? "text-brand font-semibold" : "",
+    item.key === "settings" ? "text-text-dark font-medium" : "",
+    item.destructive ? "text-destructive font-semibold" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getMenuIconClass(item: ProfileMenuSlotItem): string {
+  return [
+    "flex size-7 items-center justify-center rounded-sm",
+    item.key === "workspace" ? "bg-accent-tint text-brand" : "",
+    item.key === "settings" ? "bg-app-bg text-text-muted" : "",
+    item.destructive ? "bg-status-error-bg text-destructive" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getMenuActionTestId(item: ProfileMenuSlotItem): string {
+  if (item.key === "workspace") return "profile-menu-counterpart";
+  if (item.key === "settings") return "profile-menu-settings";
+
+  return "profile-menu-sign-out";
 }
 
 onMounted(() => {
@@ -203,16 +250,17 @@ onBeforeUnmount(() => {
         class="border-divider bg-surface shadow-popover before:border-divider before:bg-surface absolute top-full right-0 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
         data-testid="profile-menu"
       >
-        <template #start>
+        <template #item="{ item, props: itemProps }">
           <a
-            :href="props.counterpartHref"
-            class="text-brand hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2"
-            data-testid="profile-menu-counterpart"
-            role="menuitem"
+            v-if="item.href"
+            v-bind="itemProps.action"
+            :href="item.href"
+            :class="getMenuActionClass(item)"
+            :data-testid="getMenuActionTestId(item)"
             @click="closeProfileMenu()"
           >
             <span
-              class="bg-accent-tint text-brand flex size-7 items-center justify-center rounded-sm"
+              :class="getMenuIconClass(item)"
               aria-hidden="true"
             >
               <svg
@@ -230,13 +278,11 @@ onBeforeUnmount(() => {
                 <path d="m8 21-4-4 4-4" />
               </svg>
             </span>
-            <span>{{ props.counterpartLabel }}</span>
+            <span>{{ item.label }}</span>
           </a>
-        </template>
 
-        <template #item="{ item, props: itemProps }">
           <RouterLink
-            v-if="item.route"
+            v-else-if="item.route"
             v-slot="{ href, navigate }"
             :to="item.route"
             custom
@@ -244,12 +290,12 @@ onBeforeUnmount(() => {
             <a
               v-bind="itemProps.action"
               :href="href"
-              class="text-text-dark hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2"
-              data-testid="profile-menu-settings"
+              :class="getMenuActionClass(item)"
+              :data-testid="getMenuActionTestId(item)"
               @click="handleSettingsClick(navigate, $event)"
             >
               <span
-                class="bg-app-bg text-text-muted flex size-7 items-center justify-center rounded-sm"
+                :class="getMenuIconClass(item)"
                 aria-hidden="true"
               >
                 <component
@@ -276,15 +322,14 @@ onBeforeUnmount(() => {
             </a>
           </RouterLink>
 
-          <button
+          <a
             v-else
             v-bind="itemProps.action"
-            type="button"
-            class="text-destructive hover:bg-app-bg focus-visible:outline-brand flex h-11 w-full items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2"
-            data-testid="profile-menu-sign-out"
+            :class="getMenuActionClass(item)"
+            :data-testid="getMenuActionTestId(item)"
           >
             <span
-              class="bg-status-error-bg text-destructive flex size-7 items-center justify-center rounded-sm"
+              :class="getMenuIconClass(item)"
               aria-hidden="true"
             >
               <svg
@@ -302,7 +347,7 @@ onBeforeUnmount(() => {
               </svg>
             </span>
             <span>{{ item.label }}</span>
-          </button>
+          </a>
         </template>
       </Menu>
     </div>
