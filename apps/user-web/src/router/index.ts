@@ -13,6 +13,8 @@ import type { Pinia } from "pinia";
 import AppShell from "@/components/layout/AppShell.vue";
 import DashboardView from "@/views/DashboardView.vue";
 import ForbiddenView from "@/views/ForbiddenView.vue";
+import InviteAcceptView from "@/views/InviteAcceptView.vue";
+import InvitePasswordSetupView from "@/views/InvitePasswordSetupView.vue";
 import LoginView from "@/views/LoginView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 import ProfileView from "@/views/ProfileView.vue";
@@ -24,6 +26,8 @@ import { useAuthStore } from "@/stores/auth";
 export const routeNames = {
   dashboard: "dashboard",
   forbidden: "forbidden",
+  inviteAccept: "invite-accept",
+  invitePasswordSetup: "invite-password-setup",
   login: "login",
   notFound: "not-found",
   profile: "profile",
@@ -46,6 +50,22 @@ function getDefaultAuthenticatedRoute(
 }
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: "/invites/accept",
+    name: routeNames.inviteAccept,
+    component: InviteAcceptView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
+  },
+  {
+    path: "/invites/password-setup",
+    name: routeNames.invitePasswordSetup,
+    component: InvitePasswordSetupView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
+  },
   {
     path: "/login",
     name: routeNames.login,

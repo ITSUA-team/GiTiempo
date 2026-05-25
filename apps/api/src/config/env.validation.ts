@@ -93,6 +93,10 @@ export const envSchema = z
       .string()
       .default('false')
       .transform((val) => val === 'true'),
+    INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS: z
+      .string()
+      .default('false')
+      .transform((val) => val === 'true'),
 
     // --- Firebase Admin ---
     // Required in non-test environments. In test mode the fake provider is used,
@@ -102,6 +106,18 @@ export const envSchema = z
     FIREBASE_PRIVATE_KEY: firebasePrivateKeySchema.optional(),
   })
   .superRefine((env, ctx) => {
+    if (
+      env.NODE_ENV !== 'development' &&
+      env.INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS'],
+        message:
+          'INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS is only allowed when NODE_ENV=development',
+      });
+    }
+
     if (env.NODE_ENV === 'test') return;
     const required: Array<keyof typeof env> = [
       'FIREBASE_PROJECT_ID',
@@ -118,12 +134,17 @@ export const envSchema = z
       }
     }
 
-    if (!env.INVITES_EMAIL_CONSOLE_FALLBACK && !env.SMTP_HOST) {
+    if (
+      (env.NODE_ENV === 'production' || !env.INVITES_EMAIL_CONSOLE_FALLBACK) &&
+      !env.SMTP_HOST
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['SMTP_HOST'],
         message:
-          'SMTP_HOST is required when INVITES_EMAIL_CONSOLE_FALLBACK=false',
+          env.NODE_ENV === 'production'
+            ? 'SMTP_HOST is required when NODE_ENV=production'
+            : 'SMTP_HOST is required when INVITES_EMAIL_CONSOLE_FALLBACK=false',
       });
     }
 
