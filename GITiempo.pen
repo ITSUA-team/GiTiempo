@@ -20691,16 +20691,6 @@
               "alignItems": "center",
               "children": [
                 {
-                  "type": "text",
-                  "id": "LgTxY",
-                  "name": "adminWorkspaceLink",
-                  "fill": "$color-brand",
-                  "content": "Admin workspace",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "600"
-                },
-                {
                   "type": "frame",
                   "id": "UdSaW",
                   "name": "profileDropdownTrigger",
