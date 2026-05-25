@@ -103,8 +103,7 @@ describe("app router auth guards", () => {
     const inviteAcceptRoute = router.resolve("/invites/accept?token=invite-token");
 
     expect(inviteAcceptRoute.name).toBe(routeNames.inviteAccept);
-    expect(inviteAcceptRoute.meta.guestOnly).toBeUndefined();
-    expect(inviteAcceptRoute.meta.requiresAuth).toBeUndefined();
+    expect(inviteAcceptRoute.meta.allowAuthenticatedGuestFlow).toBe(true);
     expect(inviteAcceptRoute.matched).toHaveLength(1);
     expect(inviteAcceptRoute.matched[0]?.components?.default).toBe(InviteAcceptView);
   });
@@ -120,8 +119,7 @@ describe("app router auth guards", () => {
     );
 
     expect(passwordSetupRoute.name).toBe(routeNames.invitePasswordSetup);
-    expect(passwordSetupRoute.meta.guestOnly).toBeUndefined();
-    expect(passwordSetupRoute.meta.requiresAuth).toBeUndefined();
+    expect(passwordSetupRoute.meta.allowAuthenticatedGuestFlow).toBe(true);
     expect(passwordSetupRoute.matched).toHaveLength(1);
     expect(passwordSetupRoute.matched[0]?.components?.default).toBe(
       InvitePasswordSetupView,

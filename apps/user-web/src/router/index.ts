@@ -54,11 +54,17 @@ const routes: RouteRecordRaw[] = [
     path: "/invites/accept",
     name: routeNames.inviteAccept,
     component: InviteAcceptView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
   },
   {
     path: "/invites/password-setup",
     name: routeNames.invitePasswordSetup,
     component: InvitePasswordSetupView,
+    meta: {
+      allowAuthenticatedGuestFlow: true,
+    },
   },
   {
     path: "/login",
