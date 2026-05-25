@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/vue-query";
 import type { ProjectResponse } from "@gitiempo/shared";
 import { computed, toValue } from "vue";
 
-import { requireAccessToken } from "./access-token";
-import { isQueryEnabled, type QueryAccessOptions } from "./query-options";
+import { requireAccessToken } from "../access-token";
+import { isQueryEnabled, type QueryAccessOptions } from "../query-options";
 
 /* eslint-disable no-unused-vars */
 interface VisibleProjectsClient {

@@ -11,6 +11,7 @@ import {
 import type { ProjectListResponse, ProjectResponse, TimeReportQuery } from '@gitiempo/shared';
 import {
   useAdminProjectsQuery,
+  useExportTimeReportMutation,
   useTimeReportQuery,
 } from '@gitiempo/web-shared/query';
 
@@ -36,7 +37,6 @@ import {
   type AdminReportsClient,
   type ReportsCsvExport,
 } from '@/services/admin-reports-client';
-import { useReportsExportMutation } from '@/api/reports/useReportsExportMutation';
 
 interface UseReportsDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
@@ -103,9 +103,9 @@ export function useReportsData({
     enabled: false,
     query: reportQueryInput,
   });
-  const reportsExport = useReportsExportMutation({
-    reportsClient,
-    token: () => accessToken.value ?? '',
+  const exportReportMutation = useExportTimeReportMutation({
+    accessToken,
+    client: reportsClient,
   });
 
   let requestId = 0;
@@ -312,7 +312,7 @@ export function useReportsData({
       return null;
     }
 
-    return reportsExport.exportReport(toTimeReportExportQuery(filters));
+    return exportReportMutation.mutateAsync(toTimeReportExportQuery(filters));
   }
 
   watch(

@@ -4,6 +4,8 @@ import type {
 	WorkspaceSettingsResponse,
 } from '@gitiempo/shared';
 import {
+	useUpdateWorkspaceMutation,
+	useUpdateWorkspaceSettingsMutation,
 	useWorkspaceQuery,
 	useWorkspaceSettingsQuery,
 } from '@gitiempo/web-shared/query';
@@ -13,7 +15,6 @@ import { adminSettingsClient } from '@/services/admin-settings-client';
 import { useAuthStore } from '@/stores/auth';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useAdminSettingsForm } from '@/composables/settings/useAdminSettingsForm';
-import { useAdminSettingsSaveMutation } from '@/api/settings/useAdminSettingsSaveMutation';
 import {
 	getWorkspaceSettingsUpdatePayload,
 	getWorkspaceUpdatePayload,
@@ -86,10 +87,13 @@ export function useAdminSettingsPage(
 		accessToken: computed(() => authStore.accessToken),
 		enabled: false,
 	});
-	const settingsSaveMutation = useAdminSettingsSaveMutation({
+	const updateWorkspaceMutation = useUpdateWorkspaceMutation({
 		client,
-		scope: () => ({ role: null, userId: null, workspaceId: null }),
-		token: () => authStore.accessToken ?? '',
+		accessToken: computed(() => authStore.accessToken),
+	});
+	const updateWorkspaceSettingsMutation = useUpdateWorkspaceSettingsMutation({
+		client,
+		accessToken: computed(() => authStore.accessToken),
 	});
 
 	async function loadSettings(action = 'load-settings'): Promise<void> {
@@ -168,10 +172,10 @@ export function useAdminSettingsPage(
 
 		try {
 			const nextWorkspace = workspacePayload
-				? await settingsSaveMutation.updateWorkspace(workspacePayload)
+				? await updateWorkspaceMutation.mutateAsync(workspacePayload)
 				: workspace.value;
 			const nextSettings = settingsPayload
-				? await settingsSaveMutation.updateWorkspaceSettings(settingsPayload)
+				? await updateWorkspaceSettingsMutation.mutateAsync(settingsPayload)
 				: settings.value;
 
 			if (!nextWorkspace || !nextSettings) {

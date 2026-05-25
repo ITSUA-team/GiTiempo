@@ -6,9 +6,12 @@ import {
 } from "@gitiempo/shared";
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
 import {
+  useCreateTaskMutation,
   useCurrentTimerQuery,
   useOwnTimeEntriesQuery,
   useProjectTasksQuery,
+  useStartTimerMutation,
+  useStopTimerMutation,
   useVisibleProjectsQuery,
 } from "@gitiempo/web-shared/query";
 import { computed, nextTick, onMounted, shallowRef, watch } from "vue";
@@ -20,7 +23,6 @@ import {
 } from "@/services/time-entries-client";
 import { useTopBarElapsedTimer } from "@/composables/timer/useTopBarElapsedTimer";
 import { useTopBarTaskPicker } from "@/composables/timer/useTopBarTaskPicker";
-import { useTopBarTimerMutations } from "@/api/timer/useTopBarTimerMutations";
 import {
   isConflictErrorMessage,
   isRunningTimer,
@@ -53,10 +55,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   const currentTimer = shallowRef<TimeEntryResponse | null>(null);
   const selectedContext = shallowRef<SelectedTaskContext | null>(null);
-  const timerScope = computed(() => ({
-    userId: authStore.profile?.id ?? null,
-    workspaceId: null,
-  }));
   const taskPicker = useTopBarTaskPicker();
   const {
     activeProjects,
@@ -121,14 +119,21 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     enabled: false,
     query: eligibleEntryQuery,
   });
-  const timerMutations = useTopBarTimerMutations({
+  const createTaskMutation = useCreateTaskMutation({
     accessToken: computed(() => authStore.accessToken),
     client,
-    scope: timerScope,
   });
-  const isStartingTimer = computed(() => timerMutations.startTimerMutation.isPending.value);
-  const isStoppingTimer = computed(() => timerMutations.stopTimerMutation.isPending.value);
-  const isCreatingTask = computed(() => timerMutations.createTaskMutation.isPending.value);
+  const startTimerMutation = useStartTimerMutation({
+    accessToken: computed(() => authStore.accessToken),
+    client,
+  });
+  const stopTimerMutation = useStopTimerMutation({
+    accessToken: computed(() => authStore.accessToken),
+    client,
+  });
+  const isStartingTimer = computed(() => startTimerMutation.isPending.value);
+  const isStoppingTimer = computed(() => stopTimerMutation.isPending.value);
+  const isCreatingTask = computed(() => createTaskMutation.isPending.value);
 
   const isTimerRunning = computed(() => isRunningTimer(currentTimer.value));
   const runningStartedAt = computed(() =>
@@ -459,7 +464,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     }
 
     try {
-      const task = await timerMutations.createTask({
+      const task = await createTaskMutation.mutateAsync({
         input: parsed,
         projectId: selectedProjectId.value,
       });
@@ -490,7 +495,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
     if (isTimerRunning.value) {
       try {
-        const stoppedTimer = await timerMutations.stopTimer();
+        const stoppedTimer = await stopTimerMutation.mutateAsync();
 
         currentTimer.value = null;
         setSelectedContextFromTimer(stoppedTimer);
@@ -513,7 +518,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     }
 
     try {
-      currentTimer.value = await timerMutations.startTimer(selectedContext.value.taskId);
+      currentTimer.value = await startTimerMutation.mutateAsync(selectedContext.value.taskId);
       if (currentTimer.value) {
         setSelectedContextFromTimer(currentTimer.value);
       }

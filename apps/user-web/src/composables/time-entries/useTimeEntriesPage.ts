@@ -3,11 +3,16 @@ import {
   createAppConfirm,
   createAppToast,
   getErrorMessage,
-  useOwnTimeEntriesQuery,
-  useVisibleProjectsQuery,
   type ConfirmLike,
   type ToastLike,
 } from "@gitiempo/web-shared";
+import {
+  useCreateManualTimeEntryMutation,
+  useDeleteTimeEntryMutation,
+  useOwnTimeEntriesQuery,
+  useUpdateTimeEntryMutation,
+  useVisibleProjectsQuery,
+} from "@gitiempo/web-shared/query";
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -16,7 +21,6 @@ import {
   createTimeEntriesClient,
   type TimeEntriesClient,
 } from "@/services/time-entries-client";
-import { useTimeEntryMutations } from "@/api/time-entries/useTimeEntryMutations";
 import {
   formatTimeEntryDuration,
   formatTimeEntryTimeRange,
@@ -163,10 +167,6 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
   const hasRunningEntries = computed(() =>
     entries.value.some((entry) => entry.endedAt === null),
   );
-  const timeEntriesScope = computed(() => ({
-    userId: authStore.profile?.id ?? null,
-    workspaceId: null,
-  }));
   const visibleProjectsQuery = useVisibleProjectsQuery({
     accessToken: computed(() => authStore.accessToken),
     client,
@@ -178,10 +178,17 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
     enabled: false,
     query: entryListQuery,
   });
-  const timeEntryMutations = useTimeEntryMutations({
+  const createEntryMutation = useCreateManualTimeEntryMutation({
     accessToken: computed(() => authStore.accessToken),
     client,
-    scope: timeEntriesScope,
+  });
+  const updateEntryMutation = useUpdateTimeEntryMutation({
+    accessToken: computed(() => authStore.accessToken),
+    client,
+  });
+  const deleteEntryMutation = useDeleteTimeEntryMutation({
+    accessToken: computed(() => authStore.accessToken),
+    client,
   });
 
   function requireAccessToken(): string {
@@ -493,7 +500,7 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
       if (dialogMode.value === "edit" && editingEntry.value) {
         const updateInput = updateTimeEntrySchema.parse(validInput);
 
-        await timeEntryMutations.updateEntry({
+        await updateEntryMutation.mutateAsync({
           entryId: editingEntry.value.id,
           input: updateInput,
         });
@@ -502,7 +509,7 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
           "Your changes have been saved.",
         );
       } else {
-        await timeEntryMutations.createEntry(validInput);
+        await createEntryMutation.mutateAsync(validInput);
         appToast.showSuccessToast(
           "Time entry created",
           "Your manual entry has been added.",
@@ -538,7 +545,7 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
     lastMutationErrorMessage.value = null;
 
     try {
-      await timeEntryMutations.deleteEntry(entry.id);
+      await deleteEntryMutation.mutateAsync(entry.id);
       appToast.showSuccessToast(
         "Time entry deleted",
         "The selected entry has been removed.",

@@ -7,7 +7,10 @@ import {
   type ToastLike,
 } from "@gitiempo/web-shared";
 import {
+  useCreateTaskMutation,
+  useDeleteTaskMutation,
   useProjectTasksQuery,
+  useUpdateTaskMutation,
   useVisibleProjectsQuery,
 } from "@gitiempo/web-shared/query";
 import { computed, nextTick, onMounted, ref, shallowRef } from "vue";
@@ -18,7 +21,6 @@ import {
   createTimeEntriesClient,
   type TimeEntriesClient,
 } from "@/services/time-entries-client";
-import { useProjectTaskMutations } from "@/api/projects/useProjectTaskMutations";
 import { useProjectTaskDialog } from "@/composables/projects/useProjectTaskDialog";
 import { useProjectsSearch } from "@/composables/projects/useProjectsSearch";
 import {
@@ -64,10 +66,6 @@ export function useProjectsPage(options: UseProjectsPageOptions = {}) {
 
   const requestErrorMessage = shallowRef<string | null>(null);
   const lastMutationErrorMessage = shallowRef<string | null>(null);
-  const projectsScope = computed(() => ({
-    userId: authStore.profile?.id ?? null,
-    workspaceId: null,
-  }));
   const projectTasksProjectId = shallowRef<string | null>(null);
   const visibleProjectsQuery = useVisibleProjectsQuery({
     accessToken: computed(() => authStore.accessToken),
@@ -80,10 +78,17 @@ export function useProjectsPage(options: UseProjectsPageOptions = {}) {
     enabled: false,
     projectId: projectTasksProjectId,
   });
-  const projectTaskMutations = useProjectTaskMutations({
+  const createTaskMutation = useCreateTaskMutation({
     accessToken: computed(() => authStore.accessToken),
     client,
-    scope: projectsScope,
+  });
+  const updateTaskMutation = useUpdateTaskMutation({
+    accessToken: computed(() => authStore.accessToken),
+    client,
+  });
+  const deleteTaskMutation = useDeleteTaskMutation({
+    accessToken: computed(() => authStore.accessToken),
+    client,
   });
 
   const visibleProjects = computed(() =>
@@ -282,7 +287,7 @@ export function useProjectsPage(options: UseProjectsPageOptions = {}) {
           throw new Error("The selected task could not be found.");
         }
 
-        const updatedTask = await projectTaskMutations.updateTask({
+        const updatedTask = await updateTaskMutation.mutateAsync({
           input: validInput.input,
           projectId: validInput.projectId,
           taskId: editingTask.value.id,
@@ -294,7 +299,7 @@ export function useProjectsPage(options: UseProjectsPageOptions = {}) {
           "Your changes have been saved.",
         );
       } else {
-        const createdTask = await projectTaskMutations.createTask({
+        const createdTask = await createTaskMutation.mutateAsync({
           input: validInput.input,
           projectId: validInput.projectId,
         });
@@ -334,7 +339,7 @@ export function useProjectsPage(options: UseProjectsPageOptions = {}) {
     lastMutationErrorMessage.value = null;
 
     try {
-      await projectTaskMutations.deleteTask({
+      await deleteTaskMutation.mutateAsync({
         projectId: task.projectId,
         taskId: task.id,
       });
