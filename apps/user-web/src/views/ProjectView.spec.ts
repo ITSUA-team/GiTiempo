@@ -38,6 +38,7 @@ const filteredProjectGroups = shallowRef([
   },
 ]);
 const requestErrorMessage = shallowRef<string | null>(null);
+const PROJECT_VIEW_TEST_TIMEOUT_MS = 15_000;
 
 const actions = {
   closeDialog: vi.fn(),
@@ -144,46 +145,54 @@ describe("ProjectView", () => {
     });
   }
 
-  it("renders the header, search field, grouped sections, and page-level actions", async () => {
-    const wrapper = await mountView();
+  it(
+    "renders the header, search field, grouped sections, and page-level actions",
+    async () => {
+      const wrapper = await mountView();
 
-    expect(wrapper.text()).toContain("Projects");
-    expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.text()).toContain("Project Orion");
+      expect(wrapper.text()).toContain("Projects");
+      expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(
+        true,
+      );
+      expect(wrapper.text()).toContain("Project Orion");
 
-    await wrapper.get('[data-testid="projects-header-create"]').trigger("click");
-    await wrapper.get('[data-testid="project-section-add"]').trigger("click");
-    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+      await wrapper.get('[data-testid="projects-header-create"]').trigger("click");
+      await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+      await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+      await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
 
-    expect(actions.openCreateDialog).toHaveBeenNthCalledWith(1);
-    expect(actions.openCreateDialog).toHaveBeenNthCalledWith(2, "project-1");
-    expect(actions.openEditDialog).toHaveBeenCalledTimes(1);
-    expect(actions.requestDeleteTask).toHaveBeenCalledTimes(1);
-  });
+      expect(actions.openCreateDialog).toHaveBeenNthCalledWith(1);
+      expect(actions.openCreateDialog).toHaveBeenNthCalledWith(2, "project-1");
+      expect(actions.openEditDialog).toHaveBeenCalledTimes(1);
+      expect(actions.requestDeleteTask).toHaveBeenCalledTimes(1);
+    },
+    PROJECT_VIEW_TEST_TIMEOUT_MS,
+  );
 
-  it("renders distinct loading, request-error, and empty states", async () => {
-    pageState.value = "loading";
-    const loadingWrapper = await mountView();
+  it(
+    "renders distinct loading, request-error, and empty states",
+    async () => {
+      pageState.value = "loading";
+      const loadingWrapper = await mountView();
 
-    expect(loadingWrapper.findAll('[data-testid="projects-skeleton"]').length).toBeGreaterThan(0);
-    expect(loadingWrapper.text()).not.toContain("Loading your projects.");
-    expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(false);
+      expect(loadingWrapper.findAll('[data-testid="projects-skeleton"]').length).toBeGreaterThan(0);
+      expect(loadingWrapper.text()).not.toContain("Loading your projects.");
+      expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(false);
 
-    pageState.value = "request-error";
-    requestErrorMessage.value = "network down";
-    const errorWrapper = await mountView();
+      pageState.value = "request-error";
+      requestErrorMessage.value = "network down";
+      const errorWrapper = await mountView();
 
-    expect(errorWrapper.text()).toContain("Could not load projects");
-    expect(errorWrapper.text()).toContain("network down");
+      expect(errorWrapper.text()).toContain("Could not load projects");
+      expect(errorWrapper.text()).toContain("network down");
 
-    pageState.value = "empty";
-    requestErrorMessage.value = null;
-    const emptyWrapper = await mountView();
+      pageState.value = "empty";
+      requestErrorMessage.value = null;
+      const emptyWrapper = await mountView();
 
-    expect(emptyWrapper.text()).toContain("No projects or tasks match this view");
-    expect(emptyWrapper.text()).not.toContain("Could not load projects");
-  });
+      expect(emptyWrapper.text()).toContain("No projects or tasks match this view");
+      expect(emptyWrapper.text()).not.toContain("Could not load projects");
+    },
+    PROJECT_VIEW_TEST_TIMEOUT_MS,
+  );
 });

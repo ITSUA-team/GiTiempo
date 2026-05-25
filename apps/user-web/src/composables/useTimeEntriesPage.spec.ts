@@ -57,7 +57,6 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
     description: null,
     durationSeconds: 5400,
     endedAt: "2026-04-21T10:30:00.000Z",
-    githubIssue: null,
     id: "entry-1",
     isBillable: false,
     project: {
