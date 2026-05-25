@@ -10,7 +10,7 @@
 - Shell: keep the authenticated admin shell and active Settings navigation owned by `AdminAppShell`.
 - Header: render `Settings` and `Configure workspace defaults, billing preferences, and organization details.` with the approved 28px/14px visual hierarchy.
 - Card: render a single white settings card at `max-width: 620px`, 20px padding, `shadow-card`, and `rounded-lg` as the token-based card radius mapping.
-- API-supported fields: render Workspace name, Default hourly rate, and Currency as editable persisted fields; render invoice prefix, payment terms, legal entity, and tax ID only as inactive future fields.
+- API-supported fields: render Workspace name, Default hourly rate, Currency, and Time zone as editable persisted fields; render invoice prefix, payment terms, legal entity, and tax ID only as inactive future fields.
 - Layout: use a Workspace section, 12px field gaps, a desktop row for default hourly rate plus a 160px currency field, and stack the row on mobile.
 - Controls: use 38px-high PrimeVue inputs/selects with token-backed borders/backgrounds and field labels at 13px medium.
 - Actions: place `Cancel` and primary `Save Settings` in a separate right-aligned action row with a 10px gap and responsive full-width stacking on narrow screens.
