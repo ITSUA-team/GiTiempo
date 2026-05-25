@@ -14,11 +14,11 @@ const toastMock = vi.hoisted(() => ({
   successToast: vi.fn(),
 }));
 
-vi.mock('@/composables/useConfirmation', () => ({
+vi.mock('@/composables/feedback/useConfirmation', () => ({
   useConfirmation: () => confirmationMock,
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => toastMock,
 }));
 

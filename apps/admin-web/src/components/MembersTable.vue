@@ -26,10 +26,10 @@ import Column from 'primevue/column';
 import Skeleton from 'primevue/skeleton';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
-import { useConfirmation } from '@/composables/useConfirmation';
+import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/useToasts';
+import { useToasts } from '@/composables/feedback/useToasts';
 
 const props = defineProps<{
   members: WorkspaceMemberListResponse;

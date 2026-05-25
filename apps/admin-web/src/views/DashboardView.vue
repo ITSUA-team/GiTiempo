@@ -5,8 +5,8 @@ import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import DashboardPageSkeleton from '@/components/dashboard/DashboardPageSkeleton.vue';
 import DashboardRecentActivityFeed from '@/components/dashboard/DashboardRecentActivityFeed.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useAdminDashboardPage } from '@/composables/useAdminDashboardPage';
-import { useToasts } from '@/composables/useToasts';
+import { useAdminDashboardPage } from '@/composables/dashboard/useAdminDashboardPage';
+import { useToasts } from '@/composables/feedback/useToasts';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();

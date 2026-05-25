@@ -14,7 +14,7 @@ import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link
 import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
 
-import { useToasts } from "@/composables/useToasts";
+import { useToasts } from "@/composables/feedback/useToasts";
 import { routeNames } from "@/router";
 import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";

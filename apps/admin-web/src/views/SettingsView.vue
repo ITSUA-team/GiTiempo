@@ -5,7 +5,7 @@ import Button from 'primevue/button';
 
 import SettingsForm from '@/components/settings/SettingsForm.vue';
 import SettingsPageSkeleton from '@/components/settings/SettingsPageSkeleton.vue';
-import { useAdminSettingsPage } from '@/composables/useAdminSettingsPage';
+import { useAdminSettingsPage } from '@/composables/settings/useAdminSettingsPage';
 
 const {
 	canSave,

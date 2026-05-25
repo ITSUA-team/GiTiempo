@@ -50,7 +50,7 @@ const composableState = {
   timerStatusLabel: shallowRef("Last tracked task"),
 };
 
-vi.mock("@/composables/useTopBarTimer", () => ({
+vi.mock("@/composables/timer/useTopBarTimer", () => ({
   useTopBarTimer: () => composableState,
 }));
 

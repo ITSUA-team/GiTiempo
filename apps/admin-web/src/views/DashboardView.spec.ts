@@ -24,14 +24,14 @@ const dashboardMocks = vi.hoisted(() => ({
   toggleActivityRows: vi.fn(),
 }));
 
-vi.mock('@/composables/useAdminDashboardPage', () => ({
+vi.mock('@/composables/dashboard/useAdminDashboardPage', () => ({
   useAdminDashboardPage: (options: typeof dashboardMocks.options) => {
     dashboardMocks.options = options;
     return dashboardMocks.state;
   },
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: dashboardMocks.errorToast,
   }),

@@ -11,7 +11,7 @@ import { shallowRef } from 'vue';
 
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/useToasts';
+import { useToasts } from '@/composables/feedback/useToasts';
 
 const props = defineProps<{
   member: WorkspaceMemberResponse;

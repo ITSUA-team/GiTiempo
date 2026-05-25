@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Button from "primevue/button";
 
-import { useTopBarTimer } from "@/composables/useTopBarTimer";
+import { useTopBarTimer } from "@/composables/timer/useTopBarTimer";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 

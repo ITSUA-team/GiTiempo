@@ -26,8 +26,8 @@ import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
-import { useConfirmation } from '@/composables/useConfirmation';
-import { useToasts } from '@/composables/useToasts';
+import { useConfirmation } from '@/composables/feedback/useConfirmation';
+import { useToasts } from '@/composables/feedback/useToasts';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 

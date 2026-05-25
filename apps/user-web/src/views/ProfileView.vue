@@ -11,7 +11,7 @@ import { useRouter } from "vue-router";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
 import ProfileGithubConnectionCard from "@/components/profile/ProfileGithubConnectionCard.vue";
-import { useProfileGithubConnection } from "@/composables/useProfileGithubConnection";
+import { useProfileGithubConnection } from "@/composables/profile/useProfileGithubConnection";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue/usetoast";

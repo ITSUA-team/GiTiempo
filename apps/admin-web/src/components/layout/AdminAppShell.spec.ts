@@ -16,13 +16,18 @@ const testMocks = vi.hoisted(() => ({
   getWorkspace: vi.fn(),
 }));
 
+const RouterViewStub = {
+  name: "RouterView",
+  template: '<div data-testid="router-view" />',
+};
+
 vi.mock("@/services/admin-settings-client", () => ({
   adminSettingsClient: {
     getWorkspace: testMocks.getWorkspace,
   },
 }));
 
-vi.mock("@/composables/useToasts", () => ({
+vi.mock("@/composables/feedback/useToasts", () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
   }),
@@ -70,6 +75,9 @@ describe("AdminAppShell", () => {
           },
         },
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        stubs: {
+          RouterView: RouterViewStub,
+        },
       },
     });
     const workspaceLink = wrapper.get(
@@ -107,6 +115,9 @@ describe("AdminAppShell", () => {
     const wrapper = mount(AdminAppShell, {
       global: {
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          RouterView: RouterViewStub,
+        },
       },
     });
 

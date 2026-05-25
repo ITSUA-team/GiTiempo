@@ -12,7 +12,7 @@ import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.
 import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useToasts } from '@/composables/useToasts';
+import { useToasts } from '@/composables/feedback/useToasts';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';

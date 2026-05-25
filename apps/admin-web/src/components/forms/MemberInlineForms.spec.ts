@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MemberAssignPmPanel from './MemberAssignPmPanel.vue';
 import MemberEditForm from './MemberEditForm.vue';
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: vi.fn(),
     successToast: vi.fn(),

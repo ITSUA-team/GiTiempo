@@ -8,8 +8,8 @@ import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ReportsFilterForm from '@/components/reports/ReportsFilterForm.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
-import { useToasts } from '@/composables/useToasts';
-import { useReportsData } from '@/composables/useReportsData';
+import { useToasts } from '@/composables/feedback/useToasts';
+import { useReportsData } from '@/composables/reports/useReportsData';
 import { downloadReportExport } from '@/lib/report-download';
 import {
   createDefaultReportTableFilters,

@@ -7,7 +7,7 @@ import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
 
-import type { AdminSettingsFieldErrors } from '@/composables/admin-settings-form';
+import type { AdminSettingsFieldErrors } from '@/composables/settings/admin-settings-form';
 
 interface CurrencyOption {
 	label: string;

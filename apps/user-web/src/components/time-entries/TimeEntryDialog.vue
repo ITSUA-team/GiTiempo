@@ -9,7 +9,7 @@ import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
 import { computed } from "vue";
 
-import type { TaskLookupOption } from "@/composables/useTimeEntriesPage";
+import type { TaskLookupOption } from "@/composables/time-entries/useTimeEntriesPage";
 
 const props = defineProps<{
   dialogErrorMessage: string | null;

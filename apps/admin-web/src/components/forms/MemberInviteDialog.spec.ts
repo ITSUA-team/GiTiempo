@@ -18,7 +18,7 @@ vi.mock('@/services/admin-members-client', () => ({
   },
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
     successToast: testMocks.successToast,

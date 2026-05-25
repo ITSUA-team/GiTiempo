@@ -52,7 +52,7 @@ const actions = {
   setSearchValue: vi.fn(),
 };
 
-vi.mock("@/composables/useProjectsPage", () => ({
+vi.mock("@/composables/projects/useProjectsPage", () => ({
   useProjectsPage: () => ({
     canCreateTasks: computed(() => true),
     closeDialog: actions.closeDialog,

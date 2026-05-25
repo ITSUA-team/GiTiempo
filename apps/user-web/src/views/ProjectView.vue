@@ -11,7 +11,7 @@ import ProjectsTaskSection from "@/components/projects/ProjectsTaskSection.vue";
 import {
   useProjectsPage,
   type ProjectsSearchSuggestion,
-} from "@/composables/useProjectsPage";
+} from "@/composables/projects/useProjectsPage";
 
 const {
   canCreateTasks,

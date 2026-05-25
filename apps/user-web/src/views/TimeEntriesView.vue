@@ -12,7 +12,7 @@ import { SurfaceCard } from "@gitiempo/web-shared";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
-import { useTimeEntriesPage } from "@/composables/useTimeEntriesPage";
+import { useTimeEntriesPage } from "@/composables/time-entries/useTimeEntriesPage";
 
 const {
   closeDialog,

@@ -14,7 +14,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 
-import { useToasts } from '@/composables/useToasts';
+import { useToasts } from '@/composables/feedback/useToasts';
 import { routeNames } from '@/router';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';

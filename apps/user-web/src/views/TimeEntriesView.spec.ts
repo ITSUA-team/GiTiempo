@@ -69,7 +69,7 @@ const actions = {
   retryLoadEntries: vi.fn(async () => undefined),
 };
 
-vi.mock("@/composables/useTimeEntriesPage", () => ({
+vi.mock("@/composables/time-entries/useTimeEntriesPage", () => ({
   useTimeEntriesPage: () => ({
     closeDialog: vi.fn(),
     currentPage: shallowRef(1),
