@@ -262,7 +262,6 @@ describe("createTimeEntriesClient", () => {
         description: null,
         durationSeconds: null,
         endedAt: null,
-        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
         isBillable: true,
         project: {
@@ -315,7 +314,6 @@ describe("createTimeEntriesClient", () => {
         description: null,
         durationSeconds: 5400,
         endedAt: "2026-04-21T10:30:00.000Z",
-        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
         isBillable: true,
         project: {
@@ -372,7 +370,6 @@ describe("createTimeEntriesClient", () => {
         description: null,
         durationSeconds: 3600,
         endedAt: "2026-04-21T10:00:00.000Z",
-        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
         isBillable: true,
         project: {
@@ -433,7 +430,6 @@ describe("createTimeEntriesClient", () => {
         description: "Updated",
         durationSeconds: 5400,
         endedAt: "2026-04-21T10:30:00.000Z",
-        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
         isBillable: false,
         project: {
@@ -488,7 +484,6 @@ describe("createTimeEntriesClient", () => {
         description: "Updated",
         durationSeconds: 5400,
         endedAt: "2026-04-21T10:30:00.000Z",
-        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
         isBillable: false,
         project: {
