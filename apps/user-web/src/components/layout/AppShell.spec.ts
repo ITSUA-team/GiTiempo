@@ -91,7 +91,8 @@ describe("AppShell", () => {
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);
     expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Time Entries"]')).toHaveLength(2);
-    expect(profileLinks).toHaveLength(3);
+    expect(wrapper.findAll('a[aria-label="Profile"]')).toHaveLength(0);
+    expect(profileLinks).toHaveLength(1);
     expect(timerLinks).toHaveLength(0);
 
     await wrapper.get('[data-testid="profile-menu-sign-out"]').trigger("click");

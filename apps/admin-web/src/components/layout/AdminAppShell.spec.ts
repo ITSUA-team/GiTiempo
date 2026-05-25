@@ -108,7 +108,8 @@ describe("AdminAppShell", () => {
     expect(settingsLink.attributes("href")).toBe("/settings");
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(false);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
-    expect(settingsLinks).toHaveLength(3);
+    expect(wrapper.findAll('a[aria-label="Settings"]')).toHaveLength(0);
+    expect(settingsLinks).toHaveLength(1);
 
     await wrapper.get('[data-testid="profile-menu-sign-out"]').trigger("click");
     await flushPromises();

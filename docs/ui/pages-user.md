@@ -101,7 +101,7 @@
 - GitHub OAuth callback outcomes after redirect back to `/profile` are surfaced with toast notifications only; do not render inline success or error banners for callback results.
 - When `avatarUrl` is `null`, do not render the avatar row in the GitHub connection card.
 - Disconnect confirmation and callback notifications should use standard PrimeVue `<ConfirmDialog>` and `<Toast>` components; do not invent custom dialog or toast patterns for this page.
-- Sign out action at the bottom using a ghost/destructive treatment.
+- Sign out is owned by the shared header profile dropdown; do not render a duplicate sign-out action in the Profile page content.
 
 ## Cross-App Navigation
 

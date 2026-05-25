@@ -43,11 +43,6 @@ const navItems = computed(() => [
     name: routeNames.project,
     to: { name: routeNames.project },
   },
-  {
-    icon: profileIcon,
-    label: "Profile",
-    name: routeNames.profile,
-  },
 ]);
 
 async function handleSignOut(): Promise<void> {

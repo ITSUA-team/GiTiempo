@@ -42,7 +42,6 @@ const navItems = computed(() => [
   { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
   { icon: membersIcon, label: "Members", name: routeNames.members },
   { icon: projectsIcon, label: "Projects", name: routeNames.projects },
-  { icon: settingsIcon, label: "Settings", name: routeNames.settings },
 ]);
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
