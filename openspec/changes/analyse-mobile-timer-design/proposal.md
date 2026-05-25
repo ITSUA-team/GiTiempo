@@ -21,11 +21,12 @@ The current authenticated `user-web` top-bar timer is documented as a compact ce
 
 - `layout`: Clarifies mobile user-web shell timer placement and profile-menu-safe interaction requirements while preserving desktop top-bar behavior.
 - `user-pages`: Clarifies the user-web global top-bar timer mobile rendering requirements across idle, running, loading, disabled, and task-picker states.
+- `frontend-shared-leaves`: Clarifies that the shared authenticated header may render an app-owned center slot as a mobile row without owning user-web timer state or affecting admin-web.
 
 ## Impact
 
 - Affected frontend app: `apps/user-web` shell timer component, timer task-picker dialog, and focused component tests.
 - Affected shared package: `packages/web-shared` shared `WorkspaceHeader`, with admin-web regression verification because admin-web renders the same shared header.
 - Affected design source: selected `GITiempo.pen` frame `Mobile Timer - Selected Safe F` (`qTKvU`).
-- Affected docs/specs: layout and user-pages OpenSpec deltas for mobile timer behavior and mobile task-picker dialog behavior.
+- Affected docs/specs: `docs/ui/layout.md`, `docs/ui/pages-user.md`, `docs/ui/patterns.md`, plus layout, user-pages, and frontend-shared-leaves OpenSpec deltas for mobile timer behavior and mobile task-picker dialog behavior.
 - Not affected: backend API, database, shared contracts, OpenAPI output, admin-web product behavior, admin-web timer behavior, or route maps.

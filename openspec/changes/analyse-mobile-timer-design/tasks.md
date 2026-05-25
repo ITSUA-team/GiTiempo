@@ -21,8 +21,9 @@
 
 - [x] 4.1 Add or update focused `TopBarTimer` tests for desktop compact rendering, mobile selected-strip rendering, running elapsed state, disabled/loading state, and Change task affordance.
 - [x] 4.2 Add or update shell/header tests proving the user-web mobile timer row is present without duplicating timer state and admin-web remains unaffected.
-- [x] 4.3 Run `pnpm --filter @gitiempo/web-shared lint` and `pnpm --filter @gitiempo/web-shared typecheck` if shared header code changes.
-- [x] 4.4 Run `pnpm --filter user-web lint` and `pnpm --filter user-web typecheck`.
-- [x] 4.5 Run `pnpm --filter admin-web lint` and `pnpm --filter admin-web typecheck` because shared header code changes affect admin-web shell rendering.
-- [x] 4.6 Add or update focused `TopBarTimerTaskDialog` tests for mobile dialog sizing, scroll behavior, full-width stacked buttons, and mobile action order with `Use selected task` before `Cancel`.
-- [x] 4.7 Run focused affected tests, including `TopBarTimer`, `TopBarTimerTaskDialog`, and shell/header specs, and document any PrimeVue-only design compromises.
+- [x] 4.3 Add or update mobile shell/timer tests for the profile-menu-open case, proving Start/Stop and Change remain visible/actionable while any overlap is limited to non-critical task metadata.
+- [x] 4.4 Run `pnpm --filter @gitiempo/web-shared lint` and `pnpm --filter @gitiempo/web-shared typecheck` if shared header code changes.
+- [x] 4.5 Run `pnpm --filter user-web lint` and `pnpm --filter user-web typecheck`.
+- [x] 4.6 Run `pnpm --filter admin-web lint` and `pnpm --filter admin-web typecheck` because shared header code changes affect admin-web shell rendering.
+- [x] 4.7 Add or update focused `TopBarTimerTaskDialog` tests for mobile dialog sizing, scroll behavior, full-width stacked buttons, and mobile action order with `Use selected task` before `Cancel`.
+- [x] 4.8 Run focused affected tests, including `TopBarTimer`, `TopBarTimerTaskDialog`, and shell/header specs, and document any PrimeVue-only design compromises.

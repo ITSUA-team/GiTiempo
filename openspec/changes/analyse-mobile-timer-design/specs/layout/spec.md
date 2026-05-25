@@ -20,6 +20,15 @@ The authenticated user-web shell MUST reserve the top-bar center region for the 
 - **AND** the timer renders as a full-width shell strip below that top row using the approved `GITiempo.pen` mobile timer design
 - **AND** the timer Start or Stop action and Change task action remain reachable outside the top-right profile menu area
 
+#### Scenario: Mobile timer actions remain usable while profile menu is open
+
+- **GIVEN** the authenticated user-web shell is rendered below the mobile breakpoint
+- **AND** the top-right profile menu opens over the shell chrome
+- **WHEN** the mobile timer strip is visible
+- **THEN** the timer Start or Stop action remains visible and actionable
+- **AND** the Change task action remains visible and actionable
+- **AND** any profile-menu overlap is limited to non-critical task metadata
+
 #### Scenario: Admin-web top bar has no timer center content
 
 - **GIVEN** the authenticated admin-web shell is rendered

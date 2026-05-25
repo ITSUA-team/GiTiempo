@@ -53,7 +53,29 @@ The user-web authenticated shell MUST expose timer start, stop, and task-context
 
 ### Requirement: Top-Bar Timer Task Picker
 
-The user-web top-bar timer task picker MUST remain usable from the mobile timer strip while preserving visible Project -> Task selection and task creation behavior.
+The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context or create a new task inside the selected visible project, and MUST remain usable from the mobile timer strip.
+
+#### Scenario: Existing task selected for timer context
+
+- **GIVEN** the top-bar timer task picker is open
+- **WHEN** the user selects a visible project and one of that project's tasks
+- **THEN** the dialog allows confirmation with `Use selected task`
+- **AND** the top-bar timer context updates to the selected `Project / Task`
+- **AND** a subsequent idle start action starts a fresh timer for that task
+
+#### Scenario: New task created inside selected project
+
+- **GIVEN** the top-bar timer task picker is open with a visible project selected
+- **WHEN** the user submits a valid new task title
+- **THEN** the app creates the task inside the selected project
+- **AND** the dialog remains open with the newly created task selected
+- **AND** the user can confirm the context with `Use selected task`
+
+#### Scenario: Task picker states remain distinct
+
+- **WHEN** project loading, task loading, empty results, validation failure, or request failure occurs in the task picker
+- **THEN** the dialog renders a state specific to that condition
+- **AND** failed requests are not collapsed into empty-data messaging
 
 #### Scenario: Mobile task picker keeps full-width actions usable
 
