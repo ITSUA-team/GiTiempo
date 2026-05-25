@@ -106,7 +106,7 @@
 ## Cross-App Navigation
 
 - The user SPA should expose a visible entry point to the admin workspace when the admin SPA is available.
-- Prefer placing the cross-link in the shared shell identity/top-bar area so it is available from authenticated user pages without competing with page-level actions.
+- Place the cross-link in the shared shell profile dropdown so it is available from authenticated user pages without competing with page-level actions.
 
 ## Error Pages
 

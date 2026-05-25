@@ -13,9 +13,11 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **AND** the dropdown remains pinned to the sticky header so it stays visible with the header while the page scrolls
 - **AND** the dropdown includes a small caret/pointer aligned to the profile avatar circle
 - **AND** the profile/avatar trigger shows the rounded border active state only while the dropdown is open
-- **AND** the menu contains `Profile` and `Sign out` actions in that order
+- **AND** the menu contains `Admin workspace`, `Profile`, and `Sign out` actions in that order
+- **AND** the shell navigation does not render a duplicate `Profile` item
 - **AND** the `Profile` action uses the same profile icon family as the user-web profile navigation item
-- **AND** the existing user-web top-bar timer and counterpart admin workspace link remain visible
+- **AND** the existing user-web top-bar timer remains visible
+- **AND** the user Profile page does not render a duplicate page-content `Sign out` action
 
 #### Scenario: Admin-web profile menu opens from header identity trigger
 
@@ -26,18 +28,20 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **AND** the dropdown remains pinned to the sticky header so it stays visible with the header while the page scrolls
 - **AND** the dropdown includes a small caret/pointer aligned to the profile avatar circle
 - **AND** the profile/avatar trigger shows the rounded border active state only while the dropdown is open
-- **AND** the menu contains `Settings` and `Sign out` actions in that order
+- **AND** the menu contains `User workspace`, `Settings`, and `Sign out` actions in that order
+- **AND** the shell navigation does not render a duplicate `Settings` item
 - **AND** the `Settings` action keeps the settings gear icon
-- **AND** the existing admin-web workspace/scope identity and counterpart user workspace link remain visible
+- **AND** the existing admin-web workspace/scope identity remains visible
 
-#### Scenario: Mobile profile menu exposes counterpart workspace switch
+#### Scenario: Profile menu exposes counterpart workspace switch
 
-- **GIVEN** an authenticated shell is rendered below the breakpoint where the top-bar counterpart workspace text link is hidden
+- **GIVEN** an authenticated shell is rendered
 - **WHEN** the user activates the top-bar profile/avatar trigger
 - **THEN** the dropdown includes the counterpart workspace action above the app-owned profile/settings action
 - **AND** user-web labels that action `Admin workspace`
 - **AND** admin-web labels that action `User workspace`
-- **AND** the action uses the same configured counterpart workspace href as the desktop top-bar workspace link
+- **AND** the action uses the configured counterpart workspace href
+- **AND** the shell does not render a standalone top-bar counterpart workspace text link
 - **AND** the app-owned profile/settings action and `Sign out` action remain available in the same dropdown
 
 #### Scenario: Profile/settings action navigates to app-owned settings surface
@@ -60,7 +64,7 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 
 - **GIVEN** focus is on the top-bar profile/avatar trigger
 - **WHEN** the user opens the menu with keyboard input
-- **THEN** focus can move through the app-owned profile/settings action and `Sign out`
+- **THEN** focus can move through the counterpart workspace action, app-owned profile/settings action, and `Sign out`
 - **AND** activating a focused item performs the same action as clicking it
 - **AND** dismissing the menu returns focus to the profile/avatar trigger
 

@@ -13,8 +13,9 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 #### Scenario: Shared header owns the common profile dropdown shell only
 
 - **WHEN** `user-web` and `admin-web` render the same authenticated profile dropdown trigger and menu shape
-- **THEN** the shared header renders the counterpart workspace link, display name, avatar trigger, open-state trigger styling, and menu surface
-- **AND** the same counterpart workspace href and label drive both the desktop top-bar workspace link and the mobile-only dropdown workspace action
+- **THEN** the shared header renders the display name, avatar trigger, open-state trigger styling, counterpart workspace dropdown action, and menu surface
+- **AND** the counterpart workspace href and label drive the dropdown workspace action on all breakpoints
+- **AND** the shared header does not render a standalone top-bar counterpart workspace link
 - **AND** app shells provide the first-action label, icon, and route target
 - **AND** the shared header emits sign-out intent without importing app auth stores, route names, session cleanup, or login redirect behavior
 

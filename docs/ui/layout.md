@@ -22,8 +22,8 @@ User SPA and Admin SPA share the same shell:
 - If there is no eligible last tracked task context, keep the same compact surface, keep the task information field clickable, and disable the start action.
 - While the timer summary is still loading, keep the compact surface rendered with a disabled action.
 - If the timer summary fails to load, keep the compact surface rendered in a disabled fallback state and surface the failure through the standard toast flow.
-- Right: counterpart workspace link, user avatar, and display name.
-- When both SPAs exist, include a visible cross-link to the counterpart workspace in the top-right identity area so users can move between user-web and admin-web without changing URLs manually.
+- Right: user avatar and display name wrapped by the profile dropdown trigger.
+- When both SPAs exist, include the counterpart workspace switch as the first action in the shared profile dropdown so users can move between user-web and admin-web without changing URLs manually.
 
 ### Sidebar Navigation
 
