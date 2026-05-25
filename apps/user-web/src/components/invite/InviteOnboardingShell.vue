@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { SurfaceCard } from "@gitiempo/web-shared";
+
 export interface InviteOnboardingStep {
   description: string;
   title: string;
@@ -84,9 +86,12 @@ defineProps<{
       <section
         class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-10 lg:py-10"
       >
-        <div class="bg-surface shadow-card flex w-full flex-col gap-3.5 rounded-lg p-5">
+        <SurfaceCard
+          body-class="flex flex-col gap-3.5"
+          class="w-full"
+        >
           <slot />
-        </div>
+        </SurfaceCard>
       </section>
     </div>
   </div>
