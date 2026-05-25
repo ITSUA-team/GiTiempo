@@ -47,6 +47,12 @@ The user-web invite accept page MUST authenticate invited users through Firebase
 - **AND** after success the page creates the normal app API session with the same Firebase identity token
 - **AND** the page redirects to the dashboard
 
+#### Scenario: Existing app session opens invite accept route
+- **GIVEN** the browser already has an authenticated GiTiempo app session
+- **WHEN** the invitee opens `/invites/accept?token=<token>`
+- **THEN** the router keeps the invitee on the invite accept page instead of redirecting to the dashboard
+- **AND** the invitee can continue the sign-in based invite acceptance flow for the invited Firebase identity
+
 #### Scenario: Browser account creation is unavailable
 - **GIVEN** the invite accept page is opened with a valid invite token
 - **WHEN** the page renders the default form

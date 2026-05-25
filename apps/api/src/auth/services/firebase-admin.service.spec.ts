@@ -165,6 +165,36 @@ describe('RealFirebaseAdminService', () => {
     });
   });
 
+  it('recovers when another request creates the invited Firebase user first', async () => {
+    getUserByEmail
+      .mockRejectedValueOnce({ code: 'auth/user-not-found' })
+      .mockResolvedValueOnce({
+        uid: 'raced-user',
+        email: 'invitee@example.com',
+      });
+    createUser.mockRejectedValueOnce({ code: 'auth/email-already-exists' });
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      svc.getOrCreateInvitedUserByEmail('invitee@example.com'),
+    ).resolves.toEqual({
+      uid: 'raced-user',
+      email: 'invitee@example.com',
+      isExistingUser: true,
+    });
+    expect(getUserByEmail).toHaveBeenCalledTimes(2);
+    expect(createUser).toHaveBeenCalledWith({
+      email: 'invitee@example.com',
+      emailVerified: false,
+    });
+  });
+
   it('maps provisioning failures to a generic error', async () => {
     getUserByEmail.mockRejectedValueOnce(new Error('boom'));
     const svc = new RealFirebaseAdminService(

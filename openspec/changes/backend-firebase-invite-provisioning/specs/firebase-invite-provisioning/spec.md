@@ -17,6 +17,13 @@ The system SHALL provision or reuse the invited email's Firebase identity throug
 - **THEN** the system reuses the existing Firebase user for that email
 - **AND** the system generates a Firebase password setup/reset action link or equivalent sign-in guidance for that email
 
+#### Scenario: Concurrent provisioning creates the Firebase user first
+- **GIVEN** an admin creates an invite for an email that initially has no Firebase user
+- **AND** another invite flow creates the Firebase user after the system checks for the user but before create completes
+- **WHEN** Firebase reports that the email already exists during create
+- **THEN** the system re-reads the Firebase user by email
+- **AND** reuses that Firebase user for invite onboarding instead of failing the invite
+
 ### Requirement: Password Setup Avoids Application Password Handling
 The system MUST NOT accept, log, persist, or forward raw invitee passwords through GiTiempo APIs or database records during invite onboarding.
 

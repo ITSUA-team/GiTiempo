@@ -58,7 +58,16 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     try {
       const user = await auth.createUser({ email, emailVerified: false });
       return this.toInvitedUser(user, false);
-    } catch {
+    } catch (error) {
+      if (isFirebaseAuthError(error, 'auth/email-already-exists')) {
+        try {
+          const user = await auth.getUserByEmail(email);
+          return this.toInvitedUser(user, true);
+        } catch {
+          throw new Error('Failed to provision invited Firebase user');
+        }
+      }
+
       throw new Error('Failed to provision invited Firebase user');
     }
   }

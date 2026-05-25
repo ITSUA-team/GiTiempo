@@ -94,7 +94,7 @@ describe("app router auth guards", () => {
     expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
   });
 
-  it("defines the standalone guest invite accept route outside the app shell", () => {
+  it("defines the standalone invite accept route outside the app shell", () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -103,12 +103,13 @@ describe("app router auth guards", () => {
     const inviteAcceptRoute = router.resolve("/invites/accept?token=invite-token");
 
     expect(inviteAcceptRoute.name).toBe(routeNames.inviteAccept);
-    expect(inviteAcceptRoute.meta.guestOnly).toBe(true);
+    expect(inviteAcceptRoute.meta.guestOnly).toBeUndefined();
+    expect(inviteAcceptRoute.meta.requiresAuth).toBeUndefined();
     expect(inviteAcceptRoute.matched).toHaveLength(1);
     expect(inviteAcceptRoute.matched[0]?.components?.default).toBe(InviteAcceptView);
   });
 
-  it("defines the standalone guest password setup route outside the app shell", () => {
+  it("defines the standalone password setup route outside the app shell", () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -119,11 +120,32 @@ describe("app router auth guards", () => {
     );
 
     expect(passwordSetupRoute.name).toBe(routeNames.invitePasswordSetup);
-    expect(passwordSetupRoute.meta.guestOnly).toBe(true);
+    expect(passwordSetupRoute.meta.guestOnly).toBeUndefined();
+    expect(passwordSetupRoute.meta.requiresAuth).toBeUndefined();
     expect(passwordSetupRoute.matched).toHaveLength(1);
     expect(passwordSetupRoute.matched[0]?.components?.default).toBe(
       InvitePasswordSetupView,
     );
+  });
+
+  it("keeps authenticated users on invite accept routes", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "access-token";
+    authStore.bootstrapComplete = true;
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/invites/accept?token=invite-token");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.inviteAccept);
+    expect(router.currentRoute.value.query.token).toBe("invite-token");
   });
 
   it("redirects anonymous users from unknown routes to login", async () => {
