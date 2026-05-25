@@ -59,6 +59,13 @@ The frontend MUST use consistent empty-state, request-error, and loading-state p
 - THEN it presents a request-error state with retry affordance where retry is available
 - AND it does not substitute an empty-state message for the failed request
 
+#### Scenario: Structured settings first load
+
+- GIVEN a content-rich settings page is waiting for required initial data
+- WHEN the page is not yet ready
+- THEN it may use PrimeVue Skeleton placeholders matching the final header, card, form rows, and action layout
+- AND request-error states remain distinct from empty states or default form values
+
 ### Requirement: Compact Icon-Only Table Row Actions
 
 Table row action surfaces MUST support compact icon-only actions aligned to the right edge of the row.

@@ -57,7 +57,8 @@
 - Single-column workspace settings form inside the authenticated admin shell.
 - Header copy: `Settings` with `Configure workspace defaults, billing preferences, and organization details.`
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
-- Current persisted API-supported fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
+- Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
+- `Time zone` uses a full-width PrimeVue `<Select>` below the Default hourly rate + Currency row, enables filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
 - Initial load reads workspace identity from `/workspace` and workspace settings from `/workspace/settings`.

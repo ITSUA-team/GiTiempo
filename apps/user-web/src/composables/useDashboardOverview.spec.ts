@@ -13,6 +13,8 @@ import { useAuthStore } from "@/stores/auth";
 type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
 
 function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
+  const { githubIssue = null, ...entryOverrides } = overrides;
+
   return {
     createdAt: "2026-04-21T09:00:00.000Z",
     description: null,
@@ -41,7 +43,8 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
     },
     userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301",
     workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
-    ...overrides,
+    githubIssue,
+    ...entryOverrides,
   };
 }
 

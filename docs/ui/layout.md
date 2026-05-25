@@ -30,7 +30,8 @@ User SPA and Admin SPA share the same shell:
 - Nav item: `h-11 px-4`.
 - Sidebar links are icon-only in both authenticated SPAs. Do not render visible text labels in the sidebar on desktop or collapsed layouts.
 - Mobile bottom navigation uses the same icon-only shared nav items; keep labels available through accessibility naming rather than visible text.
-- Use the former link text as the PrimeVue tooltip copy and the accessible label, e.g. icon-only `Dashboard` link with tooltip `Dashboard`.
+- Use the former link text as the PrimeVue tooltip copy and the accessible label on sidebar links, e.g. icon-only `Dashboard` link with tooltip `Dashboard`.
+- Mobile bottom navigation keeps the same accessible label and `sr-only` text, but does not use PrimeVue tooltip because touch-triggered tooltips can persist during route navigation.
 - Default: icon `text-text-muted` with an icon-only hit area that keeps the same `h-11 px-4` spacing.
 - Hover: `hover:bg-app-bg`.
 - Active: `bg-accent-tint text-brand font-semibold border-l-[3px] border-brand`; the active icon uses Brand Purple.

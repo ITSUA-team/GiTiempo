@@ -422,6 +422,7 @@ describe('Time entries (e2e)', () => {
       .set('Authorization', bearer(memberToken));
     expect(current.status).toBe(200);
     expect(current.body.timeEntry.id).toBe(started.body.id);
+    expect(current.body.timeEntry.githubIssue).toBeNull();
 
     const conflict = await request(app.getHttpServer())
       .post('/time-entries/timer/start')
@@ -577,6 +578,16 @@ describe('Time entries (e2e)', () => {
     expect(started.body.source).toBe('extension');
     expect(started.body.project.name).toBe(githubRepo);
     expect(started.body.task.title).toBe('Chrome extension issue');
+    expect(started.body.githubIssue).toEqual({ githubRepo, issueNumber });
+
+    const current = await request(app.getHttpServer())
+      .get('/time-entries/current')
+      .set('Authorization', bearer(otherMemberToken));
+    expect(current.status).toBe(200);
+    expect(current.body.timeEntry.githubIssue).toEqual({
+      githubRepo,
+      issueNumber,
+    });
 
     const [projectRef] = await db
       .select()

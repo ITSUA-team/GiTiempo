@@ -11,7 +11,9 @@ import {
   ManagementTableEmptyState,
   ManagementTableRowAction,
   ManagementTableShell,
+  MobileRecordCard,
   managementTableColumnPt,
+  useIsMobileViewport,
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
 
@@ -24,6 +26,7 @@ interface ProjectsTaskSectionProps {
 }
 
 const props = defineProps<ProjectsTaskSectionProps>();
+const isMobileViewport = useIsMobileViewport();
 
 const emit = defineEmits<{
   addTask: [projectId: string];
@@ -84,7 +87,58 @@ function getStatusPt(task: TaskResponse) {
       />
     </div>
 
+    <div
+      v-if="isMobileViewport"
+      class="flex flex-col gap-3"
+    >
+      <MobileRecordCard
+        v-for="task in props.tasks"
+        :key="task.id"
+        data-testid="project-task-mobile-card"
+      >
+        <div class="flex min-w-0 flex-col gap-2">
+          <p class="text-text-dark truncate text-sm font-medium">
+            {{ task.title }}
+          </p>
+
+          <div class="flex items-center justify-between gap-3">
+            <Tag
+              :pt="getStatusPt(task)"
+              :value="getStatusLabel(task)"
+            />
+            <span class="text-text-muted text-[13px]">
+              {{ props.formatUpdatedLabel(task.updatedAt) }}
+            </span>
+          </div>
+        </div>
+
+        <template #actions>
+          <ManagementTableRowAction
+            :data-testid="`project-task-mobile-edit-${task.id}`"
+            :icon="PencilSquareIcon"
+            label="Edit"
+            @click="emit('editTask', task)"
+          />
+          <ManagementTableRowAction
+            :data-testid="`project-task-mobile-delete-${task.id}`"
+            :icon="TrashIcon"
+            label="Delete"
+            :loading="props.isDeletingTaskId === task.id"
+            tone="destructive"
+            @click="emit('deleteTask', task)"
+          />
+        </template>
+      </MobileRecordCard>
+
+      <ManagementTableEmptyState
+        v-if="props.tasks.length === 0"
+        description="Add a task to start tracking work for this project."
+        title="No active tasks yet"
+      />
+    </div>
+
     <ManagementTableShell
+      v-else
       body-row-class="h-[52px] bg-transparent hover:bg-app-bg"
       :columns="columns"
       data-key="id"

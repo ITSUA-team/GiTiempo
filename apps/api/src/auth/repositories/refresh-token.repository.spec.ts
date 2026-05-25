@@ -205,6 +205,22 @@ describe('RefreshTokenRepository', () => {
     });
   });
 
+  describe('findById', () => {
+    it('returns the matching row when present', async () => {
+      build({ selectRows: [sampleRow] });
+
+      await expect(repo.findById(sampleRow.id)).resolves.toEqual(sampleRow);
+      expect(dbMock.select).toHaveBeenCalled();
+      expect(dbMock._spies.whereSelect).toHaveBeenCalled();
+    });
+
+    it('returns null when the id is unknown', async () => {
+      build({ selectRows: [] });
+
+      await expect(repo.findById('missing-id')).resolves.toBeNull();
+    });
+  });
+
   describe('rotateIfActive', () => {
     const newRow = {
       id: 'new-rt-id',

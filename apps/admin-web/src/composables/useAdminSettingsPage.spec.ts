@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { useAdminSettingsPage } from './useAdminSettingsPage';
 import type { AdminSettingsClient } from '@/services/admin-settings-client';
 
+const originalSupportedValuesOf = Intl.supportedValuesOf;
+
 const workspaceResponse = {
 	createdAt: '2026-05-01T10:00:00.000Z',
 	id: '11111111-1111-4111-8111-111111111111',
@@ -50,6 +52,25 @@ function createSubject(client = createClient()) {
 		}),
 		toasts,
 	};
+}
+
+function stubSupportedValuesOf(value: typeof Intl.supportedValuesOf) {
+	Object.defineProperty(Intl, 'supportedValuesOf', {
+		configurable: true,
+		value,
+	});
+}
+
+function restoreSupportedValuesOf() {
+	if (originalSupportedValuesOf) {
+		Object.defineProperty(Intl, 'supportedValuesOf', {
+			configurable: true,
+			value: originalSupportedValuesOf,
+		});
+		return;
+	}
+
+	Reflect.deleteProperty(Intl, 'supportedValuesOf');
 }
 
 describe('useAdminSettingsPage', () => {
@@ -124,6 +145,31 @@ describe('useAdminSettingsPage', () => {
 		expect(client.updateWorkspaceSettings).not.toHaveBeenCalled();
 	});
 
+	it('keeps persisted and draft time zones available in selector options', async () => {
+		stubSupportedValuesOf(vi.fn().mockReturnValue(['Europe/London']));
+
+		try {
+			const client = createClient({
+				getWorkspaceSettings: vi.fn().mockResolvedValue({
+					...settingsResponse,
+					timeZone: 'Pacific/Auckland',
+				}),
+			});
+			const { page } = createSubject(client);
+
+			await page.loadSettings();
+			page.form.timeZone = 'America/Phoenix';
+
+			const values = page.timeZoneOptions.value.map((option) => option.value);
+
+			expect(values).toContain('Pacific/Auckland');
+			expect(values).toContain('America/Phoenix');
+			expect(values).toContain('Europe/London');
+		} finally {
+			restoreSupportedValuesOf();
+		}
+	});
+
 	it('saves workspace-only changes', async () => {
 		const client = createClient({
 			updateWorkspace: vi.fn().mockResolvedValue({
@@ -169,6 +215,27 @@ describe('useAdminSettingsPage', () => {
 			defaultHourlyRate: null,
 			timeZone: 'Europe/Kyiv',
 		});
+	});
+
+	it('saves time zone-only changes without sending unchanged settings fields', async () => {
+		const client = createClient({
+			updateWorkspaceSettings: vi.fn().mockResolvedValue({
+				...settingsResponse,
+				timeZone: 'Europe/Kyiv',
+			}),
+		});
+		const { page } = createSubject(client);
+		await page.loadSettings();
+
+		page.form.timeZone = 'Europe/Kyiv';
+
+		await expect(page.saveSettings()).resolves.toBe(true);
+		expect(client.updateWorkspace).not.toHaveBeenCalled();
+		expect(client.updateWorkspaceSettings).toHaveBeenCalledWith('access-token', {
+			timeZone: 'Europe/Kyiv',
+		});
+		expect(page.form.timeZone).toBe('Europe/Kyiv');
+		expect(page.isDirty.value).toBe(false);
 	});
 
 	it('saves workspace and settings changes together', async () => {
@@ -224,10 +291,10 @@ describe('useAdminSettingsPage', () => {
 		const { page, toasts } = createSubject(client);
 		await page.loadSettings();
 
-		page.form.currency = 'EUR';
+		page.form.timeZone = 'Europe/Kyiv';
 
 		await expect(page.saveSettings()).resolves.toBe(false);
-		expect(page.form.currency).toBe('EUR');
+		expect(page.form.timeZone).toBe('Europe/Kyiv');
 		expect(page.isDirty.value).toBe(true);
 		expect(toasts.errorToast).toHaveBeenCalledWith(
 			'Could not save settings',

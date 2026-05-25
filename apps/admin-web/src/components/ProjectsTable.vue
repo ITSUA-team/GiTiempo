@@ -14,11 +14,14 @@ import {
   EmptyStateBlock,
   ManagementTableRowAction,
   ManagementTableShell,
-  managementTableColumnPt,
+  MobileRecordCard,
   SectionHeader,
+  managementTableColumnPt,
+  useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
+import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
@@ -43,6 +46,7 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
 const { requireConfirmation } = useConfirmation();
+const isMobileViewport = useIsMobileViewport();
 const expandedRows = ref<Record<string, boolean>>({});
 const selectedMemberId = ref<string | null>(null);
 
@@ -156,7 +160,7 @@ function formatSource(source: string): string {
   <div class="mb-4">
     <SectionHeader title="Projects Table">
       <template #actions>
-        <div class="flex flex-col gap-1.5">
+        <div class="flex flex-col gap-1.5 sm:w-[260px]">
           <label
             id="member-filter-label"
             class="text-text-muted text-[12px] font-medium"
@@ -169,19 +173,179 @@ function formatSource(source: string): string {
             option-value="value"
             placeholder="All members"
             show-clear
-            class="w-[260px]"
+            class="w-full"
           />
         </div>
       </template>
     </SectionHeader>
   </div>
 
+  <div
+    v-if="isMobileViewport"
+    class="flex flex-col gap-3"
+  >
+    <template v-if="loading">
+      <MobileRecordCard
+        v-for="index in 3"
+        :key="index"
+        data-testid="projects-mobile-loading-card"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton
+              width="9rem"
+              height="1rem"
+            />
+            <Skeleton
+              width="5rem"
+              height="0.875rem"
+            />
+          </div>
+          <Skeleton
+            width="4.5rem"
+            height="1.5rem"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-2">
+            <Skeleton
+              width="6rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="5rem"
+              height="0.875rem"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <Skeleton
+              width="3rem"
+              height="0.75rem"
+            />
+            <Skeleton
+              width="4rem"
+              height="0.875rem"
+            />
+          </div>
+        </div>
+      </MobileRecordCard>
+    </template>
+
+    <template v-else-if="filteredProjects.length > 0">
+      <MobileRecordCard
+        v-for="project in filteredProjects"
+        :key="project.id"
+        data-testid="project-mobile-card"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3
+              class="truncate text-[15px] font-semibold"
+              :class="project.isActive ? 'text-text-dark' : 'text-text-muted'"
+            >
+              {{ project.name }}
+            </h3>
+            <p class="text-text-muted text-[13px]">
+              {{ formatSource(project.source) }}
+            </p>
+          </div>
+
+          <template v-if="project.isActive">
+            <Tag
+              v-if="project.visibility === 'public'"
+              value="Public"
+              :pt="{
+                root: 'inline-flex shrink-0 items-center rounded-[6px] bg-accent-tint px-2 py-1 text-[12px] font-semibold leading-none text-brand',
+              }"
+            />
+            <Tag
+              v-else
+              value="Private"
+              :pt="{
+                root: 'inline-flex shrink-0 items-center rounded-[6px] bg-status-warn-bg px-2 py-1 text-[12px] font-semibold leading-none text-status-warn-text',
+              }"
+            />
+          </template>
+          <Tag
+            v-else
+            :value="project.visibility === 'public' ? 'Public' : 'Private'"
+            :pt="{
+              root: 'inline-flex shrink-0 items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
+              label: 'text-text-muted',
+            }"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Assigned members</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ project.members.length }} members
+            </span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-text-muted text-xs">Hours</span>
+            <span class="text-text-dark text-[13px] font-semibold">
+              {{ project.totalHours }}h
+            </span>
+          </div>
+        </div>
+
+        <template #actions>
+          <template v-if="project.isActive">
+            <ManagementTableRowAction
+              :data-testid="`project-mobile-edit-${project.id}`"
+              :icon="PencilSquareIcon"
+              label="Edit"
+              @click="handleEdit(project)"
+            />
+            <ManagementTableRowAction
+              :data-testid="`project-mobile-archive-${project.id}`"
+              :icon="ArchiveBoxIcon"
+              label="Archive"
+              tone="destructive"
+              @click="confirmArchive(project)"
+            />
+          </template>
+          <ManagementTableRowAction
+            v-else
+            :data-testid="`project-mobile-unarchive-${project.id}`"
+            :icon="ArrowUturnLeftIcon"
+            label="Unarchive"
+            tone="muted"
+            @click="handleUnarchive(project)"
+          />
+        </template>
+
+        <ProjectEditForm
+          v-if="expandedRows[project.id]"
+          :project="project"
+          :all-members="members"
+          @saved="handleEditSaved(project)"
+          @cancelled="handleEditCancelled(project)"
+        />
+      </MobileRecordCard>
+    </template>
+
+    <EmptyStateBlock
+      v-else
+      title="No projects found"
+      description="No projects match the current filter, or none have been created yet."
+    />
+  </div>
+
   <ManagementTableShell
+    v-else
     v-model:expanded-rows="expandedRows"
     :columns="columns"
     :value="filteredProjects"
     :loading="loading"
     data-key="id"
+    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[1010px] items-center border-b font-sans text-[13px] font-semibold"
+    shell-class="border-divider overflow-x-auto rounded-[6px] border"
+    single-scroll
+    table-class="min-w-[1010px] w-full table-fixed border-collapse"
+    table-container-class="overflow-visible rounded-none border-none"
   >
     <Column :pt="managementTableColumnPt">
       <template #body="{ data }">

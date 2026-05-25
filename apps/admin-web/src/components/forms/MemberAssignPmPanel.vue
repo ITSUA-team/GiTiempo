@@ -90,12 +90,15 @@ async function handleSubmit({
       :initial-values="initialValues"
       @submit="handleSubmit"
     >
-      <div class="flex flex-wrap gap-3">
+      <div
+        data-testid="member-assign-project-list"
+        class="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:gap-3"
+      >
         <label
           v-for="project in activeProjects"
           :key="project.id"
           :for="`assign-${member.id}-${project.id}`"
-          class="bg-surface flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2"
+          class="bg-surface flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-sm px-3 py-2 sm:w-auto"
         >
           <Checkbox
             name="projectIds"
@@ -106,12 +109,16 @@ async function handleSubmit({
         </label>
       </div>
 
-      <div class="mt-3 flex items-center justify-end gap-2.5">
+      <div
+        data-testid="member-assign-actions"
+        class="mt-3 grid grid-cols-1 gap-2 sm:flex sm:items-center sm:justify-end sm:gap-2.5"
+      >
         <Button
           label="Cancel"
           severity="secondary"
           outlined
           type="button"
+          class="w-full sm:w-auto"
           :pt="{ root: { class: 'bg-white' } }"
           @click="emit('cancelled')"
         />
@@ -120,6 +127,7 @@ async function handleSubmit({
           :disabled="saving"
           :loading="saving"
           type="submit"
+          class="w-full sm:w-auto"
         />
       </div>
     </Form>

@@ -15,6 +15,8 @@ import {
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
 import ForbiddenView from "@/views/ForbiddenView.vue";
+import InviteAcceptView from "@/views/InviteAcceptView.vue";
+import InvitePasswordSetupView from "@/views/InvitePasswordSetupView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
@@ -90,6 +92,58 @@ describe("app router auth guards", () => {
     expect(notFoundRoute.meta.requiresAuth).toBe(true);
     expect(notFoundRoute.matched).toHaveLength(1);
     expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
+  });
+
+  it("defines the standalone invite accept route outside the app shell", () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const inviteAcceptRoute = router.resolve("/invites/accept?token=invite-token");
+
+    expect(inviteAcceptRoute.name).toBe(routeNames.inviteAccept);
+    expect(inviteAcceptRoute.meta.allowAuthenticatedGuestFlow).toBe(true);
+    expect(inviteAcceptRoute.matched).toHaveLength(1);
+    expect(inviteAcceptRoute.matched[0]?.components?.default).toBe(InviteAcceptView);
+  });
+
+  it("defines the standalone password setup route outside the app shell", () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const passwordSetupRoute = router.resolve(
+      "/invites/password-setup?mode=resetPassword&oobCode=test-code",
+    );
+
+    expect(passwordSetupRoute.name).toBe(routeNames.invitePasswordSetup);
+    expect(passwordSetupRoute.meta.allowAuthenticatedGuestFlow).toBe(true);
+    expect(passwordSetupRoute.matched).toHaveLength(1);
+    expect(passwordSetupRoute.matched[0]?.components?.default).toBe(
+      InvitePasswordSetupView,
+    );
+  });
+
+  it("keeps authenticated users on invite accept routes", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "access-token";
+    authStore.bootstrapComplete = true;
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/invites/accept?token=invite-token");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.inviteAccept);
+    expect(router.currentRoute.value.query.token).toBe("invite-token");
   });
 
   it("redirects anonymous users from unknown routes to login", async () => {

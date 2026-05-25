@@ -17,6 +17,12 @@ const props = defineProps<{
 function isActive(name: string): boolean {
   return props.activeName === name;
 }
+
+function clearLinkFocus(event: MouseEvent): void {
+  if (!(event.currentTarget instanceof HTMLElement)) return;
+
+  event.currentTarget.blur();
+}
 </script>
 
 <template>
@@ -37,6 +43,7 @@ function isActive(name: string): boolean {
             ? 'border-brand bg-accent-tint text-brand border-l-[3px] font-semibold'
             : 'text-text-muted hover:bg-app-bg',
         ]"
+        @click="clearLinkFocus"
       >
         <component
           :is="item.icon"
@@ -54,7 +61,6 @@ function isActive(name: string): boolean {
     <RouterLink
       v-for="item in props.items"
       :key="`mobile-${item.name}`"
-      v-tooltip.top="item.label"
       :to="item.to ?? { name: item.name }"
       :aria-current="isActive(item.name) ? 'page' : undefined"
       :aria-label="item.label"
@@ -64,6 +70,7 @@ function isActive(name: string): boolean {
           ? 'border-brand bg-accent-tint text-brand'
           : 'text-text-muted hover:bg-app-bg border-transparent',
       ]"
+      @click="clearLinkFocus"
     >
       <component
         :is="item.icon"

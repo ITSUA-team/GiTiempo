@@ -1,5 +1,5 @@
-<!-- Scope: extension popup UI only -->
-<!-- Read when: building the Chrome extension popup or sharing tokens with the extension -->
+<!-- Scope: extension popup UI and injected GitHub issue-page timer UI -->
+<!-- Read when: building the Chrome extension popup, injected GitHub issue-page UI, or sharing tokens with the extension -->
 
 # Chrome Extension UI
 
@@ -8,11 +8,14 @@
 - Tailwind only. PrimeVue is not loaded.
 - Keep popup bundle lightweight.
 - Reuse the same design tokens by importing the shared theme CSS into the extension build.
+- The extension has two surfaces: the popup and the injected timer control on GitHub issue pages.
+- Use shared token utilities for status colors instead of raw hex classes in extension markup.
 
 ## Popup Layout
 
 - Dimensions: `320 x 480px` fixed.
 - Background: `bg-surface`.
+- Use the same branded header on every popup state.
 
 ## States
 
@@ -20,21 +23,61 @@
 
 - Product logo.
 - Heading: `text-lg font-semibold text-text-dark`.
-- Primary sign-in button using brand tokens.
+- Primary `Sign in with Google` button using brand tokens.
+- Secondary `Sign in with email` action using the same popup shell and token language.
 
 ### Authenticated, No Active Timer
 
 - Show detected issue context.
+- Keep the branded header and allow a compact GiTiempo badge in the trailing header slot when popup user initials are not available locally.
 - Full-width Start Timer button.
 - Link to open the full User SPA.
+- Keep the issue context card visible above the actions.
+
+### Authenticated, Unsupported Page
+
+- Keep the branded popup shell visible.
+- Keep the same branded header treatment as the authenticated no-timer popup state.
+- Show concise guidance: `Open a GitHub issue page to start a timer.`
+- Disable or hide Start Timer because issue metadata is unavailable.
+- Keep a link to open the full User SPA.
 
 ### Authenticated, Timer Running
 
 - Elapsed time: `text-2xl font-semibold text-brand`.
 - Task name.
+- Project/repository context.
+- Use the branded header without introducing a user badge if popup user-profile data is unavailable.
 - Full-width destructive stop button.
 
 ### Error Or Disconnected
 
 - Inline muted message.
+- Keep the branded header visible without requiring a user badge.
 - Retry action link.
+
+## Injected GitHub Issue Page UI
+
+- The injected control appears on `github.com/<owner>/<repo>/issues/<number>` pages.
+- Insert it at the start of the page `main` content container so it reads as a page-local timer surface rather than a floating unrelated widget.
+- Keep the injected control visually lighter than the popup shell: no standalone `bg-surface` card, border, or shadow wrapper.
+- Match the injected issue header and helper-copy text color to the active GitHub page theme: use light text treatment on GitHub dark mode and dark/muted token text on GitHub light mode, while keeping action colors aligned with extension tokens such as `bg-brand`, `text-brand`, and `bg-destructive`.
+
+### Injected Idle State
+
+- Show repository and issue number/title detected from the current page.
+- Show one primary `Start Timer` action.
+- If auth is missing, keep issue context visible, replace the primary action with `Open extension`, and show helper copy: `Sign in to GiTiempo to start tracking this issue.`
+
+### Injected Running State
+
+- Show a compact running indicator with live `HH:MM:SS`.
+- Keep the same GitHub issue context visible.
+- When the backend current-timer response includes stable GitHub issue linkage matching the current page, show a destructive `Stop Timer` action.
+- When the backend reports a current timer for another issue or without stable GitHub linkage, show the authoritative task/project context and guide the user to `Open extension` for global timer management.
+
+### Injected Error State
+
+- Keep the issue context visible so the user knows what page the action applies to.
+- Show concise inline error copy.
+- Show a `Retry` action without replacing the entire issue-page control shell.
