@@ -12,7 +12,7 @@
 - [x] 2.2 Add the Projects table header search, desktop filter row, and mobile filter controls matching the `Admin Projects` `.pen` screen and existing Reports table treatment.
 - [x] 2.3 Apply Projects filters to both desktop rows and mobile cards, and ensure clearing filters restores all loaded projects allowed by the page scope.
 - [x] 2.4 Preserve Edit, Archive, Unarchive, and project-settings expansion behavior while collapsing or reconciling expanded rows that become hidden by active filters.
-- [x] 2.5 Add or update `ProjectsTable` component tests for search, source filter, assigned-member filter, hours filter, visibility filter, clearing filters, mobile filter rendering, no Actions-column filter control, and preserved row actions.
+- [x] 2.5 Add or update `ProjectsTable` and Projects page tests for search, source filter, assigned-member filter, required workspace-member data loading/error behavior, hours filter, visibility filter, clearing filters, mobile filter rendering, no Actions-column filter control, and preserved row actions.
 
 ## 3. Shared Frontend
 
@@ -24,4 +24,4 @@
 - [x] 4.2 Run `pnpm --filter admin-web lint`.
 - [x] 4.3 Run `pnpm --filter admin-web typecheck`.
 - [x] 4.4 Run `pnpm --filter admin-web test -- src/views/MembersView.spec.ts src/components/MembersTable.spec.ts src/components/ProjectsTable.spec.ts src/components/reports/ReportsTable.spec.ts`.
-- [x] 4.5 Because implementation touches `packages/web-shared`, run `pnpm --filter @gitiempo/web-shared lint`, `pnpm --filter @gitiempo/web-shared typecheck`, and focused shared tests for touched shared frontend helpers.
+- [x] 4.5 Because implementation touches `packages/web-shared`, run `pnpm --filter @gitiempo/web-shared lint`, `pnpm --filter @gitiempo/web-shared typecheck`, focused shared tests for touched shared frontend helpers, `pnpm --filter user-web lint`, and `pnpm --filter user-web typecheck`.

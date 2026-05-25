@@ -79,7 +79,9 @@ Alternative considered: keep identical filter styling objects in each admin tabl
 
 ### Derive assignment filter data from loaded page data
 
-Project table member filters can use each project row's `members` array. Member table project filters can derive member-to-project assignments from the `projects` prop, which is already loaded for the assignment panel. The visible assignment-count column remains backed by `projectsAssignedCount`.
+Project table member filter options come from the loaded workspace member list fetched by the Projects page, while row matching uses each loaded project row's `members` array. This keeps filter options stable even when some workspace members are not currently assigned to a project, without adding a backend search endpoint. Member table project filters can derive member-to-project assignments from the `projects` prop, which is already loaded for the assignment panel. The visible assignment-count column remains backed by `projectsAssignedCount`.
+
+The Projects page treats workspace member data as required initial page data for table discovery because the assigned-member filter options need member labels. The page should keep the initial loading surface until projects, summary, and workspace members all resolve. If the workspace member list fails during initial load, the page should show the same retryable Projects request-error surface and avoid rendering a partial table with empty assigned-member filter options.
 
 The Members page treats project membership data as required initial page data for table discovery because the assigned-project filter and global search need project names, not just assignment counts. The page should keep the initial loading surface until members, invites, and projects all resolve. If the project list fails during initial load, the page should show the same retryable Members request-error surface and avoid rendering a partial table with empty project filter options.
 
@@ -94,4 +96,5 @@ No PrimeVue-only compromises are expected for this change. Members, Projects, an
 - Local filtering can become expensive for very large workspaces -> Mitigation: keep derivation simple, case-normalized, and computed from existing arrays; revisit backend filtering only when dataset size requires it.
 - Filtered rows with an expanded edit/assignment row can leave stale expansion state hidden -> Mitigation: collapse or reconcile expanded rows when active filters exclude the expanded row.
 - Date-relative Last Active filters can be time-zone sensitive -> Mitigation: define filters using the browser's local day/week semantics and cover deterministic fixture dates in tests.
+- Project assigned-member filters depend on loaded workspace member data -> Mitigation: treat workspace member data as required initial Projects page data; keep the initial loading surface until members load and render the retryable request-error surface if they fail instead of showing empty member filter options.
 - Member assigned-project filters depend on loaded project membership data -> Mitigation: treat project data as required initial Members page data; keep the initial loading surface until projects load and render the retryable request-error surface if they fail instead of showing an empty project filter.
