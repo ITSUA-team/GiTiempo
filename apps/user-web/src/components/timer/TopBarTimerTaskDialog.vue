@@ -237,6 +237,15 @@ const isMobileViewport = useIsMobileViewport();
         data-testid="top-bar-timer-task-dialog-footer"
       >
         <Button
+          v-if="isMobileViewport"
+          type="button"
+          class="w-full"
+          :disabled="props.isConfirmSelectionDisabled"
+          :fluid="true"
+          label="Use selected task"
+          @click="emit('confirm')"
+        />
+        <Button
           type="button"
           :class="isMobileViewport ? 'w-full' : 'w-auto'"
           :fluid="isMobileViewport"
@@ -246,10 +255,11 @@ const isMobileViewport = useIsMobileViewport();
           @click="emit('close')"
         />
         <Button
+          v-if="!isMobileViewport"
           type="button"
-          :class="isMobileViewport ? 'w-full' : 'w-auto'"
+          class="w-auto"
           :disabled="props.isConfirmSelectionDisabled"
-          :fluid="isMobileViewport"
+          :fluid="false"
           label="Use selected task"
           @click="emit('confirm')"
         />

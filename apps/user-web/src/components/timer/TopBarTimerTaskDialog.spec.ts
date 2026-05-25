@@ -194,13 +194,11 @@ describe("TopBarTimerTaskDialog", () => {
     expect(footer.classes()).not.toContain("sm:flex-row");
     expect(footer.classes()).not.toContain("flex-row");
     expect(footerButtons.map((button) => button.text())).toEqual([
-      "Cancel",
       "Use selected task",
+      "Cancel",
     ]);
     expect(createTaskButton?.classes()).toContain("w-full");
     expect(confirmButton?.classes()).toContain("w-full");
-    expect(confirmButton?.classes()).not.toContain("sm:order-2");
-    expect(footerButtons[1]?.classes()).not.toContain("sm:order-1");
     expect(createTaskButton?.attributes("data-fluid")).toBe("true");
     expect(confirmButton?.attributes("data-fluid")).toBe("true");
   });

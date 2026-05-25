@@ -61,5 +61,5 @@ The user-web top-bar timer task picker MUST remain usable from the mobile timer 
 - **WHEN** the task-picker dialog renders below the mobile breakpoint
 - **THEN** the dialog uses a near-full-width mobile layout with scrollable content
 - **AND** the footer actions render as full-width stacked buttons
-- **AND** `Use selected task` appears before `Cancel` in the mobile stacked order
+- **AND** `Use selected task` renders before `Cancel` in the mobile stacked button and keyboard order
 - **AND** the dialog still separates existing task selection from creating a new task inside the selected visible project

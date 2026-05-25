@@ -24,5 +24,5 @@
 - [x] 4.3 Run `pnpm --filter @gitiempo/web-shared lint` and `pnpm --filter @gitiempo/web-shared typecheck` if shared header code changes.
 - [x] 4.4 Run `pnpm --filter user-web lint` and `pnpm --filter user-web typecheck`.
 - [x] 4.5 Run `pnpm --filter admin-web lint` and `pnpm --filter admin-web typecheck` because shared header code changes affect admin-web shell rendering.
-- [x] 4.6 Add or update focused `TopBarTimerTaskDialog` tests for mobile dialog sizing, scroll behavior, full-width stacked buttons, and mobile action order.
+- [x] 4.6 Add or update focused `TopBarTimerTaskDialog` tests for mobile dialog sizing, scroll behavior, full-width stacked buttons, and mobile action order with `Use selected task` before `Cancel`.
 - [x] 4.7 Run focused affected tests, including `TopBarTimer`, `TopBarTimerTaskDialog`, and shell/header specs, and document any PrimeVue-only design compromises.
