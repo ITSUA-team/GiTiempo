@@ -3,6 +3,7 @@ import type { TaskResponse, UpdateTaskInput } from "@gitiempo/shared";
 import { toValue, type MaybeRefOrGetter } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { projectQueryKeys } from "../keys";
 
 /* eslint-disable no-unused-vars */
 interface UpdateTaskClient {
@@ -31,7 +32,7 @@ export const useUpdateTaskMutation = (options: UseUpdateTaskMutationOptions) => 
       ),
     onSuccess: async (task, { projectId }) => {
       await queryClient.invalidateQueries({
-        queryKey: ["project_tasks", task.projectId || projectId],
+        queryKey: projectQueryKeys.projectTasks(task.projectId || projectId),
       });
     },
   });

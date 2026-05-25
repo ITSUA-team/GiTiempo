@@ -3,6 +3,7 @@ import type { TimeEntryListResponse } from "@gitiempo/shared";
 import { computed, toValue } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { timeEntryQueryKeys } from "../keys";
 import { isQueryEnabled, type QueryAccessOptions } from "../query-options";
 
 /* eslint-disable no-unused-vars */
@@ -24,7 +25,7 @@ export const useRecentOwnTimeEntriesQuery = (
   options: UseRecentOwnTimeEntriesQueryOptions,
 ) =>
   useQuery({
-    queryKey: ["recent_own_time_entries"],
+    queryKey: timeEntryQueryKeys.recentOwnTimeEntries,
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () =>
       options.client.listOwnEntries(

@@ -3,6 +3,7 @@ import type { TimeReportQuery, TimeReportResponse } from "@gitiempo/shared";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { reportQueryKeys } from "../keys";
 import { isQueryEnabled, type QueryAccessOptions } from "../query-options";
 
 /* eslint-disable no-unused-vars */
@@ -21,7 +22,7 @@ interface UseTimeReportQueryOptions extends QueryAccessOptions {
 
 export const useTimeReportQuery = (options: UseTimeReportQueryOptions) =>
   useQuery({
-    queryKey: computed(() => ["time_report", toValue(options.query)]),
+    queryKey: computed(() => reportQueryKeys.timeReport(toValue(options.query))),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () =>
       options.client.getTimeReport(

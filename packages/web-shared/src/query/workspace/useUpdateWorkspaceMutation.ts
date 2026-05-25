@@ -3,6 +3,7 @@ import type { UpdateWorkspaceInput, WorkspaceResponse } from "@gitiempo/shared";
 import { toValue, type MaybeRefOrGetter } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { workspaceQueryKeys } from "../keys";
 
 /* eslint-disable no-unused-vars */
 interface UpdateWorkspaceClient {
@@ -28,7 +29,7 @@ export const useUpdateWorkspaceMutation = (options: UseUpdateWorkspaceMutationOp
         input,
       ),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["workspace"] });
+      await queryClient.invalidateQueries({ queryKey: workspaceQueryKeys.workspace });
     },
   });
 };

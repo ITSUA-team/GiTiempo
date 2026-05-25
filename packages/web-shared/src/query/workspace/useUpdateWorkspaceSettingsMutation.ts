@@ -3,6 +3,7 @@ import type { UpdateWorkspaceSettingsInput, WorkspaceSettingsResponse } from "@g
 import { toValue, type MaybeRefOrGetter } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { workspaceQueryKeys } from "../keys";
 
 /* eslint-disable no-unused-vars */
 interface UpdateWorkspaceSettingsClient {
@@ -30,7 +31,7 @@ export const useUpdateWorkspaceSettingsMutation = (
         input,
       ),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["workspace_settings"] });
+      await queryClient.invalidateQueries({ queryKey: workspaceQueryKeys.settings });
     },
   });
 };

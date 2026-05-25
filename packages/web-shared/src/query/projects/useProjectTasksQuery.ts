@@ -3,6 +3,7 @@ import type { TaskResponse } from "@gitiempo/shared";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { projectQueryKeys } from "../keys";
 import { isQueryEnabled, type QueryAccessOptions } from "../query-options";
 
 /* eslint-disable no-unused-vars */
@@ -26,7 +27,7 @@ function requireProjectId(projectId: string | null | undefined): string {
 
 export const useProjectTasksQuery = (options: UseProjectTasksQueryOptions) =>
   useQuery({
-    queryKey: computed(() => ["project_tasks", toValue(options.projectId) ?? null]),
+    queryKey: computed(() => projectQueryKeys.projectTasks(toValue(options.projectId))),
     enabled: computed(() => isQueryEnabled(options) && Boolean(toValue(options.projectId))),
     queryFn: () =>
       options.client.listProjectTasks(

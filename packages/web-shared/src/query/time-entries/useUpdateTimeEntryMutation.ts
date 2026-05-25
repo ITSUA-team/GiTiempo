@@ -3,6 +3,7 @@ import type { TimeEntryResponse, UpdateTimeEntryInput } from "@gitiempo/shared";
 import { toValue, type MaybeRefOrGetter } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { timeEntryQueryKeys, timerQueryKeys } from "../keys";
 
 /* eslint-disable no-unused-vars */
 interface UpdateTimeEntryClient {
@@ -31,10 +32,9 @@ export const useUpdateTimeEntryMutation = (options: UseUpdateTimeEntryMutationOp
       ),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["own_time_entries"] }),
-        queryClient.invalidateQueries({ queryKey: ["recent_own_time_entries"] }),
-        queryClient.invalidateQueries({ queryKey: ["all_own_time_entries"] }),
-        queryClient.invalidateQueries({ queryKey: ["current_timer"] }),
+        queryClient.invalidateQueries({ queryKey: timeEntryQueryKeys.ownTimeEntriesRoot }),
+        queryClient.invalidateQueries({ queryKey: timeEntryQueryKeys.recentOwnTimeEntries }),
+        queryClient.invalidateQueries({ queryKey: timerQueryKeys.current }),
       ]);
     },
   });

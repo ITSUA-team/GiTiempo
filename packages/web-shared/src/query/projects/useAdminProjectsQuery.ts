@@ -3,6 +3,7 @@ import type { ProjectListResponse } from '@gitiempo/shared';
 import { computed, toValue } from 'vue';
 
 import { requireAccessToken } from '../access-token';
+import { projectQueryKeys } from '../keys';
 import { isQueryEnabled, type QueryAccessOptions } from '../query-options';
 
 /* eslint-disable no-unused-vars */
@@ -17,7 +18,7 @@ interface UseAdminProjectsQueryOptions extends QueryAccessOptions {
 
 export const useAdminProjectsQuery = (options: UseAdminProjectsQueryOptions) =>
   useQuery({
-    queryKey: ['admin_projects'],
+    queryKey: projectQueryKeys.adminProjects,
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () =>
       options.client.listProjects(

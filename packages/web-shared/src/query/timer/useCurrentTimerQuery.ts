@@ -3,6 +3,7 @@ import type { CurrentTimeEntryResponse } from "@gitiempo/shared";
 import { computed, toValue } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { timerQueryKeys } from "../keys";
 import { isQueryEnabled, type QueryAccessOptions } from "../query-options";
 
 /* eslint-disable no-unused-vars */
@@ -17,7 +18,7 @@ interface UseCurrentTimerQueryOptions extends QueryAccessOptions {
 
 export const useCurrentTimerQuery = (options: UseCurrentTimerQueryOptions) =>
   useQuery({
-    queryKey: ["current_timer"],
+    queryKey: timerQueryKeys.current,
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () =>
       options.client.getCurrentTimer(

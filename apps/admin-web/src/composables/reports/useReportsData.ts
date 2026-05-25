@@ -163,7 +163,7 @@ export function useReportsData({
       let page = 1;
       let totalPages = 1;
 
-      do {
+      while (page <= totalPages) {
         reportQueryInput.value = toTimeReportQuery(
           {
             dateRange: reportDateRange,
@@ -192,7 +192,7 @@ export function useReportsData({
         }));
         totalPages = Math.max(1, response.meta.totalPages);
         page += 1;
-      } while (page <= totalPages);
+      }
     }
 
     return nextRows;

@@ -3,6 +3,7 @@ import type { ManagementProjectSummaryResponse } from "@gitiempo/shared";
 import { computed, toValue } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { projectQueryKeys } from "../keys";
 import { isQueryEnabled, type QueryAccessOptions } from "../query-options";
 
 /* eslint-disable no-unused-vars */
@@ -19,7 +20,7 @@ export const useManagementProjectSummaryQuery = (
   options: UseManagementProjectSummaryQueryOptions,
 ) =>
   useQuery({
-    queryKey: ["management_project_summary"],
+    queryKey: projectQueryKeys.managementSummary,
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () =>
       options.client.getManagementSummary(

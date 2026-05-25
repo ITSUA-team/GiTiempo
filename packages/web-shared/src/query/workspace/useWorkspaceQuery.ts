@@ -3,6 +3,7 @@ import type { WorkspaceResponse } from "@gitiempo/shared";
 import { computed, toValue } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { workspaceQueryKeys } from "../keys";
 import { isQueryEnabled, type QueryAccessOptions } from "../query-options";
 
 /* eslint-disable no-unused-vars */
@@ -17,7 +18,7 @@ interface UseWorkspaceQueryOptions extends QueryAccessOptions {
 
 export const useWorkspaceQuery = (options: UseWorkspaceQueryOptions) =>
   useQuery({
-    queryKey: ["workspace"],
+    queryKey: workspaceQueryKeys.workspace,
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () =>
       options.client.getWorkspace(requireAccessToken(toValue(options.accessToken))),

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { toValue, type MaybeRefOrGetter } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { projectQueryKeys } from "../keys";
 
 /* eslint-disable no-unused-vars */
 interface DeleteTaskClient {
@@ -24,7 +25,7 @@ export const useDeleteTaskMutation = (options: UseDeleteTaskMutationOptions) => 
         taskId,
       ),
     onSuccess: async (_result, { projectId }) => {
-      await queryClient.invalidateQueries({ queryKey: ["project_tasks", projectId] });
+      await queryClient.invalidateQueries({ queryKey: projectQueryKeys.projectTasks(projectId) });
     },
   });
 };

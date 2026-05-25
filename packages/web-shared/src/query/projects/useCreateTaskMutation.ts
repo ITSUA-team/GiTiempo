@@ -3,6 +3,7 @@ import type { CreateTaskInput, TaskResponse } from "@gitiempo/shared";
 import { toValue, type MaybeRefOrGetter } from "vue";
 
 import { requireAccessToken } from "../access-token";
+import { projectQueryKeys } from "../keys";
 
 /* eslint-disable no-unused-vars */
 interface CreateTaskClient {
@@ -31,8 +32,8 @@ export const useCreateTaskMutation = (options: UseCreateTaskMutationOptions) => 
       ),
     onSuccess: async (_task, { projectId }) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["project_tasks", projectId] }),
-        queryClient.invalidateQueries({ queryKey: ["visible_projects"] }),
+        queryClient.invalidateQueries({ queryKey: projectQueryKeys.projectTasks(projectId) }),
+        queryClient.invalidateQueries({ queryKey: projectQueryKeys.visibleProjects }),
       ]);
     },
   });
