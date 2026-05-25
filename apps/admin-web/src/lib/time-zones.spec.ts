@@ -60,17 +60,29 @@ describe('getSettingsTimeZoneOptions', () => {
 	it('includes the current time zone when it is missing from the source', () => {
 		stubSupportedValuesOf(vi.fn().mockReturnValue(['Europe/London']));
 
-		const values = getSettingsTimeZoneOptions('Pacific/Auckland').map(
+		const values = getSettingsTimeZoneOptions(['Pacific/Auckland']).map(
 			(option) => option.value,
 		);
 
 		expect(values).toContain('Pacific/Auckland');
 	});
 
+	it('includes persisted and draft current time zones when both are missing from the source', () => {
+		stubSupportedValuesOf(vi.fn().mockReturnValue(['Europe/London']));
+
+		const values = getSettingsTimeZoneOptions([
+			'Pacific/Auckland',
+			'America/Phoenix',
+		]).map((option) => option.value);
+
+		expect(values).toContain('Pacific/Auckland');
+		expect(values).toContain('America/Phoenix');
+	});
+
 	it('does not include invalid current values as options', () => {
 		stubSupportedValuesOf(vi.fn().mockReturnValue(['Europe/London']));
 
-		const values = getSettingsTimeZoneOptions('Not/AZone').map(
+		const values = getSettingsTimeZoneOptions(['Not/AZone']).map(
 			(option) => option.value,
 		);
 
@@ -82,7 +94,7 @@ describe('getSettingsTimeZoneOptions', () => {
 			vi.fn().mockReturnValue(['Europe/Kyiv', 'Europe/Kyiv', 'UTC']),
 		);
 
-		const values = getSettingsTimeZoneOptions('Europe/Kyiv').map(
+		const values = getSettingsTimeZoneOptions(['Europe/Kyiv']).map(
 			(option) => option.value,
 		);
 

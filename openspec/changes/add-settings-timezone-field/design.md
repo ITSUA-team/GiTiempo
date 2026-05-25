@@ -11,7 +11,7 @@ The existing admin settings form state and validation already carry `timeZone` t
 - Add an editable `Time zone` selector to the Workspace section of the admin Settings card.
 - Keep the selector aligned with the existing 620px Settings card density, labels, 38px PrimeVue control height, bottom Save/Cancel flow, skeleton rhythm, and mobile stacking.
 - Source options from contract-valid time zones, preferring `Intl.supportedValuesOf('timeZone')` when available and falling back to a stable curated list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`.
-- Include the current persisted time zone in the option list even if it is not present in the runtime/fallback source.
+- Include the current persisted time zone and current draft/form time zone in the option list even if either is not present in the runtime/fallback source.
 - Save `timeZone` through the existing `/workspace/settings` update path only when the field changed.
 - Update admin Settings docs/specs so Time zone is no longer described as deferred.
 
@@ -32,7 +32,7 @@ The existing admin settings form state and validation already carry `timeZone` t
 
 2. Keep time-zone option generation admin-web local.
 
-   The option list is browser/UI behavior, not a backend-safe contract. Implement a small admin-web helper that returns `{ label, value }` options, uses `Intl.supportedValuesOf('timeZone')` when available, falls back to a stable curated list with `UTC` and IANA time-zone names, sorts `UTC` first, and appends the persisted value if missing.
+   The option list is browser/UI behavior, not a backend-safe contract. Implement a small admin-web helper that returns `{ label, value }` options, uses `Intl.supportedValuesOf('timeZone')` when available, falls back to a stable curated list with `UTC` and IANA time-zone names, sorts `UTC` first, and appends both the persisted value and draft/form value if missing.
 
    Alternative considered: move the option list into `@gitiempo/shared`. Rejected because `@gitiempo/shared` should stay contract-focused and backend-safe; the shared contract already validates the value.
 
@@ -44,13 +44,13 @@ The existing admin settings form state and validation already carry `timeZone` t
 
 4. Update the first-load skeleton and tests with the visible field.
 
-   The structured Settings skeleton should account for the additional Time zone row so first load still mirrors the final form. Tests should cover rendering, option fallback/current-value inclusion, validation failure, save payload, cancel reset, and request-error separation.
+   The structured Settings skeleton should account for the additional Time zone row so first load still mirrors the final form. Tests should cover rendering, option fallback/persisted-plus-draft current-value inclusion, validation failure, save payload, cancel reset, and request-error separation.
 
 ## Risks / Trade-offs
 
 - Browser support for `Intl.supportedValuesOf` can vary -> Use feature detection and a curated fallback list.
 - Long IANA identifiers can crowd the card -> Make Time zone full width and enable filtering in the PrimeVue selector.
-- Runtime option lists can omit a persisted valid value -> Always include the current persisted/form value when missing.
+- Runtime option lists can omit a persisted or draft valid value -> Always include both the current persisted value and current draft/form value when missing.
 - Invalid manually injected values can still reach form state in tests or edge cases -> Keep shared `updateWorkspaceSettingsSchema` validation before save and surface field-level errors.
 
 ## Migration Plan

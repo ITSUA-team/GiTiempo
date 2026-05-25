@@ -18,8 +18,8 @@
 ## 2. Time Zone Option Source
 
 - [x] 2.1 Add an admin-web-local time-zone option helper that returns stable `{ label, value }` options, uses `Intl.supportedValuesOf('timeZone')` when available, and falls back to a curated IANA list including `UTC` and `Europe/Kyiv`.
-- [x] 2.2 Ensure the option helper sorts `UTC` first, keeps option values as valid IANA identifiers, and includes the current persisted/form value when it is not already in the runtime or fallback option source.
-- [x] 2.3 Add focused tests for runtime option generation, fallback generation, current-value inclusion, and no duplicate option values.
+- [x] 2.2 Ensure the option helper sorts `UTC` first, keeps option values as valid IANA identifiers, and includes both the persisted value and current draft/form value when either is not already in the runtime or fallback option source.
+- [x] 2.3 Add focused tests for runtime option generation, fallback generation, persisted-plus-draft current-value inclusion, and no duplicate option values.
 
 ## 3. Settings Form UI And State
 

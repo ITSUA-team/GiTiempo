@@ -5,6 +5,8 @@ export interface SettingsTimeZoneOption {
 	value: string;
 }
 
+type CurrentTimeZoneValue = string | null | undefined;
+
 const FALLBACK_TIME_ZONES = [
 	'UTC',
 	'Africa/Cairo',
@@ -63,14 +65,17 @@ function compareTimeZones(a: string, b: string): number {
 }
 
 export function getSettingsTimeZoneOptions(
-	currentTimeZone?: string,
+	currentTimeZones: readonly CurrentTimeZoneValue[] = [],
 ): SettingsTimeZoneOption[] {
 	const source = getRuntimeTimeZones() ?? FALLBACK_TIME_ZONES;
 	const values = new Set<string>(['UTC', ...source]);
-	const current = currentTimeZone?.trim();
 
-	if (current && isValidTimeZoneName(current)) {
-		values.add(current);
+	for (const timeZone of currentTimeZones) {
+		const current = timeZone?.trim();
+
+		if (current && isValidTimeZoneName(current)) {
+			values.add(current);
+		}
 	}
 
 	return [...values].sort(compareTimeZones).map((value) => ({

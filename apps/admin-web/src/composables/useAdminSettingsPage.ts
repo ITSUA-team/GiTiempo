@@ -132,7 +132,9 @@ export function useAdminSettingsPage(
 			];
 	});
 
-	const timeZoneOptions = computed(() => getSettingsTimeZoneOptions(form.timeZone));
+	const timeZoneOptions = computed(() =>
+		getSettingsTimeZoneOptions([persisted.value?.timeZone, form.timeZone]),
+	);
 
 	async function loadSettings(action = 'load-settings'): Promise<void> {
 		const token = authStore.accessToken;
