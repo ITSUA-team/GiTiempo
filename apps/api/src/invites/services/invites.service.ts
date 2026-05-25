@@ -8,6 +8,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { and, eq } from 'drizzle-orm';
 import type {
   AcceptWorkspaceInviteInput,
@@ -18,13 +19,16 @@ import {
   FIREBASE_ADMIN,
   type FirebaseAdminService,
 } from '../../auth/services/firebase-admin.interface';
+import { normalizeEmail } from '../../commons/utils/normalize-email';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import type { Env } from '../../config/env.validation';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { UsersService } from '../../users/services/users.service';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { invites } from '../schemas/invites.schema';
 import { InviteDeliveryService } from './invite-delivery.service';
+import { buildInviteAcceptUrl } from './invite-url.helper';
 
 type InviteRow = typeof invites.$inferSelect;
 
@@ -33,6 +37,7 @@ export class InvitesService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     @Inject(FIREBASE_ADMIN) private readonly firebase: FirebaseAdminService,
+    private readonly config: ConfigService<Env, true>,
     private readonly users: UsersService,
     private readonly delivery: InviteDeliveryService,
   ) {}
@@ -92,9 +97,16 @@ export class InvitesService {
     if (!row) throw new Error('Failed to create invite');
 
     try {
+      const inviteUrl = buildInviteAcceptUrl(this.config, row.token);
+      await this.firebase.getOrCreateInvitedUserByEmail(email);
+      const passwordSetupUrl = await this.firebase.generatePasswordSetupLink(
+        email,
+        inviteUrl,
+      );
       await this.delivery.deliver({
         email,
-        token,
+        inviteUrl,
+        passwordSetupUrl,
         workspaceName: workspace.name,
       });
     } catch (error) {
@@ -209,8 +221,4 @@ export class InvitesService {
       createdAt: row.createdAt.toISOString(),
     };
   }
-}
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
 }

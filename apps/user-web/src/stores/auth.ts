@@ -10,7 +10,6 @@ import {
   getRefreshToken,
   setRefreshToken,
 } from "@gitiempo/web-shared/session-storage";
-
 import { getAuthRuntime } from "@/services/auth-runtime";
 
 function applyTokenPair(
@@ -98,23 +97,20 @@ export const useAuthStore = defineStore("auth", () => {
     return bootstrapPromise;
   }
 
-  async function loginWithEmailPassword(
-    email: string,
-    password: string,
-  ): Promise<void> {
+  async function exchangeFirebaseToken(firebaseIdToken: string): Promise<void> {
+    const tokenPair =
+      await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
+
+    applyTokenPair(accessToken, tokenPair);
+    await loadCurrentUser(tokenPair.accessToken);
+    bootstrapComplete.value = true;
+  }
+
+  async function withSubmitting(action: () => Promise<void>): Promise<void> {
     isSubmitting.value = true;
 
     try {
-      const firebaseIdToken = await getAuthRuntime().signInWithEmailPassword(
-        email,
-        password,
-      );
-      const tokenPair =
-        await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
-
-      applyTokenPair(accessToken, tokenPair);
-      await loadCurrentUser(tokenPair.accessToken);
-      bootstrapComplete.value = true;
+      await action();
     } catch (error) {
       clearSession();
       bootstrapComplete.value = true;
@@ -124,24 +120,30 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function runLoginFlow(
+    getFirebaseIdToken: () => Promise<string>,
+  ): Promise<void> {
+    await withSubmitting(async () => {
+      const firebaseIdToken = await getFirebaseIdToken();
+      await exchangeFirebaseToken(firebaseIdToken);
+    });
+  }
+
+  async function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
+    await withSubmitting(() => exchangeFirebaseToken(firebaseIdToken));
+  }
+
+  async function loginWithEmailPassword(
+    email: string,
+    password: string,
+  ): Promise<void> {
+    await runLoginFlow(() =>
+      getAuthRuntime().signInWithEmailPassword(email, password),
+    );
+  }
+
   async function loginWithGoogle(): Promise<void> {
-    isSubmitting.value = true;
-
-    try {
-      const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
-      const tokenPair =
-        await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
-
-      applyTokenPair(accessToken, tokenPair);
-      await loadCurrentUser(tokenPair.accessToken);
-      bootstrapComplete.value = true;
-    } catch (error) {
-      clearSession();
-      bootstrapComplete.value = true;
-      throw error;
-    } finally {
-      isSubmitting.value = false;
-    }
+    await runLoginFlow(() => getAuthRuntime().signInWithGoogle());
   }
 
   async function logout(): Promise<void> {
@@ -194,6 +196,7 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated,
     isBootstrapping,
     isSubmitting,
+    loginWithFirebaseToken,
     loginWithEmailPassword,
     loginWithGoogle,
     logout,

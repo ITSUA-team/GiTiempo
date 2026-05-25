@@ -9,7 +9,7 @@ The admin Settings page MUST replace the placeholder with a PrimeVue/Tailwind wo
 - **WHEN** an authenticated admin opens the Settings page
 - **THEN** the page renders a `Settings` header with supporting copy based on the approved `GITiempo.pen` Settings design
 - **AND** the page shows a single settings card sized to the approved 620px desktop treatment and responsive on small screens
-- **AND** the card renders editable current API fields for Workspace name, Default hourly rate, and Currency
+- **AND** the card renders editable current API fields for Workspace name, Default hourly rate, Currency, and Time zone
 - **AND** the card renders inactive future fields for Invoice prefix, Payment terms, Legal entity, and Tax ID matching the approved design sections
 - **AND** the page shows bottom-aligned `Cancel` and primary `Save Settings` actions
 
@@ -54,7 +54,7 @@ The admin Settings page MUST save changed current API fields through the existin
 - **GIVEN** the admin has changed one or more supported settings fields
 - **WHEN** the admin activates `Save Settings`
 - **THEN** workspace name changes are sent through `PATCH /workspace`
-- **AND** currency or default hourly rate changes are sent through `PATCH /workspace/settings`
+- **AND** currency, default hourly rate, or time zone changes are sent through `PATCH /workspace/settings`
 - **AND** unchanged resources are not patched just to satisfy request schemas
 - **AND** successful save refreshes or reconciles the rendered form from authoritative responses
 - **AND** successful workspace name save updates the authenticated admin shell workspace label from the authoritative response
