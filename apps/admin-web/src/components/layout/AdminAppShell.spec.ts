@@ -42,7 +42,6 @@ const WorkspaceHeaderStub = {
   emits: ["signOut"],
   template: `
     <header>
-      <a :href="counterpartHref">{{ counterpartLabel }}</a>
       <span>{{ workspaceName }}</span>
       <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
       <RouterLink data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
@@ -69,7 +68,7 @@ describe("AdminAppShell", () => {
     vi.unstubAllEnvs();
   });
 
-  it("preserves the visible user workspace link and shared navigation", async () => {
+  it("preserves the profile menu and shared navigation", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore(pinia);
@@ -101,13 +100,9 @@ describe("AdminAppShell", () => {
         },
       },
     });
-    const workspaceLink = wrapper.get(
-      'a[href="https://user.example.test/login"]',
-    );
     const settingsLinks = wrapper.findAll('a[href="/settings"]');
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
 
-    expect(workspaceLink.text()).toBe("User workspace");
     expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
     expect(settingsLink.text()).toBe("Settings");
     expect(settingsLink.attributes("href")).toBe("/settings");

@@ -184,17 +184,14 @@ describe("WorkspaceHeader", () => {
     document.body.innerHTML = "";
   });
 
-  it("renders workspace identity and counterpart link without center content", () => {
-    const counterpartHref = "https://admin.example.test/login";
+  it("renders workspace identity without standalone counterpart link", () => {
     const wrapper = mountHeader();
 
     expect(wrapper.text()).toContain("GiTiempo");
     expect(wrapper.text()).toContain("Workspace Alpha");
     expect(wrapper.text()).toContain("Alexey Tsukanov");
     expect(wrapper.text()).toContain("AT");
-    expect(wrapper.get(`a[href="${counterpartHref}"]`).text()).toBe(
-      "Admin workspace",
-    );
+    expect(wrapper.find(`a[href="${baseProps.counterpartHref}"]`).exists()).toBe(false);
     expect(wrapper.get('[aria-label="Open profile menu"]').text()).toContain(
       "AT",
     );
@@ -251,7 +248,7 @@ describe("WorkspaceHeader", () => {
     expect(signOutAction.attributes("role")).toBe("menuitem");
     expect(counterpartAction.attributes("role")).toBe("menuitem");
     expect(counterpartAction.attributes("href")).toBe(baseProps.counterpartHref);
-    expect(counterpartAction.classes()).toContain("sm:hidden");
+    expect(counterpartAction.classes()).not.toContain("sm:hidden");
     expect(counterpartAction.text()).toContain("Admin workspace");
     expect(wrapper.get('[data-testid="profile-menu"]').text()).toContain("Settings");
     expect(settingsLink.attributes("href")).toBe("/profile");
@@ -315,7 +312,7 @@ describe("WorkspaceHeader", () => {
     expect(trigger.attributes("aria-expanded")).toBe("false");
   });
 
-  it("closes the profile menu when the mobile counterpart action runs", async () => {
+  it("closes the profile menu when the counterpart workspace action runs", async () => {
     const wrapper = mountHeader({ attachTo: document.body });
     const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
 

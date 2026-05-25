@@ -22,7 +22,7 @@ describe("AppShell", () => {
     vi.unstubAllEnvs();
   });
 
-  it("preserves the visible admin workspace link, top-bar timer, and shared navigation", async () => {
+  it("preserves the top-bar timer, profile menu, and shared navigation", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore(pinia);
@@ -70,7 +70,6 @@ describe("AppShell", () => {
             emits: ["signOut"],
             template: `
               <header>
-                <a :href="counterpartHref">{{ counterpartLabel }}</a>
                 <slot name="center" />
                 <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
                 <RouterLink data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
@@ -81,14 +80,10 @@ describe("AppShell", () => {
         },
       },
     });
-    const workspaceLink = wrapper.get(
-      'a[href="https://admin.example.test/login"]',
-    );
     const profileLinks = wrapper.findAll('a[href="/profile"]');
     const timerLinks = wrapper.findAll('a[href="/timer"]');
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
 
-    expect(workspaceLink.text()).toBe("Admin workspace");
     expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
     expect(settingsLink.text()).toBe("Profile");
     expect(settingsLink.attributes("href")).toBe("/profile");

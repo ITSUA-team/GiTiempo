@@ -51,6 +51,7 @@ function createRunningEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEnt
     description: null,
     durationSeconds: null,
     endedAt: null,
+    githubIssue: null,
     id: "running-entry",
     isBillable: true,
     project: { id: "project-1", name: "Project Orion" },

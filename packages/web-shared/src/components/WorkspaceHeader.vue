@@ -163,12 +163,6 @@ onBeforeUnmount(() => {
       ref="profileMenuRegion"
       class="relative flex items-center gap-3"
     >
-      <a
-        :href="props.counterpartHref"
-        class="text-brand hidden text-[13px] font-semibold transition hover:underline sm:block"
-      >
-        {{ props.counterpartLabel }}
-      </a>
       <Button
         type="button"
         aria-controls="profile_menu"
@@ -212,7 +206,7 @@ onBeforeUnmount(() => {
         <template #start>
           <a
             :href="props.counterpartHref"
-            class="text-brand hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 sm:hidden"
+            class="text-brand hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2"
             data-testid="profile-menu-counterpart"
             role="menuitem"
             @click="closeProfileMenu()"
