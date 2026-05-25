@@ -1,14 +1,16 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { getAuth, type UserRecord } from 'firebase-admin/auth';
 import type { Env } from '../../config/env.validation';
 import type {
   DecodedFirebaseToken,
   FirebaseAdminService,
+  InvitedFirebaseUser,
 } from './firebase-admin.interface';
 
 const APP_NAME = 'gitiempo-api';
+const PASSWORD_SETUP_QUERY_KEYS = ['mode', 'oobCode'] as const;
 
 /**
  * Production Firebase Admin provider. Lazily initializes a single app
@@ -37,6 +39,81 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     } catch {
       throw new UnauthorizedException('Unauthorized');
     }
+  }
+
+  async getOrCreateInvitedUserByEmail(
+    email: string,
+  ): Promise<InvitedFirebaseUser> {
+    const auth = getAuth(this.getApp());
+
+    try {
+      const user = await auth.getUserByEmail(email);
+      return this.toInvitedUser(user, true);
+    } catch (error) {
+      if (!isFirebaseAuthError(error, 'auth/user-not-found')) {
+        throw new Error('Failed to provision invited Firebase user');
+      }
+    }
+
+    try {
+      const user = await auth.createUser({ email, emailVerified: false });
+      return this.toInvitedUser(user, false);
+    } catch (error) {
+      if (isFirebaseAuthError(error, 'auth/email-already-exists')) {
+        try {
+          const user = await auth.getUserByEmail(email);
+          return this.toInvitedUser(user, true);
+        } catch {
+          throw new Error('Failed to provision invited Firebase user');
+        }
+      }
+
+      throw new Error('Failed to provision invited Firebase user');
+    }
+  }
+
+  async generatePasswordSetupLink(
+    email: string,
+    continueUrl: string,
+  ): Promise<string> {
+    try {
+      const resetLink = await getAuth(this.getApp()).generatePasswordResetLink(
+        email,
+        { url: continueUrl },
+      );
+
+      return this.buildPasswordSetupUrl(resetLink, continueUrl);
+    } catch {
+      throw new Error('Failed to generate Firebase password setup link');
+    }
+  }
+
+  private buildPasswordSetupUrl(
+    resetLink: string,
+    continueUrl: string,
+  ): string {
+    const firebaseActionUrl = new URL(resetLink);
+    const passwordSetupUrl = new URL(
+      '/invites/password-setup',
+      this.getUserSpaUrl(),
+    );
+
+    for (const key of PASSWORD_SETUP_QUERY_KEYS) {
+      const value = firebaseActionUrl.searchParams.get(key);
+      if (value) {
+        passwordSetupUrl.searchParams.set(key, value);
+      }
+    }
+
+    const inviteReturnUrl =
+      firebaseActionUrl.searchParams.get('continueUrl') ?? continueUrl;
+    passwordSetupUrl.searchParams.set('continueUrl', inviteReturnUrl);
+
+    return passwordSetupUrl.toString();
+  }
+
+  private getUserSpaUrl(): string {
+    return this.config.get('USER_SPA_URL', { infer: true });
   }
 
   private getApp(): App {
@@ -69,4 +146,24 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     );
     return this.app;
   }
+
+  private toInvitedUser(
+    user: UserRecord,
+    isExistingUser: boolean,
+  ): InvitedFirebaseUser {
+    return {
+      uid: user.uid,
+      email: user.email ?? '',
+      isExistingUser,
+    };
+  }
+}
+
+function isFirebaseAuthError(error: unknown, code: string): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === code
+  );
 }

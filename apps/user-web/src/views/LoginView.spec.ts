@@ -126,6 +126,33 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.login);
   });
 
+  it("keeps login actions disabled while Firebase sign-in is still in progress", async () => {
+    let releaseProviderStep!: () => void;
+    const providerStep = new Promise<void>((resolve) => {
+      releaseProviderStep = resolve;
+    });
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithEmailPassword: async () => {
+          await providerStep;
+          return "firebase-email-token";
+        },
+      }),
+    );
+    const { wrapper } = await mountLoginView();
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="sign-in-submit"]').attributes("disabled")).toBeDefined();
+    expect(wrapper.get('[data-testid="sign-in-google"]').attributes("disabled")).toBeDefined();
+
+    releaseProviderStep();
+    await flushPromises();
+  });
+
   it("preserves the visible admin workspace link", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { wrapper } = await mountLoginView();

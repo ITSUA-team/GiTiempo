@@ -174,6 +174,9 @@ GitHub Actions stores deploy credentials and environment-specific values.
 | `VPS_SSH_KEY` | GitHub Environment secret | SSH private key used only by SSH validation/configuration steps |
 | `API_IMAGE` | VPS runtime env / workflow env | Selected GHCR image for Compose rollout and Compose interpolation |
 | `APP_URL` | VPS runtime env | Public API URL used by backend OAuth callback generation |
+| `USER_SPA_URL`, `ADMIN_SPA_URL` | VPS runtime env | Canonical SPA origins used by the API when generating app return links and cross-app redirects |
+| Firebase Authorized Domains / action-code config | Firebase project settings | Must include each deployed `USER_SPA_URL` origin required by invite password setup/reset flows |
+| `INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS` | Development only | Optional debug flag for full invite/setup URLs in console fallback; rejected outside `NODE_ENV=development` |
 | Registry credentials | GitHub Actions / GHCR integration | The runner logs into GHCR to push and smoke-test images; the workflow also performs a temporary VPS GHCR login with an ephemeral Docker config only for `docker compose pull` |
 | `GHCR_READ_TOKEN`, `GHCR_USERNAME` | Optional GitHub Environment secret/variable | Only needed if the default `GITHUB_TOKEN` cannot read the private GHCR package; the token is passed over SSH stdin and not stored in the VPS default Docker config |
 | API runtime env | VPS secret store or Compose `.env` on server | Not committed to git |
