@@ -1,6 +1,6 @@
 ## Context
 
-This change spans `apps/admin-web`, `apps/user-web`, and `packages/web-shared`. The primary UI feature remains the admin Members/Projects table filter work, but the implementation also consolidates shared management-table filter styling helpers and frontend date-boundary calculations that are now part of the branch. Relevant guidance includes `apps/admin-web/AGENTS.md`, `apps/user-web/AGENTS.md`, `packages/web-shared/AGENTS.md`, `docs/ui/INDEX.md`, `docs/ui/components.md`, `docs/ui/pages-admin.md`, and `docs/ui/pages-user.md`.
+This change spans `apps/admin-web` and `packages/web-shared`. The UI feature is the admin Members/Projects table filter work, plus shared presentational management-table filter styling helpers reused by admin management tables. Relevant guidance includes `apps/admin-web/AGENTS.md`, `packages/web-shared/AGENTS.md`, `docs/ui/INDEX.md`, `docs/ui/components.md`, and `docs/ui/pages-admin.md`.
 
 The approved `GITiempo.pen` screens show these parity targets:
 
@@ -14,9 +14,6 @@ Current implementation state:
 - `MembersTable.vue` renders the approved columns and row actions but has no global search or column filters.
 - `ProjectsTable.vue` has a standalone assigned-member select above the table/card list, but it does not match the approved report-style search and filter-row treatment.
 - `ManagementTableShell.vue` already provides a filter-row slot, so the implementation can reuse existing table chrome without changing shared component APIs.
-- Admin reports and dashboard view models already use local calendar boundaries for report export/default ranges and dashboard week calculations; the date-helper refactor must preserve those semantics.
-- User dashboard, Projects updated metadata, and Time Entries filters/day labels already use UTC calendar semantics; the date-helper refactor must preserve UTC behavior rather than switching to browser-local dates.
-- `@gitiempo/web-shared` owns the report filter form validation/query construction used by report export; its date-boundary behavior is frontend shared validation behavior, not a backend or `packages/shared` contract shape change.
 
 ## Goals / Non-Goals
 
@@ -25,7 +22,6 @@ Current implementation state:
 - Bring Members and Projects table discovery controls into parity with the approved `.pen` designs and the existing Reports table pattern.
 - Keep filtering frontend-only over already-loaded members, projects, and workspace members data.
 - Extract common management-table filter control styling into shared frontend leaves without moving product-specific filter state or option derivation out of the table components.
-- Preserve existing report export local-day boundaries and user-web UTC date boundaries while moving touched helper code to `date-fns` and `@date-fns/utc`.
 - Preserve existing row actions, inline expansions, mutation flows, loading behavior, request-error handling, and empty states.
 - Cover the user-visible filter behavior with focused admin-web component tests.
 
@@ -35,7 +31,7 @@ Current implementation state:
 - No server-side free-text search endpoint.
 - No change to role scope or which rows are loaded for admins or PMs.
 - No redesign of table columns, row action icons, stats cards, or page headers.
-- No behavioral switch between browser-local report/admin date boundaries and user-web UTC calendar boundaries.
+- No frontend date-helper refactor or dependency changes.
 
 ## Decisions
 
@@ -81,12 +77,6 @@ Management-table filter input classes and PrimeVue Select/MultiSelect pass-throu
 
 Alternative considered: keep identical filter styling objects in each admin table. That avoids a shared export but creates visual drift across Reports, Members, and Projects as filter controls evolve.
 
-### Treat date-fns adoption as behavior-preserving frontend normalization
-
-Date helper changes are scoped to frontend date-boundary calculations already present in the branch. Admin report export and dashboard calculations keep browser-local day/week semantics. Shared report filter query construction keeps local DatePicker day boundaries with `dateFrom` inclusive and `dateTo` exclusive. User dashboard, Projects updated labels, and Time Entries filters/day labels keep UTC calendar semantics through `@date-fns/utc`.
-
-Alternative considered: revert the date helper refactor from this change. The implementation currently depends on the new dependencies and helper rewrites, so the spec documents the actual scope and locks the expected behavior instead of leaving the branch appearing admin-only.
-
 ### Derive assignment filter data from loaded page data
 
 Project table member filters can use each project row's `members` array. Member table project filters can derive member-to-project assignments from the `projects` prop, which is already loaded for the assignment panel. The visible assignment-count column remains backed by `projectsAssignedCount`.
@@ -105,4 +95,3 @@ No PrimeVue-only compromises are expected for this change. Members, Projects, an
 - Filtered rows with an expanded edit/assignment row can leave stale expansion state hidden -> Mitigation: collapse or reconcile expanded rows when active filters exclude the expanded row.
 - Date-relative Last Active filters can be time-zone sensitive -> Mitigation: define filters using the browser's local day/week semantics and cover deterministic fixture dates in tests.
 - Member assigned-project filters depend on loaded project membership data -> Mitigation: treat project data as required initial Members page data; keep the initial loading surface until projects load and render the retryable request-error surface if they fail instead of showing an empty project filter.
-- Date helper normalization can silently shift query boundaries if local and UTC semantics are mixed -> Mitigation: document report/admin local boundaries separately from user-web UTC boundaries and keep targeted date-helper tests for touched report/user surfaces.

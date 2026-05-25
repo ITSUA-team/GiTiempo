@@ -83,9 +83,6 @@ importers:
       '@vueuse/core':
         specifier: ^14.2.1
         version: 14.2.1(vue@3.5.32(typescript@6.0.3))
-      date-fns:
-        specifier: ^4.2.1
-        version: 4.2.1
       firebase:
         specifier: ^12.4.0
         version: 12.12.1
@@ -338,9 +335,6 @@ importers:
 
   apps/user-web:
     dependencies:
-      '@date-fns/utc':
-        specifier: ^2.1.1
-        version: 2.1.1
       '@gitiempo/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -359,9 +353,6 @@ importers:
       '@vueuse/core':
         specifier: ^14.2.1
         version: 14.2.1(vue@3.5.32(typescript@6.0.3))
-      date-fns:
-        specifier: ^4.2.1
-        version: 4.2.1
       firebase:
         specifier: ^12.4.0
         version: 12.12.1
@@ -443,9 +434,6 @@ importers:
       '@primevue/forms':
         specifier: ^4.5.5
         version: 4.5.5(vue@3.5.32(typescript@5.9.3))
-      date-fns:
-        specifier: ^4.2.1
-        version: 4.2.1
       firebase:
         specifier: ^12.4.0
         version: 12.12.1
@@ -634,9 +622,6 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
-
-  '@date-fns/utc@2.1.1':
-    resolution: {integrity: sha512-SlJDfG6RPeEX8wEVv6ZB3kak4MmbtyiI2qX/5zuKdordbrhB/iaJ58GVMZgJ6P1sJaM1gMgENFYYeg1JWrCFrA==}
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
@@ -3458,9 +3443,6 @@ packages:
     resolution: {integrity: sha512-euIQENZg6x8mj3fO6o9+fOW8MimUI4PpD/fZBhJfeioZVy9TUpM4UY7KjQNVZFlqwJ0UdzRDzkycB997HEq1BQ==}
     engines: {node: '>=20'}
 
-  date-fns@4.2.1:
-    resolution: {integrity: sha512-37RhSdxaG1suen6VDCza6rNrQfooyQh57HFVPwQGEq2QWliVLzPQZ8Oa017weOu+HZCnzI7N3Pf/wyoBKfEqrA==}
-
   dateformat@4.6.3:
     resolution: {integrity: sha512-2P0p0pFGzHS5EMnhdxQi7aJN+iMheud0UhG4dlE1DLAlvL8JHjJJTX/CSm4JXwV0Ka5nGk3zC5mcb5bUQUxxMA==}
 
@@ -6130,8 +6112,6 @@ snapshots:
       css-tree: 3.2.1
 
   '@csstools/css-tokenizer@4.0.0': {}
-
-  '@date-fns/utc@2.1.1': {}
 
   '@drizzle-team/brocli@0.10.2': {}
 
@@ -8881,8 +8861,6 @@ snapshots:
     dependencies:
       whatwg-mimetype: 5.0.0
       whatwg-url: 15.1.0
-
-  date-fns@4.2.1: {}
 
   dateformat@4.6.3: {}
 

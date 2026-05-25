@@ -4,7 +4,6 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from '@heroicons/vue/24/outline';
-import { isSameDay, startOfWeek } from 'date-fns';
 import { computed, reactive, ref, watch } from 'vue';
 import type {
   ProjectListResponse,
@@ -166,6 +165,24 @@ function getLastActiveDate(member: WorkspaceMemberResponse): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function isSameLocalDate(first: Date, second: Date): boolean {
+  return (
+    first.getFullYear() === second.getFullYear() &&
+    first.getMonth() === second.getMonth() &&
+    first.getDate() === second.getDate()
+  );
+}
+
+function getLocalWeekStart(date: Date): Date {
+  const day = date.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() + mondayOffset);
+
+  weekStart.setHours(0, 0, 0, 0);
+
+  return weekStart;
+}
+
 function matchesLastActiveFilter(member: WorkspaceMemberResponse): boolean {
   if (filters.lastActive === 'any') {
     return true;
@@ -184,10 +201,10 @@ function matchesLastActiveFilter(member: WorkspaceMemberResponse): boolean {
   const now = new Date();
 
   if (filters.lastActive === 'today') {
-    return isSameDay(lastActiveDate, now);
+    return isSameLocalDate(lastActiveDate, now);
   }
 
-  return lastActiveDate >= startOfWeek(now, { weekStartsOn: 1 }) && lastActiveDate <= now;
+  return lastActiveDate >= getLocalWeekStart(now) && lastActiveDate <= now;
 }
 
 function getMemberProjectOptions(member: WorkspaceMemberResponse): FilterOption[] {

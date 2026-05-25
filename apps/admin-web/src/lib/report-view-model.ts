@@ -8,7 +8,6 @@ import {
   type TimeReportResponse,
   type TimeReportRow,
 } from '@gitiempo/shared';
-import { addDays, startOfDay, startOfMonth } from 'date-fns';
 import {
   reportDateRangeErrorMessage,
   reportDateRangeSchema,
@@ -58,8 +57,8 @@ export const emptyReportSummaryView = reportSummaryViewSchema.parse({
 
 export function getDefaultReportDateRange(now = new Date()): ReportDateRange {
   return reportDateRangeSchema.parse([
-    startOfMonth(now),
-    startOfDay(now),
+    new Date(now.getFullYear(), now.getMonth(), 1),
+    new Date(now.getFullYear(), now.getMonth(), now.getDate()),
   ]);
 }
 
@@ -176,11 +175,19 @@ export function deriveMemberOptions(
 
 function startOfLocalDayIso(date: Date): string {
   // DatePicker returns the user's local calendar day; the API expects timestamp boundaries.
-  return startOfDay(date).toISOString();
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).toISOString();
 }
 
 function nextLocalDayStartIso(date: Date): string {
-  return addDays(startOfDay(date), 1).toISOString();
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate() + 1,
+  ).toISOString();
 }
 
 function toReportDateQuery(

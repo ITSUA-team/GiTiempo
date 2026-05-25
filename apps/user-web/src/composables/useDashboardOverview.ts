@@ -1,7 +1,5 @@
 import type { TimeEntryResponse } from "@gitiempo/shared";
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
-import { UTCDateMini } from "@date-fns/utc";
-import { addDays, startOfDay, startOfISOWeek } from "date-fns";
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 import { useToast } from "primevue/usetoast";
 
@@ -65,8 +63,21 @@ const defaultClient: DashboardOverviewClient = createTimeEntriesClient({
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
 });
 
-function toUtcDate(date: Date | number): Date {
-  return new UTCDateMini(date instanceof Date ? date.getTime() : date);
+function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function startOfUtcIsoWeek(date: Date): Date {
+  const utcDay = date.getUTCDay();
+  const diffToMonday = utcDay === 0 ? 6 : utcDay - 1;
+
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - diffToMonday),
+  );
+}
+
+function addUtcDays(date: Date, days: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
 }
 
 function formatCompactDuration(totalSeconds: number): string {
@@ -215,13 +226,11 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   });
 
   const dashboardStats = computed<DashboardStat[]>(() => {
-    const utcNow = toUtcDate(nowMs.value);
-    const todayStart = startOfDay(utcNow);
-    const weekStart = startOfISOWeek(utcNow);
-    const todayStartMs = todayStart.getTime();
-    const tomorrowStartMs = addDays(todayStart, 1).getTime();
-    const weekStartMs = weekStart.getTime();
-    const nextWeekStartMs = addDays(weekStart, 7).getTime();
+    const nowDate = new Date(nowMs.value);
+    const todayStartMs = startOfUtcDay(nowDate).getTime();
+    const tomorrowStartMs = addUtcDays(startOfUtcDay(nowDate), 1).getTime();
+    const weekStartMs = startOfUtcIsoWeek(nowDate).getTime();
+    const nextWeekStartMs = addUtcDays(startOfUtcIsoWeek(nowDate), 7).getTime();
 
     let todayTrackedSeconds = 0;
     let weekTrackedSeconds = 0;
@@ -281,9 +290,9 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   });
 
   const weeklyFocus = computed<DashboardWeeklyFocus>(() => {
-    const weekStart = startOfISOWeek(toUtcDate(nowMs.value));
-    const weekStartMs = weekStart.getTime();
-    const nextWeekStartMs = addDays(weekStart, 7).getTime();
+    const nowDate = new Date(nowMs.value);
+    const weekStartMs = startOfUtcIsoWeek(nowDate).getTime();
+    const nextWeekStartMs = addUtcDays(startOfUtcIsoWeek(nowDate), 7).getTime();
     const projectMap = new Map<string, FocusAccumulator>();
     const taskMap = new Map<string, FocusAccumulator>();
     let totalTrackedSeconds = 0;
@@ -371,16 +380,17 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   }
 
   async function loadWeekEntries(accessToken: string): Promise<TimeEntryResponse[]> {
-    const weekStart = startOfISOWeek(toUtcDate(now()));
-    const nextWeekStart = addDays(weekStart, 7);
+    const nowDate = new Date(now());
+    const weekStart = startOfUtcIsoWeek(nowDate).toISOString();
+    const nextWeekStart = addUtcDays(startOfUtcIsoWeek(nowDate), 7).toISOString();
     const items: TimeEntryResponse[] = [];
     let currentPage = 1;
     let totalPages = 1;
 
     do {
       const response = await client.listOwnEntries(accessToken, {
-        dateFrom: weekStart.toISOString(),
-        dateTo: nextWeekStart.toISOString(),
+        dateFrom: weekStart,
+        dateTo: nextWeekStart,
         limit: 100,
         page: currentPage,
       });

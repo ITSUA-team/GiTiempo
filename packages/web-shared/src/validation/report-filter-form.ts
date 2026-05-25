@@ -1,4 +1,3 @@
-import { addDays, startOfDay } from "date-fns";
 import { z } from "zod";
 import {
   timeReportExportQuerySchema,
@@ -54,11 +53,19 @@ function getReportDateRangeError(dateRange: ReportFilterDateRange): string | nul
 }
 
 function startOfLocalDayIso(date: Date): string {
-  return startOfDay(date).toISOString();
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).toISOString();
 }
 
 function nextLocalDayStartIso(date: Date): string {
-  return addDays(startOfDay(date), 1).toISOString();
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate() + 1,
+  ).toISOString();
 }
 
 function toReportExportQuery(

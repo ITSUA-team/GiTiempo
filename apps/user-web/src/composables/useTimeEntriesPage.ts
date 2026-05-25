@@ -13,8 +13,6 @@ import {
   type ConfirmLike,
   type ToastLike,
 } from "@gitiempo/web-shared";
-import { UTCDateMini } from "@date-fns/utc";
-import { addDays, format, isSameDay, startOfDay, subDays } from "date-fns";
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -97,25 +95,42 @@ function formatUtcTime(isoDateTime: string): string {
   return `${hours}:${minutes}`;
 }
 
-function toUtcDate(date: Date | number | string): Date {
-  return new UTCDateMini(date instanceof Date ? date.getTime() : date);
-}
-
-function parseUtcDateKey(dateKey: string): Date {
-  return toUtcDate(`${dateKey}T00:00:00.000Z`);
-}
-
 function formatUtcDayLabel(dateKey: string, nowMs: number): string {
-  const target = parseUtcDateKey(dateKey);
-  const today = toUtcDate(nowMs);
-  const yesterday = subDays(startOfDay(today), 1);
-  const dateLabel = format(target, "MMM d");
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const monthLabels = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const target = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1));
+  const today = new Date(nowMs);
+  const todayKey = [
+    today.getUTCFullYear(),
+    String(today.getUTCMonth() + 1).padStart(2, "0"),
+    String(today.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+  const yesterday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 1));
+  const yesterdayKey = [
+    yesterday.getUTCFullYear(),
+    String(yesterday.getUTCMonth() + 1).padStart(2, "0"),
+    String(yesterday.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+  const dateLabel = `${monthLabels[target.getUTCMonth()]} ${target.getUTCDate()}`;
 
-  if (isSameDay(target, today)) {
+  if (dateKey === todayKey) {
     return `Today, ${dateLabel}`;
   }
 
-  if (isSameDay(target, yesterday)) {
+  if (dateKey === yesterdayKey) {
     return `Yesterday, ${dateLabel}`;
   }
 
@@ -152,6 +167,14 @@ function formatRunningDuration(startedAt: string, nowMs: number): string {
     String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, "0"),
     String(elapsedSeconds % 60).padStart(2, "0"),
   ].join(":");
+}
+
+function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function nextUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1));
 }
 
 export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
@@ -307,8 +330,8 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
           : "";
 
     return {
-      dateFrom: startDate ? startOfDay(toUtcDate(startDate)).toISOString() : undefined,
-      dateTo: endDate ? addDays(startOfDay(toUtcDate(endDate)), 1).toISOString() : undefined,
+      dateFrom: startDate ? startOfUtcDay(startDate).toISOString() : undefined,
+      dateTo: endDate ? nextUtcDay(endDate).toISOString() : undefined,
       limit: pageSize.value,
       page: currentPage.value,
       projectId: selectedProjectId.value ?? undefined,

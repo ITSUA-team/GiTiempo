@@ -10,7 +10,6 @@ import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
 } from '@gitiempo/shared';
-import { isSameDay, isSameMonth, startOfWeek } from 'date-fns';
 
 export type AdminDashboardActivityType = 'invite' | 'member' | 'project' | 'time';
 
@@ -64,6 +63,21 @@ function parseTimestamp(value: string | null): number | null {
 
   const timestamp = new Date(value).getTime();
   return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function isSameLocalDate(first: Date, second: Date): boolean {
+  return (
+    first.getFullYear() === second.getFullYear() &&
+    first.getMonth() === second.getMonth() &&
+    first.getDate() === second.getDate()
+  );
+}
+
+function isSameLocalMonth(first: Date, second: Date): boolean {
+  return (
+    first.getFullYear() === second.getFullYear() &&
+    first.getMonth() === second.getMonth()
+  );
 }
 
 function getMemberDisplayName(member: WorkspaceMemberResponse): string {
@@ -215,10 +229,18 @@ export function getDashboardWeekRange(now = new Date()): {
   dateFrom: string;
   dateTo: string;
 } {
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const day = now.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const startOfWeek = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + mondayOffset,
+  );
+
+  startOfWeek.setHours(0, 0, 0, 0);
 
   return {
-    dateFrom: weekStart.toISOString(),
+    dateFrom: startOfWeek.toISOString(),
     dateTo: now.toISOString(),
   };
 }
@@ -229,12 +251,12 @@ function deriveAdminDashboardStats(
 ): AdminDashboardStatCard[] {
   const trackedToday = members.filter((member) => {
     const timestamp = parseTimestamp(member.lastActiveAt);
-    return timestamp !== null && isSameDay(new Date(timestamp), now);
+    return timestamp !== null && isSameLocalDate(new Date(timestamp), now);
   }).length;
   const pendingInvites = invites.filter((invite) => invite.status === 'pending').length;
   const projectsAddedThisMonth = projects.filter((project) => {
     const timestamp = parseTimestamp(project.createdAt);
-    return timestamp !== null && isSameMonth(new Date(timestamp), now);
+    return timestamp !== null && isSameLocalMonth(new Date(timestamp), now);
   }).length;
 
   return [

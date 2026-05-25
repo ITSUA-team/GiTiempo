@@ -12,8 +12,6 @@ import {
   type ConfirmLike,
   type ToastLike,
 } from "@gitiempo/web-shared";
-import { UTCDateMini } from "@date-fns/utc";
-import { startOfDay, subDays } from "date-fns";
 import { computed, onMounted, ref, shallowRef } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -91,15 +89,13 @@ function formatUtcTime(isoDateTime: string): string {
   return `${String(date.getUTCHours()).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(2, "0")}`;
 }
 
-function toUtcDate(date: Date | number): Date {
-  return new UTCDateMini(date instanceof Date ? date.getTime() : date);
-}
-
 function formatUpdatedLabel(isoDateTime: string): string {
   const dayKey = getUtcDateKey(isoDateTime);
   const now = new Date();
   const todayKey = getUtcDateKey(now.toISOString());
-  const yesterday = subDays(startOfDay(toUtcDate(now)), 1);
+  const yesterday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1),
+  );
   const yesterdayKey = getUtcDateKey(yesterday.toISOString());
 
   if (dayKey === todayKey) {
