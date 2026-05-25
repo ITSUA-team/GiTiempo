@@ -138,10 +138,13 @@ describe('Auth (e2e)', () => {
       const statuses = [res1.status, res2.status].sort();
       expect(statuses).toEqual([200, 401]);
 
-      const replay = await request(app.getHttpServer())
+      const winningRefreshToken =
+        res1.status === 200 ? res1.body.refreshToken : res2.body.refreshToken;
+
+      const winnerStillWorks = await request(app.getHttpServer())
         .post('/auth/refresh')
-        .send({ refreshToken: session.refreshToken });
-      expect(replay.status).toBe(401);
+        .send({ refreshToken: winningRefreshToken });
+      expect(winnerStillWorks.status).toBe(200);
     });
   });
 });
