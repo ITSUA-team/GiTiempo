@@ -41,4 +41,22 @@ describe('SettingsPageSkeleton', () => {
     expect(actionPlaceholders[0]?.classes()).toContain('sm:w-[5.5rem]');
     expect(actionPlaceholders[1]?.classes()).toContain('sm:w-[8.5rem]');
   });
+
+  it('mirrors the added Time zone field row in the workspace section', () => {
+    const wrapper = mount(SettingsPageSkeleton, {
+      global: {
+        stubs: {
+          Skeleton: { template: '<div data-testid="skeleton" />' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+    });
+
+    const timeZoneRow = wrapper.get('[data-testid="settings-skeleton-time-zone"]');
+
+    expect(timeZoneRow.classes()).toEqual(
+      expect.arrayContaining(['flex', 'flex-col', 'gap-1.5']),
+    );
+    expect(timeZoneRow.findAll('[data-testid="skeleton"]')).toHaveLength(2);
+  });
 });

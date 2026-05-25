@@ -46,6 +46,8 @@ function createTask(id: string, projectId: string, title: string, isActive = tru
 }
 
 function createRunningEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
+  const { githubIssue = null, ...entryOverrides } = overrides;
+
   return {
     createdAt: "2026-04-21T09:00:00.000Z",
     description: null,
@@ -69,7 +71,8 @@ function createRunningEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEnt
     },
     userId: "user-1",
     workspaceId: "workspace-1",
-    ...overrides,
+    githubIssue,
+    ...entryOverrides,
   };
 }
 
