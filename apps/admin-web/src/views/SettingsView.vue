@@ -1,30 +1,108 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { SectionHeader, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
 import SettingsForm from '@/components/settings/SettingsForm.vue';
 import SettingsPageSkeleton from '@/components/settings/SettingsPageSkeleton.vue';
-import { useAdminSettingsPage } from '@/composables/settings/useAdminSettingsPage';
+import { useToasts } from '@/composables/feedback/useToasts';
+import { useAdminSettingsData } from '@/composables/settings/useAdminSettingsData';
+import { useAdminSettingsForm } from '@/composables/settings/useAdminSettingsForm';
+import { useAdminSettingsPersistence } from '@/composables/settings/useAdminSettingsPersistence';
+import { toAdminSettingsFormValues } from '@/composables/settings/admin-settings-form';
+import { useAuthStore } from '@/stores/auth';
 
+const authStore = useAuthStore();
+const { errorToast, successToast } = useToasts();
+const accessToken = computed(() => authStore.accessToken);
+const settingsForm = useAdminSettingsForm();
+const settingsData = useAdminSettingsData({
+  accessToken,
+  onError(message, error, action) {
+    errorToast(message, {
+      error,
+      logContext: { action, feature: 'settings' },
+    });
+  },
+});
+const settingsPersistence = useAdminSettingsPersistence({
+  accessToken,
+  onError(message, error) {
+    errorToast(message, {
+      error,
+      logContext: { action: 'save-settings', feature: 'settings' },
+    });
+  },
+});
 const {
-	canSave,
-	currencyOptions,
-	fieldErrors,
-	form,
-	initialLoaded,
-	isDirty,
-	loadSettings,
-	loading,
-	requestError,
-	resetForm,
-	retryLoad,
-	saveSettings,
-	saving,
-} = useAdminSettingsPage();
+  currencyOptions,
+  fieldErrors,
+  form,
+  isDirty,
+  persisted,
+  resetForm,
+  validateForm,
+} = settingsForm;
+const {
+  initialLoaded,
+  loadSettings,
+  loading,
+  requestError,
+  retryLoad,
+} = settingsData;
+const { saveSettings: persistSettings, saving } = settingsPersistence;
+const canSave = computed(() => isDirty.value && !saving.value && !loading.value);
+
+function syncWorkspaceName(values = persisted.value): void {
+  if (!values) return;
+  authStore.setWorkspaceName(values.workspaceName);
+}
+
+async function loadSettingsForm(): Promise<void> {
+  const nextData = await loadSettings();
+  if (!nextData) return;
+
+  const values = toAdminSettingsFormValues(nextData.workspace, nextData.settings);
+  settingsForm.applyPersistedValues(values);
+  syncWorkspaceName(values);
+}
+
+async function retryLoadSettings(): Promise<void> {
+  const nextData = await retryLoad();
+  if (!nextData) return;
+
+  const values = toAdminSettingsFormValues(nextData.workspace, nextData.settings);
+  settingsForm.applyPersistedValues(values);
+  syncWorkspaceName(values);
+}
+
+async function saveSettings(): Promise<void> {
+  const validation = validateForm();
+  const result = await persistSettings({
+    current: persisted.value,
+    settings: settingsData.settings.value,
+    values: validation.values,
+    workspace: settingsData.workspace.value,
+  });
+
+  if (!result) return;
+
+  if (!result.wroteChanges) {
+    settingsForm.assignFormValues(result.values);
+    return;
+  }
+
+  settingsData.applySettingsData({
+    settings: result.settings,
+    workspace: result.workspace,
+  });
+  settingsForm.applyPersistedValues(result.values);
+  syncWorkspaceName(result.values);
+  successToast('Settings saved.');
+}
 
 onMounted(() => {
-	void loadSettings();
+  void loadSettingsForm();
 });
 </script>
 
@@ -56,7 +134,7 @@ onMounted(() => {
             severity="secondary"
             outlined
             :loading="loading"
-            @click="retryLoad"
+            @click="retryLoadSettings"
           />
         </div>
       </SurfaceCard>

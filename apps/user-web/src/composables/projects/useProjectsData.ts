@@ -1,10 +1,7 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 import {
-  useCreateTaskMutation,
-  useDeleteTaskMutation,
   useProjectTasksQuery,
-  useUpdateTaskMutation,
   useVisibleProjectsQuery,
 } from "@gitiempo/web-shared/query";
 import { computed, nextTick, ref, shallowRef, type ComputedRef } from "vue";
@@ -48,19 +45,6 @@ export function useProjectsData({
     enabled: false,
     projectId: projectTasksProjectId,
   });
-  const createTaskMutation = useCreateTaskMutation({
-    accessToken,
-    client,
-  });
-  const updateTaskMutation = useUpdateTaskMutation({
-    accessToken,
-    client,
-  });
-  const deleteTaskMutation = useDeleteTaskMutation({
-    accessToken,
-    client,
-  });
-
   async function loadVisibleProjects(): Promise<ProjectResponse[]> {
     isLoadingProjects.value = true;
 
@@ -171,8 +155,6 @@ export function useProjectsData({
   }
 
   return {
-    createTaskMutation,
-    deleteTaskMutation,
     isLoadingProjects,
     isLoadingTasks,
     loadPage,
@@ -180,7 +162,6 @@ export function useProjectsData({
     requestErrorMessage,
     taskLoadErrors,
     tasksByProjectId: computed(() => tasksByProjectId.value),
-    updateTaskMutation,
     upsertTask,
     visibleProjects,
   };

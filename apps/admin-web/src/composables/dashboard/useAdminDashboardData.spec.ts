@@ -1,4 +1,4 @@
-import { defineComponent, shallowRef } from 'vue';
+import { defineComponent, onMounted, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type {
@@ -10,9 +10,10 @@ import type {
   WorkspaceMemberResponse,
 } from '@gitiempo/shared';
 
+import { ADMIN_DASHBOARD_REPORT_PAGE_LIMIT } from '@/constants/admin-dashboard';
 import { getDashboardWeekRange } from '@/lib/admin-dashboard-view-model';
 import { createTestQueryPlugin } from '@/test/query-client';
-import { useAdminDashboardPage } from './useAdminDashboardPage';
+import { useAdminDashboardData } from './useAdminDashboardData';
 
 const workspaceId = '33333333-3333-4333-8333-333333333333';
 const now = new Date('2026-05-13T12:00:00.000Z');
@@ -100,7 +101,12 @@ function createReport(items: TimeReportProjectRow[]): TimeReportResponse {
     dateRange: getDashboardWeekRange(now),
     groupBy: 'project',
     items,
-    meta: { limit: 100, page: 1, total: items.length, totalPages: 1 },
+    meta: {
+      limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
+      page: 1,
+      total: items.length,
+      totalPages: 1,
+    },
     summary: {
       billableSeconds: totalSeconds,
       billableShare: totalSeconds > 0 ? 1 : null,
@@ -111,7 +117,7 @@ function createReport(items: TimeReportProjectRow[]): TimeReportResponse {
   };
 }
 
-function createDashboardClients({
+export function createDashboardClients({
   invites = [createInvite('invite-1', '2026-05-13T10:00:00.000Z')],
   members = [createMember('alex', 'Alex Admin', '2026-05-13T11:58:00.000Z')],
   projectSummary = {
@@ -146,18 +152,19 @@ function createDashboardClients({
 }
 
 function mountDashboard(
-  options: Partial<Parameters<typeof useAdminDashboardPage>[0]> = {},
+  options: Partial<Parameters<typeof useAdminDashboardData>[0]> = {},
 ) {
-  let dashboard!: ReturnType<typeof useAdminDashboardPage>;
+  let dashboard!: ReturnType<typeof useAdminDashboardData>;
 
   mount(
     defineComponent({
       setup() {
-        dashboard = useAdminDashboardPage({
+        dashboard = useAdminDashboardData({
           accessToken: shallowRef('access-token'),
           now: () => now,
           ...options,
         });
+        onMounted(dashboard.refresh);
         return () => null;
       },
     }),
@@ -171,7 +178,7 @@ function mountDashboard(
   return dashboard;
 }
 
-describe('useAdminDashboardPage', () => {
+describe('useAdminDashboardData', () => {
   it('loads dashboard stats and recent activity through existing clients', async () => {
     const clients = createDashboardClients();
     const dashboard = mountDashboard(clients);
@@ -189,7 +196,7 @@ describe('useAdminDashboardPage', () => {
       expect.objectContaining({
         ...getDashboardWeekRange(now),
         groupBy: 'project',
-        limit: 100,
+        limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
         page: 1,
         sortBy: 'lastStartedAt',
         sortOrder: 'desc',
@@ -203,7 +210,7 @@ describe('useAdminDashboardPage', () => {
       'Pending Invites',
       'Active Projects',
     ]);
-    expect(dashboard.activityRows.value.map((row) => row.type)).toEqual([
+    expect(dashboard.allActivityRows.value.map((row) => row.type)).toEqual([
       'member',
       'time',
       'invite',
@@ -222,21 +229,6 @@ describe('useAdminDashboardPage', () => {
 
     expect(clients.membersClient.listMembers).not.toHaveBeenCalled();
     expect(clients.membersClient.listInvites).not.toHaveBeenCalled();
-    expect(clients.projectsClient.getManagementSummary).toHaveBeenCalledWith(
-      'access-token',
-    );
-    expect(clients.projectsClient.listProjects).toHaveBeenCalledWith('access-token');
-    expect(clients.reportsClient.getTimeReport).toHaveBeenCalledWith(
-      'access-token',
-      expect.objectContaining({
-        ...getDashboardWeekRange(now),
-        groupBy: 'project',
-        limit: 100,
-        page: 1,
-        sortBy: 'lastStartedAt',
-        sortOrder: 'desc',
-      }),
-    );
     expect(dashboard.loadError.value).toBeNull();
     expect(dashboard.stats.value.map((stat) => stat.label)).toEqual([
       'Active Projects',
@@ -244,7 +236,7 @@ describe('useAdminDashboardPage', () => {
       'Public Projects',
       'Private Projects',
     ]);
-    expect(dashboard.activityRows.value.map((row) => row.type)).toEqual([
+    expect(dashboard.allActivityRows.value.map((row) => row.type)).toEqual([
       'time',
       'project',
     ]);
@@ -314,38 +306,7 @@ describe('useAdminDashboardPage', () => {
     );
   });
 
-  it('previews five activity rows and expands when more rows are available', async () => {
-    const clients = createDashboardClients({
-      invites: Array.from({ length: 6 }, (_, index) =>
-        createInvite(
-          `invite-${index + 1}`,
-          `2026-05-13T10:0${index}:00.000Z`,
-        ),
-      ),
-      members: [],
-      projects: [],
-      report: createReport([]),
-    });
-    const dashboard = mountDashboard(clients);
-
-    await flushPromises();
-
-    expect(dashboard.hasMoreActivity.value).toBe(true);
-    expect(dashboard.showAllActivity.value).toBe(false);
-    expect(dashboard.activityRows.value).toHaveLength(5);
-
-    dashboard.toggleActivityRows();
-
-    expect(dashboard.showAllActivity.value).toBe(true);
-    expect(dashboard.activityRows.value).toHaveLength(6);
-
-    dashboard.toggleActivityRows();
-
-    expect(dashboard.showAllActivity.value).toBe(false);
-    expect(dashboard.activityRows.value).toHaveLength(5);
-  });
-
-  it('exposes a successful empty activity state distinctly', async () => {
+  it('exposes a successful empty activity source distinctly', async () => {
     const clients = createDashboardClients({
       invites: [],
       members: [],
@@ -357,7 +318,6 @@ describe('useAdminDashboardPage', () => {
     await flushPromises();
 
     expect(dashboard.loadError.value).toBeNull();
-    expect(dashboard.activityRows.value).toEqual([]);
-    expect(dashboard.isActivityEmpty.value).toBe(true);
+    expect(dashboard.allActivityRows.value).toEqual([]);
   });
 });

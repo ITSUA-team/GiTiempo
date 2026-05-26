@@ -1,11 +1,11 @@
 import {
   computed,
   nextTick,
-  onMounted,
   shallowRef,
   type ComputedRef,
   type Ref,
 } from 'vue';
+import type { TimeReportQuery, WorkspaceRole } from '@gitiempo/shared';
 import {
   useAdminProjectsQuery,
   useManagementProjectSummaryQuery,
@@ -13,8 +13,14 @@ import {
   useWorkspaceInvitesQuery,
   useWorkspaceMembersQuery,
 } from '@gitiempo/web-shared/query';
-import type { TimeReportQuery, WorkspaceRole } from '@gitiempo/shared';
 
+import {
+  ADMIN_DASHBOARD_ACTIVITY_FULL_LIMIT,
+  ADMIN_DASHBOARD_LOAD_ERROR_MESSAGE,
+  ADMIN_DASHBOARD_MISSING_ROLE_MESSAGE,
+  ADMIN_DASHBOARD_MISSING_TOKEN_MESSAGE,
+  ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
+} from '@/constants/admin-dashboard';
 import {
   deriveDashboardActivityRows,
   deriveDashboardStats,
@@ -35,7 +41,7 @@ import {
   type AdminReportsClient,
 } from '@/services/admin-reports-client';
 
-interface UseAdminDashboardPageOptions {
+interface UseAdminDashboardDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   membersClient?: Pick<AdminMembersClient, 'listInvites' | 'listMembers'>;
   now?: () => Date;
@@ -47,16 +53,11 @@ interface UseAdminDashboardPageOptions {
   role?: Ref<WorkspaceRole | null> | ComputedRef<WorkspaceRole | null>;
 }
 
-const activityPreviewLimit = 5;
-const dashboardPageLimit = 100;
-const missingRoleMessage = 'Workspace role is required to view the dashboard.';
-const missingTokenMessage = 'Sign in to view the dashboard.';
-
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Failed to load dashboard';
+  return error instanceof Error ? error.message : ADMIN_DASHBOARD_LOAD_ERROR_MESSAGE;
 }
 
-export function useAdminDashboardPage({
+export function useAdminDashboardData({
   accessToken,
   membersClient = adminMembersClient,
   now = () => new Date(),
@@ -64,10 +65,9 @@ export function useAdminDashboardPage({
   projectsClient = adminProjectsClient,
   reportsClient = adminReportsClient,
   role = shallowRef<WorkspaceRole | null>('admin'),
-}: UseAdminDashboardPageOptions) {
+}: UseAdminDashboardDataOptions) {
   const stats = shallowRef<AdminDashboardStatCard[]>([]);
   const allActivityRows = shallowRef<AdminDashboardActivityRow[]>([]);
-  const showAllActivity = shallowRef(false);
   const loading = shallowRef(true);
   const initialLoaded = shallowRef(false);
   const loadError = shallowRef<string | null>(null);
@@ -102,46 +102,28 @@ export function useAdminDashboardPage({
   let requestId = 0;
 
   const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
-  const isActivityEmpty = computed(
-    () =>
-      initialLoaded.value &&
-      !loading.value &&
-      loadError.value === null &&
-      allActivityRows.value.length === 0,
-  );
-  const hasMoreActivity = computed(
-    () => allActivityRows.value.length > activityPreviewLimit,
-  );
-  const activityRows = computed(() =>
-    showAllActivity.value
-      ? allActivityRows.value
-      : allActivityRows.value.slice(0, activityPreviewLimit),
-  );
+
+  function setBlockedState(message: string): void {
+    stats.value = [];
+    allActivityRows.value = [];
+    loadError.value = message;
+    initialLoaded.value = true;
+    loading.value = false;
+  }
 
   async function loadDashboard(action: string): Promise<void> {
-    const token = accessToken.value;
     const currentRequestId = requestId + 1;
     requestId = currentRequestId;
 
-    if (!token) {
-      stats.value = [];
-      allActivityRows.value = [];
-      showAllActivity.value = false;
-      loadError.value = missingTokenMessage;
-      initialLoaded.value = true;
-      loading.value = false;
+    if (!accessToken.value) {
+      setBlockedState(ADMIN_DASHBOARD_MISSING_TOKEN_MESSAGE);
       return;
     }
 
     const dashboardRole = role.value;
 
     if (!dashboardRole) {
-      stats.value = [];
-      allActivityRows.value = [];
-      showAllActivity.value = false;
-      loadError.value = missingRoleMessage;
-      initialLoaded.value = true;
-      loading.value = false;
+      setBlockedState(ADMIN_DASHBOARD_MISSING_ROLE_MESSAGE);
       return;
     }
 
@@ -153,7 +135,7 @@ export function useAdminDashboardPage({
     dashboardReportQuery.value = {
       ...weekRange,
       groupBy: 'project',
-      limit: dashboardPageLimit,
+      limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
       page: 1,
       sortBy: 'lastStartedAt',
       sortOrder: 'desc',
@@ -208,11 +190,8 @@ export function useAdminDashboardPage({
       allActivityRows.value = deriveDashboardActivityRows(
         nextDashboardData,
         requestedAt,
-        Number.POSITIVE_INFINITY,
+        ADMIN_DASHBOARD_ACTIVITY_FULL_LIMIT,
       );
-      if (!hasMoreActivity.value) {
-        showAllActivity.value = false;
-      }
       initialLoaded.value = true;
     } catch (error) {
       if (currentRequestId !== requestId) {
@@ -233,28 +212,13 @@ export function useAdminDashboardPage({
     await loadDashboard(initialLoaded.value ? 'refresh-dashboard' : 'load-dashboard');
   }
 
-  function toggleActivityRows(): void {
-    if (!hasMoreActivity.value) {
-      showAllActivity.value = false;
-      return;
-    }
-
-    showAllActivity.value = !showAllActivity.value;
-  }
-
-  onMounted(refresh);
-
   return {
-    activityRows,
-    hasMoreActivity,
+    allActivityRows,
     initialLoaded,
-    isActivityEmpty,
     isInitialLoading,
     loadError,
     loading,
     refresh,
-    showAllActivity,
     stats,
-    toggleActivityRows,
   };
 }

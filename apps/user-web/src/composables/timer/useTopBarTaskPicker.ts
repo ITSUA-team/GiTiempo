@@ -144,3 +144,5 @@ export function useTopBarTaskPicker() {
     validateCreateTaskInput,
   };
 }
+
+export type TopBarTaskPicker = ReturnType<typeof useTopBarTaskPicker>;

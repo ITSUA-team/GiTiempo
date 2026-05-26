@@ -13,21 +13,30 @@ import type {
 import { useAuthStore } from '@/stores/auth';
 
 const dashboardMocks = vi.hoisted(() => ({
-  errorToast: vi.fn(),
-  options: undefined as unknown as {
+  activityOptions: undefined as unknown,
+  dataOptions: undefined as unknown as {
     accessToken: { value: string | null };
     onError?: CallableFunction;
     role?: { value: UserResponse['role'] | null };
   },
+  errorToast: vi.fn(),
   refresh: vi.fn(),
-  state: undefined as unknown,
   toggleActivityRows: vi.fn(),
+  activityState: undefined as unknown,
+  dataState: undefined as unknown,
 }));
 
-vi.mock('@/composables/dashboard/useAdminDashboardPage', () => ({
-  useAdminDashboardPage: (options: typeof dashboardMocks.options) => {
-    dashboardMocks.options = options;
-    return dashboardMocks.state;
+vi.mock('@/composables/dashboard/useAdminDashboardData', () => ({
+  useAdminDashboardData: (options: typeof dashboardMocks.dataOptions) => {
+    dashboardMocks.dataOptions = options;
+    return dashboardMocks.dataState;
+  },
+}));
+
+vi.mock('@/composables/dashboard/useAdminDashboardActivity', () => ({
+  useAdminDashboardActivity: (options: unknown) => {
+    dashboardMocks.activityOptions = options;
+    return dashboardMocks.activityState;
   },
 }));
 
@@ -78,15 +87,21 @@ function createDashboardState({
   loading?: boolean;
 } = {}) {
   return {
-    activityRows: shallowRef(activityRows),
-    hasMoreActivity: shallowRef(false),
-    isInitialLoading: shallowRef(isInitialLoading),
-    loadError: shallowRef(loadError),
-    loading: shallowRef(loading),
-    refresh: dashboardMocks.refresh,
-    showAllActivity: shallowRef(false),
-    stats: shallowRef(stats),
-    toggleActivityRows: dashboardMocks.toggleActivityRows,
+    activityState: {
+      activityRows: shallowRef(activityRows),
+      hasMoreActivity: shallowRef(false),
+      showAllActivity: shallowRef(false),
+      toggleActivityRows: dashboardMocks.toggleActivityRows,
+    },
+    dataState: {
+      allActivityRows: shallowRef(activityRows),
+      initialLoaded: shallowRef(!isInitialLoading),
+      isInitialLoading: shallowRef(isInitialLoading),
+      loadError: shallowRef(loadError),
+      loading: shallowRef(loading),
+      refresh: dashboardMocks.refresh,
+      stats: shallowRef(stats),
+    },
   };
 }
 
@@ -126,14 +141,18 @@ describe('DashboardView', () => {
     dashboardMocks.errorToast.mockClear();
     dashboardMocks.refresh.mockClear();
     dashboardMocks.toggleActivityRows.mockClear();
-    dashboardMocks.state = createDashboardState();
+    const state = createDashboardState();
+    dashboardMocks.activityState = state.activityState;
+    dashboardMocks.dataState = state.dataState;
   });
 
   it('renders the page skeleton during the first dashboard load', () => {
-    dashboardMocks.state = createDashboardState({
+    const state = createDashboardState({
       isInitialLoading: true,
       loading: true,
     });
+    dashboardMocks.activityState = state.activityState;
+    dashboardMocks.dataState = state.dataState;
 
     const wrapper = mountDashboardView();
 
@@ -142,13 +161,16 @@ describe('DashboardView', () => {
   });
 
   it('renders request failures separately with retry', async () => {
-    dashboardMocks.state = createDashboardState({ loadError: 'No scope' });
+    const state = createDashboardState({ loadError: 'No scope' });
+    dashboardMocks.activityState = state.activityState;
+    dashboardMocks.dataState = state.dataState;
 
     const wrapper = mountDashboardView();
 
     expect(wrapper.text()).toContain('Failed to load dashboard');
     expect(wrapper.text()).toContain('No scope');
 
+    dashboardMocks.refresh.mockClear();
     await wrapper.get('button').trigger('click');
 
     expect(dashboardMocks.refresh).toHaveBeenCalledTimes(1);
@@ -171,11 +193,11 @@ describe('DashboardView', () => {
   it('passes auth token state and dashboard load failures to standard error toasts', () => {
     mountDashboardView();
 
-    expect(dashboardMocks.options.accessToken.value).toBe('access-token');
-    expect(dashboardMocks.options.role?.value).toBe('admin');
+    expect(dashboardMocks.dataOptions.accessToken.value).toBe('access-token');
+    expect(dashboardMocks.dataOptions.role?.value).toBe('admin');
 
     const error = new Error('No scope');
-    dashboardMocks.options.onError?.('No scope', error, 'load-dashboard');
+    dashboardMocks.dataOptions.onError?.('No scope', error, 'load-dashboard');
 
     expect(dashboardMocks.errorToast).toHaveBeenCalledWith('No scope', {
       error,
@@ -183,12 +205,27 @@ describe('DashboardView', () => {
     });
   });
 
+  it('passes dashboard source state into the activity preview composable', () => {
+    const state = createDashboardState();
+    dashboardMocks.activityState = state.activityState;
+    dashboardMocks.dataState = state.dataState;
+
+    mountDashboardView();
+
+    expect(dashboardMocks.activityOptions).toEqual({
+      allActivityRows: state.dataState.allActivityRows,
+      initialLoaded: state.dataState.initialLoaded,
+      loadError: state.dataState.loadError,
+      loading: state.dataState.loading,
+    });
+  });
+
   it('passes the view-all activity state and toggle action to the activity table', async () => {
-    dashboardMocks.state = {
-      ...createDashboardState(),
-      hasMoreActivity: shallowRef(true),
-      showAllActivity: shallowRef(false),
-    };
+    const state = createDashboardState();
+    state.activityState.hasMoreActivity = shallowRef(true);
+    state.activityState.showAllActivity = shallowRef(false);
+    dashboardMocks.activityState = state.activityState;
+    dashboardMocks.dataState = state.dataState;
 
     const wrapper = mountDashboardView();
 

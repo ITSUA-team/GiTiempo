@@ -6,17 +6,72 @@ import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
-
-import { SurfaceCard } from "@gitiempo/web-shared";
+import type { TimeEntryResponse } from "@gitiempo/shared";
+import {
+  createAppConfirm,
+  createAppToast,
+  SurfaceCard,
+} from "@gitiempo/web-shared";
+import { computed, onBeforeUnmount, onMounted } from "vue";
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 
 import PageHeader from "@/components/layout/PageHeader.vue";
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
-import { useTimeEntriesPage } from "@/composables/time-entries/useTimeEntriesPage";
+import type { TaskLookupValue } from "@/composables/time-entries/time-entry-task-lookup";
+import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
+import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
+import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
+import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
+import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
+import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { useAuthStore } from "@/stores/auth";
 
+const authStore = useAuthStore();
+const client = createDefaultTimeEntriesClient();
+const confirm = useConfirm();
+const toast = useToast();
+const appConfirm = createAppConfirm(confirm);
+const appToast = createAppToast(toast);
+const accessToken = computed(() => authStore.accessToken);
+const filters = useTimeEntryFilters();
+const dialog = useTimeEntryDialog();
+const data = useTimeEntriesData({
+  accessToken,
+  clearIntervalFn: clearInterval,
+  client,
+  currentPage: filters.currentPage,
+  entryListQuery: filters.entryListQuery,
+  now: () => Date.now(),
+  onLoadEntriesError(error) {
+    appToast.showErrorToast({
+      detail: "Please try again.",
+      error,
+      logContext: { action: "load-entries", feature: "time-entries" },
+      summary: "Could not load time entries",
+    });
+  },
+  onLoadProjectsError(error) {
+    appToast.showErrorToast({
+      detail: "Please try again.",
+      error,
+      logContext: { action: "load-projects", feature: "time-entries" },
+      summary: "Could not load visible projects",
+    });
+  },
+  pageSize: filters.pageSize,
+  setIntervalFn: setInterval,
+});
+const taskOptions = useTimeEntryTaskOptions({ accessToken, client });
+const mutations = useTimeEntryMutations({
+  accessToken,
+  client,
+  onEntriesChanged: data.refreshEntriesAfterMutation,
+  toast,
+});
 const {
   closeDialog,
-  currentPage,
   dialogDescription,
   dialogEndedAt,
   dialogErrors,
@@ -31,45 +86,185 @@ const {
   dialogTaskSuggestions,
   dialogTaskValue,
   dialogTitle,
-  entries,
-  filterTaskSuggestions,
-  filterTasksErrorMessage,
-  formatDuration,
-  formatTimeRange,
-  groupedEntries,
-  handleDialogTaskSearch,
-  handleFilterTaskSearch,
-  isDeletingEntry,
   isDialogOpen,
   isLoadingDialogTasks,
+  setDescription: setDialogDescription,
+  setEndedAt: setDialogEndedAt,
+  setIsBillable: setDialogIsBillable,
+  setStartedAt: setDialogStartedAt,
+  setTaskValue: setDialogTaskValue,
+} = dialog;
+const {
+  currentPage,
+  filterTaskSuggestions,
+  filterTasksErrorMessage,
   isLoadingFilterTasks,
-  isLoadingProjects,
-  isSavingDialog,
-  openCreateDialog,
-  openEditDialog,
   pageSize,
-  pageState,
-  projectsErrorMessage,
-  requestDeleteEntry,
-  requestErrorMessage,
-  retryLoadEntries,
-  saveDialog,
   selectedDateRange,
   selectedProjectId,
   selectedTaskFilter,
-  setDateRange,
-  setDialogDescription,
-  setDialogEndedAt,
-  setDialogIsBillable,
-  setDialogProjectId,
-  setDialogStartedAt,
-  setDialogTaskValue,
-  setPage,
-  setSelectedProjectId,
-  setSelectedTaskFilter,
+} = filters;
+const {
+  entries,
+  formatDuration,
+  formatTimeRange,
+  groupedEntries,
+  isLoadingProjects,
+  pageState,
+  projectsErrorMessage,
+  requestErrorMessage,
   totalRecords,
   visibleProjects,
-} = useTimeEntriesPage();
+} = data;
+const { isDeletingEntry, isSavingDialog } = mutations;
+
+async function loadFilterProjectTasks(projectId: string) {
+  return taskOptions.loadTargetProjectTaskOptions(projectId, filters);
+}
+
+async function loadDialogProjectTasks(projectId: string) {
+  return taskOptions.loadTargetProjectTaskOptions(projectId, dialog);
+}
+
+async function applyFilters(): Promise<void> {
+  filters.resetPagination();
+  await data.loadEntries();
+}
+
+async function setDateRange(range: Date[] | null): Promise<void> {
+  filters.setDateRange(range);
+  await applyFilters();
+}
+
+async function setSelectedProjectId(projectId: string | null): Promise<void> {
+  filters.setProjectId(projectId);
+
+  if (!projectId) {
+    await applyFilters();
+    return;
+  }
+
+  try {
+    await loadFilterProjectTasks(projectId);
+  } catch {
+    // Filter task request error remains visible in the filter helper copy.
+  }
+
+  await applyFilters();
+}
+
+async function setSelectedTaskFilter(value: TaskLookupValue): Promise<void> {
+  filters.setTaskValue(value);
+  await applyFilters();
+}
+
+function handleFilterTaskSearch(query: string): void {
+  const source = filters.selectedProjectId.value
+    ? filters.filterTaskOptions.value
+    : taskOptions.cachedTaskOptions.value;
+
+  filters.updateTaskSuggestions(query, source);
+}
+
+async function setPage(page: number): Promise<void> {
+  filters.setPage(page);
+  await data.loadEntries();
+}
+
+async function setDialogProjectId(projectId: string | null): Promise<void> {
+  dialog.setProjectId(projectId);
+
+  if (!projectId) {
+    return;
+  }
+
+  try {
+    const tasks = await loadDialogProjectTasks(projectId);
+
+    if (dialog.dialogProjectId.value === projectId) {
+      dialog.updateTaskSuggestions("", tasks);
+    }
+  } catch {
+    // Dialog keeps the request error visible for retryable correction.
+  }
+}
+
+function handleDialogTaskSearch(query: string): void {
+  dialog.updateTaskSuggestions(query);
+}
+
+async function openCreateDialog(day: string | null = null): Promise<void> {
+  dialog.openCreateDialogState(day);
+
+  try {
+    await data.ensureProjectsLoaded();
+  } catch {
+    // Create mode can still open with the visible request error state.
+  }
+}
+
+async function openEditDialog(entry: TimeEntryResponse): Promise<void> {
+  dialog.openEditDialogState(entry);
+
+  try {
+    await data.ensureProjectsLoaded();
+    const options = await loadDialogProjectTasks(entry.projectId);
+    dialog.setTaskValue(
+      options.find((task) => task.id === entry.taskId) ?? {
+        id: entry.task.id,
+        isActive: true,
+        projectId: entry.projectId,
+        title: entry.task.title,
+      },
+    );
+    dialog.updateTaskSuggestions("", options);
+  } catch {
+    dialog.setTaskFromEntryFallback(entry);
+  }
+}
+
+async function saveDialog(): Promise<void> {
+  const validInput = dialog.validateDialog();
+
+  if (!validInput) {
+    return;
+  }
+
+  dialog.setRequestError(null);
+  const errorMessage = await mutations.saveDialogEntry({
+    editingEntry: dialog.editingEntry.value,
+    input: validInput,
+    mode: dialog.dialogMode.value,
+  });
+
+  if (errorMessage) {
+    dialog.setRequestError(errorMessage);
+    return;
+  }
+
+  dialog.closeDialog();
+}
+
+function requestDeleteEntry(entry: TimeEntryResponse): void {
+  appConfirm.confirmDestructive({
+    accept: async () => mutations.deleteEntry(entry),
+    acceptLabel: "Delete",
+    header: "Delete entry?",
+    message: "This time entry will be permanently deleted.",
+  });
+}
+
+async function retryLoadEntries(): Promise<void> {
+  await data.loadEntries();
+}
+
+onMounted(async () => {
+  await Promise.allSettled([data.ensureProjectsLoaded(), data.loadEntries()]);
+});
+
+onBeforeUnmount(() => {
+  data.stopTicker();
+});
 </script>
 
 <template>

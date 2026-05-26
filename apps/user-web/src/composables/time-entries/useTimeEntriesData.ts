@@ -5,10 +5,7 @@ import type {
 } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 import {
-  useCreateManualTimeEntryMutation,
-  useDeleteTimeEntryMutation,
   useOwnTimeEntriesQuery,
-  useUpdateTimeEntryMutation,
   useVisibleProjectsQuery,
 } from "@gitiempo/web-shared/query";
 import { computed, ref, shallowRef, type ComputedRef, type Ref } from "vue";
@@ -19,9 +16,8 @@ import {
   groupTimeEntriesByUtcDay,
   type TimeEntriesDayGroup,
 } from "@/lib/time-entry-display";
+import { resolveDataPageState } from "@/lib/page-state";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
-
-import { toTaskLookupOption, type TaskLookupOption } from "./time-entry-task-lookup";
 
 /* eslint-disable no-unused-vars */
 interface UseTimeEntriesDataOptions {
@@ -59,25 +55,16 @@ export function useTimeEntriesData({
   const isLoadingProjects = shallowRef(false);
   const requestErrorMessage = shallowRef<string | null>(null);
   const projectsErrorMessage = shallowRef<string | null>(null);
-  const taskCache = new Map<string, TaskLookupOption[]>();
   let entriesRequestId = 0;
   let tickHandle: ReturnType<typeof setInterval> | null = null;
 
-  const pageState = computed(() => {
-    if (isLoadingEntries.value) {
-      return "loading";
-    }
-
-    if (requestErrorMessage.value) {
-      return "request-error";
-    }
-
-    if (entries.value.length === 0) {
-      return "empty";
-    }
-
-    return "ready";
-  });
+  const pageState = computed(() =>
+    resolveDataPageState({
+      hasRequestError: requestErrorMessage.value !== null,
+      isEmpty: entries.value.length === 0,
+      isLoading: isLoadingEntries.value,
+    }),
+  );
   const visibleProjects = computed(() => projects.value.filter((project) => project.isActive));
   const groupedEntries = computed<TimeEntriesDayGroup[]>(() =>
     groupTimeEntriesByUtcDay(entries.value, nowMs.value),
@@ -96,26 +83,6 @@ export function useTimeEntriesData({
     enabled: false,
     query: entryListQuery,
   });
-  const createEntryMutation = useCreateManualTimeEntryMutation({
-    accessToken,
-    client,
-  });
-  const updateEntryMutation = useUpdateTimeEntryMutation({
-    accessToken,
-    client,
-  });
-  const deleteEntryMutation = useDeleteTimeEntryMutation({
-    accessToken,
-    client,
-  });
-
-  function requireAccessToken(): string {
-    if (!accessToken.value) {
-      throw new Error("Your session has expired. Please sign in again.");
-    }
-
-    return accessToken.value;
-  }
 
   function stopTicker(): void {
     if (tickHandle !== null) {
@@ -163,26 +130,6 @@ export function useTimeEntriesData({
     } finally {
       isLoadingProjects.value = false;
     }
-  }
-
-  async function loadProjectTasks(projectId: string): Promise<TaskLookupOption[]> {
-    const cached = taskCache.get(projectId);
-
-    if (cached) {
-      return cached;
-    }
-
-    const nextTasks = (await client.listProjectTasks(requireAccessToken(), projectId))
-      .filter((task) => task.isActive)
-      .map(toTaskLookupOption);
-
-    taskCache.set(projectId, nextTasks);
-
-    return nextTasks;
-  }
-
-  function getCachedTaskOptions(): TaskLookupOption[] {
-    return Array.from(taskCache.values()).flat();
   }
 
   async function loadEntries(): Promise<void> {
@@ -245,18 +192,14 @@ export function useTimeEntriesData({
   }
 
   return {
-    createEntryMutation,
-    deleteEntryMutation,
     ensureProjectsLoaded,
     entries,
     formatDuration,
     formatTimeRange,
-    getCachedTaskOptions,
     groupedEntries,
     isLoadingEntries,
     isLoadingProjects,
     loadEntries,
-    loadProjectTasks,
     pageState,
     projectsErrorMessage,
     refreshEntriesAfterMutation,
@@ -264,7 +207,6 @@ export function useTimeEntriesData({
     stopTicker,
     totalPages,
     totalRecords,
-    updateEntryMutation,
     visibleProjects,
   };
 }

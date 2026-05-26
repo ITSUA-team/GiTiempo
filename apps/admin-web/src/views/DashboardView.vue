@@ -1,28 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 
 import DashboardPageSkeleton from '@/components/dashboard/DashboardPageSkeleton.vue';
 import DashboardRecentActivityFeed from '@/components/dashboard/DashboardRecentActivityFeed.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useAdminDashboardPage } from '@/composables/dashboard/useAdminDashboardPage';
+import { useAdminDashboardActivity } from '@/composables/dashboard/useAdminDashboardActivity';
+import { useAdminDashboardData } from '@/composables/dashboard/useAdminDashboardData';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
 
-const {
-  activityRows,
-  hasMoreActivity,
-  isInitialLoading,
-  loadError,
-  loading,
-  refresh,
-  showAllActivity,
-  stats,
-  toggleActivityRows,
-} = useAdminDashboardPage({
+const dashboard = useAdminDashboardData({
   accessToken: computed(() => authStore.accessToken),
   onError(message, error, action) {
     errorToast(message, {
@@ -32,6 +23,20 @@ const {
   },
   role: computed(() => authStore.profile?.role ?? null),
 });
+const {
+  activityRows,
+  hasMoreActivity,
+  showAllActivity,
+  toggleActivityRows,
+} = useAdminDashboardActivity({
+  allActivityRows: dashboard.allActivityRows,
+  initialLoaded: dashboard.initialLoaded,
+  loadError: dashboard.loadError,
+  loading: dashboard.loading,
+});
+const { isInitialLoading, loadError, loading, refresh, stats } = dashboard;
+
+onMounted(refresh);
 </script>
 
 <template>

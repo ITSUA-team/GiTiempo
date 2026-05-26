@@ -15,6 +15,7 @@ import {
   getDashboardWeekWindow,
   mapDashboardRecentEntryRows,
 } from "@/lib/dashboard-overview-helpers";
+import { resolveDataPageState } from "@/lib/page-state";
 import { useAuthStore } from "@/stores/auth";
 
 export type {
@@ -80,17 +81,13 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
       recentEntriesQuery.isPending.value ||
       isLoadingWeekEntries.value,
   );
-  const pageState = computed(() => {
-    if (isLoadingOverview.value) {
-      return "loading";
-    }
-
-    if (requestErrorMessage.value) {
-      return "request-error";
-    }
-
-    return recentEntries.value.length === 0 ? "empty" : "ready";
-  });
+  const pageState = computed(() =>
+    resolveDataPageState({
+      hasRequestError: requestErrorMessage.value !== null,
+      isEmpty: recentEntries.value.length === 0,
+      isLoading: isLoadingOverview.value,
+    }),
+  );
   const dashboardStats = computed(() => buildDashboardStats(weekEntries.value, nowMs.value));
   const weeklyFocus = computed(() => buildDashboardWeeklyFocus(weekEntries.value, nowMs.value));
   const recentEntryRows = computed(() =>

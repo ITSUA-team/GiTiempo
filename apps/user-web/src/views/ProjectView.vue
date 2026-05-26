@@ -3,18 +3,67 @@ import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import ConfirmDialog from "primevue/confirmdialog";
 import Skeleton from "primevue/skeleton";
-import { SurfaceCard } from "@gitiempo/web-shared";
+import { computed, onMounted } from "vue";
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import {
+  createAppConfirm,
+  createAppToast,
+  SurfaceCard,
+} from "@gitiempo/web-shared";
 
 import PageHeader from "@/components/layout/PageHeader.vue";
 import ProjectTaskDialog from "@/components/projects/ProjectTaskDialog.vue";
 import ProjectsTaskSection from "@/components/projects/ProjectsTaskSection.vue";
+import { useProjectsData } from "@/composables/projects/useProjectsData";
+import { useProjectsSearch } from "@/composables/projects/useProjectsSearch";
+import { useProjectTaskDialog } from "@/composables/projects/useProjectTaskDialog";
+import { useProjectTaskMutations } from "@/composables/projects/useProjectTaskMutations";
+import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { resolveDataPageState } from "@/lib/page-state";
 import {
-  useProjectsPage,
+  formatUpdatedLabel,
   type ProjectsSearchSuggestion,
-} from "@/composables/projects/useProjectsPage";
+} from "@/lib/projects-page-helpers";
+import { useAuthStore } from "@/stores/auth";
 
+const authStore = useAuthStore();
+const client = createDefaultTimeEntriesClient();
+const confirm = useConfirm();
+const toast = useToast();
+const appConfirm = createAppConfirm(confirm);
+const appToast = createAppToast(toast);
+const accessToken = computed(() => authStore.accessToken);
+const data = useProjectsData({
+  accessToken,
+  client,
+  onLoadProjectsError(error) {
+    appToast.showErrorToast({
+      detail: "Please try again.",
+      error,
+      logContext: { action: "load-projects", feature: "projects-page" },
+      summary: "Could not load visible projects",
+    });
+  },
+  onLoadTasksError(message) {
+    appToast.showErrorToast({
+      detail: "Please try again.",
+      error: new Error(message),
+      logContext: { action: "load-project-tasks", feature: "projects-page" },
+      summary: "Could not load project tasks",
+    });
+  },
+});
+const search = useProjectsSearch(data.visibleProjects, data.tasksByProjectId);
+const dialog = useProjectTaskDialog();
+const mutations = useProjectTaskMutations({
+  accessToken,
+  client,
+  onTaskDeleted: data.removeTask,
+  onTaskSaved: data.upsertTask,
+  toast,
+});
 const {
-  canCreateTasks,
   closeDialog,
   dialogErrors,
   dialogMode,
@@ -25,27 +74,70 @@ const {
   dialogTaskStatus,
   dialogTaskTitle,
   dialogTitle,
-  filteredProjectGroups,
-  formatUpdatedLabel,
-  handleSearchComplete,
-  isDeletingTaskId,
   isDialogOpen,
-  isSavingDialog,
   openCreateDialog,
   openEditDialog,
-  pageState,
-  requestDeleteTask,
-  requestErrorMessage,
-  retryLoadPage,
-  saveDialog,
-  searchSuggestions,
-  selectedSearchValue,
   setDialogProjectId,
   setDialogTaskStatus,
   setDialogTaskTitle,
+} = dialog;
+const {
+  filteredProjectGroups,
+  handleSearchComplete,
+  searchSuggestions,
+  selectedSearchValue,
   setSearchValue,
-  visibleProjects,
-} = useProjectsPage();
+} = search;
+const { isDeletingTaskId, isSavingDialog } = mutations;
+const { requestErrorMessage, visibleProjects } = data;
+const pageState = computed(() =>
+  resolveDataPageState({
+    hasRequestError: data.requestErrorMessage.value !== null,
+    isEmpty: search.filteredProjectGroups.value.length === 0,
+    isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
+  }),
+);
+const canCreateTasks = computed(
+  () =>
+    data.visibleProjects.value.length > 0 &&
+    !data.isLoadingProjects.value &&
+    !data.isLoadingTasks.value,
+);
+
+async function saveDialog(): Promise<void> {
+  const validInput = dialog.validateDialog();
+
+  if (!validInput) {
+    return;
+  }
+
+  dialog.setDialogRequestError(null);
+  const errorMessage = await mutations.saveTask(validInput, dialog.editingTask.value);
+
+  if (errorMessage) {
+    dialog.setDialogRequestError(errorMessage);
+    return;
+  }
+
+  dialog.closeDialog();
+}
+
+function requestDeleteTask(task: Parameters<typeof mutations.deleteTask>[0]): void {
+  appConfirm.confirmDestructive({
+    accept: async () => mutations.deleteTask(task),
+    acceptLabel: "Delete",
+    header: "Delete task?",
+    message: "This task will be permanently deleted.",
+  });
+}
+
+async function retryLoadPage(): Promise<void> {
+  await data.loadPage();
+}
+
+onMounted(() => {
+  void data.loadPage();
+});
 </script>
 
 <template>
