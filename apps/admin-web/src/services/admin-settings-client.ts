@@ -10,6 +10,8 @@ import {
 } from '@gitiempo/shared';
 import { requestJson } from '@gitiempo/web-shared/http';
 
+import { appEnv } from '@/config/env';
+
 interface AdminSettingsClientOptions {
 	apiBaseUrl: string | undefined;
 	fetchFn: typeof fetch;
@@ -81,9 +83,24 @@ export function createAdminSettingsClient({
 	};
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+function createDefaultAdminSettingsClient(): AdminSettingsClient {
+	return createAdminSettingsClient({
+		apiBaseUrl: appEnv.apiBaseUrl,
+		fetchFn: fetch,
+	});
+}
 
-export const adminSettingsClient = createAdminSettingsClient({
-	apiBaseUrl,
-	fetchFn: fetch,
-});
+export const adminSettingsClient: AdminSettingsClient = {
+	getWorkspace(accessToken) {
+		return createDefaultAdminSettingsClient().getWorkspace(accessToken);
+	},
+	getWorkspaceSettings(accessToken) {
+		return createDefaultAdminSettingsClient().getWorkspaceSettings(accessToken);
+	},
+	updateWorkspace(accessToken, input) {
+		return createDefaultAdminSettingsClient().updateWorkspace(accessToken, input);
+	},
+	updateWorkspaceSettings(accessToken, input) {
+		return createDefaultAdminSettingsClient().updateWorkspaceSettings(accessToken, input);
+	},
+};

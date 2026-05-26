@@ -15,6 +15,7 @@ import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
 
 import { useToasts } from "@/composables/feedback/useToasts";
+import { appEnv } from "@/config/env";
 import { routeNames } from "@/router";
 import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
@@ -29,7 +30,7 @@ const membersIcon = markRaw(UsersIcon);
 const projectsIcon = markRaw(FolderIcon);
 const settingsIcon = markRaw(Cog6ToothIcon);
 const userWorkspaceHref = getCounterpartWorkspaceHref({
-  configuredUrl: import.meta.env.VITE_USER_APP_URL,
+  configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
 

@@ -17,10 +17,8 @@ import {
 import { computed, nextTick, onMounted, shallowRef, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
-import {
-  createTimeEntriesClient,
-  type TimeEntriesClient,
-} from "@/services/time-entries-client";
+import { createDefaultTimeEntriesClient } from "@/config/clients";
+import type { TimeEntriesClient } from "@/services/time-entries-client";
 import {
   isConflictErrorMessage,
   isRunningTimer,
@@ -41,13 +39,9 @@ interface UseTopBarTimerOptions {
   toast?: ToastLike;
 }
 
-const defaultClient = createTimeEntriesClient({
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
-});
-
 export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const authStore = options.authStore ?? useAuthStore();
-  const client = options.client ?? defaultClient;
+  const client = options.client ?? createDefaultTimeEntriesClient();
   const toast = options.toast ?? useToast();
   const appToast = createAppToast(toast);
   const now = options.now ?? (() => Date.now());

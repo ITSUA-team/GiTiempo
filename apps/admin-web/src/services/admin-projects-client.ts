@@ -17,6 +17,8 @@ import {
 	requestJson,
 } from '@gitiempo/web-shared/http';
 
+import { appEnv } from '@/config/env';
+
 /* eslint-disable no-unused-vars */
 
 interface AdminProjectsClientOptions {
@@ -138,8 +140,41 @@ export function createAdminProjectsClient({
 	};
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+function createDefaultAdminProjectsClient(): AdminProjectsClient {
+	return createAdminProjectsClient({
+		apiBaseUrl: appEnv.apiBaseUrl,
+	});
+}
 
-export const adminProjectsClient = createAdminProjectsClient({
-	apiBaseUrl,
-});
+export const adminProjectsClient: AdminProjectsClient = {
+	assignMember(accessToken, projectId, userId) {
+		return createDefaultAdminProjectsClient().assignMember(
+			accessToken,
+			projectId,
+			userId,
+		);
+	},
+	createProject(accessToken, input) {
+		return createDefaultAdminProjectsClient().createProject(accessToken, input);
+	},
+	getManagementSummary(accessToken) {
+		return createDefaultAdminProjectsClient().getManagementSummary(accessToken);
+	},
+	listProjects(accessToken) {
+		return createDefaultAdminProjectsClient().listProjects(accessToken);
+	},
+	removeAssignment(accessToken, projectId, userId) {
+		return createDefaultAdminProjectsClient().removeAssignment(
+			accessToken,
+			projectId,
+			userId,
+		);
+	},
+	updateProject(accessToken, projectId, input) {
+		return createDefaultAdminProjectsClient().updateProject(
+			accessToken,
+			projectId,
+			input,
+		);
+	},
+};

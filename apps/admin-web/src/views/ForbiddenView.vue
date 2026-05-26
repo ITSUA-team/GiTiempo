@@ -3,11 +3,12 @@ import { RouteErrorPanel } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 import { useRouter } from "vue-router";
 
+import { appEnv } from "@/config/env";
 import { routeNames } from "@/router";
 
 const router = useRouter();
 const userWorkspaceHref = getCounterpartWorkspaceHref({
-  configuredUrl: import.meta.env.VITE_USER_APP_URL,
+  configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
 

@@ -19,6 +19,8 @@ import {
 	requestJson,
 } from '@gitiempo/web-shared/http';
 
+import { appEnv } from '@/config/env';
+
 interface AdminMembersClientOptions {
 	apiBaseUrl: string | undefined;
 	fetchFn?: typeof fetch;
@@ -108,8 +110,30 @@ export function createAdminMembersClient({
 	};
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+function createDefaultAdminMembersClient(): AdminMembersClient {
+	return createAdminMembersClient({
+		apiBaseUrl: appEnv.apiBaseUrl,
+	});
+}
 
-export const adminMembersClient = createAdminMembersClient({
-	apiBaseUrl,
-});
+export const adminMembersClient: AdminMembersClient = {
+	createInvite(accessToken, input) {
+		return createDefaultAdminMembersClient().createInvite(accessToken, input);
+	},
+	listInvites(accessToken) {
+		return createDefaultAdminMembersClient().listInvites(accessToken);
+	},
+	listMembers(accessToken) {
+		return createDefaultAdminMembersClient().listMembers(accessToken);
+	},
+	removeMember(accessToken, memberId) {
+		return createDefaultAdminMembersClient().removeMember(accessToken, memberId);
+	},
+	updateMemberRole(accessToken, memberId, input) {
+		return createDefaultAdminMembersClient().updateMemberRole(
+			accessToken,
+			memberId,
+			input,
+		);
+	},
+};

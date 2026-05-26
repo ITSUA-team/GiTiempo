@@ -16,10 +16,8 @@ import {
   type ToastLike,
 } from "@gitiempo/web-shared";
 
-import {
-  createProfileGitHubClient,
-  type ProfileGitHubClient,
-} from "@/services/profile-github-client";
+import { createDefaultProfileGitHubClient } from "@/config/clients";
+import type { ProfileGitHubClient } from "@/services/profile-github-client";
 import { useAuthStore } from "@/stores/auth";
 
 /* eslint-disable no-unused-vars */
@@ -35,10 +33,6 @@ interface UseProfileGithubConnectionOptions {
 }
 
 /* eslint-enable no-unused-vars */
-
-const defaultClient = createProfileGitHubClient({
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
-});
 
 const callbackErrorMessages: Record<string, string> = {
   github_config: "GitHub is not configured for this environment yet.",
@@ -98,7 +92,7 @@ export function useProfileGithubConnection(
   options: UseProfileGithubConnectionOptions = {},
 ) {
   const authStore = options.authStore ?? useAuthStore();
-  const client = options.client ?? defaultClient;
+  const client = options.client ?? createDefaultProfileGitHubClient();
   const confirm = options.confirm ?? useConfirm();
   const route = options.route ?? useRoute();
   const router = options.router ?? useRouter();

@@ -13,6 +13,8 @@ import {
   requestJson,
 } from '@gitiempo/web-shared/http';
 
+import { appEnv } from '@/config/env';
+
 /* eslint-disable no-unused-vars */
 
 interface AdminReportsClientOptions {
@@ -138,8 +140,17 @@ export function createAdminReportsClient({
   };
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+function createDefaultAdminReportsClient(): AdminReportsClient {
+  return createAdminReportsClient({
+    apiBaseUrl: appEnv.apiBaseUrl,
+  });
+}
 
-export const adminReportsClient = createAdminReportsClient({
-  apiBaseUrl,
-});
+export const adminReportsClient: AdminReportsClient = {
+  exportTimeReport(accessToken, query) {
+    return createDefaultAdminReportsClient().exportTimeReport(accessToken, query);
+  },
+  getTimeReport(accessToken, query) {
+    return createDefaultAdminReportsClient().getTimeReport(accessToken, query);
+  },
+};

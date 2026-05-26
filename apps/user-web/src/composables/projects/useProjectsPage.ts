@@ -10,10 +10,8 @@ import { computed, onMounted, shallowRef } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 
-import {
-  createTimeEntriesClient,
-  type TimeEntriesClient,
-} from "@/services/time-entries-client";
+import { createDefaultTimeEntriesClient } from "@/config/clients";
+import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { formatUpdatedLabel } from "@/lib/projects-page-helpers";
 import { useAuthStore } from "@/stores/auth";
 
@@ -33,13 +31,9 @@ interface UseProjectsPageOptions {
   toast?: ToastLike;
 }
 
-const defaultClient = createTimeEntriesClient({
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
-});
-
 export function useProjectsPage(options: UseProjectsPageOptions = {}) {
   const authStore = options.authStore ?? useAuthStore();
-  const client = options.client ?? defaultClient;
+  const client = options.client ?? createDefaultTimeEntriesClient();
   const confirm = options.confirm ?? useConfirm();
   const toast = options.toast ?? useToast();
   const appConfirm = createAppConfirm(confirm);
