@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   GoneException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
@@ -470,7 +471,7 @@ describe('InvitesService resendInvite', () => {
 
     await expect(
       service.resendInvite('workspace-1', 'invite-1'),
-    ).rejects.toThrow('SMTP failed');
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
 
     expect(firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
       'new.user@example.com',

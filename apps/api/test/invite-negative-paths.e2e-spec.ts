@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, count, eq } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -11,6 +11,69 @@ import type { DrizzleDB } from '../src/db/db.types';
 import { invites, users, workspaceMembers, workspaces } from '../src/db/schema';
 import { InviteDeliveryService } from '../src/invites/services/invite-delivery.service';
 import { bearer, login } from './helpers/auth';
+
+async function createResendTestApp(options?: {
+  deliveryError?: Error;
+  firebasePasswordSetupLinkError?: Error;
+  firebaseProvisioningError?: Error;
+}) {
+  const delivery = {
+    deliver: options?.deliveryError
+      ? vi.fn().mockRejectedValue(options.deliveryError)
+      : vi.fn().mockResolvedValue(undefined),
+  };
+  const firebase = {
+    verifyIdToken: vi.fn().mockResolvedValue({
+      uid: 'admin-uid',
+      email: 'admin@example.com',
+      name: 'Admin',
+      email_verified: true,
+    }),
+    getOrCreateInvitedUserByEmail: options?.firebaseProvisioningError
+      ? vi.fn().mockRejectedValue(options.firebaseProvisioningError)
+      : vi.fn().mockResolvedValue({
+          uid: 'firebase-invitee',
+          email: 'invitee@example.com',
+          isExistingUser: false,
+        }),
+    generatePasswordSetupLink: options?.firebasePasswordSetupLinkError
+      ? vi.fn().mockRejectedValue(options.firebasePasswordSetupLinkError)
+      : vi.fn().mockResolvedValue('https://firebase.test/reset'),
+  };
+
+  const moduleFixture: TestingModule = await Test.createTestingModule({
+    imports: [AppModule],
+  })
+    .overrideProvider(InviteDeliveryService)
+    .useValue(delivery)
+    .overrideProvider(FIREBASE_ADMIN)
+    .useValue(firebase)
+    .compile();
+
+  const app = moduleFixture.createNestApplication();
+  await app.init();
+
+  const db = app.get<DrizzleDB>(DRIZZLE);
+  const tokens = await login(app);
+  const [workspace] = await db.select().from(workspaces).limit(1);
+  const [admin] = await db.select().from(users).limit(1);
+
+  if (!workspace) throw new Error('Expected seeded workspace');
+  if (!admin) throw new Error('Expected seeded admin user');
+
+  return {
+    app,
+    db,
+    adminToken: tokens.accessToken,
+    adminUserId: admin.id,
+    delivery,
+    firebase,
+    workspace: {
+      id: workspace.id,
+      name: workspace.name,
+    },
+  };
+}
 
 describe('Invite negative paths (e2e)', () => {
   let app: INestApplication;
@@ -41,7 +104,9 @@ describe('Invite negative paths (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   async function memberCount(): Promise<number> {
@@ -131,6 +196,84 @@ describe('Invite negative paths (e2e)', () => {
   });
 
   describe('POST /invites/:id/resend', () => {
+    it('resends an existing pending invite without changing identity or creating membership', async () => {
+      const resendApp = await createResendTestApp();
+
+      try {
+        const [row] = await resendApp.db
+          .insert(invites)
+          .values({
+            workspaceId: resendApp.workspace.id,
+            email: `resend-success-${randomUUID()}@example.com`,
+            token: `token-${randomUUID()}`,
+            invitedBy: resendApp.adminUserId,
+            role: 'member',
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          })
+          .returning();
+        const [before] = await resendApp.db
+          .select({ value: count() })
+          .from(workspaceMembers)
+          .where(eq(workspaceMembers.workspaceId, resendApp.workspace.id));
+
+        const res = await request(resendApp.app.getHttpServer())
+          .post(`/invites/${row!.id}/resend`)
+          .set('Authorization', bearer(resendApp.adminToken));
+
+        expect(res.status).toBe(200);
+        expect(res.body).toMatchObject({
+          id: row!.id,
+          workspaceId: resendApp.workspace.id,
+          email: row!.email,
+          invitedBy: resendApp.adminUserId,
+          role: row!.role,
+          status: 'pending',
+          expiresAt: row!.expiresAt.toISOString(),
+          createdAt: row!.createdAt.toISOString(),
+        });
+        expect(res.body).not.toHaveProperty('token');
+
+        const [persistedInvite] = await resendApp.db
+          .select()
+          .from(invites)
+          .where(eq(invites.id, row!.id))
+          .limit(1);
+        const [after] = await resendApp.db
+          .select({ value: count() })
+          .from(workspaceMembers)
+          .where(eq(workspaceMembers.workspaceId, resendApp.workspace.id));
+
+        expect(resendApp.firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
+          row!.email,
+        );
+        expect(
+          resendApp.firebase.generatePasswordSetupLink,
+        ).toHaveBeenCalledWith(
+          row!.email,
+          `http://localhost:5173/invites/accept?token=${row!.token}`,
+        );
+        expect(resendApp.delivery.deliver).toHaveBeenCalledWith(
+          expect.objectContaining({
+            email: row!.email,
+            inviteUrl: `http://localhost:5173/invites/accept?token=${row!.token}`,
+            passwordSetupUrl: 'https://firebase.test/reset',
+            workspaceName: resendApp.workspace.name,
+          }),
+        );
+        expect(after?.value ?? 0).toBe(before?.value ?? 0);
+        expect(persistedInvite).toMatchObject({
+          id: row!.id,
+          token: row!.token,
+          status: 'pending',
+        });
+        expect(persistedInvite?.expiresAt.toISOString()).toBe(
+          row!.expiresAt.toISOString(),
+        );
+      } finally {
+        await resendApp.app.close();
+      }
+    });
+
     it('rejects non-existent invite → 404', async () => {
       const before = await memberCount();
 
@@ -139,6 +282,7 @@ describe('Invite negative paths (e2e)', () => {
         .set('Authorization', bearer(adminToken));
 
       expect(res.status).toBe(404);
+      expect(res.body.message).toBe('Pending invite not found');
       expect(await memberCount()).toBe(before);
     });
 
@@ -152,6 +296,7 @@ describe('Invite negative paths (e2e)', () => {
         .set('Authorization', bearer(adminToken));
 
       expect(res.status).toBe(404);
+      expect(res.body.message).toBe('Pending invite not found');
       expect(await memberCount()).toBe(before);
     });
 
@@ -180,6 +325,7 @@ describe('Invite negative paths (e2e)', () => {
         .set('Authorization', bearer(adminToken));
 
       expect(res.status).toBe(404);
+      expect(res.body.message).toBe('Pending invite not found');
       expect(await memberCount()).toBe(before);
     });
 
@@ -197,87 +343,45 @@ describe('Invite negative paths (e2e)', () => {
         .set('Authorization', bearer(adminToken));
 
       expect(res.status).toBe(410);
+      expect(res.body.message).toBe('Invite has expired');
       expect(await memberCount()).toBe(before);
     });
 
     it('keeps membership count unchanged when resend delivery fails', async () => {
-      const deliveryErrorAppFixture: TestingModule =
-        await Test.createTestingModule({
-          imports: [AppModule],
-        })
-          .overrideProvider(InviteDeliveryService)
-          .useValue({
-            deliver: async () => {
-              throw new Error('SMTP failed');
-            },
-          })
-          .overrideProvider(FIREBASE_ADMIN)
-          .useValue({
-            verifyIdToken: async () => ({
-              uid: 'admin-uid',
-              email: 'admin@example.com',
-              name: 'Admin',
-              email_verified: true,
-            }),
-            getOrCreateInvitedUserByEmail: async (email: string) => ({
-              uid: 'firebase-invitee',
-              email,
-              isExistingUser: false,
-            }),
-            generatePasswordSetupLink: async () =>
-              'https://firebase.test/reset',
-          })
-          .compile();
-
-      const deliveryErrorApp = deliveryErrorAppFixture.createNestApplication();
-
-      await deliveryErrorApp.init();
+      const resendApp = await createResendTestApp({
+        deliveryError: new Error('SMTP failed'),
+      });
 
       try {
-        const deliveryErrorDb = deliveryErrorApp.get<DrizzleDB>(DRIZZLE);
-        const tokens = await login(deliveryErrorApp);
-        const deliveryErrorToken = tokens.accessToken;
-
-        const [deliveryWorkspace] = await deliveryErrorDb
-          .select()
-          .from(workspaces)
-          .limit(1);
-        if (!deliveryWorkspace) throw new Error('Expected seeded workspace');
-
-        const [deliveryAdmin] = await deliveryErrorDb
-          .select()
-          .from(users)
-          .limit(1);
-        if (!deliveryAdmin) throw new Error('Expected seeded admin user');
-
         async function deliveryMemberCount(): Promise<number> {
-          const [countRow] = await deliveryErrorDb
+          const [countRow] = await resendApp.db
             .select({ value: count() })
             .from(workspaceMembers)
-            .where(eq(workspaceMembers.workspaceId, deliveryWorkspace.id));
+            .where(eq(workspaceMembers.workspaceId, resendApp.workspace.id));
           return countRow?.value ?? 0;
         }
 
-        const [row] = await deliveryErrorDb
+        const [row] = await resendApp.db
           .insert(invites)
           .values({
-            workspaceId: deliveryWorkspace.id,
+            workspaceId: resendApp.workspace.id,
             email: `delivery-failure-resend-${randomUUID()}@example.com`,
             token: `token-${randomUUID()}`,
-            invitedBy: deliveryAdmin.id,
+            invitedBy: resendApp.adminUserId,
             role: 'member',
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           })
           .returning();
         const before = await deliveryMemberCount();
 
-        const res = await request(deliveryErrorApp.getHttpServer())
+        const res = await request(resendApp.app.getHttpServer())
           .post(`/invites/${row!.id}/resend`)
-          .set('Authorization', bearer(deliveryErrorToken));
+          .set('Authorization', bearer(resendApp.adminToken));
 
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(503);
+        expect(res.body.message).toBe('SMTP failed');
 
-        const [persistedInvite] = await deliveryErrorDb
+        const [persistedInvite] = await resendApp.db
           .select()
           .from(invites)
           .where(eq(invites.id, row!.id))
@@ -287,7 +391,7 @@ describe('Invite negative paths (e2e)', () => {
         expect(persistedInvite).toBeDefined();
         expect(persistedInvite).toMatchObject({
           id: row!.id,
-          workspaceId: deliveryWorkspace.id,
+          workspaceId: resendApp.workspace.id,
           token: row!.token,
           role: row!.role,
           status: 'pending',
@@ -296,7 +400,7 @@ describe('Invite negative paths (e2e)', () => {
           row!.expiresAt.toISOString(),
         );
       } finally {
-        await deliveryErrorApp.close();
+        await resendApp.app.close();
       }
     });
   });

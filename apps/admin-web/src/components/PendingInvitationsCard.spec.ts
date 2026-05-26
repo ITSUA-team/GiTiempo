@@ -86,6 +86,17 @@ describe('PendingInvitationsCard', () => {
     expect(cancelButton.text()).toBe('');
   });
 
+  it('emits desktop resend and cancel actions with the clicked invite', async () => {
+    const pendingInvites = createInvites();
+    const wrapper = mountPendingInvitationsCard({ pendingInvites });
+
+    await wrapper.get('[data-testid="pending-invite-resend-invite-1"]').trigger('click');
+    await wrapper.get('[data-testid="pending-invite-cancel-invite-1"]').trigger('click');
+
+    expect(wrapper.emitted('resend')).toEqual([[pendingInvites[0]]]);
+    expect(wrapper.emitted('cancel')).toEqual([[pendingInvites[0]]]);
+  });
+
   it('renders mobile cards with the same fields and action labels', () => {
     mockMatchMedia(true);
 
@@ -105,6 +116,22 @@ describe('PendingInvitationsCard', () => {
         'aria-label',
       ),
     ).toBe('Cancel invite');
+  });
+
+  it('emits mobile resend and cancel actions with the clicked invite', async () => {
+    mockMatchMedia(true);
+    const pendingInvites = createInvites();
+    const wrapper = mountPendingInvitationsCard({ pendingInvites });
+
+    await wrapper
+      .get('[data-testid="pending-invite-mobile-resend-invite-1"]')
+      .trigger('click');
+    await wrapper
+      .get('[data-testid="pending-invite-mobile-cancel-invite-1"]')
+      .trigger('click');
+
+    expect(wrapper.emitted('resend')).toEqual([[pendingInvites[0]]]);
+    expect(wrapper.emitted('cancel')).toEqual([[pendingInvites[0]]]);
   });
 
   it('renders a distinct empty state when no pending invitations are loaded', () => {

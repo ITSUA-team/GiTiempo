@@ -6,6 +6,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -133,11 +134,17 @@ export class InvitesService {
       .limit(1);
     if (!workspace) throw new UnauthorizedException('Unauthorized');
 
-    await this.deliverInvite({
-      email: invite.email,
-      token: invite.token,
-      workspaceName: workspace.name,
-    });
+    try {
+      await this.deliverInvite({
+        email: invite.email,
+        token: invite.token,
+        workspaceName: workspace.name,
+      });
+    } catch (error) {
+      throw new ServiceUnavailableException(
+        error instanceof Error ? error.message : 'Invite delivery failed',
+      );
+    }
 
     return this.toResponse(invite);
   }
