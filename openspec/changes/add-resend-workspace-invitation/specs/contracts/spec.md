@@ -13,3 +13,9 @@ The shared contracts SHALL define stable shapes for invite creation, listing, re
 - **WHEN** the backend returns the resend response
 - **THEN** the payload matches the shared workspace invite response contract
 - **AND** no request body schema is required for the resend endpoint
+
+#### Scenario: Invite resend delivery failure uses documented error contract
+- **GIVEN** an admin resends a pending invite
+- **WHEN** Firebase setup link generation or invite delivery fails after the pending invite is found
+- **THEN** the API contract documents a 503 response for the resend endpoint
+- **AND** the response surfaces the delivery or Firebase failure message

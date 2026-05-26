@@ -8,7 +8,7 @@
 
 ## 2. Contracts And API Coverage
 
-- [x] 2.1 Update shared OpenAPI output so `packages/shared/openapi.json` includes `POST /invites/{id}/resend` with bearer auth, no request body, existing invite response, 403, 404, and 410 behavior.
+- [x] 2.1 Update shared OpenAPI output so `packages/shared/openapi.json` includes `POST /invites/{id}/resend` with bearer auth, no request body, existing invite response, 403, 404, 410, and delivery/Firebase failure 503 behavior.
 - [x] 2.2 Add or update admin members client tests to cover the resend path, method, headers, no request body, response parsing, and backend error propagation.
 - [x] 2.3 Extend API e2e RBAC coverage for member-token and unauthenticated access to `POST /invites/:id/resend`.
 - [x] 2.4 Extend invite negative-path e2e coverage for resend non-existent, accepted, cross-workspace, expired-pending, and no-membership-created cases.
