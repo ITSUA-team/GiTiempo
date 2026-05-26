@@ -11,8 +11,12 @@ import {
   createTimeEntriesClient,
   type TimeEntriesClient,
 } from "@/services/time-entries-client";
-import { useDashboardOverviewViewModel } from "@/composables/dashboard/useDashboardOverviewViewModel";
-import { getDashboardWeekWindow } from "@/lib/dashboard-overview-helpers";
+import {
+  buildDashboardStats,
+  buildDashboardWeeklyFocus,
+  getDashboardWeekWindow,
+  mapDashboardRecentEntryRows,
+} from "@/lib/dashboard-overview-helpers";
 import { useAuthStore } from "@/stores/auth";
 
 export type {
@@ -21,7 +25,6 @@ export type {
   DashboardStat,
   DashboardWeeklyFocus,
 } from "@/lib/dashboard-overview-helpers";
-export type { DashboardPageState } from "@/composables/dashboard/useDashboardOverviewViewModel";
 
 type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
 
@@ -83,19 +86,22 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
       recentEntriesQuery.isPending.value ||
       isLoadingWeekEntries.value,
   );
-  const dashboardViewModel = useDashboardOverviewViewModel({
-    isLoadingOverview,
-    nowMs,
-    recentEntries,
-    requestErrorMessage,
-    weekEntries,
+  const pageState = computed(() => {
+    if (isLoadingOverview.value) {
+      return "loading";
+    }
+
+    if (requestErrorMessage.value) {
+      return "request-error";
+    }
+
+    return recentEntries.value.length === 0 ? "empty" : "ready";
   });
-  const {
-    dashboardStats,
-    pageState,
-    recentEntryRows,
-    weeklyFocus,
-  } = dashboardViewModel;
+  const dashboardStats = computed(() => buildDashboardStats(weekEntries.value, nowMs.value));
+  const weeklyFocus = computed(() => buildDashboardWeeklyFocus(weekEntries.value, nowMs.value));
+  const recentEntryRows = computed(() =>
+    mapDashboardRecentEntryRows(recentEntries.value, nowMs.value),
+  );
 
   let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
