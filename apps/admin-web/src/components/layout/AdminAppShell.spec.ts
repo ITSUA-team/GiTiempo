@@ -8,7 +8,7 @@ import ToastService from "primevue/toastservice";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 import AdminAppShell from "./AdminAppShell.vue";
-import { createAppRouter } from "@/router";
+import { createAppRouter, routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
 const testMocks = vi.hoisted(() => ({
@@ -28,6 +28,28 @@ vi.mock("@/composables/useToasts", () => ({
   }),
 }));
 
+const WorkspaceHeaderStub = {
+  props: [
+    "counterpartHref",
+    "counterpartLabel",
+    "displayName",
+    "settingsIcon",
+    "settingsLabel",
+    "settingsTo",
+    "userInitials",
+    "workspaceName",
+  ],
+  emits: ["signOut"],
+  template: `
+    <header>
+      <span>{{ workspaceName }}</span>
+      <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
+      <RouterLink data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
+      <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
+    </header>
+  `,
+};
+
 describe("AdminAppShell", () => {
   beforeEach(() => {
     clearRefreshToken();
@@ -46,12 +68,15 @@ describe("AdminAppShell", () => {
     vi.unstubAllEnvs();
   });
 
-  it("preserves the visible user workspace link and shared navigation", async () => {
+  it("preserves the profile menu and shared navigation", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore(pinia);
     authStore.accessToken = "admin-access-token";
     authStore.bootstrapComplete = true;
+    const logoutSpy = vi.spyOn(authStore, "logout").mockImplementation(async () => {
+      authStore.accessToken = null;
+    });
 
     const router = createAppRouter({
       history: createMemoryHistory(),
@@ -70,21 +95,30 @@ describe("AdminAppShell", () => {
           },
         },
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        stubs: {
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
       },
     });
-    const workspaceLink = wrapper.get(
-      'a[href="https://user.example.test/login"]',
-    );
     const settingsLinks = wrapper.findAll('a[href="/settings"]');
+    const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
 
-    expect(workspaceLink.text()).toBe("User workspace");
-    expect(wrapper.find('[aria-label="Open workspace settings"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
+    expect(settingsLink.text()).toBe("Settings");
+    expect(settingsLink.attributes("href")).toBe("/settings");
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(
       false,
     );
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(false);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
-    expect(settingsLinks).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Settings"]')).toHaveLength(0);
+    expect(settingsLinks).toHaveLength(1);
+
+    await wrapper.get('[data-testid="profile-menu-sign-out"]').trigger("click");
+    await flushPromises();
+
+    expect(logoutSpy).toHaveBeenCalledTimes(1);
+    expect(router.currentRoute.value.name).toBe(routeNames.login);
 
     await flushPromises();
 
@@ -110,6 +144,9 @@ describe("AdminAppShell", () => {
     const wrapper = mount(AdminAppShell, {
       global: {
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
       },
     });
 

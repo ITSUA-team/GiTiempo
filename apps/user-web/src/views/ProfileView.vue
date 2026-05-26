@@ -6,18 +6,15 @@ import InputText from "primevue/inputtext";
 import { updateUserSchema } from "@gitiempo/shared";
 import { createAppToast, runWithFeedback } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
-import { useRouter } from "vue-router";
 
 import PageHeader from "@/components/layout/PageHeader.vue";
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
 import ProfileGithubConnectionCard from "@/components/profile/ProfileGithubConnectionCard.vue";
 import { useProfileGithubConnection } from "@/composables/useProfileGithubConnection";
-import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue/usetoast";
 
 const authStore = useAuthStore();
-const router = useRouter();
 const toast = useToast();
 const appToast = createAppToast(toast);
 
@@ -56,11 +53,6 @@ watch(
 watch(displayNameDraft, () => {
   displayNameErrorMessage.value = null;
 });
-
-async function handleSignOut(): Promise<void> {
-  await authStore.logout();
-  await router.replace({ name: routeNames.login });
-}
 
 function handleCancelProfileChanges(): void {
   displayNameDraft.value = persistedDisplayName.value;
@@ -209,17 +201,6 @@ async function handleSaveProfile(): Promise<void> {
         @disconnect="requestDisconnect"
         @refresh="refreshConnectionStatus"
       />
-
-      <div class="flex justify-end pt-4">
-        <Button
-          data-testid="profile-signout"
-          type="button"
-          label="Sign out"
-          severity="danger"
-          variant="text"
-          @click="handleSignOut"
-        />
-      </div>
     </div>
   </section>
 </template>

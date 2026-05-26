@@ -103,7 +103,7 @@
 - GitHub OAuth callback outcomes after redirect back to `/profile` are surfaced with toast notifications only; do not render inline success or error banners for callback results.
 - When `avatarUrl` is `null`, do not render the avatar row in the GitHub connection card.
 - Disconnect confirmation and callback notifications should use standard PrimeVue `<ConfirmDialog>` and `<Toast>` components; do not invent custom dialog or toast patterns for this page.
-- Sign out action at the bottom using a ghost/destructive treatment.
+- Sign out is owned by the shared header profile dropdown; do not render a duplicate sign-out action in the Profile page content.
 
 ## Invite Accept Page
 
@@ -153,7 +153,7 @@
 ## Cross-App Navigation
 
 - The user SPA should expose a visible entry point to the admin workspace when the admin SPA is available.
-- Prefer placing the cross-link in the shared shell identity/top-bar area so it is available from authenticated user pages without competing with page-level actions.
+- Place the cross-link in the shared shell profile dropdown so it is available from authenticated user pages without competing with page-level actions.
 
 ## Error Pages
 
