@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Skeleton from 'primevue/skeleton';
 
-import MobileRecordCard from '@/components/mobile/MobileRecordCard.vue';
+import { MobileRecordCard } from '@gitiempo/web-shared';
 
 type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports';
 

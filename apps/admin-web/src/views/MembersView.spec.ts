@@ -172,6 +172,12 @@ describe('MembersView', () => {
 
     membersRequest.resolve(membersData);
     invitesRequest.resolve(invitesData);
+
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-testid="skeleton"]').length).toBeGreaterThan(0);
+    expect(wrapper.find('[data-testid="members-table"]').exists()).toBe(false);
+
     projectsRequest.resolve(projectsData);
 
     await flushPromises();
@@ -221,5 +227,53 @@ describe('MembersView', () => {
     await flushPromises();
 
     expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+  });
+
+  it('treats project membership data as required before rendering member project filters', async () => {
+    testMocks.listMembers.mockResolvedValue([
+      {
+        avatarUrl: null,
+        displayName: 'Pat PM',
+        email: 'pat@example.com',
+        id: '22222222-2222-4222-8222-222222222222',
+        joinedAt: '2026-05-01T10:00:00.000Z',
+        lastActiveAt: null,
+        projectsAssignedCount: 1,
+        role: 'pm',
+        userId: 'user-2',
+        workspaceId: '33333333-3333-4333-8333-333333333333',
+      },
+    ]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.listProjects.mockRejectedValueOnce(new Error('Projects unavailable'));
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = 'access-token';
+
+    const wrapper = mount(MembersView, {
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          MemberInviteDialog: MemberInviteDialogStub,
+          MembersTable: MembersTableStub,
+          Skeleton: SkeletonStub,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Failed to load members');
+    expect(wrapper.text()).toContain('Projects unavailable');
+    expect(wrapper.find('[data-testid="members-table"]').exists()).toBe(false);
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Projects unavailable',
+      expect.objectContaining({
+        logContext: { action: 'load-members', feature: 'members' },
+      }),
+    );
   });
 });

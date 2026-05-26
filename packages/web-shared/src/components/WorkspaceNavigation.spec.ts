@@ -163,5 +163,6 @@ describe("WorkspaceNavigation", () => {
     await projectLink.trigger("click");
 
     expect(blurSpy).toHaveBeenCalledOnce();
+    expect(document.activeElement).not.toBe(projectLink.element);
   });
 });

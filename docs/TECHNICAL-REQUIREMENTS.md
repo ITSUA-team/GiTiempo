@@ -74,6 +74,8 @@ User → Firebase Auth (Google SSO or email/password) on frontend
 
 **Onboarding model:** Application access is invite-only. New users are added exclusively through the invite-acceptance flow (`POST /invites/accept`). The login endpoint does not create users or memberships - it only issues sessions for users who already have an existing local user record and an active workspace membership.
 
+**Invite accept page flow:** Invite emails link to the User SPA at `/invites/accept?token=<invite-token>`. This route is unauthenticated and outside the authenticated app shell. Invited Firebase identities are provisioned by the backend with the Firebase Admin SDK during invite creation or delivery, because browser self-service Firebase signup may be disabled by project policy. The API never receives or stores raw passwords. Invite email copy must guide first-time invitees to use Firebase's password setup/reset flow for the invited email, then return to the invite accept page and sign in. After Firebase sign-in with email/password or Google returns an identity token, the page submits `POST /invites/accept` with the invite token and Firebase ID token, then creates the normal app API session with that same Firebase ID token after invite acceptance returns `204 No Content`. Missing, expired, reused, or unknown invite tokens are terminal link errors; email mismatch is retryable with the correct identity. If Firebase sign-in succeeds but invite acceptance fails, the page must keep the user on a retry/recovery state and explain whether to retry acceptance, switch accounts, or request a fresh invite; the backend must remain the source of truth for invite validity and membership creation.
+
 **Token lifecycle:**
 
 | Token              | Lifetime   | Storage                                               |
@@ -250,7 +252,7 @@ The current web frontend baseline includes:
 **Architecture:**
 
 - Manifest V3 extension.
-- Content script injected on `github.com/*/issues/*` pages.
+- Content script injected on `github.com/*/issues/*` pages and pull-request pages so GitHub same-tab navigation can recover when moving from a PR back to an issue.
 - Detects issue from page URL (`org/repo/issues/123`).
 - Authenticates via a popup login flow (Firebase Auth), stores JWT tokens in `chrome.storage`.
 - Sends JWT access token in `Authorization` header on all API requests.
@@ -403,8 +405,8 @@ The API requires the following environment variables:
 | `GITHUB_APP_CLIENT_SECRET` | GitHub App client secret                                                                              |
 | `ENCRYPTION_KEY`           | Key for AES-encrypting stored GitHub tokens                                                           |
 | `APP_URL`                  | Public URL of the API (for OAuth callback)                                                            |
-| `USER_WEB_URL`             | Public URL of the User SPA                                                                            |
-| `ADMIN_WEB_URL`            | Public URL of the Admin SPA                                                                           |
+| `USER_SPA_URL`             | Public URL of the User SPA                                                                            |
+| `ADMIN_SPA_URL`            | Public URL of the Admin SPA                                                                           |
 | `SEED_ADMIN_EMAIL`         | Email of the initial admin user (used by seed migration)                                              |
 | `SEED_ADMIN_FIREBASE_UID`  | Firebase UID of the initial admin user                                                                |
 | `SEED_MEMBER_EMAIL`        | Email of an optional seeded member user                                                               |
@@ -414,4 +416,6 @@ The API requires the following environment variables:
 | `SMTP_USER`                | SMTP username                                                                                         |
 | `SMTP_PASSWORD`            | SMTP password                                                                                         |
 | `EMAIL_FROM`               | From address for outgoing emails                                                                      |
+| `INVITES_EMAIL_CONSOLE_FALLBACK` | Enables non-production console invite delivery fallback when SMTP is unavailable               |
+| `INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS` | Development-only flag that logs full invite/setup URLs for manual local testing       |
 | `LOG_LEVEL`                | Logging level: `error`, `warn`, `info`, `debug` (default: `info`)                                     |

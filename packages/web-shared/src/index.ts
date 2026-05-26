@@ -4,5 +4,6 @@ export * from "./feedback";
 export * from "./components";
 export * from "./session-storage";
 export * from "./validation";
+export * from "./viewport";
 export * from "./workspace-link";
 export * from "./workspace-roles";
