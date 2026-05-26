@@ -18,6 +18,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ZodSerializerDto } from 'nestjs-zod';
@@ -74,6 +75,9 @@ export class InvitesController {
   @ApiForbiddenResponse({ description: 'Admin role required' })
   @ApiNotFoundResponse({ description: 'Pending invite not found' })
   @ApiGoneResponse({ description: 'Invite has expired' })
+  @ApiServiceUnavailableResponse({
+    description: 'Invite delivery failed after the pending invite was found',
+  })
   @ZodSerializerDto(WorkspaceInviteResponseDto)
   resendInvite(
     @CurrentUser() user: AuthUser,

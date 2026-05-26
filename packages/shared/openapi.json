@@ -513,6 +513,9 @@
           },
           "410": {
             "description": "Invite has expired"
+          },
+          "503": {
+            "description": "Invite delivery failed after the pending invite was found"
           }
         },
         "security": [
