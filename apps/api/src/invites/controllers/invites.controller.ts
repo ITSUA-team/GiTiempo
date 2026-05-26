@@ -13,7 +13,9 @@ import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiGoneResponse,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -61,6 +63,23 @@ export class InvitesController {
     @Body() body: CreateWorkspaceInviteDto,
   ): Promise<WorkspaceInviteResponseDto> {
     return this.invites.createInvite(user.workspaceId, user.sub, body);
+  }
+
+  @Post(':id/resend')
+  @ApiBearerAuth()
+  @UseGuards(WorkspaceAdminGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend a pending workspace invite' })
+  @ApiOkResponse({ type: WorkspaceInviteResponseDto })
+  @ApiForbiddenResponse({ description: 'Admin role required' })
+  @ApiNotFoundResponse({ description: 'Pending invite not found' })
+  @ApiGoneResponse({ description: 'Invite has expired' })
+  @ZodSerializerDto(WorkspaceInviteResponseDto)
+  resendInvite(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ): Promise<WorkspaceInviteResponseDto> {
+    return this.invites.resendInvite(user.workspaceId, id);
   }
 
   @Delete(':id')

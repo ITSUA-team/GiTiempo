@@ -481,6 +481,51 @@
         ]
       }
     },
+    "/invites/{id}/resend": {
+      "post": {
+        "operationId": "InvitesController_resendInvite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceInviteResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          },
+          "404": {
+            "description": "Pending invite not found"
+          },
+          "410": {
+            "description": "Invite has expired"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resend a pending workspace invite",
+        "tags": [
+          "invites"
+        ]
+      }
+    },
     "/invites/{id}": {
       "delete": {
         "operationId": "InvitesController_cancelInvite",

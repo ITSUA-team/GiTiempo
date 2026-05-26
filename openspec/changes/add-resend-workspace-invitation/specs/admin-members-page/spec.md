@@ -46,6 +46,12 @@ The Admin Members page MUST provide accessible icon-only `Resend invite` and `Ca
 - **AND** confirming issues the cancel request, refreshes pending invite data, and shows success toast feedback
 - **AND** cancelling sends no request
 
+#### Scenario: Cancel pending invite failure
+- **GIVEN** the admin confirms `Cancel invite` for a pending invitation
+- **WHEN** the cancel request fails
+- **THEN** the page shows error toast feedback using the backend message when available
+- **AND** keeps the pending invitation row visible
+
 #### Scenario: Pending invitation actions are accessible
 - **GIVEN** the pending invitations card renders
 - **WHEN** row actions are visible

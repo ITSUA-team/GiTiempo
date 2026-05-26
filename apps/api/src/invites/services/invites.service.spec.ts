@@ -1,4 +1,8 @@
-import { ForbiddenException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  GoneException,
+  NotFoundException,
+} from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { InvitesService } from './invites.service';
@@ -313,5 +317,170 @@ describe('InvitesService createInvite', () => {
     ).rejects.toThrow('Failed to generate Firebase password setup link');
 
     expect(updateSetWhere).toHaveBeenCalled();
+  });
+});
+
+describe('InvitesService resendInvite', () => {
+  function makeResendEnv(options?: {
+    deliveryError?: boolean;
+    inviteOverrides?: Partial<typeof pendingInvite>;
+    linkError?: boolean;
+    provisioningError?: boolean;
+    reuseExistingUser?: boolean;
+  }) {
+    const inviteRow = {
+      ...pendingInvite,
+      ...options?.inviteOverrides,
+    };
+
+    const inviteLimit = vi.fn().mockResolvedValue([inviteRow]);
+    const inviteWhere = vi.fn().mockReturnValue({ limit: inviteLimit });
+    const inviteFrom = vi.fn().mockReturnValue({ where: inviteWhere });
+    const inviteSelect = { from: inviteFrom };
+
+    const workspaceLimit = vi
+      .fn()
+      .mockResolvedValue([{ name: 'Test Workspace' }]);
+    const workspaceWhere = vi.fn().mockReturnValue({ limit: workspaceLimit });
+    const workspaceFrom = vi.fn().mockReturnValue({ where: workspaceWhere });
+    const workspaceSelect = { from: workspaceFrom };
+
+    const db = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(inviteSelect)
+        .mockReturnValueOnce(workspaceSelect),
+      transaction: vi.fn(),
+      update: vi.fn(),
+    };
+
+    const delivery = {
+      deliver: options?.deliveryError
+        ? vi.fn().mockRejectedValue(new Error('SMTP failed'))
+        : vi.fn().mockResolvedValue(undefined),
+    };
+    const firebase = {
+      generatePasswordSetupLink: options?.linkError
+        ? vi
+            .fn()
+            .mockRejectedValue(
+              new Error('Failed to generate Firebase password setup link'),
+            )
+        : vi.fn().mockResolvedValue('https://firebase.test/reset'),
+      getOrCreateInvitedUserByEmail: options?.provisioningError
+        ? vi
+            .fn()
+            .mockRejectedValue(
+              new Error('Failed to provision invited Firebase user'),
+            )
+        : vi.fn().mockResolvedValue({
+            uid: 'firebase-invitee',
+            email: inviteRow.email,
+            isExistingUser: options?.reuseExistingUser ?? false,
+          }),
+      verifyIdToken: vi.fn(),
+    };
+    const usersService = makeUsersService();
+    const config = makeConfig();
+
+    return {
+      db,
+      delivery,
+      firebase,
+      service: new InvitesService(
+        db as never,
+        firebase as never,
+        config as never,
+        usersService as never,
+        delivery as never,
+      ),
+    };
+  }
+
+  it('resends a pending invite with the existing token and no membership creation', async () => {
+    const { service, delivery, firebase, db } = makeResendEnv();
+
+    const result = await service.resendInvite('workspace-1', 'invite-1');
+
+    expect(firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
+      'new.user@example.com',
+    );
+    expect(firebase.generatePasswordSetupLink).toHaveBeenCalledWith(
+      'new.user@example.com',
+      'http://localhost:5173/invites/accept?token=invite-token',
+    );
+    expect(delivery.deliver).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'new.user@example.com',
+        inviteUrl: 'http://localhost:5173/invites/accept?token=invite-token',
+        passwordSetupUrl: 'https://firebase.test/reset',
+        workspaceName: 'Test Workspace',
+      }),
+    );
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      id: 'invite-1',
+      status: 'pending',
+      email: 'new.user@example.com',
+    });
+  });
+
+  it('reuses an existing Firebase user before resend delivery', async () => {
+    const { service, delivery, firebase } = makeResendEnv({
+      reuseExistingUser: true,
+    });
+
+    await service.resendInvite('workspace-1', 'invite-1');
+
+    expect(firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
+      'new.user@example.com',
+    );
+    expect(delivery.deliver).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'new.user@example.com',
+        inviteUrl: 'http://localhost:5173/invites/accept?token=invite-token',
+      }),
+    );
+  });
+
+  it('returns not found when the invite is not pending', async () => {
+    const { service } = makeResendEnv({
+      inviteOverrides: { status: 'accepted' },
+    });
+
+    await expect(
+      service.resendInvite('workspace-1', 'invite-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('returns gone for expired pending invites', async () => {
+    const { service } = makeResendEnv({
+      inviteOverrides: { expiresAt: new Date('2020-01-01T00:00:00Z') },
+    });
+
+    await expect(
+      service.resendInvite('workspace-1', 'invite-1'),
+    ).rejects.toBeInstanceOf(GoneException);
+  });
+
+  it('keeps the invite pending when resend delivery fails', async () => {
+    const { service, firebase, delivery, db } = makeResendEnv({
+      deliveryError: true,
+    });
+
+    await expect(
+      service.resendInvite('workspace-1', 'invite-1'),
+    ).rejects.toThrow('SMTP failed');
+
+    expect(firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
+      'new.user@example.com',
+    );
+    expect(firebase.generatePasswordSetupLink).toHaveBeenCalledWith(
+      'new.user@example.com',
+      'http://localhost:5173/invites/accept?token=invite-token',
+    );
+    expect(delivery.deliver).toHaveBeenCalled();
+    expect(db.update).not.toHaveBeenCalled();
+    expect(db.transaction).not.toHaveBeenCalled();
   });
 });

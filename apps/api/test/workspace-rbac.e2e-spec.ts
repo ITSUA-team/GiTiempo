@@ -260,6 +260,25 @@ describe('Workspace RBAC (e2e)', () => {
     );
   });
 
+  describe('POST /invites/:id/resend', () => {
+    it(
+      'returns 403 for member token',
+      sendAs(
+        'post',
+        () => `/invites/${inviteId}/resend`,
+        () => memberToken,
+      ),
+    );
+    it(
+      'returns 401 without token',
+      sendAs(
+        'post',
+        () => `/invites/${inviteId}/resend`,
+        () => null,
+      ),
+    );
+  });
+
   describe('DELETE /invites/:id', () => {
     it(
       'returns 403 for member token',

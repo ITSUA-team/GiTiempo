@@ -5,9 +5,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, count, eq } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { FIREBASE_ADMIN } from '../src/auth/services/firebase-admin.interface';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import { invites, users, workspaceMembers, workspaces } from '../src/db/schema';
+import { InviteDeliveryService } from '../src/invites/services/invite-delivery.service';
 import { bearer, login } from './helpers/auth';
 
 describe('Invite negative paths (e2e)', () => {
@@ -125,6 +127,177 @@ describe('Invite negative paths (e2e)', () => {
         .delete(`/invites/${row!.id}`)
         .set('Authorization', bearer(adminToken));
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('POST /invites/:id/resend', () => {
+    it('rejects non-existent invite → 404', async () => {
+      const before = await memberCount();
+
+      const res = await request(app.getHttpServer())
+        .post(`/invites/${randomUUID()}/resend`)
+        .set('Authorization', bearer(adminToken));
+
+      expect(res.status).toBe(404);
+      expect(await memberCount()).toBe(before);
+    });
+
+    it('rejects accepted invite → 404', async () => {
+      const email = `accepted-resend-${randomUUID()}@example.com`;
+      const [row] = await insertInvite(email, { status: 'accepted' });
+      const before = await memberCount();
+
+      const res = await request(app.getHttpServer())
+        .post(`/invites/${row!.id}/resend`)
+        .set('Authorization', bearer(adminToken));
+
+      expect(res.status).toBe(404);
+      expect(await memberCount()).toBe(before);
+    });
+
+    it('rejects cross-workspace invite → 404', async () => {
+      const [otherWorkspace] = await db
+        .insert(workspaces)
+        .values({ name: `Other Workspace ${randomUUID()}` })
+        .returning();
+      if (!otherWorkspace) throw new Error('Expected other workspace');
+
+      const [row] = await db
+        .insert(invites)
+        .values({
+          workspaceId: otherWorkspace.id,
+          email: `cross-${randomUUID()}@example.com`,
+          token: `token-${randomUUID()}`,
+          invitedBy: adminUserId,
+          role: 'member',
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        })
+        .returning();
+      const before = await memberCount();
+
+      const res = await request(app.getHttpServer())
+        .post(`/invites/${row!.id}/resend`)
+        .set('Authorization', bearer(adminToken));
+
+      expect(res.status).toBe(404);
+      expect(await memberCount()).toBe(before);
+    });
+
+    it('rejects expired pending invite → 410', async () => {
+      const [row] = await insertInvite(
+        `expired-resend-${randomUUID()}@example.com`,
+        {
+          expiresAt: new Date('2020-01-01T00:00:00Z'),
+        },
+      );
+      const before = await memberCount();
+
+      const res = await request(app.getHttpServer())
+        .post(`/invites/${row!.id}/resend`)
+        .set('Authorization', bearer(adminToken));
+
+      expect(res.status).toBe(410);
+      expect(await memberCount()).toBe(before);
+    });
+
+    it('keeps membership count unchanged when resend delivery fails', async () => {
+      const deliveryErrorAppFixture: TestingModule =
+        await Test.createTestingModule({
+          imports: [AppModule],
+        })
+          .overrideProvider(InviteDeliveryService)
+          .useValue({
+            deliver: async () => {
+              throw new Error('SMTP failed');
+            },
+          })
+          .overrideProvider(FIREBASE_ADMIN)
+          .useValue({
+            verifyIdToken: async () => ({
+              uid: 'admin-uid',
+              email: 'admin@example.com',
+              name: 'Admin',
+              email_verified: true,
+            }),
+            getOrCreateInvitedUserByEmail: async (email: string) => ({
+              uid: 'firebase-invitee',
+              email,
+              isExistingUser: false,
+            }),
+            generatePasswordSetupLink: async () =>
+              'https://firebase.test/reset',
+          })
+          .compile();
+
+      const deliveryErrorApp = deliveryErrorAppFixture.createNestApplication();
+
+      await deliveryErrorApp.init();
+
+      try {
+        const deliveryErrorDb = deliveryErrorApp.get<DrizzleDB>(DRIZZLE);
+        const tokens = await login(deliveryErrorApp);
+        const deliveryErrorToken = tokens.accessToken;
+
+        const [deliveryWorkspace] = await deliveryErrorDb
+          .select()
+          .from(workspaces)
+          .limit(1);
+        if (!deliveryWorkspace) throw new Error('Expected seeded workspace');
+
+        const [deliveryAdmin] = await deliveryErrorDb
+          .select()
+          .from(users)
+          .limit(1);
+        if (!deliveryAdmin) throw new Error('Expected seeded admin user');
+
+        async function deliveryMemberCount(): Promise<number> {
+          const [countRow] = await deliveryErrorDb
+            .select({ value: count() })
+            .from(workspaceMembers)
+            .where(eq(workspaceMembers.workspaceId, deliveryWorkspace.id));
+          return countRow?.value ?? 0;
+        }
+
+        const [row] = await deliveryErrorDb
+          .insert(invites)
+          .values({
+            workspaceId: deliveryWorkspace.id,
+            email: `delivery-failure-resend-${randomUUID()}@example.com`,
+            token: `token-${randomUUID()}`,
+            invitedBy: deliveryAdmin.id,
+            role: 'member',
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          })
+          .returning();
+        const before = await deliveryMemberCount();
+
+        const res = await request(deliveryErrorApp.getHttpServer())
+          .post(`/invites/${row!.id}/resend`)
+          .set('Authorization', bearer(deliveryErrorToken));
+
+        expect(res.status).toBe(500);
+
+        const [persistedInvite] = await deliveryErrorDb
+          .select()
+          .from(invites)
+          .where(eq(invites.id, row!.id))
+          .limit(1);
+
+        expect(await deliveryMemberCount()).toBe(before);
+        expect(persistedInvite).toBeDefined();
+        expect(persistedInvite).toMatchObject({
+          id: row!.id,
+          workspaceId: deliveryWorkspace.id,
+          token: row!.token,
+          role: row!.role,
+          status: 'pending',
+        });
+        expect(persistedInvite?.expiresAt.toISOString()).toBe(
+          row!.expiresAt.toISOString(),
+        );
+      } finally {
+        await deliveryErrorApp.close();
+      }
     });
   });
 
