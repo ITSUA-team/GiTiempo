@@ -1,4 +1,5 @@
 import {
+  createTaskSchema,
   type ProjectResponse,
   type TaskResponse,
   type TimeEntryListResponse,
@@ -14,16 +15,15 @@ import {
   useStopTimerMutation,
   useVisibleProjectsQuery,
 } from "@gitiempo/web-shared/query";
-import { computed, nextTick, onMounted, shallowRef, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
 import {
   createTimeEntriesClient,
   type TimeEntriesClient,
 } from "@/services/time-entries-client";
-import { useTopBarElapsedTimer } from "@/composables/timer/useTopBarElapsedTimer";
-import { useTopBarTaskPicker } from "@/composables/timer/useTopBarTaskPicker";
 import {
+  formatElapsedTime,
   isConflictErrorMessage,
   isRunningTimer,
   toSelectedTaskContext,
@@ -55,36 +55,24 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   const currentTimer = shallowRef<TimeEntryResponse | null>(null);
   const selectedContext = shallowRef<SelectedTaskContext | null>(null);
-  const taskPicker = useTopBarTaskPicker();
-  const {
-    activeProjects,
-    activeTasks,
-    closeDialog,
-    createTaskErrorMessage,
-    createTaskTitle,
-    getCachedTasks,
-    isDialogOpen,
-    openDialog: openTaskPicker,
-    projects,
-    projectsErrorMessage,
-    selectedProject,
-    selectedProjectId,
-    selectedTask,
-    selectedTaskId,
-    setCachedTasks,
-    setCreateTaskError,
-    setCreateTaskTitle,
-    setProjects,
-    setProjectsError,
-    setSelectedProjectId,
-    setSelectedTaskId,
-    setTasks,
-    setTasksError,
-    tasks,
-    tasksErrorMessage,
-    toSelectedTaskContext: getSelectedTaskContext,
-    validateCreateTaskInput,
-  } = taskPicker;
+  const projects = ref<ProjectResponse[]>([]);
+  const tasks = ref<TaskResponse[]>([]);
+  const taskCache = new Map<string, TaskResponse[]>();
+  const isDialogOpen = shallowRef(false);
+  const selectedProjectId = shallowRef<string | null>(null);
+  const selectedTaskId = shallowRef<string | null>(null);
+  const createTaskTitle = shallowRef("");
+  const projectsErrorMessage = shallowRef<string | null>(null);
+  const tasksErrorMessage = shallowRef<string | null>(null);
+  const createTaskErrorMessage = shallowRef<string | null>(null);
+  const activeProjects = computed(() => projects.value.filter((project) => project.isActive));
+  const activeTasks = computed(() => tasks.value.filter((task) => task.isActive));
+  const selectedProject = computed(
+    () => activeProjects.value.find((project) => project.id === selectedProjectId.value) ?? null,
+  );
+  const selectedTask = computed(
+    () => activeTasks.value.find((task) => task.id === selectedTaskId.value) ?? null,
+  );
 
   const isLoadingSummary = shallowRef(false);
   const isLoadingProjects = shallowRef(false);
@@ -135,16 +123,126 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const isStoppingTimer = computed(() => stopTimerMutation.isPending.value);
   const isCreatingTask = computed(() => createTaskMutation.isPending.value);
 
+  function setProjects(nextProjects: ProjectResponse[]): void {
+    projects.value = nextProjects;
+  }
+
+  function setTasks(nextTasks: TaskResponse[]): void {
+    tasks.value = nextTasks;
+  }
+
+  function getCachedTasks(projectId: string): TaskResponse[] | undefined {
+    return taskCache.get(projectId);
+  }
+
+  function setCachedTasks(projectId: string, nextTasks: TaskResponse[]): void {
+    taskCache.set(projectId, nextTasks);
+  }
+
+  function openTaskPicker(context: { projectId: string; taskId: string } | null): void {
+    isDialogOpen.value = true;
+    createTaskErrorMessage.value = null;
+    projectsErrorMessage.value = null;
+    tasksErrorMessage.value = null;
+    selectedProjectId.value = context?.projectId ?? null;
+    selectedTaskId.value = context?.taskId ?? null;
+  }
+
+  function closeDialog(): void {
+    isDialogOpen.value = false;
+    createTaskTitle.value = "";
+    createTaskErrorMessage.value = null;
+  }
+
+  function setSelectedProjectId(projectId: string | null): void {
+    if (selectedProjectId.value === projectId) {
+      return;
+    }
+
+    selectedProjectId.value = projectId;
+  }
+
+  function setSelectedTaskId(taskId: string | null): void {
+    selectedTaskId.value = taskId;
+  }
+
+  function setCreateTaskTitle(title: string): void {
+    createTaskTitle.value = title;
+    createTaskErrorMessage.value = null;
+  }
+
+  function setProjectsError(message: string | null): void {
+    projectsErrorMessage.value = message;
+  }
+
+  function setTasksError(message: string | null): void {
+    tasksErrorMessage.value = message;
+  }
+
+  function setCreateTaskError(message: string | null): void {
+    createTaskErrorMessage.value = message;
+  }
+
+  function validateCreateTaskInput() {
+    const parsed = createTaskSchema.safeParse({ title: createTaskTitle.value.trim() });
+
+    if (!parsed.success) {
+      createTaskErrorMessage.value = parsed.error.issues[0]?.message ?? "Task title is invalid.";
+      return null;
+    }
+
+    createTaskErrorMessage.value = null;
+    return parsed.data;
+  }
+
+  function getSelectedTaskContext(): SelectedTaskContext | null {
+    if (!selectedProject.value || !selectedTask.value) {
+      return null;
+    }
+
+    return {
+      projectId: selectedProject.value.id,
+      projectName: selectedProject.value.name,
+      taskId: selectedTask.value.id,
+      taskTitle: selectedTask.value.title,
+    };
+  }
+
   const isTimerRunning = computed(() => isRunningTimer(currentTimer.value));
   const runningStartedAt = computed(() =>
     isTimerRunning.value ? currentTimer.value?.startedAt ?? null : null,
   );
-  const elapsedTimer = useTopBarElapsedTimer({
-    clearIntervalFn,
-    now,
-    setIntervalFn,
-    startedAt: runningStartedAt,
-  });
+  const tickNowMs = shallowRef(now());
+  const elapsedTimeLabel = computed(() =>
+    formatElapsedTime(runningStartedAt.value, tickNowMs.value),
+  );
+  let elapsedTimerIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
+  function stopElapsedTimerTicker(): void {
+    if (!elapsedTimerIntervalHandle) {
+      return;
+    }
+
+    clearIntervalFn(elapsedTimerIntervalHandle);
+    elapsedTimerIntervalHandle = null;
+  }
+
+  watch(
+    runningStartedAt,
+    (startedAt) => {
+      stopElapsedTimerTicker();
+      tickNowMs.value = now();
+
+      if (!startedAt) {
+        return;
+      }
+
+      elapsedTimerIntervalHandle = setIntervalFn(() => {
+        tickNowMs.value = now();
+      }, 1000);
+    },
+    { immediate: true },
+  );
   const timerStatusLabel = computed(() => {
     if (isTimerRunning.value) {
       return "Running timer";
@@ -572,6 +670,8 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     await refreshSummary();
   });
 
+  onBeforeUnmount(stopElapsedTimerTicker);
+
   return {
     closeDialog,
     confirmSelectedTask,
@@ -579,7 +679,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     createTaskFromDialog,
     createTaskTitle,
     currentTimer,
-    elapsedTimeLabel: elapsedTimer.elapsedTimeLabel,
+    elapsedTimeLabel,
     handlePrimaryAction,
     isConfirmSelectionDisabled,
     isCreateTaskDisabled,

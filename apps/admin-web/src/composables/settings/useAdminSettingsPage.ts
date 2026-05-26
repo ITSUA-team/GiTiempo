@@ -1,4 +1,4 @@
-import { computed, shallowRef } from 'vue';
+import { computed, reactive, shallowRef } from 'vue';
 import type {
 	WorkspaceResponse,
 	WorkspaceSettingsResponse,
@@ -14,11 +14,16 @@ import type { AdminSettingsClient } from '@/services/admin-settings-client';
 import { adminSettingsClient } from '@/services/admin-settings-client';
 import { useAuthStore } from '@/stores/auth';
 import { useToasts } from '@/composables/feedback/useToasts';
-import { useAdminSettingsForm } from '@/composables/settings/useAdminSettingsForm';
+import {
+  DEFAULT_SETTINGS_CURRENCY,
+  SETTINGS_CURRENCY_OPTIONS,
+} from '@/lib/currencies';
 import {
 	getWorkspaceSettingsUpdatePayload,
 	getWorkspaceUpdatePayload,
 	toAdminSettingsFormValues,
+	validateAdminSettingsForm,
+	type AdminSettingsFieldErrors,
 	type AdminSettingsFormValues,
 } from './admin-settings-form';
 
@@ -51,6 +56,36 @@ function syncWorkspaceName(
 	authStore.setWorkspaceName?.(values.workspaceName);
 }
 
+function getDefaultTimeZone(): string {
+	return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+}
+
+function assignForm(
+	form: AdminSettingsFormValues,
+	values: AdminSettingsFormValues,
+): void {
+	form.currency = values.currency;
+	form.defaultHourlyRate = values.defaultHourlyRate;
+	form.timeZone = values.timeZone;
+	form.workspaceName = values.workspaceName;
+}
+
+function clearFieldErrors(fieldErrors: AdminSettingsFieldErrors): void {
+	for (const key of Object.keys(fieldErrors) as Array<
+		keyof AdminSettingsFieldErrors
+	>) {
+		delete fieldErrors[key];
+	}
+}
+
+function assignFieldErrors(
+	fieldErrors: AdminSettingsFieldErrors,
+	errors: AdminSettingsFieldErrors,
+): void {
+	clearFieldErrors(fieldErrors);
+	Object.assign(fieldErrors, errors);
+}
+
 export function useAdminSettingsPage(
 	options: UseAdminSettingsPageOptions = {},
 ) {
@@ -64,19 +99,40 @@ export function useAdminSettingsPage(
 	const initialLoaded = shallowRef(false);
 	const saving = shallowRef(false);
 	const requestError = shallowRef<string | null>(null);
-	const settingsForm = useAdminSettingsForm({ loading, saving });
-	const {
-		applyPersistedValues,
-		assignFormValues,
-		canSave,
-		currencyOptions,
-		fieldErrors,
-		form,
-		isDirty,
-		persisted,
-		resetForm,
-		validateForm,
-	} = settingsForm;
+	const persisted = shallowRef<AdminSettingsFormValues | null>(null);
+	const fieldErrors = reactive<AdminSettingsFieldErrors>({});
+	const form = reactive<AdminSettingsFormValues>({
+		currency: DEFAULT_SETTINGS_CURRENCY,
+		defaultHourlyRate: null,
+		timeZone: getDefaultTimeZone(),
+		workspaceName: '',
+	});
+	const isDirty = computed(() => {
+		const current = persisted.value;
+		if (!current) return false;
+
+		return (
+			form.workspaceName !== current.workspaceName ||
+			form.defaultHourlyRate !== current.defaultHourlyRate ||
+			form.currency !== current.currency ||
+			form.timeZone !== current.timeZone
+		);
+	});
+	const canSave = computed(
+		() => isDirty.value && !saving.value && !loading.value,
+	);
+	const currencyOptions = computed(() => {
+		const existingOption = SETTINGS_CURRENCY_OPTIONS.some(
+			(option) => option.value === form.currency,
+		);
+
+		return existingOption
+			? SETTINGS_CURRENCY_OPTIONS
+			: [
+					{ label: form.currency, value: form.currency },
+					...SETTINGS_CURRENCY_OPTIONS,
+				];
+	});
 	const workspaceQuery = useWorkspaceQuery({
 		client,
 		accessToken: computed(() => authStore.accessToken),
@@ -95,6 +151,29 @@ export function useAdminSettingsPage(
 		client,
 		accessToken: computed(() => authStore.accessToken),
 	});
+
+	function applyPersistedValues(values: AdminSettingsFormValues): void {
+		persisted.value = values;
+		assignForm(form, values);
+		clearFieldErrors(fieldErrors);
+	}
+
+	function assignFormValues(values: AdminSettingsFormValues): void {
+		assignForm(form, values);
+		clearFieldErrors(fieldErrors);
+	}
+
+	function resetForm(): void {
+		if (!persisted.value) return;
+		assignFormValues(persisted.value);
+	}
+
+	function validateForm() {
+		const validation = validateAdminSettingsForm({ ...form });
+		assignFieldErrors(fieldErrors, validation.errors);
+
+		return validation;
+	}
 
 	async function loadSettings(action = 'load-settings'): Promise<void> {
 		const token = authStore.accessToken;

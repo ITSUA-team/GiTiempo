@@ -213,6 +213,16 @@ describe("useProjectsPage", () => {
 
     await flushPromises();
 
+    projectsPage.handleSearchComplete("review");
+    expect(projectsPage.searchSuggestions.value).toEqual([
+      {
+        id: "task:task-2",
+        kind: "task",
+        label: "Review PM scope rules",
+        projectId: "project-1",
+      },
+    ]);
+
     projectsPage.setSearchValue("orion");
     expect(projectsPage.filteredProjectGroups.value).toHaveLength(1);
     expect(projectsPage.filteredProjectGroups.value[0]?.project.name).toBe(
@@ -235,6 +245,15 @@ describe("useProjectsPage", () => {
     expect(projectsPage.filteredProjectGroups.value[0]?.tasks).toEqual([
       expect.objectContaining({ id: "task-3" }),
     ]);
+
+    projectsPage.setSearchValue({
+      id: "project:project-1",
+      kind: "project",
+      label: "Project Orion",
+      projectId: "project-1",
+    });
+    expect(projectsPage.filteredProjectGroups.value).toHaveLength(1);
+    expect(projectsPage.filteredProjectGroups.value[0]?.project.id).toBe("project-1");
 
     projectsPage.setSearchValue("");
     expect(projectsPage.filteredProjectGroups.value).toHaveLength(2);

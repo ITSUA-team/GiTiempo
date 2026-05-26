@@ -1,4 +1,10 @@
-import { type ProjectResponse, type TaskResponse } from "@gitiempo/shared";
+import {
+  createTaskSchema,
+  type ProjectResponse,
+  type TaskResponse,
+  type TaskStatus,
+  updateTaskSchema,
+} from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
@@ -21,11 +27,13 @@ import {
   createTimeEntriesClient,
   type TimeEntriesClient,
 } from "@/services/time-entries-client";
-import { useProjectTaskDialog } from "@/composables/projects/useProjectTaskDialog";
-import { useProjectsSearch } from "@/composables/projects/useProjectsSearch";
 import {
+  buildProjectSearchSuggestions,
+  buildProjectTaskGroups,
+  filterProjectTaskGroups,
   formatUpdatedLabel,
   sortProjectTasks,
+  type ProjectsSearchSuggestion,
 } from "@/lib/projects-page-helpers";
 import { useAuthStore } from "@/stores/auth";
 
@@ -34,7 +42,25 @@ export type {
   ProjectsSearchSuggestion,
 } from "@/lib/projects-page-helpers";
 
-type PageState = "empty" | "loading" | "ready" | "request-error";
+type DialogMode = "create" | "edit" | null;
+
+interface ProjectsDialogErrors {
+  projectId: string | null;
+  status: string | null;
+  title: string | null;
+}
+
+type ValidProjectTaskDialogInput =
+  | {
+      input: ReturnType<typeof createTaskSchema.parse>;
+      mode: "create";
+      projectId: string;
+    }
+  | {
+      input: ReturnType<typeof updateTaskSchema.parse>;
+      mode: "edit";
+      projectId: string;
+    };
 
 interface UseProjectsPageOptions {
   authStore?: ReturnType<typeof useAuthStore>;
@@ -46,6 +72,14 @@ interface UseProjectsPageOptions {
 const defaultClient = createTimeEntriesClient({
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
 });
+
+function defaultDialogErrors(): ProjectsDialogErrors {
+  return {
+    projectId: null,
+    status: null,
+    title: null,
+  };
+}
 
 export function useProjectsPage(options: UseProjectsPageOptions = {}) {
   const authStore = options.authStore ?? useAuthStore();
@@ -94,40 +128,49 @@ export function useProjectsPage(options: UseProjectsPageOptions = {}) {
   const visibleProjects = computed(() =>
     projects.value.filter((project) => project.isActive),
   );
-  const projectsSearch = useProjectsSearch({
-    projects: visibleProjects,
-    tasksByProjectId,
+  const selectedSearchValue = shallowRef<ProjectsSearchSuggestion | string | null>(
+    null,
+  );
+  const searchSuggestions = ref<ProjectsSearchSuggestion[]>([]);
+  const searchText = computed(() => {
+    if (typeof selectedSearchValue.value === "string") {
+      return selectedSearchValue.value;
+    }
+
+    return selectedSearchValue.value?.label ?? "";
   });
-  const {
-    filteredProjectGroups,
-    handleSearchComplete,
-    searchSuggestions,
-    selectedSearchValue,
-    setSearchValue,
-  } = projectsSearch;
-  const projectTaskDialog = useProjectTaskDialog();
-  const {
-    closeDialog,
-    dialogErrors,
-    dialogMode,
-    dialogProjectId,
-    dialogRequestErrorMessage,
-    dialogSaveLabel,
-    dialogSubtitle,
-    dialogTaskStatus,
-    dialogTaskTitle,
-    dialogTitle,
-    editingTask,
-    isDialogOpen,
-    openCreateDialog,
-    openEditDialog,
-    setDialogProjectId,
-    setDialogRequestError,
-    setDialogTaskStatus,
-    setDialogTaskTitle,
-    validateDialog,
-  } = projectTaskDialog;
-  const pageState = computed<PageState>(() => {
+  const allProjectGroups = computed(() =>
+    buildProjectTaskGroups(visibleProjects.value, tasksByProjectId.value),
+  );
+  const filteredProjectGroups = computed(() =>
+    filterProjectTaskGroups(allProjectGroups.value, searchText.value),
+  );
+  const dialogMode = shallowRef<DialogMode>(null);
+  const editingTask = shallowRef<TaskResponse | null>(null);
+  const dialogProjectId = shallowRef<string | null>(null);
+  const dialogTaskTitle = shallowRef("");
+  const dialogTaskStatus = shallowRef<TaskStatus>("open");
+  const dialogErrors = ref<ProjectsDialogErrors>(defaultDialogErrors());
+  const dialogRequestErrorMessage = shallowRef<string | null>(null);
+  const isDialogOpen = computed(() => dialogMode.value !== null);
+  const dialogTitle = computed(() =>
+    dialogMode.value === "edit" ? "Edit task" : "New task",
+  );
+  const dialogSubtitle = computed(() => {
+    if (dialogMode.value === "edit") {
+      return "Update the selected task details.";
+    }
+
+    if (dialogProjectId.value) {
+      return "Create a task in the selected visible project.";
+    }
+
+    return "Create a task in one of your visible projects.";
+  });
+  const dialogSaveLabel = computed(() =>
+    dialogMode.value === "edit" ? "Save changes" : "Create task",
+  );
+  const pageState = computed(() => {
     if (isLoadingProjects.value || isLoadingTasks.value) {
       return "loading";
     }
@@ -148,6 +191,130 @@ export function useProjectsPage(options: UseProjectsPageOptions = {}) {
       !isLoadingProjects.value &&
       !isLoadingTasks.value,
   );
+
+  function handleSearchComplete(query: string): void {
+    searchSuggestions.value = buildProjectSearchSuggestions(allProjectGroups.value, query);
+  }
+
+  function setSearchValue(value: ProjectsSearchSuggestion | string | null): void {
+    selectedSearchValue.value = value ?? null;
+  }
+
+  function clearDialogErrors(): void {
+    dialogErrors.value = defaultDialogErrors();
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function resetDialogState(): void {
+    dialogMode.value = null;
+    editingTask.value = null;
+    dialogProjectId.value = null;
+    dialogTaskTitle.value = "";
+    dialogTaskStatus.value = "open";
+    clearDialogErrors();
+  }
+
+  function openCreateDialog(projectId: string | null = null): void {
+    resetDialogState();
+    dialogMode.value = "create";
+    dialogProjectId.value = projectId;
+  }
+
+  function openEditDialog(task: TaskResponse): void {
+    resetDialogState();
+    dialogMode.value = "edit";
+    editingTask.value = task;
+    dialogProjectId.value = task.projectId;
+    dialogTaskTitle.value = task.title;
+    dialogTaskStatus.value = task.status;
+  }
+
+  function closeDialog(): void {
+    resetDialogState();
+  }
+
+  function setDialogProjectId(value: string | null): void {
+    dialogProjectId.value = value;
+    dialogErrors.value.projectId = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogTaskTitle(value: string): void {
+    dialogTaskTitle.value = value;
+    dialogErrors.value.title = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogTaskStatus(value: TaskStatus): void {
+    dialogTaskStatus.value = value;
+    dialogErrors.value.status = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogRequestError(message: string | null): void {
+    dialogRequestErrorMessage.value = message;
+  }
+
+  function validateDialog(): ValidProjectTaskDialogInput | null {
+    const nextErrors = defaultDialogErrors();
+
+    if (!dialogProjectId.value) {
+      nextErrors.projectId = "Select a project.";
+    }
+
+    const trimmedTitle = dialogTaskTitle.value.trim();
+    if (!dialogProjectId.value) {
+      dialogErrors.value = nextErrors;
+      return null;
+    }
+
+    if (dialogMode.value === "edit") {
+      const parsed = updateTaskSchema.safeParse({
+        status: dialogTaskStatus.value,
+        title: trimmedTitle,
+      });
+
+      if (!parsed.success) {
+        const fieldErrors = parsed.error.flatten().fieldErrors;
+
+        dialogErrors.value = {
+          projectId: nextErrors.projectId,
+          status: fieldErrors.status?.[0] ?? null,
+          title: fieldErrors.title?.[0] ?? null,
+        };
+        return null;
+      }
+
+      dialogErrors.value = nextErrors;
+
+      return {
+        input: parsed.data,
+        mode: "edit",
+        projectId: dialogProjectId.value,
+      };
+    }
+
+    const parsed = createTaskSchema.safeParse({ title: trimmedTitle });
+
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+
+      dialogErrors.value = {
+        projectId: nextErrors.projectId,
+        status: null,
+        title: fieldErrors.title?.[0] ?? null,
+      };
+      return null;
+    }
+
+    dialogErrors.value = nextErrors;
+
+    return {
+      input: parsed.data,
+      mode: "create",
+      projectId: dialogProjectId.value,
+    };
+  }
 
   async function loadVisibleProjects(): Promise<ProjectResponse[]> {
     isLoadingProjects.value = true;

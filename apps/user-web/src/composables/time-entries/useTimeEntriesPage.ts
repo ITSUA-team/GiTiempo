@@ -1,4 +1,11 @@
-import { type ProjectResponse, type TimeEntryResponse, updateTimeEntrySchema } from "@gitiempo/shared";
+import {
+  createManualTimeEntrySchema,
+  type ProjectResponse,
+  type TaskResponse,
+  type TimeEntryListQuery,
+  type TimeEntryResponse,
+  updateTimeEntrySchema,
+} from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
@@ -25,21 +32,39 @@ import {
   formatTimeEntryDuration,
   formatTimeEntryTimeRange,
   groupTimeEntriesByUtcDay,
+  nextUtcDay,
+  startOfUtcDay,
   type TimeEntriesDayGroup,
 } from "@/lib/time-entry-display";
-import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
-import {
-  toTaskLookupOption,
-  useTimeEntriesFilters,
-  type TaskLookupOption,
-  type TaskLookupValue,
-} from "@/composables/time-entries/useTimeEntriesFilters";
 import { useAuthStore } from "@/stores/auth";
 
 export type { TimeEntriesDayGroup } from "@/lib/time-entry-display";
-export type { TaskLookupOption } from "@/composables/time-entries/useTimeEntriesFilters";
 
-type PageState = "empty" | "loading" | "ready" | "request-error";
+type DialogMode = "create" | "edit" | null;
+type TaskLookupValue = string | TaskLookupOption | null;
+
+export interface TaskLookupOption {
+  id: string;
+  isActive: boolean;
+  projectId: string;
+  title: string;
+}
+
+interface TimeEntryFormErrors {
+  description: string | null;
+  endedAt: string | null;
+  projectId: string | null;
+  startedAt: string | null;
+  taskId: string | null;
+}
+
+type ValidatedTimeEntryDialogInput = {
+  description?: string | null;
+  endedAt: string;
+  isBillable: boolean;
+  startedAt: string;
+  taskId: string;
+};
 
 interface UseTimeEntriesPageOptions {
   authStore?: ReturnType<typeof useAuthStore>;
@@ -55,6 +80,49 @@ const defaultClient = createTimeEntriesClient({
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
 });
 
+function defaultFormErrors(): TimeEntryFormErrors {
+  return {
+    description: null,
+    endedAt: null,
+    projectId: null,
+    startedAt: null,
+    taskId: null,
+  };
+}
+
+function isTaskLookupOption(value: TaskLookupValue): value is TaskLookupOption {
+  return typeof value === "object" && value !== null && "id" in value;
+}
+
+function toTaskLookupOption(task: TaskResponse): TaskLookupOption {
+  return {
+    id: task.id,
+    isActive: task.isActive,
+    projectId: task.projectId,
+    title: task.title,
+  };
+}
+
+function buildTaskLookupSuggestions(
+  query: string,
+  options: TaskLookupOption[],
+): TaskLookupOption[] {
+  const normalized = query.trim().toLowerCase();
+
+  return normalized.length === 0
+    ? [...options]
+    : options.filter((task) => task.title.toLowerCase().includes(normalized));
+}
+
+function toEntryTaskOption(entry: TimeEntryResponse): TaskLookupOption {
+  return {
+    id: entry.task.id,
+    isActive: true,
+    projectId: entry.projectId,
+    title: entry.task.title,
+  };
+}
+
 export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
   const authStore = options.authStore ?? useAuthStore();
   const client = options.client ?? defaultClient;
@@ -68,27 +136,37 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
 
   const entries = ref<TimeEntryResponse[]>([]);
   const projects = ref<ProjectResponse[]>([]);
-  const {
-    currentPage,
-    filterTaskOptions,
-    filterTaskSuggestions,
-    filterTasksErrorMessage,
-    isLoadingFilterTasks,
-    listQuery: entryListQuery,
-    pageSize,
-    resetPagination,
-    selectedDateRange,
-    selectedProjectId,
-    selectedTaskFilter,
-    setDateRange: setFilterDateRange,
-    setFilterTaskOptions,
-    setFilterTasksError,
-    setFilterTasksLoading,
-    setPage: setFilterPage,
-    setSelectedProjectId: setFilterProjectId,
-    setSelectedTaskFilter: setFilterTaskValue,
-    updateFilterTaskSuggestions,
-  } = useTimeEntriesFilters();
+  const currentPage = shallowRef(1);
+  const pageSize = shallowRef(20);
+  const selectedDateRange = shallowRef<Date[] | null>(null);
+  const selectedProjectId = shallowRef<string | null>(null);
+  const selectedTaskFilter = shallowRef<TaskLookupValue>(null);
+  const filterTaskOptions = ref<TaskLookupOption[]>([]);
+  const filterTaskSuggestions = ref<TaskLookupOption[]>([]);
+  const isLoadingFilterTasks = shallowRef(false);
+  const filterTasksErrorMessage = shallowRef<string | null>(null);
+  const selectedTaskId = computed(() =>
+    isTaskLookupOption(selectedTaskFilter.value) ? selectedTaskFilter.value.id : null,
+  );
+  const entryListQuery = computed<Partial<TimeEntryListQuery>>(() => {
+    const [startDate, endDate] = selectedDateRange.value ?? [];
+    const searchValue =
+      typeof selectedTaskFilter.value === "string"
+        ? selectedTaskFilter.value.trim()
+        : isTaskLookupOption(selectedTaskFilter.value)
+          ? selectedTaskFilter.value.title
+          : "";
+
+    return {
+      dateFrom: startDate ? startOfUtcDay(startDate).toISOString() : undefined,
+      dateTo: endDate ? nextUtcDay(endDate).toISOString() : undefined,
+      limit: pageSize.value,
+      page: currentPage.value,
+      projectId: selectedProjectId.value ?? undefined,
+      search: searchValue.length > 0 ? searchValue : undefined,
+      taskId: selectedTaskId.value ?? undefined,
+    };
+  });
 
   const totalRecords = shallowRef(0);
   const totalPages = shallowRef(0);
@@ -104,39 +182,34 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
   const projectsErrorMessage = shallowRef<string | null>(null);
   const lastMutationErrorMessage = shallowRef<string | null>(null);
 
-  const {
-    closeDialog,
-    dialogDescription,
-    dialogEndedAt,
-    dialogErrors,
-    dialogIsBillable,
-    dialogMode,
-    dialogProjectId,
-    dialogRequestErrorMessage,
-    dialogSaveLabel,
-    dialogStartedAt,
-    dialogSubtitle,
-    dialogTaskOptions,
-    dialogTasksErrorMessage,
-    dialogTaskSuggestions,
-    dialogTaskValue,
-    dialogTitle,
-    editingEntry,
-    isDialogOpen,
-    openCreateDialogState,
-    openEditDialogState,
-    setDialogDescription,
-    setDialogEndedAt,
-    setDialogIsBillable,
-    setDialogProjectId: setDialogProjectIdValue,
-    setDialogStartedAt,
-    setDialogTaskFromEntryFallback,
-    setDialogTaskOptions,
-    setDialogTasksError,
-    setDialogTaskValue,
-    updateDialogTaskSuggestions,
-    validateDialog,
-  } = useTimeEntryDialog();
+  const dialogMode = shallowRef<DialogMode>(null);
+  const editingEntry = shallowRef<TimeEntryResponse | null>(null);
+  const dialogProjectId = shallowRef<string | null>(null);
+  const dialogTaskValue = shallowRef<TaskLookupValue>(null);
+  const dialogStartedAt = shallowRef<Date | null>(null);
+  const dialogEndedAt = shallowRef<Date | null>(null);
+  const dialogDescription = shallowRef("");
+  const dialogIsBillable = shallowRef(false);
+  const dialogErrors = ref<TimeEntryFormErrors>(defaultFormErrors());
+  const dialogRequestErrorMessage = shallowRef<string | null>(null);
+  const dialogTaskOptions = ref<TaskLookupOption[]>([]);
+  const dialogTaskSuggestions = ref<TaskLookupOption[]>([]);
+  const dialogTasksErrorMessage = shallowRef<string | null>(null);
+  const activeDialogTask = computed(() =>
+    isTaskLookupOption(dialogTaskValue.value) ? dialogTaskValue.value : null,
+  );
+  const dialogTitle = computed(() =>
+    dialogMode.value === "edit" ? "Edit time entry" : "New time entry",
+  );
+  const dialogSubtitle = computed(() =>
+    dialogMode.value === "edit"
+      ? "Update the selected time entry using the same popup layout as create mode."
+      : "Create a completed time entry without starting the global timer.",
+  );
+  const dialogSaveLabel = computed(() =>
+    dialogMode.value === "edit" ? "Save changes" : "Save entry",
+  );
+  const isDialogOpen = computed(() => dialogMode.value !== null);
 
   const taskCache = new Map<string, TaskLookupOption[]>();
   let entriesRequestId = 0;
@@ -144,7 +217,7 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
   let dialogTaskRequestId = 0;
   let tickHandle: ReturnType<typeof setInterval> | null = null;
 
-  const pageState = computed<PageState>(() => {
+  const pageState = computed(() => {
     if (isLoadingEntries.value) {
       return "loading";
     }
@@ -219,6 +292,210 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
     tickHandle = setIntervalFn(() => {
       nowMs.value = now();
     }, 1000);
+  }
+
+  function resetPagination(): void {
+    currentPage.value = 1;
+  }
+
+  function setFilterPage(page: number): void {
+    currentPage.value = page;
+  }
+
+  function setFilterDateRange(range: Date[] | null): void {
+    selectedDateRange.value = range && range.length > 0 ? range : null;
+  }
+
+  function setFilterProjectId(projectId: string | null): void {
+    selectedProjectId.value = projectId;
+    selectedTaskFilter.value = null;
+    filterTaskSuggestions.value = [];
+    filterTasksErrorMessage.value = null;
+
+    if (!projectId) {
+      filterTaskOptions.value = [];
+    }
+  }
+
+  function setFilterTaskValue(value: TaskLookupValue): void {
+    selectedTaskFilter.value = value;
+  }
+
+  function setFilterTaskOptions(options: TaskLookupOption[]): void {
+    filterTaskOptions.value = options;
+  }
+
+  function setFilterTasksLoading(isLoading: boolean): void {
+    isLoadingFilterTasks.value = isLoading;
+  }
+
+  function setFilterTasksError(message: string | null): void {
+    filterTasksErrorMessage.value = message;
+  }
+
+  function updateFilterTaskSuggestions(query: string, options: TaskLookupOption[]): void {
+    filterTaskSuggestions.value = buildTaskLookupSuggestions(query, options);
+  }
+
+  function clearDialogErrors(): void {
+    dialogErrors.value = defaultFormErrors();
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function resetDialogState(): void {
+    dialogMode.value = null;
+    editingEntry.value = null;
+    dialogProjectId.value = null;
+    dialogTaskValue.value = null;
+    dialogTaskOptions.value = [];
+    dialogTaskSuggestions.value = [];
+    dialogTasksErrorMessage.value = null;
+    dialogStartedAt.value = null;
+    dialogEndedAt.value = null;
+    dialogDescription.value = "";
+    dialogIsBillable.value = false;
+    clearDialogErrors();
+  }
+
+  function openCreateDialogState(day: string | null = null): void {
+    resetDialogState();
+    dialogMode.value = "create";
+
+    if (!day) {
+      return;
+    }
+
+    dialogStartedAt.value = new Date(`${day}T09:00:00.000Z`);
+    dialogEndedAt.value = new Date(`${day}T10:00:00.000Z`);
+  }
+
+  function openEditDialogState(entry: TimeEntryResponse): void {
+    resetDialogState();
+    dialogMode.value = "edit";
+    editingEntry.value = entry;
+    dialogProjectId.value = entry.projectId;
+    dialogStartedAt.value = new Date(entry.startedAt);
+    dialogEndedAt.value = entry.endedAt ? new Date(entry.endedAt) : null;
+    dialogDescription.value = entry.description ?? "";
+    dialogIsBillable.value = entry.isBillable;
+  }
+
+  function closeDialog(): void {
+    resetDialogState();
+  }
+
+  function setDialogProjectIdValue(value: string | null): void {
+    dialogProjectId.value = value;
+    dialogTaskValue.value = null;
+    dialogTaskOptions.value = [];
+    dialogTaskSuggestions.value = [];
+    dialogErrors.value.taskId = null;
+    dialogTasksErrorMessage.value = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogTaskOptions(options: TaskLookupOption[]): void {
+    dialogTaskOptions.value = options;
+  }
+
+  function setDialogTasksError(message: string | null): void {
+    dialogTasksErrorMessage.value = message;
+  }
+
+  function updateDialogTaskSuggestions(
+    query: string,
+    options = dialogTaskOptions.value,
+  ): void {
+    dialogTaskSuggestions.value = buildTaskLookupSuggestions(query, options);
+  }
+
+  function setDialogTaskValue(value: TaskLookupValue): void {
+    dialogTaskValue.value = value;
+    dialogErrors.value.taskId = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogTaskFromEntryFallback(entry: TimeEntryResponse): void {
+    setDialogTaskValue(toEntryTaskOption(entry));
+  }
+
+  function setDialogStartedAt(value: Date | null): void {
+    dialogStartedAt.value = value;
+    dialogErrors.value.startedAt = null;
+    dialogErrors.value.endedAt = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogEndedAt(value: Date | null): void {
+    dialogEndedAt.value = value;
+    dialogErrors.value.startedAt = null;
+    dialogErrors.value.endedAt = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogDescription(value: string): void {
+    dialogDescription.value = value;
+    dialogErrors.value.description = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogIsBillable(value: boolean): void {
+    dialogIsBillable.value = value;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function validateDialog(): ValidatedTimeEntryDialogInput | null {
+    const nextErrors = defaultFormErrors();
+    const selectedTask = activeDialogTask.value;
+
+    if (!dialogProjectId.value) {
+      nextErrors.projectId = "Select a project.";
+    }
+
+    if (!selectedTask) {
+      nextErrors.taskId = "Select a visible task.";
+    }
+
+    if (!dialogStartedAt.value) {
+      nextErrors.startedAt = "Select a start date and time.";
+    }
+
+    if (!dialogEndedAt.value) {
+      nextErrors.endedAt = "Select an end date and time.";
+    }
+
+    dialogErrors.value = nextErrors;
+
+    if (!selectedTask || !dialogStartedAt.value || !dialogEndedAt.value) {
+      return null;
+    }
+
+    const input = {
+      description:
+        dialogDescription.value.trim().length > 0
+          ? dialogDescription.value.trim()
+          : null,
+      endedAt: dialogEndedAt.value.toISOString(),
+      isBillable: dialogIsBillable.value,
+      startedAt: dialogStartedAt.value.toISOString(),
+      taskId: selectedTask.id,
+    };
+    const parsed = createManualTimeEntrySchema.safeParse(input);
+
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+
+      dialogErrors.value = {
+        description: fieldErrors.description?.[0] ?? nextErrors.description,
+        endedAt: fieldErrors.endedAt?.[0] ?? nextErrors.endedAt,
+        projectId: nextErrors.projectId,
+        startedAt: fieldErrors.startedAt?.[0] ?? nextErrors.startedAt,
+        taskId: fieldErrors.taskId?.[0] ?? nextErrors.taskId,
+      };
+      return null;
+    }
+
+    return input;
   }
 
   function updateTaskSuggestions(
