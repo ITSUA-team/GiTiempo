@@ -154,18 +154,13 @@ describe("ProfileView", () => {
     githubRequestErrorMessage.value = null;
   });
 
-  it("wires the identity form, GitHub surface, null-avatar omission, and sign-out action", async () => {
-    const { authStore, wrapper } = await mountProfileView();
-    const logoutSpy = vi.spyOn(authStore, "logout").mockResolvedValue(undefined);
+  it("wires the identity form and GitHub surface without a duplicate sign-out action", async () => {
+    const { wrapper } = await mountProfileView();
 
     expect(wrapper.text()).toContain("Profile");
     expect(wrapper.text()).toContain("GitHub Connection");
     expect(wrapper.text()).not.toContain("Avatar");
-
-    await wrapper.get('[data-testid="profile-signout"]').trigger("click");
-
-    expect(logoutSpy).toHaveBeenCalledTimes(1);
-    expect(replaceSpy).toHaveBeenCalledWith({ name: "login" });
+    expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);
   });
 
   it("saves a new display name, updates the rendered identity, and shows a success toast", async () => {

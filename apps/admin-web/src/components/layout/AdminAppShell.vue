@@ -8,7 +8,7 @@ import {
   Squares2X2Icon,
   UsersIcon,
 } from '@heroicons/vue/24/outline';
-import { RouterView, useRoute } from "vue-router";
+import { RouterView, useRoute, useRouter } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 import ConfirmDialog from "primevue/confirmdialog";
@@ -20,6 +20,7 @@ import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
 const dashboardIcon = markRaw(Squares2X2Icon);
@@ -41,7 +42,6 @@ const navItems = computed(() => [
   { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
   { icon: membersIcon, label: "Members", name: routeNames.members },
   { icon: projectsIcon, label: "Projects", name: routeNames.projects },
-  { icon: settingsIcon, label: "Settings", name: routeNames.settings },
 ]);
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
@@ -54,6 +54,11 @@ const activeName = computed(() => {
 
   return name;
 });
+
+async function handleSignOut(): Promise<void> {
+  await authStore.logout();
+  await router.push({ name: routeNames.login });
+}
 
 watch(
   () => authStore.accessToken,
@@ -88,8 +93,12 @@ watch(
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
       :display-name="authStore.displayName"
+      :settings-icon="settingsIcon"
+      settings-label="Settings"
+      :settings-to="{ name: routeNames.settings }"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"
+      @sign-out="handleSignOut"
     />
 
     <div class="flex min-h-[calc(100vh-4rem)]">
