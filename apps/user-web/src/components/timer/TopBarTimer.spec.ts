@@ -104,6 +104,9 @@ describe("TopBarTimer", () => {
     expect(wrapper.get('[data-testid="top-bar-timer-context"]').text()).toBe(
       "Project Orion / Improve reports filters",
     );
+    expect(wrapper.get('[data-testid="top-bar-timer-context"]').attributes("aria-label")).toBe(
+      "Change timer task",
+    );
     expect(wrapper.find('[data-testid="top-bar-timer-mobile-actions"]').exists()).toBe(
       false,
     );
@@ -207,6 +210,9 @@ describe("TopBarTimer", () => {
     expect(wrapper.get('[data-testid="top-bar-timer-mobile-context"]').text()).toContain(
       "Project Orion / Improve reports filters",
     );
+    expect(
+      wrapper.get('[data-testid="top-bar-timer-mobile-context"]').attributes("aria-label"),
+    ).toBe("Change timer task");
     expect(wrapper.find('[data-testid="top-bar-timer-context"]').exists()).toBe(false);
   });
 
@@ -233,5 +239,13 @@ describe("TopBarTimer", () => {
     expect(wrapper.get('[data-testid="top-bar-timer-mobile-context"]').text()).toContain(
       "01:00:00",
     );
+    expect(
+      wrapper.get('[data-testid="top-bar-timer-mobile-context"]').attributes("aria-label"),
+    ).toBe("Change timer task");
+    expect(
+      wrapper.get('[data-testid="top-bar-timer-mobile-context"] .tabular-nums').attributes(
+        "aria-hidden",
+      ),
+    ).toBe("true");
   });
 });

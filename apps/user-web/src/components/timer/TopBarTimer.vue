@@ -67,6 +67,7 @@ const primaryActionIcon = computed(() =>
       </p>
       <button
         type="button"
+        aria-label="Change timer task"
         class="text-text-dark mt-1 block max-w-full cursor-pointer truncate text-left text-[13px] font-medium"
         data-testid="top-bar-timer-context"
         @click="openDialog"
@@ -143,6 +144,7 @@ const primaryActionIcon = computed(() =>
 
     <button
       type="button"
+      aria-label="Change timer task"
       class="min-w-0 flex-1 text-left"
       data-testid="top-bar-timer-mobile-context"
       @click="openDialog"
@@ -151,6 +153,7 @@ const primaryActionIcon = computed(() =>
         <span class="truncate">{{ timerStatusLabel }}</span>
         <span
           v-if="showsElapsedTime"
+          aria-hidden="true"
           class="text-brand shrink-0 tabular-nums"
         >
           {{ elapsedTimeLabel }}
