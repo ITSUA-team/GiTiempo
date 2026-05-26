@@ -29,7 +29,6 @@ describe('Members enrichment: lastActiveAt & projectsAssignedCount (e2e)', () =>
   let testMemberUid: string;
   let testMemberEmail: string;
   let testMemberUserId: string;
-  let testMemberToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -85,13 +84,6 @@ describe('Members enrichment: lastActiveAt & projectsAssignedCount (e2e)', () =>
       userId: testMemberUserId,
       role: 'member',
     });
-
-    testMemberToken = (
-      await login(
-        app,
-        `test:${testMemberUid}:${testMemberEmail}:Enrichment Test`,
-      )
-    ).accessToken;
   });
 
   afterAll(async () => {
@@ -123,6 +115,12 @@ describe('Members enrichment: lastActiveAt & projectsAssignedCount (e2e)', () =>
   });
 
   it('listMembers returns non-null lastActiveAt after a time-tracking write', async () => {
+    const testMemberToken = (
+      await login(
+        app,
+        `test:${testMemberUid}:${testMemberEmail}:Enrichment Test`,
+      )
+    ).accessToken;
     const before = new Date().toISOString();
 
     // Assign test user to the project's task so they can create entries
