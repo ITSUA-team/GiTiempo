@@ -1,6 +1,6 @@
 import type { TimeEntryResponse } from "@gitiempo/shared";
 
-import { formatRunningDuration } from "@/lib/time-entry-display";
+import { formatRunningDuration } from "@/lib/time-formatters";
 
 export interface SelectedTaskContext {
   projectId: string;

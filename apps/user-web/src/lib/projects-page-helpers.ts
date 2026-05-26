@@ -1,6 +1,6 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 
-import { formatUtcTime, getUtcDateKey } from "@/lib/time-entry-display";
+import { formatUtcTime, getUtcDateKey } from "@/lib/time-formatters";
 
 export interface ProjectsPageTaskGroup {
   project: ProjectResponse;
