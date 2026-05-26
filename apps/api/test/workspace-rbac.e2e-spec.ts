@@ -2,17 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { invites, workspaceMembers, workspaces } from '../src/db/schema';
+import { invites, users, workspaceMembers, workspaces } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
 
 describe('Workspace RBAC (e2e)', () => {
   let app: INestApplication;
   let db: DrizzleDB;
   let memberToken: string;
+  let workspaceId: string;
+  let adminUserId: string;
+  let memberUserId: string;
   let memberRowId: string;
   let inviteId: string;
 
@@ -25,50 +29,100 @@ describe('Workspace RBAC (e2e)', () => {
     await app.init();
     db = app.get<DrizzleDB>(DRIZZLE);
 
-    const [workspace] = await db.select().from(workspaces).limit(1);
-    if (!workspace) throw new Error('Expected seeded workspace');
+    const suffix = randomUUID();
+    const adminUid = `rbac-admin-${suffix}`;
+    const adminEmail = `${adminUid}@example.com`;
+    const memberUid = `rbac-member-${suffix}`;
+    const memberEmail = `${memberUid}@example.com`;
 
-    await login(app);
+    const [workspace] = await db
+      .insert(workspaces)
+      .values({ name: `Workspace RBAC ${suffix}` })
+      .returning();
+    if (!workspace) throw new Error('Failed to create test workspace');
+    workspaceId = workspace.id;
+
+    const [adminUser] = await db
+      .insert(users)
+      .values({
+        firebaseUid: adminUid,
+        email: adminEmail,
+        displayName: 'RBAC Admin',
+        avatarUrl: null,
+      })
+      .returning();
+    if (!adminUser) throw new Error('Failed to create test admin');
+    adminUserId = adminUser.id;
+
+    const [memberUser] = await db
+      .insert(users)
+      .values({
+        firebaseUid: memberUid,
+        email: memberEmail,
+        displayName: 'RBAC Member',
+        avatarUrl: null,
+      })
+      .returning();
+    if (!memberUser) throw new Error('Failed to create test member');
+    memberUserId = memberUser.id;
+
+    await db.insert(workspaceMembers).values({
+      workspaceId,
+      userId: adminUserId,
+      role: 'admin',
+    });
+
+    const [member] = await db
+      .insert(workspaceMembers)
+      .values({
+        workspaceId,
+        userId: memberUserId,
+        role: 'member',
+      })
+      .returning();
+    if (!member) throw new Error('Failed to create test member membership');
+    memberRowId = member.id;
+
+    const [createdInvite] = await db
+      .insert(invites)
+      .values({
+        workspaceId,
+        email: `rbac-invite-${suffix}@example.com`,
+        token: `rbac-test-token-${suffix}`,
+        invitedBy: adminUserId,
+        role: 'member',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+    if (!createdInvite) throw new Error('Failed to create test invite');
+    inviteId = createdInvite.id;
 
     const memberTokens = await login(
       app,
-      'test:seed-user-2:bob@gitiempo.dev:Bob',
+      `test:${memberUid}:${memberEmail}:RBAC Member`,
     );
     memberToken = memberTokens.accessToken;
-
-    const [member] = await db
-      .select()
-      .from(workspaceMembers)
-      .where(eq(workspaceMembers.workspaceId, workspace.id))
-      .limit(1);
-    if (!member) throw new Error('Expected seeded member');
-    memberRowId = member.id;
-
-    const [pendingInvite] = await db
-      .select()
-      .from(invites)
-      .where(eq(invites.workspaceId, workspace.id))
-      .limit(1);
-    if (!pendingInvite) {
-      const [created] = await db
-        .insert(invites)
-        .values({
-          workspaceId: workspace.id,
-          email: 'rbac-invite@example.com',
-          token: 'rbac-test-token',
-          invitedBy: member.userId,
-          role: 'member',
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        })
-        .returning();
-      inviteId = created!.id;
-    } else {
-      inviteId = pendingInvite.id;
-    }
   });
 
   afterAll(async () => {
-    await app.close();
+    if (inviteId) {
+      await db.delete(invites).where(eq(invites.id, inviteId));
+    }
+    if (workspaceId) {
+      await db
+        .delete(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, workspaceId));
+    }
+    if (memberUserId) {
+      await db.delete(users).where(eq(users.id, memberUserId));
+    }
+    if (adminUserId) {
+      await db.delete(users).where(eq(users.id, adminUserId));
+    }
+    if (workspaceId) {
+      await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+    }
+    if (app) await app.close();
   });
 
   function sendAs(
