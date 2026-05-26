@@ -128,7 +128,7 @@ onMounted(fetchAll);
       <SectionHeader
         title="Projects"
         description="Manage project visibility, member assignments, and manual project creation."
-        variant="stats"
+        variant="page"
       >
         <template #actions>
           <Button
@@ -136,23 +136,22 @@ onMounted(fetchAll);
             @click="handleNewProject"
           />
         </template>
-        <template #stats>
-          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <StatCard
-              label="Active Projects"
-              :value="summary.activeProjects"
-            />
-            <StatCard
-              label="Private"
-              :value="summary.privateProjects"
-            />
-            <StatCard
-              label="Public"
-              :value="summary.publicProjects"
-            />
-          </div>
-        </template>
       </SectionHeader>
+
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="Active Projects"
+          :value="summary.activeProjects"
+        />
+        <StatCard
+          label="Private"
+          :value="summary.privateProjects"
+        />
+        <StatCard
+          label="Public"
+          :value="summary.publicProjects"
+        />
+      </div>
 
       <SurfaceCard padding-class="p-5">
         <ProjectsTable
