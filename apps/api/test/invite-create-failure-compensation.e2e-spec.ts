@@ -8,9 +8,10 @@ import { AppModule } from '../src/app.module';
 import { FIREBASE_ADMIN } from '../src/auth/services/firebase-admin.interface';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { invites, workspaces } from '../src/db/schema';
+import { invites } from '../src/db/schema';
 import { InviteDeliveryService } from '../src/invites/services/invite-delivery.service';
 import { bearer, login } from './helpers/auth';
+import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
 interface AppContext {
   app: INestApplication;
@@ -65,9 +66,7 @@ async function createApp(options?: {
 
   const db = app.get<DrizzleDB>(DRIZZLE);
   const tokens = await login(app);
-  const [workspace] = await db.select().from(workspaces).limit(1);
-
-  if (!workspace) throw new Error('Expected seeded workspace');
+  const { workspace } = await getSeededAdminWorkspace(db);
 
   return {
     app,

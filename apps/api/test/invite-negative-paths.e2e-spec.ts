@@ -11,6 +11,7 @@ import type { DrizzleDB } from '../src/db/db.types';
 import { invites, users, workspaceMembers, workspaces } from '../src/db/schema';
 import { InviteDeliveryService } from '../src/invites/services/invite-delivery.service';
 import { bearer, login } from './helpers/auth';
+import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
 async function createResendTestApp(options?: {
   deliveryError?: Error;
@@ -55,11 +56,7 @@ async function createResendTestApp(options?: {
 
   const db = app.get<DrizzleDB>(DRIZZLE);
   const tokens = await login(app);
-  const [workspace] = await db.select().from(workspaces).limit(1);
-  const [admin] = await db.select().from(users).limit(1);
-
-  if (!workspace) throw new Error('Expected seeded workspace');
-  if (!admin) throw new Error('Expected seeded admin user');
+  const { admin, workspace } = await getSeededAdminWorkspace(db);
 
   return {
     app,
@@ -94,12 +91,8 @@ describe('Invite negative paths (e2e)', () => {
     const tokens = await login(app);
     adminToken = tokens.accessToken;
 
-    const [workspace] = await db.select().from(workspaces).limit(1);
-    if (!workspace) throw new Error('Expected seeded workspace');
+    const { admin, workspace } = await getSeededAdminWorkspace(db);
     workspaceId = workspace.id;
-
-    const [admin] = await db.select().from(users).limit(1);
-    if (!admin) throw new Error('Expected seeded admin user');
     adminUserId = admin.id;
   });
 
@@ -243,9 +236,9 @@ describe('Invite negative paths (e2e)', () => {
           .from(workspaceMembers)
           .where(eq(workspaceMembers.workspaceId, resendApp.workspace.id));
 
-        expect(resendApp.firebase.getOrCreateInvitedUserByEmail).toHaveBeenCalledWith(
-          row!.email,
-        );
+        expect(
+          resendApp.firebase.getOrCreateInvitedUserByEmail,
+        ).toHaveBeenCalledWith(row!.email);
         expect(
           resendApp.firebase.generatePasswordSetupLink,
         ).toHaveBeenCalledWith(
@@ -301,32 +294,43 @@ describe('Invite negative paths (e2e)', () => {
     });
 
     it('rejects cross-workspace invite → 404', async () => {
-      const [otherWorkspace] = await db
-        .insert(workspaces)
-        .values({ name: `Other Workspace ${randomUUID()}` })
-        .returning();
-      if (!otherWorkspace) throw new Error('Expected other workspace');
+      let otherWorkspaceId: string | undefined;
 
-      const [row] = await db
-        .insert(invites)
-        .values({
-          workspaceId: otherWorkspace.id,
-          email: `cross-${randomUUID()}@example.com`,
-          token: `token-${randomUUID()}`,
-          invitedBy: adminUserId,
-          role: 'member',
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        })
-        .returning();
-      const before = await memberCount();
+      try {
+        const [otherWorkspace] = await db
+          .insert(workspaces)
+          .values({ name: `Other Workspace ${randomUUID()}` })
+          .returning();
+        if (!otherWorkspace) throw new Error('Expected other workspace');
+        otherWorkspaceId = otherWorkspace.id;
 
-      const res = await request(app.getHttpServer())
-        .post(`/invites/${row!.id}/resend`)
-        .set('Authorization', bearer(adminToken));
+        const [row] = await db
+          .insert(invites)
+          .values({
+            workspaceId: otherWorkspace.id,
+            email: `cross-${randomUUID()}@example.com`,
+            token: `token-${randomUUID()}`,
+            invitedBy: adminUserId,
+            role: 'member',
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          })
+          .returning();
+        const before = await memberCount();
 
-      expect(res.status).toBe(404);
-      expect(res.body.message).toBe('Pending invite not found');
-      expect(await memberCount()).toBe(before);
+        const res = await request(app.getHttpServer())
+          .post(`/invites/${row!.id}/resend`)
+          .set('Authorization', bearer(adminToken));
+
+        expect(res.status).toBe(404);
+        expect(res.body.message).toBe('Pending invite not found');
+        expect(await memberCount()).toBe(before);
+      } finally {
+        if (otherWorkspaceId) {
+          await db
+            .delete(workspaces)
+            .where(eq(workspaces.id, otherWorkspaceId));
+        }
+      }
     });
 
     it('rejects expired pending invite → 410', async () => {
