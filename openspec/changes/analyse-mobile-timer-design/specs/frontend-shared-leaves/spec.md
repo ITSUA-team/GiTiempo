@@ -10,11 +10,21 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 - **THEN** the duplicated top bar markup is implemented as a shared prop-driven Vue component
 - **AND** app shells continue to own auth-store reads, environment-derived counterpart URLs, route names, router views, sidebars, and page composition
 
-#### Scenario: Shared header omits settings/profile action after simplification
+#### Scenario: Shared header owns the common profile dropdown shell only
 
-- **WHEN** the shared authenticated header surface is simplified to the invariant identity controls
-- **THEN** the shared header renders the counterpart workspace link, display name, and avatar
-- **AND** it does not render a shared settings/profile action
+- **WHEN** `user-web` and `admin-web` render the same authenticated profile dropdown trigger and menu shape
+- **THEN** the shared header renders the display name, avatar trigger, open-state trigger styling, counterpart workspace dropdown action, and menu surface
+- **AND** the counterpart workspace href and label drive the dropdown workspace action on all breakpoints
+- **AND** the shared header does not render a standalone top-bar counterpart workspace link
+- **AND** app shells provide the first-action label, icon, and route target
+- **AND** the shared header emits sign-out intent without importing app auth stores, route names, session cleanup, or login redirect behavior
+
+#### Scenario: Mobile timer support does not own profile actions
+
+- **WHEN** the shared authenticated header renders the top-right identity/profile area
+- **THEN** profile/settings menu ownership is governed by the active header/profile-menu requirements rather than by the mobile timer center-slot contract
+- **AND** app shells continue to own profile/settings route targets, counterpart workspace URLs, and logout handlers when those actions exist
+- **AND** this mobile timer change does not add timer state, timer API calls, or task-picker behavior to the top-right profile area
 
 #### Scenario: User-web owns header center timer content
 

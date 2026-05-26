@@ -10,7 +10,7 @@ The authenticated user-web shell MUST reserve the top-bar center region for the 
 - **WHEN** the top bar is shown
 - **THEN** the left side displays the product identity and workspace name
 - **AND** the center region displays the compact top-bar timer surface
-- **AND** the right side displays counterpart workspace and user identity controls
+- **AND** the right side displays the header-owned identity/profile controls defined by the active shell requirements
 
 #### Scenario: User-web mobile shell shows selected timer strip
 
@@ -18,23 +18,33 @@ The authenticated user-web shell MUST reserve the top-bar center region for the 
 - **WHEN** the top bar is shown
 - **THEN** the product identity and user identity controls remain in the mobile top row
 - **AND** the timer renders as a full-width shell strip below that top row using the approved `GITiempo.pen` mobile timer design
-- **AND** the timer Start or Stop action and Change task action remain reachable outside the top-right profile menu area
+- **AND** the timer Start or Stop action and Change task action remain reachable outside the top-right identity/avatar control area
 
-#### Scenario: Mobile timer actions remain usable while profile menu is open
+#### Scenario: Mobile timer actions remain usable beside the right identity/profile region
 
 - **GIVEN** the authenticated user-web shell is rendered below the mobile breakpoint
-- **AND** the top-right profile menu opens over the shell chrome
-- **WHEN** the mobile timer strip is visible
+- **AND** the shell renders the top-right identity/avatar region
+- **WHEN** the mobile timer strip is visible and the right identity/profile region occupies the top-right shell area
 - **THEN** the timer Start or Stop action remains visible and actionable
 - **AND** the Change task action remains visible and actionable
-- **AND** any profile-menu overlap is limited to non-critical task metadata
+- **AND** this scenario does not require a profile menu overlay to exist
+
+#### Scenario: Mobile timer remains compatible with separately specified profile menu overlay
+
+- **GIVEN** active header or profile-menu requirements specify a header-owned profile menu overlay opened from the top-right identity/avatar trigger
+- **AND** the authenticated user-web shell is rendered below the mobile breakpoint
+- **WHEN** that profile menu overlay is open while the mobile timer strip is visible
+- **THEN** the timer Start or Stop action remains visible and actionable
+- **AND** the Change task action remains visible and actionable
+- **AND** any overlap from the profile menu overlay is limited to non-critical task metadata
+- **AND** this mobile timer requirement does not create a new profile menu owner or move profile/menu action ownership into the timer
 
 #### Scenario: Admin-web top bar has no timer center content
 
 - **GIVEN** the authenticated admin-web shell is rendered
 - **WHEN** the top bar is shown
 - **THEN** the shell does not render a compact timer surface
-- **AND** the existing admin-web top-bar identity and counterpart workspace controls remain available
+- **AND** the existing admin-web top-bar identity/profile controls remain available according to the active shell requirements
 
 #### Scenario: Compact timer fits top-bar height
 
