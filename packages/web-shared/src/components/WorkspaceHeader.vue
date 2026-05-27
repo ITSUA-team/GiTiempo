@@ -5,6 +5,7 @@ import {
   onMounted,
   shallowRef,
   useTemplateRef,
+  useSlots,
   type Component,
 } from "vue";
 import type { RouteLocationRaw } from "vue-router";
@@ -16,6 +17,7 @@ import Menu from "primevue/menu";
 type ProfileMenuItemKey = "workspace" | "settings" | "sign-out";
 
 type ProfileMenuItem = {
+  command?: () => void;
   destructive?: boolean;
   href?: string;
   key: ProfileMenuItemKey;
@@ -65,6 +67,9 @@ const props = withDefaults(
     workspaceShortName: "GT",
   },
 );
+
+const slots = useSlots();
+const hasCenterSlot = computed(() => Boolean(slots.center));
 
 const emit = defineEmits<{
   signOut: [];
@@ -222,9 +227,9 @@ onBeforeUnmount(() => {
 
 <template>
   <header
-    class="border-divider bg-surface sticky top-0 z-20 grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 border-b px-4 sm:px-6"
+    class="border-divider bg-surface sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 border-b px-4 sm:h-16 sm:grid-rows-1 sm:px-6"
   >
-    <div class="flex items-center gap-3">
+    <div class="row-start-1 flex items-center gap-3">
       <div
         class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs font-semibold"
       >
@@ -240,7 +245,11 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="min-w-0 px-2">
+    <div
+      v-if="hasCenterSlot"
+      class="col-span-3 row-start-2 -mx-4 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:mx-0 sm:px-2"
+      data-testid="workspace-header-center-row"
+    >
       <div class="flex justify-center">
         <slot name="center" />
       </div>
@@ -248,7 +257,8 @@ onBeforeUnmount(() => {
 
     <div
       ref="profileMenuRegion"
-      class="relative flex items-center gap-3"
+      class="relative col-start-3 row-start-1 flex items-center gap-3"
+      data-testid="profile-menu-region"
     >
       <Button
         type="button"

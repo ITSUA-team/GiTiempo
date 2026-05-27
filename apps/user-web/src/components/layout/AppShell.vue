@@ -53,7 +53,7 @@ async function handleSignOut(): Promise<void> {
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
+  <div class="bg-app-bg text-text-dark flex min-h-screen flex-col">
     <WorkspaceHeader
       :counterpart-href="adminWorkspaceHref"
       counterpart-label="Admin workspace"
@@ -70,7 +70,7 @@ async function handleSignOut(): Promise<void> {
       </template>
     </WorkspaceHeader>
 
-    <div class="flex min-h-[calc(100vh-4rem)]">
+    <div class="flex flex-1">
       <WorkspaceNavigation
         :active-name="route.name?.toString()"
         :items="navItems"
