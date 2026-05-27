@@ -1,10 +1,7 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
-import {
-  useProjectTasksQuery,
-  useVisibleProjectsQuery,
-} from "@/composables/query";
-import { computed, nextTick, ref, shallowRef, type ComputedRef } from "vue";
+import { useQuery, useQueryClient } from "@tanstack/vue-query";
+import { computed, watch, type ComputedRef } from "vue";
 
 import { userProjectsKeys, type UserServerStateScope } from "@/lib/query-keys";
 import { sortProjectTasks } from "@/lib/projects-page-helpers";
@@ -27,141 +24,106 @@ export function useProjectsData({
   onLoadTasksError,
   scope,
 }: UseProjectsDataOptions) {
-  const projects = ref<ProjectResponse[]>([]);
-  const tasksByProjectId = ref<Record<string, TaskResponse[]>>({});
-  const taskLoadErrors = ref<Record<string, string>>({});
-  const isLoadingProjects = shallowRef(true);
-  const isLoadingTasks = shallowRef(false);
-  const requestErrorMessage = shallowRef<string | null>(null);
-  const projectTasksProjectId = shallowRef<string | null>(null);
-  const visibleProjects = computed(() =>
-    projects.value.filter((project) => project.isActive),
-  );
-  const visibleProjectsQuery = useVisibleProjectsQuery({
-    accessToken,
-    client,
-    enabled: false,
-    queryKey: computed(() => userProjectsKeys.visibleProjects(scope.value)),
-    scope,
-  });
-  const projectTasksQuery = useProjectTasksQuery({
-    accessToken,
-    client,
-    enabled: false,
-    projectId: projectTasksProjectId,
-    queryKey: computed(() =>
-      userProjectsKeys.projectTasks(scope.value, projectTasksProjectId.value),
-    ),
-    scope,
-  });
-  async function loadVisibleProjects(): Promise<ProjectResponse[]> {
-    isLoadingProjects.value = true;
-
-    try {
-      const result = await visibleProjectsQuery.refetch({ throwOnError: true });
-
-      if (!result.data) {
-        throw result.error ?? new Error("Could not load visible projects.");
-      }
-
-      projects.value = result.data;
-      return visibleProjects.value;
-    } catch (error) {
-      projects.value = [];
-      requestErrorMessage.value = getErrorMessage(error);
-      onLoadProjectsError(error);
-      throw error;
-    } finally {
-      isLoadingProjects.value = false;
-    }
+  interface ProjectsPageData {
+    taskLoadErrors: Record<string, string>;
+    tasksByProjectId: Record<string, TaskResponse[]>;
+    visibleProjects: ProjectResponse[];
   }
 
-  async function loadTasksForProjects(projectOptions: ProjectResponse[]): Promise<void> {
-    isLoadingTasks.value = true;
-    tasksByProjectId.value = {};
-    taskLoadErrors.value = {};
+  const queryClient = useQueryClient();
+  const queryKey = computed(() => userProjectsKeys.page(scope.value));
+  const projectsPageQuery = useQuery({
+    queryKey,
+    enabled: computed(() => Boolean(accessToken.value)),
+    queryFn: async (): Promise<ProjectsPageData> => {
+      const projects = await client.listVisibleProjects();
+      const visibleProjects = projects.filter((project) => project.isActive);
+      const tasksByProjectId: Record<string, TaskResponse[]> = {};
+      const taskLoadErrors: Record<string, string> = {};
 
-    try {
-      const nextTasksByProjectId: Record<string, TaskResponse[]> = {};
-      const nextTaskErrors: Record<string, string> = {};
-
-      for (const project of projectOptions) {
+      for (const project of visibleProjects) {
         try {
-          projectTasksProjectId.value = project.id;
-          await nextTick();
+          const nextTasks = await client.listProjectTasks(project.id);
 
-          const result = await projectTasksQuery.refetch({ throwOnError: true });
-
-          if (!result.data) {
-            throw result.error ?? new Error("Could not load project tasks.");
-          }
-
-          const nextTasks = result.data;
-
-          nextTasksByProjectId[project.id] = sortProjectTasks(
+          tasksByProjectId[project.id] = sortProjectTasks(
             nextTasks.filter((task) => task.isActive),
           );
         } catch (error) {
-          nextTaskErrors[project.id] = getErrorMessage(error);
+          taskLoadErrors[project.id] = getErrorMessage(error);
         }
       }
 
-      tasksByProjectId.value = nextTasksByProjectId;
-      taskLoadErrors.value = nextTaskErrors;
-
-      const firstTaskError = Object.values(nextTaskErrors)[0] ?? null;
-
-      if (firstTaskError) {
-        requestErrorMessage.value = firstTaskError;
-        onLoadTasksError(firstTaskError);
-      }
-    } finally {
-      isLoadingTasks.value = false;
-    }
-  }
+      return { taskLoadErrors, tasksByProjectId, visibleProjects };
+    },
+  });
+  const visibleProjects = computed(() =>
+    projectsPageQuery.data.value?.visibleProjects ?? [],
+  );
+  const tasksByProjectId = computed(() =>
+    projectsPageQuery.data.value?.tasksByProjectId ?? {},
+  );
+  const taskLoadErrors = computed(() =>
+    projectsPageQuery.data.value?.taskLoadErrors ?? {},
+  );
+  const firstTaskError = computed(() => Object.values(taskLoadErrors.value)[0] ?? null);
+  const isLoadingProjects = computed(() => projectsPageQuery.isFetching.value);
+  const isLoadingTasks = computed(() => projectsPageQuery.isFetching.value);
+  const requestErrorMessage = computed(() =>
+    projectsPageQuery.error.value
+      ? getErrorMessage(projectsPageQuery.error.value)
+      : firstTaskError.value,
+  );
 
   async function loadPage(): Promise<void> {
-    requestErrorMessage.value = null;
-
-    let nextProjects: ProjectResponse[] = [];
-
-    try {
-      nextProjects = await loadVisibleProjects();
-    } catch {
-      tasksByProjectId.value = {};
-      taskLoadErrors.value = {};
-      return;
-    }
-
-    if (nextProjects.length === 0) {
-      tasksByProjectId.value = {};
-      taskLoadErrors.value = {};
-      return;
-    }
-
-    await loadTasksForProjects(nextProjects);
+    await projectsPageQuery.refetch();
   }
 
   function upsertTask(task: TaskResponse): void {
-    tasksByProjectId.value = {
-      ...tasksByProjectId.value,
-      [task.projectId]: sortProjectTasks([
-        ...(tasksByProjectId.value[task.projectId] ?? []).filter(
-          (currentTask) => currentTask.id !== task.id,
-        ),
-        task,
-      ]),
-    };
+    queryClient.setQueryData<ProjectsPageData>(queryKey.value, (currentData) => {
+      if (!currentData) return currentData;
+
+      return {
+        ...currentData,
+        tasksByProjectId: {
+          ...currentData.tasksByProjectId,
+          [task.projectId]: sortProjectTasks([
+            ...(currentData.tasksByProjectId[task.projectId] ?? []).filter(
+              (currentTask) => currentTask.id !== task.id,
+            ),
+            task,
+          ]),
+        },
+      };
+    });
   }
 
   function removeTask(task: TaskResponse): void {
-    tasksByProjectId.value = {
-      ...tasksByProjectId.value,
-      [task.projectId]: (tasksByProjectId.value[task.projectId] ?? []).filter(
-        (currentTask) => currentTask.id !== task.id,
-      ),
-    };
+    queryClient.setQueryData<ProjectsPageData>(queryKey.value, (currentData) => {
+      if (!currentData) return currentData;
+
+      return {
+        ...currentData,
+        tasksByProjectId: {
+          ...currentData.tasksByProjectId,
+          [task.projectId]: (currentData.tasksByProjectId[task.projectId] ?? []).filter(
+            (currentTask) => currentTask.id !== task.id,
+          ),
+        },
+      };
+    });
   }
+
+  watch(projectsPageQuery.error, (error) => {
+    if (error) {
+      onLoadProjectsError(error);
+    }
+  });
+
+  watch(firstTaskError, (message) => {
+    if (message) {
+      onLoadTasksError(message);
+    }
+  });
 
   return {
     isLoadingProjects,
@@ -170,7 +132,7 @@ export function useProjectsData({
     removeTask,
     requestErrorMessage,
     taskLoadErrors,
-    tasksByProjectId: computed(() => tasksByProjectId.value),
+    tasksByProjectId,
     upsertTask,
     visibleProjects,
   };

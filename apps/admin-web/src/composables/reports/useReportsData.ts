@@ -1,18 +1,17 @@
 import {
   computed,
   nextTick,
-  onMounted,
   onUnmounted,
   shallowRef,
   watch,
   type ComputedRef,
   type Ref,
 } from 'vue';
-import type { ProjectListResponse, ProjectResponse, TimeReportQuery } from '@gitiempo/shared';
+import { useQuery } from '@tanstack/vue-query';
+import type { ProjectListResponse, ProjectResponse } from '@gitiempo/shared';
 import {
   useAdminProjectsQuery,
   useExportTimeReportMutation,
-  useTimeReportQuery,
 } from '@/composables/query';
 
 import {
@@ -37,7 +36,7 @@ import {
   type AdminReportsClient,
   type ReportsCsvExport,
 } from '@/services/admin-reports-client';
-import type { AdminServerStateScope } from '@/lib/query-keys';
+import { reportsKeys, type AdminServerStateScope } from '@/lib/query-keys';
 
 interface UseReportsDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
@@ -85,27 +84,20 @@ export function useReportsData({
   onError,
   scope,
 }: UseReportsDataOptions) {
-  const projects = shallowRef<ProjectListResponse>([]);
-  const reportRows = shallowRef<ReportTableRow[]>([]);
   const selectedProjectId = shallowRef<string | null>(null);
   const selectedMemberId = shallowRef<string | null>(null);
   const dateRange = shallowRef<ReportDateRange>(getDefaultReportDateRange());
   const groupBy = shallowRef<ReportSetupFilters['groupBy']>('project');
-  const loading = shallowRef(true);
-  const initialLoaded = shallowRef(false);
-  const loadError = shallowRef<string | null>(null);
-  const reportQueryInput = shallowRef<Partial<TimeReportQuery>>({});
+  const appliedFilters = shallowRef<ReportSetupFilters>({
+    dateRange: dateRange.value,
+    groupBy: groupBy.value,
+    memberId: selectedMemberId.value,
+    projectId: selectedProjectId.value,
+  });
+  const currentAction = shallowRef('load-reports');
   const projectsQuery = useAdminProjectsQuery({
     accessToken,
     client: projectsClient,
-    enabled: false,
-    scope,
-  });
-  const timeReportQuery = useTimeReportQuery({
-    accessToken,
-    client: reportsClient,
-    enabled: false,
-    query: reportQueryInput,
     scope,
   });
   const exportReportMutation = useExportTimeReportMutation({
@@ -114,21 +106,11 @@ export function useReportsData({
     scope,
   });
 
-  let requestId = 0;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+  const projects = computed(() => sortProjects(projectsQuery.data.value ?? []));
   const projectOptions = computed(() => deriveProjectOptions(projects.value));
   const memberOptions = computed(() => deriveMemberOptions(projects.value));
-  const rows = computed(() => reportRows.value);
-  const summary = computed(() => deriveReportSummaryView(rows.value));
-  const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
-  const isEmpty = computed(
-    () =>
-      initialLoaded.value &&
-      !loading.value &&
-      loadError.value === null &&
-      rows.value.length === 0,
-  );
 
   function getCurrentSetupFilters(): ReportSetupFilters {
     return {
@@ -159,10 +141,12 @@ export function useReportsData({
 
   async function fetchReportRowsForScope(
     visibleProjects: ProjectListResponse,
-    projectId: string | null,
-    reportDateRange: ReportDateRange,
+    filters: ReportSetupFilters,
   ): Promise<ReportTableRow[]> {
-    const targetProjects = getVisibleProjectsForScope(visibleProjects, projectId);
+    const targetProjects = getVisibleProjectsForScope(
+      visibleProjects,
+      filters.projectId,
+    );
     const nextRows: ReportTableRow[] = [];
 
     for (const project of targetProjects) {
@@ -170,25 +154,18 @@ export function useReportsData({
       let totalPages = 1;
 
       while (page <= totalPages) {
-        reportQueryInput.value = toTimeReportQuery(
-          {
-            dateRange: reportDateRange,
-            groupBy: 'user',
-            memberId: null,
-            projectId: project.id,
-          },
-          page,
-          pageLimit,
+        const response = await reportsClient.getTimeReport(
+          toTimeReportQuery(
+            {
+              dateRange: filters.dateRange,
+              groupBy: 'user',
+              memberId: null,
+              projectId: project.id,
+            },
+            page,
+            pageLimit,
+          ),
         );
-        await nextTick();
-
-        const result = await timeReportQuery.refetch({ throwOnError: true });
-
-        if (!result.data) {
-          throw result.error ?? new Error('Could not load time report.');
-        }
-
-        const response = result.data;
 
         nextRows.push(...toReportTableRows(response, {
           memberOptions: memberOptions.value,
@@ -204,79 +181,42 @@ export function useReportsData({
     return nextRows;
   }
 
-  async function loadReports({
-    action,
-    reloadProjects,
-    setInitialLoaded,
-  }: {
-    action: string;
-    reloadProjects: boolean;
-    setInitialLoaded: boolean;
-  }): Promise<void> {
-    const token = accessToken.value;
+  const reportRowsQuery = useQuery({
+    queryKey: computed(() =>
+      reportsKeys.time(
+        scope.value,
+        toTimeReportQuery(appliedFilters.value, 1, pageLimit),
+      ),
+    ),
+    enabled: computed(
+      () =>
+        Boolean(accessToken.value) &&
+        projectsQuery.isSuccess.value &&
+        isReportDateRangeValid(appliedFilters.value.dateRange),
+    ),
+    queryFn: () => fetchReportRowsForScope(projects.value, appliedFilters.value),
+  });
+  const rows = computed(() => reportRowsQuery.data.value ?? []);
+  const summary = computed(() => deriveReportSummaryView(rows.value));
+  const loading = computed(
+    () => projectsQuery.isFetching.value || reportRowsQuery.isFetching.value,
+  );
+  const initialLoaded = computed(
+    () => projectsQuery.isSuccess.value && reportRowsQuery.isSuccess.value,
+  );
+  const loadError = computed(() => {
+    const error = projectsQuery.error.value ?? reportRowsQuery.error.value;
 
-    if (!token) {
-      loading.value = false;
-      return;
-    }
-
-    const currentRequestId = requestId + 1;
-    requestId = currentRequestId;
-
-    if (!isReportDateRangeValid(dateRange.value)) {
-      loading.value = false;
-      loadError.value = null;
-      return;
-    }
-
-    loading.value = true;
-    loadError.value = null;
-
-    try {
-      if (reloadProjects) {
-        const result = await projectsQuery.refetch({ throwOnError: true });
-
-        if (!result.data) {
-          throw result.error ?? new Error('Could not load projects.');
-        }
-
-        projects.value = sortProjects(result.data);
-
-        if (currentRequestId !== requestId) {
-          return;
-        }
-
-        syncSelectedFiltersWithOptions();
-      }
-
-      const nextRows = await fetchReportRowsForScope(
-        projects.value,
-        selectedProjectId.value,
-        dateRange.value,
-      );
-
-      if (currentRequestId !== requestId) {
-        return;
-      }
-
-      reportRows.value = nextRows;
-      if (setInitialLoaded) {
-        initialLoaded.value = true;
-      }
-    } catch (error) {
-      if (currentRequestId !== requestId) {
-        return;
-      }
-
-      const message = getReportErrorMessage(error);
-      loadError.value = message;
-      onError?.(message, error, action);
-    } finally {
-      if (currentRequestId === requestId) {
-        loading.value = false;
-      }
-    }
-  }
+    return error ? getReportErrorMessage(error) : null;
+  });
+  const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
+  const isEmpty = computed(
+    () =>
+      initialLoaded.value &&
+      !loading.value &&
+      loadError.value === null &&
+      rows.value.length === 0,
+  );
 
   function clearDebounceTimer(): void {
     if (debounceTimer) {
@@ -285,28 +225,36 @@ export function useReportsData({
     }
   }
 
+  function applyCurrentFilters(): void {
+    if (!isReportDateRangeValid(dateRange.value)) {
+      return;
+    }
+
+    appliedFilters.value = getCurrentSetupFilters();
+  }
+
   function scheduleReportRefresh(): void {
     if (!initialLoaded.value) {
       return;
     }
 
+    currentAction.value = 'refresh-reports';
     clearDebounceTimer();
-    debounceTimer = setTimeout(() => {
-      void loadReports({
-        action: 'refresh-reports',
-        reloadProjects: false,
-        setInitialLoaded: false,
-      });
-    }, 300);
+    debounceTimer = setTimeout(applyCurrentFilters, 300);
   }
 
   async function refresh(): Promise<void> {
+    if (!accessToken.value) {
+      return;
+    }
+
+    currentAction.value = initialLoaded.value ? 'refresh-reports' : 'load-reports';
     clearDebounceTimer();
-    await loadReports({
-      action: initialLoaded.value ? 'refresh-reports' : 'load-reports',
-      reloadProjects: true,
-      setInitialLoaded: !initialLoaded.value,
-    });
+    await projectsQuery.refetch();
+    syncSelectedFiltersWithOptions();
+    applyCurrentFilters();
+    await nextTick();
+    await reportRowsQuery.refetch();
   }
 
   async function exportCurrentReport(
@@ -332,7 +280,14 @@ export function useReportsData({
 
   watch([projectOptions, memberOptions], syncSelectedFiltersWithOptions);
 
-  onMounted(refresh);
+  watch([projectsQuery.error, reportRowsQuery.error], ([projectsError, rowsError]) => {
+    const error = projectsError ?? rowsError;
+
+    if (error) {
+      onError?.(getReportErrorMessage(error), error, currentAction.value);
+    }
+  });
+
   onUnmounted(clearDebounceTimer);
 
   return {

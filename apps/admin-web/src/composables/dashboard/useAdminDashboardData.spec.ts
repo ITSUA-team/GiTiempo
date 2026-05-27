@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, shallowRef } from 'vue';
+import { defineComponent, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type {
@@ -169,7 +169,6 @@ function mountDashboard(
           }),
           ...options,
         });
-        onMounted(dashboard.refresh);
         return () => null;
       },
     }),

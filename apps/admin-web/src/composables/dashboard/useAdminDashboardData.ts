@@ -1,18 +1,6 @@
-import {
-  computed,
-  nextTick,
-  shallowRef,
-  type ComputedRef,
-  type Ref,
-} from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import { computed, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
 import type { TimeReportQuery, WorkspaceRole } from '@gitiempo/shared';
-import {
-  useAdminProjectsQuery,
-  useManagementProjectSummaryQuery,
-  useTimeReportQuery,
-  useWorkspaceInvitesQuery,
-  useWorkspaceMembersQuery,
-} from '@/composables/query';
 
 import {
   ADMIN_DASHBOARD_ACTIVITY_FULL_LIMIT,
@@ -40,7 +28,7 @@ import {
   adminReportsClient,
   type AdminReportsClient,
 } from '@/services/admin-reports-client';
-import type { AdminServerStateScope } from '@/lib/query-keys';
+import { adminDashboardKeys, type AdminServerStateScope } from '@/lib/query-keys';
 
 interface UseAdminDashboardDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
@@ -69,156 +57,105 @@ export function useAdminDashboardData({
   role = shallowRef<WorkspaceRole | null>('admin'),
   scope,
 }: UseAdminDashboardDataOptions) {
-  const stats = shallowRef<AdminDashboardStatCard[]>([]);
-  const allActivityRows = shallowRef<AdminDashboardActivityRow[]>([]);
-  const loading = shallowRef(true);
-  const initialLoaded = shallowRef(false);
-  const loadError = shallowRef<string | null>(null);
-  const dashboardReportQuery = shallowRef<Partial<TimeReportQuery>>({});
-  const membersQuery = useWorkspaceMembersQuery({
-    accessToken,
-    client: membersClient,
-    enabled: false,
-    scope,
-  });
-  const invitesQuery = useWorkspaceInvitesQuery({
-    accessToken,
-    client: membersClient,
-    enabled: false,
-    scope,
-  });
-  const projectSummaryQuery = useManagementProjectSummaryQuery({
-    accessToken,
-    client: projectsClient,
-    enabled: false,
-    scope,
-  });
-  const projectsQuery = useAdminProjectsQuery({
-    accessToken,
-    client: projectsClient,
-    enabled: false,
-    scope,
-  });
-  const reportQuery = useTimeReportQuery({
-    accessToken,
-    client: reportsClient,
-    enabled: false,
-    query: dashboardReportQuery,
-    scope,
-  });
+  const requestedAt = shallowRef(now());
+  const currentAction = shallowRef('load-dashboard');
+  const weekRange = computed(() => getDashboardWeekRange(requestedAt.value));
+  const blockedError = computed(() => {
+    if (!accessToken.value) {
+      return ADMIN_DASHBOARD_MISSING_TOKEN_MESSAGE;
+    }
 
-  let requestId = 0;
+    if (!role.value) {
+      return ADMIN_DASHBOARD_MISSING_ROLE_MESSAGE;
+    }
 
+    return null;
+  });
+  const dashboardQuery = useQuery({
+    queryKey: computed(() => adminDashboardKeys.overview(scope.value, weekRange.value)),
+    enabled: computed(() => blockedError.value === null),
+    queryFn: async () => {
+      const dashboardRole = role.value;
+
+      if (!dashboardRole) {
+        throw new Error(ADMIN_DASHBOARD_MISSING_ROLE_MESSAGE);
+      }
+
+      const reportQuery: Partial<TimeReportQuery> = {
+        ...weekRange.value,
+        groupBy: 'project',
+        limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
+        page: 1,
+        sortBy: 'lastStartedAt',
+        sortOrder: 'desc',
+      };
+      const [projectSummary, projects, report] = await Promise.all([
+        projectsClient.getManagementSummary(),
+        projectsClient.listProjects(),
+        reportsClient.getTimeReport(reportQuery),
+      ]);
+
+      if (dashboardRole !== 'admin') {
+        return {
+          dashboardRole,
+          requestedAt: requestedAt.value,
+          source: { projectSummary, projects, report },
+        };
+      }
+
+      const [invites, members] = await Promise.all([
+        membersClient.listInvites(),
+        membersClient.listMembers(),
+      ]);
+
+      return {
+        dashboardRole,
+        requestedAt: requestedAt.value,
+        source: { invites, members, projectSummary, projects, report },
+      };
+    },
+  });
+  const stats = computed<AdminDashboardStatCard[]>(() =>
+    dashboardQuery.data.value
+      ? deriveDashboardStats(
+          dashboardQuery.data.value.source,
+          dashboardQuery.data.value.requestedAt,
+          dashboardQuery.data.value.dashboardRole,
+        )
+      : [],
+  );
+  const allActivityRows = computed<AdminDashboardActivityRow[]>(() =>
+    dashboardQuery.data.value
+      ? deriveDashboardActivityRows(
+          dashboardQuery.data.value.source,
+          dashboardQuery.data.value.requestedAt,
+          ADMIN_DASHBOARD_ACTIVITY_FULL_LIMIT,
+        )
+      : [],
+  );
+  const loading = computed(() => dashboardQuery.isFetching.value);
+  const initialLoaded = computed(() => dashboardQuery.isSuccess.value || blockedError.value !== null);
+  const loadError = computed(() =>
+    blockedError.value ??
+    (dashboardQuery.error.value ? getErrorMessage(dashboardQuery.error.value) : null),
+  );
   const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
 
-  function setBlockedState(message: string): void {
-    stats.value = [];
-    allActivityRows.value = [];
-    loadError.value = message;
-    initialLoaded.value = true;
-    loading.value = false;
-  }
-
-  async function loadDashboard(action: string): Promise<void> {
-    const currentRequestId = requestId + 1;
-    requestId = currentRequestId;
-
-    if (!accessToken.value) {
-      setBlockedState(ADMIN_DASHBOARD_MISSING_TOKEN_MESSAGE);
-      return;
-    }
-
-    const dashboardRole = role.value;
-
-    if (!dashboardRole) {
-      setBlockedState(ADMIN_DASHBOARD_MISSING_ROLE_MESSAGE);
-      return;
-    }
-
-    const requestedAt = now();
-    const weekRange = getDashboardWeekRange(requestedAt);
-
-    loading.value = true;
-    loadError.value = null;
-    dashboardReportQuery.value = {
-      ...weekRange,
-      groupBy: 'project',
-      limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
-      page: 1,
-      sortBy: 'lastStartedAt',
-      sortOrder: 'desc',
-    };
-    await nextTick();
-
-    try {
-      const [projectSummaryResult, projectsResult, reportResult] = await Promise.all([
-        projectSummaryQuery.refetch({ throwOnError: true }),
-        projectsQuery.refetch({ throwOnError: true }),
-        reportQuery.refetch({ throwOnError: true }),
-      ]);
-      const projectSummary = projectSummaryResult.data;
-      const projects = projectsResult.data;
-      const report = reportResult.data;
-
-      if (!projectSummary || !projects || !report) {
-        throw new Error('Could not load dashboard data.');
-      }
-
-      const nextDashboardData =
-        dashboardRole === 'admin'
-          ? await (async () => {
-              const [invitesResult, membersResult] = await Promise.all([
-                invitesQuery.refetch({ throwOnError: true }),
-                membersQuery.refetch({ throwOnError: true }),
-              ]);
-
-              if (!invitesResult.data || !membersResult.data) {
-                throw new Error('Could not load dashboard workspace data.');
-              }
-
-              return {
-                invites: invitesResult.data,
-                members: membersResult.data,
-                projectSummary,
-                projects,
-                report,
-              };
-            })()
-          : {
-              projectSummary,
-              projects,
-              report,
-            };
-
-      if (currentRequestId !== requestId) {
-        return;
-      }
-
-      stats.value = deriveDashboardStats(nextDashboardData, requestedAt, dashboardRole);
-      allActivityRows.value = deriveDashboardActivityRows(
-        nextDashboardData,
-        requestedAt,
-        ADMIN_DASHBOARD_ACTIVITY_FULL_LIMIT,
-      );
-      initialLoaded.value = true;
-    } catch (error) {
-      if (currentRequestId !== requestId) {
-        return;
-      }
-
-      const message = getErrorMessage(error);
-      loadError.value = message;
-      onError?.(message, error, action);
-    } finally {
-      if (currentRequestId === requestId) {
-        loading.value = false;
-      }
-    }
-  }
-
   async function refresh(): Promise<void> {
-    await loadDashboard(initialLoaded.value ? 'refresh-dashboard' : 'load-dashboard');
+    if (blockedError.value) {
+      return;
+    }
+
+    currentAction.value = initialLoaded.value ? 'refresh-dashboard' : 'load-dashboard';
+    requestedAt.value = now();
+    await dashboardQuery.refetch();
   }
+
+  watch(dashboardQuery.error, (error) => {
+    if (error) {
+      onError?.(getErrorMessage(error), error, currentAction.value);
+    }
+  });
 
   return {
     allActivityRows,

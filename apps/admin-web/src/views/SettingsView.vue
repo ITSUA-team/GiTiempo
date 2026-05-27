@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, watch } from 'vue';
 import { SectionHeader, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
@@ -50,9 +50,9 @@ const {
 } = settingsForm;
 const {
   initialLoaded,
-  loadSettings,
   loading,
   requestError,
+  result: loadedSettings,
   retryLoad,
 } = settingsData;
 const { saveSettings: persistSettings, saving } = settingsPersistence;
@@ -61,15 +61,6 @@ const canSave = computed(() => isDirty.value && !saving.value && !loading.value)
 function syncWorkspaceName(values = persisted.value): void {
   if (!values) return;
   authStore.setWorkspaceName(values.workspaceName);
-}
-
-async function loadSettingsForm(): Promise<void> {
-  const nextData = await loadSettings();
-  if (!nextData) return;
-
-  const values = toAdminSettingsFormValues(nextData.workspace, nextData.settings);
-  settingsForm.applyPersistedValues(values);
-  syncWorkspaceName(values);
 }
 
 async function retryLoadSettings(): Promise<void> {
@@ -106,9 +97,17 @@ async function saveSettings(): Promise<void> {
   successToast('Settings saved.');
 }
 
-onMounted(() => {
-  void loadSettingsForm();
-});
+watch(
+  loadedSettings,
+  (nextData) => {
+    if (!nextData) return;
+
+    const values = toAdminSettingsFormValues(nextData.workspace, nextData.settings);
+    settingsForm.applyPersistedValues(values);
+    syncWorkspaceName(values);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

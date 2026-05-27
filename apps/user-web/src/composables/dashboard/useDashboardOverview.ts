@@ -1,10 +1,8 @@
 import type { TimeEntryResponse } from "@gitiempo/shared";
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
-import {
-  useOwnTimeEntriesQuery,
-  useRecentOwnTimeEntriesQuery,
-} from "@/composables/query";
-import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
+import { useQuery } from "@tanstack/vue-query";
+import { useRecentOwnTimeEntriesQuery } from "@/composables/query";
+import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
 import { createDefaultTimeEntriesClient } from "@/config/clients";
@@ -48,43 +46,49 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
 
   const nowMs = shallowRef(now());
-  const weekEntries = shallowRef<TimeEntryResponse[]>([]);
-  const weekEntriesError = shallowRef<unknown | null>(null);
-  const isLoadingWeekEntries = shallowRef(true);
-  const weekEntriesPage = shallowRef(1);
   const accessToken = computed(() => authStore.accessToken);
   const scope = computed(() => getUserServerStateScope(authStore.accessToken));
   const hasAccessToken = computed(() => Boolean(accessToken.value));
   const weekWindow = computed(() => getDashboardWeekWindow(nowMs.value));
+  const weekEntriesQueryInput = computed(() => ({
+    dateFrom: weekWindow.value.dateFrom,
+    dateTo: weekWindow.value.dateTo,
+    limit: 100,
+  }));
   const recentEntriesQuery = useRecentOwnTimeEntriesQuery({
     accessToken,
     client,
     queryKey: computed(() => timeEntriesKeys.list(scope.value, { limit: 10, page: 1 })),
     scope,
   });
-  const weekEntriesQuery = useOwnTimeEntriesQuery({
-    accessToken,
-    client,
+  const weekEntriesQuery = useQuery({
     queryKey: computed(() =>
-      timeEntriesKeys.allList(scope.value, {
-        dateFrom: weekWindow.value.dateFrom,
-        dateTo: weekWindow.value.dateTo,
-        limit: 100,
-        page: weekEntriesPage.value,
-      }),
+      timeEntriesKeys.allList(scope.value, weekEntriesQueryInput.value),
     ),
-    query: computed(() => ({
-      dateFrom: weekWindow.value.dateFrom,
-      dateTo: weekWindow.value.dateTo,
-      limit: 100,
-      page: weekEntriesPage.value,
-    })),
-    enabled: false,
-    scope,
+    enabled: hasAccessToken,
+    queryFn: async () => {
+      const nextEntries: TimeEntryResponse[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
+
+      while (currentPage <= totalPages) {
+        const result = await client.listOwnEntries({
+          ...weekEntriesQueryInput.value,
+          page: currentPage,
+        });
+
+        nextEntries.push(...result.items);
+        totalPages = Math.max(result.meta.totalPages, 1);
+        currentPage += 1;
+      }
+
+      return nextEntries;
+    },
   });
   const recentEntries = computed(() => recentEntriesQuery.data.value?.items ?? []);
+  const weekEntries = computed(() => weekEntriesQuery.data.value ?? []);
   const queryError = computed(
-    () => recentEntriesQuery.error.value ?? weekEntriesError.value ?? null,
+    () => recentEntriesQuery.error.value ?? weekEntriesQuery.error.value ?? null,
   );
   const requestErrorMessage = computed(() =>
     queryError.value ? getErrorMessage(queryError.value) : null,
@@ -93,7 +97,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     () =>
       !hasAccessToken.value ||
       recentEntriesQuery.isPending.value ||
-      isLoadingWeekEntries.value,
+      weekEntriesQuery.isPending.value,
   );
   const pageState = computed(() =>
     resolveDataPageState({
@@ -109,43 +113,6 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   );
 
   let intervalHandle: ReturnType<typeof setInterval> | null = null;
-
-  async function loadWeekEntries(): Promise<void> {
-    if (!hasAccessToken.value) {
-      return;
-    }
-
-    const nextEntries: TimeEntryResponse[] = [];
-    let currentPage = 1;
-    let totalPages = 1;
-
-    isLoadingWeekEntries.value = true;
-    weekEntriesError.value = null;
-
-    try {
-      while (currentPage <= totalPages) {
-        weekEntriesPage.value = currentPage;
-        await nextTick();
-
-        const result = await weekEntriesQuery.refetch({ throwOnError: true });
-
-        if (!result.data) {
-          throw result.error ?? new Error("Could not load weekly time entries.");
-        }
-
-        nextEntries.push(...result.data.items);
-        totalPages = Math.max(result.data.meta.totalPages, 1);
-        currentPage += 1;
-      }
-
-      weekEntries.value = nextEntries;
-    } catch (error) {
-      weekEntries.value = [];
-      weekEntriesError.value = error;
-    } finally {
-      isLoadingWeekEntries.value = false;
-    }
-  }
 
   watch(queryError, (error) => {
     if (!error) {
@@ -167,12 +134,11 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
 
     await Promise.allSettled([
       recentEntriesQuery.refetch(),
-      loadWeekEntries(),
+      weekEntriesQuery.refetch(),
     ]);
   }
 
   onMounted(() => {
-    void loadWeekEntries();
     intervalHandle = setIntervalFn(() => {
       nowMs.value = now();
     }, 1000);

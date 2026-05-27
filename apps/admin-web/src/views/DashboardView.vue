@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 
 import DashboardPageSkeleton from '@/components/dashboard/DashboardPageSkeleton.vue';
@@ -39,8 +39,6 @@ const {
   loading: dashboard.loading,
 });
 const { isInitialLoading, loadError, loading, refresh, stats } = dashboard;
-
-onMounted(refresh);
 </script>
 
 <template>

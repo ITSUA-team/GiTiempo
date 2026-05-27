@@ -255,10 +255,12 @@ describe("ProjectView", () => {
   it("creates a task from a preselected project dialog and updates the local group", async () => {
     const client = createClientMock();
 
-    client.listVisibleProjects.mockResolvedValueOnce([
+    client.listVisibleProjects.mockResolvedValue([
       createProject("project-1", "Project Orion"),
     ]);
-    client.listProjectTasks.mockResolvedValueOnce([]);
+    client.listProjectTasks.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      createTask("task-new", "project-1", "Write release checklist"),
+    ]);
 
     const { wrapper } = await mountView(client);
 

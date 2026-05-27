@@ -3,7 +3,7 @@ import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import ConfirmDialog from "primevue/confirmdialog";
 import Skeleton from "primevue/skeleton";
-import { computed, onMounted } from "vue";
+import { computed } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import {
@@ -139,9 +139,6 @@ async function retryLoadPage(): Promise<void> {
   await data.loadPage();
 }
 
-onMounted(() => {
-  void data.loadPage();
-});
 </script>
 
 <template>

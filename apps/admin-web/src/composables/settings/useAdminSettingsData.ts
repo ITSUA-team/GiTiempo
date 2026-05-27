@@ -1,4 +1,5 @@
-import { computed, shallowRef, type ComputedRef, type Ref } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
+import { computed, watch, type ComputedRef, type Ref } from 'vue';
 import type {
   WorkspaceResponse,
   WorkspaceSettingsResponse,
@@ -10,7 +11,7 @@ import {
 
 import { adminSettingsClient } from '@/services/admin-settings-client';
 import type { AdminSettingsClient } from '@/services/admin-settings-client';
-import type { AdminServerStateScope } from '@/lib/query-keys';
+import { adminSettingsKeys, type AdminServerStateScope } from '@/lib/query-keys';
 
 interface AdminSettingsDataResult {
   settings: WorkspaceSettingsResponse;
@@ -43,41 +44,59 @@ export function useAdminSettingsData({
   onError,
   scope,
 }: UseAdminSettingsDataOptions) {
-  const workspace = shallowRef<WorkspaceResponse | null>(null);
-  const settings = shallowRef<WorkspaceSettingsResponse | null>(null);
-  const loading = shallowRef(true);
-  const initialLoaded = shallowRef(false);
-  const requestError = shallowRef<string | null>(null);
+  const queryClient = useQueryClient();
   const workspaceQuery = useWorkspaceQuery({
     client,
     accessToken,
-    enabled: false,
     scope,
   });
   const workspaceSettingsQuery = useWorkspaceSettingsQuery({
     client,
     accessToken,
-    enabled: false,
     scope,
   });
+  const workspace = computed(() => workspaceQuery.data.value ?? null);
+  const settings = computed(() => workspaceSettingsQuery.data.value ?? null);
+  const result = computed<AdminSettingsDataResult | null>(() => {
+    if (!workspace.value || !settings.value) {
+      return null;
+    }
+
+    return { settings: settings.value, workspace: workspace.value };
+  });
+  const authError = computed(() =>
+    accessToken.value ? null : 'Authentication is required to load settings.',
+  );
+  const queryError = computed(
+    () => workspaceQuery.error.value ?? workspaceSettingsQuery.error.value ?? null,
+  );
+  const requestError = computed(() =>
+    authError.value ?? (queryError.value ? getErrorMessage(queryError.value) : null),
+  );
+  const loading = computed(
+    () => workspaceQuery.isFetching.value || workspaceSettingsQuery.isFetching.value,
+  );
+  const initialLoaded = computed(
+    () => result.value !== null || authError.value !== null,
+  );
   const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
 
   function applySettingsData(nextData: AdminSettingsDataResult): void {
-    workspace.value = nextData.workspace;
-    settings.value = nextData.settings;
+    queryClient.setQueryData(
+      adminSettingsKeys.workspace(scope.value),
+      nextData.workspace,
+    );
+    queryClient.setQueryData(
+      adminSettingsKeys.workspaceSettings(scope.value),
+      nextData.settings,
+    );
   }
 
   async function loadSettings(
     action = 'load-settings',
   ): Promise<AdminSettingsDataResult | null> {
-    loading.value = true;
-    requestError.value = null;
-
     if (!accessToken.value) {
       const message = 'Authentication is required to load settings.';
-      requestError.value = message;
-      initialLoaded.value = true;
-      loading.value = false;
       onError?.(message, undefined, action);
       return null;
     }
@@ -98,21 +117,23 @@ export function useAdminSettingsData({
       };
 
       applySettingsData(nextData);
-      initialLoaded.value = true;
       return nextData;
     } catch (error) {
       const message = getErrorMessage(error);
-      requestError.value = message;
       onError?.(message, error, action);
       return null;
-    } finally {
-      loading.value = false;
     }
   }
 
   async function retryLoad(): Promise<AdminSettingsDataResult | null> {
     return loadSettings('retry-settings');
   }
+
+  watch(queryError, (error) => {
+    if (error) {
+      onError?.(getErrorMessage(error), error, 'load-settings');
+    }
+  });
 
   return {
     applySettingsData,
@@ -121,6 +142,7 @@ export function useAdminSettingsData({
     loadSettings,
     loading,
     requestError,
+    result,
     retryLoad,
     settings,
     workspace,

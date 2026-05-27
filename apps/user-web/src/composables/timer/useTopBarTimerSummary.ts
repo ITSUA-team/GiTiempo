@@ -4,13 +4,8 @@ import type {
   TimeEntryResponse,
 } from "@gitiempo/shared";
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
-import {
-  useCurrentTimerQuery,
-  useOwnTimeEntriesQuery,
-  useProjectTasksQuery,
-  useVisibleProjectsQuery,
-} from "@/composables/query";
-import { computed, nextTick, shallowRef, type ComputedRef } from "vue";
+import { useQuery } from "@tanstack/vue-query";
+import { computed, shallowRef, watch, type ComputedRef } from "vue";
 
 import {
   isConflictErrorMessage,
@@ -36,44 +31,6 @@ export function useTopBarTimerSummary({
   const appToast = createAppToast(toast);
   const currentTimer = shallowRef<TimeEntryResponse | null>(null);
   const selectedContext = shallowRef<SelectedTaskContext | null>(null);
-  const isLoadingSummary = shallowRef(false);
-  const summaryErrorMessage = shallowRef<string | null>(null);
-  const eligibleEntryQuery = shallowRef({ limit: 10, page: 1 });
-  const projectTasksProjectId = shallowRef<string | null>(null);
-
-  const currentTimerQuery = useCurrentTimerQuery({
-    accessToken,
-    client,
-    enabled: false,
-    scope,
-  });
-  const visibleProjectsQuery = useVisibleProjectsQuery({
-    accessToken,
-    client,
-    enabled: false,
-    queryKey: computed(() => timerKeys.visibleProjects(scope.value)),
-    scope,
-  });
-  const projectTasksQuery = useProjectTasksQuery({
-    accessToken,
-    client,
-    enabled: false,
-    projectId: projectTasksProjectId,
-    queryKey: computed(() =>
-      timerKeys.projectTasks(scope.value, projectTasksProjectId.value),
-    ),
-    scope,
-  });
-  const eligibleEntriesQuery = useOwnTimeEntriesQuery({
-    accessToken,
-    client,
-    enabled: false,
-    queryKey: computed(() =>
-      timerKeys.eligibleLastEntry(scope.value, eligibleEntryQuery.value),
-    ),
-    query: eligibleEntryQuery,
-    scope,
-  });
 
   function setSelectedContextFromTimer(timer: TimeEntryResponse): void {
     selectedContext.value = toSelectedTaskContext(timer);
@@ -94,27 +51,14 @@ export function useTopBarTimerSummary({
   }
 
   async function loadOwnEntriesPage(page: number): Promise<TimeEntryListResponse> {
-    eligibleEntryQuery.value = { limit: 10, page };
-    await nextTick();
-
-    const result = await eligibleEntriesQuery.refetch({ throwOnError: true });
-
-    if (!result.data) {
-      throw result.error ?? new Error("Could not load recent time entries.");
-    }
-
-    return result.data;
+    return client.listOwnEntries({ limit: 10, page });
   }
 
   async function loadEligibleLastTrackedContext(): Promise<SelectedTaskContext | null> {
-    const visibleProjectsResult = await visibleProjectsQuery.refetch({ throwOnError: true });
-
-    if (!visibleProjectsResult.data) {
-      throw visibleProjectsResult.error ?? new Error("Could not load visible projects.");
-    }
+    const visibleProjects = await client.listVisibleProjects();
 
     const activeProjectMap = new Map(
-      visibleProjectsResult.data
+      visibleProjects
         .filter((project) => project.isActive)
         .map((project) => [project.id, project]),
     );
@@ -137,15 +81,7 @@ export function useTopBarTimerSummary({
         let projectTasks = taskCache.get(project.id);
 
         if (!projectTasks) {
-          projectTasksProjectId.value = project.id;
-          await nextTick();
-          const projectTasksResult = await projectTasksQuery.refetch({ throwOnError: true });
-
-          if (!projectTasksResult.data) {
-            throw projectTasksResult.error ?? new Error("Could not load project tasks.");
-          }
-
-          projectTasks = projectTasksResult.data;
+          projectTasks = await client.listProjectTasks(project.id);
           taskCache.set(project.id, projectTasks);
         }
 
@@ -173,40 +109,32 @@ export function useTopBarTimerSummary({
     return null;
   }
 
-  async function refreshSummary(): Promise<void> {
-    isLoadingSummary.value = true;
-    summaryErrorMessage.value = null;
-
-    try {
-      const currentTimerResult = await currentTimerQuery.refetch({ throwOnError: true });
-
-      if (!currentTimerResult.data) {
-        throw currentTimerResult.error ?? new Error("Could not load current timer.");
-      }
-
-      const { timeEntry } = currentTimerResult.data;
-
-      currentTimer.value = timeEntry;
+  const summaryQuery = useQuery({
+    queryKey: computed(() => timerKeys.current(scope.value)),
+    enabled: computed(() => Boolean(accessToken.value)),
+    queryFn: async () => {
+      const { timeEntry } = await client.getCurrentTimer();
 
       if (timeEntry) {
-        setSelectedContextFromTimer(timeEntry);
-        return;
+        return {
+          currentTimer: timeEntry,
+          selectedContext: toSelectedTaskContext(timeEntry),
+        };
       }
 
-      selectedContext.value = await loadEligibleLastTrackedContext();
-    } catch (error) {
-      summaryErrorMessage.value = getErrorMessage(error);
-      currentTimer.value = null;
-      selectedContext.value = null;
-      appToast.showErrorToast({
-        detail: "Refresh and try again.",
-        error,
-        logContext: { action: "load-top-bar-timer", feature: "top-bar-timer" },
-        summary: "Could not load the timer summary",
-      });
-    } finally {
-      isLoadingSummary.value = false;
-    }
+      return {
+        currentTimer: null,
+        selectedContext: await loadEligibleLastTrackedContext(),
+      };
+    },
+  });
+  const isLoadingSummary = computed(() => summaryQuery.isFetching.value);
+  const summaryErrorMessage = computed(() =>
+    summaryQuery.error.value ? getErrorMessage(summaryQuery.error.value) : null,
+  );
+
+  async function refreshSummary(): Promise<void> {
+    await summaryQuery.refetch();
   }
 
   async function refreshSummaryAfterConflict(message: string): Promise<void> {
@@ -216,6 +144,30 @@ export function useTopBarTimerSummary({
 
     await refreshSummary();
   }
+
+  watch(
+    summaryQuery.data,
+    (data) => {
+      if (!data) return;
+
+      currentTimer.value = data.currentTimer;
+      selectedContext.value = data.selectedContext;
+    },
+    { immediate: true },
+  );
+
+  watch(summaryQuery.error, (error) => {
+    if (!error) return;
+
+    currentTimer.value = null;
+    selectedContext.value = null;
+    appToast.showErrorToast({
+      detail: "Refresh and try again.",
+      error,
+      logContext: { action: "load-top-bar-timer", feature: "top-bar-timer" },
+      summary: "Could not load the timer summary",
+    });
+  });
 
   return {
     currentTimer,

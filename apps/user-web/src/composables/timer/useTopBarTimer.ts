@@ -1,5 +1,5 @@
 import { createAppToast, type ToastLike } from "@gitiempo/web-shared";
-import { computed, onMounted, watch } from "vue";
+import { computed, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
 import { createDefaultTimeEntriesClient } from "@/config/clients";
@@ -171,10 +171,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       }
     },
   );
-
-  onMounted(async () => {
-    await summary.refreshSummary();
-  });
 
   return {
     closeDialog: picker.closeDialog,

@@ -61,6 +61,8 @@ export const timerKeys = {
 export const userProjectsKeys = {
   all: (scope?: UserServerStateScope) =>
     ["user-web", normalizeScope(scope), "projects"] as const,
+  page: (scope: UserServerStateScope) =>
+    [...userProjectsKeys.all(scope), "page"] as const,
   projectTasks: (scope: UserServerStateScope, projectId: string | null | undefined) =>
     [...userProjectsKeys.all(scope), "project-tasks", normalizeString(projectId)] as const,
   visibleProjects: (scope: UserServerStateScope) =>
@@ -72,8 +74,7 @@ export const userMutationInvalidationKeys = {
     return [
       userProjectsKeys.all(scope),
       userProjectsKeys.projectTasks(scope, projectId),
-      timerKeys.visibleProjects(scope),
-      timerKeys.projectTasks(scope, projectId),
+      timerKeys.all(scope),
     ];
   },
   afterTimeEntryMutation(scope: UserServerStateScope): QueryKey[] {

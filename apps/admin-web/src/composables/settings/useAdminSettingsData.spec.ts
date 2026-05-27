@@ -1,5 +1,5 @@
 import { defineComponent, shallowRef } from 'vue';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AdminSettingsClient } from '@/services/admin-settings-client';
@@ -86,16 +86,16 @@ describe('useAdminSettingsData', () => {
   it('loads workspace and settings source data', async () => {
     const { client, data, onError } = createSubject();
 
-    const result = await data.loadSettings();
+    await flushPromises();
 
     expect(client.getWorkspace).toHaveBeenCalledWith();
     expect(client.getWorkspaceSettings).toHaveBeenCalledWith();
-    expect(result).toEqual({
+    expect(data.result.value).toEqual({
       settings: settingsResponse,
       workspace: workspaceResponse,
     });
-    expect(data.workspace.value).toBe(workspaceResponse);
-    expect(data.settings.value).toBe(settingsResponse);
+    expect(data.workspace.value).toEqual(workspaceResponse);
+    expect(data.settings.value).toEqual(settingsResponse);
     expect(data.requestError.value).toBeNull();
     expect(data.initialLoaded.value).toBe(true);
     expect(data.isInitialLoading.value).toBe(false);
@@ -111,7 +111,7 @@ describe('useAdminSettingsData', () => {
     });
     const { data, onError } = createSubject({ client });
 
-    await expect(data.loadSettings()).resolves.toBeNull();
+    await flushPromises();
 
     expect(data.requestError.value).toBe('Network unavailable');
     expect(data.initialLoaded.value).toBe(false);
@@ -127,7 +127,7 @@ describe('useAdminSettingsData', () => {
     });
 
     expect(data.requestError.value).toBeNull();
-    expect(data.workspace.value).toBe(workspaceResponse);
+    expect(data.workspace.value).toEqual(workspaceResponse);
     expect(client.getWorkspace).toHaveBeenCalledTimes(2);
     expect(onError).toHaveBeenCalledTimes(1);
   });
@@ -135,7 +135,7 @@ describe('useAdminSettingsData', () => {
   it('blocks load attempts when the access token is absent', async () => {
     const { client, data, onError } = createSubject({ accessToken: null });
 
-    await expect(data.loadSettings()).resolves.toBeNull();
+    await flushPromises();
 
     expect(client.getWorkspace).not.toHaveBeenCalled();
     expect(client.getWorkspaceSettings).not.toHaveBeenCalled();
@@ -144,10 +144,6 @@ describe('useAdminSettingsData', () => {
     );
     expect(data.initialLoaded.value).toBe(true);
     expect(data.loading.value).toBe(false);
-    expect(onError).toHaveBeenCalledWith(
-      'Authentication is required to load settings.',
-      undefined,
-      'load-settings',
-    );
+    expect(onError).not.toHaveBeenCalled();
   });
 });

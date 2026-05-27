@@ -104,8 +104,7 @@ describe("user-web query keys", () => {
     expect(userMutationInvalidationKeys.afterTaskMutation(scope, "project-1")).toEqual([
       userProjectsKeys.all(scope),
       userProjectsKeys.projectTasks(scope, "project-1"),
-      timerKeys.visibleProjects(scope),
-      timerKeys.projectTasks(scope, "project-1"),
+      timerKeys.all(scope),
     ]);
   });
 });
