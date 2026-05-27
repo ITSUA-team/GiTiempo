@@ -49,3 +49,5 @@
 - The change remains frontend-only.
 - No backend app, database, seed, migration, OpenAPI, or shared API contract change is required by the proposal/design/spec.
 - Existing app-local clients remain the fetch boundaries; Query composables must not introduce duplicate transport helpers.
+- `useProfileGithubConnection` is inventoried as a server-state owner but is intentionally outside this change because it is not one of the listed god-composable migration targets; it remains governed by the existing Profile page specs until a separate Query migration explicitly scopes it in.
+- Query keys and cache cleanup must avoid raw bearer credentials; authenticated cache entries require non-secret session/workspace scoping or explicit cleanup on logout, failed bootstrap, and session switches.

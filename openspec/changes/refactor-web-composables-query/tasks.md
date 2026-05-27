@@ -13,11 +13,12 @@
 - [x] 2.3 Install `VueQueryPlugin` in `apps/admin-web/src/main.ts` with an app-local QueryClient or queryClientConfig.
 - [x] 2.4 Add per-app or shared frontend test helpers that mount components/composables with an isolated QueryClient, retries disabled, and cache cleanup between tests.
 - [x] 2.5 Add focused bootstrap/test-helper tests proving each SPA can render Query-backed code with an isolated QueryClient.
+- [x] 2.6 Configure app QueryClient defaults to preserve current request-error timing (`retry: false`) and immediate staleness (`staleTime: 0`) unless a feature opts into different behavior with tests.
 
 ## 3. Shared Query And Utility Boundaries
 
 - [x] 3.1 Add feature-owned query-key factories for user time entries, top-bar timer, user projects, user dashboard, admin dashboard, reports, and admin settings.
-- [x] 3.2 Ensure each query key includes auth/workspace scope plus every server-side filter, pagination, date range, sorting, grouping, or prerequisite that affects the backend response.
+- [x] 3.2 Ensure each query key includes non-secret auth/session/workspace scope plus every server-side filter, pagination, date range, sorting, grouping, or prerequisite that affects the backend response, and never includes raw bearer credentials.
 - [x] 3.3 Add direct tests for query-key factories and invalidation target helpers.
 - [x] 3.4 Extract pure date/time/duration/grouping/row-mapping helpers from large composables into app-local `lib/*` modules or `packages/web-shared` only when behavior is proven identical across both SPAs.
 - [x] 3.5 Add direct tests for extracted pure helpers without Vue lifecycle, HTTP, toast, or confirmation dependencies.
@@ -67,6 +68,8 @@
 - [x] 8.4 Ensure route-level views remain composition surfaces and do not absorb the old god-composable logic.
 - [x] 8.5 Review shared extraction candidates and move only stable identical leaves to `packages/web-shared`; keep app-specific route orchestration local.
 - [x] 8.6 Perform a no-visual-regression review against the documented UI/page behavior and note that no `.pen` design changes were required.
+- [x] 8.7 Ensure Query cache is cleared or safely scoped on logout, failed bootstrap/session restoration, and successful login to a different session.
+- [x] 8.8 Document any inventoried server-state composables intentionally left outside this migration scope, including Profile GitHub connection.
 
 ## 9. Verification
 
