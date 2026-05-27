@@ -32,6 +32,7 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated: session.isAuthenticated,
     isBootstrapping: session.isBootstrapping,
     isSubmitting: session.isSubmitting,
+    loginWithFirebaseToken: session.loginWithFirebaseToken,
     loginWithEmailPassword: session.loginWithEmailPassword,
     loginWithGoogle: session.loginWithGoogle,
     logout: session.logout,

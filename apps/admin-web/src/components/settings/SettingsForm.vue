@@ -8,6 +8,7 @@ import Message from 'primevue/message';
 import Select from 'primevue/select';
 
 import type { AdminSettingsFieldErrors } from '@/composables/settings/admin-settings-form';
+import type { SettingsTimeZoneOption } from '@/lib/time-zones';
 
 interface CurrencyOption {
 	label: string;
@@ -30,6 +31,7 @@ const defaultHourlyRate = defineModel<number | null>('defaultHourlyRate', {
 	required: true,
 });
 const currency = defineModel<string>('currency', { required: true });
+const timeZone = defineModel<string>('timeZone', { required: true });
 
 const props = defineProps<{
 	canSave: boolean;
@@ -37,9 +39,11 @@ const props = defineProps<{
 	fieldErrors: AdminSettingsFieldErrors;
 	isDirty: boolean;
 	saving: boolean;
+	timeZoneOptions: readonly SettingsTimeZoneOption[];
 }>();
 
 const selectCurrencyOptions = computed(() => [...props.currencyOptions]);
+const selectTimeZoneOptions = computed(() => [...props.timeZoneOptions]);
 
 const futureSettingsSections: FutureSettingsSection[] = [
 	{
@@ -174,6 +178,34 @@ const emit = defineEmits<{
                 {{ fieldErrors.currency }}
               </Message>
             </div>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="settings-time-zone"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              Time zone
+            </label>
+            <Select
+              v-model="timeZone"
+              input-id="settings-time-zone"
+              :options="selectTimeZoneOptions"
+              option-label="label"
+              option-value="value"
+              filter
+              filter-placeholder="Search time zones"
+              :invalid="!!fieldErrors.timeZone"
+              class="h-[38px] w-full"
+            />
+            <Message
+              v-if="fieldErrors.timeZone"
+              severity="error"
+              size="small"
+              variant="simple"
+            >
+              {{ fieldErrors.timeZone }}
+            </Message>
           </div>
         </section>
 

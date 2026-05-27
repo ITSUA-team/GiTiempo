@@ -41,6 +41,7 @@ const {
   isDirty,
   persisted,
   resetForm,
+  timeZoneOptions,
   validateForm,
 } = settingsForm;
 const {
@@ -144,11 +145,13 @@ onMounted(() => {
         v-model:workspace-name="form.workspaceName"
         v-model:default-hourly-rate="form.defaultHourlyRate"
         v-model:currency="form.currency"
+        v-model:time-zone="form.timeZone"
         :can-save="canSave"
         :currency-options="currencyOptions"
         :field-errors="fieldErrors"
         :is-dirty="isDirty"
         :saving="saving"
+        :time-zone-options="timeZoneOptions"
         @cancel="resetForm"
         @save="saveSettings"
       />

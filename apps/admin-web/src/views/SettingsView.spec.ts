@@ -34,6 +34,8 @@ vi.mock('@/composables/feedback/useToasts', () => ({
 
 import SettingsView from './SettingsView.vue';
 
+const originalSupportedValuesOf = Intl.supportedValuesOf;
+
 function createDeferred<T>() {
   let resolveDeferred = (value: T): void => {
     void value;
@@ -78,6 +80,36 @@ const SettingsPageSkeletonStub = {
   `,
 };
 
+const SelectStub = {
+  emits: ['update:modelValue'],
+  props: [
+    'filter',
+    'inputId',
+    'invalid',
+    'modelValue',
+    'optionLabel',
+    'optionValue',
+    'options',
+  ],
+  template: `
+    <select
+      :id="inputId"
+      :aria-invalid="invalid ? 'true' : undefined"
+      :data-filter="filter === false || filter === undefined ? 'false' : 'true'"
+      :value="modelValue"
+      @change="$emit('update:modelValue', $event.target.value)"
+    >
+      <option
+        v-for="option in options"
+        :key="option[optionValue]"
+        :value="option[optionValue]"
+      >
+        {{ option[optionLabel] }}
+      </option>
+    </select>
+  `,
+};
+
 function mountSettingsView() {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -89,6 +121,7 @@ function mountSettingsView() {
     global: {
       plugins: [pinia, createTestQueryPlugin(), [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
+        Select: SelectStub,
         Skeleton: SkeletonStub,
         SettingsPageSkeleton: SettingsPageSkeletonStub,
       },
@@ -123,9 +156,23 @@ describe('SettingsView', () => {
         removeListener: vi.fn(),
       })),
     );
+
+    Object.defineProperty(Intl, 'supportedValuesOf', {
+      configurable: true,
+      value: vi.fn().mockReturnValue(['America/New_York', 'Europe/Kyiv']),
+    });
   });
 
   afterEach(() => {
+    if (originalSupportedValuesOf) {
+      Object.defineProperty(Intl, 'supportedValuesOf', {
+        configurable: true,
+        value: originalSupportedValuesOf,
+      });
+    } else {
+      Reflect.deleteProperty(Intl, 'supportedValuesOf');
+    }
+
     vi.unstubAllGlobals();
   });
 
@@ -156,6 +203,7 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Workspace name');
     expect(wrapper.text()).toContain('Default hourly rate');
     expect(wrapper.text()).toContain('Currency');
+    expect(wrapper.text()).toContain('Time zone');
     expect(wrapper.text()).toContain('Billing Defaults');
     expect(wrapper.text()).toContain('Invoice prefix');
     expect(wrapper.text()).toContain('Payment terms');
@@ -165,6 +213,9 @@ describe('SettingsView', () => {
     expect(
       wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
     ).toBe('GiTiempo Studio');
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-zone').element.value,
+    ).toBe('UTC');
     expect(
       wrapper.get<HTMLInputElement>('#settings-invoice-prefix').element
         .disabled,
@@ -203,6 +254,32 @@ describe('SettingsView', () => {
     expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
   });
 
+  it('submits changed time zone through the existing workspace settings save action', async () => {
+    testMocks.updateWorkspaceSettings.mockResolvedValueOnce({
+      ...settingsResponse,
+      timeZone: 'Europe/Kyiv',
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await wrapper.get('#settings-time-zone').setValue('Europe/Kyiv');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Save Settings')
+      ?.trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
+    expect(testMocks.updateWorkspaceSettings).toHaveBeenCalledWith(
+      'access-token',
+      {
+        timeZone: 'Europe/Kyiv',
+      },
+    );
+    expect(testMocks.successToast).toHaveBeenCalledWith('Settings saved.');
+  });
+
   it('keeps initial request failures distinct and retryable', async () => {
     testMocks.getWorkspace
       .mockRejectedValueOnce(new Error('Network unavailable'))
@@ -215,6 +292,7 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Failed to load settings');
     expect(wrapper.text()).toContain('Network unavailable');
     expect(wrapper.text()).not.toContain('Workspace name');
+    expect(wrapper.text()).not.toContain('Time zone');
     expect(testMocks.errorToast).toHaveBeenCalledWith(
       'Network unavailable',
       expect.objectContaining({
@@ -230,6 +308,7 @@ describe('SettingsView', () => {
 
     expect(wrapper.text()).not.toContain('Failed to load settings');
     expect(wrapper.text()).toContain('Workspace name');
+    expect(wrapper.text()).toContain('Time zone');
     expect(testMocks.getWorkspace).toHaveBeenCalledTimes(2);
   });
 
@@ -238,6 +317,7 @@ describe('SettingsView', () => {
     await flushPromises();
 
     await wrapper.get('#settings-workspace-name').setValue('Draft Workspace');
+    await wrapper.get('#settings-time-zone').setValue('Europe/Kyiv');
     await wrapper
       .findAll('button')
       .find((button) => button.text() === 'Cancel')
@@ -246,6 +326,9 @@ describe('SettingsView', () => {
     expect(
       wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
     ).toBe('GiTiempo Studio');
+    expect(
+      wrapper.get<HTMLSelectElement>('#settings-time-zone').element.value,
+    ).toBe('UTC');
     expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
     expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();
   });

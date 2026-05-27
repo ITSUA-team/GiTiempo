@@ -74,6 +74,21 @@ import Skeleton from 'primevue/skeleton';
                 />
               </div>
             </div>
+
+            <div
+              data-testid="settings-skeleton-time-zone"
+              class="flex flex-col gap-1.5"
+            >
+              <Skeleton
+                width="5rem"
+                height="0.875rem"
+                border-radius="4px"
+              />
+              <Skeleton
+                height="38px"
+                border-radius="6px"
+              />
+            </div>
           </section>
 
           <div class="border-divider border-t" />

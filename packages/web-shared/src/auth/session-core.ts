@@ -94,6 +94,20 @@ export function createAuthSessionCore({
     bootstrapComplete.value = true;
   }
 
+  async function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
+    isSubmitting.value = true;
+
+    try {
+      await loginWithFirebaseIdToken(firebaseIdToken);
+    } catch (error) {
+      clearSession();
+      bootstrapComplete.value = true;
+      throw error;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
   async function loginWithEmailPassword(
     email: string,
     password: string,
@@ -179,6 +193,7 @@ export function createAuthSessionCore({
     isAuthenticated,
     isBootstrapping,
     isSubmitting,
+    loginWithFirebaseToken,
     loginWithEmailPassword,
     loginWithGoogle,
     logout,

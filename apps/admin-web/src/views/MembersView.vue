@@ -124,7 +124,7 @@ onMounted(fetchAll);
       <SectionHeader
         title="Members"
         description="Manage team roles, project assignments, and member activity."
-        variant="stats"
+        variant="page"
       >
         <template #actions>
           <Button
@@ -132,23 +132,22 @@ onMounted(fetchAll);
             @click="inviteDialogVisible = true"
           />
         </template>
-        <template #stats>
-          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <StatCard
-              label="Active Members"
-              :value="activeMembers"
-            />
-            <StatCard
-              label="Pending Invites"
-              :value="pendingInvites"
-            />
-            <StatCard
-              label="PMs Assigned"
-              :value="pmsAssigned"
-            />
-          </div>
-        </template>
       </SectionHeader>
+
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="Active Members"
+          :value="activeMembers"
+        />
+        <StatCard
+          label="Pending Invites"
+          :value="pendingInvites"
+        />
+        <StatCard
+          label="PMs Assigned"
+          :value="pmsAssigned"
+        />
+      </div>
 
       <SurfaceCard padding-class="p-5">
         <MembersTable

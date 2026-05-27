@@ -4,6 +4,7 @@ import {
   DEFAULT_SETTINGS_CURRENCY,
   SETTINGS_CURRENCY_OPTIONS,
 } from '@/lib/currencies';
+import { getSettingsTimeZoneOptions } from '@/lib/time-zones';
 import {
   validateAdminSettingsForm,
   type AdminSettingsFieldErrors,
@@ -72,6 +73,9 @@ export function useAdminSettingsForm() {
           ...SETTINGS_CURRENCY_OPTIONS,
         ];
   });
+  const timeZoneOptions = computed(() =>
+    getSettingsTimeZoneOptions([persisted.value?.timeZone, form.timeZone]),
+  );
 
   function applyPersistedValues(values: AdminSettingsFormValues): void {
     persisted.value = values;
@@ -105,6 +109,7 @@ export function useAdminSettingsForm() {
     isDirty,
     persisted,
     resetForm,
+    timeZoneOptions,
     validateForm,
   };
 }
