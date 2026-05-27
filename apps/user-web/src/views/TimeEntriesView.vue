@@ -26,6 +26,7 @@ import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilt
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
@@ -35,6 +36,7 @@ const toast = useToast();
 const appConfirm = createAppConfirm(confirm);
 const appToast = createAppToast(toast);
 const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
 const dialog = useTimeEntryDialog();
 const data = useTimeEntriesData({
@@ -61,13 +63,14 @@ const data = useTimeEntriesData({
     });
   },
   pageSize: filters.pageSize,
+  scope,
   setIntervalFn: setInterval,
 });
 const taskOptions = useTimeEntryTaskOptions({ accessToken, client });
 const mutations = useTimeEntryMutations({
   accessToken,
   client,
-  onEntriesChanged: data.refreshEntriesAfterMutation,
+  scope,
   toast,
 });
 const {
@@ -259,7 +262,7 @@ async function retryLoadEntries(): Promise<void> {
 }
 
 onMounted(async () => {
-  await Promise.allSettled([data.ensureProjectsLoaded(), data.loadEntries()]);
+  await Promise.allSettled([data.ensureProjectsLoaded()]);
 });
 
 onBeforeUnmount(() => {

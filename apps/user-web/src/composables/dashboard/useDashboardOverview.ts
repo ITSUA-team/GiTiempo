@@ -3,7 +3,7 @@ import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-s
 import {
   useOwnTimeEntriesQuery,
   useRecentOwnTimeEntriesQuery,
-} from "@gitiempo/web-shared/query";
+} from "@/composables/query";
 import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
@@ -16,6 +16,8 @@ import {
   mapDashboardRecentEntryRows,
 } from "@/lib/dashboard-overview-helpers";
 import { resolveDataPageState } from "@/lib/page-state";
+import { timeEntriesKeys } from "@/lib/query-keys";
+import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
 
 export type {
@@ -51,15 +53,26 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   const isLoadingWeekEntries = shallowRef(true);
   const weekEntriesPage = shallowRef(1);
   const accessToken = computed(() => authStore.accessToken);
+  const scope = computed(() => getUserServerStateScope(authStore.accessToken));
   const hasAccessToken = computed(() => Boolean(accessToken.value));
   const weekWindow = computed(() => getDashboardWeekWindow(nowMs.value));
   const recentEntriesQuery = useRecentOwnTimeEntriesQuery({
     accessToken,
     client,
+    queryKey: computed(() => timeEntriesKeys.list(scope.value, { limit: 10, page: 1 })),
+    scope,
   });
   const weekEntriesQuery = useOwnTimeEntriesQuery({
     accessToken,
     client,
+    queryKey: computed(() =>
+      timeEntriesKeys.allList(scope.value, {
+        dateFrom: weekWindow.value.dateFrom,
+        dateTo: weekWindow.value.dateTo,
+        limit: 100,
+        page: weekEntriesPage.value,
+      }),
+    ),
     query: computed(() => ({
       dateFrom: weekWindow.value.dateFrom,
       dateTo: weekWindow.value.dateTo,
@@ -67,6 +80,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
       page: weekEntriesPage.value,
     })),
     enabled: false,
+    scope,
   });
   const recentEntries = computed(() => recentEntriesQuery.data.value?.items ?? []);
   const queryError = computed(

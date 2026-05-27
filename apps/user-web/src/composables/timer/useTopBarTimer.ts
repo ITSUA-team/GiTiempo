@@ -3,6 +3,7 @@ import { computed, onMounted, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
 import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { isRunningTimer } from "@/lib/top-bar-timer-helpers";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
@@ -33,19 +34,22 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
   const picker = useTopBarTaskPicker();
   const accessToken = computed(() => authStore.accessToken);
-  const summary = useTopBarTimerSummary({ accessToken, client, toast });
+  const scope = computed(() => getUserServerStateScope(authStore.accessToken));
+  const summary = useTopBarTimerSummary({ accessToken, client, scope, toast });
   const isTimerRunning = computed(() => isRunningTimer(summary.currentTimer.value));
-  const taskOptions = useTopBarTaskOptions({ accessToken, client, picker });
+  const taskOptions = useTopBarTaskOptions({ accessToken, client, picker, scope });
   const taskCreation = useTopBarTaskCreation({
     accessToken,
     client,
     picker,
+    scope,
     toast,
   });
   const timerActions = useTopBarTimerActions({
     accessToken,
     client,
     isTimerRunning,
+    scope,
     summary,
     toast,
   });

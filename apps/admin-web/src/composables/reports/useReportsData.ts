@@ -13,7 +13,7 @@ import {
   useAdminProjectsQuery,
   useExportTimeReportMutation,
   useTimeReportQuery,
-} from '@gitiempo/web-shared/query';
+} from '@/composables/query';
 
 import {
   deriveReportSummaryView,
@@ -37,6 +37,7 @@ import {
   type AdminReportsClient,
   type ReportsCsvExport,
 } from '@/services/admin-reports-client';
+import type { AdminServerStateScope } from '@/lib/query-keys';
 
 interface UseReportsDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
@@ -45,6 +46,7 @@ interface UseReportsDataOptions {
   /* eslint-disable no-unused-vars */
   onError?: (message: string, error: unknown, action: string) => void;
   /* eslint-enable no-unused-vars */
+  scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
 
 const pageLimit = 100;
@@ -81,6 +83,7 @@ export function useReportsData({
   projectsClient = adminProjectsClient,
   reportsClient = adminReportsClient,
   onError,
+  scope,
 }: UseReportsDataOptions) {
   const projects = shallowRef<ProjectListResponse>([]);
   const reportRows = shallowRef<ReportTableRow[]>([]);
@@ -96,16 +99,19 @@ export function useReportsData({
     accessToken,
     client: projectsClient,
     enabled: false,
+    scope,
   });
   const timeReportQuery = useTimeReportQuery({
     accessToken,
     client: reportsClient,
     enabled: false,
     query: reportQueryInput,
+    scope,
   });
   const exportReportMutation = useExportTimeReportMutation({
     accessToken,
     client: reportsClient,
+    scope,
   });
 
   let requestId = 0;

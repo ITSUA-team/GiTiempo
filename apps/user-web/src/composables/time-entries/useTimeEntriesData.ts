@@ -7,8 +7,8 @@ import { getErrorMessage } from "@gitiempo/web-shared";
 import {
   useOwnTimeEntriesQuery,
   useVisibleProjectsQuery,
-} from "@gitiempo/web-shared/query";
-import { computed, ref, shallowRef, type ComputedRef, type Ref } from "vue";
+} from "@/composables/query";
+import { computed, nextTick, shallowRef, watch, type ComputedRef, type Ref } from "vue";
 
 import {
   formatTimeEntryDuration,
@@ -17,6 +17,7 @@ import {
   type TimeEntriesDayGroup,
 } from "@/lib/time-entry-display";
 import { resolveDataPageState } from "@/lib/page-state";
+import { timeEntriesKeys, userProjectsKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 /* eslint-disable no-unused-vars */
@@ -30,6 +31,7 @@ interface UseTimeEntriesDataOptions {
   onLoadEntriesError(error: unknown): void;
   onLoadProjectsError(error: unknown): void;
   pageSize: Ref<number>;
+  scope: ComputedRef<UserServerStateScope>;
   setIntervalFn: typeof setInterval;
 }
 /* eslint-enable no-unused-vars */
@@ -44,19 +46,42 @@ export function useTimeEntriesData({
   onLoadEntriesError,
   onLoadProjectsError,
   pageSize,
+  scope,
   setIntervalFn,
 }: UseTimeEntriesDataOptions) {
-  const entries = ref<TimeEntryResponse[]>([]);
-  const projects = ref<ProjectResponse[]>([]);
-  const totalRecords = shallowRef(0);
-  const totalPages = shallowRef(0);
   const nowMs = shallowRef(now());
-  const isLoadingEntries = shallowRef(true);
-  const isLoadingProjects = shallowRef(false);
-  const requestErrorMessage = shallowRef<string | null>(null);
-  const projectsErrorMessage = shallowRef<string | null>(null);
-  let entriesRequestId = 0;
   let tickHandle: ReturnType<typeof setInterval> | null = null;
+
+  const visibleProjectsQuery = useVisibleProjectsQuery({
+    accessToken,
+    client,
+    queryKey: computed(() => userProjectsKeys.visibleProjects(scope.value)),
+    scope,
+  });
+  const timeEntriesQuery = useOwnTimeEntriesQuery({
+    accessToken,
+    client,
+    query: entryListQuery,
+    queryKey: computed(() => timeEntriesKeys.list(scope.value, entryListQuery.value)),
+    scope,
+  });
+
+  const entries = computed(() => timeEntriesQuery.data.value?.items ?? []);
+  const projects = computed(() => visibleProjectsQuery.data.value ?? []);
+  const totalRecords = computed(() => timeEntriesQuery.data.value?.meta.total ?? 0);
+  const totalPages = computed(() => timeEntriesQuery.data.value?.meta.totalPages ?? 0);
+  const isLoadingEntries = computed(
+    () => timeEntriesQuery.isPending.value || timeEntriesQuery.isFetching.value,
+  );
+  const isLoadingProjects = computed(() => visibleProjectsQuery.isFetching.value);
+  const requestErrorMessage = computed(() =>
+    timeEntriesQuery.error.value ? getErrorMessage(timeEntriesQuery.error.value) : null,
+  );
+  const projectsErrorMessage = computed(() =>
+    visibleProjectsQuery.error.value
+      ? getErrorMessage(visibleProjectsQuery.error.value)
+      : null,
+  );
 
   const pageState = computed(() =>
     resolveDataPageState({
@@ -72,17 +97,6 @@ export function useTimeEntriesData({
   const hasRunningEntries = computed(() =>
     entries.value.some((entry) => entry.endedAt === null),
   );
-  const visibleProjectsQuery = useVisibleProjectsQuery({
-    accessToken,
-    client,
-    enabled: false,
-  });
-  const timeEntriesQuery = useOwnTimeEntriesQuery({
-    accessToken,
-    client,
-    enabled: false,
-    query: entryListQuery,
-  });
 
   function stopTicker(): void {
     if (tickHandle !== null) {
@@ -111,75 +125,25 @@ export function useTimeEntriesData({
       return projects.value;
     }
 
-    isLoadingProjects.value = true;
-    projectsErrorMessage.value = null;
+    const result = await visibleProjectsQuery.refetch({ throwOnError: true });
 
-    try {
-      const result = await visibleProjectsQuery.refetch({ throwOnError: true });
-
-      if (!result.data) {
-        throw result.error ?? new Error("Could not load visible projects.");
-      }
-
-      projects.value = result.data;
-      return projects.value;
-    } catch (error) {
-      projectsErrorMessage.value = getErrorMessage(error);
-      onLoadProjectsError(error);
-      throw error;
-    } finally {
-      isLoadingProjects.value = false;
+    if (!result.data) {
+      throw result.error ?? new Error("Could not load visible projects.");
     }
+
+    return result.data;
   }
 
   async function loadEntries(): Promise<void> {
-    const requestId = ++entriesRequestId;
-
-    isLoadingEntries.value = true;
-    requestErrorMessage.value = null;
-
     try {
+      await nextTick();
       const result = await timeEntriesQuery.refetch({ throwOnError: true });
 
       if (!result.data) {
         throw result.error ?? new Error("Could not load time entries.");
       }
-
-      const response = result.data;
-
-      if (requestId !== entriesRequestId) {
-        return;
-      }
-
-      entries.value = response.items;
-      currentPage.value = response.meta.page;
-      pageSize.value = response.meta.limit;
-      totalPages.value = response.meta.totalPages;
-      totalRecords.value = response.meta.total;
-      nowMs.value = now();
-      syncTicker();
-    } catch (error) {
-      if (requestId === entriesRequestId) {
-        entries.value = [];
-        totalPages.value = 0;
-        totalRecords.value = 0;
-        stopTicker();
-        requestErrorMessage.value = getErrorMessage(error);
-        onLoadEntriesError(error);
-      }
-    } finally {
-      if (requestId === entriesRequestId) {
-        isLoadingEntries.value = false;
-      }
-    }
-  }
-
-  async function refreshEntriesAfterMutation(): Promise<void> {
-    await loadEntries();
-
-    if (totalPages.value > 0 && currentPage.value > totalPages.value) {
-      currentPage.value = totalPages.value;
-      await loadEntries();
+    } catch {
+      // Query error state drives the visible error and toast watcher.
     }
   }
 
@@ -190,6 +154,43 @@ export function useTimeEntriesData({
   function formatTimeRange(entry: TimeEntryResponse): string {
     return formatTimeEntryTimeRange(entry);
   }
+
+  watch(
+    [() => timeEntriesQuery.data.value?.meta, timeEntriesQuery.isFetching],
+    ([meta, isFetching]) => {
+      if (!meta || isFetching) {
+        return;
+      }
+
+      pageSize.value = meta.limit;
+
+      if (meta.totalPages > 0 && currentPage.value > meta.totalPages) {
+        currentPage.value = meta.totalPages;
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    entries,
+    () => {
+      nowMs.value = now();
+      syncTicker();
+    },
+    { immediate: true },
+  );
+
+  watch(timeEntriesQuery.error, (error) => {
+    if (error) {
+      onLoadEntriesError(error);
+    }
+  });
+
+  watch(visibleProjectsQuery.error, (error) => {
+    if (error) {
+      onLoadProjectsError(error);
+    }
+  });
 
   return {
     ensureProjectsLoaded,
@@ -202,7 +203,6 @@ export function useTimeEntriesData({
     loadEntries,
     pageState,
     projectsErrorMessage,
-    refreshEntriesAfterMutation,
     requestErrorMessage,
     stopTicker,
     totalPages,

@@ -53,6 +53,11 @@ function createSubject({
 } = {}) {
   let data!: ReturnType<typeof useAdminSettingsData>;
   const token = shallowRef(accessToken);
+  const scope = shallowRef({
+    role: 'admin' as const,
+    userId: 'user-1',
+    workspaceId: 'workspace-1',
+  });
 
   mount(
     defineComponent({
@@ -61,6 +66,7 @@ function createSubject({
           accessToken: token,
           client,
           onError,
+          scope,
         });
 
         return () => null;

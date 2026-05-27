@@ -10,11 +10,13 @@ import { useAdminSettingsData } from '@/composables/settings/useAdminSettingsDat
 import { useAdminSettingsForm } from '@/composables/settings/useAdminSettingsForm';
 import { useAdminSettingsPersistence } from '@/composables/settings/useAdminSettingsPersistence';
 import { toAdminSettingsFormValues } from '@/composables/settings/admin-settings-form';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast, successToast } = useToasts();
 const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 const settingsForm = useAdminSettingsForm();
 const settingsData = useAdminSettingsData({
   accessToken,
@@ -24,6 +26,7 @@ const settingsData = useAdminSettingsData({
       logContext: { action, feature: 'settings' },
     });
   },
+  scope,
 });
 const settingsPersistence = useAdminSettingsPersistence({
   accessToken,
@@ -33,6 +36,7 @@ const settingsPersistence = useAdminSettingsPersistence({
       logContext: { action: 'save-settings', feature: 'settings' },
     });
   },
+  scope,
 });
 const {
   currencyOptions,

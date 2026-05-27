@@ -1,7 +1,8 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
-import { useCreateTaskMutation } from "@gitiempo/web-shared/query";
+import { useCreateTaskMutation } from "@/composables/query";
 import { computed, type ComputedRef } from "vue";
 
+import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type { TopBarTaskPicker } from "./useTopBarTaskPicker";
@@ -10,6 +11,7 @@ interface UseTopBarTaskCreationOptions {
   accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   picker: TopBarTaskPicker;
+  scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
 
@@ -17,12 +19,14 @@ export function useTopBarTaskCreation({
   accessToken,
   client,
   picker,
+  scope,
   toast,
 }: UseTopBarTaskCreationOptions) {
   const appToast = createAppToast(toast);
   const createTaskMutation = useCreateTaskMutation({
     accessToken,
     client,
+    scope,
   });
   const isCreatingTask = computed(() => createTaskMutation.isPending.value);
 

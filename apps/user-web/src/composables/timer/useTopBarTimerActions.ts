@@ -2,9 +2,10 @@ import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-s
 import {
   useStartTimerMutation,
   useStopTimerMutation,
-} from "@gitiempo/web-shared/query";
+} from "@/composables/query";
 import { computed, shallowRef, type ComputedRef } from "vue";
 
+import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type { TopBarTimerSummary } from "./useTopBarTimerSummary";
@@ -13,6 +14,7 @@ interface UseTopBarTimerActionsOptions {
   accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   isTimerRunning: ComputedRef<boolean>;
+  scope: ComputedRef<UserServerStateScope>;
   summary: TopBarTimerSummary;
   toast: ToastLike;
 }
@@ -21,6 +23,7 @@ export function useTopBarTimerActions({
   accessToken,
   client,
   isTimerRunning,
+  scope,
   summary,
   toast,
 }: UseTopBarTimerActionsOptions) {
@@ -29,10 +32,12 @@ export function useTopBarTimerActions({
   const startTimerMutation = useStartTimerMutation({
     accessToken,
     client,
+    scope,
   });
   const stopTimerMutation = useStopTimerMutation({
     accessToken,
     client,
+    scope,
   });
   const isStartingTimer = computed(() => startTimerMutation.isPending.value);
   const isStoppingTimer = computed(() => stopTimerMutation.isPending.value);

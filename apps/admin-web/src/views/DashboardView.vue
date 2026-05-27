@@ -8,13 +8,16 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useAdminDashboardActivity } from '@/composables/dashboard/useAdminDashboardActivity';
 import { useAdminDashboardData } from '@/composables/dashboard/useAdminDashboardData';
 import { useToasts } from '@/composables/feedback/useToasts';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
+const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 
 const dashboard = useAdminDashboardData({
-  accessToken: computed(() => authStore.accessToken),
+  accessToken,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -22,6 +25,7 @@ const dashboard = useAdminDashboardData({
     });
   },
   role: computed(() => authStore.profile?.role ?? null),
+  scope,
 });
 const {
   activityRows,

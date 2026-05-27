@@ -193,6 +193,14 @@ describe('useReportsData', () => {
     vi.useRealTimers();
   });
 
+  function createScope() {
+    return shallowRef({
+      role: 'admin' as const,
+      userId: 'user-1',
+      workspaceId: 'workspace-1',
+    });
+  }
+
   it('loads backend-generated project-member report rows', async () => {
     const accessToken = shallowRef('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
@@ -206,6 +214,7 @@ describe('useReportsData', () => {
             accessToken,
             projectsClient: { listProjects },
             reportsClient,
+            scope: createScope(),
           });
           return () => null;
         },
@@ -274,6 +283,7 @@ describe('useReportsData', () => {
             accessToken,
             projectsClient: { listProjects },
             reportsClient,
+            scope: createScope(),
           });
           return () => null;
         },
@@ -309,6 +319,7 @@ describe('useReportsData', () => {
             accessToken,
             projectsClient: { listProjects },
             reportsClient,
+            scope: createScope(),
           });
           return () => null;
         },
@@ -362,6 +373,7 @@ describe('useReportsData', () => {
             accessToken,
             projectsClient: { listProjects },
             reportsClient,
+            scope: createScope(),
           });
           return () => null;
         },
@@ -403,6 +415,7 @@ describe('useReportsData', () => {
             accessToken,
             projectsClient: { listProjects },
             reportsClient,
+            scope: createScope(),
           });
           return () => null;
         },
@@ -448,6 +461,7 @@ describe('useReportsData', () => {
             onError,
             projectsClient: { listProjects },
             reportsClient,
+            scope: createScope(),
           });
           return () => null;
         },

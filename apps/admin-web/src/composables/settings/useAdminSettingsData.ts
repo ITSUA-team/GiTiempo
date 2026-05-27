@@ -6,10 +6,11 @@ import type {
 import {
   useWorkspaceQuery,
   useWorkspaceSettingsQuery,
-} from '@gitiempo/web-shared/query';
+} from '@/composables/query';
 
 import { adminSettingsClient } from '@/services/admin-settings-client';
 import type { AdminSettingsClient } from '@/services/admin-settings-client';
+import type { AdminServerStateScope } from '@/lib/query-keys';
 
 interface AdminSettingsDataResult {
   settings: WorkspaceSettingsResponse;
@@ -28,6 +29,7 @@ interface UseAdminSettingsDataOptions {
     error: unknown | undefined,
     action: string,
   ) => void;
+  scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
 /* eslint-enable no-unused-vars */
 
@@ -39,6 +41,7 @@ export function useAdminSettingsData({
   accessToken,
   client = adminSettingsClient,
   onError,
+  scope,
 }: UseAdminSettingsDataOptions) {
   const workspace = shallowRef<WorkspaceResponse | null>(null);
   const settings = shallowRef<WorkspaceSettingsResponse | null>(null);
@@ -49,11 +52,13 @@ export function useAdminSettingsData({
     client,
     accessToken,
     enabled: false,
+    scope,
   });
   const workspaceSettingsQuery = useWorkspaceSettingsQuery({
     client,
     accessToken,
     enabled: false,
+    scope,
   });
   const isInitialLoading = computed(() => loading.value && !initialLoaded.value);
 

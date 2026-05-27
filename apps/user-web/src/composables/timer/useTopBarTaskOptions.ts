@@ -3,9 +3,10 @@ import { getErrorMessage } from "@gitiempo/web-shared";
 import {
   useProjectTasksQuery,
   useVisibleProjectsQuery,
-} from "@gitiempo/web-shared/query";
-import { nextTick, shallowRef, type ComputedRef } from "vue";
+} from "@/composables/query";
+import { computed, nextTick, shallowRef, type ComputedRef } from "vue";
 
+import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type { TopBarTaskPicker } from "./useTopBarTaskPicker";
@@ -14,12 +15,14 @@ interface UseTopBarTaskOptionsOptions {
   accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   picker: TopBarTaskPicker;
+  scope: ComputedRef<UserServerStateScope>;
 }
 
 export function useTopBarTaskOptions({
   accessToken,
   client,
   picker,
+  scope,
 }: UseTopBarTaskOptionsOptions) {
   const isLoadingProjects = shallowRef(false);
   const isLoadingTasks = shallowRef(false);
@@ -30,12 +33,18 @@ export function useTopBarTaskOptions({
     accessToken,
     client,
     enabled: false,
+    queryKey: computed(() => timerKeys.visibleProjects(scope.value)),
+    scope,
   });
   const projectTasksQuery = useProjectTasksQuery({
     accessToken,
     client,
     enabled: false,
     projectId: projectTasksProjectId,
+    queryKey: computed(() =>
+      timerKeys.projectTasks(scope.value, projectTasksProjectId.value),
+    ),
+    scope,
   });
 
   async function ensureProjectsLoaded(): Promise<ProjectResponse[]> {

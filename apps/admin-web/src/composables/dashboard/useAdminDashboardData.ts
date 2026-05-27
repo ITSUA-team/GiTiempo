@@ -12,7 +12,7 @@ import {
   useTimeReportQuery,
   useWorkspaceInvitesQuery,
   useWorkspaceMembersQuery,
-} from '@gitiempo/web-shared/query';
+} from '@/composables/query';
 
 import {
   ADMIN_DASHBOARD_ACTIVITY_FULL_LIMIT,
@@ -40,6 +40,7 @@ import {
   adminReportsClient,
   type AdminReportsClient,
 } from '@/services/admin-reports-client';
+import type { AdminServerStateScope } from '@/lib/query-keys';
 
 interface UseAdminDashboardDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
@@ -51,6 +52,7 @@ interface UseAdminDashboardDataOptions {
   projectsClient?: Pick<AdminProjectsClient, 'getManagementSummary' | 'listProjects'>;
   reportsClient?: Pick<AdminReportsClient, 'getTimeReport'>;
   role?: Ref<WorkspaceRole | null> | ComputedRef<WorkspaceRole | null>;
+  scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -65,6 +67,7 @@ export function useAdminDashboardData({
   projectsClient = adminProjectsClient,
   reportsClient = adminReportsClient,
   role = shallowRef<WorkspaceRole | null>('admin'),
+  scope,
 }: UseAdminDashboardDataOptions) {
   const stats = shallowRef<AdminDashboardStatCard[]>([]);
   const allActivityRows = shallowRef<AdminDashboardActivityRow[]>([]);
@@ -76,27 +79,32 @@ export function useAdminDashboardData({
     accessToken,
     client: membersClient,
     enabled: false,
+    scope,
   });
   const invitesQuery = useWorkspaceInvitesQuery({
     accessToken,
     client: membersClient,
     enabled: false,
+    scope,
   });
   const projectSummaryQuery = useManagementProjectSummaryQuery({
     accessToken,
     client: projectsClient,
     enabled: false,
+    scope,
   });
   const projectsQuery = useAdminProjectsQuery({
     accessToken,
     client: projectsClient,
     enabled: false,
+    scope,
   });
   const reportQuery = useTimeReportQuery({
     accessToken,
     client: reportsClient,
     enabled: false,
     query: dashboardReportQuery,
+    scope,
   });
 
   let requestId = 0;

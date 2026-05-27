@@ -6,10 +6,11 @@ import type {
 import {
   useUpdateWorkspaceMutation,
   useUpdateWorkspaceSettingsMutation,
-} from '@gitiempo/web-shared/query';
+} from '@/composables/query';
 
 import { adminSettingsClient } from '@/services/admin-settings-client';
 import type { AdminSettingsClient } from '@/services/admin-settings-client';
+import type { AdminServerStateScope } from '@/lib/query-keys';
 import {
   getWorkspaceSettingsUpdatePayload,
   getWorkspaceUpdatePayload,
@@ -46,6 +47,7 @@ interface UseAdminSettingsPersistenceOptions {
     'updateWorkspace' | 'updateWorkspaceSettings'
   >;
   onError?: (message: string, error: unknown) => void;
+  scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
 /* eslint-enable no-unused-vars */
 
@@ -57,15 +59,18 @@ export function useAdminSettingsPersistence({
   accessToken,
   client = adminSettingsClient,
   onError,
+  scope,
 }: UseAdminSettingsPersistenceOptions) {
   const saving = shallowRef(false);
   const updateWorkspaceMutation = useUpdateWorkspaceMutation({
     client,
     accessToken,
+    scope,
   });
   const updateWorkspaceSettingsMutation = useUpdateWorkspaceSettingsMutation({
     client,
     accessToken,
+    scope,
   });
 
   async function saveSettings({

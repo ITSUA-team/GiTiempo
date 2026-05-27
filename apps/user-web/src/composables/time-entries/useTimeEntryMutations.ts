@@ -8,9 +8,10 @@ import {
   useCreateManualTimeEntryMutation,
   useDeleteTimeEntryMutation,
   useUpdateTimeEntryMutation,
-} from "@gitiempo/web-shared/query";
+} from "@/composables/query";
 import { shallowRef, type ComputedRef } from "vue";
 
+import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type {
@@ -27,14 +28,14 @@ interface SaveTimeEntryDialogOptions {
 interface UseTimeEntryMutationsOptions {
   accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
-  onEntriesChanged(): Promise<void>;
+  scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
 
 export function useTimeEntryMutations({
   accessToken,
   client,
-  onEntriesChanged,
+  scope,
   toast,
 }: UseTimeEntryMutationsOptions) {
   const appToast = createAppToast(toast);
@@ -44,14 +45,17 @@ export function useTimeEntryMutations({
   const createEntryMutation = useCreateManualTimeEntryMutation({
     accessToken,
     client,
+    scope,
   });
   const updateEntryMutation = useUpdateTimeEntryMutation({
     accessToken,
     client,
+    scope,
   });
   const deleteEntryMutation = useDeleteTimeEntryMutation({
     accessToken,
     client,
+    scope,
   });
 
   async function saveDialogEntry({
@@ -80,7 +84,6 @@ export function useTimeEntryMutations({
         );
       }
 
-      await onEntriesChanged();
       return null;
     } catch (error) {
       const message = getErrorMessage(error);
@@ -114,7 +117,6 @@ export function useTimeEntryMutations({
         "Time entry deleted",
         "The selected entry has been removed.",
       );
-      await onEntriesChanged();
     } catch (error) {
       lastMutationErrorMessage.value = getErrorMessage(error);
       appToast.showErrorToast({

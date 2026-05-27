@@ -9,25 +9,28 @@ import {
   useOwnTimeEntriesQuery,
   useProjectTasksQuery,
   useVisibleProjectsQuery,
-} from "@gitiempo/web-shared/query";
-import { nextTick, shallowRef, type ComputedRef } from "vue";
+} from "@/composables/query";
+import { computed, nextTick, shallowRef, type ComputedRef } from "vue";
 
 import {
   isConflictErrorMessage,
   toSelectedTaskContext,
   type SelectedTaskContext,
 } from "@/lib/top-bar-timer-helpers";
+import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 interface UseTopBarTimerSummaryOptions {
   accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
+  scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
 
 export function useTopBarTimerSummary({
   accessToken,
   client,
+  scope,
   toast,
 }: UseTopBarTimerSummaryOptions) {
   const appToast = createAppToast(toast);
@@ -42,23 +45,34 @@ export function useTopBarTimerSummary({
     accessToken,
     client,
     enabled: false,
+    scope,
   });
   const visibleProjectsQuery = useVisibleProjectsQuery({
     accessToken,
     client,
     enabled: false,
+    queryKey: computed(() => timerKeys.visibleProjects(scope.value)),
+    scope,
   });
   const projectTasksQuery = useProjectTasksQuery({
     accessToken,
     client,
     enabled: false,
     projectId: projectTasksProjectId,
+    queryKey: computed(() =>
+      timerKeys.projectTasks(scope.value, projectTasksProjectId.value),
+    ),
+    scope,
   });
   const eligibleEntriesQuery = useOwnTimeEntriesQuery({
     accessToken,
     client,
     enabled: false,
+    queryKey: computed(() =>
+      timerKeys.eligibleLastEntry(scope.value, eligibleEntryQuery.value),
+    ),
     query: eligibleEntryQuery,
+    scope,
   });
 
   function setSelectedContextFromTimer(timer: TimeEntryResponse): void {

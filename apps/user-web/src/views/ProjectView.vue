@@ -21,6 +21,7 @@ import { useProjectTaskDialog } from "@/composables/projects/useProjectTaskDialo
 import { useProjectTaskMutations } from "@/composables/projects/useProjectTaskMutations";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
 import { resolveDataPageState } from "@/lib/page-state";
+import { getUserServerStateScope } from "@/lib/server-state-scope";
 import {
   formatUpdatedLabel,
   type ProjectsSearchSuggestion,
@@ -34,6 +35,7 @@ const toast = useToast();
 const appConfirm = createAppConfirm(confirm);
 const appToast = createAppToast(toast);
 const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const data = useProjectsData({
   accessToken,
   client,
@@ -53,6 +55,7 @@ const data = useProjectsData({
       summary: "Could not load project tasks",
     });
   },
+  scope,
 });
 const search = useProjectsSearch(data.visibleProjects, data.tasksByProjectId);
 const dialog = useProjectTaskDialog();
@@ -61,6 +64,7 @@ const mutations = useProjectTaskMutations({
   client,
   onTaskDeleted: data.removeTask,
   onTaskSaved: data.upsertTask,
+  scope,
   toast,
 });
 const {

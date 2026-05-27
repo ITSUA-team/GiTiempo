@@ -3,9 +3,10 @@ import { getErrorMessage } from "@gitiempo/web-shared";
 import {
   useProjectTasksQuery,
   useVisibleProjectsQuery,
-} from "@gitiempo/web-shared/query";
+} from "@/composables/query";
 import { computed, nextTick, ref, shallowRef, type ComputedRef } from "vue";
 
+import { userProjectsKeys, type UserServerStateScope } from "@/lib/query-keys";
 import { sortProjectTasks } from "@/lib/projects-page-helpers";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -15,6 +16,7 @@ interface UseProjectsDataOptions {
   client: TimeEntriesClient;
   onLoadProjectsError(error: unknown): void;
   onLoadTasksError(message: string): void;
+  scope: ComputedRef<UserServerStateScope>;
 }
 /* eslint-enable no-unused-vars */
 
@@ -23,6 +25,7 @@ export function useProjectsData({
   client,
   onLoadProjectsError,
   onLoadTasksError,
+  scope,
 }: UseProjectsDataOptions) {
   const projects = ref<ProjectResponse[]>([]);
   const tasksByProjectId = ref<Record<string, TaskResponse[]>>({});
@@ -38,12 +41,18 @@ export function useProjectsData({
     accessToken,
     client,
     enabled: false,
+    queryKey: computed(() => userProjectsKeys.visibleProjects(scope.value)),
+    scope,
   });
   const projectTasksQuery = useProjectTasksQuery({
     accessToken,
     client,
     enabled: false,
     projectId: projectTasksProjectId,
+    queryKey: computed(() =>
+      userProjectsKeys.projectTasks(scope.value, projectTasksProjectId.value),
+    ),
+    scope,
   });
   async function loadVisibleProjects(): Promise<ProjectResponse[]> {
     isLoadingProjects.value = true;

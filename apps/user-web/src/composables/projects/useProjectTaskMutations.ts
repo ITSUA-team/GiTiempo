@@ -8,9 +8,10 @@ import {
   useCreateTaskMutation,
   useDeleteTaskMutation,
   useUpdateTaskMutation,
-} from "@gitiempo/web-shared/query";
+} from "@/composables/query";
 import { shallowRef, type ComputedRef } from "vue";
 
+import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type { ValidProjectTaskDialogInput } from "./useProjectTaskDialog";
@@ -21,6 +22,7 @@ interface UseProjectTaskMutationsOptions {
   client: TimeEntriesClient;
   onTaskDeleted(task: TaskResponse): void;
   onTaskSaved(task: TaskResponse): void;
+  scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
 /* eslint-enable no-unused-vars */
@@ -30,6 +32,7 @@ export function useProjectTaskMutations({
   client,
   onTaskDeleted,
   onTaskSaved,
+  scope,
   toast,
 }: UseProjectTaskMutationsOptions) {
   const appToast = createAppToast(toast);
@@ -39,14 +42,17 @@ export function useProjectTaskMutations({
   const createTaskMutation = useCreateTaskMutation({
     accessToken,
     client,
+    scope,
   });
   const updateTaskMutation = useUpdateTaskMutation({
     accessToken,
     client,
+    scope,
   });
   const deleteTaskMutation = useDeleteTaskMutation({
     accessToken,
     client,
+    scope,
   });
 
   async function saveTask(

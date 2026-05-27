@@ -383,7 +383,7 @@ describe("TimeEntriesView", () => {
     expect(emptyWrapper.text()).not.toContain("Could not load time entries");
   });
 
-  it("applies filter and pagination changes through the shared list query", async () => {
+  it("applies filter and pagination changes through the scoped list query", async () => {
     const client = createClientMock();
     const { wrapper } = await mountView(client);
 
@@ -402,7 +402,7 @@ describe("TimeEntriesView", () => {
       "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
     );
-    expect(client.listOwnEntries).toHaveBeenLastCalledWith("access-token", {
+    expect(client.listOwnEntries).toHaveBeenCalledWith("access-token", {
       dateFrom: "2026-04-01T00:00:00.000Z",
       dateTo: "2026-04-22T00:00:00.000Z",
       limit: 20,

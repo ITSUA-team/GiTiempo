@@ -162,6 +162,11 @@ function mountDashboard(
         dashboard = useAdminDashboardData({
           accessToken: shallowRef('access-token'),
           now: () => now,
+          scope: shallowRef({
+            role: 'admin',
+            userId: 'user-1',
+            workspaceId: 'workspace-1',
+          }),
           ...options,
         });
         onMounted(dashboard.refresh);
