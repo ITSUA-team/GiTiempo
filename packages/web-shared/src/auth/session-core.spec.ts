@@ -95,6 +95,22 @@ describe("createAuthSessionCore", () => {
     expect(session.isSubmitting.value).toBe(false);
   });
 
+  it("runs login-success cleanup when a new app session starts", async () => {
+    let cleanupCalls = 0;
+    const runtime = createRuntimeMock();
+    const session = createAuthSessionCore({
+      getAuthRuntime: () => runtime,
+      onLoginSuccess: () => {
+        cleanupCalls += 1;
+      },
+    });
+
+    await session.loginWithEmailPassword("alex@example.com", "password123");
+
+    expect(cleanupCalls).toBe(1);
+    expect(session.accessToken.value).toBe("access-token");
+  });
+
   it("clears API and identity sessions on logout", async () => {
     let logoutCalls = 0;
     let identitySignOutCalls = 0;

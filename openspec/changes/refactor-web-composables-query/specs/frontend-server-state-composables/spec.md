@@ -6,6 +6,7 @@ The `user-web` and `admin-web` applications MUST use TanStack Vue Query as the o
 #### Scenario: Query plugin is available in both SPAs
 - **WHEN** either web SPA bootstraps its Vue app
 - **THEN** it installs the TanStack Vue Query plugin with an app-owned QueryClient configuration
+- **AND** the default QueryClient behavior disables retries, keeps data immediately stale, and disables automatic window-focus refetching unless a feature explicitly opts into different behavior with tests
 - **AND** route, component, and composable tests that exercise Query-backed behavior provide an isolated QueryClient for the test case
 
 #### Scenario: Query functions reuse existing client boundaries
@@ -17,7 +18,7 @@ The `user-web` and `admin-web` applications MUST use TanStack Vue Query as the o
 - **WHEN** Query-backed data is cached for an authenticated request
 - **THEN** the query key includes a non-secret user, workspace, or session-scope value when that value is available and affects the response
 - **AND** query keys never include raw access tokens, refresh tokens, Firebase identity tokens, or other bearer credentials
-- **AND** the owning SPA clears or removes affected Query cache entries when logout, failed session bootstrap, or login to a different session makes cached authenticated data unsafe to reuse
+- **AND** the owning SPA clears or removes affected Query cache entries from its auth/session integration when logout, failed session bootstrap, access-token refresh failure, or login to a different session makes cached authenticated data unsafe to reuse
 
 #### Scenario: Mutations reconcile server state through query cache
 - **WHEN** a Query-backed state-changing mutation succeeds
@@ -38,7 +39,7 @@ The `user-web` and `admin-web` applications MUST use TanStack Vue Query as the o
 Query-backed frontend server state MUST use typed feature-owned query-key factories that include every server-scope input that can change the response.
 
 #### Scenario: List query key reflects filters and pagination
-- **WHEN** a list surface such as time entries, visible projects/tasks, reports, or members loads data from the backend
+- **WHEN** a migrated list surface such as time entries, visible projects/tasks, or reports loads data from the backend
 - **THEN** the query key includes the authenticated request scope and every server-side filter, date range, pagination, sorting, or grouping input sent to that request
 - **AND** changing any included input causes the affected query to resolve independently from stale cached data for another scope
 

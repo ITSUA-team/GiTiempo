@@ -12,7 +12,20 @@ import {
   setAuthRuntimeForTesting,
   type AuthRuntime,
 } from "@/services/auth-runtime";
+import { queryClient } from "@/query-client";
 import { useAuthStore } from "@/stores/auth";
+
+const authenticatedQueryCacheProbeKey = ["auth-cache-probe"];
+
+function seedAuthenticatedQueryCache(): void {
+  queryClient.setQueryData(authenticatedQueryCacheProbeKey, "stale-data");
+}
+
+function expectAuthenticatedQueryCacheCleared(): void {
+  expect(
+    queryClient.getQueryData(authenticatedQueryCacheProbeKey),
+  ).toBeUndefined();
+}
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
@@ -54,6 +67,7 @@ describe("useAuthStore", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     clearRefreshToken();
+    queryClient.clear();
     resetAuthRuntimeForTesting();
   });
 
@@ -92,6 +106,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    seedAuthenticatedQueryCache();
 
     await authStore.bootstrapSession();
 
@@ -100,6 +115,7 @@ describe("useAuthStore", () => {
     expect(authStore.profile).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("clears invalid refresh token during bootstrap fallback", async () => {
@@ -113,6 +129,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    seedAuthenticatedQueryCache();
 
     await authStore.bootstrapSession();
 
@@ -121,12 +138,39 @@ describe("useAuthStore", () => {
     expect(authStore.profile).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
+  });
+
+  it("clears authenticated query cache when access-token refresh fails", async () => {
+    setRefreshToken("persisted-refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        refreshSession: async () => {
+          throw new Error("refresh failed");
+        },
+      }),
+    );
+
+    const authStore = useAuthStore();
+    authStore.accessToken = "stale-access-token";
+    seedAuthenticatedQueryCache();
+
+    await expect(authStore.refreshAccessToken()).rejects.toThrow(
+      "refresh failed",
+    );
+
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.accessToken).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("logs in with email/password and persists rotated token pair", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
 
     const authStore = useAuthStore();
+    seedAuthenticatedQueryCache();
 
     await authStore.loginWithEmailPassword("alex@example.com", "password123");
 
@@ -135,6 +179,7 @@ describe("useAuthStore", () => {
     expect(getRefreshToken()).toBe("refresh-token-next");
     expect(authStore.bootstrapComplete).toBe(true);
     expect(authStore.profile?.email).toBe("alexey@example.com");
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("keeps submitting state active through provider sign-in and token exchange", async () => {
@@ -291,6 +336,7 @@ describe("useAuthStore", () => {
 
     const authStore = useAuthStore();
     authStore.accessToken = "current-access-token";
+    seedAuthenticatedQueryCache();
 
     await authStore.logout();
 
@@ -300,6 +346,7 @@ describe("useAuthStore", () => {
     expect(authStore.profile).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("clears tokens on logout even when API logout fails", async () => {

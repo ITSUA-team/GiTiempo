@@ -1,7 +1,4 @@
-import {
-  QueryClient,
-  type VueQueryPluginOptions,
-} from "@tanstack/vue-query";
+import { QueryClient, type VueQueryPluginOptions } from "@tanstack/vue-query";
 
 export function createAppQueryClient(): QueryClient {
   return new QueryClient({
@@ -11,7 +8,8 @@ export function createAppQueryClient(): QueryClient {
       },
       queries: {
         refetchOnWindowFocus: false,
-        retry: 1,
+        retry: false,
+        staleTime: 0,
       },
     },
   });

@@ -11,7 +11,9 @@ export function createTestQueryClient(): QueryClient {
         retry: false,
       },
       queries: {
+        refetchOnWindowFocus: false,
         retry: false,
+        staleTime: 0,
       },
     },
   });

@@ -7,8 +7,10 @@ This change introduces TanStack Vue Query as the shared server-state approach fo
 ## What Changes
 
 - Add `@tanstack/vue-query` to both `apps/user-web` and `apps/admin-web` and install `VueQueryPlugin` with app-local `QueryClient` instances.
+- Configure app QueryClient defaults to preserve manual-load semantics: `retry: false`, `staleTime: 0`, and `refetchOnWindowFocus: false` unless a feature explicitly opts into different behavior with tests.
 - Move server-state reads and mutations from page god-composables into focused TanStack Query composables with stable query-key factories and explicit invalidation rules.
 - Scope Query migration to the listed high-risk page/server-state surfaces; unrelated server-state owners such as Profile GitHub connection remain outside this change unless explicitly listed in tasks or specs.
+- Own authenticated Query cache safety at the app auth/session boundary by clearing, removing, or proving non-secret scoped keys on logout, failed bootstrap/session restoration, access-token refresh failure, and login to another session.
 - Split page logic by responsibility, including data queries, filters/query params, dialogs/forms/validation, timer ticking, mutation side effects, and pure formatters.
 - Keep existing route/component public behavior stable for user dashboard, top-bar timer, time entries, projects list, admin dashboard, reports, settings, and any smaller touched composables.
 - Preserve existing fetch-boundary clients, auth-token handling, Zod validation, toast feedback, confirmation flows, loading/empty/request-error states, and design-system UI behavior.
@@ -30,6 +32,7 @@ This change introduces TanStack Vue Query as the shared server-state approach fo
 - Affected apps: `apps/user-web` and `apps/admin-web`.
 - Affected package manifests and lockfile: add `@tanstack/vue-query` to both web apps using pnpm, respecting the repository minimum release age policy.
 - Affected bootstraps: `apps/user-web/src/main.ts` and `apps/admin-web/src/main.ts` install `VueQueryPlugin` with app-local QueryClient configuration.
+- Affected auth/session integration: each SPA's auth store/session bootstrap/logout/login flow must clear or remove unsafe authenticated Query cache entries, or prove query keys are non-secret session/workspace scoped, before cached data can cross sessions.
 - Affected user composables: `useTimeEntriesPage`, `useTopBarTimer`, `useProjectsPage`, `useDashboardOverview`, and related specs/components that import their types or return shape.
 - Affected admin composables: `useAdminDashboardPage`, `useReportsData`, `useAdminSettingsPage`, and related specs/views where server state or mutations are handled.
 - Potential shared frontend code: QueryClient test helpers, pure date/time formatters, and browser-only helpers may move to `packages/web-shared` only when behavior is proven identical across both SPAs; broad shared page/domain query orchestration is out of scope.

@@ -18,11 +18,13 @@ const SESSION_EXPIRED_MESSAGE =
 interface AuthSessionCoreOptions {
   getAuthRuntime(): AuthRuntime;
   onClearSession?: () => void;
+  onLoginSuccess?: () => void;
 }
 
 export function createAuthSessionCore({
   getAuthRuntime,
   onClearSession,
+  onLoginSuccess,
 }: AuthSessionCoreOptions) {
   const accessToken = shallowRef<string | null>(null);
   const bootstrapComplete = shallowRef(false);
@@ -140,6 +142,7 @@ export function createAuthSessionCore({
       firebaseIdToken,
     );
 
+    onLoginSuccess?.();
     applyTokenPair(tokenPair);
     await loadCurrentUser(tokenPair.accessToken);
     completeBootstrap();

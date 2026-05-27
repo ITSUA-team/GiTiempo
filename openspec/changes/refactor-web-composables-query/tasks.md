@@ -13,7 +13,8 @@
 - [x] 2.3 Install `VueQueryPlugin` in `apps/admin-web/src/main.ts` with an app-local QueryClient or queryClientConfig.
 - [x] 2.4 Add per-app or shared frontend test helpers that mount components/composables with an isolated QueryClient, retries disabled, and cache cleanup between tests.
 - [x] 2.5 Add focused bootstrap/test-helper tests proving each SPA can render Query-backed code with an isolated QueryClient.
-- [x] 2.6 Configure app QueryClient defaults to preserve current request-error timing (`retry: false`) and immediate staleness (`staleTime: 0`) unless a feature opts into different behavior with tests.
+- [x] 2.6 Configure app QueryClient defaults to preserve current request-error timing (`retry: false`), immediate staleness (`staleTime: 0`), and manual-load focus behavior (`refetchOnWindowFocus: false`) unless a feature opts into different behavior with tests.
+- [x] 2.7 Define the app-owned Query cache lifecycle integration point in each SPA's auth/session boundary before migrating authenticated feature data.
 
 ## 3. Shared Query And Utility Boundaries
 
@@ -68,8 +69,9 @@
 - [x] 8.4 Ensure route-level views remain composition surfaces and do not absorb the old god-composable logic.
 - [x] 8.5 Review shared extraction candidates and move only stable identical leaves to `packages/web-shared`; keep app-specific route orchestration local.
 - [x] 8.6 Perform a no-visual-regression review against the documented UI/page behavior and note that no `.pen` design changes were required.
-- [x] 8.7 Ensure Query cache is cleared or safely scoped on logout, failed bootstrap/session restoration, and successful login to a different session.
-- [x] 8.8 Document any inventoried server-state composables intentionally left outside this migration scope, including Profile GitHub connection.
+- [x] 8.7 Ensure each SPA clears or removes unsafe authenticated Query cache entries, or proves non-secret key scoping, on logout, failed bootstrap/session restoration, access-token refresh failure, and successful login to a different session.
+- [x] 8.8 Add auth/session regression coverage for Query cache cleanup or scoped-key safety around bootstrap, logout, refresh failure, and session switch behavior in the affected SPA tests.
+- [x] 8.9 Document any inventoried server-state composables intentionally left outside this migration scope, including Profile GitHub connection.
 
 ## 9. Verification
 

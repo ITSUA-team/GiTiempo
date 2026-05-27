@@ -38,13 +38,13 @@ This change is frontend-only. Existing backend endpoints, contracts, auth direct
 
 2. Configure one app-local QueryClient per SPA.
 
-   `apps/user-web/src/main.ts` and `apps/admin-web/src/main.ts` install `VueQueryPlugin` with a local `QueryClient` or `queryClientConfig`. Each app owns defaults so app-specific UX remains local. The initial steady-state defaults disable automatic retries and keep query data immediately stale (`staleTime: 0`) unless a feature explicitly opts into different behavior with tests proving loading, background refetch, toast, and request-error semantics remain correct. Tests use per-test QueryClient instances with retries disabled to avoid cache leakage and flaky async timing.
+   `apps/user-web/src/main.ts` and `apps/admin-web/src/main.ts` install `VueQueryPlugin` with a local `QueryClient` or `queryClientConfig`. Each app owns defaults so app-specific UX remains local. The initial steady-state defaults disable automatic retries, keep query data immediately stale (`staleTime: 0`), and disable automatic window-focus refetching (`refetchOnWindowFocus: false`) unless a feature explicitly opts into different behavior with tests proving loading, background refetch, toast, and request-error semantics remain correct. Tests use per-test QueryClient instances with retries disabled to avoid cache leakage and flaky async timing.
 
    Alternative considered: place QueryClient configuration in `packages/web-config`. Rejected initially because no shared behavior is proven yet beyond dependency setup; shared extraction can happen later only if both apps converge on identical configuration.
 
 3. Add query-key factories near feature data ownership.
 
-   Query keys should be typed arrays created by feature-local factories such as `timeEntriesKeys`, `timerKeys`, `projectsKeys`, `dashboardKeys`, `reportsKeys`, and `settingsKeys`. Keys include all server-scope inputs that affect the request, such as non-secret authenticated session/workspace scope, filters, pagination, and report date windows. Keys MUST NOT include raw access tokens, refresh tokens, or Firebase identity tokens. If a feature cannot include a stable non-secret user/workspace scope in a key, the owning app must clear or remove affected Query cache entries on logout, failed bootstrap/session restoration, and successful login to a different session. Reactive refs or computed inputs are passed in ways compatible with Vue Query reactive query keys.
+   Query keys should be typed arrays created by feature-local factories such as `timeEntriesKeys`, `timerKeys`, `projectsKeys`, `dashboardKeys`, `reportsKeys`, and `settingsKeys`. Keys include all server-scope inputs that affect the request, such as non-secret authenticated session/workspace scope, filters, pagination, and report date windows. Keys MUST NOT include raw access tokens, refresh tokens, or Firebase identity tokens. Each SPA's auth/session integration owns Query cache safety: on logout, failed bootstrap/session restoration, access-token refresh failure, and successful login to another session, it must clear or remove affected authenticated cache entries unless every affected key is already separated by a stable non-secret user/workspace/session scope. Reactive refs or computed inputs are passed in ways compatible with Vue Query reactive query keys.
 
    Alternative considered: inline string keys in each composable. Rejected because invalidation becomes fragile and duplicated across mutations.
 
@@ -93,20 +93,21 @@ This change is frontend-only. Existing backend endpoints, contracts, auth direct
 - Reactive query keys can become stale if plain values are captured too early -> Use Vue Query reactive keys and unwrap values inside query functions with the current reactive source.
 - Mutations can over-invalidate and refetch too much -> Centralize key factories and invalidate only affected scopes.
 - Toasts or confirms can duplicate across query callbacks and wrappers -> Keep user-visible side effects in one action/mutation owner per feature.
-- Initial loading and background fetching states differ from existing manual booleans -> Use app QueryClient defaults of `retry: false` and `staleTime: 0` unless a feature opts in with tests, then map Query states deliberately so first-load skeletons, retryable failures, empty states, and background refetches remain distinct.
+- Initial loading and background fetching states differ from existing manual booleans -> Use app QueryClient defaults of `retry: false`, `staleTime: 0`, and `refetchOnWindowFocus: false` unless a feature opts in with tests, then map Query states deliberately so first-load skeletons, retryable failures, empty states, and background refetches remain distinct.
 - Adding a new dependency may be blocked by `.npmrc` minimum-release-age -> Use a version already older than 7 days and verify lockfile changes through pnpm.
 - Splitting every touched composable can grow public exports -> Keep exports narrow, prefer feature folders, and avoid barrels that expose internal transport/query primitives broadly.
 
 ## Migration Plan
 
 1. Install `@tanstack/vue-query` in both web apps and wire `VueQueryPlugin` in each app bootstrap.
-2. Configure app QueryClient defaults (`retry: false`, `staleTime: 0`) and define cache/session cleanup before migrating feature data.
-3. Add app-local or shared test helpers for QueryClient providers with retries disabled.
-4. Refactor one vertical slice at a time, starting with query-key factories and read-only queries before mutations.
-5. Convert state-changing mutations to `useMutation` and invalidate or update affected keys; keep export actions separate from cache invalidation unless they change server state.
-6. Split pure utilities and local-state modules from the largest composables before removing duplicated logic.
-7. Keep existing route composable entry points as thin compatibility aggregators until views/tests are updated safely.
-8. Run focused tests after each slice, then both app lint/typecheck/test suites.
+2. Configure app QueryClient defaults (`retry: false`, `staleTime: 0`, `refetchOnWindowFocus: false`) and define cache/session cleanup before migrating feature data.
+3. Wire cache/session cleanup through the app auth/session boundary for logout, failed bootstrap/session restoration, access-token refresh failure, and login to another session, or prove affected keys are safely scoped.
+4. Add app-local or shared test helpers for QueryClient providers with retries disabled.
+5. Refactor one vertical slice at a time, starting with query-key factories and read-only queries before mutations.
+6. Convert state-changing mutations to `useMutation` and invalidate or update affected keys; keep export actions separate from cache invalidation unless they change server state.
+7. Split pure utilities and local-state modules from the largest composables before removing duplicated logic.
+8. Keep existing route composable entry points as thin compatibility aggregators until views/tests are updated safely.
+9. Run focused tests after each slice, then both app lint/typecheck/test suites.
 
 Rollback is straightforward because this is frontend-only: revert the dependency, plugin setup, and refactored modules. No persisted data or backend contract migration is required.
 
