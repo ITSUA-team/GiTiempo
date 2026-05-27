@@ -70,7 +70,9 @@ describe("AppShell", () => {
             emits: ["signOut"],
             template: `
               <header>
-                <slot name="center" />
+                <div data-testid="workspace-header-center-row">
+                  <slot name="center" />
+                </div>
                 <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
                 <RouterLink data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
                 <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
@@ -88,7 +90,8 @@ describe("AppShell", () => {
     expect(settingsLink.text()).toBe("Profile");
     expect(settingsLink.attributes("href")).toBe("/profile");
     expect(wrapper.find('[data-testid="dashboard-overview"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="top-bar-timer"]')).toHaveLength(1);
     expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Time Entries"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Profile"]')).toHaveLength(0);

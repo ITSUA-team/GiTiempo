@@ -172,6 +172,7 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - The create-task form uses a single required task-title field backed by the existing task-create contract.
 - When task creation succeeds, keep the dialog open with the new task selected and let the user confirm with `Use selected task`.
 - The dialog must clearly separate task selection from task creation so the user always knows whether they are picking an existing task or creating a new one.
+- On mobile, keep the task-picker dialog near full width, block background scroll, make the dialog content scrollable, and stack create/confirm action rows so Project -> Task selection remains usable in the mobile timer flow. Footer buttons are full width on mobile with `Use selected task` first and `Cancel` second.
 - Loading, empty, validation-error, and request-error states must stay distinct.
 - The dialog must not include manual interval entry controls; manual entry remains on Time Entries only.
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
@@ -201,7 +202,8 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 
 ## Compact Top-Bar Timer
 
-- Use this surface in the center area of every authenticated `user-web` top bar. Do not apply it to `admin-web` unless the docs are updated explicitly.
+- This compact center-area surface is the tablet/desktop timer pattern for authenticated `user-web` top bars. Do not apply it to `admin-web` unless the docs are updated explicitly.
+- Below `640px`, do not squeeze the compact center-area surface into the top row; use the mobile timer strip defined in `docs/ui/layout.md` while keeping the same state model, task-picker behavior, and accessibility requirements.
 - Running state shows the running label, live `HH:MM:SS`, clickable current `Project / Task`, and one stop action.
 - Not-running state shows the last tracked task context, clickable task information, and one start action that creates a new time entry for that task.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
@@ -211,8 +213,8 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 - If there is no eligible last tracked task context, keep the same not-running surface, keep the task information field clickable, and disable the start action.
 - While the timer summary is loading, render the same surface shape with the action disabled.
 - If the timer summary fails to load, keep the surface shape visible, disable the action, and use standard toast feedback for the failure.
-- Keep the component compact enough to fit the existing `h-16` top bar.
-- Hide or truncate the context text first on smaller widths before compressing the elapsed-time value or removing the action.
+- Keep the tablet/desktop compact component small enough to fit the existing `h-16` top bar.
+- Hide or truncate the context text first on smaller tablet/desktop widths before compressing the elapsed-time value or removing the action.
 
 ## Pagination
 

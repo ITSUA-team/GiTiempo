@@ -106,6 +106,9 @@ describe("AdminAppShell", () => {
     expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
     expect(settingsLink.text()).toBe("Settings");
     expect(settingsLink.attributes("href")).toBe("/settings");
+    expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(
+      false,
+    );
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(false);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Settings"]')).toHaveLength(0);
