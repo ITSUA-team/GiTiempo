@@ -78,7 +78,9 @@ const primaryActionIcon = computed(() =>
 
     <p
       v-if="showsElapsedTime"
+      aria-live="off"
       class="text-brand shrink-0 text-sm font-semibold tabular-nums"
+      data-testid="top-bar-timer-elapsed"
     >
       {{ elapsedTimeLabel }}
     </p>
@@ -154,7 +156,9 @@ const primaryActionIcon = computed(() =>
         <span
           v-if="showsElapsedTime"
           aria-hidden="true"
+          aria-live="off"
           class="text-brand shrink-0 tabular-nums"
+          data-testid="top-bar-timer-elapsed"
         >
           {{ elapsedTimeLabel }}
         </span>

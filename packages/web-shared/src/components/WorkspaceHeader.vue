@@ -258,6 +258,7 @@ onBeforeUnmount(() => {
     <div
       ref="profileMenuRegion"
       class="relative col-start-3 row-start-1 flex items-center gap-3"
+      data-testid="profile-menu-region"
     >
       <Button
         type="button"

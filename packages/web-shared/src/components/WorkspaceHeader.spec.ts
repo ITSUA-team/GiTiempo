@@ -237,6 +237,58 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.text()).toContain("Alexey Tsukanov");
   });
 
+  it("keeps mobile timer actions usable beside the top-right profile menu overlay", async () => {
+    const wrapper = mountHeader({
+      attachTo: document.body,
+      slots: {
+        center: `
+          <section class="flex w-full gap-3" data-testid="mobile-timer-strip">
+            <div class="flex w-[132px] flex-col gap-[7px]" data-testid="mobile-timer-actions">
+              <button type="button" data-testid="mobile-timer-primary-action">Start</button>
+              <button type="button" data-testid="mobile-timer-change-action">Change</button>
+            </div>
+            <button type="button" aria-label="Change timer task" data-testid="mobile-timer-metadata">
+              Project Orion / Improve reports filters
+            </button>
+          </section>
+        `,
+      },
+      stubMenu: false,
+    });
+    const centerRow = wrapper.get('[data-testid="workspace-header-center-row"]');
+    const profileRegion = wrapper.get('[data-testid="profile-menu-region"]');
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+    const timerStrip = wrapper.get('[data-testid="mobile-timer-strip"]');
+    const timerActions = wrapper.get('[data-testid="mobile-timer-actions"]');
+    const primaryAction = wrapper.get('[data-testid="mobile-timer-primary-action"]');
+    const changeAction = wrapper.get('[data-testid="mobile-timer-change-action"]');
+    const metadata = wrapper.get('[data-testid="mobile-timer-metadata"]');
+
+    expect(centerRow.classes()).toContain("row-start-2");
+    expect(centerRow.classes()).toContain("sm:row-start-1");
+    expect(profileRegion.classes()).toContain("row-start-1");
+    expect(profileRegion.classes()).toContain("col-start-3");
+    expect(timerStrip.element.children[0]).toBe(timerActions.element);
+    expect(timerStrip.element.children[1]).toBe(metadata.element);
+    expect(primaryAction.attributes("disabled")).toBeUndefined();
+    expect(changeAction.attributes("disabled")).toBeUndefined();
+
+    await primaryAction.trigger("click");
+    await changeAction.trigger("click");
+    await trigger.trigger("click");
+    await nextTick();
+
+    const profileMenu = wrapper.get('[data-testid="profile-menu"]');
+
+    expect(profileMenu.attributes("class")).toContain("absolute");
+    expect(profileMenu.attributes("class")).toContain("right-0");
+    expect(profileMenu.element.contains(primaryAction.element)).toBe(false);
+    expect(profileMenu.element.contains(changeAction.element)).toBe(false);
+    expect(primaryAction.isVisible()).toBe(true);
+    expect(changeAction.isVisible()).toBe(true);
+    expect(metadata.isVisible()).toBe(true);
+  });
+
   it("opens the profile menu with settings and sign-out actions", async () => {
     const wrapper = mountHeader({ attachTo: document.body });
     const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');

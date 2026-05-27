@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { mount } from "@vue/test-utils";
+import { mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, shallowRef } from "vue";
 import PrimeVue from "primevue/config";
@@ -51,12 +51,15 @@ const composableState = {
   timerStatusLabel: shallowRef("Last tracked task"),
 };
 
+const mountedWrappers: VueWrapper[] = [];
+
 vi.mock("@/composables/useTopBarTimer", () => ({
   useTopBarTimer: () => composableState,
 }));
 
-function mountTopBarTimer() {
-  return mount(TopBarTimer, {
+function mountTopBarTimer(options: { attachTo?: HTMLElement } = {}) {
+  const wrapper = mount(TopBarTimer, {
+    attachTo: options.attachTo,
     global: {
       plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
@@ -64,6 +67,10 @@ function mountTopBarTimer() {
       },
     },
   });
+
+  mountedWrappers.push(wrapper);
+
+  return wrapper;
 }
 
 describe("TopBarTimer", () => {
@@ -92,6 +99,12 @@ describe("TopBarTimer", () => {
   });
 
   afterEach(() => {
+    for (const wrapper of mountedWrappers) {
+      wrapper.unmount();
+    }
+
+    mountedWrappers.length = 0;
+    document.body.innerHTML = "";
     vi.clearAllMocks();
   });
 
@@ -226,6 +239,58 @@ describe("TopBarTimer", () => {
     expect(openDialog).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the mobile Start, Stop, and Change controls accessible and actionable", async () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountTopBarTimer();
+
+    const primaryAction = wrapper.get(
+      '[data-testid="top-bar-timer-mobile-actions"] [data-testid="top-bar-timer-primary-action"]',
+    );
+    const changeAction = wrapper.get('[data-testid="top-bar-timer-change-task"]');
+
+    expect(primaryAction.text()).toContain("Start");
+    expect(primaryAction.attributes("aria-label")).toBe("Start");
+    expect(primaryAction.attributes("disabled")).toBeUndefined();
+    expect(changeAction.text()).toContain("Change");
+    expect(changeAction.attributes("aria-label")).toBe("Change timer task");
+    expect(changeAction.attributes("disabled")).toBeUndefined();
+
+    await primaryAction.trigger("click");
+    await changeAction.trigger("click");
+
+    expect(handlePrimaryAction).toHaveBeenCalledTimes(1);
+    expect(openDialog).toHaveBeenCalledTimes(1);
+
+    composableState.primaryActionLabel.value = "Stop";
+    await wrapper.vm.$nextTick();
+
+    const stopAction = wrapper.get(
+      '[data-testid="top-bar-timer-mobile-actions"] [data-testid="top-bar-timer-primary-action"]',
+    );
+
+    expect(stopAction.text()).toContain("Stop");
+    expect(stopAction.attributes("aria-label")).toBe("Stop");
+
+    await stopAction.trigger("click");
+
+    expect(handlePrimaryAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses disabled semantics for non-actionable mobile timer primary actions", () => {
+    mockMatchMedia(true);
+    composableState.isPrimaryActionDisabled = computed(() => true);
+
+    const wrapper = mountTopBarTimer();
+
+    expect(
+      wrapper.get('[data-testid="top-bar-timer-primary-action"]').attributes("disabled"),
+    ).toBeDefined();
+    expect(
+      wrapper.get('[data-testid="top-bar-timer-change-task"]').attributes("disabled"),
+    ).toBeUndefined();
+  });
+
   it("shows the running elapsed label in the mobile strip metadata", () => {
     mockMatchMedia(true);
     composableState.primaryActionLabel.value = "Stop";
@@ -247,5 +312,29 @@ describe("TopBarTimer", () => {
         "aria-hidden",
       ),
     ).toBe("true");
+    expect(wrapper.get('[data-testid="top-bar-timer-elapsed"]').attributes("aria-live")).toBe(
+      "off",
+    );
+    expect(
+      wrapper.get('[data-testid="top-bar-timer-elapsed"]').attributes("role"),
+    ).toBeUndefined();
+  });
+
+  it("keeps focus on the invoking mobile timer control when the task dialog closes", async () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountTopBarTimer({ attachTo: document.body });
+    const changeAction = wrapper.get('[data-testid="top-bar-timer-change-task"]');
+
+    (changeAction.element as HTMLElement).focus();
+    await changeAction.trigger("click");
+
+    expect(document.activeElement).toBe(changeAction.element);
+
+    wrapper.getComponent({ name: "TopBarTimerTaskDialog" }).vm.$emit("close");
+    await wrapper.vm.$nextTick();
+
+    expect(closeDialog).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(changeAction.element);
   });
 });
