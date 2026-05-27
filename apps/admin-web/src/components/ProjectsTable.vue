@@ -149,7 +149,7 @@ async function handleArchive(project: ProjectResponse): Promise<void> {
   }
 
   try {
-    await adminProjectsClient.updateProject(token, project.id, {
+    await adminProjectsClient.updateProject(project.id, {
       isActive: false,
     });
     successToast(`${project.name} has been archived.`);
@@ -178,7 +178,7 @@ async function handleUnarchive(project: ProjectResponse): Promise<void> {
   }
 
   try {
-    await adminProjectsClient.updateProject(token, project.id, {
+    await adminProjectsClient.updateProject(project.id, {
       isActive: true,
     });
     successToast(`${project.name} is now active.`);

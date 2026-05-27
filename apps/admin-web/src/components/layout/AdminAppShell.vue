@@ -69,7 +69,7 @@ watch(
     workspaceNameRequestToken = accessToken;
 
     try {
-      const workspace = await adminSettingsClient.getWorkspace(accessToken);
+      const workspace = await adminSettingsClient.getWorkspace();
       authStore.setWorkspaceName(workspace.name);
     } catch (error) {
       workspaceNameRequestToken = null;

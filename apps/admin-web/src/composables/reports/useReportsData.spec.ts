@@ -177,7 +177,7 @@ function mountWithQuery(component: Parameters<typeof mount>[0]) {
 function createReportsClientMocks() {
   return {
     exportTimeReport: vi.fn(),
-    getTimeReport: vi.fn(async (_token: string, query: { projectId?: string }) =>
+    getTimeReport: vi.fn(async (query: { projectId?: string }) =>
       createReportResponse(reportRowsByProject.get(query.projectId ?? '') ?? []),
     ),
   };
@@ -297,11 +297,9 @@ describe('useReportsData', () => {
       { label: 'Public Roadmap', value: projectOrionId },
     ]);
     expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
-      'access-token',
       expect.objectContaining({ projectId: projectOrionId }),
     );
     expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
-      'access-token',
       expect.objectContaining({ projectId: projectBillingId }),
     );
   });
@@ -344,7 +342,6 @@ describe('useReportsData', () => {
 
     expect(reportsClient.getTimeReport).toHaveBeenCalledTimes(1);
     expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
-      'access-token',
       expect.objectContaining({
         dateFrom: new Date(2026, 4, 1).toISOString(),
         dateTo: new Date(2026, 4, 3).toISOString(),
@@ -391,7 +388,6 @@ describe('useReportsData', () => {
 
     expect(result?.filename).toBe('time-report.csv');
     expect(reportsClient.exportTimeReport).toHaveBeenCalledWith(
-      'access-token',
       expect.objectContaining({
         groupBy: 'user',
         projectId: projectBillingId,

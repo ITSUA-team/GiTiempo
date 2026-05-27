@@ -109,19 +109,10 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     );
   });
 
-  function requireAccessToken(): string {
-    if (!authStore.accessToken) {
-      throw new Error("Your session has expired. Please sign in again.");
-    }
-
-    return authStore.accessToken;
-  }
-
   async function openDialog(): Promise<void> {
     picker.openTaskPicker(summary.getDialogSelectionFromCurrentState());
 
     try {
-      requireAccessToken();
       await taskOptions.ensureProjectsLoaded();
 
       if (picker.selectedProjectId.value) {

@@ -91,7 +91,7 @@ function createClientMock(): TimeEntriesClient & {
     createManualEntry: vi.fn(async () => {
       throw new Error("unused");
     }),
-    createTask: vi.fn(async (_accessToken, projectId, input) =>
+    createTask: vi.fn(async (projectId, input) =>
       createTask("task-new", projectId, input.title),
     ),
     deleteEntry: vi.fn(async () => undefined),
@@ -112,7 +112,7 @@ function createClientMock(): TimeEntriesClient & {
     updateEntry: vi.fn(async () => {
       throw new Error("unused");
     }),
-    updateTask: vi.fn(async (_accessToken, taskId, input) =>
+    updateTask: vi.fn(async (taskId, input) =>
       createTask(taskId, "project-1", input.title ?? "Updated task", {
         status: input.status ?? "open",
       }),
@@ -268,7 +268,7 @@ describe("ProjectView", () => {
     await wrapper.get('[data-testid="dialog-save"]').trigger("click");
     await flushPromises();
 
-    expect(client.createTask).toHaveBeenCalledWith("access-token", "project-1", {
+    expect(client.createTask).toHaveBeenCalledWith("project-1", {
       title: "Write release checklist",
     });
     expect(wrapper.text()).toContain("Write release checklist");

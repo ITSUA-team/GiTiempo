@@ -1,13 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { createAdminMembersClient } from './admin-members-client';
+
+function createTestApiClient(fetchFn: typeof fetch) {
+  return createAuthenticatedApiClient({
+    apiBaseUrl: 'https://api.example.test',
+    fetchFn,
+    getToken: () => 'access-token',
+    onRefreshFailed: vi.fn(),
+    refreshAccessToken: async () => 'access-token',
+  });
+}
 
 describe('createAdminMembersClient', () => {
   const fetchFn = vi.fn<typeof fetch>();
 
   const client = createAdminMembersClient({
-    apiBaseUrl: 'https://api.example.test',
-    fetchFn,
+    apiClient: createTestApiClient(fetchFn),
   });
 
   beforeEach(() => {
@@ -38,7 +48,7 @@ describe('createAdminMembersClient', () => {
       ),
     );
 
-    const result = await client.listMembers('access-token');
+    const result = await client.listMembers();
 
     expect(fetchFn).toHaveBeenCalledWith(
       'https://api.example.test/members',
@@ -77,7 +87,7 @@ describe('createAdminMembersClient', () => {
       ),
     );
 
-    const result = await client.createInvite('access-token', {
+    const result = await client.createInvite({
       email: 'new-member@example.com',
       role: 'pm',
     });
@@ -106,7 +116,6 @@ describe('createAdminMembersClient', () => {
 
     await expect(
       client.removeMember(
-        'access-token',
         '11111111-1111-4111-8111-111111111111',
       ),
     ).rejects.toThrow('Last admin cannot be removed');

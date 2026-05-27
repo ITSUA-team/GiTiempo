@@ -247,7 +247,7 @@ describe('SettingsView', () => {
       ?.trigger('click');
     await flushPromises();
 
-    expect(testMocks.updateWorkspace).toHaveBeenCalledWith('access-token', {
+    expect(testMocks.updateWorkspace).toHaveBeenCalledWith({
       name: 'Updated Workspace',
     });
     expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();
@@ -272,7 +272,6 @@ describe('SettingsView', () => {
 
     expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
     expect(testMocks.updateWorkspaceSettings).toHaveBeenCalledWith(
-      'access-token',
       {
         timeZone: 'Europe/Kyiv',
       },

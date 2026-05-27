@@ -66,7 +66,7 @@ const data = useTimeEntriesData({
   scope,
   setIntervalFn: setInterval,
 });
-const taskOptions = useTimeEntryTaskOptions({ accessToken, client });
+const taskOptions = useTimeEntryTaskOptions({ client });
 const mutations = useTimeEntryMutations({
   accessToken,
   client,

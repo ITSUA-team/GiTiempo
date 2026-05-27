@@ -62,9 +62,9 @@ async function loadData({
 
   try {
     const [membersData, invitesData, projectsData] = await Promise.all([
-      adminMembersClient.listMembers(token),
-      adminMembersClient.listInvites(token),
-      adminProjectsClient.listProjects(token),
+      adminMembersClient.listMembers(),
+      adminMembersClient.listInvites(),
+      adminProjectsClient.listProjects(),
     ]);
 
     members.value = membersData;

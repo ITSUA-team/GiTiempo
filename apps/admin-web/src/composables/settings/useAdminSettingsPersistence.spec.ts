@@ -112,7 +112,7 @@ describe('useAdminSettingsPersistence', () => {
       workspace: workspaceResponse,
     });
 
-    expect(client.updateWorkspace).toHaveBeenCalledWith('access-token', {
+    expect(client.updateWorkspace).toHaveBeenCalledWith({
       name: 'Updated Workspace',
     });
     expect(client.updateWorkspaceSettings).not.toHaveBeenCalled();
@@ -146,7 +146,7 @@ describe('useAdminSettingsPersistence', () => {
     });
 
     expect(client.updateWorkspace).not.toHaveBeenCalled();
-    expect(client.updateWorkspaceSettings).toHaveBeenCalledWith('access-token', {
+    expect(client.updateWorkspaceSettings).toHaveBeenCalledWith({
       currency: 'EUR',
       defaultHourlyRate: null,
       timeZone: 'Europe/Kyiv',

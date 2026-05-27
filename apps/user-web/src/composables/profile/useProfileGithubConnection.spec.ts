@@ -9,7 +9,6 @@ import type { GitHubConnectionStatusResponse } from "@gitiempo/shared";
 
 import { useProfileGithubConnection } from "./useProfileGithubConnection";
 import type { ProfileGitHubClient } from "@/services/profile-github-client";
-import { useAuthStore } from "@/stores/auth";
 
 function createConnectedStatus(avatarUrl: string | null = "https://avatars.example.test/octo.png"): GitHubConnectionStatusResponse {
   return {
@@ -50,8 +49,6 @@ function mountProfileGithub(options?: {
 
   setActivePinia(pinia);
 
-  const authStore = useAuthStore();
-  authStore.accessToken = "access-token";
   const client = options?.client ?? createClientMock();
   const confirm = { require: vi.fn() };
   const toast = { add: vi.fn() };
@@ -63,7 +60,6 @@ function mountProfileGithub(options?: {
   const Harness = defineComponent({
     setup() {
       profileGithub = useProfileGithubConnection({
-        authStore,
         client,
         confirm,
         locationAssign,
@@ -118,7 +114,7 @@ describe("useProfileGithubConnection", () => {
 
     await flushPromises();
 
-    expect(client.getConnectionStatus).toHaveBeenCalledWith("access-token");
+    expect(client.getConnectionStatus).toHaveBeenCalledWith();
     expect(profileGithub.state.value).toBe("disconnected");
   });
 
@@ -228,7 +224,7 @@ describe("useProfileGithubConnection", () => {
     expect(profileGithub.state.value).toBe("connecting");
     await connectPromise;
 
-    expect(client.getAuthUrl).toHaveBeenCalledWith("access-token");
+    expect(client.getAuthUrl).toHaveBeenCalledWith();
     expect(locationAssign).toHaveBeenCalledWith(
       "https://github.com/login/oauth/authorize",
     );
@@ -271,7 +267,7 @@ describe("useProfileGithubConnection", () => {
 
     await confirmOptions.accept();
 
-    expect(client.disconnect).toHaveBeenCalledWith("access-token");
+    expect(client.disconnect).toHaveBeenCalledWith();
     expect(client.getConnectionStatus).toHaveBeenCalledTimes(2);
     expect(profileGithub.state.value).toBe("disconnected");
     expect(toast.add).toHaveBeenCalledWith(

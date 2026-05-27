@@ -1,5 +1,5 @@
 import type { UserResponse } from "@gitiempo/shared";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearRefreshToken,
@@ -125,5 +125,63 @@ describe("createAuthSessionCore", () => {
     expect(session.isAuthenticated.value).toBe(false);
     expect(session.profile.value).toBeNull();
     expect(getRefreshToken()).toBeNull();
+  });
+
+  it("refreshes access tokens with single-flight rotation", async () => {
+    setRefreshToken("persisted-refresh-token");
+    // eslint-disable-next-line no-unused-vars
+    let resolveRefresh!: (_value: {
+      accessToken: string;
+      accessTokenExpiresIn: number;
+      refreshToken: string;
+    }) => void;
+    const refreshSession = vi.fn(
+      () =>
+        new Promise<{
+          accessToken: string;
+          accessTokenExpiresIn: number;
+          refreshToken: string;
+        }>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+    );
+    const session = createAuthSessionCore({
+      getAuthRuntime: () => createRuntimeMock({ refreshSession }),
+    });
+    const first = session.refreshAccessToken();
+    const second = session.refreshAccessToken();
+
+    resolveRefresh({
+      accessToken: "next-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "next-refresh-token",
+    });
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      "next-access-token",
+      "next-access-token",
+    ]);
+    expect(refreshSession).toHaveBeenCalledTimes(1);
+    expect(session.accessToken.value).toBe("next-access-token");
+    expect(getRefreshToken()).toBe("next-refresh-token");
+  });
+
+  it("clears the local session when access-token refresh fails", async () => {
+    setRefreshToken("persisted-refresh-token");
+    const session = createAuthSessionCore({
+      getAuthRuntime: () =>
+        createRuntimeMock({
+          refreshSession: async () => {
+            throw new Error("refresh failed");
+          },
+        }),
+    });
+
+    session.accessToken.value = "stale-access-token";
+
+    await expect(session.refreshAccessToken()).rejects.toThrow("refresh failed");
+    expect(session.accessToken.value).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(session.bootstrapComplete.value).toBe(true);
   });
 });

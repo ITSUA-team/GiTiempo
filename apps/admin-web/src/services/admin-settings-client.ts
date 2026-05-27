@@ -8,73 +8,57 @@ import {
 	type WorkspaceResponse,
 	type WorkspaceSettingsResponse,
 } from '@gitiempo/shared';
-import { requestJson } from '@gitiempo/web-shared/http';
+import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
-import { appEnv } from '@/config/env';
+import { getAuthenticatedAppApiClient } from '@/services/api-client';
 
 interface AdminSettingsClientOptions {
-	apiBaseUrl: string | undefined;
-	fetchFn: typeof fetch;
+	apiClient: Pick<AuthenticatedApiClient, 'requestJson'>;
 }
 
 /* eslint-disable no-unused-vars */
 
 export interface AdminSettingsClient {
-	getWorkspace(accessToken: string): Promise<WorkspaceResponse>;
-	getWorkspaceSettings(accessToken: string): Promise<WorkspaceSettingsResponse>;
+	getWorkspace(): Promise<WorkspaceResponse>;
+	getWorkspaceSettings(): Promise<WorkspaceSettingsResponse>;
 	updateWorkspace(
-		accessToken: string,
 		input: UpdateWorkspaceInput,
 	): Promise<WorkspaceResponse>;
 	updateWorkspaceSettings(
-		accessToken: string,
 		input: UpdateWorkspaceSettingsInput,
 	): Promise<WorkspaceSettingsResponse>;
 }
 
 export function createAdminSettingsClient({
-	apiBaseUrl,
-	fetchFn = fetch,
+	apiClient,
 }: AdminSettingsClientOptions): AdminSettingsClient {
 	return {
-		getWorkspace(accessToken) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
-				fetchFn,
+		getWorkspace() {
+			return apiClient.requestJson({
 				path: '/workspace',
 				responseSchema: workspaceResponseSchema,
 			});
 		},
 
-		getWorkspaceSettings(accessToken) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
-				fetchFn,
+		getWorkspaceSettings() {
+			return apiClient.requestJson({
 				path: '/workspace/settings',
 				responseSchema: workspaceSettingsResponseSchema,
 			});
 		},
 
-		async updateWorkspace(accessToken, input) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
+		async updateWorkspace(input) {
+			return apiClient.requestJson({
 				body: updateWorkspaceSchema.parse(input),
-				fetchFn,
 				method: 'PATCH',
 				path: '/workspace',
 				responseSchema: workspaceResponseSchema,
 			});
 		},
 
-		async updateWorkspaceSettings(accessToken, input) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
+		async updateWorkspaceSettings(input) {
+			return apiClient.requestJson({
 				body: updateWorkspaceSettingsSchema.parse(input),
-				fetchFn,
 				method: 'PATCH',
 				path: '/workspace/settings',
 				responseSchema: workspaceSettingsResponseSchema,
@@ -85,22 +69,21 @@ export function createAdminSettingsClient({
 
 function createDefaultAdminSettingsClient(): AdminSettingsClient {
 	return createAdminSettingsClient({
-		apiBaseUrl: appEnv.apiBaseUrl,
-		fetchFn: fetch,
+		apiClient: getAuthenticatedAppApiClient(),
 	});
 }
 
 export const adminSettingsClient: AdminSettingsClient = {
-	getWorkspace(accessToken) {
-		return createDefaultAdminSettingsClient().getWorkspace(accessToken);
+	getWorkspace() {
+		return createDefaultAdminSettingsClient().getWorkspace();
 	},
-	getWorkspaceSettings(accessToken) {
-		return createDefaultAdminSettingsClient().getWorkspaceSettings(accessToken);
+	getWorkspaceSettings() {
+		return createDefaultAdminSettingsClient().getWorkspaceSettings();
 	},
-	updateWorkspace(accessToken, input) {
-		return createDefaultAdminSettingsClient().updateWorkspace(accessToken, input);
+	updateWorkspace(input) {
+		return createDefaultAdminSettingsClient().updateWorkspace(input);
 	},
-	updateWorkspaceSettings(accessToken, input) {
-		return createDefaultAdminSettingsClient().updateWorkspaceSettings(accessToken, input);
+	updateWorkspaceSettings(input) {
+		return createDefaultAdminSettingsClient().updateWorkspaceSettings(input);
 	},
 };

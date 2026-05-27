@@ -440,7 +440,6 @@ describe('ProjectsTable', () => {
     await flushPromises();
 
     expect(projectClientMock.updateProject).toHaveBeenCalledWith(
-      'admin-access-token',
       'project-inactive',
       { isActive: true },
     );

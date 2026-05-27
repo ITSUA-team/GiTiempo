@@ -18,12 +18,10 @@ import {
 
 import { createDefaultProfileGitHubClient } from "@/config/clients";
 import type { ProfileGitHubClient } from "@/services/profile-github-client";
-import { useAuthStore } from "@/stores/auth";
 
 /* eslint-disable no-unused-vars */
 
 interface UseProfileGithubConnectionOptions {
-  authStore?: ReturnType<typeof useAuthStore>;
   client?: ProfileGitHubClient;
   confirm?: ConfirmLike;
   locationAssign?: (url: string) => void;
@@ -91,7 +89,6 @@ function getCleanQuery(
 export function useProfileGithubConnection(
   options: UseProfileGithubConnectionOptions = {},
 ) {
-  const authStore = options.authStore ?? useAuthStore();
   const client = options.client ?? createDefaultProfileGitHubClient();
   const confirm = options.confirm ?? useConfirm();
   const route = options.route ?? useRoute();
@@ -128,20 +125,12 @@ export function useProfileGithubConnection(
       : ("disconnected" as const);
   });
 
-  function requireAccessToken(): string {
-    if (!authStore.accessToken) {
-      throw new Error("Your session has expired. Please sign in again.");
-    }
-
-    return authStore.accessToken;
-  }
-
   async function refreshConnectionStatus(): Promise<void> {
     isLoading.value = true;
     requestErrorMessage.value = null;
 
     try {
-      connection.value = await client.getConnectionStatus(requireAccessToken());
+      connection.value = await client.getConnectionStatus();
     } catch (error) {
       const message = getErrorMessage(error);
 
@@ -174,7 +163,7 @@ export function useProfileGithubConnection(
     isConnecting.value = true;
 
     try {
-      const response = await client.getAuthUrl(requireAccessToken());
+      const response = await client.getAuthUrl();
 
       if (requestId !== connectRequestId) {
         return;
@@ -200,7 +189,7 @@ export function useProfileGithubConnection(
     isDisconnecting.value = true;
 
     try {
-      await client.disconnect(requireAccessToken());
+      await client.disconnect();
       appToast.showSuccessToast(
         "GitHub disconnected",
         "Your GitHub account has been disconnected.",

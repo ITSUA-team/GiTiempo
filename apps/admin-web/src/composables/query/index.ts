@@ -14,7 +14,6 @@ import type {
 } from '@gitiempo/shared';
 import {
   isQueryEnabled,
-  requireAccessToken,
   type QueryAccessOptions,
 } from '@gitiempo/web-shared/query';
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
@@ -37,52 +36,48 @@ interface ReportsCsvExport {
 
 /* eslint-disable no-unused-vars */
 interface AdminProjectsClient {
-  getManagementSummary(accessToken: string): Promise<ManagementProjectSummaryResponse>;
-  listProjects(accessToken: string): Promise<ProjectListResponse>;
+  getManagementSummary(): Promise<ManagementProjectSummaryResponse>;
+  listProjects(): Promise<ProjectListResponse>;
 }
 
 interface ExportTimeReportClient {
   exportTimeReport(
-    accessToken: string,
     query?: Partial<TimeReportExportQuery>,
   ): Promise<ReportsCsvExport>;
 }
 
 interface TimeReportClient {
   getTimeReport(
-    accessToken: string,
     query?: Partial<TimeReportQuery>,
   ): Promise<TimeReportResponse>;
 }
 
 interface UpdateWorkspaceClient {
   updateWorkspace(
-    accessToken: string,
     input: UpdateWorkspaceInput,
   ): Promise<WorkspaceResponse>;
 }
 
 interface UpdateWorkspaceSettingsClient {
   updateWorkspaceSettings(
-    accessToken: string,
     input: UpdateWorkspaceSettingsInput,
   ): Promise<WorkspaceSettingsResponse>;
 }
 
 interface WorkspaceClient {
-  getWorkspace(accessToken: string): Promise<WorkspaceResponse>;
+  getWorkspace(): Promise<WorkspaceResponse>;
 }
 
 interface WorkspaceInvitesClient {
-  listInvites(accessToken: string): Promise<WorkspaceInviteListResponse>;
+  listInvites(): Promise<WorkspaceInviteListResponse>;
 }
 
 interface WorkspaceMembersClient {
-  listMembers(accessToken: string): Promise<WorkspaceMemberListResponse>;
+  listMembers(): Promise<WorkspaceMemberListResponse>;
 }
 
 interface WorkspaceSettingsClient {
-  getWorkspaceSettings(accessToken: string): Promise<WorkspaceSettingsResponse>;
+  getWorkspaceSettings(): Promise<WorkspaceSettingsResponse>;
 }
 /* eslint-enable no-unused-vars */
 
@@ -149,10 +144,7 @@ export const useAdminProjectsQuery = (options: UseAdminProjectsQueryOptions) =>
   useQuery({
     queryKey: computed(() => adminProjectsKeys.list(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.listProjects(
-        requireAccessToken(toValue(options.accessToken)),
-      ),
+    queryFn: () => options.client.listProjects(),
   });
 
 export const useExportTimeReportMutation = (
@@ -160,10 +152,7 @@ export const useExportTimeReportMutation = (
 ) =>
   useMutation({
     mutationFn: (query: Partial<TimeReportExportQuery>) =>
-      options.client.exportTimeReport(
-        requireAccessToken(toValue(options.accessToken)),
-        query,
-      ),
+      options.client.exportTimeReport(query),
   });
 
 export const useManagementProjectSummaryQuery = (
@@ -172,10 +161,7 @@ export const useManagementProjectSummaryQuery = (
   useQuery({
     queryKey: computed(() => adminProjectsKeys.summary(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.getManagementSummary(
-        requireAccessToken(toValue(options.accessToken)),
-      ),
+    queryFn: () => options.client.getManagementSummary(),
   });
 
 export const useTimeReportQuery = (options: UseTimeReportQueryOptions) =>
@@ -184,11 +170,7 @@ export const useTimeReportQuery = (options: UseTimeReportQueryOptions) =>
       reportsKeys.time(toValue(options.scope), toValue(options.query)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.getTimeReport(
-        requireAccessToken(toValue(options.accessToken)),
-        toValue(options.query),
-      ),
+    queryFn: () => options.client.getTimeReport(toValue(options.query)),
   });
 
 export const useUpdateWorkspaceMutation = (
@@ -198,10 +180,7 @@ export const useUpdateWorkspaceMutation = (
 
   return useMutation({
     mutationFn: (input: UpdateWorkspaceInput) =>
-      options.client.updateWorkspace(
-        requireAccessToken(toValue(options.accessToken)),
-        input,
-      ),
+      options.client.updateWorkspace(input),
     onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
@@ -218,10 +197,7 @@ export const useUpdateWorkspaceSettingsMutation = (
 
   return useMutation({
     mutationFn: (input: UpdateWorkspaceSettingsInput) =>
-      options.client.updateWorkspaceSettings(
-        requireAccessToken(toValue(options.accessToken)),
-        input,
-      ),
+      options.client.updateWorkspaceSettings(input),
     onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
@@ -235,24 +211,21 @@ export const useWorkspaceInvitesQuery = (options: UseWorkspaceInvitesQueryOption
   useQuery({
     queryKey: computed(() => adminMembersKeys.invites(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.listInvites(requireAccessToken(toValue(options.accessToken))),
+    queryFn: () => options.client.listInvites(),
   });
 
 export const useWorkspaceMembersQuery = (options: UseWorkspaceMembersQueryOptions) =>
   useQuery({
     queryKey: computed(() => adminMembersKeys.list(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.listMembers(requireAccessToken(toValue(options.accessToken))),
+    queryFn: () => options.client.listMembers(),
   });
 
 export const useWorkspaceQuery = (options: UseWorkspaceQueryOptions) =>
   useQuery({
     queryKey: computed(() => adminSettingsKeys.workspace(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.getWorkspace(requireAccessToken(toValue(options.accessToken))),
+    queryFn: () => options.client.getWorkspace(),
   });
 
 export const useWorkspaceSettingsQuery = (
@@ -261,8 +234,5 @@ export const useWorkspaceSettingsQuery = (
   useQuery({
     queryKey: computed(() => adminSettingsKeys.workspaceSettings(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.getWorkspaceSettings(
-        requireAccessToken(toValue(options.accessToken)),
-      ),
+    queryFn: () => options.client.getWorkspaceSettings(),
   });

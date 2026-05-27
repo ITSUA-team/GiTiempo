@@ -55,9 +55,9 @@ async function fetchAll(): Promise<void> {
 
   try {
     const [projectsData, summaryData, membersData] = await Promise.all([
-      adminProjectsClient.listProjects(token),
-      adminProjectsClient.getManagementSummary(token),
-      adminMembersClient.listMembers(token),
+      adminProjectsClient.listProjects(),
+      adminProjectsClient.getManagementSummary(),
+      adminMembersClient.listMembers(),
     ]);
 
     projects.value = sortProjects(projectsData);
@@ -87,8 +87,8 @@ async function refresh(): Promise<void> {
 
   try {
     const [projectsData, summaryData] = await Promise.all([
-      adminProjectsClient.listProjects(token),
-      adminProjectsClient.getManagementSummary(token),
+      adminProjectsClient.listProjects(),
+      adminProjectsClient.getManagementSummary(),
     ]);
 
     projects.value = sortProjects(projectsData);

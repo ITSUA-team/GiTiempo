@@ -190,14 +190,11 @@ describe('useAdminDashboardData', () => {
 
     await flushPromises();
 
-    expect(clients.membersClient.listMembers).toHaveBeenCalledWith('access-token');
-    expect(clients.membersClient.listInvites).toHaveBeenCalledWith('access-token');
-    expect(clients.projectsClient.getManagementSummary).toHaveBeenCalledWith(
-      'access-token',
-    );
-    expect(clients.projectsClient.listProjects).toHaveBeenCalledWith('access-token');
+    expect(clients.membersClient.listMembers).toHaveBeenCalledWith();
+    expect(clients.membersClient.listInvites).toHaveBeenCalledWith();
+    expect(clients.projectsClient.getManagementSummary).toHaveBeenCalledWith();
+    expect(clients.projectsClient.listProjects).toHaveBeenCalledWith();
     expect(clients.reportsClient.getTimeReport).toHaveBeenCalledWith(
-      'access-token',
       expect.objectContaining({
         ...getDashboardWeekRange(now),
         groupBy: 'project',

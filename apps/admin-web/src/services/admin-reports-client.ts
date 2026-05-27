@@ -6,20 +6,14 @@ import {
   type TimeReportQuery,
   type TimeReportResponse,
 } from '@gitiempo/shared';
-import {
-  getDefaultFetchFn,
-  getRequestUrl,
-  getResponseErrorMessage,
-  requestJson,
-} from '@gitiempo/web-shared/http';
+import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
-import { appEnv } from '@/config/env';
+import { getAuthenticatedAppApiClient } from '@/services/api-client';
 
 /* eslint-disable no-unused-vars */
 
 interface AdminReportsClientOptions {
-  apiBaseUrl?: string;
-  fetchFn?: typeof fetch;
+  apiClient: Pick<AuthenticatedApiClient, 'request' | 'requestJson'>;
 }
 
 export interface ReportsCsvExport {
@@ -29,11 +23,9 @@ export interface ReportsCsvExport {
 
 export interface AdminReportsClient {
   exportTimeReport(
-    accessToken: string,
     query?: Partial<TimeReportExportQuery>,
   ): Promise<ReportsCsvExport>;
   getTimeReport(
-    accessToken: string,
     query?: Partial<TimeReportQuery>,
   ): Promise<TimeReportResponse>;
 }
@@ -100,23 +92,15 @@ function getFilenameFromContentDisposition(value: string | null): string {
 }
 
 export function createAdminReportsClient({
-  apiBaseUrl,
-  fetchFn = getDefaultFetchFn(),
-}: AdminReportsClientOptions = {}): AdminReportsClient {
+  apiClient,
+}: AdminReportsClientOptions): AdminReportsClient {
   return {
-    async exportTimeReport(accessToken, query) {
+    async exportTimeReport(query) {
       const search = buildTimeReportExportQuery(query);
-      const response = await fetchFn(
-        getRequestUrl(apiBaseUrl, `/reports/time/export?${search}`),
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          method: 'GET',
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(await getResponseErrorMessage(response));
-      }
+      const response = await apiClient.request({
+        method: 'GET',
+        path: `/reports/time/export?${search}`,
+      });
 
       return {
         blob: await response.blob(),
@@ -126,13 +110,10 @@ export function createAdminReportsClient({
       };
     },
 
-    getTimeReport(accessToken, query) {
+    getTimeReport(query) {
       const search = buildTimeReportQuery(query);
 
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
+      return apiClient.requestJson({
         path: `/reports/time?${search}`,
         responseSchema: timeReportResponseSchema,
       });
@@ -142,15 +123,15 @@ export function createAdminReportsClient({
 
 function createDefaultAdminReportsClient(): AdminReportsClient {
   return createAdminReportsClient({
-    apiBaseUrl: appEnv.apiBaseUrl,
+    apiClient: getAuthenticatedAppApiClient(),
   });
 }
 
 export const adminReportsClient: AdminReportsClient = {
-  exportTimeReport(accessToken, query) {
-    return createDefaultAdminReportsClient().exportTimeReport(accessToken, query);
+  exportTimeReport(query) {
+    return createDefaultAdminReportsClient().exportTimeReport(query);
   },
-  getTimeReport(accessToken, query) {
-    return createDefaultAdminReportsClient().getTimeReport(accessToken, query);
+  getTimeReport(query) {
+    return createDefaultAdminReportsClient().getTimeReport(query);
   },
 };

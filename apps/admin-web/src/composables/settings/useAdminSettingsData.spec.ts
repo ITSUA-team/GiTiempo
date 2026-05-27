@@ -88,8 +88,8 @@ describe('useAdminSettingsData', () => {
 
     const result = await data.loadSettings();
 
-    expect(client.getWorkspace).toHaveBeenCalledWith('access-token');
-    expect(client.getWorkspaceSettings).toHaveBeenCalledWith('access-token');
+    expect(client.getWorkspace).toHaveBeenCalledWith();
+    expect(client.getWorkspaceSettings).toHaveBeenCalledWith();
     expect(result).toEqual({
       settings: settingsResponse,
       workspace: workspaceResponse,

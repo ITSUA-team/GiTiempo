@@ -64,10 +64,10 @@ async function handleSubmit({
 
   try {
     for (const projectId of toAdd) {
-      await adminProjectsClient.assignMember(token, projectId, props.member.userId);
+      await adminProjectsClient.assignMember(projectId, props.member.userId);
     }
     for (const projectId of toRemove) {
-      await adminProjectsClient.removeAssignment(token, projectId, props.member.userId);
+      await adminProjectsClient.removeAssignment(projectId, props.member.userId);
     }
 
     successToast(`Project assignments for ${props.member.displayName ?? props.member.email} saved.`);

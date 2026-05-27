@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { createAdminReportsClient } from './admin-reports-client';
 
@@ -36,11 +37,20 @@ const reportResponse = {
   },
 } as const;
 
+function createTestApiClient(fetchFn: typeof fetch) {
+  return createAuthenticatedApiClient({
+    apiBaseUrl: 'https://api.example.test',
+    fetchFn,
+    getToken: () => 'access-token',
+    onRefreshFailed: vi.fn(),
+    refreshAccessToken: async () => 'access-token',
+  });
+}
+
 describe('createAdminReportsClient', () => {
   const fetchFn = vi.fn<typeof fetch>();
   const client = createAdminReportsClient({
-    apiBaseUrl: 'https://api.example.test',
-    fetchFn,
+    apiClient: createTestApiClient(fetchFn),
   });
 
   beforeEach(() => {
@@ -55,7 +65,7 @@ describe('createAdminReportsClient', () => {
       }),
     );
 
-    const result = await client.getTimeReport('access-token', {
+    const result = await client.getTimeReport({
       dateFrom: '2026-05-01T00:00:00.000Z',
       dateTo: '2026-06-01T00:00:00.000Z',
       groupBy: 'project',
@@ -108,7 +118,7 @@ describe('createAdminReportsClient', () => {
       }),
     );
 
-    const result = await client.exportTimeReport('access-token', {
+    const result = await client.exportTimeReport({
       dateFrom: '2026-05-01T00:00:00.000Z',
       dateTo: '2026-06-01T00:00:00.000Z',
       groupBy: 'user',
@@ -154,10 +164,10 @@ describe('createAdminReportsClient', () => {
       );
 
     await expect(
-      client.getTimeReport('access-token', { limit: 20, page: 1 }),
+      client.getTimeReport({ limit: 20, page: 1 }),
     ).rejects.toThrow('Reports are forbidden');
 
-    await expect(client.exportTimeReport('access-token')).rejects.toThrow(
+    await expect(client.exportTimeReport()).rejects.toThrow(
       'Reports are forbidden',
     );
   });

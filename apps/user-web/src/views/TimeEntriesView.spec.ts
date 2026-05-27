@@ -162,7 +162,7 @@ function createClientMock(options: {
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
-    listOwnEntries: vi.fn(async (_accessToken, query) => ({
+    listOwnEntries: vi.fn(async (query) => ({
       ...entriesResponse,
       meta: {
         ...entriesResponse.meta,
@@ -170,7 +170,7 @@ function createClientMock(options: {
         page: query?.page ?? entriesResponse.meta.page,
       },
     })),
-    listProjectTasks: vi.fn(async (_accessToken, projectId) => tasksByProject[projectId] ?? []),
+    listProjectTasks: vi.fn(async (projectId) => tasksByProject[projectId] ?? []),
     listVisibleProjects: vi.fn(async () => [
       createProject(),
       createProject({
@@ -312,8 +312,8 @@ describe("TimeEntriesView", () => {
 
     await flushPromises();
 
-    expect(client.listVisibleProjects).toHaveBeenCalledWith("access-token");
-    expect(client.listOwnEntries).toHaveBeenCalledWith("access-token", {
+    expect(client.listVisibleProjects).toHaveBeenCalledWith();
+    expect(client.listOwnEntries).toHaveBeenCalledWith({
       dateFrom: undefined,
       dateTo: undefined,
       limit: 20,
@@ -399,10 +399,9 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.listProjectTasks).toHaveBeenCalledWith(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
     );
-    expect(client.listOwnEntries).toHaveBeenCalledWith("access-token", {
+    expect(client.listOwnEntries).toHaveBeenCalledWith({
       dateFrom: "2026-04-01T00:00:00.000Z",
       dateTo: "2026-04-22T00:00:00.000Z",
       limit: 20,
@@ -438,7 +437,7 @@ describe("TimeEntriesView", () => {
     await wrapper.get('[data-testid="dialog-save"]').trigger("click");
     await flushPromises();
 
-    expect(client.createManualEntry).toHaveBeenCalledWith("access-token", {
+    expect(client.createManualEntry).toHaveBeenCalledWith({
       description: "Manual cleanup",
       endedAt: "2026-04-21T10:45:00.000Z",
       isBillable: true,
@@ -446,7 +445,7 @@ describe("TimeEntriesView", () => {
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
-    expect(client.listOwnEntries).toHaveBeenLastCalledWith("access-token", {
+    expect(client.listOwnEntries).toHaveBeenLastCalledWith({
       dateFrom: undefined,
       dateTo: undefined,
       limit: 20,
@@ -477,7 +476,6 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.updateEntry).toHaveBeenCalledWith(
-      "access-token",
       "entry-completed",
       expect.objectContaining({
         description: "Manual cleanup",
@@ -507,7 +505,7 @@ describe("TimeEntriesView", () => {
     await primeVueMocks.confirmRequire.mock.calls[0]?.[0].accept();
     await flushPromises();
 
-    expect(client.deleteEntry).toHaveBeenCalledWith("access-token", "entry-completed");
+    expect(client.deleteEntry).toHaveBeenCalledWith("entry-completed");
     expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
 
     const deleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');

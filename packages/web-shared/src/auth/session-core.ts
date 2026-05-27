@@ -28,6 +28,7 @@ export function createAuthSessionCore({
   const isSubmitting = shallowRef(false);
 
   let bootstrapPromise: Promise<void> | null = null;
+  let refreshAccessPromise: Promise<string> | null = null;
 
   const isAuthenticated = computed(() => accessToken.value !== null);
 
@@ -84,6 +85,38 @@ export function createAuthSessionCore({
     })();
 
     return bootstrapPromise;
+  }
+
+  async function refreshAccessToken(): Promise<string> {
+    if (refreshAccessPromise) {
+      return refreshAccessPromise;
+    }
+
+    refreshAccessPromise = (async () => {
+      const refreshToken = getRefreshToken();
+
+      if (!refreshToken) {
+        clearSession();
+        bootstrapComplete.value = true;
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+
+      try {
+        const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
+        applyTokenPair(tokenPair);
+        bootstrapComplete.value = true;
+
+        return tokenPair.accessToken;
+      } catch (error) {
+        clearSession();
+        bootstrapComplete.value = true;
+        throw error;
+      }
+    })().finally(() => {
+      refreshAccessPromise = null;
+    });
+
+    return refreshAccessPromise;
   }
 
   async function loginWithFirebaseIdToken(firebaseIdToken: string): Promise<void> {
@@ -198,6 +231,7 @@ export function createAuthSessionCore({
     loginWithGoogle,
     logout,
     profile,
+    refreshAccessToken,
     updateProfile,
   };
 }

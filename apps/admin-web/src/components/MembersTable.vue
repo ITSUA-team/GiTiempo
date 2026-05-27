@@ -342,7 +342,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       if (!token) return;
 
       try {
-        await adminMembersClient.removeMember(token, member.id);
+        await adminMembersClient.removeMember(member.id);
         successToast(`${member.displayName ?? member.email} has been removed.`);
         emit('member-removed');
       } catch (err) {

@@ -44,6 +44,7 @@ export const useAuthStore = defineStore("auth", () => {
     loginWithGoogle: session.loginWithGoogle,
     logout: session.logout,
     profile: session.profile,
+    refreshAccessToken: session.refreshAccessToken,
     setWorkspaceName,
     userInitials,
     workspaceName,

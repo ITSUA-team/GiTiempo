@@ -65,7 +65,6 @@ async function handleSave({
 
   try {
     const updated = await adminProjectsClient.updateProject(
-      token,
       props.project.id,
       { visibility },
     );
@@ -79,10 +78,10 @@ async function handleSave({
       .filter((id) => !nextMemberIds.has(id));
 
     for (const userId of toAdd) {
-      await adminProjectsClient.assignMember(token, props.project.id, userId);
+      await adminProjectsClient.assignMember(props.project.id, userId);
     }
     for (const userId of toRemove) {
-      await adminProjectsClient.removeAssignment(token, props.project.id, userId);
+      await adminProjectsClient.removeAssignment(props.project.id, userId);
     }
 
     successToast(`${props.project.name} has been updated.`);

@@ -109,7 +109,7 @@ function createClientMock(): TimeEntriesClient & {
 } {
   return {
     createManualEntry: vi.fn(async () => createCompletedEntry()),
-    createTask: vi.fn(async (_accessToken, projectId, input) =>
+    createTask: vi.fn(async (projectId, input) =>
       createTask("task-new", projectId, input.title),
     ),
     deleteEntry: vi.fn(async () => undefined),
@@ -286,7 +286,7 @@ describe("useTopBarTimer", () => {
     await topBarTimer.createTaskFromDialog();
     await flushPromises();
 
-    expect(client.createTask).toHaveBeenCalledWith("access-token", "project-1", {
+    expect(client.createTask).toHaveBeenCalledWith("project-1", {
       title: "Write release checklist",
     });
     expect(topBarTimer.selectedTaskId.value).toBe("task-new");
@@ -367,7 +367,7 @@ describe("useTopBarTimer", () => {
     await topBarTimer.handlePrimaryAction();
     await flushPromises();
 
-    expect(client.startTimer).toHaveBeenCalledWith("access-token", "task-1");
+    expect(client.startTimer).toHaveBeenCalledWith("task-1");
     expect(topBarTimer.primaryActionLabel.value).toBe("Stop");
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({ severity: "success", summary: "Timer started" }),
@@ -421,7 +421,7 @@ describe("useTopBarTimer", () => {
     await topBarTimer.handlePrimaryAction();
     await flushPromises();
 
-    expect(client.stopTimer).toHaveBeenCalledWith("access-token");
+    expect(client.stopTimer).toHaveBeenCalledWith();
     expect(topBarTimer.primaryActionLabel.value).toBe("Start");
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({ severity: "success", summary: "Timer stopped" }),

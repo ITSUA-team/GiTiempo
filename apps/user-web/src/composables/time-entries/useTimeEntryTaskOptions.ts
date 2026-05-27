@@ -1,12 +1,11 @@
 import { getErrorMessage } from "@gitiempo/web-shared";
-import { computed, type ComputedRef } from "vue";
+import { computed } from "vue";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import { toTaskLookupOption, type TaskLookupOption } from "./time-entry-task-lookup";
 
 interface UseTimeEntryTaskOptionsOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
 }
 
@@ -21,19 +20,10 @@ interface TaskOptionsTarget {
 /* eslint-enable no-unused-vars */
 
 export function useTimeEntryTaskOptions({
-  accessToken,
   client,
 }: UseTimeEntryTaskOptionsOptions) {
   const taskCache = new Map<string, TaskLookupOption[]>();
   const cachedTaskOptions = computed(() => Array.from(taskCache.values()).flat());
-
-  function requireAccessToken(): string {
-    if (!accessToken.value) {
-      throw new Error("Your session has expired. Please sign in again.");
-    }
-
-    return accessToken.value;
-  }
 
   async function loadProjectTaskOptions(projectId: string): Promise<TaskLookupOption[]> {
     const cached = taskCache.get(projectId);
@@ -42,7 +32,7 @@ export function useTimeEntryTaskOptions({
       return cached;
     }
 
-    const nextTasks = (await client.listProjectTasks(requireAccessToken(), projectId))
+    const nextTasks = (await client.listProjectTasks(projectId))
       .filter((task) => task.isActive)
       .map(toTaskLookupOption);
 

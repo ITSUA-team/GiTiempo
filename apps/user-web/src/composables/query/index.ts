@@ -13,7 +13,6 @@ import type {
 } from "@gitiempo/shared";
 import {
   isQueryEnabled,
-  requireAccessToken,
   type QueryAccessOptions,
 } from "@gitiempo/web-shared/query";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
@@ -31,53 +30,49 @@ type QueryKey = readonly unknown[];
 /* eslint-disable no-unused-vars */
 interface CreateManualTimeEntryClient {
   createManualEntry(
-    accessToken: string,
     input: CreateManualTimeEntryInput,
   ): Promise<TimeEntryResponse>;
 }
 
 interface CreateTaskClient {
   createTask(
-    accessToken: string,
     projectId: string,
     input: CreateTaskInput,
   ): Promise<TaskResponse>;
 }
 
 interface CurrentTimerClient {
-  getCurrentTimer(accessToken: string): Promise<CurrentTimeEntryResponse>;
+  getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
 }
 
 interface DeleteTaskClient {
-  deleteTask(accessToken: string, taskId: string): Promise<void>;
+  deleteTask(taskId: string): Promise<void>;
 }
 
 interface DeleteTimeEntryClient {
-  deleteEntry(accessToken: string, entryId: string): Promise<void>;
+  deleteEntry(entryId: string): Promise<void>;
 }
 
 interface OwnTimeEntriesClient {
   listOwnEntries(
-    accessToken: string,
     query?: Partial<TimeEntryListQuery>,
   ): Promise<TimeEntryListResponse>;
 }
 
 interface ProjectTasksClient {
-  listProjectTasks(accessToken: string, projectId: string): Promise<TaskResponse[]>;
+  listProjectTasks(projectId: string): Promise<TaskResponse[]>;
 }
 
 interface StartTimerClient {
-  startTimer(accessToken: string, taskId: string): Promise<TimeEntryResponse>;
+  startTimer(taskId: string): Promise<TimeEntryResponse>;
 }
 
 interface StopTimerClient {
-  stopTimer(accessToken: string): Promise<TimeEntryResponse>;
+  stopTimer(): Promise<TimeEntryResponse>;
 }
 
 interface UpdateTaskClient {
   updateTask(
-    accessToken: string,
     taskId: string,
     input: UpdateTaskInput,
   ): Promise<TaskResponse>;
@@ -85,14 +80,13 @@ interface UpdateTaskClient {
 
 interface UpdateTimeEntryClient {
   updateEntry(
-    accessToken: string,
     entryId: string,
     input: UpdateTimeEntryInput,
   ): Promise<TimeEntryResponse>;
 }
 
 interface VisibleProjectsClient {
-  listVisibleProjects(accessToken: string): Promise<ProjectResponse[]>;
+  listVisibleProjects(): Promise<ProjectResponse[]>;
 }
 /* eslint-enable no-unused-vars */
 
@@ -181,10 +175,7 @@ export const useCurrentTimerQuery = (options: UseCurrentTimerQueryOptions) =>
   useQuery({
     queryKey: computed(() => timerKeys.current(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.getCurrentTimer(
-        requireAccessToken(toValue(options.accessToken)),
-      ),
+    queryFn: () => options.client.getCurrentTimer(),
   });
 
 export const useOwnTimeEntriesQuery = (options: UseOwnTimeEntriesQueryOptions) =>
@@ -194,11 +185,7 @@ export const useOwnTimeEntriesQuery = (options: UseOwnTimeEntriesQueryOptions) =
       timeEntriesKeys.list(toValue(options.scope), toValue(options.query)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.listOwnEntries(
-        requireAccessToken(toValue(options.accessToken)),
-        toValue(options.query),
-      ),
+    queryFn: () => options.client.listOwnEntries(toValue(options.query)),
   });
 
 export const useProjectTasksQuery = (options: UseProjectTasksQueryOptions) =>
@@ -213,7 +200,6 @@ export const useProjectTasksQuery = (options: UseProjectTasksQueryOptions) =>
     enabled: computed(() => isQueryEnabled(options) && Boolean(toValue(options.projectId))),
     queryFn: () =>
       options.client.listProjectTasks(
-        requireAccessToken(toValue(options.accessToken)),
         requireProjectId(toValue(options.projectId)),
       ),
   });
@@ -227,11 +213,7 @@ export const useRecentOwnTimeEntriesQuery = (
       timeEntriesKeys.list(toValue(options.scope), recentOwnTimeEntriesQuery),
     ),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.listOwnEntries(
-        requireAccessToken(toValue(options.accessToken)),
-        recentOwnTimeEntriesQuery,
-      ),
+    queryFn: () => options.client.listOwnEntries(recentOwnTimeEntriesQuery),
   });
 
 export const useVisibleProjectsQuery = (options: UseVisibleProjectsQueryOptions) =>
@@ -240,10 +222,7 @@ export const useVisibleProjectsQuery = (options: UseVisibleProjectsQueryOptions)
       toValue(options.queryKey) ?? userProjectsKeys.visibleProjects(toValue(options.scope)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () =>
-      options.client.listVisibleProjects(
-        requireAccessToken(toValue(options.accessToken)),
-      ),
+    queryFn: () => options.client.listVisibleProjects(),
   });
 
 export const useCreateManualTimeEntryMutation = (
@@ -253,10 +232,7 @@ export const useCreateManualTimeEntryMutation = (
 
   return useMutation({
     mutationFn: (input: CreateManualTimeEntryInput) =>
-      options.client.createManualEntry(
-        requireAccessToken(toValue(options.accessToken)),
-        input,
-      ),
+      options.client.createManualEntry(input),
     onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
@@ -271,11 +247,7 @@ export const useCreateTaskMutation = (options: UseCreateTaskMutationOptions) => 
 
   return useMutation({
     mutationFn: ({ projectId, input }: { projectId: string; input: CreateTaskInput }) =>
-      options.client.createTask(
-        requireAccessToken(toValue(options.accessToken)),
-        projectId,
-        input,
-      ),
+      options.client.createTask(projectId, input),
     onSuccess: async (_task, { projectId }) => {
       await invalidateQueryKeys(
         queryClient,
@@ -290,10 +262,7 @@ export const useDeleteTaskMutation = (options: UseDeleteTaskMutationOptions) => 
 
   return useMutation({
     mutationFn: ({ taskId }: { projectId: string; taskId: string }) =>
-      options.client.deleteTask(
-        requireAccessToken(toValue(options.accessToken)),
-        taskId,
-      ),
+      options.client.deleteTask(taskId),
     onSuccess: async (_result, { projectId }) => {
       await invalidateQueryKeys(
         queryClient,
@@ -310,10 +279,7 @@ export const useDeleteTimeEntryMutation = (
 
   return useMutation({
     mutationFn: (entryId: string) =>
-      options.client.deleteEntry(
-        requireAccessToken(toValue(options.accessToken)),
-        entryId,
-      ),
+      options.client.deleteEntry(entryId),
     onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
@@ -328,10 +294,7 @@ export const useStartTimerMutation = (options: UseStartTimerMutationOptions) => 
 
   return useMutation({
     mutationFn: (taskId: string) =>
-      options.client.startTimer(
-        requireAccessToken(toValue(options.accessToken)),
-        taskId,
-      ),
+      options.client.startTimer(taskId),
     onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
@@ -345,8 +308,7 @@ export const useStopTimerMutation = (options: UseStopTimerMutationOptions) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () =>
-      options.client.stopTimer(requireAccessToken(toValue(options.accessToken))),
+    mutationFn: () => options.client.stopTimer(),
     onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,
@@ -361,11 +323,7 @@ export const useUpdateTaskMutation = (options: UseUpdateTaskMutationOptions) => 
 
   return useMutation({
     mutationFn: ({ taskId, input }: { projectId: string; taskId: string; input: UpdateTaskInput }) =>
-      options.client.updateTask(
-        requireAccessToken(toValue(options.accessToken)),
-        taskId,
-        input,
-      ),
+      options.client.updateTask(taskId, input),
     onSuccess: async (task, { projectId }) => {
       await invalidateQueryKeys(
         queryClient,
@@ -385,11 +343,7 @@ export const useUpdateTimeEntryMutation = (
 
   return useMutation({
     mutationFn: ({ entryId, input }: { entryId: string; input: UpdateTimeEntryInput }) =>
-      options.client.updateEntry(
-        requireAccessToken(toValue(options.accessToken)),
-        entryId,
-        input,
-      ),
+      options.client.updateEntry(entryId, input),
     onSuccess: async () => {
       await invalidateQueryKeys(
         queryClient,

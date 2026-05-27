@@ -50,7 +50,7 @@ async function handleSubmit({
   submitting.value = true;
 
   try {
-    await adminMembersClient.createInvite(token, values as WorkspaceInviteFormInput);
+    await adminMembersClient.createInvite(values as WorkspaceInviteFormInput);
     successToast(`Invitation sent to ${values.email as string}.`);
     reset();
     visible.value = false;

@@ -12,96 +12,66 @@ import {
 	type WorkspaceMemberListResponse,
 	type WorkspaceMemberResponse,
 } from '@gitiempo/shared';
-import {
-	getDefaultFetchFn,
-	getRequestUrl,
-	getResponseErrorMessage,
-	requestJson,
-} from '@gitiempo/web-shared/http';
+import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
-import { appEnv } from '@/config/env';
+import { getAuthenticatedAppApiClient } from '@/services/api-client';
 
 interface AdminMembersClientOptions {
-	apiBaseUrl: string | undefined;
-	fetchFn?: typeof fetch;
+	apiClient: Pick<AuthenticatedApiClient, 'requestJson' | 'requestNoContent'>;
 }
 
 /* eslint-disable no-unused-vars */
 
 export interface AdminMembersClient {
 	createInvite(
-		accessToken: string,
 		input: CreateWorkspaceInviteInput,
 	): Promise<WorkspaceInviteResponse>;
-	listInvites(accessToken: string): Promise<WorkspaceInviteListResponse>;
-	listMembers(accessToken: string): Promise<WorkspaceMemberListResponse>;
-	removeMember(accessToken: string, memberId: string): Promise<void>;
+	listInvites(): Promise<WorkspaceInviteListResponse>;
+	listMembers(): Promise<WorkspaceMemberListResponse>;
+	removeMember(memberId: string): Promise<void>;
 	updateMemberRole(
-		accessToken: string,
 		memberId: string,
 		input: UpdateWorkspaceMemberRoleInput,
 	): Promise<WorkspaceMemberResponse>;
 }
 
 export function createAdminMembersClient({
-	apiBaseUrl,
-	fetchFn = getDefaultFetchFn(),
+	apiClient,
 }: AdminMembersClientOptions): AdminMembersClient {
 	return {
-		createInvite(accessToken, input) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
+		createInvite(input) {
+			return apiClient.requestJson({
 				body: createWorkspaceInviteSchema.parse(input),
-				fetchFn,
 				method: 'POST',
 				path: '/invites',
 				responseSchema: workspaceInviteResponseSchema,
 			});
 		},
 
-		listInvites(accessToken) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
-				fetchFn,
+		listInvites() {
+			return apiClient.requestJson({
 				path: '/invites',
 				responseSchema: workspaceInviteListResponseSchema,
 			});
 		},
 
-		listMembers(accessToken) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
-				fetchFn,
+		listMembers() {
+			return apiClient.requestJson({
 				path: '/members',
 				responseSchema: workspaceMemberListResponseSchema,
 			});
 		},
 
-		async removeMember(accessToken, memberId) {
-			const response = await fetchFn(
-				getRequestUrl(apiBaseUrl, `/members/${memberId}`),
-				{
-					headers: {
-						Authorization: `Bearer ${accessToken}`,
-					},
-					method: 'DELETE',
-				},
-			);
-
-			if (!response.ok) {
-				throw new Error(await getResponseErrorMessage(response));
-			}
+		async removeMember(memberId) {
+			await apiClient.requestNoContent({
+				method: 'DELETE',
+				path: `/members/${memberId}`,
+			});
 		},
 
-		updateMemberRole(accessToken, memberId, input) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
+		updateMemberRole(memberId, input) {
+			return apiClient.requestJson({
 				body: updateWorkspaceMemberRoleSchema.parse(input),
-				fetchFn,
 				method: 'PATCH',
 				path: `/members/${memberId}/role`,
 				responseSchema: workspaceMemberResponseSchema,
@@ -112,26 +82,25 @@ export function createAdminMembersClient({
 
 function createDefaultAdminMembersClient(): AdminMembersClient {
 	return createAdminMembersClient({
-		apiBaseUrl: appEnv.apiBaseUrl,
+		apiClient: getAuthenticatedAppApiClient(),
 	});
 }
 
 export const adminMembersClient: AdminMembersClient = {
-	createInvite(accessToken, input) {
-		return createDefaultAdminMembersClient().createInvite(accessToken, input);
+	createInvite(input) {
+		return createDefaultAdminMembersClient().createInvite(input);
 	},
-	listInvites(accessToken) {
-		return createDefaultAdminMembersClient().listInvites(accessToken);
+	listInvites() {
+		return createDefaultAdminMembersClient().listInvites();
 	},
-	listMembers(accessToken) {
-		return createDefaultAdminMembersClient().listMembers(accessToken);
+	listMembers() {
+		return createDefaultAdminMembersClient().listMembers();
 	},
-	removeMember(accessToken, memberId) {
-		return createDefaultAdminMembersClient().removeMember(accessToken, memberId);
+	removeMember(memberId) {
+		return createDefaultAdminMembersClient().removeMember(memberId);
 	},
-	updateMemberRole(accessToken, memberId, input) {
+	updateMemberRole(memberId, input) {
 		return createDefaultAdminMembersClient().updateMemberRole(
-			accessToken,
 			memberId,
 			input,
 		);

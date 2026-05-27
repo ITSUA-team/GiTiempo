@@ -61,7 +61,7 @@ async function loadMembers(): Promise<void> {
   membersError.value = null;
 
   try {
-    members.value = await adminMembersClient.listMembers(token);
+    members.value = await adminMembersClient.listMembers();
   } catch (err) {
     membersError.value = err instanceof Error ? err.message : 'Failed to load members';
   } finally {
@@ -91,13 +91,13 @@ async function handleSubmit({
 
   try {
     const trimmedName = name.trim();
-    const project = await adminProjectsClient.createProject(token, {
+    const project = await adminProjectsClient.createProject({
       name: trimmedName,
       visibility,
     });
 
     if (managerUserId) {
-      await adminProjectsClient.assignMember(token, project.id, managerUserId);
+      await adminProjectsClient.assignMember(project.id, managerUserId);
     }
 
     successToast(`"${trimmedName}" has been created successfully.`);

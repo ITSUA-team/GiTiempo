@@ -125,7 +125,7 @@ describe("AdminAppShell", () => {
 
     await flushPromises();
 
-    expect(testMocks.getWorkspace).toHaveBeenCalledWith("admin-access-token");
+    expect(testMocks.getWorkspace).toHaveBeenCalledWith();
     expect(wrapper.text()).toContain("GiTiempo Studio");
   });
 

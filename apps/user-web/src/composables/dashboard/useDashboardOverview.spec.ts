@@ -149,11 +149,9 @@ describe("useDashboardOverview", () => {
     await flushPromises();
 
     expect(client.listOwnEntries).toHaveBeenCalledWith(
-      "access-token",
       expect.objectContaining({ limit: 10, page: 1 }),
     );
     expect(client.listOwnEntries).toHaveBeenCalledWith(
-      "access-token",
       expect.objectContaining({
         dateFrom: "2026-04-20T00:00:00.000Z",
         dateTo: "2026-04-27T00:00:00.000Z",
@@ -280,7 +278,6 @@ describe("useDashboardOverview", () => {
     await flushPromises();
 
     expect(client.listOwnEntries).toHaveBeenCalledWith(
-      "access-token",
       expect.objectContaining({
         dateFrom: "2026-04-20T00:00:00.000Z",
         dateTo: "2026-04-27T00:00:00.000Z",
