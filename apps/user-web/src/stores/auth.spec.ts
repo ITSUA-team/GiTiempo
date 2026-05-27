@@ -57,6 +57,14 @@ describe("useAuthStore", () => {
     resetAuthRuntimeForTesting();
   });
 
+  it("exposes guest auth labels from the app wrapper", () => {
+    const authStore = useAuthStore();
+
+    expect(authStore.displayName).toBe("Workspace member");
+    expect(authStore.userInitials).toBe("WM");
+    expect(authStore.workspaceName).toBe("Workspace Alpha");
+  });
+
   it("restores a session from refresh token during bootstrap", async () => {
     setRefreshToken("persisted-refresh-token");
     setAuthRuntimeForTesting(createRuntimeMock());

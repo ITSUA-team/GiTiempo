@@ -12,6 +12,9 @@ import {
 } from "../session-storage";
 import type { AuthRuntime } from "./runtime";
 
+const SESSION_EXPIRED_MESSAGE =
+  "Your session has expired. Please sign in again.";
+
 interface AuthSessionCoreOptions {
   getAuthRuntime(): AuthRuntime;
   onClearSession?: () => void;
@@ -44,6 +47,15 @@ export function createAuthSessionCore({
     clearRefreshToken();
   }
 
+  function completeBootstrap(): void {
+    bootstrapComplete.value = true;
+  }
+
+  function clearSessionAndCompleteBootstrap(): void {
+    clearSession();
+    completeBootstrap();
+  }
+
   async function loadCurrentUser(nextAccessToken: string): Promise<void> {
     try {
       profile.value = await getAuthRuntime().getCurrentUser(nextAccessToken);
@@ -52,130 +64,142 @@ export function createAuthSessionCore({
     }
   }
 
-  async function bootstrapSession(): Promise<void> {
-    if (bootstrapComplete.value) {
+  async function restoreSessionFromRefreshToken(): Promise<void> {
+    const refreshToken = getRefreshToken();
+
+    if (!refreshToken) {
+      clearSession();
       return;
     }
 
-    if (bootstrapPromise) {
-      return bootstrapPromise;
+    const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
+    applyTokenPair(tokenPair);
+    await loadCurrentUser(tokenPair.accessToken);
+  }
+
+  async function runBootstrapSession(): Promise<void> {
+    isBootstrapping.value = true;
+
+    try {
+      await restoreSessionFromRefreshToken();
+    } catch {
+      clearSession();
+    } finally {
+      completeBootstrap();
+      isBootstrapping.value = false;
+      bootstrapPromise = null;
+    }
+  }
+
+  function bootstrapSession(): Promise<void> {
+    if (bootstrapComplete.value) {
+      return Promise.resolve();
     }
 
-    bootstrapPromise = (async () => {
-      isBootstrapping.value = true;
-
-      try {
-        const refreshToken = getRefreshToken();
-
-        if (!refreshToken) {
-          clearSession();
-          return;
-        }
-
-        const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
-        applyTokenPair(tokenPair);
-        await loadCurrentUser(tokenPair.accessToken);
-      } catch {
-        clearSession();
-      } finally {
-        bootstrapComplete.value = true;
-        isBootstrapping.value = false;
-        bootstrapPromise = null;
-      }
-    })();
+    bootstrapPromise ??= runBootstrapSession();
 
     return bootstrapPromise;
   }
 
-  async function refreshAccessToken(): Promise<string> {
-    if (refreshAccessPromise) {
-      return refreshAccessPromise;
+  async function refreshStoredAccessToken(): Promise<string> {
+    const refreshToken = getRefreshToken();
+
+    if (!refreshToken) {
+      clearSessionAndCompleteBootstrap();
+      throw new Error(SESSION_EXPIRED_MESSAGE);
     }
 
-    refreshAccessPromise = (async () => {
-      const refreshToken = getRefreshToken();
+    try {
+      const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
+      applyTokenPair(tokenPair);
+      completeBootstrap();
 
-      if (!refreshToken) {
-        clearSession();
-        bootstrapComplete.value = true;
-        throw new Error("Your session has expired. Please sign in again.");
-      }
+      return tokenPair.accessToken;
+    } catch (error) {
+      clearSessionAndCompleteBootstrap();
+      throw error;
+    }
+  }
 
-      try {
-        const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
-        applyTokenPair(tokenPair);
-        bootstrapComplete.value = true;
-
-        return tokenPair.accessToken;
-      } catch (error) {
-        clearSession();
-        bootstrapComplete.value = true;
-        throw error;
-      }
-    })().finally(() => {
+  async function runAccessTokenRefresh(): Promise<string> {
+    try {
+      return await refreshStoredAccessToken();
+    } finally {
       refreshAccessPromise = null;
-    });
+    }
+  }
+
+  function refreshAccessToken(): Promise<string> {
+    refreshAccessPromise ??= runAccessTokenRefresh();
 
     return refreshAccessPromise;
   }
 
-  async function loginWithFirebaseIdToken(firebaseIdToken: string): Promise<void> {
-    const tokenPair = await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
+  async function exchangeFirebaseIdToken(firebaseIdToken: string): Promise<void> {
+    const tokenPair = await getAuthRuntime().loginWithFirebaseToken(
+      firebaseIdToken,
+    );
 
     applyTokenPair(tokenPair);
     await loadCurrentUser(tokenPair.accessToken);
-    bootstrapComplete.value = true;
+    completeBootstrap();
   }
 
-  async function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
+  async function runSubmittingLogin(login: () => Promise<void>): Promise<void> {
     isSubmitting.value = true;
 
     try {
-      await loginWithFirebaseIdToken(firebaseIdToken);
+      await login();
     } catch (error) {
-      clearSession();
-      bootstrapComplete.value = true;
+      clearSessionAndCompleteBootstrap();
       throw error;
     } finally {
       isSubmitting.value = false;
     }
   }
 
-  async function loginWithEmailPassword(
+  function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
+    return runSubmittingLogin(() => exchangeFirebaseIdToken(firebaseIdToken));
+  }
+
+  function loginWithEmailPassword(
     email: string,
     password: string,
   ): Promise<void> {
-    isSubmitting.value = true;
-
-    try {
+    return runSubmittingLogin(async () => {
       const firebaseIdToken = await getAuthRuntime().signInWithEmailPassword(
         email,
         password,
       );
 
-      await loginWithFirebaseIdToken(firebaseIdToken);
-    } catch (error) {
-      clearSession();
-      bootstrapComplete.value = true;
-      throw error;
-    } finally {
-      isSubmitting.value = false;
+      await exchangeFirebaseIdToken(firebaseIdToken);
+    });
+  }
+
+  function loginWithGoogle(): Promise<void> {
+    return runSubmittingLogin(async () => {
+      const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
+
+      await exchangeFirebaseIdToken(firebaseIdToken);
+    });
+  }
+
+  async function logoutApiSession(
+    currentAccessToken: string,
+    refreshToken: string,
+  ): Promise<void> {
+    try {
+      await getAuthRuntime().logoutSession(currentAccessToken, refreshToken);
+    } catch {
+      // The local client session still needs to be cleared on logout.
     }
   }
 
-  async function loginWithGoogle(): Promise<void> {
-    isSubmitting.value = true;
-
+  async function logoutIdentityProvider(): Promise<void> {
     try {
-      const firebaseIdToken = await getAuthRuntime().signInWithGoogle();
-
-      await loginWithFirebaseIdToken(firebaseIdToken);
-    } catch (error) {
-      clearSession();
-      bootstrapComplete.value = true;
-      throw error;
-    } finally {
-      isSubmitting.value = false;
+      await getAuthRuntime().signOutIdentityProvider();
+    } catch {
+      // The local API session is the source of truth for access control.
     }
   }
 
@@ -185,27 +209,18 @@ export function createAuthSessionCore({
 
     try {
       if (currentAccessToken && refreshToken) {
-        try {
-          await getAuthRuntime().logoutSession(currentAccessToken, refreshToken);
-        } catch {
-          // The local client session still needs to be cleared on logout.
-        }
+        await logoutApiSession(currentAccessToken, refreshToken);
       }
     } finally {
       clearSession();
-      bootstrapComplete.value = true;
-
-      try {
-        await getAuthRuntime().signOutIdentityProvider();
-      } catch {
-        // The local API session is the source of truth for access control.
-      }
+      completeBootstrap();
+      await logoutIdentityProvider();
     }
   }
 
   async function updateProfile(input: UpdateUserInput): Promise<UserResponse> {
     if (!accessToken.value) {
-      throw new Error("Your session has expired. Please sign in again.");
+      throw new Error(SESSION_EXPIRED_MESSAGE);
     }
 
     const nextProfile = await getAuthRuntime().updateCurrentUser(
@@ -218,20 +233,25 @@ export function createAuthSessionCore({
     return nextProfile;
   }
 
-  return {
+  const baseSession = {
     accessToken,
     bootstrapComplete,
     bootstrapSession,
-    clearSession,
     isAuthenticated,
     isBootstrapping,
     isSubmitting,
-    loginWithFirebaseToken,
     loginWithEmailPassword,
     loginWithGoogle,
     logout,
     profile,
     refreshAccessToken,
+  };
+
+  return {
+    ...baseSession,
+    baseSession,
+    clearSession,
+    loginWithFirebaseToken,
     updateProfile,
   };
 }
