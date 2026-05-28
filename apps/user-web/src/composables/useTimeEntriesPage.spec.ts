@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { defineComponent } from "vue";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ProjectResponse,
   TaskResponse,
@@ -14,8 +14,26 @@ import type { ConfirmLike } from "@gitiempo/web-shared";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
+import {
+  publishTimeEntryTimerSyncEvent,
+} from "@/composables/timeEntryTimerSync";
 
 import { useTimeEntriesPage } from "./useTimeEntriesPage";
+
+const TEST_IDS = {
+  completedEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3009",
+  createdEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3001",
+  defaultEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3002",
+  deleteEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3003",
+  freshEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3004",
+  runningEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3005",
+  staleEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3006",
+  startedEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3007",
+  outOfScopeEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3010",
+  updatedEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3008",
+  user: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301",
+  workspace: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
+} as const;
 
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
   return {
@@ -30,7 +48,7 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     totalHours: 12,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
-    workspaceId: "workspace-1",
+    workspaceId: TEST_IDS.workspace,
     ...overrides,
   };
 }
@@ -44,7 +62,7 @@ function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
     status: "open",
     title: "Improve reports filters",
     updatedAt: "2026-04-20T12:00:00.000Z",
-    workspaceId: "workspace-1",
+    workspaceId: TEST_IDS.workspace,
     ...overrides,
   };
 }
@@ -57,7 +75,7 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
     description: null,
     durationSeconds: 5400,
     endedAt: "2026-04-21T10:30:00.000Z",
-    id: "entry-1",
+    id: TEST_IDS.defaultEntry,
     isBillable: false,
     project: {
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
@@ -76,10 +94,10 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
       avatarUrl: null,
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
-      id: "user-1",
+      id: TEST_IDS.user,
     },
-    userId: "user-1",
-    workspaceId: "workspace-1",
+    userId: TEST_IDS.user,
+    workspaceId: TEST_IDS.workspace,
     githubIssue,
     ...entryOverrides,
   };
@@ -121,14 +139,14 @@ async function mountTimeEntriesPage(options: MountOptions = {}) {
   const defaultEntriesResponse: TimeEntryListResponse = options.entriesResponse ?? {
     items: [
       createEntry({
-        id: "entry-running",
+        id: TEST_IDS.runningEntry,
         durationSeconds: null,
         endedAt: null,
         source: "web",
         startedAt: "2026-04-21T09:00:00.000Z",
       }),
       createEntry({
-        id: "entry-completed",
+        id: TEST_IDS.completedEntry,
         startedAt: "2026-04-20T09:00:00.000Z",
         endedAt: "2026-04-20T10:30:00.000Z",
       }),
@@ -161,7 +179,7 @@ async function mountTimeEntriesPage(options: MountOptions = {}) {
 
   const client = {
     createManualEntry:
-      options.createManualEntry ?? vi.fn(async () => createEntry({ id: "entry-created" })),
+      options.createManualEntry ?? vi.fn(async () => createEntry({ id: TEST_IDS.createdEntry })),
     createTask: vi.fn(),
     deleteEntry: options.deleteEntry ?? vi.fn(async () => undefined),
     getCurrentTimer: vi.fn(),
@@ -183,7 +201,7 @@ async function mountTimeEntriesPage(options: MountOptions = {}) {
     startTimer: vi.fn(),
     stopTimer: vi.fn(),
     updateEntry:
-      options.updateEntry ?? vi.fn(async () => createEntry({ id: "entry-updated" })),
+      options.updateEntry ?? vi.fn(async () => createEntry({ id: TEST_IDS.updatedEntry })),
   };
 
   const confirmState = {
@@ -219,7 +237,7 @@ async function mountTimeEntriesPage(options: MountOptions = {}) {
     },
   });
 
-  mount(Harness, {
+  const wrapper = mount(Harness, {
     global: {
       plugins: [pinia],
     },
@@ -237,10 +255,25 @@ async function mountTimeEntriesPage(options: MountOptions = {}) {
     client,
     confirmState,
     toastAdd,
+    wrapper,
   };
 }
 
 describe("useTimeEntriesPage", () => {
+  const wrappers: VueWrapper[] = [];
+
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    while (wrappers.length > 0) {
+      wrappers.pop()?.unmount();
+    }
+
+    vi.restoreAllMocks();
+  });
+
   it("loads initial data, keeps a loading state distinct, groups entries by day, and updates running durations", async () => {
     const pendingEntries = vi.fn(
       async () =>
@@ -250,9 +283,13 @@ describe("useTimeEntriesPage", () => {
         }) satisfies TimeEntryListResponse,
     );
 
-    const { api, client, advanceTime } = await mountTimeEntriesPage({
+    const mounted = await mountTimeEntriesPage({
       listOwnEntries: pendingEntries,
     });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api, client, advanceTime } = mounted;
 
     expect(client.listVisibleProjects).toHaveBeenCalledWith("access-token");
     expect(client.listOwnEntries).toHaveBeenCalledWith("access-token", {
@@ -280,6 +317,8 @@ describe("useTimeEntriesPage", () => {
       }),
     });
 
+    wrappers.push(errorMount.wrapper);
+
     expect(errorMount.api.pageState.value).toBe("request-error");
     expect(errorMount.api.requestErrorMessage.value).toBe("network down");
     expect(errorMount.toastAdd).toHaveBeenCalledWith(
@@ -296,12 +335,18 @@ describe("useTimeEntriesPage", () => {
       },
     });
 
+    wrappers.push(emptyMount.wrapper);
+
     expect(emptyMount.api.pageState.value).toBe("empty");
     expect(emptyMount.api.requestErrorMessage.value).toBeNull();
   });
 
   it("applies filter and pagination changes through the shared list query", async () => {
-    const { api, client } = await mountTimeEntriesPage();
+    const mounted = await mountTimeEntriesPage();
+
+    wrappers.push(mounted.wrapper);
+
+    const { api, client } = mounted;
 
     await api.setDateRange([
       new Date("2026-04-01T00:00:00.000Z"),
@@ -340,7 +385,11 @@ describe("useTimeEntriesPage", () => {
       .mockImplementationOnce(async () => firstResponse.promise)
       .mockImplementationOnce(async () => secondResponse.promise);
 
-    const { api } = await mountTimeEntriesPage({ listOwnEntries });
+    const mounted = await mountTimeEntriesPage({ listOwnEntries });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api } = mounted;
 
     expect(api.pageState.value).toBe("loading");
 
@@ -349,30 +398,39 @@ describe("useTimeEntriesPage", () => {
     );
 
     secondResponse.resolve({
-      items: [createEntry({ id: "fresh-entry", projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002" })],
+      items: [
+        createEntry({
+          id: TEST_IDS.freshEntry,
+          projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
+        }),
+      ],
       meta: { limit: 20, page: 1, total: 1, totalPages: 1 },
     });
     await nextFilterLoad;
     await flushPromises();
 
     firstResponse.resolve({
-      items: [createEntry({ id: "stale-entry" })],
+      items: [createEntry({ id: TEST_IDS.staleEntry })],
       meta: { limit: 20, page: 1, total: 1, totalPages: 1 },
     });
     await flushPromises();
 
-    expect(api.entries.value.map((entry) => entry.id)).toEqual(["fresh-entry"]);
+    expect(api.entries.value.map((entry) => entry.id)).toEqual([TEST_IDS.freshEntry]);
     expect(api.selectedProjectId.value).toBe("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002");
     expect(api.pageState.value).toBe("ready");
   });
 
   it("maps create payloads, refreshes the list, and preserves pagination after success", async () => {
-    const { api, client } = await mountTimeEntriesPage({
+    const mounted = await mountTimeEntriesPage({
       entriesResponse: {
         items: [createEntry()],
         meta: { limit: 20, page: 1, total: 40, totalPages: 2 },
       },
     });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api, client } = mounted;
 
     await api.setPage(2);
     await api.openCreateDialog("2026-04-21");
@@ -411,7 +469,11 @@ describe("useTimeEntriesPage", () => {
   });
 
   it("surfaces description validation errors before submit", async () => {
-    const { api, client } = await mountTimeEntriesPage();
+    const mounted = await mountTimeEntriesPage();
+
+    wrappers.push(mounted.wrapper);
+
+    const { api, client } = mounted;
 
     await api.openCreateDialog();
     await api.setDialogProjectId("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002");
@@ -438,7 +500,11 @@ describe("useTimeEntriesPage", () => {
     const updateEntry = vi.fn(async () => {
       throw new Error("Task is inactive");
     });
-    const { api, client, toastAdd } = await mountTimeEntriesPage({ updateEntry });
+    const mounted = await mountTimeEntriesPage({ updateEntry });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api, client, toastAdd } = mounted;
     const entry = createEntry();
 
     await api.openEditDialog(entry);
@@ -490,7 +556,7 @@ describe("useTimeEntriesPage", () => {
   });
 
   it("shows all selected-project tasks in edit mode when the dialog task query is empty", async () => {
-    const { api } = await mountTimeEntriesPage({
+    const mounted = await mountTimeEntriesPage({
       tasksByProject: {
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001": [
           createTask({
@@ -506,6 +572,10 @@ describe("useTimeEntriesPage", () => {
         ],
       },
     });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api } = mounted;
 
     await api.openEditDialog(createEntry());
     const initialSuggestions = api.dialogTaskSuggestions.value;
@@ -537,7 +607,11 @@ describe("useTimeEntriesPage", () => {
       .mockImplementationOnce(async () => firstTasks.promise)
       .mockImplementationOnce(async () => secondTasks.promise);
 
-    const { api } = await mountTimeEntriesPage({ listProjectTasks });
+    const mounted = await mountTimeEntriesPage({ listProjectTasks });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api } = mounted;
 
     await api.openCreateDialog();
     const firstLoad = api.setDialogProjectId("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001");
@@ -578,13 +652,17 @@ describe("useTimeEntriesPage", () => {
       .fn(async () => undefined)
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("Delete failed"));
-    const { api, client, confirmState, toastAdd } = await mountTimeEntriesPage({ deleteEntry });
-    const entry = createEntry({ id: "entry-delete" });
+    const mounted = await mountTimeEntriesPage({ deleteEntry });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api, client, confirmState, toastAdd } = mounted;
+    const entry = createEntry({ id: TEST_IDS.deleteEntry });
 
     api.requestDeleteEntry(entry);
     await confirmState.options?.accept();
 
-    expect(client.deleteEntry).toHaveBeenCalledWith("access-token", "entry-delete");
+    expect(client.deleteEntry).toHaveBeenCalledWith("access-token", TEST_IDS.deleteEntry);
     expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
 
     api.requestDeleteEntry(entry);
@@ -597,5 +675,90 @@ describe("useTimeEntriesPage", () => {
         summary: "Could not delete time entry",
       }),
     );
+  });
+
+  it("inserts a started timer entry when it belongs to the current visible list scope", async () => {
+    const mounted = await mountTimeEntriesPage({
+      entriesResponse: {
+        items: [],
+        meta: { limit: 20, page: 1, total: 0, totalPages: 0 },
+      },
+    });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api } = mounted;
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.startedEntry,
+        source: "web",
+        startedAt: "2026-04-21T09:00:00.000Z",
+      }),
+      type: "started",
+    });
+
+    expect(api.pageState.value).toBe("ready");
+    expect(api.entries.value.map((entry) => entry.id)).toEqual([TEST_IDS.startedEntry]);
+    expect(api.totalRecords.value).toBe(1);
+    expect(api.totalPages.value).toBe(1);
+    expect(api.formatTimeRange(api.entries.value[0]!)).toBe("09:00 - Running");
+    expect(api.formatDuration(api.entries.value[0]!)).toBe("02:00:05");
+  });
+
+  it("replaces a visible running entry after a stop event and freezes its derived display state", async () => {
+    const mounted = await mountTimeEntriesPage();
+
+    wrappers.push(mounted.wrapper);
+
+    const { api, advanceTime } = mounted;
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: 3600,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        id: TEST_IDS.runningEntry,
+        source: "web",
+        startedAt: "2026-04-21T09:00:00.000Z",
+        updatedAt: "2026-04-21T10:00:00.000Z",
+      }),
+      type: "stopped",
+    });
+
+    expect(api.entries.value[0]?.endedAt).toBe("2026-04-21T10:00:00.000Z");
+    expect(api.formatTimeRange(api.entries.value[0]!)).toBe("09:00 - 10:00");
+    expect(api.formatDuration(api.entries.value[0]!)).toBe("1h");
+
+    advanceTime(3000);
+
+    expect(api.formatDuration(api.entries.value[0]!)).toBe("1h");
+  });
+
+  it("ignores started timer events that do not belong to the current visible list scope", async () => {
+    const mounted = await mountTimeEntriesPage();
+
+    wrappers.push(mounted.wrapper);
+
+    const { api } = mounted;
+
+    await api.setPage(2);
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.outOfScopeEntry,
+        source: "web",
+        startedAt: "2026-04-21T09:00:00.000Z",
+      }),
+      type: "started",
+    });
+
+    expect(api.entries.value.map((entry) => entry.id)).toEqual([
+      TEST_IDS.runningEntry,
+      TEST_IDS.completedEntry,
+    ]);
   });
 });

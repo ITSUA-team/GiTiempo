@@ -8,6 +8,11 @@ import {
   type TimeEntriesClient,
 } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
+import {
+  subscribeToTimeEntryTimerSync,
+  type TimeEntryTimerSyncEvent,
+} from "@/composables/timeEntryTimerSync";
+import { compareTimeEntriesByRecency } from "@/composables/timeEntryListOrder";
 
 type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
 
@@ -208,6 +213,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
 
   let intervalHandle: ReturnType<typeof setInterval> | null = null;
   let overviewRequestId = 0;
+  let unsubscribeFromTimerSync: (() => void) | null = null;
 
   const pageState = computed<DashboardPageState>(() => {
     if (isLoadingOverview.value) {
@@ -361,15 +367,51 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   });
 
   const recentEntryRows = computed<DashboardRecentEntryRow[]>(() => {
-    return recentEntries.value.map((entry, index) => ({
+    return recentEntries.value.map((entry) => ({
       durationLabel: formatRecentEntryDuration(entry, nowMs.value),
       id: entry.id,
-      isHighlighted: index === 0,
+      isHighlighted: entry.endedAt === null,
       projectName: entry.project.name,
       taskTitle: entry.task.title,
       timeRangeLabel: formatRecentEntryTimeRange(entry),
     }));
   });
+
+  function upsertEntries(
+    currentEntries: TimeEntryResponse[],
+    entry: TimeEntryResponse,
+    limit?: number,
+  ): TimeEntryResponse[] {
+    const nextEntries = currentEntries
+      .filter((candidate) => candidate.id !== entry.id)
+      .concat(entry)
+      .sort(compareTimeEntriesByRecency);
+
+    return limit === undefined ? nextEntries : nextEntries.slice(0, limit);
+  }
+
+  function isEntryInCurrentWeek(entry: TimeEntryResponse): boolean {
+    const nowDate = new Date(nowMs.value);
+    const weekStartMs = startOfUtcIsoWeek(nowDate).getTime();
+    const nextWeekStartMs = addUtcDays(startOfUtcIsoWeek(nowDate), 7).getTime();
+    const startedAtMs = new Date(entry.startedAt).getTime();
+
+    return startedAtMs >= weekStartMs && startedAtMs < nextWeekStartMs;
+  }
+
+  function reconcileTimerEvent(event: TimeEntryTimerSyncEvent): void {
+    recentEntries.value = upsertEntries(recentEntries.value, event.entry, 10);
+
+    if (event.type === "started") {
+      if (isEntryInCurrentWeek(event.entry)) {
+        weekEntries.value = upsertEntries(weekEntries.value, event.entry);
+      }
+    } else if (weekEntries.value.some((entry) => entry.id === event.entry.id)) {
+      weekEntries.value = upsertEntries(weekEntries.value, event.entry);
+    }
+
+    nowMs.value = now();
+  }
 
   function requireAccessToken(): string {
     if (!authStore.accessToken) {
@@ -450,10 +492,17 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
       nowMs.value = now();
     }, 1000);
 
+    unsubscribeFromTimerSync = subscribeToTimeEntryTimerSync((event) => {
+      reconcileTimerEvent(event);
+    });
+
     void loadOverview();
   });
 
   onBeforeUnmount(() => {
+    unsubscribeFromTimerSync?.();
+    unsubscribeFromTimerSync = null;
+
     if (intervalHandle) {
       clearIntervalFn(intervalHandle);
       intervalHandle = null;

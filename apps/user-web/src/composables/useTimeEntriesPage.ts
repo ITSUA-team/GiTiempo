@@ -22,6 +22,11 @@ import {
   type TimeEntriesClient,
 } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
+import {
+  subscribeToTimeEntryTimerSync,
+  type TimeEntryTimerSyncEvent,
+} from "@/composables/timeEntryTimerSync";
+import { compareTimeEntriesByRecency } from "@/composables/timeEntryListOrder";
 
 type TaskLookupValue = string | TaskLookupOption | null;
 type PageState = "empty" | "loading" | "ready" | "request-error";
@@ -234,6 +239,7 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
   let filterTaskRequestId = 0;
   let dialogTaskRequestId = 0;
   let tickHandle: ReturnType<typeof setInterval> | null = null;
+  let unsubscribeFromTimerSync: (() => void) | null = null;
 
   const pageState = computed<PageState>(() => {
     if (isLoadingEntries.value) {
@@ -338,6 +344,82 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
       search: searchValue.length > 0 ? searchValue : undefined,
       taskId: selectedTaskId.value ?? undefined,
     };
+  }
+
+  function matchesDateRange(entry: TimeEntryResponse): boolean {
+    const [startDate, endDate] = selectedDateRange.value ?? [];
+    const startedAtMs = new Date(entry.startedAt).getTime();
+
+    if (startDate && startedAtMs < startOfUtcDay(startDate).getTime()) {
+      return false;
+    }
+
+    if (endDate && startedAtMs >= nextUtcDay(endDate).getTime()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function matchesProjectFilter(entry: TimeEntryResponse): boolean {
+    return selectedProjectId.value === null || entry.projectId === selectedProjectId.value;
+  }
+
+  function matchesTaskFilter(entry: TimeEntryResponse): boolean {
+    if (isTaskLookupOption(selectedTaskFilter.value)) {
+      return entry.taskId === selectedTaskFilter.value.id;
+    }
+
+    if (typeof selectedTaskFilter.value !== "string") {
+      return true;
+    }
+
+    const normalizedSearch = selectedTaskFilter.value.trim().toLowerCase();
+
+    return normalizedSearch.length === 0
+      ? true
+      : entry.task.title.toLowerCase().includes(normalizedSearch);
+  }
+
+  function belongsInVisibleScope(entry: TimeEntryResponse): boolean {
+    return (
+      currentPage.value === 1 &&
+      matchesDateRange(entry) &&
+      matchesProjectFilter(entry) &&
+      matchesTaskFilter(entry)
+    );
+  }
+
+  function updatePaginationAfterInsert(): void {
+    totalRecords.value += 1;
+    totalPages.value = totalRecords.value === 0
+      ? 0
+      : Math.max(1, Math.ceil(totalRecords.value / pageSize.value));
+  }
+
+  function reconcileTimerEvent(event: TimeEntryTimerSyncEvent): void {
+    const existingIndex = entries.value.findIndex((entry) => entry.id === event.entry.id);
+
+    if (existingIndex >= 0) {
+      entries.value = entries.value
+        .map((entry) => (entry.id === event.entry.id ? event.entry : entry))
+        .sort(compareTimeEntriesByRecency);
+      nowMs.value = now();
+      syncTicker();
+      return;
+    }
+
+    if (event.type !== "started" || !belongsInVisibleScope(event.entry)) {
+      return;
+    }
+
+    entries.value = entries.value
+      .concat(event.entry)
+      .sort(compareTimeEntriesByRecency)
+      .slice(0, pageSize.value);
+    updatePaginationAfterInsert();
+    nowMs.value = now();
+    syncTicker();
   }
 
   function updateTaskSuggestions(
@@ -840,10 +922,16 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
   }
 
   onMounted(async () => {
+    unsubscribeFromTimerSync = subscribeToTimeEntryTimerSync((event) => {
+      reconcileTimerEvent(event);
+    });
+
     await Promise.allSettled([ensureProjectsLoaded(), loadEntries()]);
   });
 
   onBeforeUnmount(() => {
+    unsubscribeFromTimerSync?.();
+    unsubscribeFromTimerSync = null;
     stopTicker();
   });
 

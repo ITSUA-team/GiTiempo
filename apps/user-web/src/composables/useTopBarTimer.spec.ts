@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type {
   ProjectResponse,
@@ -11,9 +11,23 @@ import type {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 
+import {
+  subscribeToTimeEntryTimerSync,
+} from "@/composables/timeEntryTimerSync";
 import { useTopBarTimer } from "@/composables/useTopBarTimer";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
+
+const TEST_IDS = {
+  hiddenProject: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9102",
+  hiddenTask: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9202",
+  project: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9101",
+  runningEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+  task: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9201",
+  taskNew: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9203",
+  user: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301",
+  workspace: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
+} as const;
 
 function createProject(id: string, name: string, isActive = true): ProjectResponse {
   return {
@@ -28,7 +42,7 @@ function createProject(id: string, name: string, isActive = true): ProjectRespon
     totalHours: 12,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
-    workspaceId: "workspace-1",
+    workspaceId: TEST_IDS.workspace,
   };
 }
 
@@ -41,7 +55,7 @@ function createTask(id: string, projectId: string, title: string, isActive = tru
     status: "open",
     title,
     updatedAt: "2026-04-20T12:00:00.000Z",
-    workspaceId: "workspace-1",
+    workspaceId: TEST_IDS.workspace,
   };
 }
 
@@ -53,23 +67,23 @@ function createRunningEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEnt
     description: null,
     durationSeconds: null,
     endedAt: null,
-    id: "running-entry",
+    id: TEST_IDS.runningEntry,
     isBillable: true,
-    project: { id: "project-1", name: "Project Orion" },
-    projectId: "project-1",
+    project: { id: TEST_IDS.project, name: "Project Orion" },
+    projectId: TEST_IDS.project,
     source: "web",
     startedAt: "2026-04-21T09:00:00.000Z",
-    task: { id: "task-1", title: "Improve reports filters" },
-    taskId: "task-1",
+    task: { id: TEST_IDS.task, title: "Improve reports filters" },
+    taskId: TEST_IDS.task,
     updatedAt: "2026-04-21T09:00:00.000Z",
     user: {
       avatarUrl: null,
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
-      id: "user-1",
+      id: TEST_IDS.user,
     },
-    userId: "user-1",
-    workspaceId: "workspace-1",
+    userId: TEST_IDS.user,
+    workspaceId: TEST_IDS.workspace,
     githubIssue,
     ...entryOverrides,
   };
@@ -109,7 +123,7 @@ function createClientMock(): TimeEntriesClient & {
   return {
     createManualEntry: vi.fn(async () => createCompletedEntry()),
     createTask: vi.fn(async (_accessToken, projectId, input) =>
-      createTask("task-new", projectId, input.title),
+      createTask(TEST_IDS.taskNew, projectId, input.title),
     ),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
@@ -120,7 +134,7 @@ function createClientMock(): TimeEntriesClient & {
     startTimer: vi.fn(async () => createRunningEntry()),
     stopTimer: vi.fn(async () => createCompletedEntry()),
     updateEntry: vi.fn(async () => createCompletedEntry()),
-    updateTask: vi.fn(async () => createTask("task-1", "project-1", "Updated task")),
+    updateTask: vi.fn(async () => createTask(TEST_IDS.task, TEST_IDS.project, "Updated task")),
   };
 }
 
@@ -149,16 +163,18 @@ function mountTopBarTimer(options?: {
     },
   });
 
-  mount(Harness, {
+  const wrapper = mount(Harness, {
     global: {
       plugins: [pinia],
     },
   });
 
-  return { client, topBarTimer, toast };
+  return { client, topBarTimer, toast, wrapper };
 }
 
 describe("useTopBarTimer", () => {
+  const wrappers: VueWrapper[] = [];
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-21T10:00:00.000Z"));
@@ -166,6 +182,10 @@ describe("useTopBarTimer", () => {
   });
 
   afterEach(() => {
+    while (wrappers.length > 0) {
+      wrappers.pop()?.unmount();
+    }
+
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -175,8 +195,11 @@ describe("useTopBarTimer", () => {
 
     client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
 
-    const { topBarTimer } = mountTopBarTimer({ client });
+    const mounted = mountTopBarTimer({ client });
 
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
     await flushPromises();
 
     expect(topBarTimer.primaryActionLabel.value).toBe("Stop");
@@ -184,31 +207,35 @@ describe("useTopBarTimer", () => {
     expect(topBarTimer.timerContextLabel.value).toBe(
       "Project Orion / Improve reports filters",
     );
-    expect(topBarTimer.selectedContext.value?.taskId).toBe("task-1");
+    expect(topBarTimer.selectedContext.value?.taskId).toBe(TEST_IDS.task);
   });
 
   it("resolves the last eligible tracked task when idle", async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValueOnce([
-      createProject("project-1", "Project Orion"),
+      createProject(TEST_IDS.project, "Project Orion"),
     ]);
     client.listOwnEntries.mockResolvedValueOnce(
       createOwnEntriesResponse([createCompletedEntry()]),
     );
     client.listProjectTasks.mockResolvedValueOnce([
-      createTask("task-1", "project-1", "Improve reports filters"),
+      createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
     ]);
 
-    const { topBarTimer } = mountTopBarTimer({ client });
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
 
     expect(topBarTimer.primaryActionLabel.value).toBe("Start");
     expect(topBarTimer.selectedContext.value).toEqual({
-      projectId: "project-1",
+      projectId: TEST_IDS.project,
       projectName: "Project Orion",
-      taskId: "task-1",
+      taskId: TEST_IDS.task,
       taskTitle: "Improve reports filters",
     });
     expect(topBarTimer.isPrimaryActionDisabled.value).toBe(false);
@@ -218,20 +245,24 @@ describe("useTopBarTimer", () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValueOnce([
-      createProject("project-1", "Project Orion"),
+      createProject(TEST_IDS.project, "Project Orion"),
     ]);
     client.listOwnEntries.mockResolvedValueOnce(
       createOwnEntriesResponse([
         createCompletedEntry({
-          project: { id: "project-hidden", name: "Hidden Project" },
-          projectId: "project-hidden",
-          task: { id: "task-hidden", title: "Hidden Task" },
-          taskId: "task-hidden",
+          project: { id: TEST_IDS.hiddenProject, name: "Hidden Project" },
+          projectId: TEST_IDS.hiddenProject,
+          task: { id: TEST_IDS.hiddenTask, title: "Hidden Task" },
+          taskId: TEST_IDS.hiddenTask,
         }),
       ]),
     );
 
-    const { topBarTimer } = mountTopBarTimer({ client });
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
 
@@ -246,7 +277,11 @@ describe("useTopBarTimer", () => {
 
     client.getCurrentTimer.mockRejectedValueOnce(new Error("network down"));
 
-    const { topBarTimer } = mountTopBarTimer({ client, toast });
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
 
@@ -264,29 +299,39 @@ describe("useTopBarTimer", () => {
   it("refreshes authoritative timer state after a start conflict", async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
+    const receivedEvents: string[] = [];
+    const unsubscribe = subscribeToTimeEntryTimerSync((event) => {
+      receivedEvents.push(event.type);
+    });
 
     client.listVisibleProjects.mockResolvedValueOnce([
-      createProject("project-1", "Project Orion"),
+      createProject(TEST_IDS.project, "Project Orion"),
     ]);
     client.listOwnEntries.mockResolvedValueOnce(
       createOwnEntriesResponse([createCompletedEntry()]),
     );
     client.listProjectTasks.mockResolvedValueOnce([
-      createTask("task-1", "project-1", "Improve reports filters"),
+      createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
     ]);
     client.startTimer.mockRejectedValueOnce(new Error("A timer is already running"));
     client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: null }).mockResolvedValueOnce({
       timeEntry: createRunningEntry(),
     });
 
-    const { topBarTimer } = mountTopBarTimer({ client, toast });
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
     await topBarTimer.handlePrimaryAction();
     await flushPromises();
+    unsubscribe();
 
     expect(topBarTimer.primaryActionLabel.value).toBe("Stop");
-    expect(topBarTimer.selectedContext.value?.taskId).toBe("task-1");
+    expect(topBarTimer.selectedContext.value?.taskId).toBe(TEST_IDS.task);
+    expect(receivedEvents).toEqual([]);
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({
         detail: "Please try again.",
@@ -302,7 +347,11 @@ describe("useTopBarTimer", () => {
 
     client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
 
-    const { topBarTimer } = mountTopBarTimer({ client, toast });
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
     await topBarTimer.handlePrimaryAction();
@@ -315,9 +364,130 @@ describe("useTopBarTimer", () => {
     );
   });
 
+  it("publishes successful timer start and stop events to list subscribers", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(TEST_IDS.project, "Project Orion"),
+    ]);
+    client.listOwnEntries.mockResolvedValueOnce(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
+    ]);
+
+    const receivedEvents: Array<{ entryId: string; type: "started" | "stopped" }> = [];
+    const unsubscribe = subscribeToTimeEntryTimerSync((event) => {
+      receivedEvents.push({ entryId: event.entry.id, type: event.type });
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.handlePrimaryAction();
+    await flushPromises();
+    await topBarTimer.handlePrimaryAction();
+    await flushPromises();
+    unsubscribe();
+
+    expect(receivedEvents).toEqual([
+      { entryId: TEST_IDS.runningEntry, type: "started" },
+      { entryId: TEST_IDS.runningEntry, type: "stopped" },
+    ]);
+  });
+
+  it("does not publish list events when the idle task selection changes", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(TEST_IDS.project, "Project Orion"),
+    ]);
+    client.listOwnEntries.mockResolvedValueOnce(createOwnEntriesResponse([]));
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
+    ]);
+
+    const receivedEvents: string[] = [];
+    const unsubscribe = subscribeToTimeEntryTimerSync((event) => {
+      receivedEvents.push(event.type);
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+    topBarTimer.setSelectedTaskId(TEST_IDS.task);
+    topBarTimer.confirmSelectedTask();
+    unsubscribe();
+
+    expect(topBarTimer.selectedContext.value).toEqual({
+      projectId: TEST_IDS.project,
+      projectName: "Project Orion",
+      taskId: TEST_IDS.task,
+      taskTitle: "Improve reports filters",
+    });
+    expect(receivedEvents).toEqual([]);
+  });
+
+  it("keeps successful timer mutations independent from subscriber reconciliation failures", async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    const unsubscribe = subscribeToTimeEntryTimerSync(() => {
+      throw new Error("subscriber failed");
+    });
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(TEST_IDS.project, "Project Orion"),
+    ]);
+    client.listOwnEntries.mockResolvedValueOnce(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
+    ]);
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.handlePrimaryAction();
+    await flushPromises();
+    unsubscribe();
+
+    expect(topBarTimer.primaryActionLabel.value).toBe("Stop");
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: "success", summary: "Timer started" }),
+    );
+    expect(console.error).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        error: expect.objectContaining({ message: "subscriber failed" }),
+      }),
+    );
+  });
+
   it("keeps the running timer rendered when stop fails", async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
+    const receivedEvents: string[] = [];
+    const unsubscribe = subscribeToTimeEntryTimerSync((event) => {
+      receivedEvents.push(event.type);
+    });
 
     client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
     client.stopTimer.mockRejectedValueOnce(new Error("stop failed"));
@@ -327,9 +497,11 @@ describe("useTopBarTimer", () => {
     await flushPromises();
     await topBarTimer.handlePrimaryAction();
     await flushPromises();
+    unsubscribe();
 
     expect(topBarTimer.primaryActionLabel.value).toBe("Stop");
     expect(topBarTimer.timerActionErrorMessage.value).toBe("stop failed");
+    expect(receivedEvents).toEqual([]);
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({
         detail: "Please try again.",

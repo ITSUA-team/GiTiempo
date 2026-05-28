@@ -1,14 +1,26 @@
 // @vitest-environment jsdom
 
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type { TimeEntryListResponse, TimeEntryResponse } from "@gitiempo/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 
+import {
+  publishTimeEntryTimerSyncEvent,
+} from "@/composables/timeEntryTimerSync";
 import { useDashboardOverview } from "@/composables/useDashboardOverview";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
+
+const TEST_IDS = {
+  focusProject: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9103",
+  focusTask: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9203",
+  runningEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9005",
+  secondaryProject: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9104",
+  secondaryTask: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9204",
+  startedEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
+} as const;
 
 type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
 
@@ -89,16 +101,18 @@ function mountDashboardOverview(options?: {
     },
   });
 
-  mount(Harness, {
+  const wrapper = mount(Harness, {
     global: {
       plugins: [pinia],
     },
   });
 
-  return { client, dashboardOverview, toast };
+  return { client, dashboardOverview, toast, wrapper };
 }
 
 describe("useDashboardOverview", () => {
+  const wrappers: VueWrapper[] = [];
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-21T12:00:00.000Z"));
@@ -106,6 +120,10 @@ describe("useDashboardOverview", () => {
   });
 
   afterEach(() => {
+    while (wrappers.length > 0) {
+      wrappers.pop()?.unmount();
+    }
+
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -143,7 +161,11 @@ describe("useDashboardOverview", () => {
         ]),
       );
 
-    const { dashboardOverview } = mountDashboardOverview({ client });
+    const mounted = mountDashboardOverview({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
 
     await flushPromises();
 
@@ -173,7 +195,7 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Billing API");
     expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Fix export column order");
     expect(dashboardOverview.recentEntryRows.value).toHaveLength(2);
-    expect(dashboardOverview.recentEntryRows.value[0]?.isHighlighted).toBe(true);
+    expect(dashboardOverview.recentEntryRows.value[0]?.isHighlighted).toBe(false);
   });
 
   it("keeps request-error distinct from empty and shows a read-failure toast", async () => {
@@ -182,7 +204,11 @@ describe("useDashboardOverview", () => {
 
     client.listOwnEntries.mockRejectedValueOnce(new Error("network down"));
 
-    const { dashboardOverview } = mountDashboardOverview({ client, toast });
+    const mounted = mountDashboardOverview({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
 
     await flushPromises();
 
@@ -205,7 +231,11 @@ describe("useDashboardOverview", () => {
       .mockResolvedValueOnce(createOwnEntriesResponse([createEntry()]))
       .mockRejectedValueOnce(new Error("weekly summary failed"));
 
-    const { dashboardOverview } = mountDashboardOverview({ client, toast });
+    const mounted = mountDashboardOverview({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
 
     await flushPromises();
 
@@ -226,7 +256,11 @@ describe("useDashboardOverview", () => {
       .mockResolvedValueOnce(createOwnEntriesResponse([]))
       .mockResolvedValueOnce(createOwnEntriesResponse([]));
 
-    const { dashboardOverview } = mountDashboardOverview({ client });
+    const mounted = mountDashboardOverview({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
 
     expect(dashboardOverview.pageState.value).toBe("loading");
 
@@ -248,10 +282,10 @@ describe("useDashboardOverview", () => {
             createEntry({
               durationSeconds: 3600,
               id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9010",
-              project: { id: "project-1", name: "Billing API" },
-              projectId: "project-1",
-              task: { id: "task-1", title: "Fix export column order" },
-              taskId: "task-1",
+              project: { id: TEST_IDS.focusProject, name: "Billing API" },
+              projectId: TEST_IDS.focusProject,
+              task: { id: TEST_IDS.focusTask, title: "Fix export column order" },
+              taskId: TEST_IDS.focusTask,
             }),
           ],
           { limit: 100, page: 1, total: 2, totalPages: 2 },
@@ -264,17 +298,21 @@ describe("useDashboardOverview", () => {
               durationSeconds: 5400,
               endedAt: "2026-04-21T10:30:00.000Z",
               id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9011",
-              project: { id: "project-2", name: "Admin Web" },
-              projectId: "project-2",
-              task: { id: "task-2", title: "Polish dashboard cards" },
-              taskId: "task-2",
+              project: { id: TEST_IDS.secondaryProject, name: "Admin Web" },
+              projectId: TEST_IDS.secondaryProject,
+              task: { id: TEST_IDS.secondaryTask, title: "Polish dashboard cards" },
+              taskId: TEST_IDS.secondaryTask,
             }),
           ],
           { limit: 100, page: 2, total: 2, totalPages: 2 },
         ),
       );
 
-    const { dashboardOverview } = mountDashboardOverview({ client });
+    const mounted = mountDashboardOverview({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
 
     await flushPromises();
 
@@ -319,7 +357,11 @@ describe("useDashboardOverview", () => {
         ]),
       );
 
-    const { dashboardOverview } = mountDashboardOverview({ client });
+    const mounted = mountDashboardOverview({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
 
     await flushPromises();
 
@@ -330,5 +372,99 @@ describe("useDashboardOverview", () => {
     await flushPromises();
 
     expect(dashboardOverview.recentEntryRows.value[0]?.durationLabel).toBe("01:00:02");
+  });
+
+  it("inserts a started timer entry into the recent dashboard state without reloading", async () => {
+    const client = createClientMock();
+
+    client.listOwnEntries
+      .mockResolvedValueOnce(createOwnEntriesResponse([]))
+      .mockResolvedValueOnce(createOwnEntriesResponse([]));
+
+    const mounted = mountDashboardOverview({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.startedEntry,
+        startedAt: "2026-04-21T11:00:00.000Z",
+      }),
+      type: "started",
+    });
+
+    expect(dashboardOverview.pageState.value).toBe("ready");
+    expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
+      durationLabel: "01:00:00",
+      id: TEST_IDS.startedEntry,
+      isHighlighted: true,
+      projectName: "Project Orion",
+      taskTitle: "Improve reports filters",
+      timeRangeLabel: "11:00 - Running",
+    });
+    expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("1h");
+  });
+
+  it("replaces a running recent entry with the stopped entry and stops further duration growth", async () => {
+    const client = createClientMock();
+
+    client.listOwnEntries
+      .mockResolvedValueOnce(
+        createOwnEntriesResponse([
+          createEntry({
+            durationSeconds: null,
+            endedAt: null,
+            id: TEST_IDS.runningEntry,
+            startedAt: "2026-04-21T11:00:00.000Z",
+          }),
+        ]),
+      )
+      .mockResolvedValueOnce(
+        createOwnEntriesResponse([
+          createEntry({
+            durationSeconds: null,
+            endedAt: null,
+            id: TEST_IDS.runningEntry,
+            startedAt: "2026-04-21T11:00:00.000Z",
+          }),
+        ]),
+      );
+
+    const { dashboardOverview } = mountDashboardOverview({ client });
+
+    await flushPromises();
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: 1800,
+        endedAt: "2026-04-21T11:30:00.000Z",
+        id: TEST_IDS.runningEntry,
+        startedAt: "2026-04-21T11:00:00.000Z",
+        updatedAt: "2026-04-21T11:30:00.000Z",
+      }),
+      type: "stopped",
+    });
+
+    expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
+      durationLabel: "30m",
+      id: TEST_IDS.runningEntry,
+      isHighlighted: false,
+      projectName: "Project Orion",
+      taskTitle: "Improve reports filters",
+      timeRangeLabel: "11:00 - 11:30",
+    });
+    expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("30m");
+
+    vi.advanceTimersByTime(2000);
+    await flushPromises();
+
+    expect(dashboardOverview.recentEntryRows.value[0]?.durationLabel).toBe("30m");
+    expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("30m");
   });
 });

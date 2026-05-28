@@ -8,6 +8,7 @@ import {
   type TimeEntriesClient,
 } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
+import { publishTimeEntryTimerSyncEvent } from "@/composables/timeEntryTimerSync";
 
 interface SelectedTaskContext {
   projectId: string;
@@ -452,6 +453,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
         currentTimer.value = null;
         setSelectedContextFromTimer(stoppedTimer);
+        publishTimeEntryTimerSyncEvent({ entry: stoppedTimer, type: "stopped" });
         appToast.showSuccessToast("Timer stopped", "Your running timer has been stopped.");
       } catch (error) {
         timerActionErrorMessage.value = getErrorMessage(error);
@@ -475,13 +477,13 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isStartingTimer.value = true;
 
     try {
-      currentTimer.value = await client.startTimer(
+      const startedTimer = await client.startTimer(
         requireAccessToken(),
         selectedContext.value.taskId,
       );
-      if (currentTimer.value) {
-        setSelectedContextFromTimer(currentTimer.value);
-      }
+      currentTimer.value = startedTimer;
+      setSelectedContextFromTimer(startedTimer);
+      publishTimeEntryTimerSyncEvent({ entry: startedTimer, type: "started" });
       appToast.showSuccessToast("Timer started", "Your timer is now running.");
     } catch (error) {
       const message = getErrorMessage(error);
