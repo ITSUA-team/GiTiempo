@@ -17,6 +17,7 @@ import Toast from "primevue/toast";
 import { useToasts } from "@/composables/feedback/useToasts";
 import { appEnv } from "@/config/env";
 import { routeNames } from "@/router";
+import { hasAllowedRole } from "@/router/rbac";
 import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
 
@@ -37,13 +38,28 @@ const userWorkspaceHref = getCounterpartWorkspaceHref({
 
 let workspaceNameRequestToken: string | null = null;
 
-const navItems = computed(() => [
+const baseNavItems = [
   { icon: dashboardIcon, label: "Dashboard", name: routeNames.dashboard },
   { icon: reportsIcon, label: "Reports", name: routeNames.reports },
   { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
   { icon: membersIcon, label: "Members", name: routeNames.members },
   { icon: projectsIcon, label: "Projects", name: routeNames.projects },
-]);
+] as const;
+const currentRole = computed(() => authStore.profile?.role ?? null);
+const navItems = computed(() =>
+  baseNavItems.filter((item) =>
+    hasAllowedRole(
+      router.resolve({ name: item.name }).meta.allowedRoles,
+      currentRole.value,
+    ),
+  ),
+);
+const showSettings = computed(() =>
+  hasAllowedRole(
+    router.resolve({ name: routeNames.settings }).meta.allowedRoles,
+    currentRole.value,
+  ),
+);
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
 const activeName = computed(() => {
@@ -97,6 +113,7 @@ watch(
       :settings-icon="settingsIcon"
       settings-label="Settings"
       :settings-to="{ name: routeNames.settings }"
+      :show-settings="showSettings"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"
       @sign-out="handleSignOut"

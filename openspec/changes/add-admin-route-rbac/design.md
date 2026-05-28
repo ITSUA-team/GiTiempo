@@ -1,0 +1,57 @@
+## Context
+
+`admin-web` already has authenticated routing, a standalone `/403` page, a shared application shell, and a Pinia auth store that exposes the bootstrapped user profile. The missing layer is route-level authorization: product routes only check `requiresAuth`, while the backend already enforces role boundaries for admin-only and PM-safe endpoints.
+
+Affected frontend rules come from `apps/admin-web/AGENTS.md`, `docs/ui/INDEX.md`, `docs/ui/layout.md`, and `docs/ui/pages-admin.md`. The approved design already includes an `Admin 403 Forbidden` standalone screen in `GITiempo.pen`, and the current `ForbiddenView` uses the shared route error panel to match that pattern.
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- Enforce route-level `admin-web` role access after session bootstrap and before mounting restricted product pages.
+- Keep the existing standalone `/403` route as the role-denial destination for authenticated users.
+- Hide admin shell navigation entries that the current profile role cannot open.
+- Keep route definitions, router tests, and shell tests as the primary regression coverage for this behavior.
+
+**Non-Goals:**
+
+- Do not replace backend RBAC or treat frontend checks as the security boundary.
+- Do not change API contracts, database schema, OpenAPI, or backend guards.
+- Do not add PM-safe versions of admin-only pages in this change.
+- Do not change `user-web` routing behavior.
+
+## Decisions
+
+1. Use `meta.allowedRoles` on `admin-web` routes.
+
+   Route meta is already the router's source of truth for `requiresAuth` and `guestOnly`, and Vue Router exposes merged route meta for nested route records. Adding `allowedRoles?: readonly WorkspaceRole[]` keeps role requirements beside the route they protect and avoids a second route policy map for the current scope.
+
+   Alternative considered: a separate `routeAccessPolicy` map keyed by route name. That can work if policy becomes larger, but it introduces an extra synchronization point and likely requires moving `routeNames` to avoid import cycles. The route meta approach is smaller and matches existing router conventions.
+
+2. Check roles only after authentication succeeds.
+
+   The guard should continue to bootstrap any `requiresAuth` or `guestOnly` route first. Anonymous users still go to login with redirect preservation. Only authenticated users with a resolved profile role are eligible for the `allowedRoles` check; missing or disallowed roles route to `/403`.
+
+   Alternative considered: redirect unknown roles to login. That would blur auth and authorization failures and could loop for valid authenticated users whose role is simply insufficient.
+
+3. Treat `/403` and `/404` as authenticated standalone exceptions without `allowedRoles`.
+
+   Error pages must remain reachable for any signed-in workspace member after bootstrap. Adding `allowedRoles` to `/403` would risk redirect loops when the user already lacks access to the original destination.
+
+4. Filter shell navigation from resolved route metadata.
+
+   `AdminAppShell` should derive visible nav items by resolving each route name and applying the same role helper used by the router guard. This keeps nav visibility aligned with route authorization without duplicating role arrays in the shell.
+
+   The profile settings link also needs role-aware treatment because Settings is reached from the shell header rather than the sidebar. If the shared header cannot omit the settings item today, the implementation should either extend the shared component with a minimal optional setting or pass an alternate allowed route that does not expose a denied settings link. The smaller acceptable implementation is preferred if tests prove no denied Settings entry is visible for non-admin users.
+
+5. Start with current page capabilities rather than ideal future role scopes.
+
+   Dashboard and Reports are available to `admin` and `pm`. Members, Settings, Add Project, and current Projects page behavior are admin-only because they call admin-only member/workspace endpoints. Invoices remains admin-only until invoice requirements define PM access.
+
+## Risks / Trade-offs
+
+- Role metadata can drift from API permissions -> Cover route inventory and role-denial scenarios in router tests, and keep role arrays based on current page endpoint usage.
+- Filtering navigation can hide a route while a direct URL still redirects -> This is intentional; direct access must hit the guard and land on `/403`.
+- Missing profile after token restore could deny an otherwise valid user -> The existing session layer attempts to load `/users/me`; treating missing role as denied is safer than mounting restricted admin UI.
+- Settings lives in the shared header, not the sidebar -> Add focused shell coverage to ensure non-admin users do not see a denied Settings affordance.
+- Frontend RBAC may be mistaken for security enforcement -> Keep backend guards unchanged and document that frontend checks improve UX only.

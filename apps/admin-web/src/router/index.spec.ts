@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createMemoryHistory } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
-import type { UserResponse } from "@gitiempo/shared";
+import { WorkspaceRoles, type UserResponse, type WorkspaceRole } from "@gitiempo/shared";
 
 import {
   clearRefreshToken,
@@ -17,16 +17,23 @@ import { useAuthStore } from "@/stores/auth";
 import ForbiddenView from "@/views/ForbiddenView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 
-function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
-  const currentUser: UserResponse = {
+function createUserResponse(role: WorkspaceRole = WorkspaceRoles.Admin): UserResponse {
+  return {
     avatarUrl: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Admin User",
     email: "admin@example.com",
     id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-    role: "admin",
+    role,
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
+}
+
+function createRuntimeMock(
+  overrides?: Partial<AuthRuntime>,
+  role: WorkspaceRole = WorkspaceRoles.Admin,
+): AuthRuntime {
+  const currentUser = createUserResponse(role);
 
   return {
     getCurrentUser: async () => currentUser,
@@ -50,6 +57,22 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   };
 }
 
+function setRestorableSession(role: WorkspaceRole): void {
+  setRefreshToken("refresh-token");
+  setAuthRuntimeForTesting(
+    createRuntimeMock(
+      {
+        refreshSession: async () => ({
+          accessToken: "access-token",
+          accessTokenExpiresIn: 900,
+          refreshToken: "refresh-token-next",
+        }),
+      },
+      role,
+    ),
+  );
+}
+
 describe("admin router", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -68,6 +91,7 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.reports)).toBe(true);
     expect(router.hasRoute(routeNames.invoices)).toBe(true);
     expect(router.hasRoute(routeNames.members)).toBe(true);
+    expect(router.hasRoute(routeNames.addProject)).toBe(true);
     expect(router.hasRoute(routeNames.forbidden)).toBe(true);
     expect(router.hasRoute(routeNames.notFound)).toBe(true);
     expect(router.hasRoute(routeNames.projects)).toBe(true);
@@ -81,12 +105,41 @@ describe("admin router", () => {
     });
 
     const protectedRoutes = [
-      { path: "/", name: routeNames.dashboard },
-      { path: "/reports", name: routeNames.reports },
-      { path: "/invoices", name: routeNames.invoices },
-      { path: "/members", name: routeNames.members },
-      { path: "/projects", name: routeNames.projects },
-      { path: "/settings", name: routeNames.settings },
+      {
+        allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
+        path: "/",
+        name: routeNames.dashboard,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
+        path: "/reports",
+        name: routeNames.reports,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin],
+        path: "/invoices",
+        name: routeNames.invoices,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin],
+        path: "/members",
+        name: routeNames.members,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin],
+        path: "/projects",
+        name: routeNames.projects,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin],
+        path: "/projects/new",
+        name: routeNames.addProject,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin],
+        path: "/settings",
+        name: routeNames.settings,
+      },
     ] as const;
 
     for (const route of protectedRoutes) {
@@ -95,6 +148,7 @@ describe("admin router", () => {
       expect(resolved.name).toBe(route.name);
       expect(resolved.meta.requiresAuth).toBe(true);
       expect(resolved.meta.guestOnly).toBeUndefined();
+      expect(resolved.meta.allowedRoles).toEqual(route.allowedRoles);
       expect(resolved.matched).toHaveLength(2);
       expect(resolved.matched[0]?.path).toBe("/");
       expect(resolved.matched[0]?.meta.requiresAuth).toBe(true);
@@ -106,6 +160,7 @@ describe("admin router", () => {
     expect(forbiddenRoute.name).toBe(routeNames.forbidden);
     expect(forbiddenRoute.meta.requiresAuth).toBe(true);
     expect(forbiddenRoute.meta.guestOnly).toBeUndefined();
+    expect(forbiddenRoute.meta.allowedRoles).toBeUndefined();
     expect(forbiddenRoute.matched).toHaveLength(1);
     expect(forbiddenRoute.matched[0]?.components?.default).toBe(ForbiddenView);
 
@@ -114,6 +169,7 @@ describe("admin router", () => {
     expect(notFoundRoute.name).toBe(routeNames.notFound);
     expect(notFoundRoute.meta.requiresAuth).toBe(true);
     expect(notFoundRoute.meta.guestOnly).toBeUndefined();
+    expect(notFoundRoute.meta.allowedRoles).toBeUndefined();
     expect(notFoundRoute.matched).toHaveLength(1);
     expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
 
@@ -122,6 +178,7 @@ describe("admin router", () => {
     expect(loginRoute.name).toBe(routeNames.login);
     expect(loginRoute.meta.guestOnly).toBe(true);
     expect(loginRoute.meta.requiresAuth).toBeUndefined();
+    expect(loginRoute.meta.allowedRoles).toBeUndefined();
     expect(loginRoute.matched).toHaveLength(1);
     expect(loginRoute.matched[0]?.path).toBe("/login");
   });
@@ -161,16 +218,7 @@ describe("admin router", () => {
   it("renders the authenticated not-found route after bootstrap succeeds", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
-    setRefreshToken("refresh-token");
-    setAuthRuntimeForTesting(
-      createRuntimeMock({
-        refreshSession: async () => ({
-          accessToken: "access-token",
-          accessTokenExpiresIn: 900,
-          refreshToken: "refresh-token-next",
-        }),
-      }),
-    );
+    setRestorableSession(WorkspaceRoles.Admin);
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia,
@@ -215,6 +263,7 @@ describe("admin router", () => {
     const authStore = useAuthStore(pinia);
     authStore.accessToken = "admin-access-token";
     authStore.bootstrapComplete = true;
+    authStore.profile = createUserResponse();
 
     const router = createAppRouter({
       history: createMemoryHistory(),
@@ -233,6 +282,7 @@ describe("admin router", () => {
     const authStore = useAuthStore(pinia);
     authStore.accessToken = "admin-access-token";
     authStore.bootstrapComplete = true;
+    authStore.profile = createUserResponse();
 
     const router = createAppRouter({
       history: createMemoryHistory(),
@@ -251,6 +301,7 @@ describe("admin router", () => {
     const authStore = useAuthStore(pinia);
     authStore.accessToken = "admin-access-token";
     authStore.bootstrapComplete = true;
+    authStore.profile = createUserResponse();
 
     const router = createAppRouter({
       history: createMemoryHistory(),
@@ -261,5 +312,80 @@ describe("admin router", () => {
     await router.isReady();
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("redirects authenticated members from the admin shell entry to forbidden", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRestorableSession(WorkspaceRoles.Member);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+  });
+
+  it("allows PM users to open PM-allowed admin pages", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRestorableSession(WorkspaceRoles.PM);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/reports");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.reports);
+  });
+
+  it("redirects PM users away from admin-only pages", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRestorableSession(WorkspaceRoles.PM);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/settings");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+  });
+
+  it("allows admin users to open admin-only pages", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRestorableSession(WorkspaceRoles.Admin);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/settings");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.settings);
+  });
+
+  it("keeps the standalone forbidden route reachable for lower-privilege users", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setRestorableSession(WorkspaceRoles.Member);
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/403");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
   });
 });

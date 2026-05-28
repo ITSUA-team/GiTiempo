@@ -9,8 +9,10 @@ import {
   type RouterHistory,
 } from 'vue-router';
 import type { Pinia } from 'pinia';
+import { WorkspaceRoles } from '@gitiempo/shared';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
+import { hasAllowedRole } from '@/router/rbac';
 import AddProjectMockView from '@/views/AddProjectView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import ForbiddenView from '@/views/ForbiddenView.vue';
@@ -36,6 +38,9 @@ export const routeNames = {
   reports: 'admin-reports',
   settings: 'admin-settings',
 } as const;
+
+const managementRoles = [WorkspaceRoles.Admin, WorkspaceRoles.PM] as const;
+const adminOnlyRoles = [WorkspaceRoles.Admin] as const;
 
 function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
   const redirect = to.query.redirect;
@@ -64,6 +69,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: AdminAppShell,
     meta: {
+      allowedRoles: managementRoles,
       requiresAuth: true,
     },
     children: [
@@ -77,26 +83,41 @@ const routes: RouteRecordRaw[] = [
         path: 'invoices',
         name: routeNames.invoices,
         component: InvoicesView,
+        meta: {
+          allowedRoles: adminOnlyRoles,
+        },
       },
       {
         path: 'members',
         name: routeNames.members,
         component: MembersView,
+        meta: {
+          allowedRoles: adminOnlyRoles,
+        },
       },
       {
         path: 'projects',
         name: routeNames.projects,
         component: ProjectsView,
+        meta: {
+          allowedRoles: adminOnlyRoles,
+        },
       },
       {
         path: 'projects/new',
         name: routeNames.addProject,
         component: AddProjectMockView,
+        meta: {
+          allowedRoles: adminOnlyRoles,
+        },
       },
       {
         path: 'settings',
         name: routeNames.settings,
         component: SettingsView,
+        meta: {
+          allowedRoles: adminOnlyRoles,
+        },
       },
     ],
   },
@@ -141,6 +162,13 @@ async function handleAuthNavigation(
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     return getDefaultAuthenticatedRoute(to);
+  }
+
+  if (
+    to.meta.requiresAuth &&
+    !hasAllowedRole(to.meta.allowedRoles, authStore.profile?.role)
+  ) {
+    return { name: routeNames.forbidden };
   }
 
   return undefined;
