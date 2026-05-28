@@ -53,7 +53,7 @@ const composableState = {
 
 const mountedWrappers: VueWrapper[] = [];
 
-vi.mock("@/composables/useTopBarTimer", () => ({
+vi.mock("@/composables/timer/useTopBarTimer", () => ({
   useTopBarTimer: () => composableState,
 }));
 

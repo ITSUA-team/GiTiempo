@@ -13,7 +13,7 @@ import {
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
 
-import type { TimeEntriesDayGroup } from "@/composables/useTimeEntriesPage";
+import type { TimeEntriesDayGroup } from "@/lib/time-entry-display";
 
 const props = defineProps<{
   // eslint-disable-next-line no-unused-vars

@@ -34,8 +34,8 @@ import Tag from 'primevue/tag';
 
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
-import { useConfirmation } from '@/composables/useConfirmation';
-import { useToasts } from '@/composables/useToasts';
+import { useConfirmation } from '@/composables/feedback/useConfirmation';
+import { useToasts } from '@/composables/feedback/useToasts';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 
@@ -150,7 +150,7 @@ async function handleArchive(project: ProjectResponse): Promise<void> {
   }
 
   try {
-    await adminProjectsClient.updateProject(token, project.id, {
+    await adminProjectsClient.updateProject(project.id, {
       isActive: false,
     });
     successToast(`${project.name} has been archived.`);
@@ -179,7 +179,7 @@ async function handleUnarchive(project: ProjectResponse): Promise<void> {
   }
 
   try {
-    await adminProjectsClient.updateProject(token, project.id, {
+    await adminProjectsClient.updateProject(project.id, {
       isActive: true,
     });
     successToast(`${project.name} is now active.`);

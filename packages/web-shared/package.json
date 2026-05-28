@@ -24,6 +24,10 @@
       "types": "./src/http.ts",
       "default": "./src/http.ts"
     },
+    "./query": {
+      "types": "./src/query/index.ts",
+      "default": "./src/query/index.ts"
+    },
     "./session-storage": {
       "types": "./src/session-storage.ts",
       "default": "./src/session-storage.ts"
@@ -46,6 +50,7 @@
   "dependencies": {
     "@gitiempo/shared": "workspace:*",
     "@primevue/forms": "^4.5.5",
+    "@tanstack/vue-query": "^5.100.14",
     "firebase": "^12.4.0",
     "primevue": "^4.5.5",
     "vue": "^3.5.32",

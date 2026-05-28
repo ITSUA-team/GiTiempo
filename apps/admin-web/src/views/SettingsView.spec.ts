@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
 import { useAuthStore } from '@/stores/auth';
+import { createTestQueryPlugin } from '@/test/query-client';
 
 const testMocks = vi.hoisted(() => ({
   errorToast: vi.fn(),
@@ -24,7 +25,7 @@ vi.mock('@/services/admin-settings-client', () => ({
   },
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
     successToast: testMocks.successToast,
@@ -118,7 +119,7 @@ function mountSettingsView() {
 
   return mount(SettingsView, {
     global: {
-      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [pinia, createTestQueryPlugin(), [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
         Select: SelectStub,
         Skeleton: SkeletonStub,
@@ -246,7 +247,7 @@ describe('SettingsView', () => {
       ?.trigger('click');
     await flushPromises();
 
-    expect(testMocks.updateWorkspace).toHaveBeenCalledWith('access-token', {
+    expect(testMocks.updateWorkspace).toHaveBeenCalledWith({
       name: 'Updated Workspace',
     });
     expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();
@@ -271,7 +272,6 @@ describe('SettingsView', () => {
 
     expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
     expect(testMocks.updateWorkspaceSettings).toHaveBeenCalledWith(
-      'access-token',
       {
         timeZone: 'Europe/Kyiv',
       },

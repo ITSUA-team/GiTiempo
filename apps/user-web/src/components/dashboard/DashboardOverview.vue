@@ -8,7 +8,7 @@ import DashboardOverviewLoading from "@/components/dashboard/DashboardOverviewLo
 import DashboardRecentEntriesCard from "@/components/dashboard/DashboardRecentEntriesCard.vue";
 import DashboardWeeklyFocusCard from "@/components/dashboard/DashboardWeeklyFocusCard.vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
-import { useDashboardOverview } from "@/composables/useDashboardOverview";
+import { useDashboardOverview } from "@/composables/dashboard/useDashboardOverview";
 import { routeNames } from "@/router";
 
 const router = useRouter();

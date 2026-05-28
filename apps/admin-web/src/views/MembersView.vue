@@ -14,8 +14,8 @@ import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
 import PendingInvitationsCard from '@/components/PendingInvitationsCard.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useConfirmation } from '@/composables/useConfirmation';
-import { useToasts } from '@/composables/useToasts';
+import { useConfirmation } from '@/composables/feedback/useConfirmation';
+import { useToasts } from '@/composables/feedback/useToasts';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -80,8 +80,8 @@ async function loadData({
 
   try {
     const [membersData, projectsData] = await Promise.all([
-      adminMembersClient.listMembers(token),
-      adminProjectsClient.listProjects(token),
+      adminMembersClient.listMembers(),
+      adminProjectsClient.listProjects(),
     ]);
 
     members.value = membersData;
@@ -119,7 +119,7 @@ async function loadInvites({
   }
 
   try {
-    invites.value = await adminMembersClient.listInvites(token);
+    invites.value = await adminMembersClient.listInvites();
     invitesLoadError.value = null;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -173,7 +173,7 @@ async function handleResendInvite(invite: WorkspaceInviteResponse): Promise<void
   resendingInviteId.value = invite.id;
 
   try {
-    await adminMembersClient.resendInvite(token, invite.id);
+    await adminMembersClient.resendInvite(invite.id);
     successToast(`Invitation resent to ${invite.email}.`);
     await refreshPendingInvites();
   } catch (err) {
@@ -201,7 +201,7 @@ function handleCancelInvite(invite: WorkspaceInviteResponse): void {
       cancelingInviteId.value = invite.id;
 
       try {
-        await adminMembersClient.cancelInvite(token, invite.id);
+        await adminMembersClient.cancelInvite(invite.id);
         successToast(`Invitation canceled for ${invite.email}.`);
         await refreshPendingInvites();
       } catch (err) {

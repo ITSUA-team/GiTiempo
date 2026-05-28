@@ -11,7 +11,7 @@ import { shallowRef } from 'vue';
 
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/useToasts';
+import { useToasts } from '@/composables/feedback/useToasts';
 
 const props = defineProps<{
   member: WorkspaceMemberResponse;
@@ -53,7 +53,7 @@ async function handleSave({
   saving.value = true;
 
   try {
-    await adminMembersClient.updateMemberRole(token, props.member.id, { role });
+    await adminMembersClient.updateMemberRole(props.member.id, { role });
     successToast(
       `Role for ${props.member.displayName ?? props.member.email} changed to ${role}.`,
     );
