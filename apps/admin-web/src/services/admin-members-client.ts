@@ -27,6 +27,7 @@ interface AdminMembersClientOptions {
 /* eslint-disable no-unused-vars */
 
 export interface AdminMembersClient {
+	cancelInvite(accessToken: string, inviteId: string): Promise<void>;
 	createInvite(
 		accessToken: string,
 		input: CreateWorkspaceInviteInput,
@@ -34,6 +35,7 @@ export interface AdminMembersClient {
 	listInvites(accessToken: string): Promise<WorkspaceInviteListResponse>;
 	listMembers(accessToken: string): Promise<WorkspaceMemberListResponse>;
 	removeMember(accessToken: string, memberId: string): Promise<void>;
+	resendInvite(accessToken: string, inviteId: string): Promise<WorkspaceInviteResponse>;
 	updateMemberRole(
 		accessToken: string,
 		memberId: string,
@@ -41,11 +43,46 @@ export interface AdminMembersClient {
 	): Promise<WorkspaceMemberResponse>;
 }
 
+async function requestNoContent({
+	accessToken,
+	apiBaseUrl,
+	fetchFn,
+	method,
+	path,
+}: {
+	accessToken: string;
+	apiBaseUrl: string | undefined;
+	fetchFn: typeof fetch;
+	method: string;
+	path: string;
+}): Promise<void> {
+	const response = await fetchFn(getRequestUrl(apiBaseUrl, path), {
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+		},
+		method,
+	});
+
+	if (!response.ok) {
+		throw new Error(await getResponseErrorMessage(response));
+	}
+}
+
 export function createAdminMembersClient({
 	apiBaseUrl,
 	fetchFn = getDefaultFetchFn(),
 }: AdminMembersClientOptions): AdminMembersClient {
 	return {
+		cancelInvite(accessToken, inviteId) {
+			return requestNoContent({
+				accessToken,
+				apiBaseUrl,
+				fetchFn,
+				method: 'DELETE',
+				path: `/invites/${inviteId}`,
+			});
+		},
+
 		createInvite(accessToken, input) {
 			return requestJson({
 				accessToken,
@@ -78,20 +115,25 @@ export function createAdminMembersClient({
 			});
 		},
 
-		async removeMember(accessToken, memberId) {
-			const response = await fetchFn(
-				getRequestUrl(apiBaseUrl, `/members/${memberId}`),
-				{
-					headers: {
-						Authorization: `Bearer ${accessToken}`,
-					},
-					method: 'DELETE',
-				},
-			);
+		removeMember(accessToken, memberId) {
+			return requestNoContent({
+				accessToken,
+				apiBaseUrl,
+				fetchFn,
+				method: 'DELETE',
+				path: `/members/${memberId}`,
+			});
+		},
 
-			if (!response.ok) {
-				throw new Error(await getResponseErrorMessage(response));
-			}
+		resendInvite(accessToken, inviteId) {
+			return requestJson({
+				accessToken,
+				apiBaseUrl,
+				fetchFn,
+				method: 'POST',
+				path: `/invites/${inviteId}/resend`,
+				responseSchema: workspaceInviteResponseSchema,
+			});
 		},
 
 		updateMemberRole(accessToken, memberId, input) {

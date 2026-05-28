@@ -6,6 +6,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -31,6 +32,9 @@ import { InviteDeliveryService } from './invite-delivery.service';
 import { buildInviteAcceptUrl } from './invite-url.helper';
 
 type InviteRow = typeof invites.$inferSelect;
+type InviteWorkspaceRow = Pick<InviteRow, 'email' | 'token'> & {
+  workspaceName: string;
+};
 
 @Injectable()
 export class InvitesService {
@@ -97,16 +101,9 @@ export class InvitesService {
     if (!row) throw new Error('Failed to create invite');
 
     try {
-      const inviteUrl = buildInviteAcceptUrl(this.config, row.token);
-      await this.firebase.getOrCreateInvitedUserByEmail(email);
-      const passwordSetupUrl = await this.firebase.generatePasswordSetupLink(
+      await this.deliverInvite({
         email,
-        inviteUrl,
-      );
-      await this.delivery.deliver({
-        email,
-        inviteUrl,
-        passwordSetupUrl,
+        token: row.token,
         workspaceName: workspace.name,
       });
     } catch (error) {
@@ -118,6 +115,38 @@ export class InvitesService {
     }
 
     return this.toResponse(row);
+  }
+
+  async resendInvite(
+    workspaceId: string,
+    inviteId: string,
+  ): Promise<WorkspaceInviteResponse> {
+    const invite = await this.findPendingInviteForWorkspace(
+      workspaceId,
+      inviteId,
+    );
+    this.assertInviteCanBeResent(invite);
+
+    const [workspace] = await this.db
+      .select({ name: workspaces.name })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+    if (!workspace) throw new UnauthorizedException('Unauthorized');
+
+    try {
+      await this.deliverInvite({
+        email: invite.email,
+        token: invite.token,
+        workspaceName: workspace.name,
+      });
+    } catch (error) {
+      throw new ServiceUnavailableException(
+        error instanceof Error ? error.message : 'Invite delivery failed',
+      );
+    }
+
+    return this.toResponse(invite);
   }
 
   async cancelInvite(workspaceId: string, inviteId: string): Promise<void> {
@@ -200,6 +229,25 @@ export class InvitesService {
     return row;
   }
 
+  private async findPendingInviteForWorkspace(
+    workspaceId: string,
+    inviteId: string,
+  ): Promise<InviteRow> {
+    const [row] = await this.db
+      .select()
+      .from(invites)
+      .where(
+        and(eq(invites.id, inviteId), eq(invites.workspaceId, workspaceId)),
+      )
+      .limit(1);
+
+    if (!row || row.status !== 'pending') {
+      throw new NotFoundException('Pending invite not found');
+    }
+
+    return row;
+  }
+
   private assertInviteCanBeAccepted(invite: InviteRow): void {
     if (invite.status !== 'pending') {
       throw new ConflictException('Invite cannot be accepted');
@@ -207,6 +255,28 @@ export class InvitesService {
     if (invite.expiresAt.getTime() <= Date.now()) {
       throw new GoneException('Invite has expired');
     }
+  }
+
+  private assertInviteCanBeResent(invite: InviteRow): void {
+    if (invite.expiresAt.getTime() <= Date.now()) {
+      throw new GoneException('Invite has expired');
+    }
+  }
+
+  private async deliverInvite(input: InviteWorkspaceRow): Promise<void> {
+    const inviteUrl = buildInviteAcceptUrl(this.config, input.token);
+    await this.firebase.getOrCreateInvitedUserByEmail(input.email);
+    const passwordSetupUrl = await this.firebase.generatePasswordSetupLink(
+      input.email,
+      inviteUrl,
+    );
+
+    await this.delivery.deliver({
+      email: input.email,
+      inviteUrl,
+      passwordSetupUrl,
+      workspaceName: input.workspaceName,
+    });
   }
 
   private toResponse(row: InviteRow): WorkspaceInviteResponse {

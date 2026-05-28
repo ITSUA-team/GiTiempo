@@ -16,6 +16,7 @@ import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
+import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   formatReportDuration,
   type ReportBillableFilter,
@@ -201,20 +202,15 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
               </p>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <span class="text-text-muted text-xs">Hours</span>
-                <span class="text-text-dark text-[13px] font-semibold">
-                  {{ formatReportDuration(row.totalSeconds) }}
-                </span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-text-muted text-xs">Billable</span>
-                <span class="text-text-dark text-[13px] font-semibold">
-                  {{ formatReportDuration(row.billableSeconds) }}
-                </span>
-              </div>
-            </div>
+            <MobileRecordMetadataList
+              :items="[
+                { label: 'Hours', value: formatReportDuration(row.totalSeconds) },
+                {
+                  label: 'Billable',
+                  value: formatReportDuration(row.billableSeconds),
+                },
+              ]"
+            />
           </MobileRecordCard>
         </template>
 

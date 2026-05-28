@@ -61,4 +61,3 @@ The user-web standalone 404 page MUST show its secondary `Go back` action only w
 - **WHEN** an authenticated user reaches the user-web standalone 404 page without a prior browser-history entry in the current tab
 - **THEN** the page omits the secondary `Go back` action
 - **AND** `Back to dashboard` remains available as the primary action
-

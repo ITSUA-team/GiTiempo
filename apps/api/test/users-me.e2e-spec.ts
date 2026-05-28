@@ -4,9 +4,10 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { ADMIN_EMAIL, bearer, login } from './helpers/auth';
+import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { users, workspaceMembers, workspaces } from '../src/db/schema';
+import { users, workspaceMembers } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -108,8 +109,7 @@ describe('Users (e2e)', () => {
       const db = app.get<DrizzleDB>(DRIZZLE);
       const uid = `deleted-user-${Date.now()}`;
       const email = `${uid}@example.com`;
-      const [workspace] = await db.select().from(workspaces).limit(1);
-      if (!workspace) throw new Error('Expected seeded workspace');
+      const { workspace } = await getSeededAdminWorkspace(db);
       const [user] = await db
         .insert(users)
         .values({

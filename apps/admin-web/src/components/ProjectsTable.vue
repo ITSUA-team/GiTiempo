@@ -32,6 +32,7 @@ import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
+import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
 import { useConfirmation } from '@/composables/useConfirmation';
 import { useToasts } from '@/composables/useToasts';
@@ -500,20 +501,12 @@ watch(filteredProjects, (projects) => {
           />
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-xs">Assigned members</span>
-            <span class="text-text-dark text-[13px] font-semibold">
-              {{ formatAssignedMembers(project) }}
-            </span>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-xs">Hours</span>
-            <span class="text-text-dark text-[13px] font-semibold">
-              {{ project.totalHours }}h
-            </span>
-          </div>
-        </div>
+        <MobileRecordMetadataList
+          :items="[
+            { label: 'Assigned members', value: formatAssignedMembers(project) },
+            { label: 'Hours', value: `${project.totalHours}h` },
+          ]"
+        />
 
         <template #actions>
           <template v-if="project.isActive">

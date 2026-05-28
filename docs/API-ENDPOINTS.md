@@ -181,14 +181,17 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 ## 13. Invites
 
-| Method | Path              | Auth | Role  | Description                                                          |
-| ------ | ----------------- | ---- | ----- | -------------------------------------------------------------------- |
-| GET    | `/invites`        | JWT  | Admin | List pending invites                                                 |
-| POST   | `/invites`        | JWT  | Admin | Create invite (send email)                                           |
-| DELETE | `/invites/:id`    | JWT  | Admin | Cancel pending invite                                                |
-| POST   | `/invites/accept` | None | —     | Accept invite by token: `{ token: string, firebaseIdToken: string }` |
+| Method | Path                   | Auth | Role  | Description                                                          |
+| ------ | ---------------------- | ---- | ----- | -------------------------------------------------------------------- |
+| GET    | `/invites`             | JWT  | Admin | List pending invites                                                 |
+| POST   | `/invites`             | JWT  | Admin | Create invite (send email)                                           |
+| POST   | `/invites/:id/resend`  | JWT  | Admin | Resend pending invite delivery without changing token or expiration  |
+| DELETE | `/invites/:id`         | JWT  | Admin | Cancel pending invite                                                |
+| POST   | `/invites/accept`      | None | —     | Accept invite by token: `{ token: string, firebaseIdToken: string }` |
 
 `POST /invites/accept` returns `204 No Content` on success. Expected frontend-visible failure messages include `Invite not found` (`404`), `Invite has expired` (`410`), `Invite cannot be accepted` (`409`), `Invite email does not match identity` (`403`), and `User is already a workspace member` (`409`). The User SPA invite accept page must call this endpoint after Firebase sign-in and before calling normal app login for a first-time invited user. Email/password account creation is not performed by the browser; invite delivery is responsible for backend Firebase Admin SDK provisioning plus Firebase password setup/reset link delivery. The API must not receive raw passwords.
+
+`POST /invites/:id/resend` is admin-only and accepts no body. It returns the existing invite response on success after redelivering invite email content for the same pending invite token and expiration. It must reject missing, accepted, canceled, or cross-workspace invites with `404 Pending invite not found`, reject expired pending invites with `410 Invite has expired`, and return `503` with the delivery/Firebase failure message when resend cannot complete after the pending invite is found. Resend generates fresh Firebase password setup/reset link content for delivery, but it must not create a new invite row, extend expiration, or create workspace membership.
 
 ---
 
