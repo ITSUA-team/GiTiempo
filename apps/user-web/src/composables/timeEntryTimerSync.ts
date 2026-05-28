@@ -23,8 +23,9 @@ export function publishTimeEntryTimerSyncEvent(
       listener(event);
     } catch (error) {
       console.error("Could not notify time entry timer sync listener", {
+        entryId: event.entry.id,
         error,
-        event,
+        type: event.type,
       });
     }
   }

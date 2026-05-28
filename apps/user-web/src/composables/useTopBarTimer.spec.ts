@@ -476,7 +476,15 @@ describe("useTopBarTimer", () => {
     expect(console.error).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
+        entryId: TEST_IDS.runningEntry,
         error: expect.objectContaining({ message: "subscriber failed" }),
+        type: "started",
+      }),
+    );
+    expect(console.error).not.toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        event: expect.anything(),
       }),
     );
   });
