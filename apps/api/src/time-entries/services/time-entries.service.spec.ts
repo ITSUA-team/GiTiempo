@@ -46,6 +46,14 @@ function selectRows(rows: unknown[]) {
   return { from };
 }
 
+function selectRowsForUpdate(rows: unknown[]) {
+  const forUpdate = vi.fn().mockResolvedValue(rows);
+  const limit = vi.fn().mockReturnValue({ for: forUpdate });
+  const where = vi.fn().mockReturnValue({ limit });
+  const from = vi.fn().mockReturnValue({ where });
+  return { from, forUpdate };
+}
+
 describe('TimeEntriesService', () => {
   it('calculates positive whole-second duration', () => {
     expect(
@@ -75,9 +83,9 @@ describe('TimeEntriesService', () => {
   });
 
   it('rejects updates to running entries', async () => {
-    const db = {
+    const tx = {
       select: vi.fn().mockReturnValue(
-        selectRows([
+        selectRowsForUpdate([
           {
             ...completedEntry,
             endedAt: null,
@@ -86,6 +94,9 @@ describe('TimeEntriesService', () => {
           },
         ]),
       ),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
     };
     const service = new TimeEntriesService(
       db as never,
@@ -100,6 +111,43 @@ describe('TimeEntriesService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('rejects mixed running-entry updates before validating the task', async () => {
+    const tx = {
+      select: vi.fn().mockReturnValue(
+        selectRowsForUpdate([
+          {
+            ...completedEntry,
+            endedAt: null,
+            durationSeconds: null,
+            source: 'web',
+          },
+        ]),
+      ),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
+    };
+    const tasks = {
+      requireTrackableTask: vi.fn(),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      tasks as never,
+      mockUsersActivity as never,
+    );
+
+    await expect(
+      service.updateOwnEntry(user, completedEntry.id, {
+        taskId: 'task-2',
+        description: 'x',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(tasks.requireTrackableTask).not.toHaveBeenCalled();
+  });
+
   it('allows task-only reassignment for running entries', async () => {
     const runningEntry = {
       ...completedEntry,
@@ -110,9 +158,12 @@ describe('TimeEntriesService', () => {
     const set = vi.fn().mockReturnThis();
     const where = vi.fn().mockReturnThis();
     const returning = vi.fn().mockResolvedValue([{ id: runningEntry.id }]);
-    const db = {
-      select: vi.fn().mockReturnValue(selectRows([runningEntry])),
+    const tx = {
+      select: vi.fn().mockReturnValue(selectRowsForUpdate([runningEntry])),
       update: vi.fn().mockReturnValue({ set, where, returning }),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
       requireTrackableTask: vi
@@ -132,6 +183,7 @@ describe('TimeEntriesService', () => {
 
     await service.updateOwnEntry(user, runningEntry.id, { taskId: 'task-2' });
 
+    expect(db.transaction).toHaveBeenCalledOnce();
     expect(tasks.requireTrackableTask).toHaveBeenCalledWith(user, 'task-2');
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -268,9 +320,12 @@ describe('TimeEntriesService', () => {
     const set = vi.fn().mockReturnValue({
       where: vi.fn().mockReturnValue({ returning }),
     });
-    const db = {
-      select: vi.fn().mockReturnValue(selectRows([completedEntry])),
+    const tx = {
+      select: vi.fn().mockReturnValue(selectRowsForUpdate([completedEntry])),
       update: vi.fn().mockReturnValue({ set }),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
       requireTrackableTask: vi.fn().mockResolvedValue({
@@ -301,9 +356,12 @@ describe('TimeEntriesService', () => {
   });
 
   it('propagates inactive task reassignment failures for completed entries', async () => {
-    const db = {
-      select: vi.fn().mockReturnValue(selectRows([completedEntry])),
+    const tx = {
+      select: vi.fn().mockReturnValue(selectRowsForUpdate([completedEntry])),
       update: vi.fn(),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
       requireTrackableTask: vi
@@ -323,7 +381,7 @@ describe('TimeEntriesService', () => {
     await expect(
       service.updateOwnEntry(user, completedEntry.id, { taskId: 'task-2' }),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
-    expect(db.update).not.toHaveBeenCalled();
+    expect(tx.update).not.toHaveBeenCalled();
   });
 
   it('starts GitHub timer transactionally', async () => {
