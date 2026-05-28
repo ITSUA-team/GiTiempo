@@ -161,9 +161,25 @@ The members, projects, and settings pages MUST support the documented administra
 
 - GIVEN an admin opens the settings page
 - WHEN the page renders
-- THEN workspace settings are shown in a grouped single-column form layout using the current API-supported workspace settings fields
-- AND save actions remain discoverable at the page bottom
-- AND the page uses the approved Settings design as the visual reference without adding unsupported backend fields
+- THEN workspace settings are shown in a grouped single-column form layout
+- AND the form includes workspace name, currency, default hourly rate, and time zone fields
+- AND the time zone field is an editable selector populated with contract-valid time-zone options, including `UTC` and IANA time-zone names, the current persisted time-zone value, and the current draft/form time-zone value
+- AND save actions remain discoverable at section level or page bottom
+
+#### Scenario: Workspace settings time zone save
+
+- GIVEN an admin changes the Settings page time zone to a contract-valid time-zone value
+- WHEN the admin saves settings
+- THEN the page submits the changed `timeZone` through the existing workspace settings update boundary
+- AND the saved form reconciles from the authoritative workspace settings response
+- AND unchanged workspace settings fields are not sent only to satisfy schemas
+
+#### Scenario: Workspace settings time zone validation
+
+- GIVEN an invalid time-zone value is represented in the Settings form state
+- WHEN the admin attempts to save settings
+- THEN the page shows field-level validation feedback for Time zone
+- AND no workspace settings update request is sent
 
 ### Requirement: Projects Navigation Item Is Active On Project Subpages
 

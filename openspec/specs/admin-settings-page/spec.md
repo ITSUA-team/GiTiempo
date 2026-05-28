@@ -15,7 +15,8 @@ The admin Settings page MUST replace the placeholder with a PrimeVue/Tailwind wo
 - **WHEN** an authenticated admin opens the Settings page
 - **THEN** the page renders a `Settings` header with supporting copy based on the approved `GITiempo.pen` Settings design
 - **AND** the page shows a single settings card sized to the approved 620px desktop treatment and responsive on small screens
-- **AND** the card renders editable current API fields for Workspace name, Default hourly rate, and Currency
+- **AND** the card renders editable current API fields for Workspace name, Default hourly rate, Currency, and Time zone
+- **AND** Time zone is a full-width PrimeVue selector populated with contract-valid time-zone options, including `UTC` and IANA time-zone names, plus the current persisted time-zone value and current draft/form time-zone value
 - **AND** the card renders inactive future fields for Invoice prefix, Payment terms, Legal entity, and Tax ID matching the approved design sections
 - **AND** the page shows bottom-aligned `Cancel` and primary `Save Settings` actions
 
@@ -35,13 +36,13 @@ The admin Settings page MUST load workspace identity and workspace settings from
 - **WHEN** the Settings page initializes
 - **THEN** it requests the current workspace through `GET /workspace`
 - **AND** it requests workspace settings through `GET /workspace/settings`
-- **AND** it initializes form state from those authoritative responses
+- **AND** it initializes form state from those authoritative responses, including `timeZone`
 - **AND** the authenticated admin shell uses the current workspace response for the visible workspace label instead of a hardcoded workspace name
 
 #### Scenario: Initial loading renders structured skeleton
 
 - **WHEN** required settings data is still loading
-- **THEN** the page renders a PrimeVue Skeleton surface approximating the header, settings card, fields, and action row
+- **THEN** the page renders a PrimeVue Skeleton surface approximating the header, settings card, editable fields including Time zone, and action row
 - **AND** it does not render empty-state or default settings copy before the first request completes
 
 #### Scenario: Initial request failure remains retryable
@@ -60,8 +61,8 @@ The admin Settings page MUST save changed current API fields through the existin
 - **GIVEN** the admin has changed one or more supported settings fields
 - **WHEN** the admin activates `Save Settings`
 - **THEN** workspace name changes are sent through `PATCH /workspace`
-- **AND** currency or default hourly rate changes are sent through `PATCH /workspace/settings`
-- **AND** unchanged resources are not patched just to satisfy request schemas
+- **AND** currency, default hourly rate, or time zone changes are sent through `PATCH /workspace/settings`
+- **AND** unchanged resources and unchanged fields are not patched just to satisfy request schemas
 - **AND** successful save refreshes or reconciles the rendered form from authoritative responses
 - **AND** successful workspace name save updates the authenticated admin shell workspace label from the authoritative response
 - **AND** the page shows success toast feedback
@@ -76,7 +77,7 @@ The admin Settings page MUST save changed current API fields through the existin
 
 #### Scenario: Cancel restores persisted settings
 
-- **GIVEN** the admin has unsaved settings changes
+- **GIVEN** the admin has unsaved settings changes, including a Time zone change
 - **WHEN** the admin activates `Cancel`
 - **THEN** the page restores the latest successfully loaded or saved workspace and settings values
 - **AND** no update request is sent
@@ -89,6 +90,13 @@ The admin Settings form MUST validate form input before sending existing API upd
 
 - **WHEN** the admin submits invalid settings input
 - **THEN** the page shows field-level validation feedback through PrimeVue invalid/helper UI
+- **AND** no workspace or workspace-settings update request is sent
+
+#### Scenario: Invalid time zone is blocked before API calls
+
+- **GIVEN** an invalid time-zone value is represented in the Settings form state
+- **WHEN** the admin activates `Save Settings`
+- **THEN** the page shows field-level validation feedback for Time zone
 - **AND** no workspace or workspace-settings update request is sent
 
 #### Scenario: Nullable hourly rate stays explicit
