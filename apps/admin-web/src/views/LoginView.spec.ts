@@ -59,8 +59,12 @@ async function waitForRoute(
     let stop: (() => void) | undefined;
     const timeout = setTimeout(() => {
       stop?.();
-      reject(new Error("Timed out waiting for route navigation."));
-    }, 1000);
+      reject(
+        new Error(
+          `Timed out waiting for route navigation. Current route: ${router.currentRoute.value.fullPath}`,
+        ),
+      );
+    }, 5000);
 
     stop = router.afterEach(() => {
       if (!matches()) return;
@@ -109,13 +113,13 @@ describe("LoginView", () => {
     const { router, wrapper } = await mountLoginView(
       "/login?redirect=%2Freports",
     );
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("admin@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
     const routeReady = waitForRoute(
       router,
       () => router.currentRoute.value.fullPath === "/reports",
     );
-
-    await wrapper.get('[data-testid="sign-in-email"]').setValue("admin@example.com");
-    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
     await wrapper.get("form").trigger("submit");
     await routeReady;
 

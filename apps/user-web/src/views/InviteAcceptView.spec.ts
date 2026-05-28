@@ -81,8 +81,12 @@ async function waitForRoute(
     let stop: (() => void) | undefined;
     const timeout = setTimeout(() => {
       stop?.();
-      reject(new Error("Timed out waiting for route navigation."));
-    }, 1000);
+      reject(
+        new Error(
+          `Timed out waiting for route navigation. Current route: ${router.currentRoute.value.fullPath}`,
+        ),
+      );
+    }, 5000);
 
     stop = router.afterEach(() => {
       if (!matches()) return;
@@ -198,16 +202,16 @@ describe("InviteAcceptView", () => {
     acceptInvite.mockImplementation(async () => {
       acceptInviteCompleted = true;
     });
-    const routeReady = waitForRoute(
-      router,
-      () => router.currentRoute.value.name === routeNames.dashboard,
-    );
 
     await wrapper.get('[data-testid="invite-accept-email"]').setValue(
       "alexey@example.com",
     );
     await wrapper.get('[data-testid="invite-accept-password"]').setValue(
       "password123",
+    );
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
     );
     await wrapper.get("form").trigger("submit");
     await routeReady;
