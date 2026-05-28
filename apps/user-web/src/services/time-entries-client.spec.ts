@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createAuthenticatedApiClient } from "@gitiempo/web-shared/http";
 
 import { createTimeEntriesClient } from "./time-entries-client";
 
@@ -13,6 +14,16 @@ function noContentResponse(init: { status?: number } = {}): Response {
   return new Response(null, {
     status: 204,
     ...init,
+  });
+}
+
+function createTestApiClient(fetchFn: typeof fetch, apiBaseUrl?: string) {
+  return createAuthenticatedApiClient({
+    apiBaseUrl,
+    fetchFn,
+    getToken: () => "access-token",
+    onRefreshFailed: vi.fn(),
+    refreshAccessToken: async () => "access-token",
   });
 }
 
@@ -37,11 +48,10 @@ describe("createTimeEntriesClient", () => {
       ]),
     );
     const client = createTimeEntriesClient({
-      apiBaseUrl: "https://api.example.test/",
-      fetchFn,
+      apiClient: createTestApiClient(fetchFn, "https://api.example.test/"),
     });
 
-    const projects = await client.listVisibleProjects("access-token");
+    const projects = await client.listVisibleProjects();
 
     expect(projects[0]?.name).toBe("Project Orion");
     expect(fetchFn).toHaveBeenCalledWith("https://api.example.test/projects", {
@@ -60,9 +70,9 @@ describe("createTimeEntriesClient", () => {
         meta: { limit: 10, page: 1, total: 0, totalPages: 0 },
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.listOwnEntries("access-token", { limit: 10, search: "reports" });
+    await client.listOwnEntries({ limit: 10, search: "reports" });
 
     expect(fetchFn).toHaveBeenCalledWith(
       "/time-entries?page=1&limit=10&search=reports",
@@ -83,9 +93,9 @@ describe("createTimeEntriesClient", () => {
         meta: { limit: 20, page: 2, total: 0, totalPages: 0 },
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.listOwnEntries("access-token", {
+    await client.listOwnEntries({
       dateFrom: "2026-04-01T00:00:00.000Z",
       dateTo: "2026-04-22T00:00:00.000Z",
       limit: 20,
@@ -122,11 +132,10 @@ describe("createTimeEntriesClient", () => {
         },
       ]),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
       client.listProjectTasks(
-        "access-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       ),
     ).resolves.toHaveLength(1);
@@ -155,10 +164,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await client.createTask(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       { title: "Write release checklist" },
     );
@@ -189,10 +197,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     const task = await client.updateTask(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       {
         status: "closed",
@@ -219,11 +226,10 @@ describe("createTimeEntriesClient", () => {
 
   it("handles task deletion with the no-content contract", async () => {
     const fetchFn = vi.fn(async () => noContentResponse());
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
       client.deleteTask(
-        "access-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       ),
     ).resolves.toBeUndefined();
@@ -245,11 +251,10 @@ describe("createTimeEntriesClient", () => {
         { status: 409 },
       ),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
       client.deleteTask(
-        "access-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       ),
     ).rejects.toThrow("Task has related time entries");
@@ -288,10 +293,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await client.startTimer(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
     );
 
@@ -340,9 +344,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    const entry = await client.createManualEntry("access-token", {
+    const entry = await client.createManualEntry({
       endedAt: "2026-04-21T10:30:00.000Z",
       startedAt: "2026-04-21T09:00:00.000Z",
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
@@ -396,9 +400,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.stopTimer("access-token");
+    await client.stopTimer();
 
     expect(fetchFn).toHaveBeenCalledWith("/time-entries/timer/stop", {
       body: undefined,
@@ -411,9 +415,9 @@ describe("createTimeEntriesClient", () => {
 
   it("deletes entries using the no-content endpoint contract", async () => {
     const fetchFn = vi.fn(async () => noContentResponse());
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.deleteEntry("access-token", "entry-1");
+    await client.deleteEntry("entry-1");
 
     expect(fetchFn).toHaveBeenCalledWith("/time-entries/entry-1", {
       headers: {
@@ -456,10 +460,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await client.updateEntry(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
       { description: "Updated", isBillable: false },
     );
@@ -510,10 +513,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await client.updateEntry(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
       {
         taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9009",
@@ -540,11 +542,10 @@ describe("createTimeEntriesClient", () => {
         { status: 409 },
       ),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
       client.startTimer(
-        "access-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       ),
     ).rejects.toThrow("A timer is already running");
@@ -554,9 +555,9 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () => {
       throw new Error("network down");
     });
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await expect(client.getCurrentTimer("access-token")).rejects.toThrow(
+    await expect(client.getCurrentTimer()).rejects.toThrow(
       "network down",
     );
   });

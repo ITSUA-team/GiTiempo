@@ -11,6 +11,7 @@ import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import TopBarTimer from "@/components/timer/TopBarTimer.vue";
+import { appEnv } from "@/config/env";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -22,7 +23,7 @@ const timeEntriesIcon = markRaw(ClockIcon);
 const projectsIcon = markRaw(FolderIcon);
 const profileIcon = markRaw(UserCircleIcon);
 const adminWorkspaceHref = getCounterpartWorkspaceHref({
-  configuredUrl: import.meta.env.VITE_ADMIN_APP_URL,
+  configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
 

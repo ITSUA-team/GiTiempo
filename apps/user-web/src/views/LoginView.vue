@@ -8,6 +8,7 @@ import {
 } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
+import { appEnv } from "@/config/env";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -17,7 +18,7 @@ const router = useRouter();
 
 const errorMessage = shallowRef<string | null>(null);
 const adminWorkspaceHref = getCounterpartWorkspaceHref({
-  configuredUrl: import.meta.env.VITE_ADMIN_APP_URL,
+  configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
 const introBadgeItems = ["Secure workspace sign-in", "No dark mode for MVP"];

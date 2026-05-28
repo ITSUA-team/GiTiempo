@@ -25,7 +25,7 @@ const reportMocks = vi.hoisted(() => ({
   successToast: vi.fn(),
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: reportMocks.errorToast,
     infoToast: reportMocks.infoToast,
@@ -37,7 +37,7 @@ vi.mock('@/lib/report-download', () => ({
   downloadReportExport: reportMocks.downloadReportExport,
 }));
 
-vi.mock('@/composables/useReportsData', () => ({
+vi.mock('@/composables/reports/useReportsData', () => ({
   useReportsData: () => reportMocks.state,
 }));
 

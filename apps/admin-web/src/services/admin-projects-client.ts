@@ -10,126 +10,81 @@ import {
 	type ProjectResponse,
 	type UpdateProjectInput,
 } from '@gitiempo/shared';
-import {
-  getDefaultFetchFn,
-	getRequestUrl,
-	getResponseErrorMessage,
-	requestJson,
-} from '@gitiempo/web-shared/http';
+import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
+
+import { getAuthenticatedAppApiClient } from '@/services/api-client';
 
 /* eslint-disable no-unused-vars */
 
 interface AdminProjectsClientOptions {
-	apiBaseUrl: string | undefined;
-	fetchFn?: typeof fetch;
+	apiClient: Pick<AuthenticatedApiClient, 'requestJson' | 'requestNoContent'>;
 }
 
 export interface AdminProjectsClient {
 	assignMember(
-		accessToken: string,
 		projectId: string,
 		userId: string,
 	): Promise<void>;
 	createProject(
-		accessToken: string,
 		input: CreateProjectInput,
 	): Promise<ProjectResponse>;
-	getManagementSummary(
-		accessToken: string,
-	): Promise<ManagementProjectSummaryResponse>;
-	listProjects(accessToken: string): Promise<ProjectListResponse>;
+	getManagementSummary(): Promise<ManagementProjectSummaryResponse>;
+	listProjects(): Promise<ProjectListResponse>;
 	removeAssignment(
-		accessToken: string,
 		projectId: string,
 		userId: string,
 	): Promise<void>;
 	updateProject(
-		accessToken: string,
 		projectId: string,
 		input: UpdateProjectInput,
 	): Promise<ProjectResponse>;
 }
 
 export function createAdminProjectsClient({
-	apiBaseUrl,
-	fetchFn = getDefaultFetchFn(),
+	apiClient,
 }: AdminProjectsClientOptions): AdminProjectsClient {
 	return {
-		async assignMember(accessToken, projectId, userId) {
-			const response = await fetchFn(
-				getRequestUrl(apiBaseUrl, `/projects/${projectId}/assignments`),
-				{
-					body: JSON.stringify({ userId }),
-					headers: {
-						Authorization: `Bearer ${accessToken}`,
-						'Content-Type': 'application/json',
-					},
-					method: 'POST',
-				},
-			);
-
-			if (!response.ok) {
-				throw new Error(await getResponseErrorMessage(response));
-			}
+		async assignMember(projectId, userId) {
+			await apiClient.requestNoContent({
+				body: { userId },
+				method: 'POST',
+				path: `/projects/${projectId}/assignments`,
+			});
 		},
 
-		createProject(accessToken, input) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
+		createProject(input) {
+			return apiClient.requestJson({
 				body: createProjectSchema.parse(input),
-				fetchFn,
 				method: 'POST',
 				path: '/projects',
 				responseSchema: projectResponseSchema,
 			});
 		},
 
-		getManagementSummary(accessToken) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
-				fetchFn,
+		getManagementSummary() {
+			return apiClient.requestJson({
 				path: '/projects/management-summary',
 				responseSchema: managementProjectSummaryResponseSchema,
 			});
 		},
 
-		listProjects(accessToken) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
-				fetchFn,
+		listProjects() {
+			return apiClient.requestJson({
 				path: '/projects',
 				responseSchema: projectListResponseSchema,
 			});
 		},
 
-		async removeAssignment(accessToken, projectId, userId) {
-			const response = await fetchFn(
-				getRequestUrl(
-					apiBaseUrl,
-					`/projects/${projectId}/assignments/${userId}`,
-				),
-				{
-					headers: {
-						Authorization: `Bearer ${accessToken}`,
-					},
-					method: 'DELETE',
-				},
-			);
-
-			if (!response.ok) {
-				throw new Error(await getResponseErrorMessage(response));
-			}
+		async removeAssignment(projectId, userId) {
+			await apiClient.requestNoContent({
+				method: 'DELETE',
+				path: `/projects/${projectId}/assignments/${userId}`,
+			});
 		},
 
-		updateProject(accessToken, projectId, input) {
-			return requestJson({
-				accessToken,
-				apiBaseUrl,
+		updateProject(projectId, input) {
+			return apiClient.requestJson({
 				body: updateProjectSchema.parse(input),
-				fetchFn,
 				method: 'PATCH',
 				path: `/projects/${projectId}`,
 				responseSchema: projectResponseSchema,
@@ -138,8 +93,38 @@ export function createAdminProjectsClient({
 	};
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+function createDefaultAdminProjectsClient(): AdminProjectsClient {
+	return createAdminProjectsClient({
+		apiClient: getAuthenticatedAppApiClient(),
+	});
+}
 
-export const adminProjectsClient = createAdminProjectsClient({
-	apiBaseUrl,
-});
+export const adminProjectsClient: AdminProjectsClient = {
+	assignMember(projectId, userId) {
+		return createDefaultAdminProjectsClient().assignMember(
+			projectId,
+			userId,
+		);
+	},
+	createProject(input) {
+		return createDefaultAdminProjectsClient().createProject(input);
+	},
+	getManagementSummary() {
+		return createDefaultAdminProjectsClient().getManagementSummary();
+	},
+	listProjects() {
+		return createDefaultAdminProjectsClient().listProjects();
+	},
+	removeAssignment(projectId, userId) {
+		return createDefaultAdminProjectsClient().removeAssignment(
+			projectId,
+			userId,
+		);
+	},
+	updateProject(projectId, input) {
+		return createDefaultAdminProjectsClient().updateProject(
+			projectId,
+			input,
+		);
+	},
+};

@@ -52,7 +52,7 @@ vi.mock("primevue/usetoast", () => ({
   useToast: () => ({ add: toastAddSpy }),
 }));
 
-vi.mock("@/composables/useProfileGithubConnection", () => ({
+vi.mock("@/composables/profile/useProfileGithubConnection", () => ({
   useProfileGithubConnection: () => ({
     connect: githubActions.connect,
     connection: computed(() => githubConnection.value),

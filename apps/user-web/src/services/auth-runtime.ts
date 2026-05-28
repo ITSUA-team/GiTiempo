@@ -1,35 +1,39 @@
 import {
   createAuthHttpClient,
-  createAuthRuntimeController,
   createCurrentUserClient,
   createDefaultAuthRuntime,
   type AuthRuntime,
 } from "@gitiempo/web-shared/auth";
 
+import { appEnv } from "@/config/env";
 import { getFirebaseAuth, hasFirebaseConfig } from "@/lib/firebase";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-const authClient = createAuthHttpClient({ apiBaseUrl });
-const currentUserClient = createCurrentUserClient({ apiBaseUrl });
-const controller = createAuthRuntimeController(
-  createDefaultAuthRuntime({
+function createConfiguredAuthRuntime(): AuthRuntime {
+  const authClient = createAuthHttpClient({ apiBaseUrl: appEnv.apiBaseUrl });
+  const currentUserClient = createCurrentUserClient({ apiBaseUrl: appEnv.apiBaseUrl });
+
+  return createDefaultAuthRuntime({
     authClient,
     currentUserClient,
     getFirebaseAuth,
     hasFirebaseConfig,
-  }),
-);
+  });
+}
+
+let authRuntime: AuthRuntime | null = null;
 
 export function getAuthRuntime(): AuthRuntime {
-  return controller.getAuthRuntime();
+  authRuntime ??= createConfiguredAuthRuntime();
+
+  return authRuntime;
 }
 
 export function setAuthRuntimeForTesting(runtime: AuthRuntime): void {
-  controller.setAuthRuntimeForTesting(runtime);
+  authRuntime = runtime;
 }
 
 export function resetAuthRuntimeForTesting(): void {
-  controller.resetAuthRuntimeForTesting();
+  authRuntime = null;
 }
 
 export type { AuthRuntime };

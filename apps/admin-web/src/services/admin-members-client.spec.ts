@@ -1,13 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { createAdminMembersClient } from './admin-members-client';
+
+function createTestApiClient(fetchFn: typeof fetch) {
+  return createAuthenticatedApiClient({
+    apiBaseUrl: 'https://api.example.test',
+    fetchFn,
+    getToken: () => 'access-token',
+    onRefreshFailed: vi.fn(),
+    refreshAccessToken: async () => 'access-token',
+  });
+}
 
 describe('createAdminMembersClient', () => {
   const fetchFn = vi.fn<typeof fetch>();
 
   const client = createAdminMembersClient({
-    apiBaseUrl: 'https://api.example.test',
-    fetchFn,
+    apiClient: createTestApiClient(fetchFn),
   });
 
   beforeEach(() => {
@@ -38,7 +48,7 @@ describe('createAdminMembersClient', () => {
       ),
     );
 
-    const result = await client.listMembers('access-token');
+    const result = await client.listMembers();
 
     expect(fetchFn).toHaveBeenCalledWith(
       'https://api.example.test/members',
@@ -77,7 +87,7 @@ describe('createAdminMembersClient', () => {
       ),
     );
 
-    const result = await client.createInvite('access-token', {
+    const result = await client.createInvite({
       email: 'new-member@example.com',
       role: 'pm',
     });
@@ -117,7 +127,6 @@ describe('createAdminMembersClient', () => {
     );
 
     const result = await client.resendInvite(
-      'access-token',
       '44444444-4444-4444-8444-444444444444',
     );
 
@@ -144,10 +153,7 @@ describe('createAdminMembersClient', () => {
     );
 
     await expect(
-      client.resendInvite(
-        'access-token',
-        '44444444-4444-4444-8444-444444444444',
-      ),
+      client.resendInvite('44444444-4444-4444-8444-444444444444'),
     ).rejects.toThrow('Invite has expired');
   });
 
@@ -158,10 +164,7 @@ describe('createAdminMembersClient', () => {
       }),
     );
 
-    await client.cancelInvite(
-      'access-token',
-      '44444444-4444-4444-8444-444444444444',
-    );
+    await client.cancelInvite('44444444-4444-4444-8444-444444444444');
 
     expect(fetchFn).toHaveBeenCalledWith(
       'https://api.example.test/invites/44444444-4444-4444-8444-444444444444',
@@ -185,10 +188,7 @@ describe('createAdminMembersClient', () => {
     );
 
     await expect(
-      client.cancelInvite(
-        'access-token',
-        '44444444-4444-4444-8444-444444444444',
-      ),
+      client.cancelInvite('44444444-4444-4444-8444-444444444444'),
     ).rejects.toThrow('Pending invite not found');
   });
 
@@ -202,7 +202,6 @@ describe('createAdminMembersClient', () => {
 
     await expect(
       client.removeMember(
-        'access-token',
         '11111111-1111-4111-8111-111111111111',
       ),
     ).rejects.toThrow('Last admin cannot be removed');

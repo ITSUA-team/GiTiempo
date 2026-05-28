@@ -10,7 +10,7 @@ import { computed, shallowRef, watch } from "vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
 import ProfileGithubConnectionCard from "@/components/profile/ProfileGithubConnectionCard.vue";
-import { useProfileGithubConnection } from "@/composables/useProfileGithubConnection";
+import { useProfileGithubConnection } from "@/composables/profile/useProfileGithubConnection";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue/usetoast";
 
@@ -87,11 +87,11 @@ async function handleSaveProfile(): Promise<void> {
       toast: appToast,
     });
     displayNameDraft.value = authStore.profile?.displayName ?? "";
-    } catch {
-      // Toast feedback is handled inside the shared feedback runner.
-    } finally {
-      isSavingProfile.value = false;
-    }
+  } catch {
+    // Toast feedback is handled inside the shared feedback runner.
+  } finally {
+    isSavingProfile.value = false;
+  }
 }
 </script>
 

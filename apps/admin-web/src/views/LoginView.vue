@@ -8,6 +8,7 @@ import {
 } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
+import { appEnv } from "@/config/env";
 import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -17,7 +18,7 @@ const router = useRouter();
 
 const errorMessage = shallowRef<string | null>(null);
 const userWorkspaceHref = getCounterpartWorkspaceHref({
-  configuredUrl: import.meta.env.VITE_USER_APP_URL,
+  configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
 const introBadgeItems = [
