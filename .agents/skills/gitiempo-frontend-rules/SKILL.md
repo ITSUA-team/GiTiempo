@@ -64,6 +64,7 @@ Use this skill when:
 - For record-list surfaces that already use a documented desktop table, preserve that desktop/tablet table branch and switch to stacked mobile cards only below `640px`.
 - Use the shared `useIsMobileViewport` helper for the mobile breakpoint check when the task needs distinct desktop/mobile markup branches.
 - Prefer the shared `MobileRecordCard` only as a neutral card shell for mobile record rows. Keep record-specific fields, row states, and action behavior app-local.
+- In `apps/admin-web`, reuse the app-local `MobileRecordMetadataList` for repeated mobile record label/value metadata grids inside `MobileRecordCard`; keep product-specific labels, values, formatting, and actions in the caller.
 - Preserve row/card parity: mobile cards must expose the same meaningful fields, highlight states, and action affordances as the corresponding desktop rows unless the active spec says otherwise.
 - Do not introduce PrimeVue `responsiveLayout` or another parallel responsive-table convention for surfaces that follow the admin/user record-list pattern.
 - Do not replace desktop tables with cards on tablet or desktop unless the docs or active spec explicitly change the surface model.

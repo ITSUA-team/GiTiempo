@@ -111,7 +111,6 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('1h 00m');
     const filterControls = wrapper.findAll('[data-testid="select-stub"]');
     expect(filterControls).toHaveLength(4);
-    expect(filterControls).toHaveLength(4);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
 
     const search = wrapper.get('input[aria-label="Search report rows"]');

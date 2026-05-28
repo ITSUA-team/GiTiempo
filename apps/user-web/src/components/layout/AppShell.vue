@@ -6,7 +6,7 @@ import {
   UserCircleIcon,
 } from "@heroicons/vue/24/outline";
 import { computed, markRaw } from "vue";
-import { RouterView, useRoute } from "vue-router";
+import { RouterView, useRoute, useRouter } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
@@ -15,6 +15,7 @@ import { routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 const dashboardIcon = markRaw(Squares2X2Icon);
 const timeEntriesIcon = markRaw(ClockIcon);
@@ -42,29 +43,33 @@ const navItems = computed(() => [
     name: routeNames.project,
     to: { name: routeNames.project },
   },
-  {
-    icon: profileIcon,
-    label: "Profile",
-    name: routeNames.profile,
-  },
 ]);
+
+async function handleSignOut(): Promise<void> {
+  await authStore.logout();
+  await router.push({ name: routeNames.login });
+}
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
+  <div class="bg-app-bg text-text-dark flex min-h-screen flex-col">
     <WorkspaceHeader
       :counterpart-href="adminWorkspaceHref"
       counterpart-label="Admin workspace"
       :display-name="authStore.displayName"
+      :settings-icon="profileIcon"
+      settings-label="Profile"
+      :settings-to="{ name: routeNames.profile }"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"
+      @sign-out="handleSignOut"
     >
       <template #center>
         <TopBarTimer />
       </template>
     </WorkspaceHeader>
 
-    <div class="flex min-h-[calc(100vh-4rem)]">
+    <div class="flex flex-1">
       <WorkspaceNavigation
         :active-name="route.name?.toString()"
         :items="navItems"

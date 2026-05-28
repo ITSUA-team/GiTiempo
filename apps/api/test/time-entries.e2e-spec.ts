@@ -18,6 +18,7 @@ import {
   workspaces,
 } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
+import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
 describe('Time entries (e2e)', () => {
   let app: INestApplication;
@@ -41,8 +42,7 @@ describe('Time entries (e2e)', () => {
     db = app.get<DrizzleDB>(DRIZZLE);
     await cleanupGitHubFixtures();
 
-    const [workspace] = await db.select().from(workspaces).limit(1);
-    if (!workspace) throw new Error('Expected seeded workspace');
+    const { workspace } = await getSeededAdminWorkspace(db);
     workspaceId = workspace.id;
 
     const [platformProject] = await db

@@ -17,8 +17,8 @@ const skeletonConfig = {
     descriptionWidth: 'min(100%, 24rem)',
     filterCount: 0,
     statCount: 3,
-    tableActionWidth: undefined,
-    tableHeaderWidths: ['120px', '160px', '140px', '200px'],
+    tableActionWidth: '17.5rem',
+    tableHeaderWidths: ['120px', '220px', '140px', '150px'],
   },
   projects: {
     actionWidth: '7.5rem',
@@ -175,7 +175,7 @@ const skeletonConfig = {
         </div>
 
         <div
-          v-if="props.variant === 'reports'"
+          v-if="skeletonConfig[props.variant].tableHeaderWidths.length > 0"
           class="border-divider flex h-[44px] items-center gap-3 border-b px-3"
         >
           <Skeleton

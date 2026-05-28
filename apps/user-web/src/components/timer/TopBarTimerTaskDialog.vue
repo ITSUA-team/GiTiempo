@@ -5,6 +5,7 @@ import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
+import { useIsMobileViewport } from "@gitiempo/web-shared";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -53,18 +54,21 @@ const createTaskTitleModel = computed({
     emit("update:createTaskTitle", value);
   },
 });
+
+const isMobileViewport = useIsMobileViewport();
 </script>
 
 <template>
   <Dialog
     modal
+    block-scroll
     :dismissable-mask="true"
     :draggable="false"
     :pt="{
-      root: 'w-[min(560px,calc(100vw-2rem))] rounded-lg border border-divider',
-      header: 'px-6 pt-6 pb-0',
-      content: 'px-6 pb-6 pt-4',
-      footer: 'px-6 pb-6 pt-0',
+      root: 'max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-divider sm:w-[min(560px,calc(100vw-2rem))]',
+      header: 'px-4 pt-4 pb-0 sm:px-6 sm:pt-6',
+      content: 'max-h-[calc(100vh-13rem)] overflow-y-auto px-4 pb-4 pt-4 sm:px-6 sm:pb-6',
+      footer: 'px-4 pb-4 pt-0 sm:px-6 sm:pb-6',
     }"
     :visible="props.isOpen"
     @update:visible="emit('close')"
@@ -202,14 +206,19 @@ const createTaskTitleModel = computed({
             </small>
           </div>
 
-          <div class="flex items-center justify-between gap-3">
+          <div
+            class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            data-testid="top-bar-timer-create-task-actions"
+          >
             <p class="text-text-muted text-xs">
               {{ props.selectedProjectId ? 'The new task is created in the selected project only.' : 'Select a project first.' }}
             </p>
             <Button
               type="button"
+              class="w-full sm:w-auto"
               severity="secondary"
               :disabled="props.isCreateTaskDisabled"
+              :fluid="isMobileViewport"
               label="Create task"
               :loading="props.isCreatingTask"
               @click="emit('createTask')"
@@ -220,17 +229,37 @@ const createTaskTitleModel = computed({
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
+      <div
+        :class="[
+          'flex w-full gap-2',
+          isMobileViewport ? 'flex-col' : 'flex-row justify-end',
+        ]"
+        data-testid="top-bar-timer-task-dialog-footer"
+      >
+        <Button
+          v-if="isMobileViewport"
+          type="button"
+          class="w-full"
+          :disabled="props.isConfirmSelectionDisabled"
+          :fluid="true"
+          label="Use selected task"
+          @click="emit('confirm')"
+        />
         <Button
           type="button"
+          :class="isMobileViewport ? 'w-full' : 'w-auto'"
+          :fluid="isMobileViewport"
           label="Cancel"
           severity="secondary"
           text
           @click="emit('close')"
         />
         <Button
+          v-if="!isMobileViewport"
           type="button"
+          class="w-auto"
           :disabled="props.isConfirmSelectionDisabled"
+          :fluid="false"
           label="Use selected task"
           @click="emit('confirm')"
         />

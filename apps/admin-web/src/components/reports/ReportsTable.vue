@@ -5,6 +5,7 @@ import {
   MobileRecordCard,
   SectionHeader,
   managementTableColumnPt,
+  managementTableFilterSelectPt,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -15,6 +16,7 @@ import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
+import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   formatReportDuration,
   type ReportBillableFilter,
@@ -54,10 +56,6 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
   { label: 'Non-billable', value: 'withoutBillable' },
 ];
 
-const filterSelectPt = {
-  root: { class: 'h-[34px] w-full rounded-[6px] text-[12px]' },
-  label: { class: 'flex items-center py-0 text-[12px] font-normal' },
-} as const;
 </script>
 
 <template>
@@ -93,7 +91,7 @@ const filterSelectPt = {
             option-value="value"
             placeholder="All projects"
             show-clear
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -110,7 +108,7 @@ const filterSelectPt = {
             option-value="value"
             placeholder="All members"
             show-clear
-            :pt="filterSelectPt"
+            :pt="managementTableFilterSelectPt"
           />
         </div>
 
@@ -126,7 +124,7 @@ const filterSelectPt = {
               :options="hoursFilterOptions"
               option-label="label"
               option-value="value"
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
 
@@ -141,7 +139,7 @@ const filterSelectPt = {
               :options="billableFilterOptions"
               option-label="label"
               option-value="value"
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
         </div>
@@ -204,20 +202,15 @@ const filterSelectPt = {
               </p>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <span class="text-text-muted text-xs">Hours</span>
-                <span class="text-text-dark text-[13px] font-semibold">
-                  {{ formatReportDuration(row.totalSeconds) }}
-                </span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-text-muted text-xs">Billable</span>
-                <span class="text-text-dark text-[13px] font-semibold">
-                  {{ formatReportDuration(row.billableSeconds) }}
-                </span>
-              </div>
-            </div>
+            <MobileRecordMetadataList
+              :items="[
+                { label: 'Hours', value: formatReportDuration(row.totalSeconds) },
+                {
+                  label: 'Billable',
+                  value: formatReportDuration(row.billableSeconds),
+                },
+              ]"
+            />
           </MobileRecordCard>
         </template>
 
@@ -252,7 +245,7 @@ const filterSelectPt = {
               option-value="value"
               placeholder="All projects"
               show-clear
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
 
@@ -265,7 +258,7 @@ const filterSelectPt = {
               option-value="value"
               placeholder="All members"
               show-clear
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
 
@@ -276,10 +269,9 @@ const filterSelectPt = {
               aria-label="Filter report rows by hours"
               option-label="label"
               option-value="value"
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
-
           <div class="w-[140px] px-3 text-right">
             <Select
               v-model="filters.billable"
@@ -287,7 +279,7 @@ const filterSelectPt = {
               aria-label="Filter report rows by billable hours"
               option-label="label"
               option-value="value"
-              :pt="filterSelectPt"
+              :pt="managementTableFilterSelectPt"
             />
           </div>
         </div>

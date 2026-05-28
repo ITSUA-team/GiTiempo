@@ -3,9 +3,7 @@
 ## Purpose
 
 Define when browser-only frontend leaf logic and structurally similar shared Vue surfaces should move into shared frontend packages while preserving app-level ownership, established PrimeVue usage, and documented frontend styling conventions.
-
 ## Requirements
-
 ### Requirement: Identical Cross-SPA Frontend Leaves Are Shared
 
 The frontend codebase MUST place browser-only leaf logic in a shared frontend location when that logic is already behaviorally identical across `apps/user-web` and `apps/admin-web`.
@@ -242,3 +240,40 @@ The frontend codebase SHALL use frontend-scoped markup review to surface class o
 - **WHEN** markup review reports class-order or obvious utility cleanup warnings in touched shared/frontend templates
 - **THEN** the implementation resolves or intentionally retains those warnings with current UI fidelity in mind
 - **AND** the warning surface stays focused on frontend/shared markup rather than unrelated packages
+
+### Requirement: Extension Reuses Only Browser-Safe Shared Frontend Leaves
+Chrome extension code SHALL reuse shared frontend tokens and contract-safe helpers only when they are browser-extension safe and do not pull SPA-only runtime dependencies.
+
+#### Scenario: Extension imports shared token styling without SPA bootstrap
+- **WHEN** the Chrome extension needs GiTiempo design tokens
+- **THEN** it imports the shared token CSS or generated Tailwind token surface needed for extension styling
+- **AND** it does not import PrimeVue setup, Vue Router setup, Pinia stores, or SPA app bootstrap modules
+
+#### Scenario: Extension keeps runtime helpers extension-owned when storage differs
+- **WHEN** the Chrome extension needs token persistence, tab messaging, content-script messaging, or browser-extension storage behavior
+- **THEN** that behavior is implemented in an extension-owned runtime boundary
+- **AND** shared SPA helpers are not reused if they assume `localStorage`, router state, app shell state, or DOM ownership outside the extension
+
+#### Scenario: Extension may consume shared contracts
+- **WHEN** the Chrome extension constructs or validates contract-facing API payloads and responses
+- **THEN** it may consume browser-safe schemas or types from `@gitiempo/shared`
+- **AND** browser-only extension runtime helpers are not moved into `@gitiempo/shared`
+
+### Requirement: Shared Mobile Record List Leaves
+The frontend shared package SHALL provide only neutral, presentational leaves for mobile record-list rendering when the same viewport and card shell behavior is used by both SPAs.
+
+#### Scenario: Shared viewport helper matches shell breakpoint
+- **WHEN** a frontend component needs to switch between desktop table rendering and mobile record-card rendering
+- **THEN** it can use a shared viewport helper that treats widths below `640px` as mobile
+- **AND** the helper remains safe when browser viewport APIs are unavailable
+
+#### Scenario: Shared mobile record card stays presentational
+- **WHEN** a user-web or admin-web list renders a mobile record card
+- **THEN** the shared card leaf provides only the token-based surface, spacing, border, and optional actions slot
+- **AND** product-specific record fields, row states, and action behavior remain owned by the app-level component using the card
+
+#### Scenario: Shared extraction preserves existing admin behavior
+- **GIVEN** admin-web already renders mobile record cards for management tables
+- **WHEN** the viewport helper or mobile card shell is moved into the shared frontend package
+- **THEN** admin-web preserves the same mobile card behavior, accessible row actions, and desktop table behavior after updating imports
+

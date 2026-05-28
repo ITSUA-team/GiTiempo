@@ -15,6 +15,7 @@ describe('Workspace, members, and invites (e2e)', () => {
   let db: DrizzleDB;
   let adminAccessToken: string;
   let workspaceId: string;
+  const createdUserEmails: string[] = [];
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -25,16 +26,56 @@ describe('Workspace, members, and invites (e2e)', () => {
     await app.init();
     db = app.get<DrizzleDB>(DRIZZLE);
 
-    const [workspace] = await db.select().from(workspaces).limit(1);
-    if (!workspace) throw new Error('Expected seeded workspace');
+    const suffix = randomUUID();
+    const adminUid = `workflow-admin-${suffix}`;
+    const adminEmail = `${adminUid}@example.com`;
+
+    const [workspace] = await db
+      .insert(workspaces)
+      .values({ name: `Workflow Members ${suffix}` })
+      .returning();
+    if (!workspace) throw new Error('Failed to create test workspace');
     workspaceId = workspace.id;
 
-    const tokens = await login(app);
+    const [adminUser] = await db
+      .insert(users)
+      .values({
+        firebaseUid: adminUid,
+        email: adminEmail,
+        displayName: 'Workflow Admin',
+        avatarUrl: null,
+      })
+      .returning();
+    if (!adminUser) throw new Error('Failed to create test admin');
+    createdUserEmails.push(adminEmail);
+
+    await db.insert(workspaceMembers).values({
+      workspaceId,
+      userId: adminUser.id,
+      role: 'admin',
+    });
+
+    const tokens = await login(
+      app,
+      `test:${adminUid}:${adminEmail}:Workflow Admin`,
+    );
     adminAccessToken = tokens.accessToken;
   });
 
   afterAll(async () => {
-    await app.close();
+    if (workspaceId) {
+      await db.delete(invites).where(eq(invites.workspaceId, workspaceId));
+      await db
+        .delete(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, workspaceId));
+    }
+    for (const email of createdUserEmails) {
+      await db.delete(users).where(eq(users.email, email));
+    }
+    if (workspaceId) {
+      await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+    }
+    if (app) await app.close();
   });
 
   it('rejects login and refresh when workspace membership is missing', async () => {
@@ -46,6 +87,7 @@ describe('Workspace, members, and invites (e2e)', () => {
       displayName: 'No Member',
       avatarUrl: null,
     });
+    createdUserEmails.push(email);
 
     const loginWithoutMembership = await request(app.getHttpServer())
       .post('/auth/login')
@@ -63,6 +105,7 @@ describe('Workspace, members, and invites (e2e)', () => {
         avatarUrl: null,
       })
       .returning();
+    createdUserEmails.push(memberEmail);
     await db.insert(workspaceMembers).values({
       workspaceId,
       userId: memberUser!.id,
@@ -92,6 +135,7 @@ describe('Workspace, members, and invites (e2e)', () => {
 
     const inviteUid = `invite-${randomUUID()}`;
     const inviteEmail = `${inviteUid}@example.com`;
+    createdUserEmails.push(inviteEmail);
     const createInvite = await request(app.getHttpServer())
       .post('/invites')
       .set('Authorization', bearer(adminAccessToken))
