@@ -4,11 +4,11 @@
 
 The authenticated `admin-web` shell MUST render navigation affordances only for product routes available to the current user's workspace role.
 
-#### Scenario: Member cannot see admin product navigation
+#### Scenario: Member denial stays outside admin shell navigation
 
 - **WHEN** an authenticated user with workspace role `member` reaches an allowed admin-web surface such as the standalone `/403` route
-- **THEN** the admin product shell navigation is not rendered for restricted admin product pages
-- **AND** the user is not offered sidebar or mobile navigation links that would open admin-only or PM-only product routes
+- **THEN** the standalone route-level page renders without admin shell chrome
+- **AND** the user is not offered sidebar, mobile navigation, or profile-menu route actions that would open admin-only or PM-only product routes
 
 #### Scenario: PM sees only PM-allowed product navigation
 

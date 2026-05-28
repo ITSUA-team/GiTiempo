@@ -4,6 +4,13 @@
 
 The `admin-web` router MUST enforce role requirements for authenticated product routes before mounting route components whose required role set does not include the current user's workspace role.
 
+#### Scenario: Product route role matrix is explicit
+
+- **WHEN** the admin-web router defines role-restricted product routes
+- **THEN** Dashboard and Reports allow workspace roles `admin` and `pm`
+- **AND** Invoices, Members, Projects, Add Project, and Settings allow only workspace role `admin`
+- **AND** route-level `/403` and authenticated not-found routes remain authenticated standalone routes without product-page role restrictions
+
 #### Scenario: Member is denied access to the admin shell entry
 
 - **WHEN** an authenticated user with workspace role `member` navigates to an authenticated admin-web product route that is limited to admin or PM users

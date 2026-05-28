@@ -28,3 +28,8 @@
 - [x] 5.1 Run `pnpm --filter admin-web lint`.
 - [x] 5.2 Run `pnpm --filter admin-web typecheck`.
 - [x] 5.3 Run `pnpm --filter admin-web test`.
+- [x] 5.4 Run `pnpm --filter @gitiempo/web-shared lint`.
+- [x] 5.5 Run `pnpm --filter @gitiempo/web-shared typecheck`.
+- [x] 5.6 Run `pnpm --filter @gitiempo/web-shared test`.
+- [x] 5.7 Run `pnpm --filter user-web lint`.
+- [x] 5.8 Run `pnpm --filter user-web typecheck`.
