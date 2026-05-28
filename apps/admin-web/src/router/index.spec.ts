@@ -17,6 +17,19 @@ import { useAuthStore } from "@/stores/auth";
 import ForbiddenView from "@/views/ForbiddenView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 
+type LazyRouteComponent = () => Promise<{ default: unknown }>;
+
+async function expectLazyRouteComponent(
+  component: unknown,
+  expectedComponent: unknown,
+): Promise<void> {
+  expect(component).toBeTypeOf("function");
+
+  const loadedComponent = await (component as LazyRouteComponent)();
+
+  expect(loadedComponent.default).toBe(expectedComponent);
+}
+
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
@@ -74,7 +87,7 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.settings)).toBe(true);
   });
 
-  it("mounts documented admin product pages inside the shell while keeping standalone error routes outside it", () => {
+  it("mounts documented admin product pages inside the shell while keeping standalone error routes outside it", async () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -86,6 +99,7 @@ describe("admin router", () => {
       { path: "/invoices", name: routeNames.invoices },
       { path: "/members", name: routeNames.members },
       { path: "/projects", name: routeNames.projects },
+      { path: "/projects/new", name: routeNames.addProject },
       { path: "/settings", name: routeNames.settings },
     ] as const;
 
@@ -98,7 +112,9 @@ describe("admin router", () => {
       expect(resolved.matched).toHaveLength(2);
       expect(resolved.matched[0]?.path).toBe("/");
       expect(resolved.matched[0]?.meta.requiresAuth).toBe(true);
+      expect(resolved.matched[0]?.components?.default).not.toBeTypeOf("function");
       expect(resolved.matched[1]?.name).toBe(route.name);
+      expect(resolved.matched[1]?.components?.default).toBeTypeOf("function");
     }
 
     const forbiddenRoute = router.resolve("/403");
@@ -107,7 +123,10 @@ describe("admin router", () => {
     expect(forbiddenRoute.meta.requiresAuth).toBe(true);
     expect(forbiddenRoute.meta.guestOnly).toBeUndefined();
     expect(forbiddenRoute.matched).toHaveLength(1);
-    expect(forbiddenRoute.matched[0]?.components?.default).toBe(ForbiddenView);
+    await expectLazyRouteComponent(
+      forbiddenRoute.matched[0]?.components?.default,
+      ForbiddenView,
+    );
 
     const notFoundRoute = router.resolve("/missing-page");
 
@@ -115,7 +134,10 @@ describe("admin router", () => {
     expect(notFoundRoute.meta.requiresAuth).toBe(true);
     expect(notFoundRoute.meta.guestOnly).toBeUndefined();
     expect(notFoundRoute.matched).toHaveLength(1);
-    expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
+    await expectLazyRouteComponent(
+      notFoundRoute.matched[0]?.components?.default,
+      NotFoundView,
+    );
 
     const loginRoute = router.resolve("/login");
 
@@ -124,6 +146,7 @@ describe("admin router", () => {
     expect(loginRoute.meta.requiresAuth).toBeUndefined();
     expect(loginRoute.matched).toHaveLength(1);
     expect(loginRoute.matched[0]?.path).toBe("/login");
+    expect(loginRoute.matched[0]?.components?.default).not.toBeTypeOf("function");
   });
 
   it("redirects anonymous users to login and preserves the requested route", async () => {

@@ -2,7 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
-import { createMemoryHistory } from "vue-router";
+import { createMemoryHistory, type Router } from "vue-router";
 import type { UserResponse } from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
@@ -49,6 +49,29 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   };
 }
 
+async function waitForRoute(
+  router: Router,
+  matches: () => boolean,
+): Promise<void> {
+  if (matches()) return;
+
+  await new Promise<void>((resolve, reject) => {
+    let stop: (() => void) | undefined;
+    const timeout = setTimeout(() => {
+      stop?.();
+      reject(new Error("Timed out waiting for route navigation."));
+    }, 1000);
+
+    stop = router.afterEach(() => {
+      if (!matches()) return;
+
+      clearTimeout(timeout);
+      stop?.();
+      resolve();
+    });
+  });
+}
+
 async function mountLoginView(initialPath = "/login") {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -86,11 +109,15 @@ describe("LoginView", () => {
     const { router, wrapper } = await mountLoginView(
       "/login?redirect=%2Freports",
     );
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.fullPath === "/reports",
+    );
 
     await wrapper.get('[data-testid="sign-in-email"]').setValue("admin@example.com");
     await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
     await wrapper.get("form").trigger("submit");
-    await flushPromises();
+    await routeReady;
 
     expect(router.currentRoute.value.fullPath).toBe("/reports");
   });
@@ -98,9 +125,13 @@ describe("LoginView", () => {
   it("signs in with Google through the UI and redirects to the dashboard", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { router, wrapper } = await mountLoginView();
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
 
     await wrapper.get('[data-testid="sign-in-google"]').trigger("click");
-    await flushPromises();
+    await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });

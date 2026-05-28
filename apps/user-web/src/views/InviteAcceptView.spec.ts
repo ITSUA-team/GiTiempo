@@ -2,7 +2,7 @@
 
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createMemoryHistory } from "vue-router";
+import { createMemoryHistory, type Router } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
 import type { UserResponse } from "@gitiempo/shared";
 import PrimeVue from "primevue/config";
@@ -69,6 +69,29 @@ function createWorkspaceInvitesClientMock(
     acceptInvite: async () => undefined,
     ...overrides,
   };
+}
+
+async function waitForRoute(
+  router: Router,
+  matches: () => boolean,
+): Promise<void> {
+  if (matches()) return;
+
+  await new Promise<void>((resolve, reject) => {
+    let stop: (() => void) | undefined;
+    const timeout = setTimeout(() => {
+      stop?.();
+      reject(new Error("Timed out waiting for route navigation."));
+    }, 1000);
+
+    stop = router.afterEach(() => {
+      if (!matches()) return;
+
+      clearTimeout(timeout);
+      stop?.();
+      resolve();
+    });
+  });
 }
 
 async function mountInviteAcceptView(
@@ -175,6 +198,10 @@ describe("InviteAcceptView", () => {
     acceptInvite.mockImplementation(async () => {
       acceptInviteCompleted = true;
     });
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
 
     await wrapper.get('[data-testid="invite-accept-email"]').setValue(
       "alexey@example.com",
@@ -183,7 +210,7 @@ describe("InviteAcceptView", () => {
       "password123",
     );
     await wrapper.get("form").trigger("submit");
-    await flushPromises();
+    await routeReady;
 
     expect(signInWithEmailPassword).toHaveBeenCalledWith(
       "alexey@example.com",
@@ -219,9 +246,13 @@ describe("InviteAcceptView", () => {
     acceptInvite.mockImplementation(async () => {
       acceptInviteCompleted = true;
     });
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
 
     await wrapper.get('[data-testid="invite-accept-google"]').trigger("click");
-    await flushPromises();
+    await routeReady;
 
     expect(signInWithGoogle).toHaveBeenCalled();
     expect(acceptInvite).toHaveBeenCalledWith({

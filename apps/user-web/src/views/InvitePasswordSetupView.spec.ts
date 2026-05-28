@@ -2,7 +2,7 @@
 
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createMemoryHistory } from "vue-router";
+import { createMemoryHistory, type Router } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
@@ -34,6 +34,29 @@ function createDefaultPath(): string {
   );
 
   return `/invites/password-setup?mode=resetPassword&oobCode=valid-code&continueUrl=${continueUrl}`;
+}
+
+async function waitForRoute(
+  router: Router,
+  matches: () => boolean,
+): Promise<void> {
+  if (matches()) return;
+
+  await new Promise<void>((resolve, reject) => {
+    let stop: (() => void) | undefined;
+    const timeout = setTimeout(() => {
+      stop?.();
+      reject(new Error("Timed out waiting for route navigation."));
+    }, 1000);
+
+    stop = router.afterEach(() => {
+      if (!matches()) return;
+
+      clearTimeout(timeout);
+      stop?.();
+      resolve();
+    });
+  });
 }
 
 async function mountInvitePasswordSetupView(initialPath = createDefaultPath()) {
@@ -230,8 +253,12 @@ describe("InvitePasswordSetupView", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain("Password saved");
 
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.inviteAccept,
+    );
     await wrapper.get('[data-testid="invite-password-setup-success"]').trigger("click");
-    await flushPromises();
+    await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.inviteAccept);
     expect(router.currentRoute.value.fullPath).toBe(
