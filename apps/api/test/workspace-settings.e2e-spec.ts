@@ -2,17 +2,25 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
-import { workspaceSettings, workspaces } from '../src/db/schema';
+import {
+  users,
+  workspaceMembers,
+  workspaceSettings,
+  workspaces,
+} from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
 
 describe('Workspace settings (e2e)', () => {
   let app: INestApplication;
   let db: DrizzleDB;
   let adminToken: string;
+  let workspaceId: string;
+  let adminUserId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -23,19 +31,59 @@ describe('Workspace settings (e2e)', () => {
     await app.init();
     db = app.get<DrizzleDB>(DRIZZLE);
 
-    const tokens = await login(app);
-    adminToken = tokens.accessToken;
+    const suffix = randomUUID();
+    const adminUid = `workspace-settings-admin-${suffix}`;
+    const adminEmail = `${adminUid}@example.com`;
 
-    const [workspace] = await db.select().from(workspaces).limit(1);
-    if (!workspace) throw new Error('Expected seeded workspace');
-    await db
-      .update(workspaceSettings)
-      .set({ currency: 'USD', defaultHourlyRate: 100, timeZone: 'UTC' })
-      .where(eq(workspaceSettings.workspaceId, workspace.id));
+    const [workspace] = await db
+      .insert(workspaces)
+      .values({ name: `Workspace Settings ${suffix}` })
+      .returning();
+    if (!workspace) throw new Error('Failed to create test workspace');
+    workspaceId = workspace.id;
+
+    const [adminUser] = await db
+      .insert(users)
+      .values({
+        firebaseUid: adminUid,
+        email: adminEmail,
+        displayName: 'Workspace Settings Admin',
+        avatarUrl: null,
+      })
+      .returning();
+    if (!adminUser) throw new Error('Failed to create test admin');
+    adminUserId = adminUser.id;
+
+    await db.insert(workspaceMembers).values({
+      workspaceId,
+      userId: adminUserId,
+      role: 'admin',
+    });
+    await db.insert(workspaceSettings).values({
+      workspaceId,
+      currency: 'USD',
+      defaultHourlyRate: 100,
+      timeZone: 'UTC',
+    });
+
+    const tokens = await login(
+      app,
+      `test:${adminUid}:${adminEmail}:Workspace Settings Admin`,
+    );
+    adminToken = tokens.accessToken;
   });
 
   afterAll(async () => {
-    await app.close();
+    if (workspaceId) {
+      await db
+        .delete(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, workspaceId));
+      await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+    }
+    if (adminUserId) {
+      await db.delete(users).where(eq(users.id, adminUserId));
+    }
+    if (app) await app.close();
   });
 
   describe('GET /workspace', () => {
@@ -86,11 +134,10 @@ describe('Workspace settings (e2e)', () => {
         .set('Authorization', bearer(adminToken));
       expect(verify.body.currency).toBe('EUR');
 
-      const [ws] = await db.select().from(workspaces).limit(1);
       const [row] = await db
         .select()
         .from(workspaceSettings)
-        .where(eq(workspaceSettings.workspaceId, ws.id));
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
       expect(row?.currency).toBe('EUR');
     });
 
@@ -138,11 +185,10 @@ describe('Workspace settings (e2e)', () => {
         .set('Authorization', bearer(adminToken));
       expect(verify.body.timeZone).toBe('Europe/Kyiv');
 
-      const [ws] = await db.select().from(workspaces).limit(1);
       const [row] = await db
         .select()
         .from(workspaceSettings)
-        .where(eq(workspaceSettings.workspaceId, ws.id));
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
       expect(row?.timeZone).toBe('Europe/Kyiv');
     });
 
@@ -189,7 +235,10 @@ describe('Workspace settings (e2e)', () => {
         .set('Authorization', bearer(adminToken));
       expect(verify.body.name).toBe('Updated Workspace');
 
-      const [row] = await db.select().from(workspaces).limit(1);
+      const [row] = await db
+        .select()
+        .from(workspaces)
+        .where(eq(workspaces.id, workspaceId));
       expect(row?.name).toBe('Updated Workspace');
     });
 

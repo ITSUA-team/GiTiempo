@@ -4,10 +4,11 @@ import Skeleton from 'primevue/skeleton';
 import { MobileRecordCard } from '@gitiempo/web-shared';
 
 type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports';
+type ManagementSkeletonVariant = ManagementPageSkeletonVariant | 'pendingInvites';
 
 defineProps<{
   index: number;
-  variant: ManagementPageSkeletonVariant;
+  variant: ManagementSkeletonVariant;
 }>();
 </script>
 
@@ -60,7 +61,7 @@ defineProps<{
     </div>
 
     <div
-      v-else
+      v-else-if="variant === 'reports'"
       class="flex min-w-0 flex-col gap-1.5"
     >
       <Skeleton
@@ -70,6 +71,22 @@ defineProps<{
       />
       <Skeleton
         width="55%"
+        height="0.75rem"
+        border-radius="4px"
+      />
+    </div>
+
+    <div
+      v-else
+      class="flex min-w-0 flex-col gap-1.5"
+    >
+      <Skeleton
+        width="70%"
+        height="0.95rem"
+        border-radius="4px"
+      />
+      <Skeleton
+        width="45%"
         height="0.75rem"
         border-radius="4px"
       />
@@ -142,7 +159,7 @@ defineProps<{
         </div>
       </template>
 
-      <template v-else>
+      <template v-else-if="variant === 'reports'">
         <div class="flex flex-col gap-1.5">
           <Skeleton
             width="2.5rem"
@@ -163,6 +180,33 @@ defineProps<{
           />
           <Skeleton
             width="4.5rem"
+            height="0.85rem"
+            border-radius="4px"
+          />
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="flex flex-col gap-1.5">
+          <Skeleton
+            width="2.5rem"
+            height="0.7rem"
+            border-radius="4px"
+          />
+          <Skeleton
+            width="4rem"
+            height="0.85rem"
+            border-radius="4px"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <Skeleton
+            width="3.5rem"
+            height="0.7rem"
+            border-radius="4px"
+          />
+          <Skeleton
+            width="5rem"
             height="0.85rem"
             border-radius="4px"
           />

@@ -33,6 +33,7 @@ import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
+import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
@@ -536,26 +537,17 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-xs">Role</span>
-            <span class="text-text-dark text-[13px] font-semibold">
-              {{ formatWorkspaceRole(member.role) }}
-            </span>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-xs">Projects</span>
-            <span class="text-text-dark text-[13px] font-semibold">
-              {{ formatProjectsAssigned(member) }}
-            </span>
-          </div>
-          <div class="col-span-2 flex flex-col gap-1">
-            <span class="text-text-muted text-xs">Last active</span>
-            <span class="text-text-dark text-[13px] font-semibold">
-              {{ formatLastActive(member.lastActiveAt) }}
-            </span>
-          </div>
-        </div>
+        <MobileRecordMetadataList
+          :items="[
+            { label: 'Role', value: formatWorkspaceRole(member.role) },
+            { label: 'Projects', value: formatProjectsAssigned(member) },
+            {
+              label: 'Last active',
+              value: formatLastActive(member.lastActiveAt),
+              fullWidth: true,
+            },
+          ]"
+        />
 
         <template
           v-if="!isSelf(member)"
