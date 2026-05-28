@@ -213,6 +213,8 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
 
   let intervalHandle: ReturnType<typeof setInterval> | null = null;
   let overviewRequestId = 0;
+  let activeOverviewLoadRequestId = 0;
+  let pendingOverviewTimerEvents: TimeEntryTimerSyncEvent[] = [];
   let unsubscribeFromTimerSync: (() => void) | null = null;
 
   const pageState = computed<DashboardPageState>(() => {
@@ -413,6 +415,25 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     nowMs.value = now();
   }
 
+  function queueTimerEventIfOverviewLoadActive(event: TimeEntryTimerSyncEvent): void {
+    if (activeOverviewLoadRequestId !== 0) {
+      pendingOverviewTimerEvents.push(event);
+    }
+  }
+
+  function replayPendingOverviewTimerEvents(requestId: number): void {
+    if (activeOverviewLoadRequestId !== requestId || pendingOverviewTimerEvents.length === 0) {
+      return;
+    }
+
+    const eventsToReplay = pendingOverviewTimerEvents;
+    pendingOverviewTimerEvents = [];
+
+    for (const event of eventsToReplay) {
+      reconcileTimerEvent(event);
+    }
+  }
+
   function requireAccessToken(): string {
     if (!authStore.accessToken) {
       throw new Error("Your session has expired. Please sign in again.");
@@ -449,6 +470,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     const accessToken = requireAccessToken();
     const requestId = ++overviewRequestId;
 
+    activeOverviewLoadRequestId = requestId;
     isLoadingOverview.value = true;
     requestErrorMessage.value = null;
 
@@ -464,6 +486,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
 
       recentEntries.value = recentResponse.items;
       weekEntries.value = nextWeekEntries;
+      replayPendingOverviewTimerEvents(requestId);
     } catch (error) {
       if (requestId !== overviewRequestId) {
         return;
@@ -478,6 +501,8 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
       });
     } finally {
       if (requestId === overviewRequestId) {
+        activeOverviewLoadRequestId = 0;
+        pendingOverviewTimerEvents = [];
         isLoadingOverview.value = false;
       }
     }
@@ -494,6 +519,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
 
     unsubscribeFromTimerSync = subscribeToTimeEntryTimerSync((event) => {
       reconcileTimerEvent(event);
+      queueTimerEventIfOverviewLoadActive(event);
     });
 
     void loadOverview();

@@ -761,4 +761,87 @@ describe("useTimeEntriesPage", () => {
       TEST_IDS.completedEntry,
     ]);
   });
+
+  it("replays a started timer event after the initial entries load resolves", async () => {
+    const initialResponse = createDeferred<TimeEntryListResponse>();
+    const listOwnEntries = vi.fn<TimeEntriesClient["listOwnEntries"]>().mockImplementationOnce(
+      async () => initialResponse.promise,
+    );
+
+    const mounted = await mountTimeEntriesPage({ listOwnEntries });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api } = mounted;
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.startedEntry,
+        source: "web",
+        startedAt: "2026-04-21T09:00:00.000Z",
+      }),
+      type: "started",
+    });
+
+    initialResponse.resolve({
+      items: [],
+      meta: { limit: 20, page: 1, total: 0, totalPages: 0 },
+    });
+    await flushPromises();
+
+    expect(api.pageState.value).toBe("ready");
+    expect(api.entries.value.map((entry) => entry.id)).toEqual([TEST_IDS.startedEntry]);
+    expect(api.totalRecords.value).toBe(1);
+    expect(api.totalPages.value).toBe(1);
+    expect(api.formatTimeRange(api.entries.value[0]!)).toBe("09:00 - Running");
+  });
+
+  it("replays a stopped timer event after a stale entries response resolves", async () => {
+    const initialResponse = createDeferred<TimeEntryListResponse>();
+    const listOwnEntries = vi.fn<TimeEntriesClient["listOwnEntries"]>().mockImplementationOnce(
+      async () => initialResponse.promise,
+    );
+
+    const mounted = await mountTimeEntriesPage({ listOwnEntries });
+
+    wrappers.push(mounted.wrapper);
+
+    const { api, advanceTime } = mounted;
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: 3600,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        id: TEST_IDS.runningEntry,
+        source: "web",
+        startedAt: "2026-04-21T09:00:00.000Z",
+        updatedAt: "2026-04-21T10:00:00.000Z",
+      }),
+      type: "stopped",
+    });
+
+    initialResponse.resolve({
+      items: [
+        createEntry({
+          durationSeconds: null,
+          endedAt: null,
+          id: TEST_IDS.runningEntry,
+          source: "web",
+          startedAt: "2026-04-21T09:00:00.000Z",
+        }),
+      ],
+      meta: { limit: 20, page: 1, total: 1, totalPages: 1 },
+    });
+    await flushPromises();
+
+    expect(api.entries.value[0]?.endedAt).toBe("2026-04-21T10:00:00.000Z");
+    expect(api.formatTimeRange(api.entries.value[0]!)).toBe("09:00 - 10:00");
+    expect(api.formatDuration(api.entries.value[0]!)).toBe("1h");
+
+    advanceTime(3000);
+
+    expect(api.formatDuration(api.entries.value[0]!)).toBe("1h");
+  });
 });

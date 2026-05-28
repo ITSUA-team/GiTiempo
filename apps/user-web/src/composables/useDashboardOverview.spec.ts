@@ -67,6 +67,20 @@ function createOwnEntriesResponse(
   return { items, meta };
 }
 
+function createDeferred<T>() {
+  // eslint-disable-next-line no-unused-vars
+  let resolve!: (value: T) => void;
+  // eslint-disable-next-line no-unused-vars
+  let reject!: (reason?: unknown) => void;
+
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+
+  return { promise, reject, resolve };
+}
+
 function createClientMock(): DashboardOverviewClient & {
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
 } {
@@ -411,6 +425,41 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("1h");
   });
 
+  it("replays a started timer event after the initial overview load resolves", async () => {
+    const recentResponse = createDeferred<TimeEntryListResponse>();
+    const weekResponse = createDeferred<TimeEntryListResponse>();
+    const client = createClientMock();
+
+    client.listOwnEntries
+      .mockImplementationOnce(async () => recentResponse.promise)
+      .mockImplementationOnce(async () => weekResponse.promise);
+
+    const mounted = mountDashboardOverview({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.startedEntry,
+        startedAt: "2026-04-21T11:00:00.000Z",
+      }),
+      type: "started",
+    });
+
+    recentResponse.resolve(createOwnEntriesResponse([]));
+    weekResponse.resolve(createOwnEntriesResponse([]));
+    await flushPromises();
+
+    expect(dashboardOverview.pageState.value).toBe("ready");
+    expect(dashboardOverview.recentEntryRows.value[0]?.id).toBe(TEST_IDS.startedEntry);
+    expect(dashboardOverview.recentEntryRows.value[0]?.isHighlighted).toBe(true);
+    expect(dashboardOverview.recentEntryRows.value[0]?.timeRangeLabel).toBe("11:00 - Running");
+  });
+
   it("replaces a running recent entry with the stopped entry and stops further duration growth", async () => {
     const client = createClientMock();
 
@@ -466,5 +515,68 @@ describe("useDashboardOverview", () => {
 
     expect(dashboardOverview.recentEntryRows.value[0]?.durationLabel).toBe("30m");
     expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("30m");
+  });
+
+  it("replays a stopped timer event after a stale overview response resolves", async () => {
+    const recentResponse = createDeferred<TimeEntryListResponse>();
+    const weekResponse = createDeferred<TimeEntryListResponse>();
+    const client = createClientMock();
+
+    client.listOwnEntries
+      .mockImplementationOnce(async () => recentResponse.promise)
+      .mockImplementationOnce(async () => weekResponse.promise);
+
+    const mounted = mountDashboardOverview({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    publishTimeEntryTimerSyncEvent({
+      entry: createEntry({
+        durationSeconds: 1800,
+        endedAt: "2026-04-21T11:30:00.000Z",
+        id: TEST_IDS.runningEntry,
+        startedAt: "2026-04-21T11:00:00.000Z",
+        updatedAt: "2026-04-21T11:30:00.000Z",
+      }),
+      type: "stopped",
+    });
+
+    recentResponse.resolve(
+      createOwnEntriesResponse([
+        createEntry({
+          durationSeconds: null,
+          endedAt: null,
+          id: TEST_IDS.runningEntry,
+          startedAt: "2026-04-21T11:00:00.000Z",
+        }),
+      ]),
+    );
+    weekResponse.resolve(
+      createOwnEntriesResponse([
+        createEntry({
+          durationSeconds: null,
+          endedAt: null,
+          id: TEST_IDS.runningEntry,
+          startedAt: "2026-04-21T11:00:00.000Z",
+        }),
+      ]),
+    );
+    await flushPromises();
+
+    expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
+      durationLabel: "30m",
+      id: TEST_IDS.runningEntry,
+      isHighlighted: false,
+      projectName: "Project Orion",
+      taskTitle: "Improve reports filters",
+      timeRangeLabel: "11:00 - 11:30",
+    });
+
+    vi.advanceTimersByTime(2000);
+    await flushPromises();
+
+    expect(dashboardOverview.recentEntryRows.value[0]?.durationLabel).toBe("30m");
   });
 });

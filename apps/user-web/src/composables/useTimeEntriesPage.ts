@@ -236,6 +236,8 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
 
   const taskCache = new Map<string, TaskLookupOption[]>();
   let entriesRequestId = 0;
+  let activeEntriesLoadRequestId = 0;
+  let pendingEntriesTimerEvents: TimeEntryTimerSyncEvent[] = [];
   let filterTaskRequestId = 0;
   let dialogTaskRequestId = 0;
   let tickHandle: ReturnType<typeof setInterval> | null = null;
@@ -422,6 +424,25 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
     syncTicker();
   }
 
+  function queueTimerEventIfEntriesLoadActive(event: TimeEntryTimerSyncEvent): void {
+    if (activeEntriesLoadRequestId !== 0) {
+      pendingEntriesTimerEvents.push(event);
+    }
+  }
+
+  function replayPendingEntriesTimerEvents(requestId: number): void {
+    if (activeEntriesLoadRequestId !== requestId || pendingEntriesTimerEvents.length === 0) {
+      return;
+    }
+
+    const eventsToReplay = pendingEntriesTimerEvents;
+    pendingEntriesTimerEvents = [];
+
+    for (const event of eventsToReplay) {
+      reconcileTimerEvent(event);
+    }
+  }
+
   function updateTaskSuggestions(
     target: "dialog" | "filter",
     query: string,
@@ -548,6 +569,7 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
   async function loadEntries(): Promise<void> {
     const requestId = ++entriesRequestId;
 
+    activeEntriesLoadRequestId = requestId;
     isLoadingEntries.value = true;
     requestErrorMessage.value = null;
 
@@ -563,6 +585,7 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
       pageSize.value = response.meta.limit;
       totalPages.value = response.meta.totalPages;
       totalRecords.value = response.meta.total;
+      replayPendingEntriesTimerEvents(requestId);
       nowMs.value = now();
       syncTicker();
     } catch (error) {
@@ -581,6 +604,8 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
       }
     } finally {
       if (requestId === entriesRequestId) {
+        activeEntriesLoadRequestId = 0;
+        pendingEntriesTimerEvents = [];
         isLoadingEntries.value = false;
       }
     }
@@ -924,6 +949,7 @@ export function useTimeEntriesPage(options: UseTimeEntriesPageOptions = {}) {
   onMounted(async () => {
     unsubscribeFromTimerSync = subscribeToTimeEntryTimerSync((event) => {
       reconcileTimerEvent(event);
+      queueTimerEventIfEntriesLoadActive(event);
     });
 
     await Promise.allSettled([ensureProjectsLoaded(), loadEntries()]);
