@@ -1,14 +1,10 @@
 import {
-  createMemoryHistory,
-  createRouter,
-  createWebHistory,
-  type RouteLocationNormalized,
-  type RouteLocationRaw,
   type RouteRecordRaw,
   type Router,
   type RouterHistory,
 } from "vue-router";
 import type { Pinia } from "pinia";
+import { createProtectedRouter } from "@gitiempo/web-shared/router";
 
 import AppShell from "@/components/layout/AppShell.vue";
 import DashboardView from "@/views/DashboardView.vue";
@@ -35,21 +31,7 @@ export const routeNames = {
   timeEntries: "time-entries",
 } as const;
 
-function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
-  const redirect = to.query.redirect;
-
-  return typeof redirect === "string" && redirect.startsWith("/")
-    ? redirect
-    : null;
-}
-
-function getDefaultAuthenticatedRoute(
-  to: RouteLocationNormalized,
-): RouteLocationRaw {
-  return normalizeRedirectTarget(to) ?? { name: routeNames.dashboard };
-}
-
-const routes: RouteRecordRaw[] = [
+const publicRoutes: RouteRecordRaw[] = [
   {
     path: "/invites/accept",
     name: routeNames.inviteAccept,
@@ -74,35 +56,32 @@ const routes: RouteRecordRaw[] = [
       guestOnly: true,
     },
   },
+];
+
+const protectedRoutes: RouteRecordRaw[] = [
   {
-    path: "/",
-    component: AppShell,
-    meta: {
-      requiresAuth: true,
-    },
-    children: [
-      {
-        path: "",
-        name: routeNames.dashboard,
-        component: DashboardView,
-      },
-      {
-        path: "time-entries",
-        name: routeNames.timeEntries,
-        component: TimeEntriesView,
-      },
-      {
-        path: "projects",
-        name: routeNames.project,
-        component: ProjectView,
-      },
-      {
-        path: "profile",
-        name: routeNames.profile,
-        component: ProfileView,
-      },
-    ],
+    path: "",
+    name: routeNames.dashboard,
+    component: DashboardView,
   },
+  {
+    path: "time-entries",
+    name: routeNames.timeEntries,
+    component: TimeEntriesView,
+  },
+  {
+    path: "projects",
+    name: routeNames.project,
+    component: ProjectView,
+  },
+  {
+    path: "profile",
+    name: routeNames.profile,
+    component: ProfileView,
+  },
+];
+
+const standaloneRoutes: RouteRecordRaw[] = [
   {
     path: "/403",
     name: routeNames.forbidden,
@@ -121,49 +100,24 @@ const routes: RouteRecordRaw[] = [
   },
 ];
 
-function createAppHistory(): RouterHistory {
-  return typeof window === "undefined"
-    ? createMemoryHistory()
-    : createWebHistory();
-}
-
-async function handleAuthNavigation(
-  to: RouteLocationNormalized,
-  authStore: ReturnType<typeof useAuthStore>,
-): Promise<RouteLocationRaw | undefined> {
-  if (to.meta.requiresAuth || to.meta.guestOnly) {
-    await authStore.bootstrapSession();
-  }
-
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return {
-      name: routeNames.login,
-      query: { redirect: to.fullPath },
-    };
-  }
-
-  if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return getDefaultAuthenticatedRoute(to);
-  }
-
-  return undefined;
-}
-
 export function createAppRouter(options?: {
   history?: RouterHistory;
   pinia?: Pinia;
 }): Router {
   const appPinia = options?.pinia ?? pinia;
-  const router = createRouter({
-    history: options?.history ?? createAppHistory(),
-    routes,
-  });
 
-  router.beforeEach(async (to) => {
-    return handleAuthNavigation(to, useAuthStore(appPinia));
+  return createProtectedRouter({
+    history: options?.history,
+    pinia: appPinia,
+    routeNames,
+    routes: {
+      protected: protectedRoutes,
+      public: publicRoutes,
+      standalone: standaloneRoutes,
+    },
+    shellComponent: AppShell,
+    useAuthStore,
   });
-
-  return router;
 }
 
 export const router = createAppRouter();

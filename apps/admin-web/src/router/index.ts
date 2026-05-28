@@ -1,18 +1,13 @@
 import {
-  createMemoryHistory,
-  createRouter,
-  createWebHistory,
-  type RouteLocationNormalized,
-  type RouteLocationRaw,
   type RouteRecordRaw,
   type Router,
   type RouterHistory,
 } from 'vue-router';
 import type { Pinia } from 'pinia';
 import { WorkspaceRoles } from '@gitiempo/shared';
+import { createProtectedRouter } from '@gitiempo/web-shared/router';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
-import { hasAllowedRole } from '@/router/rbac';
 import AddProjectMockView from '@/views/AddProjectView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import ForbiddenView from '@/views/ForbiddenView.vue';
@@ -42,21 +37,7 @@ export const routeNames = {
 const managementRoles = [WorkspaceRoles.Admin, WorkspaceRoles.PM] as const;
 const adminOnlyRoles = [WorkspaceRoles.Admin] as const;
 
-function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
-  const redirect = to.query.redirect;
-
-  return typeof redirect === 'string' && redirect.startsWith('/')
-    ? redirect
-    : null;
-}
-
-function getDefaultAuthenticatedRoute(
-  to: RouteLocationNormalized,
-): RouteLocationRaw {
-  return normalizeRedirectTarget(to) ?? { name: routeNames.dashboard };
-}
-
-const routes: RouteRecordRaw[] = [
+const publicRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: routeNames.login,
@@ -65,62 +46,62 @@ const routes: RouteRecordRaw[] = [
       guestOnly: true,
     },
   },
+];
+
+const protectedRoutes: RouteRecordRaw[] = [
   {
-    path: '/',
-    component: AdminAppShell,
-    meta: {
-      allowedRoles: managementRoles,
-      requiresAuth: true,
-    },
-    children: [
-      { path: '', name: routeNames.dashboard, component: DashboardView },
-      {
-        path: 'reports',
-        name: routeNames.reports,
-        component: ReportsView,
-      },
-      {
-        path: 'invoices',
-        name: routeNames.invoices,
-        component: InvoicesView,
-        meta: {
-          allowedRoles: adminOnlyRoles,
-        },
-      },
-      {
-        path: 'members',
-        name: routeNames.members,
-        component: MembersView,
-        meta: {
-          allowedRoles: adminOnlyRoles,
-        },
-      },
-      {
-        path: 'projects',
-        name: routeNames.projects,
-        component: ProjectsView,
-        meta: {
-          allowedRoles: adminOnlyRoles,
-        },
-      },
-      {
-        path: 'projects/new',
-        name: routeNames.addProject,
-        component: AddProjectMockView,
-        meta: {
-          allowedRoles: adminOnlyRoles,
-        },
-      },
-      {
-        path: 'settings',
-        name: routeNames.settings,
-        component: SettingsView,
-        meta: {
-          allowedRoles: adminOnlyRoles,
-        },
-      },
-    ],
+    path: '',
+    name: routeNames.dashboard,
+    component: DashboardView,
   },
+  {
+    path: 'reports',
+    name: routeNames.reports,
+    component: ReportsView,
+  },
+  {
+    path: 'invoices',
+    name: routeNames.invoices,
+    component: InvoicesView,
+    meta: {
+      allowedRoles: adminOnlyRoles,
+    },
+  },
+  {
+    path: 'members',
+    name: routeNames.members,
+    component: MembersView,
+    meta: {
+      allowedRoles: adminOnlyRoles,
+    },
+  },
+  {
+    path: 'projects',
+    name: routeNames.projects,
+    component: ProjectsView,
+    meta: {
+      allowedRoles: adminOnlyRoles,
+    },
+  },
+  {
+    path: 'projects/new',
+    name: routeNames.addProject,
+    component: AddProjectMockView,
+    meta: {
+      allowedRoles: adminOnlyRoles,
+    },
+  },
+  {
+    path: 'settings',
+    name: routeNames.settings,
+    component: SettingsView,
+    meta: {
+      allowedRoles: adminOnlyRoles,
+    },
+  },
+];
+
+const standaloneRoutes: RouteRecordRaw[] = [
   {
     path: '/403',
     name: routeNames.forbidden,
@@ -139,56 +120,27 @@ const routes: RouteRecordRaw[] = [
   },
 ];
 
-function createAppHistory(): RouterHistory {
-  return typeof window === 'undefined'
-    ? createMemoryHistory()
-    : createWebHistory();
-}
-
-async function handleAuthNavigation(
-  to: RouteLocationNormalized,
-  authStore: ReturnType<typeof useAuthStore>,
-): Promise<RouteLocationRaw | undefined> {
-  if (to.meta.requiresAuth || to.meta.guestOnly) {
-    await authStore.bootstrapSession();
-  }
-
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return {
-      name: routeNames.login,
-      query: { redirect: to.fullPath },
-    };
-  }
-
-  if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return getDefaultAuthenticatedRoute(to);
-  }
-
-  if (
-    to.meta.requiresAuth &&
-    !hasAllowedRole(to.meta.allowedRoles, authStore.profile?.role)
-  ) {
-    return { name: routeNames.forbidden };
-  }
-
-  return undefined;
-}
-
 export function createAppRouter(options?: {
   history?: RouterHistory;
   pinia?: Pinia;
 }): Router {
   const appPinia = options?.pinia ?? pinia;
-  const router = createRouter({
-    history: options?.history ?? createAppHistory(),
-    routes,
-  });
 
-  router.beforeEach(async (to) => {
-    return handleAuthNavigation(to, useAuthStore(appPinia));
+  return createProtectedRouter({
+    history: options?.history,
+    pinia: appPinia,
+    routeNames,
+    routes: {
+      protected: protectedRoutes,
+      public: publicRoutes,
+      standalone: standaloneRoutes,
+    },
+    shellComponent: AdminAppShell,
+    shellMeta: {
+      allowedRoles: managementRoles,
+    },
+    useAuthStore,
   });
-
-  return router;
 }
 
 export const router = createAppRouter();

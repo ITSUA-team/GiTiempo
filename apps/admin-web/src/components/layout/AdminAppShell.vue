@@ -10,6 +10,7 @@ import {
 } from '@heroicons/vue/24/outline';
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
+import { hasAllowedRole } from "@gitiempo/web-shared/router";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
@@ -17,7 +18,6 @@ import Toast from "primevue/toast";
 import { useToasts } from "@/composables/feedback/useToasts";
 import { appEnv } from "@/config/env";
 import { routeNames } from "@/router";
-import { hasAllowedRole } from "@/router/rbac";
 import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
 
