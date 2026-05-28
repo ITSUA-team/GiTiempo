@@ -100,6 +100,51 @@ describe('TimeEntriesService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('allows task-only reassignment for running entries', async () => {
+    const runningEntry = {
+      ...completedEntry,
+      endedAt: null,
+      durationSeconds: null,
+      source: 'web' as const,
+    };
+    const set = vi.fn().mockReturnThis();
+    const where = vi.fn().mockReturnThis();
+    const returning = vi.fn().mockResolvedValue([{ id: runningEntry.id }]);
+    const db = {
+      select: vi.fn().mockReturnValue(selectRows([runningEntry])),
+      update: vi.fn().mockReturnValue({ set, where, returning }),
+    };
+    const tasks = {
+      requireTrackableTask: vi
+        .fn()
+        .mockResolvedValue({ task: { id: 'task-2' } }),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      tasks as never,
+      mockUsersActivity as never,
+    );
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: vi.fn().mockResolvedValue({ ...runningEntry, taskId: 'task-2' }),
+    });
+
+    await service.updateOwnEntry(user, runningEntry.id, { taskId: 'task-2' });
+
+    expect(tasks.requireTrackableTask).toHaveBeenCalledWith(user, 'task-2');
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'task-2',
+      }),
+    );
+    expect(set).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        durationSeconds: expect.anything(),
+      }),
+    );
+  });
+
   it('rejects deletes of running entries', async () => {
     const db = {
       select: vi.fn().mockReturnValue(

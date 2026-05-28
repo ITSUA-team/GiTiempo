@@ -84,12 +84,14 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const isStartingTimer = shallowRef(false);
   const isStoppingTimer = shallowRef(false);
   const isCreatingTask = shallowRef(false);
+  const isConfirmingSelection = shallowRef(false);
 
   const summaryErrorMessage = shallowRef<string | null>(null);
   const projectsErrorMessage = shallowRef<string | null>(null);
   const tasksErrorMessage = shallowRef<string | null>(null);
   const timerActionErrorMessage = shallowRef<string | null>(null);
   const createTaskErrorMessage = shallowRef<string | null>(null);
+  const selectionUpdateErrorMessage = shallowRef<string | null>(null);
   const tickNowMs = shallowRef(now());
 
   const taskCache = new Map<string, TaskResponse[]>();
@@ -151,7 +153,11 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     return !selectedContext.value || summaryErrorMessage.value !== null;
   });
   const isConfirmSelectionDisabled = computed(
-    () => !selectedProjectId.value || !selectedTaskId.value || isCreatingTask.value,
+    () =>
+      !selectedProjectId.value ||
+      !selectedTaskId.value ||
+      isCreatingTask.value ||
+      isConfirmingSelection.value,
   );
   const isCreateTaskDisabled = computed(() => {
     return !selectedProjectId.value || isCreatingTask.value || createTaskTitle.value.trim().length === 0;
@@ -335,11 +341,12 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   }
 
   async function openDialog(): Promise<void> {
+    setDialogSelectionFromCurrentState();
     isDialogOpen.value = true;
     createTaskErrorMessage.value = null;
+    selectionUpdateErrorMessage.value = null;
     projectsErrorMessage.value = null;
     tasksErrorMessage.value = null;
-    setDialogSelectionFromCurrentState();
 
     try {
       await ensureProjectsLoaded(requireAccessToken());
@@ -363,6 +370,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isDialogOpen.value = false;
     createTaskTitle.value = "";
     createTaskErrorMessage.value = null;
+    selectionUpdateErrorMessage.value = null;
   }
 
   function setSelectedProjectId(projectId: string | null): void {
@@ -370,11 +378,17 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       return;
     }
 
+    if (isDialogOpen.value) {
+      selectedTaskId.value = null;
+    }
+
     selectedProjectId.value = projectId;
+    selectionUpdateErrorMessage.value = null;
   }
 
   function setSelectedTaskId(taskId: string | null): void {
     selectedTaskId.value = taskId;
+    selectionUpdateErrorMessage.value = null;
   }
 
   function setCreateTaskTitle(title: string): void {
@@ -382,8 +396,56 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     createTaskErrorMessage.value = null;
   }
 
-  function confirmSelectedTask(): void {
+  async function confirmSelectedTask(): Promise<void> {
     if (!selectedProject.value || !selectedTask.value) {
+      return;
+    }
+
+    selectionUpdateErrorMessage.value = null;
+
+    if (currentTimer.value) {
+      if (currentTimer.value.task.id === selectedTask.value.id) {
+        closeDialog();
+        return;
+      }
+
+      isConfirmingSelection.value = true;
+
+      try {
+        const updatedTimer = await client.updateEntry(
+          requireAccessToken(),
+          currentTimer.value.id,
+          { taskId: selectedTask.value.id },
+        );
+
+        currentTimer.value = updatedTimer;
+        setSelectedContextFromTimer(updatedTimer);
+        closeDialog();
+        appToast.showSuccessToast(
+          "Timer task updated",
+          "The running timer now tracks the selected task.",
+        );
+      } catch (error) {
+        const message = getErrorMessage(error);
+
+        selectionUpdateErrorMessage.value = message;
+        appToast.showErrorToast({
+          detail: "Please try again.",
+          error,
+          logContext: { action: "update-running-timer-task", feature: "top-bar-timer" },
+          summary: "Could not update the timer task",
+        });
+
+        if (
+          message.toLowerCase().includes("stop the timer") ||
+          message.toLowerCase().includes("time entry not found")
+        ) {
+          await refreshSummary();
+        }
+      } finally {
+        isConfirmingSelection.value = false;
+      }
+
       return;
     }
 
@@ -501,7 +563,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   watch(
     selectedProjectId,
-    async (nextProjectId, previousProjectId) => {
+    async (nextProjectId) => {
       if (!isDialogOpen.value) {
         return;
       }
@@ -511,10 +573,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
         tasksErrorMessage.value = null;
         selectedTaskId.value = null;
         return;
-      }
-
-      if (nextProjectId !== previousProjectId) {
-        selectedTaskId.value = null;
       }
 
       try {
@@ -570,6 +628,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     currentTimer,
     elapsedTimeLabel,
     handlePrimaryAction,
+    isConfirmingSelection,
     isConfirmSelectionDisabled,
     isCreateTaskDisabled,
     isCreatingTask,
@@ -590,6 +649,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     selectedProject,
     selectedTask,
     selectedTaskId,
+    selectionUpdateErrorMessage,
     setCreateTaskTitle,
     setSelectedProjectId,
     setSelectedTaskId,

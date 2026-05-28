@@ -12,6 +12,7 @@ const props = defineProps<{
   createTaskErrorMessage: string | null;
   createTaskTitle: string;
   isConfirmSelectionDisabled: boolean;
+  isConfirmingSelection: boolean;
   isCreateTaskDisabled: boolean;
   isCreatingTask: boolean;
   isLoadingProjects: boolean;
@@ -21,6 +22,7 @@ const props = defineProps<{
   projectsErrorMessage: string | null;
   selectedProjectId: string | null;
   selectedTaskId: string | null;
+  selectionUpdateErrorMessage: string | null;
   taskOptions: TaskResponse[];
   tasksErrorMessage: string | null;
 }>();
@@ -94,6 +96,18 @@ const isMobileViewport = useIsMobileViewport();
         </p>
         <p class="text-destructive mt-1 text-xs">
           {{ props.projectsErrorMessage }}
+        </p>
+      </div>
+
+      <div
+        v-if="props.selectionUpdateErrorMessage"
+        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
+      >
+        <p class="text-destructive text-sm font-medium">
+          Could not update the active timer task.
+        </p>
+        <p class="text-destructive mt-1 text-xs">
+          {{ props.selectionUpdateErrorMessage }}
         </p>
       </div>
 
@@ -243,6 +257,7 @@ const isMobileViewport = useIsMobileViewport();
           :disabled="props.isConfirmSelectionDisabled"
           :fluid="true"
           label="Use selected task"
+          :loading="props.isConfirmingSelection"
           @click="emit('confirm')"
         />
         <Button
@@ -261,6 +276,7 @@ const isMobileViewport = useIsMobileViewport();
           :disabled="props.isConfirmSelectionDisabled"
           :fluid="false"
           label="Use selected task"
+          :loading="props.isConfirmingSelection"
           @click="emit('confirm')"
         />
       </div>

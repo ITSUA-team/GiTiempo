@@ -153,8 +153,35 @@ export class TimeEntriesService {
     input: UpdateTimeEntryInput,
   ): Promise<TimeEntryResponse> {
     const row = await this.requireOwnEntryRow(user, entryId);
+
+    const nextTaskId =
+      input.taskId !== undefined && input.taskId !== row.taskId
+        ? (await this.tasks.requireTrackableTask(user, input.taskId)).task.id
+        : row.taskId;
+
     if (!row.endedAt) {
-      throw new ConflictException('Stop the timer before updating it');
+      if (
+        input.startedAt !== undefined ||
+        input.endedAt !== undefined ||
+        input.description !== undefined ||
+        input.isBillable !== undefined
+      ) {
+        throw new ConflictException('Stop the timer before updating it');
+      }
+
+      const [updated] = await this.db
+        .update(timeEntries)
+        .set({
+          ...(nextTaskId !== row.taskId ? { taskId: nextTaskId } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(timeEntries.id, row.id))
+        .returning({ id: timeEntries.id });
+      if (!updated) throw new Error('Failed to update time entry');
+
+      const result = await this.requireEntryResponse(this.db, updated.id);
+      void this.usersActivity.touchLastActive(user.sub);
+      return result;
     }
 
     const startedAt =
@@ -162,10 +189,6 @@ export class TimeEntriesService {
     const endedAt =
       input.endedAt !== undefined ? new Date(input.endedAt) : row.endedAt;
     const durationSeconds = calculateDurationSeconds(startedAt, endedAt);
-    const nextTaskId =
-      input.taskId !== undefined && input.taskId !== row.taskId
-        ? (await this.tasks.requireTrackableTask(user, input.taskId)).task.id
-        : row.taskId;
 
     const [updated] = await this.db
       .update(timeEntries)

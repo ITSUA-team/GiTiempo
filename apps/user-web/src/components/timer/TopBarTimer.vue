@@ -20,6 +20,7 @@ const {
   createTaskTitle,
   elapsedTimeLabel,
   handlePrimaryAction,
+  isConfirmingSelection,
   isConfirmSelectionDisabled,
   isCreateTaskDisabled,
   isCreatingTask,
@@ -35,6 +36,7 @@ const {
   projectOptions,
   selectedProjectId,
   selectedTaskId,
+  selectionUpdateErrorMessage,
   setCreateTaskTitle,
   setSelectedProjectId,
   setSelectedTaskId,
@@ -173,6 +175,7 @@ const primaryActionIcon = computed(() =>
     :create-task-error-message="createTaskErrorMessage"
     :create-task-title="createTaskTitle"
     :is-confirm-selection-disabled="isConfirmSelectionDisabled"
+    :is-confirming-selection="isConfirmingSelection"
     :is-create-task-disabled="isCreateTaskDisabled"
     :is-creating-task="isCreatingTask"
     :is-loading-projects="isLoadingProjects"
@@ -182,6 +185,7 @@ const primaryActionIcon = computed(() =>
     :projects-error-message="projectsErrorMessage ?? summaryErrorMessage"
     :selected-project-id="selectedProjectId"
     :selected-task-id="selectedTaskId"
+    :selection-update-error-message="selectionUpdateErrorMessage"
     :task-options="taskOptions"
     :tasks-error-message="tasksErrorMessage"
     @close="closeDialog"

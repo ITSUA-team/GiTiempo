@@ -46,7 +46,14 @@ function createTask(id: string, projectId: string, title: string, isActive = tru
 }
 
 function createRunningEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
-  const { githubIssue = null, ...entryOverrides } = overrides;
+  const {
+    githubIssue = null,
+    project = { id: "project-1", name: "Project Orion" },
+    projectId = project.id,
+    task = { id: "task-1", title: "Improve reports filters" },
+    taskId = task.id,
+    ...entryOverrides
+  } = overrides;
 
   return {
     createdAt: "2026-04-21T09:00:00.000Z",
@@ -55,12 +62,12 @@ function createRunningEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEnt
     endedAt: null,
     id: "running-entry",
     isBillable: true,
-    project: { id: "project-1", name: "Project Orion" },
-    projectId: "project-1",
+    project,
+    projectId,
     source: "web",
     startedAt: "2026-04-21T09:00:00.000Z",
-    task: { id: "task-1", title: "Improve reports filters" },
-    taskId: "task-1",
+    task,
+    taskId,
     updatedAt: "2026-04-21T09:00:00.000Z",
     user: {
       avatarUrl: null,
@@ -119,7 +126,7 @@ function createClientMock(): TimeEntriesClient & {
     listVisibleProjects: vi.fn(async () => []),
     startTimer: vi.fn(async () => createRunningEntry()),
     stopTimer: vi.fn(async () => createCompletedEntry()),
-    updateEntry: vi.fn(async () => createCompletedEntry()),
+    updateEntry: vi.fn(async () => createRunningEntry()),
     updateTask: vi.fn(async () => createTask("task-1", "project-1", "Updated task")),
   };
 }
@@ -354,5 +361,116 @@ describe("useTopBarTimer", () => {
     await flushPromises();
 
     expect(topBarTimer.elapsedTimeLabel.value).toBe("01:00:02");
+  });
+
+  it("preselects the running timer task when the dialog opens", async () => {
+    const client = createClientMock();
+
+    client.getCurrentTimer.mockResolvedValueOnce({
+      timeEntry: createRunningEntry({
+        task: { id: "task-2", title: "Review PM scope rules" },
+        taskId: "task-2",
+      }),
+    });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+      createTask("task-2", "project-1", "Review PM scope rules"),
+    ]);
+
+    const { topBarTimer } = mountTopBarTimer({ client });
+
+    await flushPromises();
+
+    topBarTimer.selectedProjectId.value = "project-stale";
+    topBarTimer.selectedTaskId.value = "task-stale";
+
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.selectedProjectId.value).toBe("project-1");
+    expect(topBarTimer.selectedTaskId.value).toBe("task-2");
+  });
+
+  it("updates the running timer task from the authoritative response", async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+      createTask("task-2", "project-1", "Review PM scope rules"),
+    ]);
+    client.updateEntry.mockResolvedValueOnce(
+      createRunningEntry({
+        task: { id: "task-2", title: "Review PM scope rules" },
+        taskId: "task-2",
+      }),
+    );
+
+    const { topBarTimer } = mountTopBarTimer({ client, toast });
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    topBarTimer.setSelectedTaskId("task-2");
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(client.updateEntry).toHaveBeenCalledWith("access-token", "running-entry", {
+      taskId: "task-2",
+    });
+    expect(topBarTimer.currentTimer.value?.taskId).toBe("task-2");
+    expect(topBarTimer.timerContextLabel.value).toBe(
+      "Project Orion / Review PM scope rules",
+    );
+    expect(topBarTimer.isDialogOpen.value).toBe(false);
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "success",
+        summary: "Timer task updated",
+      }),
+    );
+  });
+
+  it("keeps the dialog open when updating the running timer task fails", async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+      createTask("task-2", "project-1", "Review PM scope rules"),
+    ]);
+    client.updateEntry.mockRejectedValueOnce(new Error("Task is inactive"));
+
+    const { topBarTimer } = mountTopBarTimer({ client, toast });
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    topBarTimer.setSelectedTaskId("task-2");
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+    expect(topBarTimer.currentTimer.value?.taskId).toBe("task-1");
+    expect(topBarTimer.selectionUpdateErrorMessage.value).toBe("Task is inactive");
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "error",
+        summary: "Could not update the timer task",
+      }),
+    );
   });
 });
