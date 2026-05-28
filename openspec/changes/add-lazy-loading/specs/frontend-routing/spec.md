@@ -1,9 +1,9 @@
 ## ADDED Requirements
 
 ### Requirement: User-Web Route Views Load On Demand
-The user-web router SHALL load non-entry route view components on demand while keeping the public login entry and authenticated shell immediately available.
+The user-web router SHALL load route view components other than the primary public login entry and authenticated shell on demand. Invite accept and invite password setup routes SHALL remain public/guest-flow entry points behaviorally, but SHALL be treated as non-primary public entry flows for loading behavior.
 
-#### Scenario: User-web non-entry route views are lazy
+#### Scenario: User-web non-login route views are lazy
 - **WHEN** the user-web router module is initialized
 - **THEN** the public login route is available without a lazy route component loader
 - **AND** the authenticated shell route is available without a lazy route component loader

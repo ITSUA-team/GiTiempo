@@ -1,9 +1,9 @@
 ## ADDED Requirements
 
 ### Requirement: Admin Route Views Load On Demand
-The admin-web router SHALL load non-entry admin route view components on demand while keeping the public login entry and authenticated admin shell immediately available.
+The admin-web router SHALL load route view components other than the primary public login entry and authenticated admin shell on demand.
 
-#### Scenario: Admin non-entry route views are lazy
+#### Scenario: Admin non-login route views are lazy
 - **WHEN** the admin-web router module is initialized
 - **THEN** the public login route is available without a lazy route component loader
 - **AND** the authenticated admin shell route is available without a lazy route component loader

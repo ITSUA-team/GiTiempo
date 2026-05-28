@@ -21,4 +21,5 @@
 - [x] 3.5 Run `pnpm --filter admin-web lint`.
 - [x] 3.6 Run `pnpm --filter admin-web typecheck`.
 - [x] 3.7 Run `pnpm --filter admin-web test`.
-- [x] 3.8 Run `pnpm --filter user-web build` and `pnpm --filter admin-web build` to verify production builds still succeed and route view chunks are emitted through dynamic imports.
+- [x] 3.8 Run `pnpm --filter user-web build` and `pnpm --filter admin-web build`, then inspect Vite build output for separate route view chunk assets to verify dynamic imports emitted route-level chunks.
+- [x] 3.9 Document invite route loading rationale and the accepted default chunk-load failure behavior for this change.

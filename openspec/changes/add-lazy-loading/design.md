@@ -14,10 +14,10 @@ Current implementation scope:
 
 **Goals:**
 
-- Reduce initial frontend JavaScript by lazy-loading route view components that are not needed for the initial public entry route.
+- Reduce initial frontend JavaScript by lazy-loading route view components that are not needed for the primary login entry route.
 - Preserve every existing route path, name, auth meta field, redirect rule, and shell grouping behavior.
 - Keep the implementation idiomatic for Vue Router by using route component loader functions that return dynamic `import()` promises.
-- Keep `LoginView` eager because it is the immediate public entry screen for unauthenticated users.
+- Keep `LoginView` eager because it is the primary public entry screen for unauthenticated users.
 - Keep app shell layout components eager because they are small routing/layout composition surfaces needed for normal authenticated app entry.
 - Update tests so they verify lazy route loaders and wait for lazy navigation resolution where needed.
 
@@ -49,6 +49,12 @@ Alternative considered: wrap route views in `defineAsyncComponent`. This is not 
 
 Alternative considered: lazy-load every view, including login and shells. That would minimize static imports but would penalize the most common public entry path and add little value for small layout shells.
 
+### Treat invite routes as non-primary public entry flows
+
+`InviteAcceptView` and `InvitePasswordSetupView` can be reached directly from email links, but they are not the primary unauthenticated entry screen. They remain public/guest-flow routes behaviorally, while their view code is lazy-loaded so invite-specific form and Firebase action-code logic does not inflate the normal login entry bundle.
+
+Alternative considered: keep invite views eager alongside `LoginView`. That would make invite email links one request faster, but it would keep low-frequency invite-only code in the initial bundle for every login visit.
+
 ### Lazy-load product, invite, and error route views
 
 The implementation should convert these route views to lazy loaders:
@@ -66,6 +72,12 @@ Rely on Vite/Rollup's default dynamic import code splitting first. Manual chunks
 
 Alternative considered: create shared `user-views` or `admin-views` chunks immediately. That can accidentally re-bundle unrelated pages together and reduce the benefit of lazy-loading before real bundle data exists.
 
+### Do not add a route chunk recovery fallback in this change
+
+Dynamic route chunks can fail to load because of network errors, stale browser caches after deployment, or a user keeping an older app shell open while new assets are deployed. This change accepts Vue Router/Vite/browser default error behavior for that failure mode because the project does not yet have an app-wide chunk recovery, reload, or error-boundary policy. Adding `router.onError` reload behavior now would introduce broader UX and loop-prevention decisions that are separate from route-level code splitting.
+
+Alternative considered: add a router-level chunk-load error fallback that reloads the page. That can improve recovery from stale chunks, but it needs cross-SPA policy for detecting chunk errors, avoiding reload loops, preserving pending navigation intent, and presenting failure feedback.
+
 ### Update tests around lazy route functions and navigation timing
 
 Router tests that compare `route.matched[0].components.default` to an imported component must change to assert that the route component is a function and that invoking it resolves to the expected module default.
@@ -77,6 +89,7 @@ Alternative considered: remove component identity assertions from router tests. 
 ## Risks / Trade-offs
 
 - First navigation to a lazy page adds a dynamic chunk request -> Mitigation: keep login and shell eager, lazy-load only route views, and defer prefetch/manual chunking until bundle data justifies it.
+- Dynamic route chunks can fail after deploy/cache mismatch or transient network failure -> Mitigation: explicitly accept default browser/Vue Router failure behavior in this change and defer a cross-SPA chunk recovery policy to a separate reliability change.
 - Tests can become flaky if they assert route state before the lazy component resolves -> Mitigation: update navigation tests to wait for the expected route state and update router tests to resolve lazy loaders explicitly.
 - Dynamic import typing can become noisy with `RouteRecordRaw` -> Mitigation: keep loader constants simple and let Vue Router's route component typing infer valid async components.
 - Too many tiny chunks could hurt slow networks -> Mitigation: start with default Vite code splitting and evaluate build output later before adding manual chunk groups.
@@ -87,7 +100,8 @@ Alternative considered: remove component identity assertions from router tests. 
 - Replace static route-view imports with dynamic import loader constants in `apps/user-web/src/router/index.ts` and `apps/admin-web/src/router/index.ts`.
 - Keep route records, route names, paths, meta, children, and navigation guards unchanged.
 - Update router and affected view tests.
-- Verify both SPAs with `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, `pnpm --filter user-web test`, `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`.
+- Verify both SPAs with `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, `pnpm --filter user-web test`, `pnpm --filter user-web build`, `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, `pnpm --filter admin-web test`, and `pnpm --filter admin-web build`.
+- Inspect Vite build output for separate route view chunk assets such as `DashboardView`, `TimeEntriesView`, `ProjectsView`, or `ReportsView` to confirm dynamic imports produced route-level chunks.
 - Rollback is straightforward: restore the static imports and route record component references if unexpected routing or bundling issues appear.
 
 ## Open Questions
