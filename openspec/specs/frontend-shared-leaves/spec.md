@@ -148,6 +148,13 @@ The frontend codebase SHALL place repeated boxed management-table chrome in `@gi
 - **AND** product-specific columns, filters, and per-row content stay in the consuming page
 - **AND** consumers do not maintain a parallel app-local copy of the chrome
 
+#### Scenario: Shared management table filter helpers stay presentational
+
+- **WHEN** admin management tables render filter controls through the shared management-table chrome
+- **THEN** reusable filter input classes and PrimeVue Select/MultiSelect pass-through styling SHALL live in `@gitiempo/web-shared`
+- **AND** those helpers remain presentational styling leaves
+- **AND** product-specific filter state, option derivation, and row-matching behavior stay in the consuming admin table component
+
 ### Requirement: Shared Authenticated Header Chrome Is Extractable
 
 The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/web-shared` when the user/admin header structure is identical and all app-specific orchestration can remain local.
