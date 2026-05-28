@@ -158,11 +158,21 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 - **THEN** the duplicated top bar markup is implemented as a shared prop-driven Vue component
 - **AND** app shells continue to own auth-store reads, environment-derived counterpart URLs, route names, router views, sidebars, and page composition
 
-#### Scenario: Shared header omits settings/profile action after simplification
+#### Scenario: Shared header owns the common profile dropdown shell only
 
-- **WHEN** the shared authenticated header surface is simplified to the invariant identity controls
-- **THEN** the shared header renders the counterpart workspace link, display name, and avatar
-- **AND** it does not render a shared settings/profile action
+- **WHEN** `user-web` and `admin-web` render the same authenticated profile dropdown trigger and menu shape
+- **THEN** the shared header renders the display name, avatar trigger, open-state trigger styling, counterpart workspace dropdown action, and menu surface
+- **AND** the counterpart workspace href and label drive the dropdown workspace action on all breakpoints
+- **AND** the shared header does not render a standalone top-bar counterpart workspace link
+- **AND** app shells provide the first-action label, icon, and route target
+- **AND** the shared header emits sign-out intent without importing app auth stores, route names, session cleanup, or login redirect behavior
+
+#### Scenario: Mobile timer support does not own profile actions
+
+- **WHEN** the shared authenticated header renders the top-right identity/profile area
+- **THEN** profile/settings menu ownership is governed by the active header/profile-menu requirements rather than by the mobile timer center-slot contract
+- **AND** app shells continue to own profile/settings route targets, counterpart workspace URLs, and logout handlers when those actions exist
+- **AND** this mobile timer change does not add timer state, timer API calls, or task-picker behavior to the top-right profile area
 
 #### Scenario: User-web owns header center timer content
 
@@ -170,6 +180,13 @@ The frontend codebase SHALL extract authenticated header chrome into `@gitiempo/
 - **THEN** the shared header allows app-owned center content without owning timer state, API calls, or task-picker behavior
 - **AND** `admin-web` can keep the same shared header without rendering a top-bar timer
 - **AND** the shared header layout remains stable when the center region is empty
+
+#### Scenario: User-web center content may render as a mobile row
+
+- **WHEN** `user-web` provides app-owned center content and the shared header renders below the mobile breakpoint
+- **THEN** the shared header may render that center content as a row below the mobile top row
+- **AND** the shared header still does not own timer state, timer API calls, or task-picker behavior
+- **AND** `admin-web` keeps the same shared header without rendering an empty mobile center row
 
 ### Requirement: Shared Authenticated Navigation Uses Compact Icon-Only Base
 
@@ -276,4 +293,3 @@ The frontend shared package SHALL provide only neutral, presentational leaves fo
 - **GIVEN** admin-web already renders mobile record cards for management tables
 - **WHEN** the viewport helper or mobile card shell is moved into the shared frontend package
 - **THEN** admin-web preserves the same mobile card behavior, accessible row actions, and desktop table behavior after updating imports
-
