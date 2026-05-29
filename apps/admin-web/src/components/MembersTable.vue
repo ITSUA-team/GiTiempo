@@ -36,10 +36,10 @@ import Skeleton from 'primevue/skeleton';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
-import { useConfirmation } from '@/composables/useConfirmation';
+import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/useToasts';
+import { useToasts } from '@/composables/feedback/useToasts';
 
 type MemberLastActiveFilter = 'any' | 'today' | 'thisWeek' | 'inactive';
 
@@ -343,7 +343,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       if (!token) return;
 
       try {
-        await adminMembersClient.removeMember(token, member.id);
+        await adminMembersClient.removeMember(member.id);
         successToast(`${member.displayName ?? member.email} has been removed.`);
         emit('member-removed');
       } catch (err) {

@@ -5,7 +5,7 @@ import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import TimeEntriesDaySection from './TimeEntriesDaySection.vue';
-import type { TimeEntriesDayGroup } from '@/composables/useTimeEntriesPage';
+import type { TimeEntriesDayGroup } from '@/lib/time-entry-display';
 import { mockMatchMedia } from '@/test/mockMatchMedia';
 
 const group: TimeEntriesDayGroup = {

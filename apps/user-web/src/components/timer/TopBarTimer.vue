@@ -8,7 +8,7 @@ import { computed } from "vue";
 import Button from "primevue/button";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
 
-import { useTopBarTimer } from "@/composables/useTopBarTimer";
+import { useTopBarTimer } from "@/composables/timer/useTopBarTimer";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 

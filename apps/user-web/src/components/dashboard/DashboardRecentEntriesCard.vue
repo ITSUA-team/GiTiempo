@@ -9,7 +9,7 @@ import {
   useIsMobileViewport,
 } from "@gitiempo/web-shared";
 
-import type { DashboardRecentEntryRow } from "@/composables/useDashboardOverview";
+import type { DashboardRecentEntryRow } from "@/composables/dashboard/useDashboardOverview";
 
 const props = defineProps<{
   entries: DashboardRecentEntryRow[];

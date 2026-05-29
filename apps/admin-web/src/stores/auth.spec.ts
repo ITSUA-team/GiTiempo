@@ -12,7 +12,20 @@ import {
   setAuthRuntimeForTesting,
   type AuthRuntime,
 } from "@/services/auth-runtime";
+import { queryClient } from "@/query-client";
 import { useAuthStore } from "@/stores/auth";
+
+const authenticatedQueryCacheProbeKey = ["auth-cache-probe"];
+
+function seedAuthenticatedQueryCache(): void {
+  queryClient.setQueryData(authenticatedQueryCacheProbeKey, "stale-data");
+}
+
+function expectAuthenticatedQueryCacheCleared(): void {
+  expect(
+    queryClient.getQueryData(authenticatedQueryCacheProbeKey),
+  ).toBeUndefined();
+}
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
@@ -53,7 +66,16 @@ describe("useAuthStore", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     clearRefreshToken();
+    queryClient.clear();
     resetAuthRuntimeForTesting();
+  });
+
+  it("exposes guest auth labels from the app wrapper", () => {
+    const authStore = useAuthStore();
+
+    expect(authStore.displayName).toBe("Admin User");
+    expect(authStore.userInitials).toBe("AU");
+    expect(authStore.workspaceName).toBe("Workspace Admin");
   });
 
   it("restores a session from refresh token during bootstrap", async () => {
@@ -83,6 +105,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    seedAuthenticatedQueryCache();
 
     await authStore.bootstrapSession();
 
@@ -91,6 +114,7 @@ describe("useAuthStore", () => {
     expect(authStore.profile).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("clears invalid refresh token during bootstrap fallback", async () => {
@@ -104,6 +128,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    seedAuthenticatedQueryCache();
 
     await authStore.bootstrapSession();
 
@@ -112,12 +137,39 @@ describe("useAuthStore", () => {
     expect(authStore.profile).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
+  });
+
+  it("clears authenticated query cache when access-token refresh fails", async () => {
+    setRefreshToken("persisted-refresh-token");
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        refreshSession: async () => {
+          throw new Error("refresh failed");
+        },
+      }),
+    );
+
+    const authStore = useAuthStore();
+    authStore.accessToken = "stale-access-token";
+    seedAuthenticatedQueryCache();
+
+    await expect(authStore.refreshAccessToken()).rejects.toThrow(
+      "refresh failed",
+    );
+
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.accessToken).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("logs in with email/password and persists rotated token pair", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
 
     const authStore = useAuthStore();
+    seedAuthenticatedQueryCache();
 
     await authStore.loginWithEmailPassword("admin@example.com", "password123");
 
@@ -126,6 +178,7 @@ describe("useAuthStore", () => {
     expect(getRefreshToken()).toBe("refresh-token-next");
     expect(authStore.bootstrapComplete).toBe(true);
     expect(authStore.profile?.email).toBe("admin@example.com");
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("clears stale local session state when login exchange fails", async () => {
@@ -194,6 +247,7 @@ describe("useAuthStore", () => {
     const authStore = useAuthStore();
     authStore.accessToken = "current-access-token";
     authStore.setWorkspaceName("Updated Workspace");
+    seedAuthenticatedQueryCache();
 
     await authStore.logout();
 
@@ -205,6 +259,7 @@ describe("useAuthStore", () => {
     expect(authStore.workspaceName).toBe("Workspace Admin");
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("updates the workspace label from workspace settings flows", () => {

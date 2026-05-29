@@ -12,7 +12,7 @@ import Button from 'primevue/button';
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import ProjectsTable from '@/components/ProjectsTable.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useToasts } from '@/composables/useToasts';
+import { useToasts } from '@/composables/feedback/useToasts';
 import { routeNames } from '@/router';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
@@ -55,9 +55,9 @@ async function fetchAll(): Promise<void> {
 
   try {
     const [projectsData, summaryData, membersData] = await Promise.all([
-      adminProjectsClient.listProjects(token),
-      adminProjectsClient.getManagementSummary(token),
-      adminMembersClient.listMembers(token),
+      adminProjectsClient.listProjects(),
+      adminProjectsClient.getManagementSummary(),
+      adminMembersClient.listMembers(),
     ]);
 
     projects.value = sortProjects(projectsData);
@@ -87,8 +87,8 @@ async function refresh(): Promise<void> {
 
   try {
     const [projectsData, summaryData] = await Promise.all([
-      adminProjectsClient.listProjects(token),
-      adminProjectsClient.getManagementSummary(token),
+      adminProjectsClient.listProjects(),
+      adminProjectsClient.getManagementSummary(),
     ]);
 
     projects.value = sortProjects(projectsData);
