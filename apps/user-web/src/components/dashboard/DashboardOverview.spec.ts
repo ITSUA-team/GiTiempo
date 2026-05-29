@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 
-import { mount } from "@vue/test-utils";
+import { mount, type VueWrapper } from "@vue/test-utils";
 import { computed, shallowRef } from "vue";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const pageState = shallowRef<"empty" | "loading" | "ready" | "request-error">("ready");
 const requestErrorMessage = shallowRef<string | null>(null);
 const retryLoadOverview = vi.fn(async () => undefined);
 const routerPush = vi.fn(async () => undefined);
+const wrappers: VueWrapper[] = [];
 
 vi.mock("vue-router", async () => {
   const actual = await vi.importActual("vue-router");
@@ -75,10 +76,15 @@ describe("DashboardOverview", () => {
     routerPush.mockClear();
   });
 
+  afterEach(() => {
+    while (wrappers.length > 0) {
+      wrappers.pop()?.unmount();
+    }
+  });
+
   async function mountOverview() {
     const DashboardOverview = (await import("./DashboardOverview.vue")).default;
-
-    return mount(DashboardOverview, {
+    const wrapper = mount(DashboardOverview, {
       global: {
         stubs: {
           Button: {
@@ -131,9 +137,39 @@ describe("DashboardOverview", () => {
               </div>
             `,
           },
+          DashboardRecentEntriesCard: {
+            props: ["entries"],
+            emits: ["view-all"],
+            template: `
+              <section data-testid="dashboard-recent-entries-card">
+                <h2>Recent Time Entries</h2>
+                <div v-for="entry in entries" :key="entry.id">
+                  <span>{{ entry.projectName }}</span>
+                  <span>{{ entry.taskTitle }}</span>
+                  <span>{{ entry.durationLabel }}</span>
+                </div>
+                <button type="button" @click="$emit('view-all')">View all</button>
+              </section>
+            `,
+          },
+          DashboardWeeklyFocusCard: {
+            props: ["focus"],
+            template: `
+              <section data-testid="dashboard-weekly-focus-card">
+                <h2>Top Focus This Week</h2>
+                <div>{{ focus.project?.title }}</div>
+                <div>{{ focus.task?.title }}</div>
+                <div>{{ focus.project?.sharePercent }}</div>
+              </section>
+            `,
+          },
         },
       },
     });
+
+    wrappers.push(wrapper);
+
+    return wrapper;
   }
 
   it("renders the populated dashboard overview without page-level timer controls", async () => {

@@ -95,7 +95,11 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isTimerRunning.value ? "Stop" : "Start",
   );
   const isPrimaryActionDisabled = computed(() => {
-    if (timerActions.isPrimaryActionPending.value || summary.isLoadingSummary.value) {
+    if (
+      timerActions.isPrimaryActionPending.value ||
+      summary.isLoadingSummary.value ||
+      updateTimeEntryMutation.isPending.value
+    ) {
       return true;
     }
 
@@ -172,6 +176,8 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     selectionUpdateErrorMessage.value = null;
 
     if (summary.currentTimer.value) {
+      const currentTimerId = summary.currentTimer.value.id;
+
       if (summary.currentTimer.value.task.id === context.taskId) {
         closeDialog();
         return;
@@ -179,7 +185,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
       try {
         const updatedTimer = await updateTimeEntryMutation.mutateAsync({
-          entryId: summary.currentTimer.value.id,
+          entryId: currentTimerId,
           input: { taskId: context.taskId },
         });
 
@@ -208,6 +214,14 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
     summary.selectedContext.value = context;
     closeDialog();
+  }
+
+  async function handlePrimaryAction(): Promise<void> {
+    if (updateTimeEntryMutation.isPending.value) {
+      return;
+    }
+
+    await timerActions.handlePrimaryAction();
   }
 
   watch(
@@ -245,7 +259,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     createTaskTitle: picker.createTaskTitle,
     currentTimer: summary.currentTimer,
     elapsedTimeLabel,
-    handlePrimaryAction: timerActions.handlePrimaryAction,
+    handlePrimaryAction,
     isConfirmSelectionDisabled,
     isConfirmingSelection: updateTimeEntryMutation.isPending,
     isCreateTaskDisabled,
