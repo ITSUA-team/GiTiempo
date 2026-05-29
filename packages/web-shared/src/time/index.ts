@@ -3,48 +3,41 @@ import {
   differenceInMinutes,
   differenceInSeconds,
   format,
+  formatDistanceStrict,
   isSameDay,
   isSameMonth,
+  isValid,
+  isWithinInterval,
+  parse,
+  parseISO,
   startOfDay,
   startOfMonth,
   startOfWeek,
 } from 'date-fns';
 
-const utcTimeFormatter = new Intl.DateTimeFormat('en-US', {
-  hour: '2-digit',
-  hourCycle: 'h23',
-  minute: '2-digit',
-  timeZone: 'UTC',
-});
-const utcMonthDayFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-});
-const utcWeekdayFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'UTC',
-  weekday: 'short',
-});
+export type DateInput = Date | string | null | undefined;
 
 export function getUtcDateKey(isoDateTime: string): string {
   return isoDateTime.slice(0, 10);
 }
 
 export function formatUtcTime(isoDateTime: string): string {
-  return utcTimeFormatter.format(new Date(isoDateTime));
+  return format(toUtcLocalDate(requireValidDate(isoDateTime)), 'HH:mm');
 }
 
 export function formatUtcWeekday(isoDateTime: string): string {
-  return utcWeekdayFormatter.format(new Date(isoDateTime));
+  return format(toUtcLocalDate(requireValidDate(isoDateTime)), 'EEE');
 }
 
 export function formatUtcDayLabel(dateKey: string, nowMs: number): string {
   const target = dateFromUtcDateKey(dateKey);
-  const todayKey = getUtcDateKey(new Date(nowMs).toISOString());
-  const yesterdayKey = getUtcDateKey(
-    addUtcDays(new Date(nowMs), -1).toISOString(),
+  const todayKey = getUtcDateKey(
+    requireValidDate(new Date(nowMs)).toISOString(),
   );
-  const dateLabel = utcMonthDayFormatter.format(target);
+  const yesterdayKey = getUtcDateKey(
+    addUtcDays(requireValidDate(new Date(nowMs)), -1).toISOString(),
+  );
+  const dateLabel = format(target, 'MMM d');
 
   if (dateKey === todayKey) {
     return `Today, ${dateLabel}`;
@@ -119,15 +112,21 @@ export function formatRunningDuration(
   startedAt: string,
   nowMs: number,
 ): string {
+  const start = parseDateInput(startedAt);
+
+  if (start === null) {
+    return formatElapsedDuration(0);
+  }
+
   return formatElapsedDuration(
-    differenceInSeconds(new Date(nowMs), new Date(startedAt)),
+    differenceInSeconds(requireValidDate(new Date(nowMs)), start),
   );
 }
 
 export function formatRelativeTime(value: string, now = new Date()): string {
-  const timestamp = new Date(value);
+  const timestamp = parseDateInput(value);
 
-  if (Number.isNaN(timestamp.getTime())) {
+  if (timestamp === null) {
     return 'Unknown';
   }
 
@@ -156,10 +155,51 @@ export function formatRelativeTime(value: string, now = new Date()): string {
   return format(timestamp, 'MMM d');
 }
 
+export function formatAutoRelativeTime(
+  value: DateInput,
+  now = new Date(),
+): string | null {
+  const date = parseDateInput(value);
+
+  if (date === null) {
+    return null;
+  }
+
+  if (Math.abs(differenceInSeconds(date, now)) < 30) {
+    return 'now';
+  }
+
+  return formatDistanceStrict(date, now, {
+    addSuffix: true,
+    roundingMethod: 'round',
+  });
+}
+
+export function formatPrefixedAutoRelativeTime(
+  value: DateInput,
+  prefix: string,
+  fallback = `${prefix} recently`,
+  now = new Date(),
+): string {
+  const relativeTime = formatAutoRelativeTime(value, now);
+
+  return relativeTime === null ? fallback : `${prefix} ${relativeTime}`;
+}
+
+export function formatLocalCalendarDate(
+  value: DateInput,
+): string {
+  const date = parseDateInput(value);
+
+  if (date === null) {
+    return '—';
+  }
+
+  return format(date, 'MMM d, yyyy');
+}
+
 export function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
+  return utcBoundaryFromLocalDate(toUtcLocalDate(date));
 }
 
 export function nextUtcDay(date: Date): Date {
@@ -167,26 +207,13 @@ export function nextUtcDay(date: Date): Date {
 }
 
 export function startOfUtcIsoWeek(date: Date): Date {
-  const utcDay = date.getUTCDay();
-  const diffToMonday = utcDay === 0 ? 6 : utcDay - 1;
-
-  return new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate() - diffToMonday,
-    ),
+  return utcBoundaryFromLocalDate(
+    startOfWeek(toUtcLocalDate(date), { weekStartsOn: 1 }),
   );
 }
 
 export function addUtcDays(date: Date, days: number): Date {
-  return new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate() + days,
-    ),
-  );
+  return utcBoundaryFromLocalDate(addDays(toUtcLocalDate(date), days));
 }
 
 export function startOfLocalDay(date: Date): Date {
@@ -199,6 +226,10 @@ export function nextLocalDay(date: Date): Date {
 
 export function startOfLocalMonth(date: Date): Date {
   return startOfMonth(date);
+}
+
+export function startOfLocalIsoWeek(date: Date): Date {
+  return startOfWeek(date, { weekStartsOn: 1 });
 }
 
 export function startOfLocalDayIso(date: Date): string {
@@ -214,7 +245,7 @@ export function getLocalIsoWeekRange(now = new Date()): {
   dateTo: string;
 } {
   return {
-    dateFrom: startOfWeek(now, { weekStartsOn: 1 }).toISOString(),
+    dateFrom: startOfLocalIsoWeek(now).toISOString(),
     dateTo: now.toISOString(),
   };
 }
@@ -223,14 +254,81 @@ export function isSameLocalDate(first: Date, second: Date): boolean {
   return isSameDay(first, second);
 }
 
+export function isSameLocalDateValue(
+  first: DateInput,
+  second: DateInput,
+): boolean {
+  const firstDate = parseDateInput(first);
+  const secondDate = parseDateInput(second);
+
+  return (
+    firstDate !== null &&
+    secondDate !== null &&
+    isSameDay(firstDate, secondDate)
+  );
+}
+
 export function isSameLocalMonth(first: Date, second: Date): boolean {
   return isSameMonth(first, second);
 }
 
-function dateFromUtcDateKey(dateKey: string): Date {
-  const [year = 0, month = 1, day = 1] = dateKey.split('-').map(Number);
+export function hasValidDate(value: DateInput): boolean {
+  return parseDateInput(value) !== null;
+}
 
-  return new Date(Date.UTC(year, month - 1, day));
+export function isWithinLocalIsoWeekToDate(
+  value: DateInput,
+  now = new Date(),
+): boolean {
+  const date = parseDateInput(value);
+  const end = parseDateInput(now);
+
+  if (date === null || end === null) {
+    return false;
+  }
+
+  return isWithinInterval(date, {
+    end,
+    start: startOfLocalIsoWeek(end),
+  });
+}
+
+function dateFromUtcDateKey(dateKey: string): Date {
+  const date = parse(dateKey, 'yyyy-MM-dd', new Date(0));
+
+  return isValid(date) ? date : new Date(Number.NaN);
+}
+
+export function parseDateInput(value: DateInput): Date | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : parseISO(value);
+
+  return isValid(date) ? date : null;
+}
+
+function requireValidDate(value: DateInput): Date {
+  return parseDateInput(value) ?? new Date(Number.NaN);
+}
+
+function toUtcLocalDate(date: Date): Date {
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds(),
+  );
+}
+
+function utcBoundaryFromLocalDate(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
 }
 
 function getRoundedDownDurationParts(totalSeconds: number): {

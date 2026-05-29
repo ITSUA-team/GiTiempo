@@ -26,6 +26,7 @@ import { projectMemberSchema } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { startOfUtcIsoWeek, startOfUtcMonth } from '../../common/time';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
@@ -157,8 +158,8 @@ export class ProjectsService {
       .where(and(...visibleConditions));
 
     const now = new Date();
-    const weekStart = startOfIsoWeekUtc(now);
-    const monthStart = startOfMonthUtc(now);
+    const weekStart = startOfUtcIsoWeek(now);
+    const monthStart = startOfUtcMonth(now);
     const earliestStart =
       weekStart.getTime() < monthStart.getTime() ? weekStart : monthStart;
     const [hoursRow] = await this.db
@@ -744,18 +745,4 @@ function roleRank(role: ProjectMember['role']): number {
 
 function memberDisplayName(member: ProjectMember): string {
   return member.displayName ?? member.email;
-}
-
-function startOfIsoWeekUtc(now: Date): Date {
-  const start = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
-  const day = start.getUTCDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  start.setUTCDate(start.getUTCDate() + diff);
-  return start;
-}
-
-function startOfMonthUtc(now: Date): Date {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }

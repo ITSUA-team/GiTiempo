@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   addUtcDays,
+  formatAutoRelativeTime,
   formatCompactDuration,
   formatElapsedDuration,
+  formatLocalCalendarDate,
   formatPaddedHoursMinutesDuration,
+  formatPrefixedAutoRelativeTime,
   formatRelativeTime,
   formatRunningDuration,
   formatTrimmedHoursMinutesDuration,
@@ -13,13 +16,18 @@ import {
   formatUtcWeekday,
   getLocalIsoWeekRange,
   getUtcDateKey,
+  hasValidDate,
   isSameLocalDate,
+  isSameLocalDateValue,
   isSameLocalMonth,
+  isWithinLocalIsoWeekToDate,
   nextLocalDay,
   nextLocalDayStartIso,
   nextUtcDay,
+  parseDateInput,
   startOfLocalDay,
   startOfLocalDayIso,
+  startOfLocalIsoWeek,
   startOfLocalMonth,
   startOfUtcDay,
   startOfUtcIsoWeek,
@@ -69,10 +77,30 @@ describe('shared date-time helpers', () => {
     expect(startOfLocalMonth(date).toISOString()).toBe(
       new Date(2026, 4, 1, 0, 0, 0, 0).toISOString(),
     );
+    expect(startOfLocalIsoWeek(date).toISOString()).toBe(
+      new Date(2026, 4, 11, 0, 0, 0, 0).toISOString(),
+    );
     expect(getLocalIsoWeekRange(date)).toEqual({
       dateFrom: new Date(2026, 4, 11, 0, 0, 0, 0).toISOString(),
       dateTo: date.toISOString(),
     });
+  });
+
+  it('formats local calendar dates with an invalid-date fallback', () => {
+    expect(formatLocalCalendarDate(new Date(2026, 4, 2, 12))).toBe(
+      'May 2, 2026',
+    );
+    expect(formatLocalCalendarDate('not-a-date')).toBe('—');
+    expect(formatLocalCalendarDate(null)).toBe('—');
+  });
+
+  it('parses and validates date inputs through date-fns', () => {
+    expect(parseDateInput('2026-05-13T12:00:00.000Z')?.toISOString()).toBe(
+      '2026-05-13T12:00:00.000Z',
+    );
+    expect(parseDateInput('not-a-date')).toBeNull();
+    expect(hasValidDate('2026-05-13T12:00:00.000Z')).toBe(true);
+    expect(hasValidDate(null)).toBe(false);
   });
 
   it('compares local days and months', () => {
@@ -85,6 +113,21 @@ describe('shared date-time helpers', () => {
     expect(isSameLocalMonth(new Date(2026, 4, 1), new Date(2026, 4, 31))).toBe(
       true,
     );
+    expect(
+      isSameLocalDateValue('2026-05-13T08:00:00.000Z', new Date(2026, 4, 13)),
+    ).toBe(true);
+    expect(
+      isWithinLocalIsoWeekToDate(
+        '2026-05-12T08:00:00.000Z',
+        new Date(2026, 4, 13, 12),
+      ),
+    ).toBe(true);
+    expect(
+      isWithinLocalIsoWeekToDate(
+        '2026-05-14T08:00:00.000Z',
+        new Date(2026, 4, 13, 12),
+      ),
+    ).toBe(false);
   });
 
   it('formats compact, padded, trimmed, elapsed, and running durations', () => {
@@ -123,5 +166,34 @@ describe('shared date-time helpers', () => {
     expect(formatRelativeTime('2026-05-13T09:00:00.000Z', now)).toBe('3h ago');
     expect(formatRelativeTime('2026-05-10T12:00:00.000Z', now)).toBe('3d ago');
     expect(formatRelativeTime('2026-05-01T12:00:00.000Z', now)).toBe('May 1');
+  });
+
+  it('formats auto relative time labels for sentence prefixes', () => {
+    const now = new Date('2026-05-13T12:00:00.000Z');
+
+    expect(formatAutoRelativeTime('invalid', now)).toBeNull();
+    expect(formatAutoRelativeTime('2026-05-13T12:00:05.000Z', now)).toBe(
+      'now',
+    );
+    expect(formatAutoRelativeTime('2026-05-13T11:58:00.000Z', now)).toBe(
+      '2 minutes ago',
+    );
+    expect(formatAutoRelativeTime('2026-05-13T09:00:00.000Z', now)).toBe(
+      '3 hours ago',
+    );
+    expect(formatAutoRelativeTime('2026-05-12T12:00:00.000Z', now)).toBe(
+      '1 day ago',
+    );
+    expect(
+      formatPrefixedAutoRelativeTime(
+        '2026-05-13T11:58:00.000Z',
+        'Sent',
+        undefined,
+        now,
+      ),
+    ).toBe('Sent 2 minutes ago');
+    expect(
+      formatPrefixedAutoRelativeTime('invalid', 'Sent', undefined, now),
+    ).toBe('Sent recently');
   });
 });

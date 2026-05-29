@@ -13,6 +13,10 @@ import {
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
+import {
+  formatLocalCalendarDate,
+  formatPrefixedAutoRelativeTime,
+} from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import RequestErrorBlock from '@/components/RequestErrorBlock.vue';
@@ -49,15 +53,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'actions', label: 'Actions', width: 140, align: 'end' },
 ];
 
-const expiresFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-});
-const relativeTimeFormatter = new Intl.RelativeTimeFormat('en', {
-  numeric: 'auto',
-});
-
 const pendingCountLabel = computed(() => {
   const count = props.pendingInvites.length;
 
@@ -67,48 +62,6 @@ const pendingCountLabel = computed(() => {
 const showErrorState = computed(
   () => !props.loading && props.pendingInvites.length === 0 && !!props.errorMessage,
 );
-
-function formatExpires(expiresAt: string): string {
-  const parsed = new Date(expiresAt);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return '—';
-  }
-
-  return expiresFormatter.format(parsed);
-}
-
-function formatSent(createdAt: string): string {
-  const parsed = new Date(createdAt);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return 'Sent recently';
-  }
-
-  const deltaMs = parsed.getTime() - Date.now();
-  const absoluteMinutes = Math.abs(deltaMs) / (60 * 1000);
-
-  if (absoluteMinutes < 60) {
-    return `Sent ${relativeTimeFormatter.format(
-      Math.round(deltaMs / (60 * 1000)),
-      'minute',
-    )}`;
-  }
-
-  const absoluteHours = absoluteMinutes / 60;
-
-  if (absoluteHours < 24) {
-    return `Sent ${relativeTimeFormatter.format(
-      Math.round(deltaMs / (60 * 60 * 1000)),
-      'hour',
-    )}`;
-  }
-
-  return `Sent ${relativeTimeFormatter.format(
-    Math.round(deltaMs / (24 * 60 * 60 * 1000)),
-    'day',
-  )}`;
-}
 
 function isRowBusy(inviteId: string): boolean {
   return (
@@ -201,14 +154,14 @@ function isRowBusy(inviteId: string): boolean {
                 {{ invite.email }}
               </h3>
               <p class="text-text-muted text-[12px]">
-                {{ formatSent(invite.createdAt) }}
+                {{ formatPrefixedAutoRelativeTime(invite.createdAt, 'Sent') }}
               </p>
             </div>
 
             <MobileRecordMetadataList
               :items="[
                 { label: 'Role', value: formatWorkspaceRole(invite.role) },
-                { label: 'Expires', value: formatExpires(invite.expiresAt) },
+                { label: 'Expires', value: formatLocalCalendarDate(invite.expiresAt) },
               ]"
             />
 
@@ -253,7 +206,7 @@ function isRowBusy(inviteId: string): boolean {
                 {{ data.email }}
               </span>
               <span class="text-text-muted text-[12px]">
-                {{ formatSent(data.createdAt) }}
+                {{ formatPrefixedAutoRelativeTime(data.createdAt, 'Sent') }}
               </span>
             </div>
           </template>
@@ -276,7 +229,7 @@ function isRowBusy(inviteId: string): boolean {
         >
           <template #body="{ data }">
             <span class="text-text-muted text-[13px] font-normal">
-              {{ formatExpires(data.expiresAt) }}
+              {{ formatLocalCalendarDate(data.expiresAt) }}
             </span>
           </template>
         </Column>
