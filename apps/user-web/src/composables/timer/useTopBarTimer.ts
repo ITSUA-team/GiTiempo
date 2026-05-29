@@ -184,13 +184,12 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       }
 
       try {
-        const updatedTimer = await updateTimeEntryMutation.mutateAsync({
+        await updateTimeEntryMutation.mutateAsync({
           entryId: currentTimerId,
           input: { taskId: context.taskId },
         });
 
-        summary.currentTimer.value = updatedTimer;
-        summary.setSelectedContextFromTimer(updatedTimer);
+        await summary.refreshSummary();
         closeDialog();
         appToast.showSuccessToast(
           "Timer task updated",

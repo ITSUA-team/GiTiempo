@@ -674,7 +674,14 @@ describe("useTopBarTimer", () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
 
-    client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
+    client.getCurrentTimer
+      .mockResolvedValueOnce({ timeEntry: createRunningEntry() })
+      .mockResolvedValue({
+        timeEntry: createRunningEntry({
+          task: { id: TEST_IDS.taskAlt, title: "Review PM scope rules" },
+          taskId: TEST_IDS.taskAlt,
+        }),
+      });
     client.listVisibleProjects.mockResolvedValueOnce([
       createProject(TEST_IDS.project, "Project Orion"),
     ]);
@@ -722,7 +729,14 @@ describe("useTopBarTimer", () => {
       void entry;
     };
 
-    client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
+    client.getCurrentTimer
+      .mockResolvedValueOnce({ timeEntry: createRunningEntry() })
+      .mockResolvedValue({
+        timeEntry: createRunningEntry({
+          task: { id: TEST_IDS.taskAlt, title: "Review PM scope rules" },
+          taskId: TEST_IDS.taskAlt,
+        }),
+      });
     client.listVisibleProjects.mockResolvedValueOnce([
       createProject(TEST_IDS.project, "Project Orion"),
     ]);
@@ -774,6 +788,49 @@ describe("useTopBarTimer", () => {
     expect(topBarTimer.timerContextLabel.value).toBe(
       "Project Orion / Review PM scope rules",
     );
+  });
+
+  it("keeps refreshed timer state when it differs from the task-update response", async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.getCurrentTimer
+      .mockResolvedValueOnce({ timeEntry: createRunningEntry() })
+      .mockResolvedValue({
+        timeEntry: createRunningEntry({
+          task: { id: TEST_IDS.taskNew, title: "Prepare quarterly summary" },
+          taskId: TEST_IDS.taskNew,
+        }),
+      });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(TEST_IDS.project, "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
+      createTask(TEST_IDS.taskAlt, TEST_IDS.project, "Review PM scope rules"),
+    ]);
+    client.updateEntry.mockResolvedValueOnce(
+      createRunningEntry({
+        task: { id: TEST_IDS.taskAlt, title: "Review PM scope rules" },
+        taskId: TEST_IDS.taskAlt,
+      }),
+    );
+
+    const { topBarTimer } = mountTopBarTimer({ client, toast });
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    topBarTimer.setSelectedTaskId(TEST_IDS.taskAlt);
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(topBarTimer.currentTimer.value?.taskId).toBe(TEST_IDS.taskNew);
+    expect(topBarTimer.timerContextLabel.value).toBe(
+      "Project Orion / Prepare quarterly summary",
+    );
+    expect(topBarTimer.currentTimer.value?.taskId).not.toBe(TEST_IDS.taskAlt);
   });
 
   it("closes the dialog without updating when confirming the current running task", async () => {
