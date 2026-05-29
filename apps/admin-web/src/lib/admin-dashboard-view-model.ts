@@ -10,8 +10,21 @@ import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
 } from '@gitiempo/shared';
+import {
+  formatRelativeTime as formatSharedRelativeTime,
+  formatTrimmedHoursMinutesDuration,
+  getLocalIsoWeekRange,
+  isSameLocalDate,
+  isSameLocalMonth,
+} from '@gitiempo/web-shared/time';
 
-export type AdminDashboardActivityType = 'invite' | 'member' | 'project' | 'time';
+export { formatSharedRelativeTime as formatRelativeTime };
+
+export type AdminDashboardActivityType =
+  | 'invite'
+  | 'member'
+  | 'project'
+  | 'time';
 
 export interface AdminDashboardStatCard {
   description: string;
@@ -63,21 +76,6 @@ function parseTimestamp(value: string | null): number | null {
 
   const timestamp = new Date(value).getTime();
   return Number.isNaN(timestamp) ? null : timestamp;
-}
-
-function isSameLocalDate(first: Date, second: Date): boolean {
-  return (
-    first.getFullYear() === second.getFullYear() &&
-    first.getMonth() === second.getMonth() &&
-    first.getDate() === second.getDate()
-  );
-}
-
-function isSameLocalMonth(first: Date, second: Date): boolean {
-  return (
-    first.getFullYear() === second.getFullYear() &&
-    first.getMonth() === second.getMonth()
-  );
 }
 
 function getMemberDisplayName(member: WorkspaceMemberResponse): string {
@@ -141,7 +139,7 @@ function createActivityRow({
     activity,
     id,
     occurredAt,
-    timeLabel: formatRelativeTime(occurredAt, now),
+    timeLabel: formatSharedRelativeTime(occurredAt, now),
     timestamp,
     type,
     typeLabel: activityTypeLabels[type],
@@ -173,87 +171,33 @@ function getAddedProjectsDescription(count: number): string {
 }
 
 export function formatDashboardHours(totalSeconds: number): string {
-  const safeSeconds = Math.max(0, Math.round(totalSeconds));
-  const totalMinutes = Math.floor(safeSeconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours === 0) {
-    return minutes === 0 ? '0h' : `${minutes}m`;
-  }
-
-  if (minutes === 0) {
-    return `${hours}h`;
-  }
-
-  return `${hours}h ${minutes}m`;
-}
-
-export function formatRelativeTime(value: string, now = new Date()): string {
-  const timestamp = parseTimestamp(value);
-
-  if (timestamp === null) {
-    return 'Unknown';
-  }
-
-  const diffMs = Math.max(0, now.getTime() - timestamp);
-  const diffMinutes = Math.floor(diffMs / 60_000);
-
-  if (diffMinutes < 1) {
-    return 'Just now';
-  }
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  }
-
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffDays < 7) {
-    return `${diffDays}d ago`;
-  }
-
-  return new Intl.DateTimeFormat('en-US', {
-    day: 'numeric',
-    month: 'short',
-  }).format(new Date(timestamp));
+  return formatTrimmedHoursMinutesDuration(totalSeconds);
 }
 
 export function getDashboardWeekRange(now = new Date()): {
   dateFrom: string;
   dateTo: string;
 } {
-  const day = now.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const startOfWeek = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + mondayOffset,
-  );
-
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  return {
-    dateFrom: startOfWeek.toISOString(),
-    dateTo: now.toISOString(),
-  };
+  return getLocalIsoWeekRange(now);
 }
 
 function deriveAdminDashboardStats(
-  { invites, members, projectSummary, projects, report }: AdminDashboardDataInput,
+  {
+    invites,
+    members,
+    projectSummary,
+    projects,
+    report,
+  }: AdminDashboardDataInput,
   now = new Date(),
 ): AdminDashboardStatCard[] {
   const trackedToday = members.filter((member) => {
     const timestamp = parseTimestamp(member.lastActiveAt);
     return timestamp !== null && isSameLocalDate(new Date(timestamp), now);
   }).length;
-  const pendingInvites = invites.filter((invite) => invite.status === 'pending').length;
+  const pendingInvites = invites.filter(
+    (invite) => invite.status === 'pending',
+  ).length;
   const projectsAddedThisMonth = projects.filter((project) => {
     const timestamp = parseTimestamp(project.createdAt);
     return timestamp !== null && isSameLocalMonth(new Date(timestamp), now);
@@ -283,9 +227,10 @@ function deriveAdminDashboardStats(
   ];
 }
 
-function deriveProjectScopedDashboardStats(
-  { projectSummary, report }: ProjectScopedDashboardDataInput,
-): AdminDashboardStatCard[] {
+function deriveProjectScopedDashboardStats({
+  projectSummary,
+  report,
+}: ProjectScopedDashboardDataInput): AdminDashboardStatCard[] {
   return [
     {
       description: 'Visible project scope',
@@ -316,10 +261,7 @@ export function deriveDashboardStats(
   role: WorkspaceRole = 'admin',
 ): AdminDashboardStatCard[] {
   if (role === 'admin' && data.members && data.invites) {
-    return deriveAdminDashboardStats(
-      data as AdminDashboardDataInput,
-      now,
-    );
+    return deriveAdminDashboardStats(data as AdminDashboardDataInput, now);
   }
 
   return deriveProjectScopedDashboardStats(data);
@@ -370,6 +312,9 @@ export function deriveDashboardActivityRows(
   ].filter((row): row is AdminDashboardActivityRow => row !== null);
 
   return rows
-    .sort((a, b) => b.timestamp - a.timestamp || a.activity.localeCompare(b.activity))
+    .sort(
+      (a, b) =>
+        b.timestamp - a.timestamp || a.activity.localeCompare(b.activity),
+    )
     .slice(0, limit);
 }

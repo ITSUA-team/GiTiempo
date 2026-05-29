@@ -1,6 +1,10 @@
-import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-
-import { formatUtcTime, getUtcDateKey } from "@/lib/time-formatters";
+import type { ProjectResponse, TaskResponse } from '@gitiempo/shared';
+import {
+  addUtcDays,
+  formatUtcTime,
+  formatUtcWeekday,
+  getUtcDateKey,
+} from '@gitiempo/web-shared/time';
 
 export interface ProjectsPageTaskGroup {
   project: ProjectResponse;
@@ -9,7 +13,7 @@ export interface ProjectsPageTaskGroup {
 
 export interface ProjectsSearchSuggestion {
   id: string;
-  kind: "project" | "task";
+  kind: 'project' | 'task';
   label: string;
   projectId: string;
 }
@@ -82,7 +86,7 @@ export function buildProjectSearchSuggestions(
     ) {
       suggestions.push({
         id: `project:${group.project.id}`,
-        kind: "project",
+        kind: 'project',
         label: group.project.name,
         projectId: group.project.id,
       });
@@ -95,7 +99,7 @@ export function buildProjectSearchSuggestions(
       ) {
         suggestions.push({
           id: `task:${task.id}`,
-          kind: "task",
+          kind: 'task',
           label: task.title,
           projectId: group.project.id,
         });
@@ -106,14 +110,14 @@ export function buildProjectSearchSuggestions(
   return suggestions.slice(0, 10);
 }
 
-export function formatUpdatedLabel(isoDateTime: string, nowMs = Date.now()): string {
+export function formatUpdatedLabel(
+  isoDateTime: string,
+  nowMs = Date.now(),
+): string {
   const dayKey = getUtcDateKey(isoDateTime);
   const now = new Date(nowMs);
   const todayKey = getUtcDateKey(now.toISOString());
-  const yesterday = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1),
-  );
-  const yesterdayKey = getUtcDateKey(yesterday.toISOString());
+  const yesterdayKey = getUtcDateKey(addUtcDays(now, -1).toISOString());
 
   if (dayKey === todayKey) {
     return `Today, ${formatUtcTime(isoDateTime)}`;
@@ -123,10 +127,5 @@ export function formatUpdatedLabel(isoDateTime: string, nowMs = Date.now()): str
     return `Yesterday, ${formatUtcTime(isoDateTime)}`;
   }
 
-  const weekday = new Intl.DateTimeFormat("en-US", {
-    timeZone: "UTC",
-    weekday: "short",
-  }).format(new Date(isoDateTime));
-
-  return `${weekday}, ${formatUtcTime(isoDateTime)}`;
+  return `${formatUtcWeekday(isoDateTime)}, ${formatUtcTime(isoDateTime)}`;
 }

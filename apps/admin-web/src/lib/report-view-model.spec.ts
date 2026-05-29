@@ -4,7 +4,9 @@ import type { TimeReportResponse } from '@gitiempo/shared';
 import {
   createDefaultReportTableFilters,
   filterReportRows,
+  formatReportDuration,
   toReportTableRows,
+  toTimeReportExportQuery,
   toTimeReportQuery,
   type ReportTableFilters,
   type ReportTableRow,
@@ -73,6 +75,40 @@ describe('report-view-model', () => {
     });
   });
 
+  it('converts report date ranges to local closed-open API boundaries', () => {
+    const filters = {
+      dateRange: [new Date(2026, 4, 1, 12), new Date(2026, 4, 2, 12)] as [
+        Date,
+        Date,
+      ],
+      groupBy: 'project' as const,
+      memberId: null,
+      projectId,
+    };
+    const expectedDateWindow = {
+      dateFrom: new Date(2026, 4, 1).toISOString(),
+      dateTo: new Date(2026, 4, 3).toISOString(),
+    };
+
+    expect(toTimeReportQuery(filters, 2, 50)).toMatchObject({
+      ...expectedDateWindow,
+      limit: 50,
+      page: 2,
+      projectId,
+    });
+    expect(toTimeReportExportQuery(filters)).toMatchObject({
+      ...expectedDateWindow,
+      projectId,
+    });
+  });
+
+  it('formats report durations with padded hour-minute labels', () => {
+    expect(formatReportDuration(-1)).toBe('0m');
+    expect(formatReportDuration(59)).toBe('0m');
+    expect(formatReportDuration(3600)).toBe('1h 00m');
+    expect(formatReportDuration(3660)).toBe('1h 01m');
+  });
+
   it('rejects invalid report date ranges before API calls', () => {
     expect(() =>
       toTimeReportQuery(
@@ -86,6 +122,21 @@ describe('report-view-model', () => {
         100,
       ),
     ).toThrow('End date must be after the start date.');
+  });
+
+  it('rejects invalid DatePicker dates before API calls', () => {
+    expect(() =>
+      toTimeReportQuery(
+        {
+          dateRange: [new Date(Number.NaN), new Date(2026, 4, 2)],
+          groupBy: 'project',
+          memberId: null,
+          projectId: null,
+        },
+        1,
+        100,
+      ),
+    ).toThrow();
   });
 
   it('maps backend report rows into validated table rows', () => {
@@ -161,6 +212,45 @@ describe('report-view-model', () => {
         totalSeconds: 3600,
       },
     ];
+
+    expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
+  });
+
+  it('searches report rows using formatted duration labels', () => {
+    const filters = createDefaultReportTableFilters();
+    filters.global = '1h 01m';
+    const rows: ReportTableRow[] = [
+      {
+        billableSeconds: 3600,
+        billableShare: 0.98,
+        entryCount: 1,
+        groupBy: 'project',
+        id: `project:${projectId}:no-task:all-members`,
+        memberIds: [],
+        memberName: 'Member scope',
+        nonBillableSeconds: 60,
+        projectIds: [projectId],
+        projectName: 'Project Orion',
+        totalSeconds: 3660,
+      },
+      {
+        billableSeconds: 1800,
+        billableShare: 1,
+        entryCount: 1,
+        groupBy: 'project',
+        id: 'project:other:no-task:all-members',
+        memberIds: [],
+        memberName: 'Member scope',
+        nonBillableSeconds: 0,
+        projectIds: ['11111111-1111-4111-8111-111111111112'],
+        projectName: 'Billing API',
+        totalSeconds: 1800,
+      },
+    ];
+
+    expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
+
+    filters.global = '1h 00m';
 
     expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
   });

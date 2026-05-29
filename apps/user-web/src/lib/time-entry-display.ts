@@ -1,11 +1,10 @@
-import type { TimeEntryResponse } from "@gitiempo/shared";
+import type { TimeEntryResponse } from '@gitiempo/shared';
+import { formatUtcDayLabel, getUtcDateKey } from '@gitiempo/web-shared/time';
 
 import {
   formatTimeEntryDuration,
   formatTimeEntryTimeRange,
-  formatUtcDayLabel,
-  getUtcDateKey,
-} from "@/lib/time-formatters";
+} from '@/lib/time-formatters';
 
 export {
   addUtcDays,
@@ -20,7 +19,7 @@ export {
   nextUtcDay,
   startOfUtcDay,
   startOfUtcIsoWeek,
-} from "@/lib/time-formatters";
+} from '@/lib/time-formatters';
 
 export interface TimeEntriesDayGroup {
   dateKey: string;
@@ -56,7 +55,8 @@ export function getEntryTrackedSecondsWithinRange(
   nowMs: number,
 ): number {
   const startedAtMs = new Date(entry.startedAt).getTime();
-  const endedAtMs = entry.endedAt === null ? nowMs : new Date(entry.endedAt).getTime();
+  const endedAtMs =
+    entry.endedAt === null ? nowMs : new Date(entry.endedAt).getTime();
   const overlapStartMs = Math.max(startedAtMs, rangeStartMs);
   const overlapEndMs = Math.min(endedAtMs, rangeEndMs);
 
@@ -67,7 +67,10 @@ export function getEntryTrackedSecondsWithinRange(
   return Math.floor((overlapEndMs - overlapStartMs) / 1000);
 }
 
-export function formatRecentEntryDuration(entry: TimeEntryResponse, nowMs: number): string {
+export function formatRecentEntryDuration(
+  entry: TimeEntryResponse,
+  nowMs: number,
+): string {
   return formatTimeEntryDuration(entry, nowMs);
 }
 

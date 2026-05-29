@@ -1,14 +1,16 @@
-import type { TimeEntryResponse } from "@gitiempo/shared";
-
+import type { TimeEntryResponse } from '@gitiempo/shared';
 import {
   addUtcDays,
   formatCompactDuration,
+  startOfUtcDay,
+  startOfUtcIsoWeek,
+} from '@gitiempo/web-shared/time';
+
+import {
   formatRecentEntryDuration,
   formatRecentEntryTimeRange,
   getEntryTrackedSecondsWithinRange,
-  startOfUtcDay,
-  startOfUtcIsoWeek,
-} from "@/lib/time-entry-display";
+} from '@/lib/time-entry-display';
 
 export interface DashboardStat {
   description: string;
@@ -47,7 +49,10 @@ interface FocusAccumulator {
   title: string;
 }
 
-export function getDashboardWeekWindow(nowMs: number): { dateFrom: string; dateTo: string } {
+export function getDashboardWeekWindow(nowMs: number): {
+  dateFrom: string;
+  dateTo: string;
+} {
   const nowDate = new Date(nowMs);
   const weekStart = startOfUtcIsoWeek(nowDate);
 
@@ -57,7 +62,10 @@ export function getDashboardWeekWindow(nowMs: number): { dateFrom: string; dateT
   };
 }
 
-export function buildDashboardStats(entries: TimeEntryResponse[], nowMs: number): DashboardStat[] {
+export function buildDashboardStats(
+  entries: TimeEntryResponse[],
+  nowMs: number,
+): DashboardStat[] {
   const nowDate = new Date(nowMs);
   const todayStartMs = startOfUtcDay(nowDate).getTime();
   const tomorrowStartMs = addUtcDays(startOfUtcDay(nowDate), 1).getTime();
@@ -100,22 +108,22 @@ export function buildDashboardStats(entries: TimeEntryResponse[], nowMs: number)
     {
       description:
         todayProjectIds.size === 1
-          ? "1 project tracked today"
+          ? '1 project tracked today'
           : `${todayProjectIds.size} projects tracked today`,
-      label: "Today",
+      label: 'Today',
       value: formatCompactDuration(todayTrackedSeconds),
     },
     {
       description: `${toEntryLabel(weekEntryCount)} tracked this week`,
-      label: "This Week",
+      label: 'This Week',
       value: formatCompactDuration(weekTrackedSeconds),
     },
     {
       description:
         weekProjectIds.size === 1
-          ? "1 project received tracked time"
+          ? '1 project received tracked time'
           : `${weekProjectIds.size} projects received tracked time`,
-      label: "Projects This Week",
+      label: 'Projects This Week',
       value: String(weekProjectIds.size),
     },
   ];
@@ -148,7 +156,7 @@ export function buildDashboardWeeklyFocus(
 
     const projectStats = projectMap.get(entry.project.id) ?? {
       entryCount: 0,
-      label: "Top Project",
+      label: 'Top Project',
       seconds: 0,
       title: entry.project.name,
     };
@@ -159,7 +167,7 @@ export function buildDashboardWeeklyFocus(
     const taskStats = taskMap.get(entry.task.id) ?? {
       descriptionLabel: entry.project.name,
       entryCount: 0,
-      label: "Top Task",
+      label: 'Top Task',
       seconds: 0,
       title: entry.task.title,
     };
@@ -218,22 +226,23 @@ function toSharePercent(seconds: number, totalSeconds: number): number {
 }
 
 function toEntryLabel(count: number): string {
-  return count === 1 ? "1 entry" : `${count} entries`;
+  return count === 1 ? '1 entry' : `${count} entries`;
 }
 
-function pickTopFocusItem(items: Iterable<FocusAccumulator>): FocusAccumulator | null {
+function pickTopFocusItem(
+  items: Iterable<FocusAccumulator>,
+): FocusAccumulator | null {
   let winner: FocusAccumulator | null = null;
 
   for (const candidate of items) {
     if (
       winner === null ||
       candidate.seconds > winner.seconds ||
-      (candidate.seconds === winner.seconds && candidate.entryCount > winner.entryCount) ||
-      (
-        candidate.seconds === winner.seconds &&
+      (candidate.seconds === winner.seconds &&
+        candidate.entryCount > winner.entryCount) ||
+      (candidate.seconds === winner.seconds &&
         candidate.entryCount === winner.entryCount &&
-        candidate.title.localeCompare(winner.title) < 0
-      )
+        candidate.title.localeCompare(winner.title) < 0)
     ) {
       winner = candidate;
     }
