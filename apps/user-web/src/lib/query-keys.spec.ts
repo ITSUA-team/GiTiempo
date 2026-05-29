@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   normalizeTimeEntryListQuery,
+  readTimeEntryListQueryKey,
   timeEntriesKeys,
   timerKeys,
   userMutationInvalidationKeys,
@@ -106,5 +107,47 @@ describe("user-web query keys", () => {
       userProjectsKeys.projectTasks(scope, "project-1"),
       timerKeys.all(scope),
     ]);
+  });
+
+  it("reads normalized list queries from time-entry list keys", () => {
+    const query = readTimeEntryListQueryKey(
+      timeEntriesKeys.list(scope, { limit: 20, page: 2, search: "reports" }),
+    );
+
+    expect(query).toEqual({
+      dateFrom: null,
+      dateTo: null,
+      limit: 20,
+      page: 2,
+      projectId: null,
+      search: "reports",
+      taskId: null,
+    });
+  });
+
+  it("reads normalized list-all queries from aggregated time-entry keys", () => {
+    const query = readTimeEntryListQueryKey(
+      timeEntriesKeys.allList(scope, {
+        dateFrom: "2026-04-21T00:00:00.000Z",
+        dateTo: "2026-04-28T00:00:00.000Z",
+        limit: 100,
+      }),
+    );
+
+    expect(query).toEqual({
+      dateFrom: "2026-04-21T00:00:00.000Z",
+      dateTo: "2026-04-28T00:00:00.000Z",
+      limit: 100,
+      page: null,
+      projectId: null,
+      search: null,
+      taskId: null,
+    });
+  });
+
+  it("rejects non-time-entry keys", () => {
+    expect(
+      readTimeEntryListQueryKey(timerKeys.current(scope)),
+    ).toBeNull();
   });
 });

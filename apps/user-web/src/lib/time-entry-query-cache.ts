@@ -1,17 +1,15 @@
-import type { QueryClient, QueryKey } from "@tanstack/vue-query";
+import type { QueryClient } from "@tanstack/vue-query";
 import type {
-  TimeEntryListQuery,
   TimeEntryListResponse,
   TimeEntryResponse,
 } from "@gitiempo/shared";
 
 import {
-  normalizeTimeEntryListQuery,
+  readTimeEntryListQueryKey,
   timeEntriesKeys,
+  type NormalizedTimeEntryListQuery,
   type UserServerStateScope,
 } from "@/lib/query-keys";
-
-type NormalizedTimeEntryListQuery = ReturnType<typeof normalizeTimeEntryListQuery>;
 
 function compareTimeEntriesByRecency(
   left: TimeEntryResponse,
@@ -39,23 +37,6 @@ function isTimeEntryListResponse(
     Array.isArray(value.items) &&
     isRecord(value.meta)
   );
-}
-
-function readTimeEntryQuery(
-  queryKey: QueryKey,
-): NormalizedTimeEntryListQuery | null {
-  const queryType = queryKey[3];
-  const maybeQuery = queryKey[4];
-
-  if (
-    queryKey[2] !== "time-entries" ||
-    (queryType !== "list" && queryType !== "list-all") ||
-    !isRecord(maybeQuery)
-  ) {
-    return null;
-  }
-
-  return normalizeTimeEntryListQuery(maybeQuery as Partial<TimeEntryListQuery>);
 }
 
 function entryMatchesQuery(
@@ -149,7 +130,7 @@ export function reconcileTimeEntryListCaches(
   for (const query of queries) {
     const queryKey = query.queryKey;
     const currentData = query.state.data;
-    const listQuery = readTimeEntryQuery(queryKey);
+    const listQuery = readTimeEntryListQueryKey(queryKey);
 
     if (!listQuery) {
       continue;
