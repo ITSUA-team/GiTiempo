@@ -24,6 +24,7 @@ import {
   userProjectsKeys,
   type UserServerStateScope,
 } from "@/lib/query-keys";
+import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 
 type QueryKey = readonly unknown[];
 
@@ -56,6 +57,7 @@ interface DeleteTimeEntryClient {
 interface OwnTimeEntriesClient {
   listOwnEntries(
     query?: Partial<TimeEntryListQuery>,
+    options?: { signal?: AbortSignal },
   ): Promise<TimeEntryListResponse>;
 }
 
@@ -171,6 +173,26 @@ async function invalidateQueryKeys(
   );
 }
 
+async function reconcileTimeEntryCachesAfterTimerMutation(
+  queryClient: ReturnType<typeof useQueryClient>,
+  scope: UserServerStateScope,
+  timer: TimeEntryResponse,
+): Promise<void> {
+  await queryClient.cancelQueries(
+    { queryKey: timeEntriesKeys.all(scope) },
+    { silent: true },
+  );
+
+  try {
+    reconcileTimeEntryListCaches(queryClient, scope, timer);
+  } catch (error) {
+    console.error("Could not reconcile time-entry caches after timer mutation", {
+      entryId: timer.id,
+      error,
+    });
+  }
+}
+
 export const useCurrentTimerQuery = (options: UseCurrentTimerQueryOptions) =>
   useQuery({
     queryKey: computed(() => timerKeys.current(toValue(options.scope))),
@@ -185,7 +207,8 @@ export const useOwnTimeEntriesQuery = (options: UseOwnTimeEntriesQueryOptions) =
       timeEntriesKeys.list(toValue(options.scope), toValue(options.query)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () => options.client.listOwnEntries(toValue(options.query)),
+    queryFn: ({ signal }) =>
+      options.client.listOwnEntries(toValue(options.query), { signal }),
   });
 
 export const useProjectTasksQuery = (options: UseProjectTasksQueryOptions) =>
@@ -213,7 +236,8 @@ export const useRecentOwnTimeEntriesQuery = (
       timeEntriesKeys.list(toValue(options.scope), recentOwnTimeEntriesQuery),
     ),
     enabled: computed(() => isQueryEnabled(options)),
-    queryFn: () => options.client.listOwnEntries(recentOwnTimeEntriesQuery),
+    queryFn: ({ signal }) =>
+      options.client.listOwnEntries(recentOwnTimeEntriesQuery, { signal }),
   });
 
 export const useVisibleProjectsQuery = (options: UseVisibleProjectsQueryOptions) =>
@@ -295,7 +319,12 @@ export const useStartTimerMutation = (options: UseStartTimerMutationOptions) => 
   return useMutation({
     mutationFn: (taskId: string) =>
       options.client.startTimer(taskId),
-    onSuccess: async () => {
+    onSuccess: async (timer) => {
+      await reconcileTimeEntryCachesAfterTimerMutation(
+        queryClient,
+        toValue(options.scope),
+        timer,
+      );
       await invalidateQueryKeys(
         queryClient,
         userMutationInvalidationKeys.afterTimerMutation(toValue(options.scope)),
@@ -309,7 +338,12 @@ export const useStopTimerMutation = (options: UseStopTimerMutationOptions) => {
 
   return useMutation({
     mutationFn: () => options.client.stopTimer(),
-    onSuccess: async () => {
+    onSuccess: async (timer) => {
+      await reconcileTimeEntryCachesAfterTimerMutation(
+        queryClient,
+        toValue(options.scope),
+        timer,
+      );
       await invalidateQueryKeys(
         queryClient,
         userMutationInvalidationKeys.afterTimerMutation(toValue(options.scope)),

@@ -78,6 +78,30 @@ describe("createAuthenticatedApiClient", () => {
     });
   });
 
+  it("forwards abort signals to fetch requests", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ ok: true }));
+    const apiClient = createAuthenticatedApiClient({
+      fetchFn,
+      getToken: () => "access-token",
+      onRefreshFailed: vi.fn(),
+      refreshAccessToken: vi.fn(),
+    });
+    const controller = new AbortController();
+
+    await apiClient.requestJson({
+      path: "/protected",
+      responseSchema: z.object({ ok: z.boolean() }),
+      signal: controller.signal,
+    });
+
+    expect(fetchFn).toHaveBeenCalledWith("/protected", {
+      body: undefined,
+      headers: { Authorization: "Bearer access-token" },
+      method: "GET",
+      signal: controller.signal,
+    });
+  });
+
   it("expires the session when refresh fails", async () => {
     const onRefreshFailed = vi.fn();
     const apiClient = createAuthenticatedApiClient({
