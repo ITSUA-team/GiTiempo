@@ -13,35 +13,45 @@ const TEST_SCOPE = {
   workspaceId: null,
 };
 
+const TEST_IDS = {
+  existingEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3001",
+  newEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3002",
+  pageTwoEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3003",
+  project: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
+  task: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2001",
+  user: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f4001",
+  workspace: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f5001",
+} as const;
+
 function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
   return {
     createdAt: "2026-04-21T09:00:00.000Z",
     description: null,
     durationSeconds: 1800,
     endedAt: "2026-04-21T09:30:00.000Z",
-    id: "entry-1",
+    id: TEST_IDS.existingEntry,
     isBillable: false,
     project: {
-      id: "project-1",
+      id: TEST_IDS.project,
       name: "Project Orion",
     },
-    projectId: "project-1",
+    projectId: TEST_IDS.project,
     source: "web",
     startedAt: "2026-04-21T09:00:00.000Z",
     task: {
-      id: "task-1",
+      id: TEST_IDS.task,
       title: "Improve reports filters",
     },
-    taskId: "task-1",
+    taskId: TEST_IDS.task,
     updatedAt: "2026-04-21T09:30:00.000Z",
     user: {
       avatarUrl: null,
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
-      id: "user-1",
+      id: TEST_IDS.user,
     },
-    userId: "user-1",
-    workspaceId: "workspace-1",
+    userId: TEST_IDS.user,
+    workspaceId: TEST_IDS.workspace,
     githubIssue: null,
     ...overrides,
   };
@@ -72,7 +82,7 @@ describe("reconcileTimeEntryListCaches", () => {
 
     expect(
       queryClient.getQueryData<TimeEntryListResponse>(taskTitleKey)?.items,
-    ).toEqual([expect.objectContaining({ id: "entry-1" })]);
+    ).toEqual([expect.objectContaining({ id: TEST_IDS.existingEntry })]);
     expect(
       queryClient.getQueryData<TimeEntryListResponse>(projectNameKey)?.items,
     ).toEqual([]);
@@ -85,7 +95,7 @@ describe("reconcileTimeEntryListCaches", () => {
     queryClient.setQueryData(
       listKey,
       createListResponse(
-        [createEntry({ id: "entry-0", startedAt: "2026-04-20T09:00:00.000Z" })],
+        [createEntry({ id: TEST_IDS.pageTwoEntry, startedAt: "2026-04-20T09:00:00.000Z" })],
         { limit: 1, page: 1, total: 1, totalPages: 1 },
       ),
     );
@@ -93,7 +103,7 @@ describe("reconcileTimeEntryListCaches", () => {
     reconcileTimeEntryListCaches(
       queryClient,
       TEST_SCOPE,
-      createEntry({ id: "entry-2", startedAt: "2026-04-21T10:00:00.000Z" }),
+      createEntry({ id: TEST_IDS.newEntry, startedAt: "2026-04-21T10:00:00.000Z" }),
     );
 
     expect(queryClient.getQueryData<TimeEntryListResponse>(listKey)?.meta).toEqual({
@@ -108,7 +118,7 @@ describe("reconcileTimeEntryListCaches", () => {
     const queryClient = createTestQueryClient();
     const listKey = timeEntriesKeys.list(TEST_SCOPE, { limit: 1, page: 2 });
     const existingPage = createListResponse(
-      [createEntry({ id: "entry-0", startedAt: "2026-04-20T09:00:00.000Z" })],
+      [createEntry({ id: TEST_IDS.pageTwoEntry, startedAt: "2026-04-20T09:00:00.000Z" })],
       { limit: 1, page: 2, total: 2, totalPages: 2 },
     );
 
@@ -117,7 +127,7 @@ describe("reconcileTimeEntryListCaches", () => {
     reconcileTimeEntryListCaches(
       queryClient,
       TEST_SCOPE,
-      createEntry({ id: "entry-2", startedAt: "2026-04-21T10:00:00.000Z" }),
+      createEntry({ id: TEST_IDS.newEntry, startedAt: "2026-04-21T10:00:00.000Z" }),
     );
 
     expect(queryClient.getQueryData<TimeEntryListResponse>(listKey)).toEqual(existingPage);

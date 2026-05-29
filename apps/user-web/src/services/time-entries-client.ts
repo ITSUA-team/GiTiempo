@@ -43,6 +43,7 @@ export interface TimeEntriesClient {
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
   listOwnEntries(
     query?: Partial<TimeEntryListQuery>,
+    options?: { signal?: AbortSignal },
   ): Promise<TimeEntryListResponse>;
   listProjectTasks(projectId: string): Promise<TaskResponse[]>;
   listVisibleProjects(): Promise<ProjectResponse[]>;
@@ -128,12 +129,13 @@ export function createTimeEntriesClient({
         responseSchema: currentTimeEntryResponseSchema,
       });
     },
-    listOwnEntries(query) {
+    listOwnEntries(query, options) {
       const search = buildTimeEntryListQuery(query);
 
       return apiClient.requestJson({
         path: `/time-entries?${search}`,
         responseSchema: timeEntryListResponseSchema,
+        signal: options?.signal,
       });
     },
     listProjectTasks(projectId) {

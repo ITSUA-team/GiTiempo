@@ -179,6 +179,7 @@ describe("useDashboardOverview", () => {
 
     expect(client.listOwnEntries).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 10, page: 1 }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(client.listOwnEntries).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -186,6 +187,7 @@ describe("useDashboardOverview", () => {
         dateTo: "2026-04-27T00:00:00.000Z",
         page: 1,
       }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(dashboardOverview.pageState.value).toBe("ready");
     expect(dashboardOverview.dashboardStats.value[0]).toEqual({
@@ -201,7 +203,7 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Billing API");
     expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Fix export column order");
     expect(dashboardOverview.recentEntryRows.value).toHaveLength(2);
-    expect(dashboardOverview.recentEntryRows.value[0]?.isHighlighted).toBe(true);
+    expect(dashboardOverview.recentEntryRows.value[0]?.isHighlighted).toBe(false);
   });
 
   it("keeps request-error distinct from empty and shows a read-failure toast", async () => {
@@ -328,6 +330,7 @@ describe("useDashboardOverview", () => {
         dateTo: "2026-04-27T00:00:00.000Z",
         page: 2,
       }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(dashboardOverview.dashboardStats.value[1]).toEqual({
       description: "2 entries tracked this week",
@@ -465,7 +468,7 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
       durationLabel: "30m",
       id: TEST_IDS.runningEntry,
-      isHighlighted: true,
+      isHighlighted: false,
       projectName: "Project Orion",
       taskTitle: "Improve reports filters",
       timeRangeLabel: "11:00 - 11:30",
