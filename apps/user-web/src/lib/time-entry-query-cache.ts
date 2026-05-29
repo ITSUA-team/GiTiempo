@@ -78,16 +78,8 @@ function entryMatchesQuery(
 
   if (query.search) {
     const search = query.search.toLowerCase();
-    const haystack = [
-      entry.description,
-      entry.project.name,
-      entry.task.title,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
 
-    return haystack.includes(search);
+    return entry.task.title.toLowerCase().includes(search);
   }
 
   return true;
@@ -126,15 +118,17 @@ function reconcileListResponse(
   const nextItems = reconcileEntries(response.items, entry, query);
   const hasEntry = nextItems.some((item) => item.id === entry.id);
   const limit = response.meta.limit;
+  const nextTotal = response.meta.total +
+    (hasEntry && !hadEntry ? 1 : 0) -
+    (!hasEntry && hadEntry ? 1 : 0);
 
   return {
     ...response,
     items: nextItems.slice(0, limit),
     meta: {
       ...response.meta,
-      total: response.meta.total +
-        (hasEntry && !hadEntry ? 1 : 0) -
-        (!hasEntry && hadEntry ? 1 : 0),
+      total: nextTotal,
+      totalPages: nextTotal === 0 ? 0 : Math.ceil(nextTotal / limit),
     },
   };
 }

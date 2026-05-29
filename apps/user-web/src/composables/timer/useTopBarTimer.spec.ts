@@ -221,7 +221,7 @@ describe("useTopBarTimer", () => {
   it("resolves the last eligible tracked task when idle", async () => {
     const client = createClientMock();
 
-    client.listVisibleProjects.mockResolvedValueOnce([
+    client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, "Project Orion"),
     ]);
     client.listOwnEntries.mockResolvedValueOnce(
@@ -252,7 +252,7 @@ describe("useTopBarTimer", () => {
   it("keeps the compact surface disabled when no eligible task exists", async () => {
     const client = createClientMock();
 
-    client.listVisibleProjects.mockResolvedValueOnce([
+    client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, "Project Orion"),
     ]);
     client.listOwnEntries.mockResolvedValueOnce(
@@ -287,7 +287,11 @@ describe("useTopBarTimer", () => {
       createTask("task-1", "project-1", "Improve reports filters"),
     ]);
 
-    const { topBarTimer } = mountTopBarTimer({ client });
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
     await topBarTimer.openDialog();
@@ -314,7 +318,11 @@ describe("useTopBarTimer", () => {
       createTask("task-1", "project-1", "Improve reports filters"),
     ]);
 
-    const { topBarTimer } = mountTopBarTimer({ client, toast });
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
     await topBarTimer.openDialog();
@@ -327,10 +335,10 @@ describe("useTopBarTimer", () => {
     expect(client.createTask).toHaveBeenCalledWith("project-1", {
       title: "Write release checklist",
     });
-    expect(topBarTimer.selectedTaskId.value).toBe("task-new");
+    expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
     expect(topBarTimer.createTaskTitle.value).toBe("");
     expect(topBarTimer.taskOptions.value).toContainEqual(
-      expect.objectContaining({ id: "task-new", title: "Write release checklist" }),
+      expect.objectContaining({ id: TEST_IDS.taskNew, title: "Write release checklist" }),
     );
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({ severity: "success", summary: "Task created" }),
@@ -347,7 +355,11 @@ describe("useTopBarTimer", () => {
     ]);
     client.createTask.mockRejectedValueOnce(new Error("task failed"));
 
-    const { topBarTimer } = mountTopBarTimer({ client, toast });
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
     await topBarTimer.openDialog();
@@ -394,22 +406,26 @@ describe("useTopBarTimer", () => {
     const toast = { add: vi.fn() };
 
     client.listVisibleProjects.mockResolvedValueOnce([
-      createProject("project-1", "Project Orion"),
+      createProject(TEST_IDS.project, "Project Orion"),
     ]);
     client.listOwnEntries.mockResolvedValueOnce(
       createOwnEntriesResponse([createCompletedEntry()]),
     );
     client.listProjectTasks.mockResolvedValueOnce([
-      createTask("task-1", "project-1", "Improve reports filters"),
+      createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
     ]);
 
-    const { topBarTimer } = mountTopBarTimer({ client, toast });
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
     await topBarTimer.handlePrimaryAction();
     await flushPromises();
 
-    expect(client.startTimer).toHaveBeenCalledWith("task-1");
+    expect(client.startTimer).toHaveBeenCalledWith(TEST_IDS.task);
     expect(topBarTimer.primaryActionLabel.value).toBe("Stop");
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({ severity: "success", summary: "Timer started" }),
@@ -420,7 +436,7 @@ describe("useTopBarTimer", () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
 
-    client.listVisibleProjects.mockResolvedValueOnce([
+    client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, "Project Orion"),
     ]);
     client.listOwnEntries.mockResolvedValueOnce(
@@ -529,7 +545,7 @@ describe("useTopBarTimer", () => {
   it("keeps idle task selection independent from cached time-entry lists", async () => {
     const client = createClientMock();
 
-    client.listVisibleProjects.mockResolvedValueOnce([
+    client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, "Project Orion"),
     ]);
     client.listOwnEntries.mockResolvedValueOnce(createOwnEntriesResponse([]));
@@ -552,6 +568,7 @@ describe("useTopBarTimer", () => {
     topBarTimer.setSelectedProjectId(TEST_IDS.project);
     await flushPromises();
     topBarTimer.setSelectedTaskId(TEST_IDS.task);
+    await flushPromises();
     topBarTimer.confirmSelectedTask();
 
     expect(topBarTimer.selectedContext.value).toEqual({
@@ -572,7 +589,11 @@ describe("useTopBarTimer", () => {
     client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
     client.stopTimer.mockRejectedValueOnce(new Error("stop failed"));
 
-    const { topBarTimer } = mountTopBarTimer({ client, toast });
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
     await topBarTimer.handlePrimaryAction();
@@ -594,7 +615,11 @@ describe("useTopBarTimer", () => {
 
     client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
 
-    const { topBarTimer } = mountTopBarTimer({ client });
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
 
     await flushPromises();
 

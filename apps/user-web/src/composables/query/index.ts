@@ -24,6 +24,7 @@ import {
   userProjectsKeys,
   type UserServerStateScope,
 } from "@/lib/query-keys";
+import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 
 type QueryKey = readonly unknown[];
 
@@ -295,7 +296,8 @@ export const useStartTimerMutation = (options: UseStartTimerMutationOptions) => 
   return useMutation({
     mutationFn: (taskId: string) =>
       options.client.startTimer(taskId),
-    onSuccess: async () => {
+    onSuccess: async (timer) => {
+      reconcileTimeEntryListCaches(queryClient, toValue(options.scope), timer);
       await invalidateQueryKeys(
         queryClient,
         userMutationInvalidationKeys.afterTimerMutation(toValue(options.scope)),
@@ -309,7 +311,8 @@ export const useStopTimerMutation = (options: UseStopTimerMutationOptions) => {
 
   return useMutation({
     mutationFn: () => options.client.stopTimer(),
-    onSuccess: async () => {
+    onSuccess: async (timer) => {
+      reconcileTimeEntryListCaches(queryClient, toValue(options.scope), timer);
       await invalidateQueryKeys(
         queryClient,
         userMutationInvalidationKeys.afterTimerMutation(toValue(options.scope)),

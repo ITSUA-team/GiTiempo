@@ -201,7 +201,7 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Billing API");
     expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Fix export column order");
     expect(dashboardOverview.recentEntryRows.value).toHaveLength(2);
-    expect(dashboardOverview.recentEntryRows.value[0]?.isHighlighted).toBe(false);
+    expect(dashboardOverview.recentEntryRows.value[0]?.isHighlighted).toBe(true);
   });
 
   it("keeps request-error distinct from empty and shows a read-failure toast", async () => {
@@ -442,7 +442,11 @@ describe("useDashboardOverview", () => {
         ]),
       );
 
-    const { dashboardOverview, queryClient } = mountDashboardOverview({ client });
+    const mounted = mountDashboardOverview({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview, queryClient } = mounted;
 
     await flushPromises();
 
@@ -461,7 +465,7 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
       durationLabel: "30m",
       id: TEST_IDS.runningEntry,
-      isHighlighted: false,
+      isHighlighted: true,
       projectName: "Project Orion",
       taskTitle: "Improve reports filters",
       timeRangeLabel: "11:00 - 11:30",

@@ -1,12 +1,9 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
-import { useQueryClient } from "@tanstack/vue-query";
 import {
   useStartTimerMutation,
   useStopTimerMutation,
 } from "@/composables/query";
-import { computed, shallowRef, toValue, type ComputedRef } from "vue";
-
-import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
+import { computed, shallowRef, type ComputedRef } from "vue";
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -30,7 +27,6 @@ export function useTopBarTimerActions({
   toast,
 }: UseTopBarTimerActionsOptions) {
   const appToast = createAppToast(toast);
-  const queryClient = useQueryClient();
   const timerActionErrorMessage = shallowRef<string | null>(null);
   const startTimerMutation = useStartTimerMutation({
     accessToken,
@@ -57,7 +53,6 @@ export function useTopBarTimerActions({
 
         summary.currentTimer.value = null;
         summary.setSelectedContextFromTimer(stoppedTimer);
-        reconcileTimeEntryListCaches(queryClient, toValue(scope), stoppedTimer);
         appToast.showSuccessToast("Timer stopped", "Your running timer has been stopped.");
       } catch (error) {
         timerActionErrorMessage.value = getErrorMessage(error);
@@ -82,11 +77,6 @@ export function useTopBarTimerActions({
       );
       if (summary.currentTimer.value) {
         summary.setSelectedContextFromTimer(summary.currentTimer.value);
-        reconcileTimeEntryListCaches(
-          queryClient,
-          toValue(scope),
-          summary.currentTimer.value,
-        );
       }
       appToast.showSuccessToast("Timer started", "Your timer is now running.");
     } catch (error) {
