@@ -43,7 +43,7 @@ function isTimeEntryListResponse(
 
 function readTimeEntryQuery(
   queryKey: QueryKey,
-): NormalizedTimeEntryListQuery {
+): NormalizedTimeEntryListQuery | null {
   const queryType = queryKey[3];
   const maybeQuery = queryKey[4];
 
@@ -52,7 +52,7 @@ function readTimeEntryQuery(
     (queryType !== "list" && queryType !== "list-all") ||
     !isRecord(maybeQuery)
   ) {
-    return normalizeTimeEntryListQuery();
+    return null;
   }
 
   return normalizeTimeEntryListQuery(maybeQuery as Partial<TimeEntryListQuery>);
@@ -150,6 +150,10 @@ export function reconcileTimeEntryListCaches(
     const queryKey = query.queryKey;
     const currentData = query.state.data;
     const listQuery = readTimeEntryQuery(queryKey);
+
+    if (!listQuery) {
+      continue;
+    }
 
     if (isTimeEntryListResponse(currentData)) {
       queryClient.setQueryData(

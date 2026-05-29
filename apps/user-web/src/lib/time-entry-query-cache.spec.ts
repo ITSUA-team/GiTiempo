@@ -162,4 +162,30 @@ describe("reconcileTimeEntryListCaches", () => {
       }),
     ]);
   });
+
+  it("skips unsupported time-entry query keys even when cached data is array-shaped", () => {
+    const queryClient = createTestQueryClient();
+    const unsupportedKey = [...timeEntriesKeys.all(TEST_SCOPE), "summary"] as const;
+    const unsupportedData = [
+      createEntry({
+        durationSeconds: null,
+        endedAt: null,
+      }),
+    ];
+
+    queryClient.setQueryData(unsupportedKey, unsupportedData);
+
+    reconcileTimeEntryListCaches(
+      queryClient,
+      TEST_SCOPE,
+      createEntry({
+        durationSeconds: 3600,
+        endedAt: "2026-04-21T10:00:00.000Z",
+      }),
+    );
+
+    expect(
+      queryClient.getQueryData<TimeEntryResponse[]>(unsupportedKey),
+    ).toEqual(unsupportedData);
+  });
 });
