@@ -18,6 +18,8 @@ import {
   createTestQueryPlugin,
 } from "@/test/query-client";
 
+import TimeEntriesView from "./TimeEntriesView.vue";
+
 const clientRef = vi.hoisted(() => ({
   current: null as unknown,
 }));
@@ -218,7 +220,6 @@ async function mountView(
   useAuthStore().accessToken = "access-token";
   clientRef.current = client;
 
-  const TimeEntriesView = (await import("./TimeEntriesView.vue")).default;
   const wrapper = mount(TimeEntriesView, {
     global: {
       plugins: [pinia, createTestQueryPlugin(queryClient)],
