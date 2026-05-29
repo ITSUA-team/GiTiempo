@@ -66,7 +66,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
       timeEntriesKeys.allList(scope.value, weekEntriesQueryInput.value),
     ),
     enabled: hasAccessToken,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const nextEntries: TimeEntryResponse[] = [];
       let currentPage = 1;
       let totalPages = 1;
@@ -75,7 +75,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
         const result = await client.listOwnEntries({
           ...weekEntriesQueryInput.value,
           page: currentPage,
-        });
+        }, { signal });
 
         nextEntries.push(...result.items);
         totalPages = Math.max(result.meta.totalPages, 1);

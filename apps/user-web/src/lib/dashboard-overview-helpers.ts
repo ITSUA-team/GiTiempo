@@ -207,10 +207,10 @@ export function mapDashboardRecentEntryRows(
   entries: TimeEntryResponse[],
   nowMs: number,
 ): DashboardRecentEntryRow[] {
-  return entries.map((entry, index) => ({
+  return entries.map((entry) => ({
     durationLabel: formatRecentEntryDuration(entry, nowMs),
     id: entry.id,
-    isHighlighted: index === 0,
+    isHighlighted: entry.endedAt === null,
     projectName: entry.project.name,
     taskTitle: entry.task.title,
     timeRangeLabel: formatRecentEntryTimeRange(entry),

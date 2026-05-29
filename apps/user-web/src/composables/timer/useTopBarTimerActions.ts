@@ -4,7 +4,6 @@ import {
   useStopTimerMutation,
 } from "@/composables/query";
 import { computed, shallowRef, type ComputedRef } from "vue";
-
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
