@@ -8,8 +8,8 @@ import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ReportsFilterForm from '@/components/reports/ReportsFilterForm.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
-import { useToasts } from '@/composables/useToasts';
-import { useReportsData } from '@/composables/useReportsData';
+import { useToasts } from '@/composables/feedback/useToasts';
+import { useReportsData } from '@/composables/reports/useReportsData';
 import { downloadReportExport } from '@/lib/report-download';
 import {
   createDefaultReportTableFilters,
@@ -19,10 +19,13 @@ import {
   getReportDateRangeError,
   type ReportDateRange,
 } from '@/lib/report-view-model';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast, successToast } = useToasts();
+const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 
 const {
   dateRange,
@@ -39,13 +42,14 @@ const {
   selectedProjectId,
   summary,
 } = useReportsData({
-  accessToken: computed(() => authStore.accessToken),
+  accessToken,
   onError(message, error, action) {
     errorToast(message, {
       error,
       logContext: { action, feature: 'reports' },
     });
   },
+  scope,
 });
 
 const tableFilters = ref(createDefaultReportTableFilters());

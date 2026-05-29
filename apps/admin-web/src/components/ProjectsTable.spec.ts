@@ -22,11 +22,11 @@ const projectClientMock = vi.hoisted(() => ({
   updateProject: vi.fn(),
 }));
 
-vi.mock('@/composables/useConfirmation', () => ({
+vi.mock('@/composables/feedback/useConfirmation', () => ({
   useConfirmation: () => confirmationMock,
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => toastMock,
 }));
 
@@ -440,7 +440,6 @@ describe('ProjectsTable', () => {
     await flushPromises();
 
     expect(projectClientMock.updateProject).toHaveBeenCalledWith(
-      'admin-access-token',
       'project-inactive',
       { isActive: true },
     );

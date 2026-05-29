@@ -18,7 +18,7 @@ vi.mock("vue-router", async () => {
   };
 });
 
-vi.mock("@/composables/useDashboardOverview", () => ({
+vi.mock("@/composables/dashboard/useDashboardOverview", () => ({
   useDashboardOverview: () => ({
     dashboardStats: computed(() => [
       { description: "1 project tracked today", label: "Today", value: "6h 40m" },

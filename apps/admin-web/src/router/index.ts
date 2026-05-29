@@ -9,6 +9,10 @@ import {
   type RouterHistory,
 } from 'vue-router';
 import type { Pinia } from 'pinia';
+import {
+  WorkspaceRoles,
+  type WorkspaceRole,
+} from '@gitiempo/shared';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
 import AddProjectMockView from '@/views/AddProjectView.vue';
@@ -36,6 +40,46 @@ export const routeNames = {
   reports: 'admin-reports',
   settings: 'admin-settings',
 } as const;
+
+type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
+
+const adminOnlyRoles = [WorkspaceRoles.Admin] as const satisfies readonly WorkspaceRole[];
+const adminAndPmRoles = [
+  WorkspaceRoles.Admin,
+  WorkspaceRoles.PM,
+] as const satisfies readonly WorkspaceRole[];
+
+export const adminRouteAllowedRoles = {
+  [routeNames.addProject]: adminOnlyRoles,
+  [routeNames.dashboard]: adminAndPmRoles,
+  [routeNames.invoices]: adminOnlyRoles,
+  [routeNames.members]: adminOnlyRoles,
+  [routeNames.projects]: adminOnlyRoles,
+  [routeNames.reports]: adminAndPmRoles,
+  [routeNames.settings]: adminOnlyRoles,
+} as const satisfies Partial<Record<AdminRouteName, readonly WorkspaceRole[]>>;
+
+function isRoleAllowed(
+  role: WorkspaceRole | null | undefined,
+  allowedRoles?: readonly WorkspaceRole[],
+): boolean {
+  return !allowedRoles || (!!role && allowedRoles.includes(role));
+}
+
+export function canAccessAdminRoute(
+  role: WorkspaceRole | null | undefined,
+  routeName: string | symbol | null | undefined,
+): boolean {
+  if (typeof routeName !== 'string') {
+    return true;
+  }
+
+  const allowedRoles = adminRouteAllowedRoles[
+    routeName as keyof typeof adminRouteAllowedRoles
+  ];
+
+  return isRoleAllowed(role, allowedRoles);
+}
 
 function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
   const redirect = to.query.redirect;
@@ -67,36 +111,61 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
     },
     children: [
-      { path: '', name: routeNames.dashboard, component: DashboardView },
+      {
+        path: '',
+        name: routeNames.dashboard,
+        component: DashboardView,
+        meta: {
+          allowedRoles: adminRouteAllowedRoles[routeNames.dashboard],
+        },
+      },
       {
         path: 'reports',
         name: routeNames.reports,
         component: ReportsView,
+        meta: {
+          allowedRoles: adminRouteAllowedRoles[routeNames.reports],
+        },
       },
       {
         path: 'invoices',
         name: routeNames.invoices,
         component: InvoicesView,
+        meta: {
+          allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
+        },
       },
       {
         path: 'members',
         name: routeNames.members,
         component: MembersView,
+        meta: {
+          allowedRoles: adminRouteAllowedRoles[routeNames.members],
+        },
       },
       {
         path: 'projects',
         name: routeNames.projects,
         component: ProjectsView,
+        meta: {
+          allowedRoles: adminRouteAllowedRoles[routeNames.projects],
+        },
       },
       {
         path: 'projects/new',
         name: routeNames.addProject,
         component: AddProjectMockView,
+        meta: {
+          allowedRoles: adminRouteAllowedRoles[routeNames.addProject],
+        },
       },
       {
         path: 'settings',
         name: routeNames.settings,
         component: SettingsView,
+        meta: {
+          allowedRoles: adminRouteAllowedRoles[routeNames.settings],
+        },
       },
     ],
   },
@@ -141,6 +210,13 @@ async function handleAuthNavigation(
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     return getDefaultAuthenticatedRoute(to);
+  }
+
+  if (
+    to.meta.requiresAuth &&
+    !isRoleAllowed(authStore.profile?.role, to.meta.allowedRoles)
+  ) {
+    return { name: routeNames.forbidden };
   }
 
   return undefined;

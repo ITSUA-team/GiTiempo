@@ -3,7 +3,7 @@ import ProgressBar from "primevue/progressbar";
 import Tag from "primevue/tag";
 import { SectionHeader, SurfaceCard } from "@gitiempo/web-shared";
 
-import type { DashboardWeeklyFocus } from "@/composables/useDashboardOverview";
+import type { DashboardWeeklyFocus } from "@/composables/dashboard/useDashboardOverview";
 
 const props = defineProps<{
   focus: DashboardWeeklyFocus;

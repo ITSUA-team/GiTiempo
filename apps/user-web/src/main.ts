@@ -1,4 +1,5 @@
 import { createApp } from "vue";
+import { VueQueryPlugin } from "@tanstack/vue-query";
 import PrimeVue from "primevue/config";
 import ConfirmationService from "primevue/confirmationservice";
 import Tooltip from "primevue/tooltip";
@@ -7,6 +8,7 @@ import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import App from "./App.vue";
 import "./assets/main.css";
+import { vueQueryPluginOptions } from "./query-client";
 import { router } from "./router";
 import { pinia } from "./stores";
 
@@ -14,6 +16,7 @@ const app = createApp(App);
 
 app.use(pinia);
 app.use(router);
+app.use(VueQueryPlugin, vueQueryPluginOptions);
 app.use(PrimeVue, giTiempoPrimeVueOptions);
 app.use(ToastService);
 app.use(ConfirmationService);

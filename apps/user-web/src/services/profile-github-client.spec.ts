@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createAuthenticatedApiClient } from "@gitiempo/web-shared/http";
 
 import { createProfileGitHubClient } from "./profile-github-client";
 
@@ -6,6 +7,16 @@ function jsonResponse(body: unknown, init: { status?: number } = {}): Response {
   return new Response(JSON.stringify(body), {
     headers: { "Content-Type": "application/json" },
     ...init,
+  });
+}
+
+function createTestApiClient(fetchFn: typeof fetch, apiBaseUrl?: string) {
+  return createAuthenticatedApiClient({
+    apiBaseUrl,
+    fetchFn,
+    getToken: () => "access-token",
+    onRefreshFailed: vi.fn(),
+    refreshAccessToken: async () => "access-token",
   });
 }
 
@@ -24,11 +35,10 @@ describe("createProfileGitHubClient", () => {
       }),
     );
     const client = createProfileGitHubClient({
-      apiBaseUrl: "https://api.example.test/",
-      fetchFn,
+      apiClient: createTestApiClient(fetchFn, "https://api.example.test/"),
     });
 
-    const response = await client.getConnectionStatus("access-token");
+    const response = await client.getConnectionStatus();
 
     expect(response.status).toBe("connected");
     expect(fetchFn).toHaveBeenCalledWith(
@@ -47,9 +57,9 @@ describe("createProfileGitHubClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({ authorizationUrl: "https://github.com/login/oauth/authorize" }),
     );
-    const client = createProfileGitHubClient({ fetchFn });
+    const client = createProfileGitHubClient({ apiClient: createTestApiClient(fetchFn) });
 
-    const response = await client.getAuthUrl("access-token");
+    const response = await client.getAuthUrl();
 
     expect(response.authorizationUrl).toContain("github.com/login/oauth/authorize");
     expect(fetchFn).toHaveBeenCalledWith("/github/auth-url", {
@@ -63,11 +73,12 @@ describe("createProfileGitHubClient", () => {
 
   it("disconnects the GitHub connection with bearer auth and no JSON body", async () => {
     const fetchFn = vi.fn(async () => new Response(null, { status: 204 }));
-    const client = createProfileGitHubClient({ fetchFn });
+    const client = createProfileGitHubClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.disconnect("access-token");
+    await client.disconnect();
 
     expect(fetchFn).toHaveBeenCalledWith("/github/connection", {
+      body: undefined,
       headers: {
         Authorization: "Bearer access-token",
       },
@@ -82,9 +93,9 @@ describe("createProfileGitHubClient", () => {
         { status: 409 },
       ),
     );
-    const client = createProfileGitHubClient({ fetchFn });
+    const client = createProfileGitHubClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await expect(client.getAuthUrl("access-token")).rejects.toThrow(
+    await expect(client.getAuthUrl()).rejects.toThrow(
       "GitHub auth flow is already pending",
     );
   });
@@ -93,9 +104,9 @@ describe("createProfileGitHubClient", () => {
     const fetchFn = vi.fn(async () => {
       throw new Error("network down");
     });
-    const client = createProfileGitHubClient({ fetchFn });
+    const client = createProfileGitHubClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await expect(client.getConnectionStatus("access-token")).rejects.toThrow(
+    await expect(client.getConnectionStatus()).rejects.toThrow(
       "network down",
     );
   });

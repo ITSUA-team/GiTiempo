@@ -13,7 +13,7 @@ import Select from 'primevue/select';
 
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/useToasts';
+import { useToasts } from '@/composables/feedback/useToasts';
 
 const visible = defineModel<boolean>('visible', { required: true });
 
@@ -50,7 +50,7 @@ async function handleSubmit({
   submitting.value = true;
 
   try {
-    await adminMembersClient.createInvite(token, values as WorkspaceInviteFormInput);
+    await adminMembersClient.createInvite(values as WorkspaceInviteFormInput);
     successToast(`Invitation sent to ${values.email as string}.`);
     reset();
     visible.value = false;

@@ -32,14 +32,14 @@ vi.mock('@/services/admin-projects-client', () => ({
   },
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
     successToast: testMocks.successToast,
   }),
 }));
 
-vi.mock('@/composables/useConfirmation', () => ({
+vi.mock('@/composables/feedback/useConfirmation', () => ({
   useConfirmation: () => ({
     requireConfirmation: testMocks.requireConfirmation,
   }),
@@ -445,7 +445,6 @@ describe('MembersView', () => {
     await flushPromises();
 
     expect(testMocks.resendInvite).toHaveBeenCalledWith(
-      'access-token',
       '44444444-4444-4444-8444-444444444444',
     );
     expect(testMocks.listInvites).toHaveBeenCalledTimes(2);
@@ -559,7 +558,6 @@ describe('MembersView', () => {
     await flushPromises();
 
     expect(testMocks.cancelInvite).toHaveBeenCalledWith(
-      'access-token',
       '44444444-4444-4444-8444-444444444444',
     );
     expect(testMocks.listInvites).toHaveBeenCalledTimes(2);
@@ -615,7 +613,6 @@ describe('MembersView', () => {
     await flushPromises();
 
     expect(testMocks.cancelInvite).toHaveBeenCalledWith(
-      'access-token',
       '44444444-4444-4444-8444-444444444444',
     );
     expect(testMocks.listInvites).toHaveBeenCalledTimes(1);

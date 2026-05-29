@@ -5,25 +5,19 @@ import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import DashboardPageSkeleton from '@/components/dashboard/DashboardPageSkeleton.vue';
 import DashboardRecentActivityFeed from '@/components/dashboard/DashboardRecentActivityFeed.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
-import { useAdminDashboardPage } from '@/composables/useAdminDashboardPage';
-import { useToasts } from '@/composables/useToasts';
+import { useAdminDashboardActivity } from '@/composables/dashboard/useAdminDashboardActivity';
+import { useAdminDashboardData } from '@/composables/dashboard/useAdminDashboardData';
+import { useToasts } from '@/composables/feedback/useToasts';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
+const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 
-const {
-  activityRows,
-  hasMoreActivity,
-  isInitialLoading,
-  loadError,
-  loading,
-  refresh,
-  showAllActivity,
-  stats,
-  toggleActivityRows,
-} = useAdminDashboardPage({
-  accessToken: computed(() => authStore.accessToken),
+const dashboard = useAdminDashboardData({
+  accessToken,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -31,7 +25,20 @@ const {
     });
   },
   role: computed(() => authStore.profile?.role ?? null),
+  scope,
 });
+const {
+  activityRows,
+  hasMoreActivity,
+  showAllActivity,
+  toggleActivityRows,
+} = useAdminDashboardActivity({
+  allActivityRows: dashboard.allActivityRows,
+  initialLoaded: dashboard.initialLoaded,
+  loadError: dashboard.loadError,
+  loading: dashboard.loading,
+});
+const { isInitialLoading, loadError, loading, refresh, stats } = dashboard;
 </script>
 
 <template>

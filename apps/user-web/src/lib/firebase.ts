@@ -1,50 +1,65 @@
 import { FirebaseError, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import type { FirebaseOptions } from "firebase/app";
+import type { FirebaseApp, FirebaseOptions } from "firebase/app";
+
+import { appEnv } from "@/config/env";
 
 function getFirebaseConfig(): FirebaseOptions | null {
   const {
-    VITE_FIREBASE_API_KEY,
-    VITE_FIREBASE_APP_ID,
-    VITE_FIREBASE_AUTH_DOMAIN,
-    VITE_FIREBASE_MESSAGING_SENDER_ID,
-    VITE_FIREBASE_PROJECT_ID,
-    VITE_FIREBASE_STORAGE_BUCKET,
-  } = import.meta.env;
+    apiKey,
+    appId,
+    authDomain,
+    messagingSenderId,
+    projectId,
+    storageBucket,
+  } = appEnv.firebase;
 
   if (
-    !VITE_FIREBASE_API_KEY ||
-    !VITE_FIREBASE_APP_ID ||
-    !VITE_FIREBASE_AUTH_DOMAIN ||
-    !VITE_FIREBASE_PROJECT_ID
+    !apiKey ||
+    !appId ||
+    !authDomain ||
+    !projectId
   ) {
     return null;
   }
 
   return {
-    apiKey: VITE_FIREBASE_API_KEY,
-    appId: VITE_FIREBASE_APP_ID,
-    authDomain: VITE_FIREBASE_AUTH_DOMAIN,
-    messagingSenderId: VITE_FIREBASE_MESSAGING_SENDER_ID,
-    projectId: VITE_FIREBASE_PROJECT_ID,
-    storageBucket: VITE_FIREBASE_STORAGE_BUCKET,
+    apiKey,
+    appId,
+    authDomain,
+    messagingSenderId,
+    projectId,
+    storageBucket,
   };
 }
 
-const firebaseConfig = getFirebaseConfig();
-const firebaseApp = firebaseConfig ? initializeApp(firebaseConfig) : null;
+let firebaseApp: FirebaseApp | null | undefined;
+
+function getFirebaseApp(): FirebaseApp | null {
+  if (firebaseApp !== undefined) {
+    return firebaseApp;
+  }
+
+  const firebaseConfig = getFirebaseConfig();
+
+  firebaseApp = firebaseConfig ? initializeApp(firebaseConfig) : null;
+
+  return firebaseApp;
+}
 
 export function hasFirebaseConfig(): boolean {
-  return firebaseApp !== null;
+  return getFirebaseApp() !== null;
 }
 
 export function getFirebaseAuth() {
-  if (!firebaseApp) {
+  const app = getFirebaseApp();
+
+  if (!app) {
     throw new FirebaseError(
       "auth/missing-config",
       "Firebase Auth is not configured for apps/user-web.",
     );
   }
 
-  return getAuth(firebaseApp);
+  return getAuth(app);
 }

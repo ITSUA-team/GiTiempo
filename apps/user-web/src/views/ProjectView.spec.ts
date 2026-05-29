@@ -1,198 +1,358 @@
 // @vitest-environment jsdom
 
-import { mount } from "@vue/test-utils";
-import { computed, shallowRef } from "vue";
+import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import type {
+  ProjectResponse,
+  TaskResponse,
+  TimeEntryListResponse,
+} from "@gitiempo/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const pageState = shallowRef<"empty" | "loading" | "ready" | "request-error">(
-  "ready",
-);
-const filteredProjectGroups = shallowRef([
-  {
-    project: {
-      color: null,
-      createdAt: "2026-04-20T12:00:00.000Z",
-      description: null,
-      id: "project-1",
-      isActive: true,
-      members: [],
-      name: "Project Orion",
-      source: "manual",
-      totalHours: 12,
-      updatedAt: "2026-04-20T12:00:00.000Z",
-      visibility: "public",
-      workspaceId: "workspace-1",
-    },
-    tasks: [
-      {
-        createdAt: "2026-04-20T12:00:00.000Z",
-        id: "task-1",
-        isActive: true,
-        projectId: "project-1",
-        status: "open",
-        title: "Improve reports filters",
-        updatedAt: "2026-04-21T10:00:00.000Z",
-        workspaceId: "workspace-1",
-      },
-    ],
-  },
-]);
-const requestErrorMessage = shallowRef<string | null>(null);
-const PROJECT_VIEW_TEST_TIMEOUT_MS = 15_000;
+import type { TimeEntriesClient } from "@/services/time-entries-client";
+import { createTestQueryPlugin } from "@/test/query-client";
+import { useAuthStore } from "@/stores/auth";
 
-const actions = {
-  closeDialog: vi.fn(),
-  openCreateDialog: vi.fn(),
-  openEditDialog: vi.fn(),
-  requestDeleteTask: vi.fn(),
-  retryLoadPage: vi.fn(async () => undefined),
-  saveDialog: vi.fn(async () => undefined),
-  setDialogProjectId: vi.fn(),
-  setDialogTaskStatus: vi.fn(),
-  setDialogTaskTitle: vi.fn(),
-  setSearchValue: vi.fn(),
-};
-
-vi.mock("@/composables/useProjectsPage", () => ({
-  useProjectsPage: () => ({
-    canCreateTasks: computed(() => true),
-    closeDialog: actions.closeDialog,
-    dialogErrors: shallowRef({ projectId: null, status: null, title: null }),
-    dialogMode: shallowRef(null),
-    dialogProjectId: shallowRef(null),
-    dialogRequestErrorMessage: shallowRef(null),
-    dialogSaveLabel: computed(() => "Create task"),
-    dialogSubtitle: computed(() => "Create a task in one of your visible projects."),
-    dialogTaskStatus: shallowRef("open"),
-    dialogTaskTitle: shallowRef(""),
-    dialogTitle: computed(() => "New task"),
-    filteredProjectGroups,
-    formatUpdatedLabel: () => "Today, 10:00",
-    handleSearchComplete: vi.fn(),
-    isDeletingTaskId: shallowRef<string | null>(null),
-    isDialogOpen: computed(() => false),
-    isLoadingProjects: shallowRef(false),
-    isLoadingTasks: shallowRef(false),
-    isSavingDialog: shallowRef(false),
-    lastMutationErrorMessage: shallowRef(null),
-    openCreateDialog: actions.openCreateDialog,
-    openEditDialog: actions.openEditDialog,
-    pageState,
-    requestDeleteTask: actions.requestDeleteTask,
-    requestErrorMessage,
-    retryLoadPage: actions.retryLoadPage,
-    saveDialog: actions.saveDialog,
-    searchSuggestions: shallowRef([]),
-    selectedSearchValue: shallowRef(null),
-    setDialogProjectId: actions.setDialogProjectId,
-    setDialogTaskStatus: actions.setDialogTaskStatus,
-    setDialogTaskTitle: actions.setDialogTaskTitle,
-    setSearchValue: actions.setSearchValue,
-    taskLoadErrors: shallowRef({}),
-    visibleProjects: shallowRef([]),
-  }),
+const clientRef = vi.hoisted(() => ({
+  current: null as unknown,
 }));
+const primeVueMocks = vi.hoisted(() => ({
+  confirmRequire: vi.fn(),
+  toastAdd: vi.fn(),
+}));
+
+vi.mock("@/config/clients", () => ({
+  createDefaultTimeEntriesClient: () => clientRef.current,
+}));
+
+vi.mock("primevue/useconfirm", () => ({
+  useConfirm: () => ({ require: primeVueMocks.confirmRequire }),
+}));
+
+vi.mock("primevue/usetoast", () => ({
+  useToast: () => ({ add: primeVueMocks.toastAdd }),
+}));
+
+function createProject(
+  id: string,
+  name: string,
+  isActive = true,
+): ProjectResponse {
+  return {
+    color: null,
+    createdAt: "2026-04-20T12:00:00.000Z",
+    description: null,
+    id,
+    isActive,
+    members: [],
+    name,
+    source: "manual",
+    totalHours: 12,
+    updatedAt: "2026-04-20T12:00:00.000Z",
+    visibility: "public",
+    workspaceId: "workspace-1",
+  };
+}
+
+function createTask(
+  id: string,
+  projectId: string,
+  title: string,
+  overrides: Partial<TaskResponse> = {},
+): TaskResponse {
+  return {
+    createdAt: "2026-04-20T12:00:00.000Z",
+    id,
+    isActive: true,
+    projectId,
+    status: "open",
+    title,
+    updatedAt: "2026-04-21T10:00:00.000Z",
+    workspaceId: "workspace-1",
+    ...overrides,
+  };
+}
+
+function createClientMock(): TimeEntriesClient & {
+  createManualEntry: ReturnType<typeof vi.fn<TimeEntriesClient["createManualEntry"]>>;
+  createTask: ReturnType<typeof vi.fn<TimeEntriesClient["createTask"]>>;
+  deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient["deleteEntry"]>>;
+  deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
+  getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
+  listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
+  listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
+  listVisibleProjects: ReturnType<typeof vi.fn<TimeEntriesClient["listVisibleProjects"]>>;
+  startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
+  stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
+  updateEntry: ReturnType<typeof vi.fn<TimeEntriesClient["updateEntry"]>>;
+  updateTask: ReturnType<typeof vi.fn<TimeEntriesClient["updateTask"]>>;
+} {
+  return {
+    createManualEntry: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    createTask: vi.fn(async (projectId, input) =>
+      createTask("task-new", projectId, input.title),
+    ),
+    deleteEntry: vi.fn(async () => undefined),
+    deleteTask: vi.fn(async () => undefined),
+    getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    listOwnEntries: vi.fn(async (): Promise<TimeEntryListResponse> => ({
+      items: [],
+      meta: { limit: 10, page: 1, total: 0, totalPages: 0 },
+    })),
+    listProjectTasks: vi.fn(async () => []),
+    listVisibleProjects: vi.fn(async () => []),
+    startTimer: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    stopTimer: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    updateEntry: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    updateTask: vi.fn(async (taskId, input) =>
+      createTask(taskId, "project-1", input.title ?? "Updated task", {
+        status: input.status ?? "open",
+      }),
+    ),
+  };
+}
+
+async function mountView(client = createClientMock()) {
+  const pinia = createPinia();
+
+  setActivePinia(pinia);
+  useAuthStore().accessToken = "access-token";
+  clientRef.current = client;
+
+  const ProjectView = (await import("./ProjectView.vue")).default;
+  const wrapper = mount(ProjectView, {
+    global: {
+      plugins: [pinia, createTestQueryPlugin()],
+      stubs: {
+        AutoComplete: {
+          emits: ["complete", "update:modelValue"],
+          props: ["placeholder"],
+          template: '<input :placeholder="placeholder" />',
+        },
+        Button: {
+          emits: ["click"],
+          props: ["disabled", "label"],
+          template:
+            '<button type="button" :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
+        },
+        ConfirmDialog: { template: "<div />" },
+        ProjectTaskDialog: {
+          emits: ["close", "save", "update:projectId", "update:status", "update:title"],
+          props: [
+            "isOpen",
+            "requestErrorMessage",
+            "valueTitle",
+          ],
+          template: `
+            <div v-if="isOpen" data-testid="project-task-dialog">
+              <p data-testid="dialog-title-value">{{ valueTitle }}</p>
+              <p data-testid="dialog-request-error">{{ requestErrorMessage }}</p>
+              <button data-testid="dialog-title-input" type="button" @click="$emit('update:title', 'Write release checklist')">Title</button>
+              <button data-testid="dialog-edit-title-input" type="button" @click="$emit('update:title', 'Updated task')">Edit title</button>
+              <button data-testid="dialog-status-input" type="button" @click="$emit('update:status', 'closed')">Status</button>
+              <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
+              <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
+            </div>
+          `,
+        },
+        ProjectsTaskSection: {
+          emits: ["addTask", "deleteTask", "editTask"],
+          props: ["project", "tasks"],
+          template: `
+            <section>
+              <p>{{ project.name }}</p>
+              <p v-for="task in tasks" :key="task.id">{{ task.title }}</p>
+              <button data-testid="project-section-add" type="button" @click="$emit('addTask', project.id)">Add</button>
+              <button data-testid="project-section-edit" type="button" @click="$emit('editTask', tasks[0])">Edit</button>
+              <button data-testid="project-section-delete" type="button" @click="$emit('deleteTask', tasks[0])">Delete</button>
+            </section>
+          `,
+        },
+        Skeleton: { template: '<div data-testid="projects-skeleton" />' },
+        SurfaceCard: { template: "<section><slot /></section>" },
+      },
+    },
+  });
+
+  return { client, wrapper };
+}
 
 describe("ProjectView", () => {
   beforeEach(() => {
-    pageState.value = "ready";
-    requestErrorMessage.value = null;
-    actions.closeDialog.mockClear();
-    actions.openCreateDialog.mockClear();
-    actions.openEditDialog.mockClear();
-    actions.requestDeleteTask.mockClear();
-    actions.retryLoadPage.mockClear();
-    actions.saveDialog.mockClear();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    primeVueMocks.confirmRequire.mockClear();
+    primeVueMocks.toastAdd.mockClear();
   });
 
-  async function mountView() {
-    const ProjectView = (await import("./ProjectView.vue")).default;
+  it("renders the header, search field, grouped sections, and page-level actions", async () => {
+    const client = createClientMock();
 
-    return mount(ProjectView, {
-      global: {
-        stubs: {
-          AutoComplete: {
-            props: ["placeholder"],
-            template: '<input :placeholder="placeholder" />',
-          },
-          Button: {
-            props: ["label"],
-            emits: ["click"],
-            template:
-              '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
-          },
-          ConfirmDialog: { template: "<div />" },
-          Skeleton: { template: '<div data-testid="projects-skeleton" />' },
-          ProjectTaskDialog: {
-            emits: ["close", "save", "update:projectId", "update:status", "update:title"],
-            template: '<div data-testid="project-task-dialog" />',
-          },
-          ProjectsTaskSection: {
-            props: ["project", "tasks"],
-            emits: ["addTask", "deleteTask", "editTask"],
-            template: `
-              <section>
-                <p>{{ project.name }}</p>
-                <button data-testid="project-section-add" type="button" @click="$emit('addTask', project.id)">Add</button>
-                <button data-testid="project-section-edit" type="button" @click="$emit('editTask', tasks[0])">Edit</button>
-                <button data-testid="project-section-delete" type="button" @click="$emit('deleteTask', tasks[0])">Delete</button>
-              </section>
-            `,
-          },
-          SurfaceCard: { template: "<section><slot /></section>" },
-        },
-      },
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Projects");
+    expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.text()).toContain("Project Orion");
+    expect(wrapper.text()).toContain("Improve reports filters");
+
+    await wrapper.get('[data-testid="projects-header-create"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+
+    expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(true);
+    expect(primeVueMocks.confirmRequire).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders distinct loading, request-error, and empty states", async () => {
+    const loadingClient = createClientMock();
+
+    loadingClient.listVisibleProjects.mockImplementationOnce(
+      async () => new Promise<ProjectResponse[]>(() => undefined),
+    );
+    const { wrapper: loadingWrapper } = await mountView(loadingClient);
+
+    expect(loadingWrapper.findAll('[data-testid="projects-skeleton"]').length).toBeGreaterThan(0);
+    expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(false);
+
+    const errorClient = createClientMock();
+
+    errorClient.listVisibleProjects.mockRejectedValueOnce(new Error("network down"));
+    const { wrapper: errorWrapper } = await mountView(errorClient);
+
+    await flushPromises();
+
+    expect(errorWrapper.text()).toContain("Could not load projects");
+    expect(errorWrapper.text()).toContain("network down");
+
+    const emptyClient = createClientMock();
+    const { wrapper: emptyWrapper } = await mountView(emptyClient);
+
+    await flushPromises();
+
+    expect(emptyWrapper.text()).toContain("No projects or tasks match this view");
+    expect(emptyWrapper.text()).not.toContain("Could not load projects");
+  });
+
+  it("creates a task from a preselected project dialog and updates the local group", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      createTask("task-new", "project-1", "Write release checklist"),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-title-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith("project-1", {
+      title: "Write release checklist",
     });
-  }
+    expect(wrapper.text()).toContain("Write release checklist");
+    expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
+  });
 
-  it(
-    "renders the header, search field, grouped sections, and page-level actions",
-    async () => {
-      const wrapper = await mountView();
+  it("keeps the dialog open when task mutations fail and exposes the request error", async () => {
+    const client = createClientMock();
 
-      expect(wrapper.text()).toContain("Projects");
-      expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(
-        true,
-      );
-      expect(wrapper.text()).toContain("Project Orion");
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+    ]);
+    client.updateTask.mockRejectedValueOnce(new Error("conflict"));
 
-      await wrapper.get('[data-testid="projects-header-create"]').trigger("click");
-      await wrapper.get('[data-testid="project-section-add"]').trigger("click");
-      await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
-      await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    const { wrapper } = await mountView(client);
 
-      expect(actions.openCreateDialog).toHaveBeenNthCalledWith(1);
-      expect(actions.openCreateDialog).toHaveBeenNthCalledWith(2, "project-1");
-      expect(actions.openEditDialog).toHaveBeenCalledTimes(1);
-      expect(actions.requestDeleteTask).toHaveBeenCalledTimes(1);
-    },
-    PROJECT_VIEW_TEST_TIMEOUT_MS,
-  );
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-edit-title-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
 
-  it(
-    "renders distinct loading, request-error, and empty states",
-    async () => {
-      pageState.value = "loading";
-      const loadingWrapper = await mountView();
+    expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="dialog-request-error"]').text()).toBe("conflict");
+  });
 
-      expect(loadingWrapper.findAll('[data-testid="projects-skeleton"]').length).toBeGreaterThan(0);
-      expect(loadingWrapper.text()).not.toContain("Loading your projects.");
-      expect(loadingWrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(false);
+  it("removes deleted tasks after confirmation success", async () => {
+    const client = createClientMock();
 
-      pageState.value = "request-error";
-      requestErrorMessage.value = "network down";
-      const errorWrapper = await mountView();
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+    ]);
 
-      expect(errorWrapper.text()).toContain("Could not load projects");
-      expect(errorWrapper.text()).toContain("network down");
+    const { wrapper } = await mountView(client);
 
-      pageState.value = "empty";
-      requestErrorMessage.value = null;
-      const emptyWrapper = await mountView();
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
 
-      expect(emptyWrapper.text()).toContain("No projects or tasks match this view");
-      expect(emptyWrapper.text()).not.toContain("Could not load projects");
-    },
-    PROJECT_VIEW_TEST_TIMEOUT_MS,
-  );
+    const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
+
+    await options.accept();
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain("Improve reports filters");
+  });
+
+  it("keeps tasks visible after delete conflicts and surfaces the backend message", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters"),
+    ]);
+    client.deleteTask.mockRejectedValueOnce(
+      new Error("Task has related time entries"),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+
+    const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
+
+    await options.accept();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Improve reports filters");
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Task has related time entries",
+        severity: "error",
+        summary: "Could not delete task",
+      }),
+    );
+  });
 });
