@@ -4,14 +4,11 @@ import {
   differenceInSeconds,
   format,
   formatDistanceStrict,
-  isSameDay,
-  isSameMonth,
   isValid,
   isWithinInterval,
   parse,
   parseISO,
   startOfDay,
-  startOfMonth,
   startOfWeek,
 } from 'date-fns';
 
@@ -175,17 +172,6 @@ export function formatAutoRelativeTime(
   });
 }
 
-export function formatPrefixedAutoRelativeTime(
-  value: DateInput,
-  prefix: string,
-  fallback = `${prefix} recently`,
-  now = new Date(),
-): string {
-  const relativeTime = formatAutoRelativeTime(value, now);
-
-  return relativeTime === null ? fallback : `${prefix} ${relativeTime}`;
-}
-
 export function formatLocalCalendarDate(
   value: DateInput,
 ): string {
@@ -216,28 +202,12 @@ export function addUtcDays(date: Date, days: number): Date {
   return utcBoundaryFromLocalDate(addDays(toUtcLocalDate(date), days));
 }
 
-export function startOfLocalDay(date: Date): Date {
-  return startOfDay(date);
-}
-
-export function nextLocalDay(date: Date): Date {
-  return addDays(startOfLocalDay(date), 1);
-}
-
-export function startOfLocalMonth(date: Date): Date {
-  return startOfMonth(date);
-}
-
-export function startOfLocalIsoWeek(date: Date): Date {
-  return startOfWeek(date, { weekStartsOn: 1 });
-}
-
 export function startOfLocalDayIso(date: Date): string {
-  return startOfLocalDay(date).toISOString();
+  return startOfDay(date).toISOString();
 }
 
 export function nextLocalDayStartIso(date: Date): string {
-  return nextLocalDay(date).toISOString();
+  return addDays(startOfDay(date), 1).toISOString();
 }
 
 export function getLocalIsoWeekRange(now = new Date()): {
@@ -245,13 +215,9 @@ export function getLocalIsoWeekRange(now = new Date()): {
   dateTo: string;
 } {
   return {
-    dateFrom: startOfLocalIsoWeek(now).toISOString(),
+    dateFrom: startOfWeek(now, { weekStartsOn: 1 }).toISOString(),
     dateTo: now.toISOString(),
   };
-}
-
-export function isSameLocalDate(first: Date, second: Date): boolean {
-  return isSameDay(first, second);
 }
 
 export function isSameLocalDateValue(
@@ -264,12 +230,10 @@ export function isSameLocalDateValue(
   return (
     firstDate !== null &&
     secondDate !== null &&
-    isSameDay(firstDate, secondDate)
+    firstDate.getFullYear() === secondDate.getFullYear() &&
+    firstDate.getMonth() === secondDate.getMonth() &&
+    firstDate.getDate() === secondDate.getDate()
   );
-}
-
-export function isSameLocalMonth(first: Date, second: Date): boolean {
-  return isSameMonth(first, second);
 }
 
 export function hasValidDate(value: DateInput): boolean {
@@ -289,7 +253,7 @@ export function isWithinLocalIsoWeekToDate(
 
   return isWithinInterval(date, {
     end,
-    start: startOfLocalIsoWeek(end),
+    start: startOfWeek(end, { weekStartsOn: 1 }),
   });
 }
 

@@ -14,8 +14,8 @@ import {
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import {
+  formatAutoRelativeTime,
   formatLocalCalendarDate,
-  formatPrefixedAutoRelativeTime,
 } from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
@@ -67,6 +67,12 @@ function isRowBusy(inviteId: string): boolean {
   return (
     props.resendingInviteId === inviteId || props.cancelingInviteId === inviteId
   );
+}
+
+function formatSentInviteTime(createdAt: string): string {
+  const relativeTime = formatAutoRelativeTime(createdAt);
+
+  return relativeTime === null ? 'Sent recently' : `Sent ${relativeTime}`;
 }
 </script>
 
@@ -154,7 +160,7 @@ function isRowBusy(inviteId: string): boolean {
                 {{ invite.email }}
               </h3>
               <p class="text-text-muted text-[12px]">
-                {{ formatPrefixedAutoRelativeTime(invite.createdAt, 'Sent') }}
+                {{ formatSentInviteTime(invite.createdAt) }}
               </p>
             </div>
 
@@ -206,7 +212,7 @@ function isRowBusy(inviteId: string): boolean {
                 {{ data.email }}
               </span>
               <span class="text-text-muted text-[12px]">
-                {{ formatPrefixedAutoRelativeTime(data.createdAt, 'Sent') }}
+                {{ formatSentInviteTime(data.createdAt) }}
               </span>
             </div>
           </template>

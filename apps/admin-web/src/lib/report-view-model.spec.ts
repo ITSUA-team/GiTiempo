@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { TimeReportResponse } from '@gitiempo/shared';
+import {
+  nextLocalDayStartIso,
+  startOfLocalDayIso,
+} from '@gitiempo/web-shared/time';
 
 import {
   createDefaultReportTableFilters,
@@ -75,7 +79,7 @@ describe('report-view-model', () => {
     });
   });
 
-  it('converts report date ranges to local closed-open API boundaries', () => {
+  it('keeps report query and export date boundaries aligned', () => {
     const filters = {
       dateRange: [new Date(2026, 4, 1, 12), new Date(2026, 4, 2, 12)] as [
         Date,
@@ -86,8 +90,8 @@ describe('report-view-model', () => {
       projectId,
     };
     const expectedDateWindow = {
-      dateFrom: new Date(2026, 4, 1).toISOString(),
-      dateTo: new Date(2026, 4, 3).toISOString(),
+      dateFrom: startOfLocalDayIso(filters.dateRange[0]),
+      dateTo: nextLocalDayStartIso(filters.dateRange[1]),
     };
 
     expect(toTimeReportQuery(filters, 2, 50)).toMatchObject({

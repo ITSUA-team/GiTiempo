@@ -7,7 +7,6 @@ import {
   formatElapsedDuration,
   formatLocalCalendarDate,
   formatPaddedHoursMinutesDuration,
-  formatPrefixedAutoRelativeTime,
   formatRelativeTime,
   formatRunningDuration,
   formatTrimmedHoursMinutesDuration,
@@ -17,18 +16,12 @@ import {
   getLocalIsoWeekRange,
   getUtcDateKey,
   hasValidDate,
-  isSameLocalDate,
   isSameLocalDateValue,
-  isSameLocalMonth,
   isWithinLocalIsoWeekToDate,
-  nextLocalDay,
   nextLocalDayStartIso,
   nextUtcDay,
   parseDateInput,
-  startOfLocalDay,
   startOfLocalDayIso,
-  startOfLocalIsoWeek,
-  startOfLocalMonth,
   startOfUtcDay,
   startOfUtcIsoWeek,
 } from './index';
@@ -62,23 +55,11 @@ describe('shared date-time helpers', () => {
   it('calculates local DatePicker-style day and week boundaries', () => {
     const date = new Date(2026, 4, 13, 12, 30, 0);
 
-    expect(startOfLocalDay(date).toISOString()).toBe(
-      new Date(2026, 4, 13, 0, 0, 0, 0).toISOString(),
-    );
-    expect(nextLocalDay(date).toISOString()).toBe(
-      new Date(2026, 4, 14, 0, 0, 0, 0).toISOString(),
-    );
     expect(startOfLocalDayIso(date)).toBe(
       new Date(2026, 4, 13, 0, 0, 0, 0).toISOString(),
     );
     expect(nextLocalDayStartIso(date)).toBe(
       new Date(2026, 4, 14, 0, 0, 0, 0).toISOString(),
-    );
-    expect(startOfLocalMonth(date).toISOString()).toBe(
-      new Date(2026, 4, 1, 0, 0, 0, 0).toISOString(),
-    );
-    expect(startOfLocalIsoWeek(date).toISOString()).toBe(
-      new Date(2026, 4, 11, 0, 0, 0, 0).toISOString(),
     );
     expect(getLocalIsoWeekRange(date)).toEqual({
       dateFrom: new Date(2026, 4, 11, 0, 0, 0, 0).toISOString(),
@@ -94,7 +75,7 @@ describe('shared date-time helpers', () => {
     expect(formatLocalCalendarDate(null)).toBe('—');
   });
 
-  it('parses and validates date inputs through date-fns', () => {
+  it('parses and validates date inputs', () => {
     expect(parseDateInput('2026-05-13T12:00:00.000Z')?.toISOString()).toBe(
       '2026-05-13T12:00:00.000Z',
     );
@@ -103,16 +84,7 @@ describe('shared date-time helpers', () => {
     expect(hasValidDate(null)).toBe(false);
   });
 
-  it('compares local days and months', () => {
-    expect(
-      isSameLocalDate(
-        new Date(2026, 4, 13, 1, 0, 0),
-        new Date(2026, 4, 13, 23, 0, 0),
-      ),
-    ).toBe(true);
-    expect(isSameLocalMonth(new Date(2026, 4, 1), new Date(2026, 4, 31))).toBe(
-      true,
-    );
+  it('compares local date values and week ranges', () => {
     expect(
       isSameLocalDateValue('2026-05-13T08:00:00.000Z', new Date(2026, 4, 13)),
     ).toBe(true);
@@ -168,7 +140,7 @@ describe('shared date-time helpers', () => {
     expect(formatRelativeTime('2026-05-01T12:00:00.000Z', now)).toBe('May 1');
   });
 
-  it('formats auto relative time labels for sentence prefixes', () => {
+  it('formats auto relative time labels', () => {
     const now = new Date('2026-05-13T12:00:00.000Z');
 
     expect(formatAutoRelativeTime('invalid', now)).toBeNull();
@@ -184,16 +156,5 @@ describe('shared date-time helpers', () => {
     expect(formatAutoRelativeTime('2026-05-12T12:00:00.000Z', now)).toBe(
       '1 day ago',
     );
-    expect(
-      formatPrefixedAutoRelativeTime(
-        '2026-05-13T11:58:00.000Z',
-        'Sent',
-        undefined,
-        now,
-      ),
-    ).toBe('Sent 2 minutes ago');
-    expect(
-      formatPrefixedAutoRelativeTime('invalid', 'Sent', undefined, now),
-    ).toBe('Sent recently');
   });
 });

@@ -24,7 +24,6 @@ import type {
   TimeReportTotals,
 } from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
-import { nextUtcMonth, startOfUtcMonth } from '../../common/time';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
@@ -364,8 +363,12 @@ function resolveDateRange(
   query: TimeReportQuery | TimeReportExportQuery,
 ): TimeReportEffectiveDateRange {
   const now = new Date();
-  const defaultFrom = startOfUtcMonth(now);
-  const defaultTo = nextUtcMonth(now);
+  const defaultFrom = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+  );
+  const defaultTo = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+  );
 
   return {
     dateFrom: (query.dateFrom
