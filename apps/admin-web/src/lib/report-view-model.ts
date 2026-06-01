@@ -9,6 +9,11 @@ import {
   type TimeReportRow,
 } from '@gitiempo/shared';
 import {
+  formatPaddedHoursMinutesDuration,
+  nextLocalDayStartIso,
+  startOfLocalDayIso,
+} from '@gitiempo/web-shared/time';
+import {
   reportDateRangeErrorMessage,
   reportDateRangeSchema,
   reportFilterOptionSchema,
@@ -88,19 +93,6 @@ export function isReportDateRangeValid(dateRange: ReportDateRange): boolean {
   return getReportDateRangeError(dateRange) === null;
 }
 
-export function formatReportDuration(totalSeconds: number): string {
-  const safeSeconds = Math.max(0, Math.round(totalSeconds));
-  const totalMinutes = Math.floor(safeSeconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours === 0) {
-    return `${minutes}m`;
-  }
-
-  return `${hours}h ${String(minutes).padStart(2, '0')}m`;
-}
-
 export function formatReportPercent(value: number | null): string {
   if (value === null) {
     return '0%';
@@ -170,24 +162,9 @@ export function deriveMemberOptions(
     }
   }
 
-  return reportFilterOptionSchema.array().parse(sortByLabel([...options.values()]));
-}
-
-function startOfLocalDayIso(date: Date): string {
-  // DatePicker returns the user's local calendar day; the API expects timestamp boundaries.
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  ).toISOString();
-}
-
-function nextLocalDayStartIso(date: Date): string {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate() + 1,
-  ).toISOString();
+  return reportFilterOptionSchema
+    .array()
+    .parse(sortByLabel([...options.values()]));
 }
 
 function toReportDateQuery(
@@ -242,7 +219,10 @@ export function toTimeReportExportQuery(
   });
 }
 
-function formatUserName(user: { displayName: string | null; email: string }): string {
+function formatUserName(user: {
+  displayName: string | null;
+  email: string;
+}): string {
   return user.displayName?.trim() || user.email;
 }
 
@@ -279,8 +259,12 @@ function getReportTableRowLabels(
   };
 }
 
-function getReportTableRowId(row: TimeReportRow, context: ReportRowContext): string {
-  const projectId = row.project?.id ?? context.selectedProjectId ?? 'all-projects';
+function getReportTableRowId(
+  row: TimeReportRow,
+  context: ReportRowContext,
+): string {
+  const projectId =
+    row.project?.id ?? context.selectedProjectId ?? 'all-projects';
   const taskId = row.task?.id ?? 'no-task';
   const memberId = row.user?.id ?? context.selectedMemberId ?? 'all-members';
 
@@ -317,14 +301,19 @@ export function toReportTableRows(
     });
   });
 
-  return reportTableRowSchema.array().parse(rows).sort(
-    (a, b) =>
-      a.projectName.localeCompare(b.projectName) ||
-      a.memberName.localeCompare(b.memberName),
-  );
+  return reportTableRowSchema
+    .array()
+    .parse(rows)
+    .sort(
+      (a, b) =>
+        a.projectName.localeCompare(b.projectName) ||
+        a.memberName.localeCompare(b.memberName),
+    );
 }
 
-export function deriveReportSummaryView(rows: ReportTableRow[]): ReportSummaryView {
+export function deriveReportSummaryView(
+  rows: ReportTableRow[],
+): ReportSummaryView {
   let totalSeconds = 0;
   let billableSeconds = 0;
   let nonBillableSeconds = 0;
@@ -403,7 +392,10 @@ export function filterReportRows(
       return false;
     }
 
-    if (parsedFilters.memberId && !row.memberIds.includes(parsedFilters.memberId)) {
+    if (
+      parsedFilters.memberId &&
+      !row.memberIds.includes(parsedFilters.memberId)
+    ) {
       return false;
     }
 
@@ -437,8 +429,10 @@ export function filterReportRows(
     const haystack = [
       row.projectName,
       row.memberName,
-      formatReportDuration(row.totalSeconds),
-      formatReportDuration(getReportRowBillableSeconds(row, parsedFilters.billable)),
+      formatPaddedHoursMinutesDuration(row.totalSeconds),
+      formatPaddedHoursMinutesDuration(
+        getReportRowBillableSeconds(row, parsedFilters.billable),
+      ),
       formatReportPercent(row.billableShare),
     ]
       .join(' ')

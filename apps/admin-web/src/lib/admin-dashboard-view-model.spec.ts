@@ -11,9 +11,7 @@ import type {
 import {
   deriveDashboardActivityRows,
   deriveDashboardStats,
-  formatDashboardHours,
   formatRelativeTime,
-  getDashboardWeekRange,
 } from './admin-dashboard-view-model';
 
 const workspaceId = '33333333-3333-4333-8333-333333333333';
@@ -249,19 +247,7 @@ describe('admin dashboard view model', () => {
     expect(rows.map((row) => row.type)).toEqual(['time', 'project']);
   });
 
-  it('formats dashboard durations and relative time labels compactly', () => {
-    expect(formatDashboardHours(0)).toBe('0h');
-    expect(formatDashboardHours(1800)).toBe('30m');
-    expect(formatDashboardHours(5400)).toBe('1h 30m');
+  it('formats relative time labels compactly', () => {
     expect(formatRelativeTime('2026-05-13T11:59:40.000Z', now)).toBe('Just now');
-  });
-
-  it('creates the dashboard report window from local week start through request time', () => {
-    const requestedAt = new Date(2026, 4, 13, 12, 0, 0);
-
-    expect(getDashboardWeekRange(requestedAt)).toEqual({
-      dateFrom: new Date(2026, 4, 11, 0, 0, 0, 0).toISOString(),
-      dateTo: requestedAt.toISOString(),
-    });
   });
 });

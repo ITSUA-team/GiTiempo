@@ -9,9 +9,9 @@ import type {
   WorkspaceInviteResponse,
   WorkspaceMemberResponse,
 } from '@gitiempo/shared';
+import { getLocalIsoWeekRange } from '@gitiempo/web-shared/time';
 
 import { ADMIN_DASHBOARD_REPORT_PAGE_LIMIT } from '@/constants/admin-dashboard';
-import { getDashboardWeekRange } from '@/lib/admin-dashboard-view-model';
 import { createTestQueryPlugin } from '@/test/query-client';
 import { useAdminDashboardData } from './useAdminDashboardData';
 
@@ -98,7 +98,7 @@ function createReport(items: TimeReportProjectRow[]): TimeReportResponse {
   const totalSeconds = items.reduce((total, item) => total + item.totalSeconds, 0);
 
   return {
-    dateRange: getDashboardWeekRange(now),
+    dateRange: getLocalIsoWeekRange(now),
     groupBy: 'project',
     items,
     meta: {
@@ -195,7 +195,7 @@ describe('useAdminDashboardData', () => {
     expect(clients.projectsClient.listProjects).toHaveBeenCalledWith();
     expect(clients.reportsClient.getTimeReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        ...getDashboardWeekRange(now),
+        ...getLocalIsoWeekRange(now),
         groupBy: 'project',
         limit: ADMIN_DASHBOARD_REPORT_PAGE_LIMIT,
         page: 1,

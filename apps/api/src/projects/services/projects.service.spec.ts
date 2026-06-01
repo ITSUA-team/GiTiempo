@@ -3,7 +3,7 @@ import {
   ForbiddenException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projects } from '../schemas/projects.schema';
@@ -58,6 +58,45 @@ function selectRows(rows: unknown[]) {
   const from = vi.fn().mockReturnValue({ where });
   return { from };
 }
+
+function collectDateParams(value: unknown): string[] {
+  const dates: string[] = [];
+  const seen = new WeakSet<object>();
+
+  const visit = (candidate: unknown): void => {
+    if (candidate instanceof Date) {
+      dates.push(candidate.toISOString());
+      return;
+    }
+    if (candidate === null || typeof candidate !== 'object') return;
+    if (seen.has(candidate)) return;
+
+    seen.add(candidate);
+    if (Array.isArray(candidate)) {
+      for (const item of candidate) visit(item);
+      return;
+    }
+    if ('queryChunks' in candidate) {
+      visit((candidate as { queryChunks: unknown }).queryChunks);
+    }
+    if ('value' in candidate) {
+      visit((candidate as { value: unknown }).value);
+    }
+    if (Object.getPrototypeOf(candidate) === Object.prototype) {
+      for (const item of Object.values(candidate as Record<string, unknown>)) {
+        visit(item);
+      }
+    }
+  };
+
+  visit(value);
+
+  return dates;
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('ProjectsService', () => {
   it('auto-assigns a PM to a project created by that PM', async () => {
@@ -199,5 +238,43 @@ describe('ProjectsService', () => {
       2,
       expect.objectContaining({ isActive: true }),
     );
+  });
+
+  it('uses UTC ISO-week and month starts for my tracked-hour summary', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-17T12:34:56.000Z'));
+    const visibleWhere = vi.fn().mockResolvedValue([{ value: 4 }]);
+    const visibleFrom = vi.fn().mockReturnValue({
+      leftJoin: vi.fn().mockReturnValue({ where: visibleWhere }),
+    });
+    const hoursWhere = vi
+      .fn()
+      .mockResolvedValue([{ trackedHoursWeek: 2, trackedHoursMonth: '5.5' }]);
+    const hoursFrom = vi.fn().mockReturnValue({ where: hoursWhere });
+    const select = vi
+      .fn()
+      .mockReturnValueOnce({ from: visibleFrom })
+      .mockReturnValueOnce({ from: hoursFrom });
+    const db = { select };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+
+    const result = await service.getMySummary(adminUser);
+
+    expect(result).toEqual({
+      visibleProjects: 4,
+      trackedHoursWeek: 2,
+      trackedHoursMonth: 5.5,
+    });
+    expect(collectDateParams(select.mock.calls[1]?.[0])).toEqual([
+      '2026-05-11T00:00:00.000Z',
+      '2026-05-01T00:00:00.000Z',
+    ]);
+    expect(collectDateParams(hoursWhere.mock.calls[0]?.[0])).toEqual([
+      '2026-05-01T00:00:00.000Z',
+      '2026-05-17T12:34:56.000Z',
+    ]);
   });
 });

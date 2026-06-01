@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/vue-query';
 import { computed, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
 import type { TimeReportQuery, WorkspaceRole } from '@gitiempo/shared';
+import { getLocalIsoWeekRange } from '@gitiempo/web-shared/time';
 
 import {
   ADMIN_DASHBOARD_ACTIVITY_FULL_LIMIT,
@@ -12,7 +13,6 @@ import {
 import {
   deriveDashboardActivityRows,
   deriveDashboardStats,
-  getDashboardWeekRange,
   type AdminDashboardActivityRow,
   type AdminDashboardStatCard,
 } from '@/lib/admin-dashboard-view-model';
@@ -59,7 +59,7 @@ export function useAdminDashboardData({
 }: UseAdminDashboardDataOptions) {
   const requestedAt = shallowRef(now());
   const currentAction = shallowRef('load-dashboard');
-  const weekRange = computed(() => getDashboardWeekRange(requestedAt.value));
+  const weekRange = computed(() => getLocalIsoWeekRange(requestedAt.value));
   const blockedError = computed(() => {
     if (!accessToken.value) {
       return ADMIN_DASHBOARD_MISSING_TOKEN_MESSAGE;
