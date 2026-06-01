@@ -18,7 +18,9 @@ const TEST_IDS = {
   newEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3002",
   pageTwoEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3003",
   project: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
+  projectAlt: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
   task: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2001",
+  taskAlt: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
   user: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f4001",
   workspace: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f5001",
 } as const;
@@ -88,6 +90,37 @@ describe("reconcileTimeEntryListCaches", () => {
     ).toEqual([]);
   });
 
+  it("honors date-window boundaries during reconciliation", () => {
+    const queryClient = createTestQueryClient();
+    const listKey = timeEntriesKeys.list(TEST_SCOPE, {
+      dateFrom: "2026-04-21T09:00:00.000Z",
+      dateTo: "2026-04-21T10:00:00.000Z",
+    });
+
+    queryClient.setQueryData(listKey, createListResponse([]));
+
+    reconcileTimeEntryListCaches(
+      queryClient,
+      TEST_SCOPE,
+      createEntry({ id: TEST_IDS.existingEntry, startedAt: "2026-04-21T09:00:00.000Z" }),
+    );
+    reconcileTimeEntryListCaches(
+      queryClient,
+      TEST_SCOPE,
+      createEntry({ id: TEST_IDS.newEntry, startedAt: "2026-04-21T10:00:00.000Z" }),
+    );
+
+    expect(queryClient.getQueryData<TimeEntryListResponse>(listKey)).toEqual({
+      items: [expect.objectContaining({ id: TEST_IDS.existingEntry })],
+      meta: {
+        limit: 10,
+        page: 1,
+        total: 1,
+        totalPages: 1,
+      },
+    });
+  });
+
   it("recomputes totalPages when page-one reconciliation changes the total", () => {
     const queryClient = createTestQueryClient();
     const listKey = timeEntriesKeys.list(TEST_SCOPE, { limit: 1, page: 1 });
@@ -114,6 +147,54 @@ describe("reconcileTimeEntryListCaches", () => {
     });
   });
 
+  it("replaces visible rows on later pages when the entry id already exists", () => {
+    const queryClient = createTestQueryClient();
+    const listKey = timeEntriesKeys.list(TEST_SCOPE, { limit: 1, page: 2 });
+
+    queryClient.setQueryData(
+      listKey,
+      createListResponse(
+        [
+          createEntry({
+            durationSeconds: null,
+            endedAt: null,
+            id: TEST_IDS.existingEntry,
+            startedAt: "2026-04-20T09:00:00.000Z",
+          }),
+        ],
+        { limit: 1, page: 2, total: 2, totalPages: 2 },
+      ),
+    );
+
+    reconcileTimeEntryListCaches(
+      queryClient,
+      TEST_SCOPE,
+      createEntry({
+        durationSeconds: 1800,
+        endedAt: "2026-04-20T09:30:00.000Z",
+        id: TEST_IDS.existingEntry,
+        startedAt: "2026-04-20T09:00:00.000Z",
+        updatedAt: "2026-04-20T09:30:00.000Z",
+      }),
+    );
+
+    expect(queryClient.getQueryData<TimeEntryListResponse>(listKey)).toEqual({
+      items: [
+        expect.objectContaining({
+          durationSeconds: 1800,
+          endedAt: "2026-04-20T09:30:00.000Z",
+          id: TEST_IDS.existingEntry,
+        }),
+      ],
+      meta: {
+        limit: 1,
+        page: 2,
+        total: 2,
+        totalPages: 2,
+      },
+    });
+  });
+
   it("does not inject new rows into later paginated caches", () => {
     const queryClient = createTestQueryClient();
     const listKey = timeEntriesKeys.list(TEST_SCOPE, { limit: 1, page: 2 });
@@ -131,6 +212,88 @@ describe("reconcileTimeEntryListCaches", () => {
     );
 
     expect(queryClient.getQueryData<TimeEntryListResponse>(listKey)).toEqual(existingPage);
+  });
+
+  it("removes entries that stop matching project filters and decrements paginated metadata", () => {
+    const queryClient = createTestQueryClient();
+    const listKey = timeEntriesKeys.list(TEST_SCOPE, {
+      limit: 1,
+      page: 1,
+      projectId: TEST_IDS.project,
+    });
+
+    queryClient.setQueryData(
+      listKey,
+      createListResponse([createEntry()], {
+        limit: 1,
+        page: 1,
+        total: 1,
+        totalPages: 1,
+      }),
+    );
+
+    reconcileTimeEntryListCaches(
+      queryClient,
+      TEST_SCOPE,
+      createEntry({
+        project: {
+          id: TEST_IDS.projectAlt,
+          name: "Billing API",
+        },
+        projectId: TEST_IDS.projectAlt,
+      }),
+    );
+
+    expect(queryClient.getQueryData<TimeEntryListResponse>(listKey)).toEqual({
+      items: [],
+      meta: {
+        limit: 1,
+        page: 1,
+        total: 0,
+        totalPages: 0,
+      },
+    });
+  });
+
+  it("removes entries that stop matching filters and decrements paginated metadata", () => {
+    const queryClient = createTestQueryClient();
+    const listKey = timeEntriesKeys.list(TEST_SCOPE, {
+      limit: 1,
+      page: 1,
+      taskId: TEST_IDS.task,
+    });
+
+    queryClient.setQueryData(
+      listKey,
+      createListResponse([createEntry()], {
+        limit: 1,
+        page: 1,
+        total: 1,
+        totalPages: 1,
+      }),
+    );
+
+    reconcileTimeEntryListCaches(
+      queryClient,
+      TEST_SCOPE,
+      createEntry({
+        task: {
+          id: TEST_IDS.taskAlt,
+          title: "Review PM scope rules",
+        },
+        taskId: TEST_IDS.taskAlt,
+      }),
+    );
+
+    expect(queryClient.getQueryData<TimeEntryListResponse>(listKey)).toEqual({
+      items: [],
+      meta: {
+        limit: 1,
+        page: 1,
+        total: 0,
+        totalPages: 0,
+      },
+    });
   });
 
   it("reconciles aggregated array caches for existing entries", () => {

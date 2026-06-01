@@ -4,11 +4,11 @@ import type {
   TimeEntryResponse,
 } from "@gitiempo/shared";
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
+import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import { useQuery } from "@tanstack/vue-query";
 import { computed, shallowRef, watch, type ComputedRef } from "vue";
 
 import {
-  isConflictErrorMessage,
   toSelectedTaskContext,
   type SelectedTaskContext,
 } from "@/lib/top-bar-timer-helpers";
@@ -137,8 +137,8 @@ export function useTopBarTimerSummary({
     await summaryQuery.refetch();
   }
 
-  async function refreshSummaryAfterConflict(message: string): Promise<void> {
-    if (!isConflictErrorMessage(message)) {
+  async function refreshSummaryAfterConflict(error: unknown): Promise<void> {
+    if (!isApiErrorStatus(error, [403, 404, 409, 422])) {
       return;
     }
 

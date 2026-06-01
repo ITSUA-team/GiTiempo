@@ -111,7 +111,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | GET    | `/time-entries`                         | JWT  | Any  | List current user's time entries (filterable by date, project, task, task-title search)            |
 | POST   | `/time-entries`                         | JWT  | Any  | Create manual time entry (start/end)                                                               |
 | GET    | `/time-entries/:id`                     | JWT  | Any  | Get time entry details                                                                             |
-| PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry (description, times, billable)                                               |
+| PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry                                                                               |
 | DELETE | `/time-entries/:id`                     | JWT  | Any  | Delete own time entry                                                                              |
 | GET    | `/time-entries/current`                 | JWT  | Any  | Get currently running timer (if any)                                                               |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
@@ -129,7 +129,8 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 **PATCH /time-entries/:id** body: `{ taskId?: string, startedAt?: string, endedAt?: string, description?: string | null, isBillable?: boolean }`
 
-- Updates only completed entries; running entries must be stopped first.
+- Completed entries may update `taskId`, `startedAt`, `endedAt`, `description`, and `isBillable`.
+- Running entries may only update `taskId`; any other field change requires stopping the timer first.
 - `taskId` may be changed to move the entry to another visible active task.
 - If both `startedAt` and `endedAt` are provided, `endedAt` must be later than `startedAt`.
 

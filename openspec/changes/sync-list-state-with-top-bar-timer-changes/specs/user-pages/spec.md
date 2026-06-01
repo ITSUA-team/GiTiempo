@@ -2,7 +2,24 @@
 
 ### Requirement: Top-Bar Timer Changes Synchronize User Time Entry Lists
 
-The user app SHALL synchronize visible Dashboard recent-entry and Time Entries list state with successful global top-bar timer lifecycle changes without requiring a page refresh.
+The user app SHALL synchronize visible Dashboard weekly aggregate state, Dashboard recent-entry state, and Time Entries list state with successful global top-bar timer lifecycle changes without requiring a page refresh.
+
+#### Scenario: Dashboard weekly aggregates update after top-bar timer start
+
+- **GIVEN** an authenticated user is viewing the Dashboard
+- **AND** the Dashboard weekly focus or stats depend on the current-week entry set
+- **WHEN** the top-bar timer start action succeeds and returns a running time entry that belongs in the current-week dashboard query scope
+- **THEN** the Dashboard weekly focus and stats SHALL update without a page refresh
+- **AND** the updated values SHALL continue to derive from the same current-week entry set semantics used by the Dashboard overview
+
+#### Scenario: Dashboard weekly aggregates update after top-bar timer stop
+
+- **GIVEN** an authenticated user is viewing the Dashboard
+- **AND** the Dashboard weekly focus or stats currently include the running entry controlled by the top-bar timer
+- **WHEN** the top-bar timer stop action succeeds and returns the completed time entry
+- **THEN** the Dashboard weekly focus and stats SHALL update without a page refresh
+- **AND** the updated values SHALL reflect the completed duration from the returned entry
+- **AND** the Dashboard SHALL NOT require a full page reload to clear stale running-entry contribution from weekly aggregates
 
 #### Scenario: Dashboard recent entries update after top-bar timer start
 
@@ -29,6 +46,10 @@ The user app SHALL synchronize visible Dashboard recent-entry and Time Entries l
 - **AND** the top-bar timer start action succeeds and returns a running time entry
 - **WHEN** the returned entry belongs in the current Time Entries visible list scope
 - **THEN** the grouped entry list SHALL appear or update without a page refresh
+- **AND** any currently visible row or card with the same `id` SHALL be replaced by the returned entry
+- **AND** a new row or card SHALL be inserted only when the returned entry matches the active filters and the current list scope is unpaged or on page 1
+- **AND** later paginated pages SHALL NOT inject a new row or card for that started entry
+- **AND** paginated visible scopes that gain the new entry locally SHALL update `total` and `totalPages` consistently with the visible list state
 - **AND** the running entry row or card SHALL use the running-entry visual treatment
 - **AND** edit and delete actions SHALL remain unavailable for that running entry.
 
@@ -38,6 +59,9 @@ The user app SHALL synchronize visible Dashboard recent-entry and Time Entries l
 - **AND** the visible list includes the running entry controlled by the top-bar timer
 - **WHEN** the top-bar timer stop action succeeds and returns the completed time entry
 - **THEN** the matching grouped row or card SHALL update without a page refresh
+- **AND** if the completed entry no longer matches the active filters, that visible row or card SHALL be removed from the current list scope
+- **AND** paginated visible scopes that lose the entry locally SHALL update `total` and `totalPages` consistently with the visible list state
+- **AND** filtered or paginated scopes that cannot be preserved safely through local reconciliation SHALL remain unchanged until the existing list reload path runs
 - **AND** it SHALL render the completed range and duration from the returned entry
 - **AND** running-entry highlighting and live duration growth SHALL stop for that entry
 - **AND** edit and delete actions SHALL follow the existing completed-entry rules.

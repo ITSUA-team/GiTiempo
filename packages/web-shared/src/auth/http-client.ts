@@ -5,9 +5,9 @@ import {
   type TokenPairResponse,
 } from "@gitiempo/shared";
 import {
+  createResponseError,
   getDefaultFetchFn,
   getRequestUrl,
-  getResponseErrorMessage,
   requestJson,
 } from "../http";
 
@@ -52,7 +52,7 @@ export function createAuthHttpClient({
       });
 
       if (!response.ok) {
-        throw new Error(await getResponseErrorMessage(response));
+        throw await createResponseError(response);
       }
     },
     refreshAuthSession(refreshToken) {
