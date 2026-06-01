@@ -14,7 +14,7 @@
 ## Popup Layout
 
 - Dimensions: `320 x 480px` fixed.
-- Background: `bg-surface`.
+- Background: `bg-surface-primary`.
 - Use the same branded header on every popup state.
 
 ## States
@@ -60,7 +60,7 @@
 
 - The injected control appears on `github.com/<owner>/<repo>/issues/<number>` pages.
 - Insert it at the start of the page `main` content container so it reads as a page-local timer surface rather than a floating unrelated widget.
-- Keep the injected control visually lighter than the popup shell: no standalone `bg-surface` card, border, or shadow wrapper.
+- Keep the injected control visually lighter than the popup shell: no standalone `bg-surface-primary` card, border, or shadow wrapper.
 - Match the injected issue header and helper-copy text color to the active GitHub page theme: use `text-text-inverse` and `text-text-inverse-muted` on GitHub dark mode and dark/muted token text on GitHub light mode, while keeping action colors aligned with extension tokens such as `bg-brand`, `text-brand`, and `bg-destructive`.
 
 ### Injected Idle State

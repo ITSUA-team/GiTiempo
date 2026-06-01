@@ -71,7 +71,7 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
 const selectPt = {
   root: {
     class:
-      'border-divider bg-surface h-[38px] w-full rounded-[6px] border shadow-none',
+      'border-divider bg-surface-primary h-[38px] w-full rounded-[6px] border shadow-none',
   },
   label: {
     class:
@@ -85,7 +85,7 @@ const datePickerPt = {
   pcInputText: {
     root: {
       class:
-        'border-divider bg-surface h-[38px] rounded-[6px] border px-3 text-[14px] font-medium text-text-dark shadow-none',
+        'border-divider bg-surface-primary h-[38px] rounded-[6px] border px-3 text-[14px] font-medium text-text-dark shadow-none',
     },
   },
 } as const;

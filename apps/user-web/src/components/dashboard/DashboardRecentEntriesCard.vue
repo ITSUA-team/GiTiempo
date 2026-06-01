@@ -25,7 +25,7 @@ const rangeColumnWidth = "8rem";
 const durationColumnWidth = "8rem";
 
 function getRowClass(entry: DashboardRecentEntryRow): string {
-  return entry.isHighlighted ? "bg-accent-tint" : "bg-surface";
+  return entry.isHighlighted ? "bg-accent-tint" : "bg-surface-primary";
 }
 </script>
 

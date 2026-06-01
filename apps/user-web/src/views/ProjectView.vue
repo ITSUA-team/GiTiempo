@@ -197,7 +197,7 @@ async function retryLoadPage(): Promise<void> {
             />
           </div>
 
-          <div class="border-divider bg-surface flex flex-col rounded-lg border">
+          <div class="border-divider bg-surface-primary flex flex-col rounded-lg border">
             <Skeleton
               width="100%"
               height="2.75rem"

@@ -27,7 +27,7 @@ Current workspace setup:
 
   --color-brand: #5d2b85;
   --color-accent-tint: #e8e1f5;
-  --color-surface: #ffffff;
+  --color-surface-primary: #ffffff;
   --color-app-bg: #f4f4f5;
   --color-text-dark: #1a1a1a;
   --color-text-muted: #666666;

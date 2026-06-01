@@ -15,7 +15,7 @@ withDefaults(
 
 <template>
   <section
-    class="bg-surface shadow-card rounded-lg"
+    class="bg-surface-primary shadow-card rounded-lg"
     :class="[paddingClass, border ? 'border-divider border' : '']"
   >
     <div :class="bodyClass">

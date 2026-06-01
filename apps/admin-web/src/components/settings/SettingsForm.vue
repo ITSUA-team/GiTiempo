@@ -252,7 +252,7 @@ const emit = defineEmits<{
         outlined
         type="button"
         :disabled="saving || !isDirty"
-        :pt="{ root: { class: 'bg-surface min-h-11' } }"
+        :pt="{ root: { class: 'bg-surface-primary min-h-11' } }"
         @click="emit('cancel')"
       />
       <Button

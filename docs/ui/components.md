@@ -11,7 +11,7 @@
 | -------------- | --------------------- | ------------------------- | --------- | ----------------------------------------------------------- |
 | Brand Purple   | `--color-brand`       | `bg-brand` / `text-brand` | `#5D2B85` | Primary accent, folder icons, active states, filled buttons |
 | Accent Tint    | `--color-accent-tint` | `bg-accent-tint`          | `#E8E1F5` | Active row backgrounds, tag fills, hover states             |
-| Surface        | `--color-surface`     | `bg-surface`              | `#FFFFFF` | Cards and container backgrounds                             |
+| Surface Primary | `--color-surface-primary` | `bg-surface-primary` | `#FFFFFF` | Cards and container backgrounds                             |
 | App Background | `--color-app-bg`      | `bg-app-bg`               | `#F4F4F5` | Main application canvas                                     |
 | Text Dark      | `--color-text-dark`   | `text-text-dark`          | `#1A1A1A` | Headings and primary copy                                   |
 | Text Muted     | `--color-text-muted`  | `text-text-muted`         | `#666666` | Secondary info and metadata                                 |
@@ -89,7 +89,7 @@ Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<Select>`, `<Au
 
 - Wrap in `<div class="flex flex-col gap-1">` with a real `<label>`.
 - Single-line height: `h-[38px]`.
-- Background: `bg-surface`.
+- Background: `bg-surface-primary`.
 - Error state: `invalid` prop plus `<small class="text-xs text-destructive">`.
 - Full width: `class="w-full"`.
 

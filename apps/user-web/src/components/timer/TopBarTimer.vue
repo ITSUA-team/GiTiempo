@@ -103,7 +103,7 @@ const primaryActionIcon = computed(() =>
 
   <section
     v-else
-    class="border-divider bg-surface flex w-full min-w-0 items-center gap-3 border-t px-4 py-3"
+    class="border-divider bg-surface-primary flex w-full min-w-0 items-center gap-3 border-t px-4 py-3"
     data-layout="mobile"
     data-testid="top-bar-timer"
   >
