@@ -1520,7 +1520,7 @@
             "description": "Time entry not found"
           },
           "409": {
-            "description": "Running entries must be stopped first"
+            "description": "Running entries must be stopped first unless only taskId is being reassigned"
           },
           "422": {
             "description": "Task or project inactive"
@@ -1531,7 +1531,7 @@
             "bearer": []
           }
         ],
-        "summary": "Update own completed time entry",
+        "summary": "Update own time entry",
         "tags": [
           "time-entries"
         ]

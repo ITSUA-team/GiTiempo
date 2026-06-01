@@ -15,18 +15,19 @@ import {
 } from '@gitiempo/shared';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
-import AddProjectMockView from '@/views/AddProjectView.vue';
-import DashboardView from '@/views/DashboardView.vue';
-import ForbiddenView from '@/views/ForbiddenView.vue';
-import InvoicesView from '@/views/InvoicesView.vue';
 import LoginView from '@/views/LoginView.vue';
-import MembersView from '@/views/MembersView.vue';
-import NotFoundView from '@/views/NotFoundView.vue';
-import ProjectsView from '@/views/ProjectsView.vue';
-import ReportsView from '@/views/ReportsView.vue';
-import SettingsView from '@/views/SettingsView.vue';
 import { pinia } from '@/stores';
 import { useAuthStore } from '@/stores/auth';
+
+const AddProjectMockView = () => import('@/views/AddProjectView.vue');
+const DashboardView = () => import('@/views/DashboardView.vue');
+const ForbiddenView = () => import('@/views/ForbiddenView.vue');
+const InvoicesView = () => import('@/views/InvoicesView.vue');
+const MembersView = () => import('@/views/MembersView.vue');
+const NotFoundView = () => import('@/views/NotFoundView.vue');
+const ProjectsView = () => import('@/views/ProjectsView.vue');
+const ReportsView = () => import('@/views/ReportsView.vue');
+const SettingsView = () => import('@/views/SettingsView.vue');
 
 export const routeNames = {
   addProject: 'admin-add-project',

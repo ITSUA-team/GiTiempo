@@ -3,9 +3,9 @@ import {
   type AcceptWorkspaceInviteInput,
 } from "@gitiempo/shared";
 import {
+  createResponseError,
   getDefaultFetchFn,
   getRequestUrl,
-  getResponseErrorMessage,
 } from "@gitiempo/web-shared/http";
 
 /* eslint-disable no-unused-vars */
@@ -36,7 +36,7 @@ export function createWorkspaceInvitesClient({
       });
 
       if (!response.ok) {
-        throw new Error(await getResponseErrorMessage(response));
+        throw await createResponseError(response);
       }
     },
   };

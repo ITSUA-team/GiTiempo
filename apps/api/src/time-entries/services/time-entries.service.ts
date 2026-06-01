@@ -152,41 +152,84 @@ export class TimeEntriesService {
     entryId: string,
     input: UpdateTimeEntryInput,
   ): Promise<TimeEntryResponse> {
-    const row = await this.requireOwnEntryRow(user, entryId);
-    if (!row.endedAt) {
-      throw new ConflictException('Stop the timer before updating it');
-    }
+    const hasRunningOnlyConflict =
+      input.startedAt !== undefined ||
+      input.endedAt !== undefined ||
+      input.description !== undefined ||
+      input.isBillable !== undefined;
 
-    const startedAt =
-      input.startedAt !== undefined ? new Date(input.startedAt) : row.startedAt;
-    const endedAt =
-      input.endedAt !== undefined ? new Date(input.endedAt) : row.endedAt;
-    const durationSeconds = calculateDurationSeconds(startedAt, endedAt);
-    const nextTaskId =
-      input.taskId !== undefined && input.taskId !== row.taskId
-        ? (await this.tasks.requireTrackableTask(user, input.taskId)).task.id
-        : row.taskId;
+    const updatedId = await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(timeEntries)
+        .where(
+          and(
+            eq(timeEntries.id, entryId),
+            eq(timeEntries.workspaceId, user.workspaceId),
+            eq(timeEntries.userId, user.sub),
+          ),
+        )
+        .limit(1)
+        .for('update');
+      if (!row) throw new NotFoundException('Time entry not found');
 
-    const [updated] = await this.db
-      .update(timeEntries)
-      .set({
-        ...(nextTaskId !== row.taskId ? { taskId: nextTaskId } : {}),
-        ...(input.startedAt !== undefined ? { startedAt } : {}),
-        ...(input.endedAt !== undefined ? { endedAt } : {}),
-        ...(input.description !== undefined
-          ? { description: input.description }
-          : {}),
-        ...(input.isBillable !== undefined
-          ? { isBillable: input.isBillable }
-          : {}),
-        durationSeconds,
-        updatedAt: new Date(),
-      })
-      .where(eq(timeEntries.id, row.id))
-      .returning({ id: timeEntries.id });
-    if (!updated) throw new Error('Failed to update time entry');
+      if (!row.endedAt) {
+        if (hasRunningOnlyConflict) {
+          throw new ConflictException('Stop the timer before updating it');
+        }
 
-    const result = await this.requireEntryResponse(this.db, updated.id);
+        const nextTaskId =
+          input.taskId !== undefined && input.taskId !== row.taskId
+            ? (await this.tasks.requireTrackableTask(user, input.taskId)).task
+                .id
+            : row.taskId;
+
+        const [updated] = await tx
+          .update(timeEntries)
+          .set({
+            ...(nextTaskId !== row.taskId ? { taskId: nextTaskId } : {}),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(timeEntries.id, row.id), isNull(timeEntries.endedAt)))
+          .returning({ id: timeEntries.id });
+        if (!updated) throw new Error('Failed to update time entry');
+        return updated.id;
+      }
+
+      const nextTaskId =
+        input.taskId !== undefined && input.taskId !== row.taskId
+          ? (await this.tasks.requireTrackableTask(user, input.taskId)).task.id
+          : row.taskId;
+      const startedAt =
+        input.startedAt !== undefined
+          ? new Date(input.startedAt)
+          : row.startedAt;
+      const endedAt =
+        input.endedAt !== undefined ? new Date(input.endedAt) : row.endedAt;
+      const durationSeconds = calculateDurationSeconds(startedAt, endedAt);
+
+      const [updated] = await tx
+        .update(timeEntries)
+        .set({
+          ...(nextTaskId !== row.taskId ? { taskId: nextTaskId } : {}),
+          ...(input.startedAt !== undefined ? { startedAt } : {}),
+          ...(input.endedAt !== undefined ? { endedAt } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description }
+            : {}),
+          ...(input.isBillable !== undefined
+            ? { isBillable: input.isBillable }
+            : {}),
+          durationSeconds,
+          updatedAt: new Date(),
+        })
+        .where(eq(timeEntries.id, row.id))
+        .returning({ id: timeEntries.id });
+      if (!updated) throw new Error('Failed to update time entry');
+      return updated.id;
+    });
+
+    const result = await this.requireEntryResponse(this.db, updatedId);
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }

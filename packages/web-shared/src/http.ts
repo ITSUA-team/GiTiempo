@@ -55,20 +55,78 @@ export function getRequestUrl(apiBaseUrl: string | undefined, path: string): str
   return `${getApiBaseUrl(apiBaseUrl)}${path}`;
 }
 
+export class ApiError extends Error {
+  readonly code: string | null;
+  readonly status: number;
+
+  constructor(
+    message: string,
+    options: {
+      code?: string | null;
+      status: number;
+    },
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.code = options.code ?? null;
+    this.status = options.status;
+  }
+}
+
+export function isApiErrorStatus(
+  error: unknown,
+  statuses: readonly number[],
+): error is ApiError {
+  return error instanceof ApiError && statuses.includes(error.status);
+}
+
+function getResponseErrorDetails(body: unknown, status: number): {
+  code: string | null;
+  message: string;
+} {
+  if (!body || typeof body !== "object") {
+    return { code: null, message: `Request failed with ${status}` };
+  }
+
+  const { code, error, message } = body as {
+    code?: unknown;
+    error?: unknown;
+    message?: unknown;
+  };
+
+  return {
+    code: typeof code === "string" ? code : null,
+    message:
+      typeof message === "string"
+        ? message
+        : typeof error === "string"
+          ? error
+          : `Request failed with ${status}`,
+  };
+}
+
 export async function getResponseErrorMessage(
   response: Response,
 ): Promise<string> {
   try {
-    const body = (await response.json()) as {
-      error?: string;
-      message?: string;
-    };
+    const body = await response.json();
 
-    return (
-      body.message ?? body.error ?? `Request failed with ${response.status}`
-    );
+    return getResponseErrorDetails(body, response.status).message;
   } catch {
     return `Request failed with ${response.status}`;
+  }
+}
+
+export async function createResponseError(response: Response): Promise<ApiError> {
+  try {
+    const body = await response.json();
+    const { code, message } = getResponseErrorDetails(body, response.status);
+
+    return new ApiError(message, { code, status: response.status });
+  } catch {
+    return new ApiError(`Request failed with ${response.status}`, {
+      status: response.status,
+    });
   }
 }
 
@@ -105,7 +163,7 @@ export async function requestJson<TResponse>({
   });
 
   if (!response.ok) {
-    throw new Error(await getResponseErrorMessage(response));
+    throw await createResponseError(response);
   }
 
   return responseSchema.parse(await response.json());
@@ -186,7 +244,7 @@ export function createAuthenticatedApiClient({
 
     if (!auth || response.status !== 401) {
       if (!response.ok) {
-        throw new Error(await getResponseErrorMessage(response));
+        throw await createResponseError(response);
       }
 
       return response;
@@ -213,7 +271,7 @@ export function createAuthenticatedApiClient({
     }
 
     if (!retryResponse.ok) {
-      throw new Error(await getResponseErrorMessage(retryResponse));
+      throw await createResponseError(retryResponse);
     }
 
     return retryResponse;
