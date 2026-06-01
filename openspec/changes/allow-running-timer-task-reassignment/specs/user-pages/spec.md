@@ -29,6 +29,15 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **AND** the timer surface refreshes from the authoritative current timer state
 - **AND** the dialog closes after the refreshed timer state is applied
 
+#### Scenario: Running timer stops before task reassignment completes
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open
+- **WHEN** the timer stops before the selected task update completes successfully
+- **THEN** the app treats the task update as a successful correction to the same time entry
+- **AND** the timer surface refreshes from the authoritative current timer state
+- **AND** the dialog closes even when the refreshed timer state shows no running timer
+
 #### Scenario: Current running task confirmation does not update
 
 - **GIVEN** the authenticated user has a running timer
@@ -45,7 +54,7 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **THEN** the dialog remains open
 - **AND** the dialog shows inline error feedback
 - **AND** the visible current task does not switch to the failed selection
-- **AND** stopped or not-found conflict responses refresh the authoritative timer summary
+- **AND** not-found, authorization, validation, visibility, or conflict responses refresh the authoritative timer summary
 
 #### Scenario: New task created inside selected project
 

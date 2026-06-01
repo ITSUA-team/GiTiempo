@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Own Completed Time Entries Can Be Read Updated And Deleted
-The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active task. The backend MUST also allow task-only reassignment for the authenticated user's own running time entry, while preventing other mutation of running entries until the timer is stopped.
+The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active task. The backend MUST also allow task-only reassignment for the authenticated user's own running time entry, while preventing other mutation of running entries until the timer is stopped. Task-only reassignment through the own-entry update endpoint MUST remain valid for the same owned entry if it stops before the update request is processed.
 
 #### Scenario: User reads own entry
 - **GIVEN** an authenticated user owns a time entry
@@ -48,6 +48,15 @@ The backend MUST allow authenticated users to read, update, and delete their own
 - **THEN** the backend applies the task change without stopping the timer
 - **AND** the response includes the new task and project display context
 - **AND** the entry remains running with no ended time or stored duration
+
+#### Scenario: User moves an entry after it stops during reassignment
+- **GIVEN** an authenticated user owns a running time entry
+- **AND** the time entry is stopped before a task-only update request is processed
+- **AND** the user has visibility to another active task in an active project
+- **WHEN** the user updates that now-completed entry with only that task identifier
+- **THEN** the backend applies the task change
+- **AND** the response includes the new task and project display context
+- **AND** the entry remains completed with its ended time and stored duration unchanged
 
 #### Scenario: User cannot move running entry to invisible private task
 - **GIVEN** an authenticated user owns a running time entry

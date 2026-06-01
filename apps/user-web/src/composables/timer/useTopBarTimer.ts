@@ -205,7 +205,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
           logContext: { action: "update-running-timer-task", feature: "top-bar-timer" },
           summary: "Could not update the timer task",
         });
-        await summary.refreshSummaryAfterConflict(message);
+        await summary.refreshSummaryAfterConflict(error);
       }
 
       return;

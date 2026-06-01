@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatElapsedTime,
-  isConflictErrorMessage,
   isRunningTimer,
   toSelectedTaskContext,
 } from "@/lib/top-bar-timer-helpers";
@@ -47,14 +46,6 @@ describe("top-bar-timer-helpers", () => {
         Date.parse("2026-04-21T10:00:02.000Z"),
       ),
     ).toBe("01:00:02");
-  });
-
-  it("detects conflict messages that should refresh authoritative timer state", () => {
-    expect(isConflictErrorMessage("A timer is already running")).toBe(true);
-    expect(isConflictErrorMessage("Active timer overlaps this entry")).toBe(true);
-    expect(isConflictErrorMessage("Stop the timer before editing this entry")).toBe(true);
-    expect(isConflictErrorMessage("Time entry not found")).toBe(true);
-    expect(isConflictErrorMessage("network down")).toBe(false);
   });
 
   it("maps running timer state to selected task context", () => {

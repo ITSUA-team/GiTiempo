@@ -8,6 +8,7 @@ import type {
   TimeEntryListResponse,
   TimeEntryResponse,
 } from "@gitiempo/shared";
+import { ApiError } from "@gitiempo/web-shared/http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 
@@ -453,7 +454,9 @@ describe("useTopBarTimer", () => {
     client.listProjectTasks.mockResolvedValueOnce([
       createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
     ]);
-    client.startTimer.mockRejectedValueOnce(new Error("A timer is already running"));
+    client.startTimer.mockRejectedValueOnce(
+      new ApiError("A timer is already running", { status: 409 }),
+    );
     client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: null }).mockResolvedValueOnce({
       timeEntry: createRunningEntry(),
     });
@@ -722,6 +725,54 @@ describe("useTopBarTimer", () => {
     );
   });
 
+  it("closes after a successful task correction when the refreshed timer is stopped", async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.getCurrentTimer
+      .mockResolvedValueOnce({ timeEntry: createRunningEntry() })
+      .mockResolvedValueOnce({ timeEntry: null });
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(TEST_IDS.project, "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
+      createTask(TEST_IDS.taskAlt, TEST_IDS.project, "Review PM scope rules"),
+    ]);
+    client.updateEntry.mockResolvedValueOnce(
+      createCompletedEntry({
+        task: { id: TEST_IDS.taskAlt, title: "Review PM scope rules" },
+        taskId: TEST_IDS.taskAlt,
+      }),
+    );
+
+    const { topBarTimer } = mountTopBarTimer({ client, toast });
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    topBarTimer.setSelectedTaskId(TEST_IDS.taskAlt);
+    const timerReadsBeforeConfirm = client.getCurrentTimer.mock.calls.length;
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(client.updateEntry).toHaveBeenCalledWith(TEST_IDS.runningEntry, {
+      taskId: TEST_IDS.taskAlt,
+    });
+    expect(client.getCurrentTimer.mock.calls.length).toBeGreaterThan(
+      timerReadsBeforeConfirm,
+    );
+    expect(topBarTimer.currentTimer.value).toBeNull();
+    expect(topBarTimer.isDialogOpen.value).toBe(false);
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "success",
+        summary: "Timer task updated",
+      }),
+    );
+  });
+
   it("ignores primary timer actions while a task update is pending", async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
@@ -873,7 +924,10 @@ describe("useTopBarTimer", () => {
       createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
       createTask(TEST_IDS.taskAlt, TEST_IDS.project, "Review PM scope rules"),
     ]);
-    client.updateEntry.mockRejectedValueOnce(new Error("Task is inactive"));
+    client.updateEntry.mockRejectedValueOnce(
+      new ApiError("Task is inactive", { status: 422 }),
+    );
+    client.getCurrentTimer.mockResolvedValueOnce({ timeEntry: createRunningEntry() });
 
     const { topBarTimer } = mountTopBarTimer({ client, toast });
 
@@ -885,6 +939,7 @@ describe("useTopBarTimer", () => {
     await topBarTimer.confirmSelectedTask();
     await flushPromises();
 
+    expect(client.getCurrentTimer).toHaveBeenCalledTimes(2);
     expect(topBarTimer.isDialogOpen.value).toBe(true);
     expect(topBarTimer.currentTimer.value?.taskId).toBe(TEST_IDS.task);
     expect(topBarTimer.selectionUpdateErrorMessage.value).toBe("Task is inactive");
@@ -910,7 +965,9 @@ describe("useTopBarTimer", () => {
       createTask(TEST_IDS.task, TEST_IDS.project, "Improve reports filters"),
       createTask(TEST_IDS.taskAlt, TEST_IDS.project, "Review PM scope rules"),
     ]);
-    client.updateEntry.mockRejectedValueOnce(new Error("Time entry not found"));
+    client.updateEntry.mockRejectedValueOnce(
+      new ApiError("Time entry not found", { status: 404 }),
+    );
 
     const { topBarTimer } = mountTopBarTimer({ client, toast });
 

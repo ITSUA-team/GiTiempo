@@ -17,18 +17,6 @@ export function formatElapsedTime(startedAt: string | null, nowMs: number): stri
   return formatRunningDuration(startedAt, nowMs);
 }
 
-export function isConflictErrorMessage(message: string): boolean {
-  const normalized = message.toLowerCase();
-
-  return (
-    normalized.includes("already running") ||
-    normalized.includes("active timer") ||
-    normalized.includes("overlap") ||
-    normalized.includes("stop the timer") ||
-    normalized.includes("time entry not found")
-  );
-}
-
 export function isRunningTimer(timer: TimeEntryResponse | null): boolean {
   return timer !== null && timer.endedAt === null;
 }

@@ -487,6 +487,40 @@ describe('Time entries (e2e)', () => {
     expect(remove.status).toBe(409);
   });
 
+  it('allows task reassignment when the timer stops before the update arrives', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: platformTaskId });
+    expect(started.status).toBe(201);
+
+    const stopped = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(memberToken));
+    expect(stopped.status).toBe(200);
+    expect(stopped.body.id).toBe(started.body.id);
+    expect(stopped.body.endedAt).not.toBeNull();
+
+    const suffix = randomUUID().slice(0, 8);
+    const nextTaskId = await createTask(
+      platformProjectId,
+      `Search task search Stopped Move ${suffix}`,
+    );
+
+    const reassign = await request(app.getHttpServer())
+      .patch(`/time-entries/${started.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: nextTaskId });
+    expect(reassign.status).toBe(200);
+    expect(reassign.body.id).toBe(started.body.id);
+    expect(reassign.body.taskId).toBe(nextTaskId);
+    expect(reassign.body.task.title).toBe(
+      `Search task search Stopped Move ${suffix}`,
+    );
+    expect(reassign.body.endedAt).toBe(stopped.body.endedAt);
+    expect(reassign.body.durationSeconds).toBe(stopped.body.durationSeconds);
+  });
+
   it('lists visible project time entries as read-only team data', async () => {
     const created = await createManualEntry(memberToken, {
       startedAt: '2026-05-01T10:00:00.000Z',

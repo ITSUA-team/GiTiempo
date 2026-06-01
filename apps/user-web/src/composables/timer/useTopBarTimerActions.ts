@@ -89,7 +89,7 @@ export function useTopBarTimerActions({
         logContext: { action: "start-timer", feature: "top-bar-timer" },
         summary: "Could not start the timer",
       });
-      await summary.refreshSummaryAfterConflict(message);
+      await summary.refreshSummaryAfterConflict(error);
     }
   }
 

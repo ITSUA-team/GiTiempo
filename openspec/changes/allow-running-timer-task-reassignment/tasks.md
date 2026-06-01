@@ -16,3 +16,4 @@
 - [x] 3.1 Add backend unit and e2e coverage for task-only running-entry reassignment and rejected running-entry mutations.
 - [x] 3.2 Add user-web timer composable coverage for preselection, successful reassignment, same-task confirmation, failures, conflict refresh, and stale async response handling.
 - [x] 3.3 Run focused user-web timer tests, user-web typecheck, and user-web lint.
+- [x] 3.4 Add regression coverage that a stop-before-PATCH top-bar task update remains a valid task correction for the same completed entry.
