@@ -9,6 +9,7 @@ import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
+import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { createAppRouter, routeNames } from "@/router";
 import {
   resetAuthRuntimeForTesting,
@@ -182,8 +183,12 @@ describe("InviteAcceptView", () => {
     await wrapper.get('[data-testid="invite-accept-password"]').setValue(
       "password123",
     );
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
     await wrapper.get("form").trigger("submit");
-    await flushPromises();
+    await routeReady;
 
     expect(signInWithEmailPassword).toHaveBeenCalledWith(
       "alexey@example.com",
@@ -219,9 +224,13 @@ describe("InviteAcceptView", () => {
     acceptInvite.mockImplementation(async () => {
       acceptInviteCompleted = true;
     });
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
 
     await wrapper.get('[data-testid="invite-accept-google"]').trigger("click");
-    await flushPromises();
+    await routeReady;
 
     expect(signInWithGoogle).toHaveBeenCalled();
     expect(acceptInvite).toHaveBeenCalledWith({
