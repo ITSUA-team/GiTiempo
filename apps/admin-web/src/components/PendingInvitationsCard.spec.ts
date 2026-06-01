@@ -118,6 +118,15 @@ describe('PendingInvitationsCard', () => {
     ).toBe('Cancel invite');
   });
 
+  it('keeps sent-date fallback copy local to the invitations card', () => {
+    const pendingInvites = createInvites();
+    pendingInvites[0].createdAt = 'not-a-date';
+
+    const wrapper = mountPendingInvitationsCard({ pendingInvites });
+
+    expect(wrapper.text()).toContain('Sent recently');
+  });
+
   it('emits mobile resend and cancel actions with the clicked invite', async () => {
     mockMatchMedia(true);
     const pendingInvites = createInvites();
