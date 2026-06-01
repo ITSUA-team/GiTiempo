@@ -5,8 +5,6 @@ import {
   addUtcDays,
   formatCompactDuration,
   formatElapsedDuration,
-  formatRecentEntryDuration,
-  formatRecentEntryTimeRange,
   formatRunningDuration,
   formatTimeEntryDuration,
   formatTimeEntryTimeRange,
@@ -129,8 +127,6 @@ describe('time-entry-display', () => {
     expect(formatTimeEntryDuration(runningEntry, nowMs)).toBe('02:00:05');
     expect(formatTimeEntryTimeRange(completedEntry)).toBe('09:00 - 10:30');
     expect(formatTimeEntryTimeRange(runningEntry)).toBe('09:00 - Running');
-    expect(formatRecentEntryDuration(runningEntry, nowMs)).toBe('02:00:05');
-    expect(formatRecentEntryTimeRange(runningEntry)).toBe('09:00 - Running');
   });
 
   it('counts only the entry overlap inside a requested time range', () => {

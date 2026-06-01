@@ -93,10 +93,6 @@ export function isReportDateRangeValid(dateRange: ReportDateRange): boolean {
   return getReportDateRangeError(dateRange) === null;
 }
 
-export function formatReportDuration(totalSeconds: number): string {
-  return formatPaddedHoursMinutesDuration(totalSeconds);
-}
-
 export function formatReportPercent(value: number | null): string {
   if (value === null) {
     return '0%';
@@ -433,8 +429,8 @@ export function filterReportRows(
     const haystack = [
       row.projectName,
       row.memberName,
-      formatReportDuration(row.totalSeconds),
-      formatReportDuration(
+      formatPaddedHoursMinutesDuration(row.totalSeconds),
+      formatPaddedHoursMinutesDuration(
         getReportRowBillableSeconds(row, parsedFilters.billable),
       ),
       formatReportPercent(row.billableShare),

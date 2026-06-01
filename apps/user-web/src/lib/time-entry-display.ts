@@ -1,11 +1,6 @@
 import type { TimeEntryResponse } from '@gitiempo/shared';
 import { formatUtcDayLabel, getUtcDateKey } from '@gitiempo/web-shared/time';
 
-import {
-  formatTimeEntryDuration,
-  formatTimeEntryTimeRange,
-} from '@/lib/time-formatters';
-
 export {
   addUtcDays,
   formatCompactDuration,
@@ -65,15 +60,4 @@ export function getEntryTrackedSecondsWithinRange(
   }
 
   return Math.floor((overlapEndMs - overlapStartMs) / 1000);
-}
-
-export function formatRecentEntryDuration(
-  entry: TimeEntryResponse,
-  nowMs: number,
-): string {
-  return formatTimeEntryDuration(entry, nowMs);
-}
-
-export function formatRecentEntryTimeRange(entry: TimeEntryResponse): string {
-  return formatTimeEntryTimeRange(entry);
 }

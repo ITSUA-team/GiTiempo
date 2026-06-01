@@ -8,7 +8,6 @@ import {
 import {
   createDefaultReportTableFilters,
   filterReportRows,
-  formatReportDuration,
   toReportTableRows,
   toTimeReportExportQuery,
   toTimeReportQuery,
@@ -104,13 +103,6 @@ describe('report-view-model', () => {
       ...expectedDateWindow,
       projectId,
     });
-  });
-
-  it('formats report durations with padded hour-minute labels', () => {
-    expect(formatReportDuration(-1)).toBe('0m');
-    expect(formatReportDuration(59)).toBe('0m');
-    expect(formatReportDuration(3600)).toBe('1h 00m');
-    expect(formatReportDuration(3660)).toBe('1h 01m');
   });
 
   it('rejects invalid report date ranges before API calls', () => {

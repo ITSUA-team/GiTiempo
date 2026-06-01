@@ -13,7 +13,6 @@ import type {
 import {
   formatRelativeTime as formatSharedRelativeTime,
   formatTrimmedHoursMinutesDuration,
-  getLocalIsoWeekRange,
 } from '@gitiempo/web-shared/time';
 
 export { formatSharedRelativeTime as formatRelativeTime };
@@ -105,7 +104,7 @@ function getReportActivityProjectLabel(row: TimeReportRow): string {
 }
 
 function getReportActivityText(row: TimeReportRow): string {
-  const duration = formatDashboardHours(row.totalSeconds);
+  const duration = formatTrimmedHoursMinutesDuration(row.totalSeconds);
 
   if (row.groupBy === 'user') {
     return `${getReportActivityProjectLabel(row)} tracked ${duration}`;
@@ -183,17 +182,6 @@ function isSameLocalMonth(first: Date, second: Date): boolean {
   );
 }
 
-export function formatDashboardHours(totalSeconds: number): string {
-  return formatTrimmedHoursMinutesDuration(totalSeconds);
-}
-
-export function getDashboardWeekRange(now = new Date()): {
-  dateFrom: string;
-  dateTo: string;
-} {
-  return getLocalIsoWeekRange(now);
-}
-
 function deriveAdminDashboardStats(
   {
     invites,
@@ -225,7 +213,7 @@ function deriveAdminDashboardStats(
     {
       description: 'Across all projects',
       label: 'Hours This Week',
-      value: formatDashboardHours(report.summary.totalSeconds),
+      value: formatTrimmedHoursMinutesDuration(report.summary.totalSeconds),
     },
     {
       description: getPendingInvitesDescription(pendingInvites),
@@ -253,7 +241,7 @@ function deriveProjectScopedDashboardStats({
     {
       description: 'In visible project scope',
       label: 'Hours This Week',
-      value: formatDashboardHours(report.summary.totalSeconds),
+      value: formatTrimmedHoursMinutesDuration(report.summary.totalSeconds),
     },
     {
       description: 'Visible public projects',

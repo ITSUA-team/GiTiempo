@@ -7,10 +7,12 @@ import {
 } from '@gitiempo/web-shared/time';
 
 import {
-  formatRecentEntryDuration,
-  formatRecentEntryTimeRange,
   getEntryTrackedSecondsWithinRange,
 } from '@/lib/time-entry-display';
+import {
+  formatTimeEntryDuration,
+  formatTimeEntryTimeRange,
+} from '@/lib/time-formatters';
 
 export interface DashboardStat {
   description: string;
@@ -208,12 +210,12 @@ export function mapDashboardRecentEntryRows(
   nowMs: number,
 ): DashboardRecentEntryRow[] {
   return entries.map((entry) => ({
-    durationLabel: formatRecentEntryDuration(entry, nowMs),
+    durationLabel: formatTimeEntryDuration(entry, nowMs),
     id: entry.id,
     isHighlighted: entry.endedAt === null,
     projectName: entry.project.name,
     taskTitle: entry.task.title,
-    timeRangeLabel: formatRecentEntryTimeRange(entry),
+    timeRangeLabel: formatTimeEntryTimeRange(entry),
   }));
 }
 
