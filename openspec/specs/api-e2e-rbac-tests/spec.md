@@ -3,9 +3,7 @@
 ## Purpose
 
 Define backend e2e coverage expectations for admin-only API route authorization boundaries.
-
 ## Requirements
-
 ### Requirement: Admin-only routes reject member tokens with 403
 The system SHALL reject requests from authenticated users with a non-admin role on all routes protected by `WorkspaceAdminGuard`, returning HTTP 403.
 
@@ -39,6 +37,10 @@ The system SHALL reject requests from authenticated users with a non-admin role 
 
 #### Scenario: Member token on POST /invites
 - **WHEN** a user with role "member" sends POST /invites with a valid JWT
+- **THEN** the system responds with 403 Forbidden
+
+#### Scenario: Member token on POST /invites/:id/resend
+- **WHEN** a user with role "member" sends POST /invites/:id/resend with a valid JWT
 - **THEN** the system responds with 403 Forbidden
 
 #### Scenario: Member token on DELETE /invites/:id
@@ -80,6 +82,11 @@ The system SHALL reject requests without a valid JWT on all routes protected by 
 - **WHEN** a request is sent to POST /invites without an Authorization header
 - **THEN** the system responds with 401 Unauthorized
 
+#### Scenario: No token on POST /invites/:id/resend
+- **WHEN** a request is sent to POST /invites/:id/resend without an Authorization header
+- **THEN** the system responds with 401 Unauthorized
+
 #### Scenario: No token on DELETE /invites/:id
 - **WHEN** a request is sent to DELETE /invites/:id without an Authorization header
 - **THEN** the system responds with 401 Unauthorized
+
