@@ -40,6 +40,7 @@ Read this file first. Load only the linked section files needed for the task.
 | App Background | `bg-app-bg` | `#F4F4F5` | Main app canvas |
 | Text Dark | `text-text-dark` | `#1A1A1A` | Headings, primary body text |
 | Text Muted | `text-text-muted` | `#666666` | Secondary metadata |
+| Text Inverse | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand/destructive/dark surfaces |
 | Divider | `border-divider` | `#EEEEEE` | Borders and separators |
 | Destructive | `text-destructive`, `border-destructive` | `#D32F2F` | Delete and disconnect actions |
 

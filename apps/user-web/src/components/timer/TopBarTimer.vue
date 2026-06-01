@@ -67,15 +67,16 @@ const primaryActionIcon = computed(() =>
       <p class="text-text-muted text-[11px] leading-none font-medium">
         {{ timerStatusLabel }}
       </p>
-      <button
+      <Button
         type="button"
+        variant="text"
+        :label="timerContextLabel"
         aria-label="Change timer task"
-        class="text-text-dark mt-1 block max-w-full cursor-pointer truncate text-left text-[13px] font-medium"
+        class="text-text-dark mt-1 max-w-full justify-start p-0 text-left text-[13px] font-medium"
+        :pt="{ label: { class: 'truncate' } }"
         data-testid="top-bar-timer-context"
         @click="openDialog"
-      >
-        {{ timerContextLabel }}
-      </button>
+      />
     </div>
 
     <p
@@ -146,10 +147,11 @@ const primaryActionIcon = computed(() =>
       </Button>
     </div>
 
-    <button
+    <Button
       type="button"
+      variant="text"
       aria-label="Change timer task"
-      class="min-w-0 flex-1 text-left"
+      class="min-w-0 flex-1 justify-start p-0 text-left"
       data-testid="top-bar-timer-mobile-context"
       @click="openDialog"
     >
@@ -168,7 +170,7 @@ const primaryActionIcon = computed(() =>
       <span class="text-text-dark mt-1 block truncate text-[13px] font-semibold">
         {{ timerContextLabel }}
       </span>
-    </button>
+    </Button>
   </section>
 
   <TopBarTimerTaskDialog

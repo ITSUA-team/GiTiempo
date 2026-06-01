@@ -135,7 +135,7 @@ async function handleSave({
             outlined
             type="button"
             class="w-full sm:w-auto"
-            :pt="{ root: { class: 'bg-white' } }"
+            :pt="{ root: { class: 'bg-surface' } }"
             @click="emit('cancelled')"
           />
           <Button

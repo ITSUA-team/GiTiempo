@@ -15,11 +15,12 @@
 | App Background | `--color-app-bg`      | `bg-app-bg`               | `#F4F4F5` | Main application canvas                                     |
 | Text Dark      | `--color-text-dark`   | `text-text-dark`          | `#1A1A1A` | Headings and primary copy                                   |
 | Text Muted     | `--color-text-muted`  | `text-text-muted`         | `#666666` | Secondary info and metadata                                 |
+| Text Inverse   | `--color-text-inverse` / `--color-text-inverse-muted` | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand, destructive, and dark surfaces |
 | Dividers       | `--color-divider`     | `border-divider`          | `#EEEEEE` | Borders and separators                                      |
 
 - Never use Brand Purple as a large background area.
 - Accent Tint is the only permitted purple-tinted background surface.
-- Text on Brand Purple must be white.
+- Text on Brand Purple must use `text-text-inverse`.
 - Text on Accent Tint must be `text-text-dark` or `text-brand`.
 - Use token utilities instead of raw hex values in markup.
 
