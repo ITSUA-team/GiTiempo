@@ -3,12 +3,13 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { createMemoryHistory, type Router } from "vue-router";
+import { createMemoryHistory } from "vue-router";
 import PrimeVue from "primevue/config";
 import type { UserResponse } from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { createAppRouter, routeNames } from "@/router";
 import {
   resetAuthRuntimeForTesting,
@@ -49,33 +50,6 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     }),
     ...overrides,
   };
-}
-
-async function waitForRoute(
-  router: Router,
-  matches: () => boolean,
-): Promise<void> {
-  if (matches()) return;
-
-  await new Promise<void>((resolve, reject) => {
-    let stop: (() => void) | undefined;
-    const timeout = setTimeout(() => {
-      stop?.();
-      reject(
-        new Error(
-          `Timed out waiting for route navigation. Current route: ${router.currentRoute.value.fullPath}`,
-        ),
-      );
-    }, 5000);
-
-    stop = router.afterEach(() => {
-      if (!matches()) return;
-
-      clearTimeout(timeout);
-      stop?.();
-      resolve();
-    });
-  });
 }
 
 async function mountLoginView(initialPath = "/login") {
