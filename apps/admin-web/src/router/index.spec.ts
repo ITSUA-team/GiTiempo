@@ -309,6 +309,24 @@ describe("admin router", () => {
     );
   });
 
+  it("redirects authenticated users without a resolved profile role to forbidden", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "profile-missing-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = null;
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/reports");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+  });
+
   it("redirects to login after bootstrap rejects a persisted refresh token", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);

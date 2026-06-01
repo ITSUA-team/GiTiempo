@@ -27,13 +27,13 @@ Affected frontend rules come from `apps/admin-web/AGENTS.md`, `docs/ui/INDEX.md`
 
 1. Use `meta.allowedRoles` on `admin-web` routes.
 
-   Route meta is already the router's source of truth for `requiresAuth` and `guestOnly`, and Vue Router exposes merged route meta for nested route records. Adding `allowedRoles?: readonly WorkspaceRole[]` keeps role requirements beside the route they protect and avoids a second route policy map for the current scope.
+   Route meta is already the router's source of truth for `requiresAuth` and `guestOnly`, and Vue Router exposes merged route meta for nested route records. Adding `allowedRoles?: readonly WorkspaceRole[]` keeps role requirements beside the route they protect. The app-owned `adminRouteAllowedRoles` matrix is typed as an exhaustive record for admin product route names while intentionally excluding login, `/403`, and 404 routes so future product routes must make an explicit role decision.
 
    Alternative considered: a separate `routeAccessPolicy` map keyed by route name. That can work if policy becomes larger, but it introduces an extra synchronization point and likely requires moving `routeNames` to avoid import cycles. The route meta approach is smaller and matches existing router conventions.
 
 2. Check roles only after authentication succeeds.
 
-   The guard should continue to bootstrap any `requiresAuth` or `guestOnly` route first. Anonymous users still go to login with redirect preservation. Only authenticated users with a resolved profile role are eligible for the `allowedRoles` check; missing or disallowed roles route to `/403`.
+   The guard should continue to bootstrap any `requiresAuth` or `guestOnly` route first. Anonymous users still go to login with redirect preservation. Only authenticated users with a resolved profile role are eligible for the `allowedRoles` check; missing, null, or disallowed roles route to `/403` as authorization failures rather than login.
 
    Alternative considered: redirect unknown roles to login. That would blur auth and authorization failures and could loop for valid authenticated users whose role is simply insufficient.
 

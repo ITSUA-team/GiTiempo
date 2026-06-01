@@ -53,3 +53,10 @@
 - [x] 7.7 Run `pnpm --filter user-web lint`.
 - [x] 7.8 Run `pnpm --filter user-web typecheck`.
 - [x] 7.9 Run `pnpm --filter user-web test`.
+
+## 8. Review Remediation
+
+- [x] 8.1 Make the admin route role matrix exhaustive at the TypeScript type level and remove the unused `canAccessAdminRoute` helper surface.
+- [x] 8.2 Add focused router coverage and OpenSpec scenarios for authenticated sessions with null or missing profile roles redirecting to `/403`.
+- [x] 8.3 Confirm PM-safe Dashboard and Reports coverage remains tied to existing page behavior: `useAdminDashboardData.spec.ts` covers PM dashboard clients avoiding member/invite management clients, and `ReportsView.spec.ts` covers API-backed reports, CSV export scope, invalid ranges, and export failures.
+- [x] 8.4 Coordinate with `add-lazy-loading` by keeping the RBAC route inventory aligned with the lazy-route inventory: dashboard, reports, invoices, members, projects, add-project, settings, `/403`, and 404.

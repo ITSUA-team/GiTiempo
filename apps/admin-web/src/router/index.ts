@@ -8,10 +8,7 @@ import {
   WorkspaceRoles,
   type WorkspaceRole,
 } from '@gitiempo/shared';
-import {
-  createProtectedRouter,
-  hasAllowedRole,
-} from '@gitiempo/web-shared/router';
+import { createProtectedRouter } from '@gitiempo/web-shared/router';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
 import LoginView from '@/views/LoginView.vue';
@@ -42,6 +39,11 @@ export const routeNames = {
 } as const;
 
 type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
+type AdminNonProductRouteName =
+  | typeof routeNames.forbidden
+  | typeof routeNames.login
+  | typeof routeNames.notFound;
+type AdminProductRouteName = Exclude<AdminRouteName, AdminNonProductRouteName>;
 
 const adminOnlyRoles = [
   WorkspaceRoles.Admin,
@@ -59,22 +61,7 @@ export const adminRouteAllowedRoles = {
   [routeNames.projects]: adminOnlyRoles,
   [routeNames.reports]: managementRoles,
   [routeNames.settings]: adminOnlyRoles,
-} as const satisfies Partial<Record<AdminRouteName, readonly WorkspaceRole[]>>;
-
-export function canAccessAdminRoute(
-  role: WorkspaceRole | null | undefined,
-  routeName: string | symbol | null | undefined,
-): boolean {
-  if (typeof routeName !== 'string') {
-    return true;
-  }
-
-  const allowedRoles = adminRouteAllowedRoles[
-    routeName as keyof typeof adminRouteAllowedRoles
-  ];
-
-  return hasAllowedRole(allowedRoles, role);
-}
+} as const satisfies Record<AdminProductRouteName, readonly WorkspaceRole[]>;
 
 const publicRoutes: RouteRecordRaw[] = [
   {

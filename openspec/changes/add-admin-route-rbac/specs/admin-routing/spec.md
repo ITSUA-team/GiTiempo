@@ -17,6 +17,13 @@ The `admin-web` router MUST enforce role requirements for authenticated product 
 - **THEN** the router redirects the user to the standalone `/403` route
 - **AND** the restricted product route does not mount inside the authenticated admin shell
 
+#### Scenario: Missing role is denied as an authorization failure
+
+- **WHEN** an authenticated admin-web session has completed bootstrap but the current profile role is null or unavailable
+- **AND** the user navigates to a role-restricted admin-web product route
+- **THEN** the router redirects the user to the standalone `/403` route
+- **AND** the router does not treat the session as anonymous or redirect the user to the guest login entry
+
 #### Scenario: PM opens PM-allowed admin pages
 
 - **WHEN** an authenticated user with workspace role `pm` navigates to an admin-web product route that allows admin and PM users
