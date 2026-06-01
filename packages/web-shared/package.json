@@ -32,6 +32,10 @@
       "types": "./src/session-storage.ts",
       "default": "./src/session-storage.ts"
     },
+    "./testing": {
+      "types": "./src/testing/router.ts",
+      "default": "./src/testing/router.ts"
+    },
     "./validation": {
       "types": "./src/validation/index.ts",
       "default": "./src/validation/index.ts"
