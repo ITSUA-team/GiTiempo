@@ -9,6 +9,7 @@ import type { UserResponse } from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { createAppRouter, routeNames } from "@/router";
 import {
   resetAuthRuntimeForTesting,
@@ -91,8 +92,12 @@ describe("LoginView", () => {
 
     await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
     await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.fullPath === "/time-entries",
+    );
     await wrapper.get("form").trigger("submit");
-    await flushPromises();
+    await routeReady;
 
     expect(router.currentRoute.value.fullPath).toBe("/time-entries");
   });
@@ -100,9 +105,13 @@ describe("LoginView", () => {
   it("signs in with Google through the UI and redirects to the dashboard", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
     const { router, wrapper } = await mountLoginView();
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
 
     await wrapper.get('[data-testid="sign-in-google"]').trigger("click");
-    await flushPromises();
+    await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
