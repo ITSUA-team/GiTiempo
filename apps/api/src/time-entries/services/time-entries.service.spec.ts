@@ -83,14 +83,13 @@ describe('TimeEntriesService', () => {
   });
 
   it('updates running entries with task and description changes', async () => {
-    const tx = {
-      update: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ id: completedEntry.id }]),
-          }),
-        }),
+    const set = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: completedEntry.id }]),
       }),
+    });
+    const tx = {
+      update: vi.fn().mockReturnValue({ set }),
       select: vi.fn().mockReturnValue(
         selectRowsForUpdate([
           {
@@ -141,17 +140,22 @@ describe('TimeEntriesService', () => {
         taskId: 'task-2',
       }),
     );
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Investigate release blocker',
+        taskId: 'task-2',
+      }),
+    );
   });
 
   it('clears running-entry descriptions without stopping the timer', async () => {
-    const tx = {
-      update: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ id: completedEntry.id }]),
-          }),
-        }),
+    const set = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: completedEntry.id }]),
       }),
+    });
+    const tx = {
+      update: vi.fn().mockReturnValue({ set }),
       select: vi.fn().mockReturnValue(
         selectRowsForUpdate([
           {
@@ -187,6 +191,11 @@ describe('TimeEntriesService', () => {
     await expect(
       service.updateOwnEntry(user, completedEntry.id, { description: null }),
     ).resolves.toEqual(
+      expect.objectContaining({
+        description: null,
+      }),
+    );
+    expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
         description: null,
       }),

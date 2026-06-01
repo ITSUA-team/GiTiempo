@@ -615,6 +615,36 @@ describe("useTopBarTimer", () => {
     );
   });
 
+  it("clears the previous running description before the next idle start", async () => {
+    const client = createClientMock();
+
+    client.getCurrentTimer.mockResolvedValueOnce({
+      timeEntry: createRunningEntry({ description: "Existing note" }),
+    });
+    client.stopTimer.mockResolvedValueOnce(
+      createCompletedEntry({ description: "Existing note" }),
+    );
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+
+    await topBarTimer.handlePrimaryAction();
+    await flushPromises();
+
+    expect(topBarTimer.primaryActionLabel.value).toBe("Start");
+    expect(topBarTimer.selectedDescription.value).toBe("");
+
+    await topBarTimer.handlePrimaryAction();
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.task });
+  });
+
   it("reconciles cached time-entry lists after successful timer start and stop", async () => {
     const client = createClientMock();
 
