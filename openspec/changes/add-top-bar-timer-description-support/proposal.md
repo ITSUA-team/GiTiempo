@@ -9,6 +9,11 @@ The approved top-bar timer picker now includes a time-entry `Description` field,
 - Update the user-web top-bar task picker to include a Description textarea below Task, use that value for the next idle Start action, and save task/description changes against the running entry when the timer is active.
 - Preserve existing task/project visibility rules, active-work validation, single-running-timer protection, manual interval ownership by the Time Entries page, and Chrome extension GitHub timer behavior.
 
+## Active Change Relationship
+
+- This change is the follow-up and superset for `allow-running-timer-task-reassignment`: that change establishes running-entry task reassignment, and this change broadens the allowed running-entry fields to `taskId` plus `description` only. If both changes are active, archive or reconcile `allow-running-timer-task-reassignment` first, then apply this change as the later delta.
+- This change reuses the cache/list synchronization behavior from `sync-list-state-with-top-bar-timer-changes` for top-bar start and stop mutations, and extends the same reconciliation approach to successful running task/description updates. It does not introduce a separate start/stop list-sync ownership model.
+
 ## Capabilities
 
 ### New Capabilities

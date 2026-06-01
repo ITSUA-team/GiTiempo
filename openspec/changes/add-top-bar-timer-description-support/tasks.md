@@ -4,6 +4,7 @@
 - [x] 1.2 Extend `startTimerSchema` and exported start-timer types in `packages/shared/src/contracts/time-entries.ts` to accept optional nullable `description` with the existing time-entry description length limit.
 - [x] 1.3 Add shared-contract tests that cover timer start with no description, string description, `null`, unknown fields, and over-limit descriptions.
 - [x] 1.4 Update API DTO/OpenAPI-facing types generated from the shared timer start contract.
+- [x] 1.5 Resolve active-change overlap by documenting that this change follows/supersedes `allow-running-timer-task-reassignment` for running update fields and reuses `sync-list-state-with-top-bar-timer-changes` for start/stop list reconciliation.
 
 ## 2. Backend API
 
@@ -19,7 +20,7 @@
 - [x] 3.2 Add description draft state to the top-bar timer picker, including blank idle defaults, running-timer prefill from `currentTimer.description`, whitespace-to-null submit normalization, and close/reset behavior.
 - [x] 3.3 Add the PrimeVue `Textarea` Description field to `TopBarTimerTaskDialog` directly below Task, preserving approved desktop/mobile order, spacing, footer order, loading, and disabled states.
 - [x] 3.4 Update top-bar timer actions so idle Start sends the selected task plus description, and running `Use selected task` saves task/description to the active entry without stopping the timer.
-- [x] 3.5 Reconcile local current-timer state and relevant query caches from authoritative API responses after start, stop, and running updates; refresh authoritative state on conflicts.
+- [x] 3.5 Reconcile local current-timer state and relevant query caches from authoritative API responses after start, stop, and running updates; reuse the `sync-list-state-with-top-bar-timer-changes` start/stop strategy and extend it to running task/description updates; refresh authoritative state on conflicts.
 - [x] 3.6 Add user-web tests for dialog rendering/emits, idle start payloads, running update payloads, clearing descriptions, retryable failures, and desktop/mobile task-picker layout expectations.
 
 ## 4. Verification

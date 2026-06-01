@@ -4,6 +4,12 @@ The top-bar timer is owned by `apps/user-web` shell chrome and uses shared time-
 
 This change spans shared contracts, NestJS time-entry API behavior, OpenAPI output, and user-web top-bar timer state. Affected implementation must follow root monorepo instructions, `apps/api/AGENTS.md` for backend work, `apps/user-web/AGENTS.md` for user-web work, and `docs/ui/INDEX.md` plus the relevant UI section docs for the dialog and shell timer.
 
+## Active Change Ordering
+
+`allow-running-timer-task-reassignment` is the baseline active change for running-entry task reassignment. This change intentionally supersedes its task-only running update rule by allowing exactly one additional running-entry field: `description`. Apply/archive the task-reassignment change first, or reconcile it into this change before archiving, so the final spec does not retain the older "non-task fields are rejected" wording for `description`.
+
+`sync-list-state-with-top-bar-timer-changes` owns visible Dashboard and Time Entries list synchronization for top-bar start/stop lifecycle mutations. This change should reuse that reconciliation strategy for start/stop and add only the new running task/description update reconciliation behavior, rather than creating a second independent cache ownership model.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -30,7 +36,7 @@ This change spans shared contracts, NestJS time-entry API behavior, OpenAPI outp
 
 2. Reuse the existing own-entry update endpoint for running task/description changes.
 
-   `PATCH /time-entries/:id` already validates `taskId` and `description` through `updateTimeEntrySchema`. Backend service rules should branch by entry state: completed entries retain the existing editable fields, while running entries accept only `taskId` and/or `description`. Requests that include `startedAt`, `endedAt`, or `isBillable` for a running entry must still fail with a conflict that tells the caller to stop the timer first. A dedicated running-timer update endpoint was rejected because it would duplicate ownership checks and create another frontend mutation path for the same time-entry resource.
+   `PATCH /time-entries/:id` already validates `taskId` and `description` through `updateTimeEntrySchema`. Backend service rules should branch by entry state: completed entries retain the existing editable fields, while running entries accept only `taskId` and/or `description`. This is the intended follow-up to the task-only running reassignment behavior from `allow-running-timer-task-reassignment`; `description` is the only newly allowed non-task running field. Requests that include `startedAt`, `endedAt`, or `isBillable` for a running entry must still fail with a conflict that tells the caller to stop the timer first. A dedicated running-timer update endpoint was rejected because it would duplicate ownership checks and create another frontend mutation path for the same time-entry resource.
 
 3. Keep task visibility and active-work validation identical for start and update.
 
@@ -42,7 +48,7 @@ This change spans shared contracts, NestJS time-entry API behavior, OpenAPI outp
 
 5. Reconcile current timer and list caches from authoritative API responses.
 
-   On successful start, stop, or running update, user-web should set `summary.currentTimer` from the response and update selected context from that same entry. The mutation should reconcile or invalidate current timer, recent/list entries, dashboard summaries, and timer-related query keys consistently with existing timer mutations. On API conflict, the UI should show toast feedback, refresh authoritative timer state, and keep the dialog inputs retryable.
+   On successful start, stop, or running update, user-web should set `summary.currentTimer` from the response and update selected context from that same entry. Start/stop list reconciliation should reuse the behavior defined by `sync-list-state-with-top-bar-timer-changes`; this change adds the same authoritative-response principle for running task/description updates. The mutation should reconcile or invalidate current timer, recent/list entries, dashboard summaries, and timer-related query keys consistently with existing timer mutations. On API conflict, the UI should show toast feedback, refresh authoritative timer state, and keep the dialog inputs retryable.
 
 6. Keep design parity centered on existing approved sources.
 

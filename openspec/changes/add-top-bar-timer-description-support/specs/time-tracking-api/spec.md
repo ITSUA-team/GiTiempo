@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
-### Requirement: Own Completed Time Entries Can Be Read Updated And Deleted
-The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active task, and MUST allow limited task and description updates to their own running time entry while preventing running-entry interval, billable, and delete mutations.
+### Requirement: Own Time Entries Can Be Read Updated And Deleted
+The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active task, and MUST allow limited task and description updates to their own running time entry while preventing running-entry interval, billable, and delete mutations. This broadens the prior running task-only reassignment behavior by allowing `description` as the only additional running-entry update field.
 
 #### Scenario: User reads own entry
 - **GIVEN** an authenticated user owns a time entry
