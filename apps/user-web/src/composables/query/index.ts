@@ -4,6 +4,7 @@ import type {
   CreateTaskInput,
   CurrentTimeEntryResponse,
   ProjectResponse,
+  StartTimerInput,
   TaskResponse,
   TimeEntryListQuery,
   TimeEntryListResponse,
@@ -66,7 +67,7 @@ interface ProjectTasksClient {
 }
 
 interface StartTimerClient {
-  startTimer(taskId: string): Promise<TimeEntryResponse>;
+  startTimer(input: StartTimerInput): Promise<TimeEntryResponse>;
 }
 
 interface StopTimerClient {
@@ -317,8 +318,8 @@ export const useStartTimerMutation = (options: UseStartTimerMutationOptions) => 
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (taskId: string) =>
-      options.client.startTimer(taskId),
+    mutationFn: (input: StartTimerInput) =>
+      options.client.startTimer(input),
     onSuccess: async (timer) => {
       await reconcileTimeEntryCachesAfterTimerMutation(
         queryClient,
@@ -378,7 +379,12 @@ export const useUpdateTimeEntryMutation = (
   return useMutation({
     mutationFn: ({ entryId, input }: { entryId: string; input: UpdateTimeEntryInput }) =>
       options.client.updateEntry(entryId, input),
-    onSuccess: async () => {
+    onSuccess: async (timer) => {
+      await reconcileTimeEntryCachesAfterTimerMutation(
+        queryClient,
+        toValue(options.scope),
+        timer,
+      );
       await invalidateQueryKeys(
         queryClient,
         userMutationInvalidationKeys.afterTimeEntryMutation(toValue(options.scope)),

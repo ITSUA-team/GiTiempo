@@ -1,4 +1,5 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
+import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import { computed, shallowRef, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
@@ -174,26 +175,37 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     }
 
     selectionUpdateErrorMessage.value = null;
+    const description = picker.getNormalizedDescription();
 
     if (summary.currentTimer.value) {
       const currentTimerId = summary.currentTimer.value.id;
+      const currentDescription = summary.currentTimer.value.description ?? null;
 
-      if (summary.currentTimer.value.task.id === context.taskId) {
+      if (
+        summary.currentTimer.value.task.id === context.taskId &&
+        currentDescription === description
+      ) {
         closeDialog();
         return;
       }
 
       try {
-        await updateTimeEntryMutation.mutateAsync({
+        const updatedTimer = await updateTimeEntryMutation.mutateAsync({
           entryId: currentTimerId,
-          input: { taskId: context.taskId },
+          input: {
+            description,
+            taskId: context.taskId,
+          },
         });
 
-        await summary.refreshSummary();
+        summary.currentTimer.value = updatedTimer;
+        summary.setSelectedContextFromTimer(updatedTimer);
+        summary.setSelectedDescriptionFromTimer(updatedTimer);
+        picker.setSelectedDescription(updatedTimer.description ?? "");
         closeDialog();
         appToast.showSuccessToast(
-          "Timer task updated",
-          "The running timer now tracks the selected task.",
+          "Timer updated",
+          "Your running timer has been updated.",
         );
       } catch (error) {
         const message = getErrorMessage(error);
@@ -202,16 +214,19 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
         appToast.showErrorToast({
           detail: "Please try again.",
           error,
-          logContext: { action: "update-running-timer-task", feature: "top-bar-timer" },
-          summary: "Could not update the timer task",
+          logContext: { action: "update-running-timer", feature: "top-bar-timer" },
+          summary: "Could not update the timer",
         });
-        await summary.refreshSummaryAfterConflict(error);
+
+        if (isApiErrorStatus(error, [403, 404, 409, 422])) {
+          await summary.refreshSummary();
+        }
       }
 
       return;
     }
 
-    summary.selectedContext.value = context;
+    summary.setIdleSelection(context, description);
     closeDialog();
   }
 
@@ -225,7 +240,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   watch(
     picker.selectedProjectId,
-    async (nextProjectId) => {
+    async (nextProjectId, previousProjectId) => {
       if (!picker.isDialogOpen.value) {
         return;
       }
@@ -235,6 +250,10 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
         picker.setTasksError(null);
         picker.setSelectedTaskId(null);
         return;
+      }
+
+      if (nextProjectId !== previousProjectId && previousProjectId !== null) {
+        picker.setSelectedTaskId(null);
       }
 
       try {
@@ -276,12 +295,14 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     projectOptions: picker.activeProjects,
     refreshSummary: summary.refreshSummary,
     selectedContext: summary.selectedContext,
+    selectedDescription: picker.selectedDescription,
     selectedProjectId: picker.selectedProjectId,
     selectedProject: picker.selectedProject,
     selectedTask: picker.selectedTask,
     selectedTaskId: picker.selectedTaskId,
     selectionUpdateErrorMessage,
     setCreateTaskTitle: picker.setCreateTaskTitle,
+    setSelectedDescription: picker.setSelectedDescription,
     setSelectedProjectId,
     setSelectedTaskId,
     summaryErrorMessage: summary.summaryErrorMessage,

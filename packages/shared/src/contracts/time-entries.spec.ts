@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { timeEntryResponseSchema, updateTimeEntrySchema } from "./time-entries.js";
+import {
+  startTimerSchema,
+  timeEntryResponseSchema,
+  updateTimeEntrySchema,
+} from "./time-entries.js";
 
 describe("timeEntryResponseSchema", () => {
   it("accepts stable github issue linkage on time entry responses", () => {
@@ -114,5 +118,55 @@ describe("updateTimeEntrySchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+  });
+});
+
+describe("startTimerSchema", () => {
+  it("accepts start payloads without a description", () => {
+    const result = startTimerSchema.parse({
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
+
+    expect(result).toEqual({
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
+  });
+
+  it("accepts a string description", () => {
+    const result = startTimerSchema.parse({
+      description: "Investigate release blocker",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
+
+    expect(result.description).toBe("Investigate release blocker");
+  });
+
+  it("accepts a null description", () => {
+    const result = startTimerSchema.parse({
+      description: null,
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
+
+    expect(result.description).toBeNull();
+  });
+
+  it("rejects unknown fields", () => {
+    const result = startTimerSchema.safeParse({
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      unknown: true,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+  });
+
+  it("rejects descriptions over the contract limit", () => {
+    const result = startTimerSchema.safeParse({
+      description: "x".repeat(2001),
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["description"]);
   });
 });

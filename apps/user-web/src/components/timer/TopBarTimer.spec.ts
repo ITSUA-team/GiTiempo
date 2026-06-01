@@ -15,6 +15,7 @@ const createTaskFromDialog = vi.fn();
 const handlePrimaryAction = vi.fn();
 const openDialog = vi.fn();
 const setCreateTaskTitle = vi.fn();
+const setSelectedDescription = vi.fn();
 const setSelectedProjectId = vi.fn();
 const setSelectedTaskId = vi.fn();
 
@@ -40,10 +41,12 @@ const composableState = {
   primaryActionLabel: shallowRef("Start"),
   projectsErrorMessage: shallowRef<string | null>(null),
   projectOptions: shallowRef([]),
+  selectedDescription: shallowRef(""),
   selectedProjectId: shallowRef<string | null>(null),
   selectedTaskId: shallowRef<string | null>(null),
   selectionUpdateErrorMessage: shallowRef<string | null>(null),
   setCreateTaskTitle,
+  setSelectedDescription,
   setSelectedProjectId,
   setSelectedTaskId,
   summaryErrorMessage: shallowRef<string | null>(null),
@@ -86,6 +89,7 @@ describe("TopBarTimer", () => {
       handlePrimaryAction,
       openDialog,
       setCreateTaskTitle,
+      setSelectedDescription,
       setSelectedProjectId,
       setSelectedTaskId,
     }).forEach((spy) => spy.mockReset());

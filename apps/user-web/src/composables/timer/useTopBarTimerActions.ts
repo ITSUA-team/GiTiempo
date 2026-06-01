@@ -1,4 +1,5 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
+import type { StartTimerInput } from "@gitiempo/shared";
 import {
   useStartTimerMutation,
   useStopTimerMutation,
@@ -53,6 +54,7 @@ export function useTopBarTimerActions({
 
         summary.currentTimer.value = null;
         summary.setSelectedContextFromTimer(stoppedTimer);
+        summary.clearSelectedDescription();
         appToast.showSuccessToast("Timer stopped", "Your running timer has been stopped.");
       } catch (error) {
         timerActionErrorMessage.value = getErrorMessage(error);
@@ -72,11 +74,18 @@ export function useTopBarTimerActions({
     }
 
     try {
-      summary.currentTimer.value = await startTimerMutation.mutateAsync(
-        summary.selectedContext.value.taskId,
-      );
+      const input: StartTimerInput = {
+        taskId: summary.selectedContext.value.taskId,
+      };
+
+      if (summary.selectedDescription.value !== null) {
+        input.description = summary.selectedDescription.value;
+      }
+
+      summary.currentTimer.value = await startTimerMutation.mutateAsync(input);
       if (summary.currentTimer.value) {
         summary.setSelectedContextFromTimer(summary.currentTimer.value);
+        summary.setSelectedDescriptionFromTimer(summary.currentTimer.value);
       }
       appToast.showSuccessToast("Timer started", "Your timer is now running.");
     } catch (error) {

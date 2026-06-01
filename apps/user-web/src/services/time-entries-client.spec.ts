@@ -295,9 +295,9 @@ describe("createTimeEntriesClient", () => {
     );
     const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.startTimer(
-      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-    );
+    await client.startTimer({
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
 
     expect(fetchFn).toHaveBeenCalledWith("/time-entries/timer/start", {
       body: JSON.stringify({
@@ -308,6 +308,77 @@ describe("createTimeEntriesClient", () => {
         "Content-Type": "application/json",
       },
       method: "POST",
+    });
+  });
+
+  it("posts timer start requests with a nullable description", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        createdAt: "2026-04-21T09:00:00.000Z",
+        description: "Investigate release blocker",
+        durationSeconds: null,
+        endedAt: null,
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        isBillable: true,
+        project: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          name: "Project Orion",
+        },
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        source: "web",
+        startedAt: "2026-04-21T09:00:00.000Z",
+        githubIssue: null,
+        task: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+          title: "Improve reports filters",
+        },
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        updatedAt: "2026-04-21T09:00:00.000Z",
+        user: {
+          avatarUrl: null,
+          displayName: "Alexey Tsukanov",
+          email: "alexey@example.com",
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        },
+        userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+      }),
+    );
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+
+    await client.startTimer({
+      description: "Investigate release blocker",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+
+    const call = fetchFn.mock.calls[0];
+
+    if (!call) {
+      throw new Error("Expected timer start request");
+    }
+
+    const [path, requestInit] = call as unknown as [
+      string,
+      {
+        body?: string;
+        headers?: Record<string, string>;
+        method?: string;
+      },
+    ];
+
+    expect(path).toBe("/time-entries/timer/start");
+    expect(requestInit).toMatchObject({
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+    expect(JSON.parse(String(requestInit.body))).toEqual({
+      description: "Investigate release blocker",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
     });
   });
 
@@ -570,9 +641,9 @@ describe("createTimeEntriesClient", () => {
     const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
-      client.startTimer(
-        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-      ),
+      client.startTimer({
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      }),
     ).rejects.toThrow("A timer is already running");
   });
 

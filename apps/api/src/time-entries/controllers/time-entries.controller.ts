@@ -135,7 +135,7 @@ export class TimeEntriesController {
   @ApiOkResponse({ type: TimeEntryResponseDto })
   @ApiConflictResponse({
     description:
-      'Running entries must be stopped first unless only taskId is being reassigned',
+      'Running entries may update only task and description without stopping first',
   })
   @ApiNotFoundResponse({ description: 'Time entry not found' })
   @ApiUnprocessableEntityResponse({ description: 'Task or project inactive' })

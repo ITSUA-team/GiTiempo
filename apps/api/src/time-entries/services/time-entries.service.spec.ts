@@ -82,12 +82,81 @@ describe('TimeEntriesService', () => {
     ).toThrow(BadRequestException);
   });
 
-  it('rejects updates to running entries', async () => {
+  it('updates running entries with task and description changes', async () => {
     const tx = {
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: completedEntry.id }]),
+          }),
+        }),
+      }),
       select: vi.fn().mockReturnValue(
         selectRowsForUpdate([
           {
             ...completedEntry,
+            description: 'Existing note',
+            endedAt: null,
+            durationSeconds: null,
+            source: 'web',
+          },
+        ]),
+      ),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
+    };
+    const tasks = {
+      requireTrackableTask: vi
+        .fn()
+        .mockResolvedValue({ task: { id: 'task-2' } }),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      tasks as never,
+      mockUsersActivity as never,
+    );
+
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: vi.fn().mockResolvedValue({
+        ...completedEntry,
+        description: 'Investigate release blocker',
+        endedAt: null,
+        durationSeconds: null,
+        source: 'web',
+        taskId: 'task-2',
+      }),
+    });
+
+    await expect(
+      service.updateOwnEntry(user, completedEntry.id, {
+        description: 'Investigate release blocker',
+        taskId: 'task-2',
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        description: 'Investigate release blocker',
+        taskId: 'task-2',
+      }),
+    );
+  });
+
+  it('clears running-entry descriptions without stopping the timer', async () => {
+    const tx = {
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: completedEntry.id }]),
+          }),
+        }),
+      }),
+      select: vi.fn().mockReturnValue(
+        selectRowsForUpdate([
+          {
+            ...completedEntry,
+            description: 'Existing note',
             endedAt: null,
             durationSeconds: null,
             source: 'web',
@@ -105,13 +174,26 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
     );
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: vi.fn().mockResolvedValue({
+        ...completedEntry,
+        description: null,
+        endedAt: null,
+        durationSeconds: null,
+        source: 'web',
+      }),
+    });
 
     await expect(
-      service.updateOwnEntry(user, completedEntry.id, { description: 'x' }),
-    ).rejects.toBeInstanceOf(ConflictException);
+      service.updateOwnEntry(user, completedEntry.id, { description: null }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        description: null,
+      }),
+    );
   });
 
-  it('rejects mixed running-entry updates before validating the task', async () => {
+  it('rejects running-entry time or billable updates', async () => {
     const tx = {
       select: vi.fn().mockReturnValue(
         selectRowsForUpdate([
@@ -140,12 +222,83 @@ describe('TimeEntriesService', () => {
 
     await expect(
       service.updateOwnEntry(user, completedEntry.id, {
-        taskId: 'task-2',
         description: 'x',
+        endedAt: '2026-01-01T12:00:00.000Z',
+        taskId: 'task-2',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
 
     expect(tasks.requireTrackableTask).not.toHaveBeenCalled();
+  });
+
+  it('propagates invisible task reassignment failures for running entries', async () => {
+    const tx = {
+      select: vi.fn().mockReturnValue(
+        selectRowsForUpdate([
+          {
+            ...completedEntry,
+            endedAt: null,
+            durationSeconds: null,
+            source: 'web',
+          },
+        ]),
+      ),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
+    };
+    const tasks = {
+      requireTrackableTask: vi
+        .fn()
+        .mockRejectedValue(new NotFoundException('Task not found')),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      tasks as never,
+      mockUsersActivity as never,
+    );
+
+    await expect(
+      service.updateOwnEntry(user, completedEntry.id, { taskId: 'task-2' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('propagates inactive task reassignment failures for running entries', async () => {
+    const tx = {
+      select: vi.fn().mockReturnValue(
+        selectRowsForUpdate([
+          {
+            ...completedEntry,
+            endedAt: null,
+            durationSeconds: null,
+            source: 'web',
+          },
+        ]),
+      ),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
+    };
+    const tasks = {
+      requireTrackableTask: vi
+        .fn()
+        .mockRejectedValue(
+          new UnprocessableEntityException('Task is inactive'),
+        ),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      tasks as never,
+      mockUsersActivity as never,
+    );
+
+    await expect(
+      service.updateOwnEntry(user, completedEntry.id, { taskId: 'task-2' }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
   it('allows task-only reassignment for running entries', async () => {
@@ -249,6 +402,46 @@ describe('TimeEntriesService', () => {
     await expect(
       service.startTimer(user, { taskId: 'task-1' }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('starts web timers with an optional description', async () => {
+    const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const db = { insert: vi.fn().mockReturnValue({ values }) };
+    const tasks = {
+      requireTrackableTask: vi.fn().mockResolvedValue({
+        project: { id: 'project-1', isActive: true },
+        task: { id: 'task-1', isActive: true },
+      }),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      tasks as never,
+      mockUsersActivity as never,
+    );
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: vi.fn().mockResolvedValue({
+        ...completedEntry,
+        description: 'Investigate release blocker',
+        endedAt: null,
+        durationSeconds: null,
+        source: 'web',
+      }),
+    });
+
+    await service.startTimer(user, {
+      description: 'Investigate release blocker',
+      taskId: 'task-1',
+    });
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Investigate release blocker',
+        source: 'web',
+      }),
+    );
   });
 
   it('returns not found when stopping without a running timer', async () => {
