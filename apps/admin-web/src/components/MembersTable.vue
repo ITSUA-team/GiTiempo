@@ -25,6 +25,12 @@ import {
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
+import {
+  formatLocalCalendarDate,
+  hasValidDate,
+  isSameLocalDateValue,
+  isWithinLocalIsoWeekToDate,
+} from '@gitiempo/web-shared/time';
 import Avatar from 'primevue/avatar';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
@@ -136,76 +142,22 @@ function getMemberDisplayName(member: WorkspaceMemberResponse): string {
   return member.displayName?.trim() || member.email;
 }
 
-const lastActiveFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-});
-
-function formatLastActive(lastActiveAt: string | null): string {
-  if (!lastActiveAt) {
-    return '—';
-  }
-
-  const parsed = new Date(lastActiveAt);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return '—';
-  }
-
-  return lastActiveFormatter.format(parsed);
-}
-
-function getLastActiveDate(member: WorkspaceMemberResponse): Date | null {
-  if (!member.lastActiveAt) {
-    return null;
-  }
-
-  const parsed = new Date(member.lastActiveAt);
-
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function isSameLocalDate(first: Date, second: Date): boolean {
-  return (
-    first.getFullYear() === second.getFullYear() &&
-    first.getMonth() === second.getMonth() &&
-    first.getDate() === second.getDate()
-  );
-}
-
-function getLocalWeekStart(date: Date): Date {
-  const day = date.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() + mondayOffset);
-
-  weekStart.setHours(0, 0, 0, 0);
-
-  return weekStart;
-}
-
 function matchesLastActiveFilter(member: WorkspaceMemberResponse): boolean {
   if (filters.lastActive === 'any') {
     return true;
   }
 
-  const lastActiveDate = getLastActiveDate(member);
-
   if (filters.lastActive === 'inactive') {
-    return lastActiveDate === null;
-  }
-
-  if (!lastActiveDate) {
-    return false;
+    return !hasValidDate(member.lastActiveAt);
   }
 
   const now = new Date();
 
   if (filters.lastActive === 'today') {
-    return isSameLocalDate(lastActiveDate, now);
+    return isSameLocalDateValue(member.lastActiveAt, now);
   }
 
-  return lastActiveDate >= getLocalWeekStart(now) && lastActiveDate <= now;
+  return isWithinLocalIsoWeekToDate(member.lastActiveAt, now);
 }
 
 function getMemberProjectOptions(member: WorkspaceMemberResponse): FilterOption[] {
@@ -258,7 +210,7 @@ function matchesGlobalSearch(member: WorkspaceMemberResponse): boolean {
     member.email,
     formatWorkspaceRole(member.role),
     formatProjectsAssigned(member),
-    formatLastActive(member.lastActiveAt),
+    formatLocalCalendarDate(member.lastActiveAt),
     ...projectLabels,
   ].join(' ');
 
@@ -543,7 +495,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
             { label: 'Projects', value: formatProjectsAssigned(member) },
             {
               label: 'Last active',
-              value: formatLastActive(member.lastActiveAt),
+              value: formatLocalCalendarDate(member.lastActiveAt),
               fullWidth: true,
             },
           ]"
@@ -724,7 +676,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
-          formatLastActive(data.lastActiveAt)
+          formatLocalCalendarDate(data.lastActiveAt)
         }}</span>
       </template>
     </Column>

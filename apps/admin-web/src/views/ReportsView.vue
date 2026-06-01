@@ -2,6 +2,7 @@
 import { computed, ref, shallowRef } from 'vue';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
 import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
+import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
@@ -14,7 +15,6 @@ import { downloadReportExport } from '@/lib/report-download';
 import {
   createDefaultReportTableFilters,
   filterReportRows,
-  formatReportDuration,
   formatReportPercent,
   getReportDateRangeError,
   type ReportDateRange,
@@ -69,13 +69,13 @@ const exportDisabled = computed(
 );
 
 const totalHoursLabel = computed(() =>
-  formatReportDuration(summary.value.totalSeconds),
+  formatPaddedHoursMinutesDuration(summary.value.totalSeconds),
 );
 const billableShareLabel = computed(() =>
   formatReportPercent(summary.value.billableShare),
 );
 const avgPerMemberLabel = computed(() =>
-  formatReportDuration(summary.value.avgPerMemberSeconds),
+  formatPaddedHoursMinutesDuration(summary.value.avgPerMemberSeconds),
 );
 const trackedHoursDescription = computed(() => {
   const count = summary.value.memberCount;
@@ -88,7 +88,7 @@ const topProjectDescription = computed(() => {
     return 'No tracked time';
   }
 
-  return `${formatReportDuration(seconds)} tracked this period`;
+  return `${formatPaddedHoursMinutesDuration(seconds)} tracked this period`;
 });
 
 async function handleExport(): Promise<void> {
