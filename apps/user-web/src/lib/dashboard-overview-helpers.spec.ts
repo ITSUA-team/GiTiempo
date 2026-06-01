@@ -129,4 +129,17 @@ describe("dashboard-overview-helpers", () => {
       },
     ]);
   });
+
+  it("does not highlight completed rows just because they are first", () => {
+    const rows = mapDashboardRecentEntryRows(
+      [
+        createEntry({ id: "entry-completed-first" }),
+        createEntry({ id: "entry-completed-second" }),
+      ],
+      Date.parse("2026-04-21T12:00:00.000Z"),
+    );
+
+    expect(rows[0]?.isHighlighted).toBe(false);
+    expect(rows[1]?.isHighlighted).toBe(false);
+  });
 });

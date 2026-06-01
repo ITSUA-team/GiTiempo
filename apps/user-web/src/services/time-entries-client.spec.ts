@@ -535,6 +535,31 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("passes abort signals through list requests", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        items: [],
+        meta: { limit: 10, page: 1, total: 0, totalPages: 0 },
+      }),
+    );
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+    const controller = new AbortController();
+
+    await client.listOwnEntries({ limit: 10 }, { signal: controller.signal });
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/time-entries?page=1&limit=10",
+      {
+        body: undefined,
+        headers: {
+          Authorization: "Bearer access-token",
+        },
+        method: "GET",
+        signal: controller.signal,
+      },
+    );
+  });
+
   it("throws API error messages using repository message ordering", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse(

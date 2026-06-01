@@ -9,6 +9,7 @@ interface RequestJsonOptions<TResponse> {
   method?: string;
   path: string;
   responseSchema: ZodType<TResponse>;
+  signal?: AbortSignal;
 }
 
 export interface ApiRequestOptions {
@@ -17,6 +18,7 @@ export interface ApiRequestOptions {
   headers?: Record<string, string>;
   method?: string;
   path: string;
+  signal?: AbortSignal;
 }
 
 export interface ApiRequestJsonOptions<TResponse> extends ApiRequestOptions {
@@ -79,6 +81,7 @@ export async function requestJson<TResponse>({
   method = "GET",
   path,
   responseSchema,
+  signal,
 }: RequestJsonOptions<TResponse>): Promise<TResponse> {
   const requestHeaders: Record<string, string> = {
     ...(headers ?? {}),
@@ -98,6 +101,7 @@ export async function requestJson<TResponse>({
           }
         : requestHeaders,
     method,
+    ...(signal ? { signal } : {}),
   });
 
   if (!response.ok) {
@@ -172,6 +176,7 @@ export function createAuthenticatedApiClient({
         token,
       }),
       method: options.method ?? "GET",
+      ...(options.signal ? { signal: options.signal } : {}),
     });
   }
 
