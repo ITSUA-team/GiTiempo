@@ -1,14 +1,13 @@
-import type { TimeEntryListQuery } from "@gitiempo/shared";
-import { computed, ref, shallowRef } from "vue";
-
-import { nextUtcDay, startOfUtcDay } from "@/lib/time-formatters";
+import type { TimeEntryListQuery } from '@gitiempo/shared';
+import { nextUtcDay, startOfUtcDay } from '@gitiempo/web-shared/time';
+import { computed, ref, shallowRef } from 'vue';
 
 import {
   buildTaskLookupSuggestions,
   isTaskLookupOption,
   type TaskLookupOption,
   type TaskLookupValue,
-} from "./time-entry-task-lookup";
+} from './time-entry-task-lookup';
 
 export function useTimeEntryFilters() {
   const currentPage = shallowRef(1);
@@ -23,16 +22,18 @@ export function useTimeEntryFilters() {
   let taskRequestId = 0;
 
   const selectedTaskId = computed(() =>
-    isTaskLookupOption(selectedTaskFilter.value) ? selectedTaskFilter.value.id : null,
+    isTaskLookupOption(selectedTaskFilter.value)
+      ? selectedTaskFilter.value.id
+      : null,
   );
   const entryListQuery = computed<Partial<TimeEntryListQuery>>(() => {
     const [startDate, endDate] = selectedDateRange.value ?? [];
     const searchValue =
-      typeof selectedTaskFilter.value === "string"
+      typeof selectedTaskFilter.value === 'string'
         ? selectedTaskFilter.value.trim()
         : isTaskLookupOption(selectedTaskFilter.value)
           ? selectedTaskFilter.value.title
-          : "";
+          : '';
 
     return {
       dateFrom: startDate ? startOfUtcDay(startDate).toISOString() : undefined,
@@ -93,7 +94,10 @@ export function useTimeEntryFilters() {
     filterTasksErrorMessage.value = message;
   }
 
-  function updateTaskSuggestions(query: string, options: TaskLookupOption[]): void {
+  function updateTaskSuggestions(
+    query: string,
+    options: TaskLookupOption[],
+  ): void {
     filterTaskSuggestions.value = buildTaskLookupSuggestions(query, options);
   }
 
