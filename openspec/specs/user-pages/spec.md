@@ -67,13 +67,21 @@ The user dashboard SHALL provide an authenticated overview page focused on weekl
 
 ### Requirement: Global Top-Bar Timer
 
-The user-web authenticated shell MUST expose timer start, stop, and task-context selection through a compact top-bar timer surface on every authenticated member page.
+The user-web authenticated shell MUST expose timer start, stop, and task-context selection through a compact top-bar timer surface on tablet and desktop, and through the approved mobile timer strip on mobile authenticated member pages.
 
 #### Scenario: Running timer shown in authenticated top bar
 
 - **GIVEN** the authenticated user has a running timer
-- **WHEN** any authenticated user-web page renders
+- **WHEN** any authenticated user-web page renders at tablet or desktop width
 - **THEN** the top bar shows a compact running timer surface with live `HH:MM:SS`, current `Project / Task`, a clickable task information field, and one stop action
+- **AND** the elapsed display advances while the timer remains active without requiring a page refresh
+
+#### Scenario: Running timer shown in mobile timer strip
+
+- **GIVEN** the authenticated user has a running timer
+- **WHEN** any authenticated user-web page renders below the mobile breakpoint
+- **THEN** the mobile timer strip shows live `HH:MM:SS`, current `Project / Task`, a task-change affordance, and one stop action
+- **AND** the stop action and task-change affordance remain available even if the profile menu opens from the top-right identity control
 - **AND** the elapsed display advances while the timer remains active without requiring a page refresh
 
 #### Scenario: Idle top-bar timer uses eligible last tracked task
@@ -81,44 +89,88 @@ The user-web authenticated shell MUST expose timer start, stop, and task-context
 - **GIVEN** the authenticated user has no running timer
 - **AND** the user has a most recent own time entry whose task and parent project are still visible and active
 - **WHEN** any authenticated user-web page renders
-- **THEN** the top bar shows that last tracked `Project / Task` context
-- **AND** the top bar start action creates a fresh running time entry for that task
+- **THEN** the timer surface shows that last tracked `Project / Task` context
+- **AND** the start action creates a fresh running time entry for that task
 - **AND** the previous time entry record is not resumed or mutated
 
 #### Scenario: No eligible task keeps picker available
 
 - **GIVEN** the authenticated user has no running timer
 - **AND** no recent own time entry resolves to a currently visible active project and active task
-- **WHEN** the top-bar timer renders
-- **THEN** the top bar keeps the compact timer surface visible in a no-eligible-task state
-- **AND** the task information field remains clickable
+- **WHEN** the timer surface renders
+- **THEN** the timer surface keeps a no-eligible-task state visible
+- **AND** the task information or task-change affordance remains clickable
 - **AND** the start action is disabled until a valid task context is selected
 
 #### Scenario: Timer summary load failure stays compact
 
 - **WHEN** current timer or timer-summary data fails to load in the authenticated shell
-- **THEN** the top-bar timer keeps the same compact surface shape visible
+- **THEN** the timer surface keeps the same compact desktop or mobile strip shape visible
 - **AND** the start or stop action is disabled while the state is not actionable
 - **AND** the failure is surfaced through standard toast feedback
 
 #### Scenario: Task information opens picker dialog
 
-- **WHEN** the user activates the top-bar task information field
+- **WHEN** the user activates the timer task information field or mobile task-change affordance
 - **THEN** a centered task-picker dialog opens
 - **AND** the dialog uses visible Project -> Task selection only
 - **AND** the dialog does not include manual interval entry controls
 
 ### Requirement: Top-Bar Timer Task Picker
 
-The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context or create a new task inside the selected visible project.
+The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context or create a new task inside the selected visible project, MUST remain usable from the mobile timer strip, and MUST support reassigning the task of the currently running timer.
 
-#### Scenario: Existing task selected for timer context
+#### Scenario: Existing task selected for idle timer context
 
 - **GIVEN** the top-bar timer task picker is open
+- **AND** no timer is currently running
 - **WHEN** the user selects a visible project and one of that project's tasks
 - **THEN** the dialog allows confirmation with `Use selected task`
 - **AND** the top-bar timer context updates to the selected `Project / Task`
 - **AND** a subsequent idle start action starts a fresh timer for that task
+
+#### Scenario: Running timer task is preselected
+
+- **GIVEN** the authenticated user has a running timer
+- **WHEN** the user opens the top-bar timer task picker
+- **THEN** the dialog preselects the running timer's current project and task
+- **AND** loading task options does not clear that preselected task unless the user selects a different project
+
+#### Scenario: Running timer task is reassigned
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open
+- **WHEN** the user selects a different visible active task and confirms the selection
+- **THEN** the app updates the running time entry to that task without stopping the timer
+- **AND** the timer surface refreshes from the authoritative current timer state
+- **AND** the dialog closes after the refreshed timer state is applied
+
+#### Scenario: Running timer stops before task reassignment completes
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open
+- **WHEN** the timer stops before the selected task update completes successfully
+- **THEN** the app treats the task update as a successful correction to the same time entry
+- **AND** the timer surface refreshes from the authoritative current timer state
+- **AND** the dialog closes even when the refreshed timer state shows no running timer
+
+#### Scenario: Current running task confirmation does not update
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open with the running timer's current task selected
+- **WHEN** the user confirms the selection
+- **THEN** the app does not send a running-entry task update
+- **AND** the dialog closes without changing the visible timer context
+
+#### Scenario: Running timer task update failure keeps picker open
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open
+- **WHEN** the user selects a different task and the running-entry task update fails
+- **THEN** the dialog remains open
+- **AND** the dialog shows inline error feedback
+- **AND** the visible current task does not switch to the failed selection
+- **AND** not-found, authorization, validation, visibility, or conflict responses refresh the authoritative timer summary
 
 #### Scenario: New task created inside selected project
 
@@ -133,6 +185,15 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **WHEN** project loading, task loading, empty results, validation failure, or request failure occurs in the task picker
 - **THEN** the dialog renders a state specific to that condition
 - **AND** failed requests are not collapsed into empty-data messaging
+
+#### Scenario: Mobile task picker keeps full-width actions usable
+
+- **GIVEN** the authenticated user opens the task picker from the mobile timer strip Change affordance
+- **WHEN** the task-picker dialog renders below the mobile breakpoint
+- **THEN** the dialog uses a near-full-width mobile layout with scrollable content
+- **AND** the footer actions render as full-width stacked buttons
+- **AND** `Use selected task` renders before `Cancel` in the mobile stacked button and keyboard order
+- **AND** the dialog still separates existing task selection from creating a new task inside the selected visible project
 
 ### Requirement: Time Entries Page Record Management
 
@@ -455,4 +516,83 @@ User-web record-list surfaces SHALL preserve desktop table rendering on tablet a
 - **GIVEN** the Time Entries page has a day group with own time entries
 - **WHEN** the day section renders at or above the mobile breakpoint
 - **THEN** the section continues to render the existing desktop entry table with task, project, time, duration, and actions columns
+
+### Requirement: Top-Bar Timer Changes Synchronize User Time Entry Lists
+
+The user app SHALL synchronize visible Dashboard weekly aggregate state, Dashboard recent-entry state, and Time Entries list state with successful global top-bar timer lifecycle changes without requiring a page refresh.
+
+#### Scenario: Dashboard weekly aggregates update after top-bar timer start
+
+- **GIVEN** an authenticated user is viewing the Dashboard
+- **AND** the Dashboard weekly focus or stats depend on the current-week entry set
+- **WHEN** the top-bar timer start action succeeds and returns a running time entry that belongs in the current-week dashboard query scope
+- **THEN** the Dashboard weekly focus and stats SHALL update without a page refresh
+- **AND** the updated values SHALL continue to derive from the same current-week entry set semantics used by the Dashboard overview
+
+#### Scenario: Dashboard weekly aggregates update after top-bar timer stop
+
+- **GIVEN** an authenticated user is viewing the Dashboard
+- **AND** the Dashboard weekly focus or stats currently include the running entry controlled by the top-bar timer
+- **WHEN** the top-bar timer stop action succeeds and returns the completed time entry
+- **THEN** the Dashboard weekly focus and stats SHALL update without a page refresh
+- **AND** the updated values SHALL reflect the completed duration from the returned entry
+- **AND** the Dashboard SHALL NOT require a full page reload to clear stale running-entry contribution from weekly aggregates
+
+#### Scenario: Dashboard recent entries update after top-bar timer start
+
+- **GIVEN** an authenticated user is viewing the Dashboard
+- **AND** the top-bar timer start action succeeds and returns a running time entry
+- **WHEN** the returned entry belongs in the Dashboard recent-entry scope
+- **THEN** the Recent Time Entries row or card for that entry SHALL appear or update without a page refresh
+- **AND** it SHALL use the running-entry range, live duration, and highlighted running/current visual state defined for Dashboard recent entries
+- **AND** the Dashboard SHALL NOT expose page-local timer stop controls.
+
+#### Scenario: Dashboard recent entries update after top-bar timer stop
+
+- **GIVEN** an authenticated user is viewing the Dashboard
+- **AND** the Recent Time Entries section includes the running entry controlled by the top-bar timer
+- **WHEN** the top-bar timer stop action succeeds and returns the completed time entry
+- **THEN** the matching Dashboard row or card SHALL update without a page refresh
+- **AND** it SHALL render the completed range and duration from the returned entry
+- **AND** it SHALL no longer render running/current highlighting or live duration growth for that entry
+- **AND** the recent-entry ordering SHALL continue to follow the backend list ordering semantics.
+
+#### Scenario: Time Entries list updates after top-bar timer start
+
+- **GIVEN** an authenticated user is viewing the Time Entries page
+- **AND** the top-bar timer start action succeeds and returns a running time entry
+- **WHEN** the returned entry belongs in the current Time Entries visible list scope
+- **THEN** the grouped entry list SHALL appear or update without a page refresh
+- **AND** any currently visible row or card with the same `id` SHALL be replaced by the returned entry
+- **AND** a new row or card SHALL be inserted only when the returned entry matches the active filters and the current list scope is unpaged or on page 1
+- **AND** later paginated pages SHALL NOT inject a new row or card for that started entry
+- **AND** paginated visible scopes that gain the new entry locally SHALL update `total` and `totalPages` consistently with the visible list state
+- **AND** the running entry row or card SHALL use the running-entry visual treatment
+- **AND** edit and delete actions SHALL remain unavailable for that running entry.
+
+#### Scenario: Time Entries list updates after top-bar timer stop
+
+- **GIVEN** an authenticated user is viewing the Time Entries page
+- **AND** the visible list includes the running entry controlled by the top-bar timer
+- **WHEN** the top-bar timer stop action succeeds and returns the completed time entry
+- **THEN** the matching grouped row or card SHALL update without a page refresh
+- **AND** if the completed entry no longer matches the active filters, that visible row or card SHALL be removed from the current list scope
+- **AND** paginated visible scopes that lose the entry locally SHALL update `total` and `totalPages` consistently with the visible list state
+- **AND** filtered or paginated scopes that cannot be preserved safely through local reconciliation SHALL remain unchanged until the existing list reload path runs
+- **AND** it SHALL render the completed range and duration from the returned entry
+- **AND** running-entry highlighting and live duration growth SHALL stop for that entry
+- **AND** edit and delete actions SHALL follow the existing completed-entry rules.
+
+#### Scenario: Idle top-bar task selection does not create list state
+
+- **GIVEN** no timer is running
+- **WHEN** the user changes the selected task in the global top-bar timer
+- **THEN** Dashboard recent entries and Time Entries SHALL NOT insert a synthetic row or card
+- **AND** they SHALL NOT mark an entry as running/current solely because of idle task selection.
+
+#### Scenario: Failed top-bar timer mutation leaves lists unchanged
+
+- **GIVEN** the Dashboard or Time Entries page has visible time-entry list state
+- **WHEN** a top-bar timer start or stop action fails
+- **THEN** visible list state SHALL remain based on the previously loaded or reconciled entries.
 

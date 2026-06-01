@@ -106,6 +106,92 @@ describe('createAdminMembersClient', () => {
     expect(result.email).toBe('new-member@example.com');
   });
 
+  it('resends invites with the expected path, no request body, and parsed response', async () => {
+    fetchFn.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          createdAt: '2026-05-01T10:00:00.000Z',
+          email: 'new-member@example.com',
+          expiresAt: '2026-05-08T10:00:00.000Z',
+          id: '44444444-4444-4444-8444-444444444444',
+          invitedBy: '55555555-5555-4555-8555-555555555555',
+          role: 'pm',
+          status: 'pending',
+          workspaceId: '33333333-3333-4333-8333-333333333333',
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        },
+      ),
+    );
+
+    const result = await client.resendInvite(
+      '44444444-4444-4444-8444-444444444444',
+    );
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/invites/44444444-4444-4444-8444-444444444444/resend',
+      expect.objectContaining({
+        headers: {
+          Authorization: 'Bearer access-token',
+        },
+        method: 'POST',
+      }),
+    );
+    const [, requestOptions] = fetchFn.mock.calls[0] ?? [];
+    expect(requestOptions?.body).toBeUndefined();
+    expect(result.email).toBe('new-member@example.com');
+  });
+
+  it('surfaces backend resend errors', async () => {
+    fetchFn.mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Invite has expired' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 410,
+      }),
+    );
+
+    await expect(
+      client.resendInvite('44444444-4444-4444-8444-444444444444'),
+    ).rejects.toThrow('Invite has expired');
+  });
+
+  it('cancels invites with the expected path and no request body', async () => {
+    fetchFn.mockResolvedValue(
+      new Response(null, {
+        status: 204,
+      }),
+    );
+
+    await client.cancelInvite('44444444-4444-4444-8444-444444444444');
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/invites/44444444-4444-4444-8444-444444444444',
+      expect.objectContaining({
+        headers: {
+          Authorization: 'Bearer access-token',
+        },
+        method: 'DELETE',
+      }),
+    );
+    const [, requestOptions] = fetchFn.mock.calls[0] ?? [];
+    expect(requestOptions?.body).toBeUndefined();
+  });
+
+  it('surfaces backend cancel-invite errors', async () => {
+    fetchFn.mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Pending invite not found' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 404,
+      }),
+    );
+
+    await expect(
+      client.cancelInvite('44444444-4444-4444-8444-444444444444'),
+    ).rejects.toThrow('Pending invite not found');
+  });
+
   it('surfaces API errors for destructive member removal', async () => {
     fetchFn.mockResolvedValue(
       new Response(JSON.stringify({ message: 'Last admin cannot be removed' }), {

@@ -9,6 +9,7 @@ import {
   useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
+import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -16,8 +17,8 @@ import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
+import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
-  formatReportDuration,
   type ReportBillableFilter,
   type ReportFilterOption,
   type ReportHoursFilter,
@@ -201,20 +202,18 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
               </p>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <span class="text-text-muted text-xs">Hours</span>
-                <span class="text-text-dark text-[13px] font-semibold">
-                  {{ formatReportDuration(row.totalSeconds) }}
-                </span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-text-muted text-xs">Billable</span>
-                <span class="text-text-dark text-[13px] font-semibold">
-                  {{ formatReportDuration(row.billableSeconds) }}
-                </span>
-              </div>
-            </div>
+            <MobileRecordMetadataList
+              :items="[
+                {
+                  label: 'Hours',
+                  value: formatPaddedHoursMinutesDuration(row.totalSeconds),
+                },
+                {
+                  label: 'Billable',
+                  value: formatPaddedHoursMinutesDuration(row.billableSeconds),
+                },
+              ]"
+            />
           </MobileRecordCard>
         </template>
 
@@ -310,7 +309,7 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
       >
         <template #body="{ data }">
           <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(data.totalSeconds) }}</span>
+            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
           </div>
         </template>
       </Column>
@@ -321,7 +320,7 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
       >
         <template #body="{ data }">
           <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatReportDuration(data.billableSeconds) }}</span>
+            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
           </div>
         </template>
       </Column>

@@ -3,6 +3,7 @@ import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
 process.env.INVITES_EMAIL_CONSOLE_FALLBACK = 'true';
+process.env.INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS = 'false';
 
 /**
  * E2E tests run against a real Postgres instance (the local dev DB).

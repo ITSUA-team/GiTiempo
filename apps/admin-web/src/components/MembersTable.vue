@@ -25,6 +25,12 @@ import {
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
+import {
+  formatLocalCalendarDate,
+  hasValidDate,
+  isSameLocalDateValue,
+  isWithinLocalIsoWeekToDate,
+} from '@gitiempo/web-shared/time';
 import Avatar from 'primevue/avatar';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
@@ -33,6 +39,7 @@ import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
+import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
@@ -135,76 +142,22 @@ function getMemberDisplayName(member: WorkspaceMemberResponse): string {
   return member.displayName?.trim() || member.email;
 }
 
-const lastActiveFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-});
-
-function formatLastActive(lastActiveAt: string | null): string {
-  if (!lastActiveAt) {
-    return '—';
-  }
-
-  const parsed = new Date(lastActiveAt);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return '—';
-  }
-
-  return lastActiveFormatter.format(parsed);
-}
-
-function getLastActiveDate(member: WorkspaceMemberResponse): Date | null {
-  if (!member.lastActiveAt) {
-    return null;
-  }
-
-  const parsed = new Date(member.lastActiveAt);
-
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function isSameLocalDate(first: Date, second: Date): boolean {
-  return (
-    first.getFullYear() === second.getFullYear() &&
-    first.getMonth() === second.getMonth() &&
-    first.getDate() === second.getDate()
-  );
-}
-
-function getLocalWeekStart(date: Date): Date {
-  const day = date.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() + mondayOffset);
-
-  weekStart.setHours(0, 0, 0, 0);
-
-  return weekStart;
-}
-
 function matchesLastActiveFilter(member: WorkspaceMemberResponse): boolean {
   if (filters.lastActive === 'any') {
     return true;
   }
 
-  const lastActiveDate = getLastActiveDate(member);
-
   if (filters.lastActive === 'inactive') {
-    return lastActiveDate === null;
-  }
-
-  if (!lastActiveDate) {
-    return false;
+    return !hasValidDate(member.lastActiveAt);
   }
 
   const now = new Date();
 
   if (filters.lastActive === 'today') {
-    return isSameLocalDate(lastActiveDate, now);
+    return isSameLocalDateValue(member.lastActiveAt, now);
   }
 
-  return lastActiveDate >= getLocalWeekStart(now) && lastActiveDate <= now;
+  return isWithinLocalIsoWeekToDate(member.lastActiveAt, now);
 }
 
 function getMemberProjectOptions(member: WorkspaceMemberResponse): FilterOption[] {
@@ -257,7 +210,7 @@ function matchesGlobalSearch(member: WorkspaceMemberResponse): boolean {
     member.email,
     formatWorkspaceRole(member.role),
     formatProjectsAssigned(member),
-    formatLastActive(member.lastActiveAt),
+    formatLocalCalendarDate(member.lastActiveAt),
     ...projectLabels,
   ].join(' ');
 
@@ -536,26 +489,17 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-xs">Role</span>
-            <span class="text-text-dark text-[13px] font-semibold">
-              {{ formatWorkspaceRole(member.role) }}
-            </span>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-text-muted text-xs">Projects</span>
-            <span class="text-text-dark text-[13px] font-semibold">
-              {{ formatProjectsAssigned(member) }}
-            </span>
-          </div>
-          <div class="col-span-2 flex flex-col gap-1">
-            <span class="text-text-muted text-xs">Last active</span>
-            <span class="text-text-dark text-[13px] font-semibold">
-              {{ formatLastActive(member.lastActiveAt) }}
-            </span>
-          </div>
-        </div>
+        <MobileRecordMetadataList
+          :items="[
+            { label: 'Role', value: formatWorkspaceRole(member.role) },
+            { label: 'Projects', value: formatProjectsAssigned(member) },
+            {
+              label: 'Last active',
+              value: formatLocalCalendarDate(member.lastActiveAt),
+              fullWidth: true,
+            },
+          ]"
+        />
 
         <template
           v-if="!isSelf(member)"
@@ -732,7 +676,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
-          formatLastActive(data.lastActiveAt)
+          formatLocalCalendarDate(data.lastActiveAt)
         }}</span>
       </template>
     </Column>

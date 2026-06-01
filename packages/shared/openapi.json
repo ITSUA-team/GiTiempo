@@ -481,6 +481,54 @@
         ]
       }
     },
+    "/invites/{id}/resend": {
+      "post": {
+        "operationId": "InvitesController_resendInvite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceInviteResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          },
+          "404": {
+            "description": "Pending invite not found"
+          },
+          "410": {
+            "description": "Invite has expired"
+          },
+          "503": {
+            "description": "Invite delivery failed after the pending invite was found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resend a pending workspace invite",
+        "tags": [
+          "invites"
+        ]
+      }
+    },
     "/invites/{id}": {
       "delete": {
         "operationId": "InvitesController_cancelInvite",
@@ -1472,7 +1520,7 @@
             "description": "Time entry not found"
           },
           "409": {
-            "description": "Running entries must be stopped first"
+            "description": "Running entries must be stopped first unless only taskId is being reassigned"
           },
           "422": {
             "description": "Task or project inactive"
@@ -1483,7 +1531,7 @@
             "bearer": []
           }
         ],
-        "summary": "Update own completed time entry",
+        "summary": "Update own time entry",
         "tags": [
           "time-entries"
         ]

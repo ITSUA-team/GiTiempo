@@ -15,9 +15,9 @@ import {
   taskExternalRefs,
   timeEntries,
   users,
-  workspaces,
 } from '../src/db/schema';
 import { bearer, login } from './helpers/auth';
+import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
 const TEST_PROJECT_NAME_PREFIXES = [
   'PM Created ',
@@ -81,8 +81,7 @@ describe('Projects and tasks (e2e)', () => {
     await app.init();
     db = app.get<DrizzleDB>(DRIZZLE);
 
-    const [workspace] = await db.select().from(workspaces).limit(1);
-    if (!workspace) throw new Error('Expected seeded workspace');
+    const { workspace } = await getSeededAdminWorkspace(db);
     workspaceId = workspace.id;
 
     const [platformProject] = await db

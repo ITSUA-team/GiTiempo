@@ -4,7 +4,6 @@ import {
   useStopTimerMutation,
 } from "@/composables/query";
 import { computed, shallowRef, type ComputedRef } from "vue";
-
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -90,7 +89,7 @@ export function useTopBarTimerActions({
         logContext: { action: "start-timer", feature: "top-bar-timer" },
         summary: "Could not start the timer",
       });
-      await summary.refreshSummaryAfterConflict(message);
+      await summary.refreshSummaryAfterConflict(error);
     }
   }
 

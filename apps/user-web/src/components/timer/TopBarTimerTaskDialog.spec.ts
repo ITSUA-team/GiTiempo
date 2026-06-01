@@ -12,6 +12,7 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
       createTaskErrorMessage: null,
       createTaskTitle: "Write release checklist",
       isConfirmSelectionDisabled: false,
+      isConfirmingSelection: false,
       isCreateTaskDisabled: false,
       isCreatingTask: false,
       isLoadingProjects: false,
@@ -36,6 +37,7 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
       projectsErrorMessage: null,
       selectedProjectId: "project-1",
       selectedTaskId: "task-1",
+      selectionUpdateErrorMessage: null,
       taskOptions: [
         {
           createdAt: "2026-04-20T12:00:00.000Z",
@@ -54,9 +56,9 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
     global: {
       stubs: {
         Button: {
-          props: ["disabled", "fluid", "label"],
+          props: ["disabled", "fluid", "label", "loading"],
           template:
-            '<button :data-fluid="String(fluid)" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
+            '<button :data-fluid="String(fluid)" :data-loading="String(loading)" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Dialog: {
           props: {
@@ -159,6 +161,20 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.text()).toContain("Task title is required.");
     expect(confirmButton?.attributes("disabled")).toBeDefined();
+  });
+
+  it("renders inline active-timer update errors and confirm loading state", () => {
+    const wrapper = mountDialog({
+      isConfirmingSelection: true,
+      selectionUpdateErrorMessage: "Task is inactive",
+    });
+    const confirmButton = wrapper
+      .findAll("button")
+      .find((button) => button.text() === "Use selected task");
+
+    expect(wrapper.text()).toContain("Could not update the active timer task.");
+    expect(wrapper.text()).toContain("Task is inactive");
+    expect(confirmButton?.attributes("data-loading")).toBe("true");
   });
 
   it("uses mobile-friendly dialog sizing, scrolling, and stacked action rows", () => {

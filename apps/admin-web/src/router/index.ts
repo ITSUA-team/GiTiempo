@@ -4,22 +4,29 @@ import {
   type RouterHistory,
 } from 'vue-router';
 import type { Pinia } from 'pinia';
-import { WorkspaceRoles } from '@gitiempo/shared';
-import { createProtectedRouter } from '@gitiempo/web-shared/router';
+import {
+  WorkspaceRoles,
+  type WorkspaceRole,
+} from '@gitiempo/shared';
+import {
+  createProtectedRouter,
+  hasAllowedRole,
+} from '@gitiempo/web-shared/router';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
-import AddProjectMockView from '@/views/AddProjectView.vue';
-import DashboardView from '@/views/DashboardView.vue';
-import ForbiddenView from '@/views/ForbiddenView.vue';
-import InvoicesView from '@/views/InvoicesView.vue';
 import LoginView from '@/views/LoginView.vue';
-import MembersView from '@/views/MembersView.vue';
-import NotFoundView from '@/views/NotFoundView.vue';
-import ProjectsView from '@/views/ProjectsView.vue';
-import ReportsView from '@/views/ReportsView.vue';
-import SettingsView from '@/views/SettingsView.vue';
 import { pinia } from '@/stores';
 import { useAuthStore } from '@/stores/auth';
+
+const AddProjectMockView = () => import('@/views/AddProjectView.vue');
+const DashboardView = () => import('@/views/DashboardView.vue');
+const ForbiddenView = () => import('@/views/ForbiddenView.vue');
+const InvoicesView = () => import('@/views/InvoicesView.vue');
+const MembersView = () => import('@/views/MembersView.vue');
+const NotFoundView = () => import('@/views/NotFoundView.vue');
+const ProjectsView = () => import('@/views/ProjectsView.vue');
+const ReportsView = () => import('@/views/ReportsView.vue');
+const SettingsView = () => import('@/views/SettingsView.vue');
 
 export const routeNames = {
   addProject: 'admin-add-project',
@@ -34,8 +41,40 @@ export const routeNames = {
   settings: 'admin-settings',
 } as const;
 
-const managementRoles = [WorkspaceRoles.Admin, WorkspaceRoles.PM] as const;
-const adminOnlyRoles = [WorkspaceRoles.Admin] as const;
+type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
+
+const adminOnlyRoles = [
+  WorkspaceRoles.Admin,
+] as const satisfies readonly WorkspaceRole[];
+const managementRoles = [
+  WorkspaceRoles.Admin,
+  WorkspaceRoles.PM,
+] as const satisfies readonly WorkspaceRole[];
+
+export const adminRouteAllowedRoles = {
+  [routeNames.addProject]: adminOnlyRoles,
+  [routeNames.dashboard]: managementRoles,
+  [routeNames.invoices]: adminOnlyRoles,
+  [routeNames.members]: adminOnlyRoles,
+  [routeNames.projects]: adminOnlyRoles,
+  [routeNames.reports]: managementRoles,
+  [routeNames.settings]: adminOnlyRoles,
+} as const satisfies Partial<Record<AdminRouteName, readonly WorkspaceRole[]>>;
+
+export function canAccessAdminRoute(
+  role: WorkspaceRole | null | undefined,
+  routeName: string | symbol | null | undefined,
+): boolean {
+  if (typeof routeName !== 'string') {
+    return true;
+  }
+
+  const allowedRoles = adminRouteAllowedRoles[
+    routeName as keyof typeof adminRouteAllowedRoles
+  ];
+
+  return hasAllowedRole(allowedRoles, role);
+}
 
 const publicRoutes: RouteRecordRaw[] = [
   {
@@ -53,18 +92,24 @@ const protectedRoutes: RouteRecordRaw[] = [
     path: '',
     name: routeNames.dashboard,
     component: DashboardView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.dashboard],
+    },
   },
   {
     path: 'reports',
     name: routeNames.reports,
     component: ReportsView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.reports],
+    },
   },
   {
     path: 'invoices',
     name: routeNames.invoices,
     component: InvoicesView,
     meta: {
-      allowedRoles: adminOnlyRoles,
+      allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
     },
   },
   {
@@ -72,7 +117,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     name: routeNames.members,
     component: MembersView,
     meta: {
-      allowedRoles: adminOnlyRoles,
+      allowedRoles: adminRouteAllowedRoles[routeNames.members],
     },
   },
   {
@@ -80,7 +125,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     name: routeNames.projects,
     component: ProjectsView,
     meta: {
-      allowedRoles: adminOnlyRoles,
+      allowedRoles: adminRouteAllowedRoles[routeNames.projects],
     },
   },
   {
@@ -88,7 +133,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     name: routeNames.addProject,
     component: AddProjectMockView,
     meta: {
-      allowedRoles: adminOnlyRoles,
+      allowedRoles: adminRouteAllowedRoles[routeNames.addProject],
     },
   },
   {
@@ -96,7 +141,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     name: routeNames.settings,
     component: SettingsView,
     meta: {
-      allowedRoles: adminOnlyRoles,
+      allowedRoles: adminRouteAllowedRoles[routeNames.settings],
     },
   },
 ];

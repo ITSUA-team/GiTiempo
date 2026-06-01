@@ -111,7 +111,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | GET    | `/time-entries`                         | JWT  | Any  | List current user's time entries (filterable by date, project, task, task-title search)            |
 | POST   | `/time-entries`                         | JWT  | Any  | Create manual time entry (start/end)                                                               |
 | GET    | `/time-entries/:id`                     | JWT  | Any  | Get time entry details                                                                             |
-| PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry (description, times, billable)                                               |
+| PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry                                                                               |
 | DELETE | `/time-entries/:id`                     | JWT  | Any  | Delete own time entry                                                                              |
 | GET    | `/time-entries/current`                 | JWT  | Any  | Get currently running timer (if any)                                                               |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
@@ -129,7 +129,8 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 **PATCH /time-entries/:id** body: `{ taskId?: string, startedAt?: string, endedAt?: string, description?: string | null, isBillable?: boolean }`
 
-- Updates only completed entries; running entries must be stopped first.
+- Completed entries may update `taskId`, `startedAt`, `endedAt`, `description`, and `isBillable`.
+- Running entries may only update `taskId`; any other field change requires stopping the timer first.
 - `taskId` may be changed to move the entry to another visible active task.
 - If both `startedAt` and `endedAt` are provided, `endedAt` must be later than `startedAt`.
 
@@ -181,14 +182,17 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 ## 13. Invites
 
-| Method | Path              | Auth | Role  | Description                                                          |
-| ------ | ----------------- | ---- | ----- | -------------------------------------------------------------------- |
-| GET    | `/invites`        | JWT  | Admin | List pending invites                                                 |
-| POST   | `/invites`        | JWT  | Admin | Create invite (send email)                                           |
-| DELETE | `/invites/:id`    | JWT  | Admin | Cancel pending invite                                                |
-| POST   | `/invites/accept` | None | —     | Accept invite by token: `{ token: string, firebaseIdToken: string }` |
+| Method | Path                   | Auth | Role  | Description                                                          |
+| ------ | ---------------------- | ---- | ----- | -------------------------------------------------------------------- |
+| GET    | `/invites`             | JWT  | Admin | List pending invites                                                 |
+| POST   | `/invites`             | JWT  | Admin | Create invite (send email)                                           |
+| POST   | `/invites/:id/resend`  | JWT  | Admin | Resend pending invite delivery without changing token or expiration  |
+| DELETE | `/invites/:id`         | JWT  | Admin | Cancel pending invite                                                |
+| POST   | `/invites/accept`      | None | —     | Accept invite by token: `{ token: string, firebaseIdToken: string }` |
 
 `POST /invites/accept` returns `204 No Content` on success. Expected frontend-visible failure messages include `Invite not found` (`404`), `Invite has expired` (`410`), `Invite cannot be accepted` (`409`), `Invite email does not match identity` (`403`), and `User is already a workspace member` (`409`). The User SPA invite accept page must call this endpoint after Firebase sign-in and before calling normal app login for a first-time invited user. Email/password account creation is not performed by the browser; invite delivery is responsible for backend Firebase Admin SDK provisioning plus Firebase password setup/reset link delivery. The API must not receive raw passwords.
+
+`POST /invites/:id/resend` is admin-only and accepts no body. It returns the existing invite response on success after redelivering invite email content for the same pending invite token and expiration. It must reject missing, accepted, canceled, or cross-workspace invites with `404 Pending invite not found`, reject expired pending invites with `410 Invite has expired`, and return `503` with the delivery/Firebase failure message when resend cannot complete after the pending invite is found. Resend generates fresh Firebase password setup/reset link content for delivery, but it must not create a new invite row, extend expiration, or create workspace membership.
 
 ---
 

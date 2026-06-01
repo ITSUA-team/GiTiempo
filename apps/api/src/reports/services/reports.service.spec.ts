@@ -151,7 +151,7 @@ describe('ReportsService', () => {
 
   it('defaults omitted dates to the current UTC calendar month', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-05-13T12:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-12-13T12:00:00.000Z'));
     const { service } = createService('admin');
 
     const context = await (
@@ -172,8 +172,8 @@ describe('ReportsService', () => {
     });
 
     expect(context.dateRange).toEqual({
-      dateFrom: '2026-05-01T00:00:00.000Z',
-      dateTo: '2026-06-01T00:00:00.000Z',
+      dateFrom: '2026-12-01T00:00:00.000Z',
+      dateTo: '2027-01-01T00:00:00.000Z',
     });
   });
 

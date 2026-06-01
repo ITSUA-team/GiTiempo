@@ -4,8 +4,8 @@ import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
-import ToastService from "primevue/toastservice";
 import { WorkspaceRoles, type UserResponse, type WorkspaceRole } from "@gitiempo/shared";
+import ToastService from "primevue/toastservice";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 import AdminAppShell from "./AdminAppShell.vue";
@@ -69,6 +69,26 @@ const WorkspaceHeaderStub = {
   `,
 };
 
+function setAuthenticatedShellUser(
+  pinia: ReturnType<typeof createPinia>,
+  role: WorkspaceRole = WorkspaceRoles.Admin,
+): ReturnType<typeof useAuthStore> {
+  const authStore = useAuthStore(pinia);
+  authStore.accessToken = `${role}-access-token`;
+  authStore.bootstrapComplete = true;
+  authStore.profile = {
+    avatarUrl: null,
+    createdAt: "2026-05-01T10:00:00.000Z",
+    displayName: "Admin User",
+    email: `${role}@example.com`,
+    id: "11111111-1111-4111-8111-111111111111",
+    role,
+    updatedAt: "2026-05-01T10:00:00.000Z",
+  };
+
+  return authStore;
+}
+
 describe("AdminAppShell", () => {
   beforeEach(() => {
     clearRefreshToken();
@@ -90,10 +110,7 @@ describe("AdminAppShell", () => {
   it("preserves the profile menu and shared navigation", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
-    const authStore = useAuthStore(pinia);
-    authStore.accessToken = "admin-access-token";
-    authStore.bootstrapComplete = true;
-    authStore.profile = createAuthProfile();
+    const authStore = setAuthenticatedShellUser(pinia);
     const logoutSpy = vi.spyOn(authStore, "logout").mockImplementation(async () => {
       authStore.accessToken = null;
     });
@@ -150,14 +167,47 @@ describe("AdminAppShell", () => {
     expect(wrapper.text()).toContain("GiTiempo Studio");
   });
 
+  it("filters product navigation for project managers", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setAuthenticatedShellUser(pinia, WorkspaceRoles.PM);
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/reports");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute('data-tooltip', String(binding.value));
+            },
+          },
+        },
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(0);
+  });
+
   it("keeps the fallback workspace label and shows toast feedback when shell workspace load fails", async () => {
     testMocks.getWorkspace.mockRejectedValueOnce(new Error("Workspace unavailable"));
     const pinia = createPinia();
     setActivePinia(pinia);
-    const authStore = useAuthStore(pinia);
-    authStore.accessToken = "admin-access-token";
-    authStore.bootstrapComplete = true;
-    authStore.profile = createAuthProfile();
+    setAuthenticatedShellUser(pinia);
 
     const router = createAppRouter({
       history: createMemoryHistory(),

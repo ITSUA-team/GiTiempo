@@ -5,6 +5,7 @@ import {
   type TimeReportExportQuery,
   type TimeReportGroupBy,
 } from "@gitiempo/shared";
+import { nextLocalDayStartIso, startOfLocalDayIso } from "../time";
 
 export type ReportFilterDateRange = [Date | null, Date | null] | null;
 export type ReportDatePickerRangeValue =
@@ -50,22 +51,6 @@ function getReportDateRangeError(dateRange: ReportFilterDateRange): string | nul
   }
 
   return null;
-}
-
-function startOfLocalDayIso(date: Date): string {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  ).toISOString();
-}
-
-function nextLocalDayStartIso(date: Date): string {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate() + 1,
-  ).toISOString();
 }
 
 function toReportExportQuery(

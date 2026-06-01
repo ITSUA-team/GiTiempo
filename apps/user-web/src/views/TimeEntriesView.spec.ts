@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -10,9 +10,15 @@ import type {
   TimeEntryResponse,
 } from "@gitiempo/shared";
 
+import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
-import { createTestQueryPlugin } from "@/test/query-client";
+import {
+  createTestQueryClient,
+  createTestQueryPlugin,
+} from "@/test/query-client";
+
+import TimeEntriesView from "./TimeEntriesView.vue";
 
 const clientRef = vi.hoisted(() => ({
   current: null as unknown,
@@ -34,12 +40,27 @@ vi.mock("primevue/usetoast", () => ({
   useToast: () => ({ add: primeVueMocks.toastAdd }),
 }));
 
+const TEST_IDS = {
+  completedEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3002",
+  createdEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3003",
+  projectAdmin: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
+  projectOrion: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
+  runningEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3001",
+  taskAdmin: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
+  taskReports: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2001",
+  updatedEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3004",
+  user: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f4001",
+  workspace: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f5001",
+} as const;
+
+const mountedWrappers: VueWrapper[] = [];
+
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
     description: null,
-    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
+    id: TEST_IDS.projectOrion,
     isActive: true,
     members: [],
     name: "Project Orion",
@@ -47,7 +68,7 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     totalHours: 12,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
-    workspaceId: "workspace-1",
+    workspaceId: TEST_IDS.workspace,
     ...overrides,
   };
 }
@@ -55,13 +76,13 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
-    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2001",
+    id: TEST_IDS.taskReports,
     isActive: true,
-    projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
+    projectId: TEST_IDS.projectOrion,
     status: "open",
     title: "Improve reports filters",
     updatedAt: "2026-04-20T12:00:00.000Z",
-    workspaceId: "workspace-1",
+    workspaceId: TEST_IDS.workspace,
     ...overrides,
   };
 }
@@ -74,29 +95,29 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
     description: null,
     durationSeconds: 5400,
     endedAt: "2026-04-21T10:30:00.000Z",
-    id: "entry-1",
+    id: TEST_IDS.completedEntry,
     isBillable: false,
     project: {
-      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
+      id: TEST_IDS.projectOrion,
       name: "Project Orion",
     },
-    projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
+    projectId: TEST_IDS.projectOrion,
     source: "manual",
     startedAt: "2026-04-21T09:00:00.000Z",
     task: {
-      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2001",
+      id: TEST_IDS.taskReports,
       title: "Improve reports filters",
     },
-    taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2001",
+    taskId: TEST_IDS.taskReports,
     updatedAt: "2026-04-21T10:30:00.000Z",
     user: {
       avatarUrl: null,
       displayName: "Alexey Tsukanov",
       email: "alexey@example.com",
-      id: "user-1",
+      id: TEST_IDS.user,
     },
-    userId: "user-1",
-    workspaceId: "workspace-1",
+    userId: TEST_IDS.user,
+    workspaceId: TEST_IDS.workspace,
     githubIssue,
     ...entryOverrides,
   };
@@ -135,21 +156,21 @@ function createClientMock(options: {
     createEntry({
       durationSeconds: null,
       endedAt: null,
-      id: "entry-running",
+      id: TEST_IDS.runningEntry,
       source: "web",
     }),
     createEntry({
       endedAt: "2026-04-20T10:30:00.000Z",
-      id: "entry-completed",
+      id: TEST_IDS.completedEntry,
       startedAt: "2026-04-20T09:00:00.000Z",
     }),
   ], { limit: 20, page: 1, total: 2, totalPages: 1 });
   const tasksByProject: Record<string, TaskResponse[]> = {
-    "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001": [createTask()],
-    "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002": [
+    [TEST_IDS.projectOrion]: [createTask()],
+    [TEST_IDS.projectAdmin]: [
       createTask({
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
-        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
+        id: TEST_IDS.taskAdmin,
+        projectId: TEST_IDS.projectAdmin,
         title: "Ship admin polish",
       }),
     ],
@@ -157,7 +178,7 @@ function createClientMock(options: {
   };
 
   return {
-    createManualEntry: vi.fn(async () => createEntry({ id: "entry-created" })),
+    createManualEntry: vi.fn(async () => createEntry({ id: TEST_IDS.createdEntry })),
     createTask: vi.fn(async () => createTask()),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
@@ -174,28 +195,34 @@ function createClientMock(options: {
     listVisibleProjects: vi.fn(async () => [
       createProject(),
       createProject({
-        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
+        id: TEST_IDS.projectAdmin,
         name: "Admin Web",
       }),
     ]),
-    startTimer: vi.fn(async () => createEntry({ endedAt: null })),
+    startTimer: vi.fn(async () => createEntry({ endedAt: null, id: TEST_IDS.runningEntry })),
     stopTimer: vi.fn(async () => createEntry()),
-    updateEntry: vi.fn(async () => createEntry({ id: "entry-updated" })),
+    updateEntry: vi.fn(async () => createEntry({ id: TEST_IDS.updatedEntry })),
     updateTask: vi.fn(async () => createTask()),
   };
 }
 
-async function mountView(client = createClientMock()) {
-  const pinia = createPinia();
+async function mountView(
+  client = createClientMock(),
+  options: {
+    pinia?: ReturnType<typeof createPinia>;
+    queryClient?: ReturnType<typeof createTestQueryClient>;
+  } = {},
+) {
+  const pinia = options.pinia ?? createPinia();
+  const queryClient = options.queryClient ?? createTestQueryClient();
 
   setActivePinia(pinia);
   useAuthStore().accessToken = "access-token";
   clientRef.current = client;
 
-  const TimeEntriesView = (await import("./TimeEntriesView.vue")).default;
   const wrapper = mount(TimeEntriesView, {
     global: {
-      plugins: [pinia, createTestQueryPlugin()],
+      plugins: [pinia, createTestQueryPlugin(queryClient)],
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
@@ -240,16 +267,29 @@ async function mountView(client = createClientMock()) {
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
           emits: ["createForDay", "deleteEntry", "editEntry"],
-          props: ["formatDuration", "group"],
+          props: ["formatDuration", "formatTimeRange", "group"],
           template: `
             <section>
               <p>{{ group.heading }}</p>
-              <p v-for="entry in group.items" :key="entry.id">{{ entry.id }} {{ entry.task.title }}</p>
-              <p>{{ formatDuration(group.items[0]) }}</p>
+                <div v-for="entry in group.items" :key="entry.id">
+                  <p>{{ entry.id }} {{ entry.task.title }}</p>
+                  <p>{{ formatTimeRange(entry) }}</p>
+                  <p>{{ formatDuration(entry) }}</p>
+                  <button
+                    v-if="entry.endedAt !== null"
+                    data-testid="time-entry-edit-entry-completed"
+                    type="button"
+                    @click="$emit('editEntry', entry)"
+                  >Edit</button>
+                  <button
+                    v-if="entry.endedAt !== null"
+                    data-testid="time-entry-delete-entry-completed"
+                    type="button"
+                    @click="$emit('deleteEntry', entry)"
+                  >Delete</button>
+                  <p v-else>Stop from the top bar</p>
+                </div>
               <button data-testid="time-entries-day-create-2026-04-21" type="button" @click="$emit('createForDay', group.dateKey)">Create day</button>
-              <button data-testid="time-entry-edit-entry-completed" type="button" @click="$emit('editEntry', group.items[group.items.length - 1])">Edit</button>
-              <button data-testid="time-entry-delete-entry-completed" type="button" @click="$emit('deleteEntry', group.items[group.items.length - 1])">Delete</button>
-              <p>Stop from the top bar</p>
             </section>
           `,
         },
@@ -289,7 +329,9 @@ async function mountView(client = createClientMock()) {
     },
   });
 
-  return { client, wrapper };
+  mountedWrappers.push(wrapper);
+
+  return { client, pinia, queryClient, wrapper };
 }
 
 describe("TimeEntriesView", () => {
@@ -302,6 +344,11 @@ describe("TimeEntriesView", () => {
   });
 
   afterEach(() => {
+    while (mountedWrappers.length > 0) {
+      mountedWrappers.pop()?.unmount();
+    }
+
+    clientRef.current = null;
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -313,7 +360,7 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.listVisibleProjects).toHaveBeenCalledWith();
-    expect(client.listOwnEntries).toHaveBeenCalledWith({
+    expect(client.listOwnEntries.mock.calls[0]?.[0]).toEqual({
       dateFrom: undefined,
       dateTo: undefined,
       limit: 20,
@@ -347,6 +394,54 @@ describe("TimeEntriesView", () => {
 
     expect(wrapper.text()).toContain("Stop from the top bar");
     expect(primeVueMocks.confirmRequire).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates grouped entry state after a top-bar stop reconciliation", async () => {
+    const initialRunningResponse = createEntryListResponse([
+      createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+        source: "web",
+      }),
+    ]);
+    const client = createClientMock({
+      entriesResponse: initialRunningResponse,
+    });
+    const stoppedEntry = createEntry({
+      id: TEST_IDS.runningEntry,
+      updatedAt: "2026-04-21T10:30:00.000Z",
+    });
+
+    client.listOwnEntries
+      .mockResolvedValueOnce(initialRunningResponse)
+      .mockResolvedValue(createEntryListResponse([stoppedEntry]));
+
+    const { queryClient, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("09:00 - Running");
+    expect(wrapper.text()).toContain("02:00:05");
+    expect(wrapper.text()).toContain("Stop from the top bar");
+    expect(wrapper.find('[data-testid="time-entry-edit-entry-completed"]').exists()).toBe(false);
+
+    reconcileTimeEntryListCaches(queryClient, { userId: null, workspaceId: null }, stoppedEntry);
+    await flushPromises();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("09:00 - 10:30");
+    expect(wrapper.text()).toContain("1h 30m");
+    expect(wrapper.text()).not.toContain("Stop from the top bar");
+    expect(wrapper.find('[data-testid="time-entry-edit-entry-completed"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(true);
+
+    vi.advanceTimersByTime(3000);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("1h 30m");
+    expect(wrapper.text()).not.toContain("02:00:08");
   });
 
   it("keeps request-error and empty states distinct", async () => {
@@ -401,7 +496,7 @@ describe("TimeEntriesView", () => {
     expect(client.listProjectTasks).toHaveBeenCalledWith(
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
     );
-    expect(client.listOwnEntries).toHaveBeenCalledWith({
+    expect(client.listOwnEntries.mock.calls.map((call) => call[0])).toContainEqual({
       dateFrom: "2026-04-01T00:00:00.000Z",
       dateTo: "2026-04-22T00:00:00.000Z",
       limit: 20,
@@ -445,7 +540,7 @@ describe("TimeEntriesView", () => {
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
-    expect(client.listOwnEntries).toHaveBeenLastCalledWith({
+    expect(client.listOwnEntries.mock.calls.map((call) => call[0])).toContainEqual({
       dateFrom: undefined,
       dateTo: undefined,
       limit: 20,
@@ -476,7 +571,7 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.updateEntry).toHaveBeenCalledWith(
-      "entry-completed",
+      TEST_IDS.completedEntry,
       expect.objectContaining({
         description: "Manual cleanup",
         taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
@@ -505,7 +600,7 @@ describe("TimeEntriesView", () => {
     await primeVueMocks.confirmRequire.mock.calls[0]?.[0].accept();
     await flushPromises();
 
-    expect(client.deleteEntry).toHaveBeenCalledWith("entry-completed");
+    expect(client.deleteEntry).toHaveBeenCalledWith(TEST_IDS.completedEntry);
     expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
 
     const deleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');

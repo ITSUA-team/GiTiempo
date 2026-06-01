@@ -7,17 +7,19 @@ import type { Pinia } from "pinia";
 import { createProtectedRouter } from "@gitiempo/web-shared/router";
 
 import AppShell from "@/components/layout/AppShell.vue";
-import DashboardView from "@/views/DashboardView.vue";
-import ForbiddenView from "@/views/ForbiddenView.vue";
-import InviteAcceptView from "@/views/InviteAcceptView.vue";
-import InvitePasswordSetupView from "@/views/InvitePasswordSetupView.vue";
 import LoginView from "@/views/LoginView.vue";
-import NotFoundView from "@/views/NotFoundView.vue";
-import ProfileView from "@/views/ProfileView.vue";
-import ProjectView from "@/views/ProjectView.vue";
-import TimeEntriesView from "@/views/TimeEntriesView.vue";
 import { pinia } from "@/stores";
 import { useAuthStore } from "@/stores/auth";
+
+const DashboardView = () => import("@/views/DashboardView.vue");
+const ForbiddenView = () => import("@/views/ForbiddenView.vue");
+const InviteAcceptView = () => import("@/views/InviteAcceptView.vue");
+const InvitePasswordSetupView = () =>
+  import("@/views/InvitePasswordSetupView.vue");
+const NotFoundView = () => import("@/views/NotFoundView.vue");
+const ProfileView = () => import("@/views/ProfileView.vue");
+const ProjectView = () => import("@/views/ProjectView.vue");
+const TimeEntriesView = () => import("@/views/TimeEntriesView.vue");
 
 export const routeNames = {
   dashboard: "dashboard",

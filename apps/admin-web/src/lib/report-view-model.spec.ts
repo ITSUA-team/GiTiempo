@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { TimeReportResponse } from '@gitiempo/shared';
+import {
+  nextLocalDayStartIso,
+  startOfLocalDayIso,
+} from '@gitiempo/web-shared/time';
 
 import {
   createDefaultReportTableFilters,
   filterReportRows,
   toReportTableRows,
+  toTimeReportExportQuery,
   toTimeReportQuery,
   type ReportTableFilters,
   type ReportTableRow,
@@ -73,6 +78,33 @@ describe('report-view-model', () => {
     });
   });
 
+  it('keeps report query and export date boundaries aligned', () => {
+    const filters = {
+      dateRange: [new Date(2026, 4, 1, 12), new Date(2026, 4, 2, 12)] as [
+        Date,
+        Date,
+      ],
+      groupBy: 'project' as const,
+      memberId: null,
+      projectId,
+    };
+    const expectedDateWindow = {
+      dateFrom: startOfLocalDayIso(filters.dateRange[0]),
+      dateTo: nextLocalDayStartIso(filters.dateRange[1]),
+    };
+
+    expect(toTimeReportQuery(filters, 2, 50)).toMatchObject({
+      ...expectedDateWindow,
+      limit: 50,
+      page: 2,
+      projectId,
+    });
+    expect(toTimeReportExportQuery(filters)).toMatchObject({
+      ...expectedDateWindow,
+      projectId,
+    });
+  });
+
   it('rejects invalid report date ranges before API calls', () => {
     expect(() =>
       toTimeReportQuery(
@@ -86,6 +118,21 @@ describe('report-view-model', () => {
         100,
       ),
     ).toThrow('End date must be after the start date.');
+  });
+
+  it('rejects invalid DatePicker dates before API calls', () => {
+    expect(() =>
+      toTimeReportQuery(
+        {
+          dateRange: [new Date(Number.NaN), new Date(2026, 4, 2)],
+          groupBy: 'project',
+          memberId: null,
+          projectId: null,
+        },
+        1,
+        100,
+      ),
+    ).toThrow();
   });
 
   it('maps backend report rows into validated table rows', () => {
@@ -161,6 +208,45 @@ describe('report-view-model', () => {
         totalSeconds: 3600,
       },
     ];
+
+    expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
+  });
+
+  it('searches report rows using formatted duration labels', () => {
+    const filters = createDefaultReportTableFilters();
+    filters.global = '1h 01m';
+    const rows: ReportTableRow[] = [
+      {
+        billableSeconds: 3600,
+        billableShare: 0.98,
+        entryCount: 1,
+        groupBy: 'project',
+        id: `project:${projectId}:no-task:all-members`,
+        memberIds: [],
+        memberName: 'Member scope',
+        nonBillableSeconds: 60,
+        projectIds: [projectId],
+        projectName: 'Project Orion',
+        totalSeconds: 3660,
+      },
+      {
+        billableSeconds: 1800,
+        billableShare: 1,
+        entryCount: 1,
+        groupBy: 'project',
+        id: 'project:other:no-task:all-members',
+        memberIds: [],
+        memberName: 'Member scope',
+        nonBillableSeconds: 0,
+        projectIds: ['11111111-1111-4111-8111-111111111112'],
+        projectName: 'Billing API',
+        totalSeconds: 1800,
+      },
+    ];
+
+    expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
+
+    filters.global = '1h 00m';
 
     expect(filterReportRows(rows, filters)).toEqual([rows[0]]);
   });

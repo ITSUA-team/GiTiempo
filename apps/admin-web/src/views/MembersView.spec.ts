@@ -7,7 +7,11 @@ import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
+  cancelInvite: vi.fn(),
   errorToast: vi.fn(),
+  requireConfirmation: vi.fn(),
+  resendInvite: vi.fn(),
+  successToast: vi.fn(),
   listInvites: vi.fn(),
   listMembers: vi.fn(),
   listProjects: vi.fn(),
@@ -15,8 +19,10 @@ const testMocks = vi.hoisted(() => ({
 
 vi.mock('@/services/admin-members-client', () => ({
   adminMembersClient: {
+    cancelInvite: testMocks.cancelInvite,
     listInvites: testMocks.listInvites,
     listMembers: testMocks.listMembers,
+    resendInvite: testMocks.resendInvite,
   },
 }));
 
@@ -29,6 +35,13 @@ vi.mock('@/services/admin-projects-client', () => ({
 vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
+    successToast: testMocks.successToast,
+  }),
+}));
+
+vi.mock('@/composables/feedback/useConfirmation', () => ({
+  useConfirmation: () => ({
+    requireConfirmation: testMocks.requireConfirmation,
   }),
 }));
 
@@ -65,6 +78,36 @@ const MemberInviteDialogStub = {
   template: '<div data-testid="member-invite-dialog" />',
 };
 
+const PendingInvitationsCardStub = {
+  name: 'PendingInvitationsCard',
+  props: {
+    cancelingInviteId: { type: String, default: null },
+    errorMessage: { type: String, default: null },
+    loading: { type: Boolean, required: true },
+    pendingInvites: { type: Array, required: true },
+    resendingInviteId: { type: String, default: null },
+  },
+  template: `
+    <div data-testid="pending-invitations-card">
+      {{ pendingInvites.length }} invites | loading={{ loading }} | error={{ errorMessage ?? 'none' }}
+      <button
+        v-if="pendingInvites[0]"
+        data-testid="pending-invite-resend"
+        @click="$emit('resend', pendingInvites[0])"
+      />
+      <button
+        v-if="pendingInvites[0]"
+        data-testid="pending-invite-cancel"
+        @click="$emit('cancel', pendingInvites[0])"
+      />
+      <button
+        data-testid="pending-invite-retry"
+        @click="$emit('retry')"
+      />
+    </div>
+  `,
+};
+
 const SkeletonStub = {
   name: 'Skeleton',
   template: '<div data-testid="skeleton" />',
@@ -72,10 +115,14 @@ const SkeletonStub = {
 
 describe('MembersView', () => {
   beforeEach(() => {
+    testMocks.cancelInvite.mockReset();
     testMocks.listMembers.mockReset();
     testMocks.listInvites.mockReset();
     testMocks.listProjects.mockReset();
     testMocks.errorToast.mockReset();
+    testMocks.requireConfirmation.mockReset();
+    testMocks.resendInvite.mockReset();
+    testMocks.successToast.mockReset();
   });
 
   it('shows the dedicated skeleton state before the first members load resolves, then renders loaded stats', async () => {
@@ -162,6 +209,7 @@ describe('MembersView', () => {
         stubs: {
           MemberInviteDialog: MemberInviteDialogStub,
           MembersTable: MembersTableStub,
+          PendingInvitationsCard: PendingInvitationsCardStub,
           Skeleton: SkeletonStub,
         },
       },
@@ -191,6 +239,9 @@ describe('MembersView', () => {
     expect(wrapper.get('[data-testid="members-table"]').text()).toContain(
       '2 members | 1 projects | loading=false | currentUser=user-1',
     );
+    expect(wrapper.get('[data-testid="pending-invitations-card"]').text()).toContain(
+      '1 invites | loading=false | error=none',
+    );
     expect(testMocks.errorToast).not.toHaveBeenCalled();
   });
 
@@ -213,6 +264,7 @@ describe('MembersView', () => {
         stubs: {
           MemberInviteDialog: MemberInviteDialogStub,
           MembersTable: MembersTableStub,
+          PendingInvitationsCard: PendingInvitationsCardStub,
           Skeleton: SkeletonStub,
         },
       },
@@ -259,6 +311,7 @@ describe('MembersView', () => {
         stubs: {
           MemberInviteDialog: MemberInviteDialogStub,
           MembersTable: MembersTableStub,
+          PendingInvitationsCard: PendingInvitationsCardStub,
           Skeleton: SkeletonStub,
         },
       },
@@ -275,5 +328,303 @@ describe('MembersView', () => {
         logContext: { action: 'load-members', feature: 'members' },
       }),
     );
+  });
+
+  it('keeps pending invite request failures scoped to the pending invitations card', async () => {
+    testMocks.listMembers.mockResolvedValue([
+      {
+        avatarUrl: null,
+        displayName: 'Pat PM',
+        email: 'pat@example.com',
+        id: '22222222-2222-4222-8222-222222222222',
+        joinedAt: '2026-05-01T10:00:00.000Z',
+        lastActiveAt: null,
+        projectsAssignedCount: 1,
+        role: 'pm',
+        userId: 'user-2',
+        workspaceId: '33333333-3333-4333-8333-333333333333',
+      },
+    ]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockRejectedValueOnce(new Error('Invite service unavailable'));
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = 'access-token';
+
+    const wrapper = mount(MembersView, {
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          MemberInviteDialog: MemberInviteDialogStub,
+          MembersTable: MembersTableStub,
+          PendingInvitationsCard: PendingInvitationsCardStub,
+          Skeleton: SkeletonStub,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Members');
+    expect(wrapper.find('[data-testid="members-table"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="pending-invitations-card"]').text()).toContain(
+      '0 invites | loading=false | error=Invite service unavailable',
+    );
+    expect(wrapper.text()).toContain('Pending Invites');
+    expect(wrapper.text()).toContain('—');
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Invite service unavailable',
+      expect.objectContaining({
+        logContext: { action: 'load-pending-invites', feature: 'members' },
+      }),
+    );
+  });
+
+  it('resends a pending invite, shows success feedback, and refreshes pending invitations', async () => {
+    testMocks.listMembers.mockResolvedValue([]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites
+      .mockResolvedValueOnce([
+        {
+          createdAt: '2026-05-01T10:00:00.000Z',
+          email: 'invitee@example.com',
+          expiresAt: '2026-05-08T10:00:00.000Z',
+          id: '44444444-4444-4444-8444-444444444444',
+          invitedBy: '55555555-5555-4555-8555-555555555555',
+          role: 'member',
+          status: 'pending',
+          workspaceId: '33333333-3333-4333-8333-333333333333',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          createdAt: '2026-05-01T10:00:00.000Z',
+          email: 'invitee@example.com',
+          expiresAt: '2026-05-08T10:00:00.000Z',
+          id: '44444444-4444-4444-8444-444444444444',
+          invitedBy: '55555555-5555-4555-8555-555555555555',
+          role: 'member',
+          status: 'pending',
+          workspaceId: '33333333-3333-4333-8333-333333333333',
+        },
+      ]);
+    testMocks.resendInvite.mockResolvedValue({
+      createdAt: '2026-05-01T10:00:00.000Z',
+      email: 'invitee@example.com',
+      expiresAt: '2026-05-08T10:00:00.000Z',
+      id: '44444444-4444-4444-8444-444444444444',
+      invitedBy: '55555555-5555-4555-8555-555555555555',
+      role: 'member',
+      status: 'pending',
+      workspaceId: '33333333-3333-4333-8333-333333333333',
+    });
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = 'access-token';
+
+    const wrapper = mount(MembersView, {
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          MemberInviteDialog: MemberInviteDialogStub,
+          MembersTable: MembersTableStub,
+          PendingInvitationsCard: PendingInvitationsCardStub,
+          Skeleton: SkeletonStub,
+        },
+      },
+    });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="pending-invite-resend"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.resendInvite).toHaveBeenCalledWith(
+      '44444444-4444-4444-8444-444444444444',
+    );
+    expect(testMocks.listInvites).toHaveBeenCalledTimes(2);
+    expect(testMocks.successToast).toHaveBeenCalledWith(
+      'Invitation resent to invitee@example.com.',
+    );
+  });
+
+  it('keeps the pending invite visible when resend fails', async () => {
+    testMocks.listMembers.mockResolvedValue([]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([
+      {
+        createdAt: '2026-05-01T10:00:00.000Z',
+        email: 'invitee@example.com',
+        expiresAt: '2026-05-08T10:00:00.000Z',
+        id: '44444444-4444-4444-8444-444444444444',
+        invitedBy: '55555555-5555-4555-8555-555555555555',
+        role: 'member',
+        status: 'pending',
+        workspaceId: '33333333-3333-4333-8333-333333333333',
+      },
+    ]);
+    testMocks.resendInvite.mockRejectedValueOnce(new Error('Invite has expired'));
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = 'access-token';
+
+    const wrapper = mount(MembersView, {
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          MemberInviteDialog: MemberInviteDialogStub,
+          MembersTable: MembersTableStub,
+          PendingInvitationsCard: PendingInvitationsCardStub,
+          Skeleton: SkeletonStub,
+        },
+      },
+    });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="pending-invite-resend"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.listInvites).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[data-testid="pending-invitations-card"]').text()).toContain(
+      '1 invites | loading=false | error=none',
+    );
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Invite has expired',
+      expect.objectContaining({
+        logContext: { action: 'resend-invite', feature: 'members' },
+      }),
+    );
+  });
+
+  it('confirms invite cancellation before refreshing pending invitations', async () => {
+    testMocks.listMembers.mockResolvedValue([]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites
+      .mockResolvedValueOnce([
+        {
+          createdAt: '2026-05-01T10:00:00.000Z',
+          email: 'invitee@example.com',
+          expiresAt: '2026-05-08T10:00:00.000Z',
+          id: '44444444-4444-4444-8444-444444444444',
+          invitedBy: '55555555-5555-4555-8555-555555555555',
+          role: 'member',
+          status: 'pending',
+          workspaceId: '33333333-3333-4333-8333-333333333333',
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    testMocks.cancelInvite.mockResolvedValue(undefined);
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = 'access-token';
+
+    const wrapper = mount(MembersView, {
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          MemberInviteDialog: MemberInviteDialogStub,
+          MembersTable: MembersTableStub,
+          PendingInvitationsCard: PendingInvitationsCardStub,
+          Skeleton: SkeletonStub,
+        },
+      },
+    });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="pending-invite-cancel"]').trigger('click');
+
+    expect(testMocks.requireConfirmation).toHaveBeenCalledWith(
+      'invitee@example.com will lose access to this invitation. This action cannot be undone.',
+      'Cancel invite?',
+      'Cancel invite',
+      expect.any(Function),
+    );
+
+    const accept = testMocks.requireConfirmation.mock.calls[0]?.[3] as
+      | (() => Promise<void>)
+      | undefined;
+    await accept?.();
+    await flushPromises();
+
+    expect(testMocks.cancelInvite).toHaveBeenCalledWith(
+      '44444444-4444-4444-8444-444444444444',
+    );
+    expect(testMocks.listInvites).toHaveBeenCalledTimes(2);
+    expect(testMocks.successToast).toHaveBeenCalledWith(
+      'Invitation canceled for invitee@example.com.',
+    );
+  });
+
+  it('keeps the pending invite visible when confirmed cancellation fails', async () => {
+    testMocks.listMembers.mockResolvedValue([]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([
+      {
+        createdAt: '2026-05-01T10:00:00.000Z',
+        email: 'invitee@example.com',
+        expiresAt: '2026-05-08T10:00:00.000Z',
+        id: '44444444-4444-4444-8444-444444444444',
+        invitedBy: '55555555-5555-4555-8555-555555555555',
+        role: 'member',
+        status: 'pending',
+        workspaceId: '33333333-3333-4333-8333-333333333333',
+      },
+    ]);
+    testMocks.cancelInvite.mockRejectedValueOnce(
+      new Error('Pending invite not found'),
+    );
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = 'access-token';
+
+    const wrapper = mount(MembersView, {
+      global: {
+        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          MemberInviteDialog: MemberInviteDialogStub,
+          MembersTable: MembersTableStub,
+          PendingInvitationsCard: PendingInvitationsCardStub,
+          Skeleton: SkeletonStub,
+        },
+      },
+    });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="pending-invite-cancel"]').trigger('click');
+
+    const accept = testMocks.requireConfirmation.mock.calls[0]?.[3] as
+      | (() => Promise<void>)
+      | undefined;
+    await accept?.();
+    await flushPromises();
+
+    expect(testMocks.cancelInvite).toHaveBeenCalledWith(
+      '44444444-4444-4444-8444-444444444444',
+    );
+    expect(testMocks.listInvites).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[data-testid="pending-invitations-card"]').text()).toContain(
+      '1 invites | loading=false | error=none',
+    );
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Pending invite not found',
+      expect.objectContaining({
+        logContext: { action: 'cancel-invite', feature: 'members' },
+      }),
+    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 });

@@ -8408,7 +8408,7 @@
       "name": "Admin Members",
       "clip": true,
       "width": 1280,
-      "height": 1040,
+      "height": 1240,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -9850,6 +9850,497 @@
                                       "type": "icon_font",
                                       "id": "E67cCw",
                                       "name": "Remove icon",
+                                      "width": 16,
+                                      "height": 16,
+                                      "iconFontName": "trash-2",
+                                      "iconFontFamily": "lucide",
+                                      "fill": "$color-destructive"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pendingInvitationsCard",
+                  "name": "pendingInvitationsCard",
+                  "width": "fill_container",
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-lg",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000014",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 3
+                  },
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pendingInvitesHeader",
+                      "name": "pendingInvitesHeader",
+                      "width": "fill_container",
+                      "height": 44,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pendingInvitesHeaderText",
+                          "name": "pendingInvitesHeaderText",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "pendingInvitesTitle",
+                              "fill": "$color-text-dark",
+                              "content": "Pending Invitations",
+                              "fontFamily": "Inter",
+                              "fontSize": 18,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "pendingInvitesSubtitle",
+                              "fill": "$color-text-muted",
+                              "content": "Resend access emails or cancel outstanding invites.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "pendingInvitesCount",
+                          "fill": "$color-text-muted",
+                          "content": "3 pending",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pendingInvitesTable",
+                      "name": "pendingInvitesTable",
+                      "width": "fill_container",
+                      "cornerRadius": "$radius-sm",
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$color-divider"
+                      },
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pendingInvitesHead",
+                          "name": "pendingInvitesHead",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$color-app-bg",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "pendingEmailHead",
+                              "name": "pendingEmailHead",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingEmailHeadText",
+                                  "fill": "$color-text-dark",
+                                  "content": "Email",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingRoleHead",
+                              "name": "pendingRoleHead",
+                              "width": 140,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingRoleHeadText",
+                                  "fill": "$color-text-dark",
+                                  "content": "Role",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingExpiresHead",
+                              "name": "pendingExpiresHead",
+                              "width": 180,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingExpiresHeadText",
+                                  "fill": "$color-text-dark",
+                                  "content": "Expires",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingActionsHead",
+                              "name": "pendingActionsHead",
+                              "width": 140,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingActionsHeadText",
+                                  "fill": "$color-text-dark",
+                                  "content": "Actions",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pendingInviteRow1",
+                          "name": "pendingInviteRow1",
+                          "width": "fill_container",
+                          "height": 56,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "pendingInviteRow1Email",
+                              "name": "pendingInviteRow1Email",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "layout": "vertical",
+                              "gap": 2,
+                              "justifyContent": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingInviteRow1EmailText",
+                                  "fill": "$color-text-dark",
+                                  "content": "maya@example.com",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "pendingInviteRow1SentText",
+                                  "fill": "$color-text-muted",
+                                  "content": "Sent 2 hours ago",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingInviteRow1Role",
+                              "name": "pendingInviteRow1Role",
+                              "width": 140,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingInviteRow1RoleText",
+                                  "fill": "$color-text-dark",
+                                  "content": "Project Manager",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingInviteRow1Expires",
+                              "name": "pendingInviteRow1Expires",
+                              "width": 180,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingInviteRow1ExpiresText",
+                                  "fill": "$color-text-muted",
+                                  "content": "May 30, 2026",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingInviteRow1Actions",
+                              "name": "pendingInviteRow1Actions",
+                              "width": 140,
+                              "height": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "pendingInviteRow1Resend",
+                                  "name": "Resend invite",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    4,
+                                    6
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "icon_font",
+                                      "id": "pendingInviteRow1ResendIcon",
+                                      "name": "Send icon",
+                                      "width": 16,
+                                      "height": 16,
+                                      "iconFontName": "send",
+                                      "iconFontFamily": "lucide",
+                                      "fill": "$color-brand"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "pendingInviteRow1Cancel",
+                                  "name": "Cancel invite",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    4,
+                                    6
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "icon_font",
+                                      "id": "pendingInviteRow1CancelIcon",
+                                      "name": "Trash icon",
+                                      "width": 16,
+                                      "height": 16,
+                                      "iconFontName": "trash-2",
+                                      "iconFontFamily": "lucide",
+                                      "fill": "$color-destructive"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pendingInviteRow2",
+                          "name": "pendingInviteRow2",
+                          "width": "fill_container",
+                          "height": 56,
+                          "stroke": {
+                            "thickness": {
+                              "top": 1
+                            },
+                            "fill": "$color-divider"
+                          },
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "pendingInviteRow2Email",
+                              "name": "pendingInviteRow2Email",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "layout": "vertical",
+                              "gap": 2,
+                              "justifyContent": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingInviteRow2EmailText",
+                                  "fill": "$color-text-dark",
+                                  "content": "ops@example.com",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "pendingInviteRow2SentText",
+                                  "fill": "$color-text-muted",
+                                  "content": "Sent yesterday",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingInviteRow2Role",
+                              "name": "pendingInviteRow2Role",
+                              "width": 140,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingInviteRow2RoleText",
+                                  "fill": "$color-text-dark",
+                                  "content": "Admin",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingInviteRow2Expires",
+                              "name": "pendingInviteRow2Expires",
+                              "width": 180,
+                              "height": "fill_container",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "pendingInviteRow2ExpiresText",
+                                  "fill": "$color-text-muted",
+                                  "content": "Jun 2, 2026",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pendingInviteRow2Actions",
+                              "name": "pendingInviteRow2Actions",
+                              "width": 140,
+                              "height": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "pendingInviteRow2Resend",
+                                  "name": "Resend invite",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    4,
+                                    6
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "icon_font",
+                                      "id": "pendingInviteRow2ResendIcon",
+                                      "name": "Send icon",
+                                      "width": 16,
+                                      "height": 16,
+                                      "iconFontName": "send",
+                                      "iconFontFamily": "lucide",
+                                      "fill": "$color-brand"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "pendingInviteRow2Cancel",
+                                  "name": "Cancel invite",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    4,
+                                    6
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "icon_font",
+                                      "id": "pendingInviteRow2CancelIcon",
+                                      "name": "Trash icon",
                                       "width": 16,
                                       "height": 16,
                                       "iconFontName": "trash-2",
