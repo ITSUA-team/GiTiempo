@@ -418,6 +418,8 @@ describe("useDashboardOverview", () => {
       timeRangeLabel: "11:00 - Running",
     });
     expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("1h");
+    expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Project Orion");
+    expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Improve reports filters");
   });
 
   it("reflects a stopped timer entry from Query cache reconciliation", async () => {
@@ -474,6 +476,8 @@ describe("useDashboardOverview", () => {
       timeRangeLabel: "11:00 - 11:30",
     });
     expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("30m");
+    expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Project Orion");
+    expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Improve reports filters");
 
     vi.advanceTimersByTime(2000);
     await flushPromises();

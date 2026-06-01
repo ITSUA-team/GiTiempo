@@ -33,6 +33,28 @@ export function normalizeTimeEntryListQuery(
   };
 }
 
+export type NormalizedTimeEntryListQuery = ReturnType<typeof normalizeTimeEntryListQuery>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export function readTimeEntryListQueryKey(
+  queryKey: QueryKey,
+): NormalizedTimeEntryListQuery | null {
+  const [, , feature, queryType, maybeQuery] = queryKey;
+
+  if (
+    feature !== "time-entries" ||
+    (queryType !== "list" && queryType !== "list-all") ||
+    !isRecord(maybeQuery)
+  ) {
+    return null;
+  }
+
+  return normalizeTimeEntryListQuery(maybeQuery as Partial<TimeEntryListQuery>);
+}
+
 export const timeEntriesKeys = {
   all: (scope?: UserServerStateScope) =>
     ["user-web", normalizeScope(scope), "time-entries"] as const,

@@ -7,6 +7,7 @@ import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
+import { waitForRoute } from "@gitiempo/web-shared/testing";
 
 import { createAppRouter, routeNames } from "@/router";
 
@@ -230,8 +231,12 @@ describe("InvitePasswordSetupView", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain("Password saved");
 
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.inviteAccept,
+    );
     await wrapper.get('[data-testid="invite-password-setup-success"]').trigger("click");
-    await flushPromises();
+    await routeReady;
 
     expect(router.currentRoute.value.name).toBe(routeNames.inviteAccept);
     expect(router.currentRoute.value.fullPath).toBe(
