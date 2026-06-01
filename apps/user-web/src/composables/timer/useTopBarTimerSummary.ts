@@ -32,12 +32,15 @@ export function useTopBarTimerSummary({
   const currentTimer = shallowRef<TimeEntryResponse | null>(null);
   const selectedContext = shallowRef<SelectedTaskContext | null>(null);
   const selectedDescription = shallowRef<string | null>(null);
+  const hasExplicitIdleSelection = shallowRef(false);
 
   function setSelectedContextFromTimer(timer: TimeEntryResponse): void {
+    hasExplicitIdleSelection.value = false;
     selectedContext.value = toSelectedTaskContext(timer);
   }
 
   function setSelectedDescriptionFromTimer(timer: TimeEntryResponse): void {
+    hasExplicitIdleSelection.value = false;
     selectedDescription.value = timer.description ?? null;
   }
 
@@ -45,11 +48,13 @@ export function useTopBarTimerSummary({
     context: SelectedTaskContext,
     description: string | null,
   ): void {
+    hasExplicitIdleSelection.value = true;
     selectedContext.value = context;
     selectedDescription.value = description;
   }
 
   function clearSelectedDescription(): void {
+    hasExplicitIdleSelection.value = false;
     selectedDescription.value = null;
   }
 
@@ -176,6 +181,18 @@ export function useTopBarTimerSummary({
       if (!data) return;
 
       currentTimer.value = data.currentTimer;
+
+      if (data.currentTimer) {
+        hasExplicitIdleSelection.value = false;
+        selectedContext.value = data.selectedContext;
+        selectedDescription.value = data.selectedDescription;
+        return;
+      }
+
+      if (hasExplicitIdleSelection.value) {
+        return;
+      }
+
       selectedContext.value = data.selectedContext;
       selectedDescription.value = data.selectedDescription;
     },
@@ -188,6 +205,7 @@ export function useTopBarTimerSummary({
     currentTimer.value = null;
     selectedContext.value = null;
     selectedDescription.value = null;
+    hasExplicitIdleSelection.value = false;
     appToast.showErrorToast({
       detail: "Refresh and try again.",
       error,

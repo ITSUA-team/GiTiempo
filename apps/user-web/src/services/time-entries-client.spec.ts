@@ -3,6 +3,37 @@ import { createAuthenticatedApiClient } from "@gitiempo/web-shared/http";
 
 import { createTimeEntriesClient } from "./time-entries-client";
 
+type FetchMock = typeof fetch;
+type RecordedRequestInit = {
+  body?: string;
+  headers?: Record<string, string>;
+  method?: string;
+};
+
+function getRecordedFetchRequest(fetchFn: ReturnType<typeof vi.fn<FetchMock>>) {
+  const call = fetchFn.mock.calls[0];
+
+  if (!call) {
+    throw new Error("Expected recorded fetch request");
+  }
+
+  const path = call[0];
+  const requestInit = call[1];
+
+  if (typeof path !== "string") {
+    throw new Error("Expected string request path");
+  }
+
+  if (!requestInit || typeof requestInit !== "object") {
+    throw new Error("Expected fetch request options");
+  }
+
+  return {
+    path,
+    requestInit: requestInit as RecordedRequestInit,
+  };
+}
+
 function jsonResponse(body: unknown, init: { status?: number } = {}): Response {
   return new Response(JSON.stringify(body), {
     headers: { "Content-Type": "application/json" },
@@ -64,7 +95,7 @@ describe("createTimeEntriesClient", () => {
   });
 
   it("loads recent own entries with query parameters", async () => {
-    const fetchFn = vi.fn(async () =>
+    const fetchFn = vi.fn<FetchMock>(async () =>
       jsonResponse({
         items: [],
         meta: { limit: 10, page: 1, total: 0, totalPages: 0 },
@@ -353,20 +384,7 @@ describe("createTimeEntriesClient", () => {
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
 
-    const call = fetchFn.mock.calls[0];
-
-    if (!call) {
-      throw new Error("Expected timer start request");
-    }
-
-    const [path, requestInit] = call as unknown as [
-      string,
-      {
-        body?: string;
-        headers?: Record<string, string>;
-        method?: string;
-      },
-    ];
+    const { path, requestInit } = getRecordedFetchRequest(fetchFn);
 
     expect(path).toBe("/time-entries/timer/start");
     expect(requestInit).toMatchObject({

@@ -1,5 +1,4 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
-import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import { computed, shallowRef, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
@@ -218,9 +217,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
           summary: "Could not update the timer",
         });
 
-        if (isApiErrorStatus(error, [403, 404, 409, 422])) {
-          await summary.refreshSummary();
-        }
+        await summary.refreshSummaryAfterConflict(error);
       }
 
       return;

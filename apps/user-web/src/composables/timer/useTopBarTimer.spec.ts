@@ -344,6 +344,56 @@ describe("useTopBarTimer", () => {
     expect(topBarTimer.selectedDescription.value).toBe("Investigate release blocker");
   });
 
+  it("preserves an explicit idle selection when the timer summary refetches", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject("project-1", "Project Orion"),
+      createProject("project-2", "Project Atlas"),
+    ]);
+    client.listOwnEntries.mockResolvedValue(
+      createOwnEntriesResponse([
+        createCompletedEntry({
+          project: { id: "project-1", name: "Project Orion" },
+          projectId: "project-1",
+          task: { id: "task-1", title: "Improve reports filters" },
+          taskId: "task-1",
+        }),
+      ]),
+    );
+    client.listProjectTasks.mockImplementation(async (projectId) => {
+      if (projectId === "project-1") {
+        return [createTask("task-1", "project-1", "Improve reports filters")];
+      }
+
+      return [createTask("task-2", "project-2", "Summarize PM scope changes")];
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId("project-2");
+    await flushPromises();
+    topBarTimer.setSelectedTaskId("task-2");
+    topBarTimer.setSelectedDescription("Investigate release blocker");
+    await topBarTimer.confirmSelectedTask();
+    await topBarTimer.refreshSummary();
+    await flushPromises();
+
+    expect(topBarTimer.selectedContext.value).toEqual({
+      projectId: "project-2",
+      projectName: "Project Atlas",
+      taskId: "task-2",
+      taskTitle: "Summarize PM scope changes",
+    });
+    expect(topBarTimer.selectedDescription.value).toBe("Investigate release blocker");
+  });
+
   it("creates a task from the picker and selects it with success toast feedback", async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
