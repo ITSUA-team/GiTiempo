@@ -443,7 +443,7 @@ describe('Time entries (e2e)', () => {
     expect(stopAgain.status).toBe(404);
   });
 
-  it('rejects update and delete for running entries before stop', async () => {
+  it('allows task and description updates but rejects interval and delete for running entries before stop', async () => {
     const started = await request(app.getHttpServer())
       .post('/time-entries/timer/start')
       .set('Authorization', bearer(memberToken))
@@ -468,11 +468,20 @@ describe('Time entries (e2e)', () => {
     );
     expect(reassign.body.endedAt).toBeNull();
 
-    const update = await request(app.getHttpServer())
+    const updateDescription = await request(app.getHttpServer())
       .patch(`/time-entries/${started.body.id}`)
       .set('Authorization', bearer(memberToken))
-      .send({ description: 'Nope' });
-    expect(update.status).toBe(409);
+      .send({ description: 'Running note' });
+    expect(updateDescription.status).toBe(200);
+    expect(updateDescription.body.id).toBe(started.body.id);
+    expect(updateDescription.body.description).toBe('Running note');
+    expect(updateDescription.body.endedAt).toBeNull();
+
+    const updateInterval = await request(app.getHttpServer())
+      .patch(`/time-entries/${started.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ startedAt: '2026-05-01T10:00:00.000Z' });
+    expect(updateInterval.status).toBe(409);
 
     const current = await request(app.getHttpServer())
       .get('/time-entries/current')
@@ -480,6 +489,7 @@ describe('Time entries (e2e)', () => {
     expect(current.status).toBe(200);
     expect(current.body.timeEntry.id).toBe(started.body.id);
     expect(current.body.timeEntry.taskId).toBe(nextTaskId);
+    expect(current.body.timeEntry.description).toBe('Running note');
 
     const remove = await request(app.getHttpServer())
       .delete(`/time-entries/${started.body.id}`)
