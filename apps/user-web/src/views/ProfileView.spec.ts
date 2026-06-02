@@ -3,7 +3,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
-import { computed, shallowRef } from "vue";
+import { computed, ref, shallowRef } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as VueRouterModule from "vue-router";
 import type {
@@ -23,16 +23,16 @@ import { useAuthStore } from "@/stores/auth";
 const replaceSpy = vi.fn(async () => undefined);
 const toastAddSpy = vi.fn();
 
-const githubState = shallowRef<
+const githubState = ref<
   "connected" | "connecting" | "disconnected" | "loading" | "request-error"
 >("disconnected");
 const githubConnection = shallowRef<GitHubConnectionStatusResponse | null>({
   account: null,
   status: "disconnected",
 });
-const githubRequestErrorMessage = shallowRef<string | null>(null);
-const githubIsConnecting = shallowRef(false);
-const githubIsDisconnecting = shallowRef(false);
+const githubRequestErrorMessage = ref<string | null>(null);
+const githubIsConnecting = ref(false);
+const githubIsDisconnecting = ref(false);
 const githubActions = {
   connect: vi.fn(),
   refreshConnectionStatus: vi.fn(async () => undefined),

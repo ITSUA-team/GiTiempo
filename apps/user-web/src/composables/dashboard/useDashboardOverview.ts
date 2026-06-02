@@ -2,7 +2,7 @@ import type { TimeEntryResponse } from "@gitiempo/shared";
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
 import { useQuery } from "@tanstack/vue-query";
 import { useRecentOwnTimeEntriesQuery } from "@/composables/query";
-import { computed, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
 import { createDefaultTimeEntriesClient } from "@/config/clients";
@@ -45,7 +45,7 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   const setIntervalFn = options.setIntervalFn ?? setInterval;
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
 
-  const nowMs = shallowRef(now());
+  const nowMs = ref(now());
   const accessToken = computed(() => authStore.accessToken);
   const scope = computed(() => getUserServerStateScope(authStore.accessToken));
   const hasAccessToken = computed(() => Boolean(accessToken.value));

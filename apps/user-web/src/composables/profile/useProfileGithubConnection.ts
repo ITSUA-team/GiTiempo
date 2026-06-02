@@ -1,4 +1,4 @@
-import { computed, onMounted, shallowRef } from "vue";
+import { computed, onMounted, ref, shallowRef } from "vue";
 import type {
   LocationQueryRaw,
   RouteLocationNormalizedLoaded,
@@ -100,10 +100,10 @@ export function useProfileGithubConnection(
     options.locationAssign ?? ((url: string) => window.location.assign(url));
 
   const connection = shallowRef<GitHubConnectionStatusResponse | null>(null);
-  const isConnecting = shallowRef(false);
-  const isDisconnecting = shallowRef(false);
-  const isLoading = shallowRef(true);
-  const requestErrorMessage = shallowRef<string | null>(null);
+  const isConnecting = ref(false);
+  const isDisconnecting = ref(false);
+  const isLoading = ref(true);
+  const requestErrorMessage = ref<string | null>(null);
 
   let connectRequestId = 0;
 

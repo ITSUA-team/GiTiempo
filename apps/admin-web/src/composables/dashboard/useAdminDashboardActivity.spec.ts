@@ -1,4 +1,4 @@
-import { defineComponent, shallowRef } from 'vue';
+import { defineComponent, ref, shallowRef } from 'vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 
@@ -20,9 +20,9 @@ function createActivityRow(index: number): AdminDashboardActivityRow {
 
 function mountActivity(rows = Array.from({ length: 6 }, (_, index) => createActivityRow(index))) {
   const allActivityRows = shallowRef(rows);
-  const initialLoaded = shallowRef(true);
-  const loading = shallowRef(false);
-  const loadError = shallowRef<string | null>(null);
+  const initialLoaded = ref(true);
+  const loading = ref(false);
+  const loadError = ref<string | null>(null);
   let activity!: ReturnType<typeof useAdminDashboardActivity>;
 
   mount(

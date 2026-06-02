@@ -8,7 +8,7 @@ import {
   useOwnTimeEntriesQuery,
   useVisibleProjectsQuery,
 } from "@/composables/query";
-import { computed, nextTick, shallowRef, watch, type ComputedRef, type Ref } from "vue";
+import { computed, nextTick, ref, watch, type ComputedRef, type Ref } from "vue";
 
 import {
   formatTimeEntryDuration,
@@ -49,7 +49,7 @@ export function useTimeEntriesData({
   scope,
   setIntervalFn,
 }: UseTimeEntriesDataOptions) {
-  const nowMs = shallowRef(now());
+  const nowMs = ref(now());
   let tickHandle: ReturnType<typeof setInterval> | null = null;
 
   const visibleProjectsQuery = useVisibleProjectsQuery({

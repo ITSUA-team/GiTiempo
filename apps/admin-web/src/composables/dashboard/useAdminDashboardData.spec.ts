@@ -1,4 +1,4 @@
-import { defineComponent, shallowRef } from 'vue';
+import { defineComponent, ref, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type {
@@ -6,6 +6,7 @@ import type {
   ProjectResponse,
   TimeReportProjectRow,
   TimeReportResponse,
+  WorkspaceRole,
   WorkspaceInviteResponse,
   WorkspaceMemberResponse,
 } from '@gitiempo/shared';
@@ -160,7 +161,7 @@ function mountDashboard(
     defineComponent({
       setup() {
         dashboard = useAdminDashboardData({
-          accessToken: shallowRef('access-token'),
+          accessToken: ref<string | null>('access-token'),
           now: () => now,
           scope: shallowRef({
             role: 'admin',
@@ -223,7 +224,7 @@ describe('useAdminDashboardData', () => {
     const clients = createDashboardClients();
     const dashboard = mountDashboard({
       ...clients,
-      role: shallowRef('pm'),
+      role: ref<WorkspaceRole | null>('pm'),
     });
 
     await flushPromises();
@@ -273,7 +274,7 @@ describe('useAdminDashboardData', () => {
     const clients = createDashboardClients();
     const dashboard = mountDashboard({
       ...clients,
-      accessToken: shallowRef(null),
+      accessToken: ref<string | null>(null),
     });
 
     await flushPromises();
@@ -291,7 +292,7 @@ describe('useAdminDashboardData', () => {
     const clients = createDashboardClients();
     const dashboard = mountDashboard({
       ...clients,
-      role: shallowRef(null),
+      role: ref<WorkspaceRole | null>(null),
     });
 
     await flushPromises();

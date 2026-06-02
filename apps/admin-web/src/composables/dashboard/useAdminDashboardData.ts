@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/vue-query';
-import { computed, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, ref, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
 import type { TimeReportQuery, WorkspaceRole } from '@gitiempo/shared';
 import { getLocalIsoWeekRange } from '@gitiempo/web-shared/time';
 
@@ -54,11 +54,11 @@ export function useAdminDashboardData({
   onError,
   projectsClient = adminProjectsClient,
   reportsClient = adminReportsClient,
-  role = shallowRef<WorkspaceRole | null>('admin'),
+  role = ref<WorkspaceRole | null>('admin'),
   scope,
 }: UseAdminDashboardDataOptions) {
   const requestedAt = shallowRef(now());
-  const currentAction = shallowRef('load-dashboard');
+  const currentAction = ref('load-dashboard');
   const weekRange = computed(() => getLocalIsoWeekRange(requestedAt.value));
   const blockedError = computed(() => {
     if (!accessToken.value) {

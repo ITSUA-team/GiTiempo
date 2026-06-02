@@ -1,5 +1,5 @@
 /* eslint-disable vue/one-component-per-file */
-import { defineComponent, shallowRef } from 'vue';
+import { defineComponent, ref, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -202,7 +202,7 @@ describe('useReportsData', () => {
   }
 
   it('loads backend-generated project-member report rows', async () => {
-    const accessToken = shallowRef('access-token');
+    const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
     const reportsClient = createReportsClientMocks();
     let reports!: ReturnType<typeof useReportsData>;
@@ -246,7 +246,7 @@ describe('useReportsData', () => {
   });
 
   it('keeps active public and assigned private projects in PM-visible report scope', async () => {
-    const accessToken = shallowRef('access-token');
+    const accessToken = ref<string | null>('access-token');
     const scopedProjects: ProjectListResponse = [
       createProject(projectOrionId, 'Public Roadmap', [
         {
@@ -305,7 +305,7 @@ describe('useReportsData', () => {
   });
 
   it('debounces project/date table refreshes without applying export group-by to the table', async () => {
-    const accessToken = shallowRef('access-token');
+    const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
     const reportsClient = createReportsClientMocks();
     let reports!: ReturnType<typeof useReportsData>;
@@ -354,7 +354,7 @@ describe('useReportsData', () => {
   });
 
   it('exports through the reports API using explicit export setup controls', async () => {
-    const accessToken = shallowRef('access-token');
+    const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
     const reportsClient = createReportsClientMocks();
     reportsClient.exportTimeReport.mockResolvedValue({
@@ -399,7 +399,7 @@ describe('useReportsData', () => {
   });
 
   it('blocks invalid table date ranges before refresh and export requests', async () => {
-    const accessToken = shallowRef('access-token');
+    const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
     const reportsClient = createReportsClientMocks();
     let reports!: ReturnType<typeof useReportsData>;
@@ -442,7 +442,7 @@ describe('useReportsData', () => {
   });
 
   it('keeps request errors distinct from empty report results', async () => {
-    const accessToken = shallowRef('access-token');
+    const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects.slice(0, 1));
     const reportsClient = createReportsClientMocks();
     reportsClient.getTimeReport.mockRejectedValue(new Error('No scope'));

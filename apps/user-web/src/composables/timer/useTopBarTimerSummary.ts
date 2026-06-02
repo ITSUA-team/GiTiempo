@@ -6,7 +6,7 @@ import type {
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
 import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import { useQuery } from "@tanstack/vue-query";
-import { computed, shallowRef, watch, type ComputedRef } from "vue";
+import { computed, ref, shallowRef, watch, type ComputedRef } from "vue";
 
 import {
   toSelectedTaskContext,
@@ -31,8 +31,8 @@ export function useTopBarTimerSummary({
   const appToast = createAppToast(toast);
   const currentTimer = shallowRef<TimeEntryResponse | null>(null);
   const selectedContext = shallowRef<SelectedTaskContext | null>(null);
-  const selectedDescription = shallowRef<string | null>(null);
-  const hasExplicitIdleSelection = shallowRef(false);
+  const selectedDescription = ref<string | null>(null);
+  const hasExplicitIdleSelection = ref(false);
 
   function setSelectedContextFromTimer(timer: TimeEntryResponse): void {
     hasExplicitIdleSelection.value = false;

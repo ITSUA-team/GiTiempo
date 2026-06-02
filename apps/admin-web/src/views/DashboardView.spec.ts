@@ -1,4 +1,4 @@
-import { shallowRef } from 'vue';
+import { ref, shallowRef } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
@@ -89,16 +89,16 @@ function createDashboardState({
   return {
     activityState: {
       activityRows: shallowRef(activityRows),
-      hasMoreActivity: shallowRef(false),
-      showAllActivity: shallowRef(false),
+      hasMoreActivity: ref(false),
+      showAllActivity: ref(false),
       toggleActivityRows: dashboardMocks.toggleActivityRows,
     },
     dataState: {
       allActivityRows: shallowRef(activityRows),
-      initialLoaded: shallowRef(!isInitialLoading),
-      isInitialLoading: shallowRef(isInitialLoading),
-      loadError: shallowRef(loadError),
-      loading: shallowRef(loading),
+      initialLoaded: ref(!isInitialLoading),
+      isInitialLoading: ref(isInitialLoading),
+      loadError: ref(loadError),
+      loading: ref(loading),
       refresh: dashboardMocks.refresh,
       stats: shallowRef(stats),
     },
@@ -222,8 +222,8 @@ describe('DashboardView', () => {
 
   it('passes the view-all activity state and toggle action to the activity table', async () => {
     const state = createDashboardState();
-    state.activityState.hasMoreActivity = shallowRef(true);
-    state.activityState.showAllActivity = shallowRef(false);
+    state.activityState.hasMoreActivity = ref(true);
+    state.activityState.showAllActivity = ref(false);
     dashboardMocks.activityState = state.activityState;
     dashboardMocks.dataState = state.dataState;
 
