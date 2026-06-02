@@ -10,6 +10,7 @@ const testMocks = vi.hoisted(() => ({
   cancelInvite: vi.fn(),
   errorToast: vi.fn(),
   requireConfirmation: vi.fn(),
+  removeMember: vi.fn(),
   resendInvite: vi.fn(),
   successToast: vi.fn(),
   listInvites: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock('@/services/admin-members-client', () => ({
     cancelInvite: testMocks.cancelInvite,
     listInvites: testMocks.listInvites,
     listMembers: testMocks.listMembers,
+    removeMember: testMocks.removeMember,
     resendInvite: testMocks.resendInvite,
   },
 }));
@@ -58,8 +60,24 @@ function createDeferred<T>() {
   return deferred;
 }
 
+function createMember() {
+  return {
+    avatarUrl: null,
+    displayName: 'Pat PM',
+    email: 'pat@example.com',
+    id: 'member-remove',
+    joinedAt: '2026-05-01T10:00:00.000Z',
+    lastActiveAt: null,
+    projectsAssignedCount: 1,
+    role: 'pm',
+    userId: 'user-2',
+    workspaceId: '33333333-3333-4333-8333-333333333333',
+  };
+}
+
 const MembersTableStub = {
   name: 'MembersTable',
+  emits: ['remove-member'],
   props: {
     currentUserId: { type: String, default: null },
     loading: { type: Boolean, required: true },
@@ -67,7 +85,14 @@ const MembersTableStub = {
     projects: { type: Array, required: true },
   },
   template:
-    '<div data-testid="members-table">{{ members.length }} members | {{ projects.length }} projects | loading={{ loading }} | currentUser={{ currentUserId }}</div>',
+    `<div data-testid="members-table">
+      {{ members.length }} members | {{ projects.length }} projects | loading={{ loading }} | currentUser={{ currentUserId }}
+      <button
+        v-if="members[0]"
+        data-testid="member-remove-intent"
+        @click="$emit('remove-member', members[0])"
+      />
+    </div>`,
 };
 
 const MemberInviteDialogStub = {
@@ -113,6 +138,35 @@ const SkeletonStub = {
   template: '<div data-testid="skeleton" />',
 };
 
+function mountMembersView() {
+  const pinia = createPinia();
+  setActivePinia(pinia);
+
+  const authStore = useAuthStore(pinia);
+  authStore.accessToken = 'access-token';
+  authStore.profile = {
+    avatarUrl: null,
+    createdAt: '2026-05-01T10:00:00.000Z',
+    displayName: 'Alex Admin',
+    email: 'alex@example.com',
+    id: 'user-1',
+    role: 'admin',
+    updatedAt: '2026-05-01T10:00:00.000Z',
+  };
+
+  return mount(MembersView, {
+    global: {
+      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      stubs: {
+        MemberInviteDialog: MemberInviteDialogStub,
+        MembersTable: MembersTableStub,
+        PendingInvitationsCard: PendingInvitationsCardStub,
+        Skeleton: SkeletonStub,
+      },
+    },
+  });
+}
+
 describe('MembersView', () => {
   beforeEach(() => {
     testMocks.cancelInvite.mockReset();
@@ -120,6 +174,7 @@ describe('MembersView', () => {
     testMocks.listInvites.mockReset();
     testMocks.listProjects.mockReset();
     testMocks.errorToast.mockReset();
+    testMocks.removeMember.mockReset();
     testMocks.requireConfirmation.mockReset();
     testMocks.resendInvite.mockReset();
     testMocks.successToast.mockReset();
@@ -328,6 +383,82 @@ describe('MembersView', () => {
         logContext: { action: 'load-members', feature: 'members' },
       }),
     );
+  });
+
+  it('confirms member removal, shows success feedback, and refreshes members', async () => {
+    const member = createMember();
+
+    testMocks.listMembers
+      .mockResolvedValueOnce([member])
+      .mockResolvedValueOnce([]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.removeMember.mockResolvedValue(undefined);
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-remove-intent"]').trigger('click');
+
+    expect(testMocks.requireConfirmation).toHaveBeenCalledWith(
+      'Pat PM will be removed from this workspace. This action cannot be undone.',
+      'Remove member?',
+      'Remove',
+      expect.any(Function),
+    );
+
+    const accept = testMocks.requireConfirmation.mock.calls[0]?.[3] as
+      | (() => Promise<void>)
+      | undefined;
+    await accept?.();
+    await flushPromises();
+
+    expect(testMocks.removeMember).toHaveBeenCalledWith('member-remove');
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+    expect(testMocks.successToast).toHaveBeenCalledWith('Pat PM has been removed.');
+  });
+
+  it('does not remove a member before the confirmation accept callback runs', async () => {
+    testMocks.listMembers.mockResolvedValue([createMember()]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-remove-intent"]').trigger('click');
+
+    expect(testMocks.requireConfirmation).toHaveBeenCalledTimes(1);
+    expect(testMocks.removeMember).not.toHaveBeenCalled();
+  });
+
+  it('keeps member data loaded when confirmed removal fails', async () => {
+    testMocks.listMembers.mockResolvedValue([createMember()]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.removeMember.mockRejectedValueOnce(new Error('Last admin cannot be removed'));
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-remove-intent"]').trigger('click');
+
+    const accept = testMocks.requireConfirmation.mock.calls[0]?.[3] as
+      | (() => Promise<void>)
+      | undefined;
+    await accept?.();
+    await flushPromises();
+
+    expect(testMocks.removeMember).toHaveBeenCalledWith('member-remove');
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[data-testid="members-table"]').text()).toContain('1 members');
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Last admin cannot be removed',
+      expect.objectContaining({
+        logContext: { action: 'remove-member', feature: 'members' },
+      }),
+    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
   it('keeps pending invite request failures scoped to the pending invitations card', async () => {

@@ -1,37 +1,13 @@
 // @vitest-environment jsdom
 
-import { flushPromises, mount } from '@vue/test-utils';
+import { mount } from '@vue/test-utils';
 import type { ProjectListResponse, WorkspaceMemberListResponse } from '@gitiempo/shared';
 import { ManagementTableShell } from '@gitiempo/web-shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
-import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const confirmationMock = vi.hoisted(() => ({
-  requireConfirmation: vi.fn(),
-}));
-
-const toastMock = vi.hoisted(() => ({
-  errorToast: vi.fn(),
-  successToast: vi.fn(),
-}));
-
-vi.mock('@/composables/feedback/useConfirmation', () => ({
-  useConfirmation: () => confirmationMock,
-}));
-
-vi.mock('@/composables/feedback/useToasts', () => ({
-  useToasts: () => toastMock,
-}));
-
-vi.mock('@/services/admin-members-client', () => ({
-  adminMembersClient: {
-    removeMember: vi.fn(),
-  },
-}));
 
 import MembersTable from './MembersTable.vue';
 
@@ -158,9 +134,6 @@ function mountMembersTable(options: {
   members?: WorkspaceMemberListResponse;
   projects?: ProjectListResponse;
 } = {}) {
-  const pinia = createPinia();
-  setActivePinia(pinia);
-
   return mount(MembersTable, {
     props: {
       currentUserId: options.currentUserId ?? 'current-user',
@@ -176,7 +149,7 @@ function mountMembersTable(options: {
           },
         },
       },
-      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
         MemberAssignPmPanel: { template: '<div data-testid="assign-panel" />' },
         MemberEditForm: { template: '<div data-testid="edit-panel" />' },
@@ -202,9 +175,6 @@ function expectVisibleMembers(wrapper: ReturnType<typeof mountMembersTable>, nam
 
 describe('MembersTable', () => {
   beforeEach(() => {
-    confirmationMock.requireConfirmation.mockReset();
-    toastMock.errorToast.mockReset();
-    toastMock.successToast.mockReset();
     mockMatchMedia();
   });
 
@@ -296,27 +266,24 @@ describe('MembersTable', () => {
   it('renders non-loading mobile cards with shared fields and actions on small viewports', async () => {
     mockMatchMedia(true);
 
-    const pinia = createPinia();
-    setActivePinia(pinia);
+    const member = {
+      avatarUrl: null,
+      displayName: 'Pat PM',
+      email: 'pat@example.com',
+      id: 'member-1',
+      joinedAt: '2026-05-01T10:00:00.000Z',
+      lastActiveAt: '2026-05-02T11:00:00.000Z',
+      projectsAssignedCount: 2,
+      role: 'pm' as const,
+      userId: 'user-2',
+      workspaceId: 'workspace-1',
+    };
 
     const wrapper = mount(MembersTable, {
       props: {
         currentUserId: 'current-user',
         loading: false,
-        members: [
-          {
-            avatarUrl: null,
-            displayName: 'Pat PM',
-            email: 'pat@example.com',
-            id: 'member-1',
-            joinedAt: '2026-05-01T10:00:00.000Z',
-            lastActiveAt: '2026-05-02T11:00:00.000Z',
-            projectsAssignedCount: 2,
-            role: 'pm',
-            userId: 'user-2',
-            workspaceId: 'workspace-1',
-          },
-        ],
+        members: [member],
         projects: [
           {
             color: null,
@@ -342,7 +309,7 @@ describe('MembersTable', () => {
             },
           },
         },
-        plugins: [pinia, PrimeVue],
+        plugins: [PrimeVue],
         stubs: {
           MemberAssignPmPanel: { template: '<div data-testid="assign-panel" />' },
           MemberEditForm: { template: '<div data-testid="edit-panel" />' },
@@ -364,10 +331,14 @@ describe('MembersTable', () => {
 
     expect(wrapper.get('[data-testid="member-mobile-edit-member-1"]').attributes('aria-label')).toBe('Edit');
     expect(wrapper.get('[data-testid="member-mobile-remove-member-1"]').attributes('aria-label')).toBe('Remove');
+
+    await wrapper.get('[data-testid="member-mobile-remove-member-1"]').trigger('click');
+    expect(wrapper.emitted('remove-member')).toEqual([[member]]);
   });
 
   it('preserves assign, edit, and remove flows behind the icon-only actions', async () => {
-    const wrapper = mountMembersTable({ members: [createMembers()[0]!], projects: [createProjects()[0]!] });
+    const member = createMembers()[0]!;
+    const wrapper = mountMembersTable({ members: [member], projects: [createProjects()[0]!] });
 
     await wrapper.get('[data-testid="member-assign-pm-member-1"]').trigger('click');
     expect(wrapper.find('[data-testid="assign-panel"]').exists()).toBe(true);
@@ -376,9 +347,7 @@ describe('MembersTable', () => {
     expect(wrapper.find('[data-testid="edit-panel"]').exists()).toBe(true);
 
     await wrapper.get('[data-testid="member-remove-member-1"]').trigger('click');
-    await flushPromises();
-
-    expect(confirmationMock.requireConfirmation).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('remove-member')).toEqual([[member]]);
   });
 
   it('hides an expanded member panel when filters exclude that row', async () => {

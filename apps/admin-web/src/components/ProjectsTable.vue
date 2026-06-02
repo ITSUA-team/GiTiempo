@@ -34,10 +34,6 @@ import Tag from 'primevue/tag';
 
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
-import { useConfirmation } from '@/composables/feedback/useConfirmation';
-import { useToasts } from '@/composables/feedback/useToasts';
-import { adminProjectsClient } from '@/services/admin-projects-client';
-import { useAuthStore } from '@/stores/auth';
 
 type ProjectHoursFilter = 'any' | 'tracked' | 'gte40' | 'zero';
 
@@ -63,13 +59,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'edit-saved': [];
-  archive: [];
-  unarchive: [];
+  archive: [project: ProjectResponse];
+  unarchive: [project: ProjectResponse];
 }>();
 
-const authStore = useAuthStore();
-const { successToast, errorToast } = useToasts();
-const { requireConfirmation } = useConfirmation();
 const isMobileViewport = useIsMobileViewport();
 const expandedRows = ref<Record<string, boolean>>({});
 
@@ -143,53 +136,12 @@ function handleEditCancelled(project: ProjectResponse): void {
   collapseRow(project);
 }
 
-async function handleArchive(project: ProjectResponse): Promise<void> {
-  const token = authStore.accessToken;
-  if (!token) {
-    return;
-  }
-
-  try {
-    await adminProjectsClient.updateProject(project.id, {
-      isActive: false,
-    });
-    successToast(`${project.name} has been archived.`);
-    emit('archive');
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to archive project', {
-      error: err,
-      logContext: { action: 'archive-project', feature: 'projects' },
-    });
-  }
+function handleArchive(project: ProjectResponse): void {
+  emit('archive', project);
 }
 
-function confirmArchive(project: ProjectResponse): void {
-  requireConfirmation(
-    `"${project.name}" will be archived and hidden from non-admin users.`,
-    'Archive project?',
-    'Archive',
-    () => handleArchive(project),
-  );
-}
-
-async function handleUnarchive(project: ProjectResponse): Promise<void> {
-  const token = authStore.accessToken;
-  if (!token) {
-    return;
-  }
-
-  try {
-    await adminProjectsClient.updateProject(project.id, {
-      isActive: true,
-    });
-    successToast(`${project.name} is now active.`);
-    emit('unarchive');
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to unarchive project', {
-      error: err,
-      logContext: { action: 'unarchive-project', feature: 'projects' },
-    });
-  }
+function handleUnarchive(project: ProjectResponse): void {
+  emit('unarchive', project);
 }
 
 function formatSource(source: string): string {
@@ -521,7 +473,7 @@ watch(filteredProjects, (projects) => {
               :icon="ArchiveBoxIcon"
               label="Archive"
               tone="destructive"
-              @click="confirmArchive(project)"
+              @click="handleArchive(project)"
             />
           </template>
           <ManagementTableRowAction
@@ -721,7 +673,7 @@ watch(filteredProjects, (projects) => {
               :icon="ArchiveBoxIcon"
               label="Archive"
               tone="destructive"
-              @click="confirmArchive(data)"
+              @click="handleArchive(data)"
             />
           </template>
           <template v-else>

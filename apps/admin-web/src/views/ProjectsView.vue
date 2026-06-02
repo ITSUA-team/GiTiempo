@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import type {
   ManagementProjectSummaryResponse,
   ProjectListResponse,
+  ProjectResponse,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
@@ -12,6 +13,7 @@ import Button from 'primevue/button';
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import ProjectsTable from '@/components/ProjectsTable.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
+import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { routeNames } from '@/router';
 import { adminMembersClient } from '@/services/admin-members-client';
@@ -20,7 +22,8 @@ import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { errorToast } = useToasts();
+const { requireConfirmation } = useConfirmation();
+const { errorToast, successToast } = useToasts();
 
 const projects = ref<ProjectListResponse>([]);
 const summary = ref<ManagementProjectSummaryResponse>({
@@ -107,6 +110,57 @@ function handleNewProject(): void {
   router.push({ name: routeNames.addProject });
 }
 
+async function archiveProject(project: ProjectResponse): Promise<void> {
+  const token = authStore.accessToken;
+
+  if (!token) {
+    return;
+  }
+
+  try {
+    await adminProjectsClient.updateProject(project.id, {
+      isActive: false,
+    });
+    successToast(`${project.name} has been archived.`);
+    await refresh();
+  } catch (err) {
+    errorToast(err instanceof Error ? err.message : 'Failed to archive project', {
+      error: err,
+      logContext: { action: 'archive-project', feature: 'projects' },
+    });
+  }
+}
+
+function handleArchive(project: ProjectResponse): void {
+  requireConfirmation(
+    `"${project.name}" will be archived and hidden from non-admin users.`,
+    'Archive project?',
+    'Archive',
+    () => archiveProject(project),
+  );
+}
+
+async function handleUnarchive(project: ProjectResponse): Promise<void> {
+  const token = authStore.accessToken;
+
+  if (!token) {
+    return;
+  }
+
+  try {
+    await adminProjectsClient.updateProject(project.id, {
+      isActive: true,
+    });
+    successToast(`${project.name} is now active.`);
+    await refresh();
+  } catch (err) {
+    errorToast(err instanceof Error ? err.message : 'Failed to unarchive project', {
+      error: err,
+      logContext: { action: 'unarchive-project', feature: 'projects' },
+    });
+  }
+}
+
 onMounted(fetchAll);
 </script>
 
@@ -159,8 +213,8 @@ onMounted(fetchAll);
           :members="members"
           :loading="loading"
           @edit-saved="refresh"
-          @archive="refresh"
-          @unarchive="refresh"
+          @archive="handleArchive"
+          @unarchive="handleUnarchive"
         />
       </SurfaceCard>
     </template>

@@ -5,6 +5,7 @@ import type {
   WorkspaceInviteListResponse,
   WorkspaceInviteResponse,
   WorkspaceMemberListResponse,
+  WorkspaceMemberResponse,
 } from '@gitiempo/shared';
 import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
@@ -163,6 +164,38 @@ function handleInviteCreated(): void {
   refreshPendingInvites();
 }
 
+function getMemberDisplayName(member: WorkspaceMemberResponse): string {
+  return member.displayName?.trim() || member.email;
+}
+
+function handleRemoveMember(member: WorkspaceMemberResponse): void {
+  const memberName = getMemberDisplayName(member);
+
+  requireConfirmation(
+    `${memberName} will be removed from this workspace. This action cannot be undone.`,
+    'Remove member?',
+    'Remove',
+    async () => {
+      const token = authStore.accessToken;
+
+      if (!token) {
+        return;
+      }
+
+      try {
+        await adminMembersClient.removeMember(member.id);
+        successToast(`${memberName} has been removed.`);
+        await refreshMembers();
+      } catch (err) {
+        errorToast(err instanceof Error ? err.message : 'Failed to remove member', {
+          error: err,
+          logContext: { action: 'remove-member', feature: 'members' },
+        });
+      }
+    },
+  );
+}
+
 async function handleResendInvite(invite: WorkspaceInviteResponse): Promise<void> {
   const token = authStore.accessToken;
 
@@ -268,7 +301,7 @@ onMounted(fetchAll);
           :projects="projects"
           :loading="loading"
           :current-user-id="currentUserId"
-          @member-removed="refreshMembers"
+          @remove-member="handleRemoveMember"
           @role-updated="refreshMembers"
           @assignments-updated="refreshMembers"
         />

@@ -42,10 +42,6 @@ import Skeleton from 'primevue/skeleton';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
-import { useConfirmation } from '@/composables/feedback/useConfirmation';
-import { adminMembersClient } from '@/services/admin-members-client';
-import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/feedback/useToasts';
 
 type MemberLastActiveFilter = 'any' | 'today' | 'thisWeek' | 'inactive';
 
@@ -70,14 +66,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  'member-removed': [];
-  'role-updated': [];
   'assignments-updated': [];
+  'remove-member': [member: WorkspaceMemberResponse];
+  'role-updated': [];
 }>();
 
-const authStore = useAuthStore();
-const { successToast, errorToast } = useToasts();
-const { requireConfirmation } = useConfirmation();
 const isMobileViewport = useIsMobileViewport();
 
 const expandedRows = ref<Record<string, boolean>>({});
@@ -286,26 +279,7 @@ function handleEditSaved(member: WorkspaceMemberResponse): void {
 }
 
 function handleRemove(member: WorkspaceMemberResponse): void {
-  requireConfirmation(
-    `${member.displayName ?? member.email} will be removed from this workspace. This action cannot be undone.`,
-    'Remove member?',
-    'Remove',
-    async () => {
-      const token = authStore.accessToken;
-      if (!token) return;
-
-      try {
-        await adminMembersClient.removeMember(member.id);
-        successToast(`${member.displayName ?? member.email} has been removed.`);
-        emit('member-removed');
-      } catch (err) {
-        errorToast(err instanceof Error ? err.message : 'Failed to remove member', {
-          error: err,
-          logContext: { action: 'remove-member', feature: 'members' },
-        });
-      }
-    },
-  );
+  emit('remove-member', member);
 }
 </script>
 
