@@ -5,7 +5,7 @@ import ConfirmDialog from "primevue/confirmdialog";
 import InputText from "primevue/inputtext";
 import { updateUserSchema } from "@gitiempo/shared";
 import { createAppToast, runWithFeedback } from "@gitiempo/web-shared";
-import { computed, shallowRef, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import PageHeader from "@/components/layout/PageHeader.vue";
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
@@ -18,9 +18,9 @@ const authStore = useAuthStore();
 const toast = useToast();
 const appToast = createAppToast(toast);
 
-const displayNameDraft = shallowRef(authStore.profile?.displayName ?? "");
-const displayNameErrorMessage = shallowRef<string | null>(null);
-const isSavingProfile = shallowRef(false);
+const displayNameDraft = ref(authStore.profile?.displayName ?? "");
+const displayNameErrorMessage = ref<string | null>(null);
+const isSavingProfile = ref(false);
 
 const {
   connect,

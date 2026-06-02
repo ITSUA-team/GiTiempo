@@ -70,8 +70,8 @@ function renderInjectedBody(
   state: InjectedState,
   nowMs: number,
 ): string {
-  const headlineTextClass = state.theme === "dark" ? "text-white" : "text-text-dark";
-  const mutedTextClass = state.theme === "dark" ? "text-white/70" : "text-text-muted";
+  const headlineTextClass = state.theme === "dark" ? "text-text-inverse" : "text-text-dark";
+  const mutedTextClass = state.theme === "dark" ? "text-text-inverse-muted" : "text-text-muted";
 
   if (state.isLoading || state.snapshot === null) {
     return `
@@ -104,7 +104,7 @@ function renderInjectedBody(
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-sm ${mutedTextClass}">Sign in to GiTiempo to start tracking this issue.</p>
-        <button type="button" data-action="open-extension" class="bg-brand text-white ${injectedActionButtonClass}">Open extension</button>
+        <button type="button" data-action="open-extension" class="bg-brand text-text-inverse ${injectedActionButtonClass}">Open extension</button>
       </div>
     `;
   }
@@ -126,7 +126,7 @@ function renderInjectedBody(
       </div>
       <div class="flex items-center justify-between gap-3">
         <p class="m-0 text-lg font-semibold text-brand">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
-        <button type="button" data-action="stop-timer" class="bg-destructive text-white ${injectedActionButtonClass}">Stop Timer</button>
+        <button type="button" data-action="stop-timer" class="bg-destructive text-text-inverse ${injectedActionButtonClass}">Stop Timer</button>
       </div>
     `;
   }
@@ -143,7 +143,7 @@ function renderInjectedBody(
           <p class="m-0 text-sm ${mutedTextClass}">${escapeHtml(currentTimer.task.title)} · ${escapeHtml(currentTimer.project.name)}</p>
           <p class="m-0 text-xs ${mutedTextClass}">${formatElapsedTime(currentTimer.startedAt, nowMs)}</p>
         </div>
-        <button type="button" data-action="open-extension" class="bg-brand text-white ${injectedActionButtonClass}">Open extension</button>
+        <button type="button" data-action="open-extension" class="bg-brand text-text-inverse ${injectedActionButtonClass}">Open extension</button>
       </div>
     `;
   }
@@ -155,7 +155,7 @@ function renderInjectedBody(
     </div>
     <div class="flex items-center justify-between gap-3">
       <p class="m-0 text-sm ${mutedTextClass}">Start tracking directly from this GitHub issue.</p>
-      <button type="button" data-action="start-timer" class="bg-brand text-white ${injectedActionButtonClass}">Start Timer</button>
+      <button type="button" data-action="start-timer" class="bg-brand text-text-inverse ${injectedActionButtonClass}">Start Timer</button>
     </div>
   `;
 }

@@ -15,7 +15,7 @@ withDefaults(
   <component
     :is="as"
     class="border-divider flex flex-col gap-3 rounded-lg border p-4"
-    :class="tone === 'highlighted' ? 'bg-accent-tint' : 'bg-surface'"
+    :class="tone === 'highlighted' ? 'bg-accent-tint' : 'bg-surface-primary'"
   >
     <slot />
 

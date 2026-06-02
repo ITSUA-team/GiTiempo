@@ -27,10 +27,12 @@ Current workspace setup:
 
   --color-brand: #5d2b85;
   --color-accent-tint: #e8e1f5;
-  --color-surface: #ffffff;
+  --color-surface-primary: #ffffff;
   --color-app-bg: #f4f4f5;
   --color-text-dark: #1a1a1a;
   --color-text-muted: #666666;
+  --color-text-inverse: #ffffff;
+  --color-text-inverse-muted: rgba(255, 255, 255, 0.7);
   --color-divider: #eeeeee;
   --color-destructive: #d32f2f;
 

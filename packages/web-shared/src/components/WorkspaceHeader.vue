@@ -3,7 +3,7 @@ import {
   computed,
   onBeforeUnmount,
   onMounted,
-  shallowRef,
+  ref,
   useTemplateRef,
   useSlots,
   type Component,
@@ -78,13 +78,13 @@ const emit = defineEmits<{
 }>();
 
 const profileMenuRegion = useTemplateRef<HTMLElement>("profileMenuRegion");
-const isProfileMenuOpen = shallowRef(false);
+const isProfileMenuOpen = ref(false);
 
 const profileTriggerRootClass = computed(() =>
   [
     "focus-visible:outline-brand flex h-10 items-center gap-3 rounded-lg border px-1.5 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2",
     isProfileMenuOpen.value
-      ? "border-divider bg-surface"
+      ? "border-divider bg-surface-primary"
       : "border-transparent bg-transparent hover:bg-app-bg",
   ].join(" "),
 );
@@ -239,7 +239,7 @@ onBeforeUnmount(() => {
 
 <template>
   <header
-    class="border-divider bg-surface sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 border-b px-4 sm:h-16 sm:grid-rows-1 sm:px-6"
+    class="border-divider bg-surface-primary sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 border-b px-4 sm:h-16 sm:grid-rows-1 sm:px-6"
   >
     <div class="row-start-1 flex items-center gap-3">
       <div
@@ -309,7 +309,7 @@ onBeforeUnmount(() => {
         id="profile_menu"
         :model="profileMenuItems"
         aria-label="Profile actions"
-        class="border-divider bg-surface shadow-popover before:border-divider before:bg-surface absolute top-full right-0 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
+        class="border-divider bg-surface-primary shadow-popover before:border-divider before:bg-surface-primary absolute top-full right-0 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
         data-testid="profile-menu"
       >
         <template #item="{ item, props: itemProps }">

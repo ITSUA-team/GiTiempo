@@ -144,7 +144,7 @@ function getStatusPt(task: TaskResponse) {
       data-key="id"
       header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
       :loading="false"
-      shell-class="border-divider overflow-hidden rounded-lg border bg-surface"
+      shell-class="border-divider overflow-hidden rounded-lg border bg-surface-primary"
       table-class="min-w-[740px] w-full table-fixed border-collapse"
       table-container-class="overflow-auto rounded-none border-none"
       :value="props.tasks"

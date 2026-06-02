@@ -1,4 +1,4 @@
-import { defineComponent, shallowRef } from 'vue';
+import { defineComponent, ref, shallowRef } from 'vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -62,7 +62,7 @@ function createSubject({
   onError?: AdminSettingsPersistenceErrorHandler;
 } = {}) {
   let persistence!: ReturnType<typeof useAdminSettingsPersistence>;
-  const token = shallowRef(accessToken);
+  const token = ref<string | null>(accessToken);
   const scope = shallowRef({
     role: 'admin' as const,
     userId: 'user-1',

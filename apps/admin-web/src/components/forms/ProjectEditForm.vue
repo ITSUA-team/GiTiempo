@@ -11,7 +11,7 @@ import { zodResolver } from '@primevue/forms/resolvers/zod';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
-import { shallowRef } from 'vue';
+import { ref } from 'vue';
 
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -29,7 +29,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
-const saving = shallowRef(false);
+const saving = ref(false);
 
 const memberOptions = props.allMembers
   .filter((m) => m.role !== WorkspaceRoles.Admin)
@@ -152,7 +152,6 @@ async function handleSave({
             outlined
             type="button"
             class="w-full sm:w-auto"
-            :pt="{ root: { class: 'bg-white' } }"
             @click="emit('cancelled')"
           />
           <Button

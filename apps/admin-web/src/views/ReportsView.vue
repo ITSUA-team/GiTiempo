@@ -53,11 +53,11 @@ const {
 });
 
 const tableFilters = ref(createDefaultReportTableFilters());
-const reportProjectId = shallowRef<string | null>(selectedProjectId.value);
-const reportMemberId = shallowRef<string | null>(selectedMemberId.value);
+const reportProjectId = ref<string | null>(selectedProjectId.value);
+const reportMemberId = ref<string | null>(selectedMemberId.value);
 const reportDateRange = shallowRef<ReportDateRange>(dateRange.value);
-const reportGroupBy = shallowRef<TimeReportGroupBy>(groupBy.value);
-const exporting = shallowRef(false);
+const reportGroupBy = ref<TimeReportGroupBy>(groupBy.value);
+const exporting = ref(false);
 const tableRows = computed(() =>
   filterReportRows(rows.value, tableFilters.value),
 );

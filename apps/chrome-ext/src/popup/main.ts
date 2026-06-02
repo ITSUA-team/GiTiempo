@@ -35,7 +35,7 @@ interface PopupState {
 const config = getExtensionConfig();
 
 const popupPrimaryButtonClass =
-  "bg-brand w-full rounded-sm px-4 py-3 text-sm font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60";
+  "bg-brand text-text-inverse w-full rounded-sm px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60";
 const popupSecondaryButtonClass =
   "border-brand text-brand w-full rounded-sm border px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-60";
 const popupTextActionClass =
@@ -148,7 +148,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
           <p class="m-0 text-xs text-text-muted">${escapeHtml(runningContext)}</p>
         </div>
         <div class="mt-auto flex flex-col gap-3">
-          <button data-action="stop-timer" class="w-full rounded-sm bg-destructive px-4 py-3 text-sm font-semibold text-white transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Stop Timer</button>
+          <button data-action="stop-timer" class="bg-destructive text-text-inverse w-full rounded-sm px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Stop Timer</button>
         </div>
       </div>
     `;
@@ -176,7 +176,7 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
         <p class="m-0 text-xs text-text-muted">Timer start is unavailable on this tab.</p>
       </div>
       <div class="mt-auto flex flex-col gap-3">
-        <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="bg-brand rounded-sm px-4 py-3 text-center text-sm font-semibold text-white no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Open GiTiempo workspace</a>
+        <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="bg-brand text-text-inverse rounded-sm px-4 py-3 text-center text-sm font-semibold no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Open GiTiempo workspace</a>
         <p class="m-0 text-center text-[13px] font-semibold text-brand">Navigate to github.com/&lt;owner&gt;/&lt;repo&gt;/issues/&lt;number&gt;.</p>
       </div>
     </div>
@@ -302,7 +302,7 @@ export function createPopupApp({
 
   function render(): void {
     root.innerHTML = `
-      <div class="bg-surface text-text-dark flex min-h-[480px] w-[320px] flex-col p-5">
+      <div class="bg-surface-primary text-text-dark flex min-h-[480px] w-[320px] flex-col p-5">
         ${renderPopupBody(state, now())}
       </div>
     `;

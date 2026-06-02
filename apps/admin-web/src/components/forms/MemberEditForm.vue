@@ -7,7 +7,7 @@ import { z } from 'zod';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
-import { shallowRef } from 'vue';
+import { ref } from 'vue';
 
 import { adminMembersClient } from '@/services/admin-members-client';
 import { useAuthStore } from '@/stores/auth';
@@ -24,7 +24,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
-const saving = shallowRef(false);
+const saving = ref(false);
 
 const editRoleSchema = z.object({ role: z.enum(['admin', 'pm', 'member']) });
 const resolver = zodResolver(editRoleSchema);
@@ -135,7 +135,6 @@ async function handleSave({
             outlined
             type="button"
             class="w-full sm:w-auto"
-            :pt="{ root: { class: 'bg-white' } }"
             @click="emit('cancelled')"
           />
           <Button

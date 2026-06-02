@@ -293,7 +293,7 @@ function handleTaskComplete(event: { query: string }): void {
 
       <label
         for="time-entry-billable"
-        class="border-divider bg-surface flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
+        class="border-divider bg-surface-primary flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
       >
         <Checkbox
           id="time-entry-billable"

@@ -36,10 +36,11 @@ Read this file first. Load only the linked section files needed for the task.
 |---|---|---|---|
 | Brand Purple | `bg-brand`, `text-brand`, `border-brand` | `#5D2B85` | Primary accent, active states, filled actions |
 | Accent Tint | `bg-accent-tint` | `#E8E1F5` | Selected rows, soft badges, hover states |
-| Surface | `bg-surface` | `#FFFFFF` | Cards, dialogs, inputs |
+| Surface Primary | `bg-surface-primary` | `#FFFFFF` | Cards, dialogs, inputs |
 | App Background | `bg-app-bg` | `#F4F4F5` | Main app canvas |
 | Text Dark | `text-text-dark` | `#1A1A1A` | Headings, primary body text |
 | Text Muted | `text-text-muted` | `#666666` | Secondary metadata |
+| Text Inverse | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand/destructive/dark surfaces |
 | Divider | `border-divider` | `#EEEEEE` | Borders and separators |
 | Destructive | `text-destructive`, `border-destructive` | `#D32F2F` | Delete and disconnect actions |
 

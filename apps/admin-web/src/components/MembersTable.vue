@@ -651,7 +651,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       :pt="managementTableColumnPt"
     >
       <template #body="{ data }">
-        <span class="text-[13px] font-bold text-black">{{
+        <span class="text-text-dark text-[13px] font-bold">{{
           formatWorkspaceRole(data.role)
         }}</span>
       </template>

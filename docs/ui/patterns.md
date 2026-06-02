@@ -8,7 +8,7 @@
 Use PrimeVue `<Dialog>`.
 
 - Backdrop opacity is overridden in the preset.
-- Dialog panel uses `bg-surface rounded-lg shadow-modal`.
+- Dialog panel uses `bg-surface-primary rounded-lg shadow-modal`.
 - Common widths: 480px for forms, larger for content-heavy dialogs.
 - Footer uses `flex justify-end gap-2`.
 - Destructive dialogs use `severity="danger"` for the main action.
