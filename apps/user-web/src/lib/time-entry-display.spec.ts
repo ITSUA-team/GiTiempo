@@ -1,5 +1,5 @@
 import type { TimeEntryResponse } from '@gitiempo/shared';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
   formatCompactDuration,
@@ -17,19 +17,12 @@ import {
   startOfLocalIsoWeek,
 } from '@/lib/time-entry-display';
 
-const ORIGINAL_TZ = process.env.TZ;
-
 beforeAll(() => {
-  process.env.TZ = 'Europe/Kiev';
+  vi.stubEnv('TZ', 'Europe/Kiev');
 });
 
 afterAll(() => {
-  if (ORIGINAL_TZ === undefined) {
-    delete process.env.TZ;
-    return;
-  }
-
-  process.env.TZ = ORIGINAL_TZ;
+  vi.unstubAllEnvs();
 });
 
 function createEntry(

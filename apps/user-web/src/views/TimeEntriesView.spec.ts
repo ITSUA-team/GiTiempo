@@ -53,20 +53,14 @@ const TEST_IDS = {
   workspace: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f5001",
 } as const;
 
-const ORIGINAL_TZ = process.env.TZ;
 const mountedWrappers: VueWrapper[] = [];
 
 beforeAll(() => {
-  process.env.TZ = "Europe/Kiev";
+  vi.stubEnv("TZ", "Europe/Kiev");
 });
 
 afterAll(() => {
-  if (ORIGINAL_TZ === undefined) {
-    delete process.env.TZ;
-    return;
-  }
-
-  process.env.TZ = ORIGINAL_TZ;
+  vi.unstubAllEnvs();
 });
 
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
