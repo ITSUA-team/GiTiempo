@@ -44,7 +44,7 @@ export function useTimeEntryDialog() {
   const dialogMode = ref<TimeEntryDialogMode>(null);
   const editingEntry = shallowRef<TimeEntryResponse | null>(null);
   const dialogProjectId = ref<string | null>(null);
-  const dialogTaskValue = ref<TaskLookupValue>(null);
+  const dialogTaskValue = shallowRef<TaskLookupValue>(null);
   const dialogStartedAt = shallowRef<Date | null>(null);
   const dialogEndedAt = shallowRef<Date | null>(null);
   const dialogDescription = ref("");

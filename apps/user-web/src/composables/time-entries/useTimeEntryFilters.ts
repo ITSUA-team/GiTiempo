@@ -14,7 +14,7 @@ export function useTimeEntryFilters() {
   const pageSize = ref(20);
   const selectedDateRange = shallowRef<Date[] | null>(null);
   const selectedProjectId = ref<string | null>(null);
-  const selectedTaskFilter = ref<TaskLookupValue>(null);
+  const selectedTaskFilter = shallowRef<TaskLookupValue>(null);
   const filterTaskOptions = ref<TaskLookupOption[]>([]);
   const filterTaskSuggestions = ref<TaskLookupOption[]>([]);
   const isLoadingFilterTasks = ref(false);
