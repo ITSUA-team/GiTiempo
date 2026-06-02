@@ -1,5 +1,5 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
-import { computed, shallowRef, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useToast } from "primevue/usetoast";
 
 import { useUpdateTimeEntryMutation } from "@/composables/query";
@@ -34,7 +34,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const setIntervalFn = options.setIntervalFn ?? setInterval;
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
   const picker = useTopBarTaskPicker();
-  const selectionUpdateErrorMessage = shallowRef<string | null>(null);
+  const selectionUpdateErrorMessage = ref<string | null>(null);
   const accessToken = computed(() => authStore.accessToken);
   const scope = computed(() => getUserServerStateScope(authStore.accessToken));
   const summary = useTopBarTimerSummary({ accessToken, client, scope, toast });

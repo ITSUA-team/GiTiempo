@@ -10,15 +10,15 @@ import {
 } from './time-entry-task-lookup';
 
 export function useTimeEntryFilters() {
-  const currentPage = shallowRef(1);
-  const pageSize = shallowRef(20);
+  const currentPage = ref(1);
+  const pageSize = ref(20);
   const selectedDateRange = shallowRef<Date[] | null>(null);
-  const selectedProjectId = shallowRef<string | null>(null);
-  const selectedTaskFilter = shallowRef<TaskLookupValue>(null);
+  const selectedProjectId = ref<string | null>(null);
+  const selectedTaskFilter = ref<TaskLookupValue>(null);
   const filterTaskOptions = ref<TaskLookupOption[]>([]);
   const filterTaskSuggestions = ref<TaskLookupOption[]>([]);
-  const isLoadingFilterTasks = shallowRef(false);
-  const filterTasksErrorMessage = shallowRef<string | null>(null);
+  const isLoadingFilterTasks = ref(false);
+  const filterTasksErrorMessage = ref<string | null>(null);
   let taskRequestId = 0;
 
   const selectedTaskId = computed(() =>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, shallowRef, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "primevue/button";
 import Message from "primevue/message";
@@ -18,15 +18,15 @@ const router = useRouter();
 const toast = useToast();
 const appToast = createAppToast(toast);
 
-const newPassword = shallowRef("");
-const confirmPassword = shallowRef("");
-const passwordErrorMessage = shallowRef<string | null>(null);
-const confirmPasswordErrorMessage = shallowRef<string | null>(null);
-const inlineErrorMessage = shallowRef<string | null>(null);
-const verifiedEmail = shallowRef<string | null>(null);
-const isChecking = shallowRef(true);
-const isSubmitting = shallowRef(false);
-const isSuccess = shallowRef(false);
+const newPassword = ref("");
+const confirmPassword = ref("");
+const passwordErrorMessage = ref<string | null>(null);
+const confirmPasswordErrorMessage = ref<string | null>(null);
+const inlineErrorMessage = ref<string | null>(null);
+const verifiedEmail = ref<string | null>(null);
+const isChecking = ref(true);
+const isSubmitting = ref(false);
+const isSuccess = ref(false);
 const passwordInputProps: Record<string, string> = {
   "data-testid": "invite-password-setup-password",
 };

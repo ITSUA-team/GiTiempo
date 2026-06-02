@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, shallowRef, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
@@ -31,15 +31,15 @@ const router = useRouter();
 const toast = useToast();
 const appToast = createAppToast(toast);
 
-const email = shallowRef("");
-const password = shallowRef("");
-const emailErrorMessage = shallowRef<string | null>(null);
-const passwordErrorMessage = shallowRef<string | null>(null);
-const inlineErrorMessage = shallowRef<string | null>(null);
-const activeAction = shallowRef<SubmitAction | null>(null);
-const isRedirecting = shallowRef(false);
-const terminalState = shallowRef<TerminalState | null>(null);
-const terminalMessage = shallowRef<string | null>(null);
+const email = ref("");
+const password = ref("");
+const emailErrorMessage = ref<string | null>(null);
+const passwordErrorMessage = ref<string | null>(null);
+const inlineErrorMessage = ref<string | null>(null);
+const activeAction = ref<SubmitAction | null>(null);
+const isRedirecting = ref(false);
+const terminalState = ref<TerminalState | null>(null);
+const terminalMessage = ref<string | null>(null);
 const passwordInputProps: Record<string, string> = {
   "data-testid": "invite-accept-password",
 };

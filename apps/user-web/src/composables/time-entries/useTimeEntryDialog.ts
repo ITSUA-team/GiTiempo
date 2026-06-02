@@ -41,20 +41,20 @@ function defaultFormErrors(): TimeEntryFormErrors {
 }
 
 export function useTimeEntryDialog() {
-  const dialogMode = shallowRef<TimeEntryDialogMode>(null);
+  const dialogMode = ref<TimeEntryDialogMode>(null);
   const editingEntry = shallowRef<TimeEntryResponse | null>(null);
-  const dialogProjectId = shallowRef<string | null>(null);
-  const dialogTaskValue = shallowRef<TaskLookupValue>(null);
+  const dialogProjectId = ref<string | null>(null);
+  const dialogTaskValue = ref<TaskLookupValue>(null);
   const dialogStartedAt = shallowRef<Date | null>(null);
   const dialogEndedAt = shallowRef<Date | null>(null);
-  const dialogDescription = shallowRef("");
-  const dialogIsBillable = shallowRef(false);
+  const dialogDescription = ref("");
+  const dialogIsBillable = ref(false);
   const dialogErrors = ref<TimeEntryFormErrors>(defaultFormErrors());
-  const dialogRequestErrorMessage = shallowRef<string | null>(null);
+  const dialogRequestErrorMessage = ref<string | null>(null);
   const dialogTaskOptions = ref<TaskLookupOption[]>([]);
   const dialogTaskSuggestions = ref<TaskLookupOption[]>([]);
-  const dialogTasksErrorMessage = shallowRef<string | null>(null);
-  const isLoadingDialogTasks = shallowRef(false);
+  const dialogTasksErrorMessage = ref<string | null>(null);
+  const isLoadingDialogTasks = ref(false);
   let taskRequestId = 0;
 
   const activeDialogTask = computed(() =>

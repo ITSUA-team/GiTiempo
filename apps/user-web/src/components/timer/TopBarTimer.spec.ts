@@ -2,7 +2,7 @@
 
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, shallowRef } from "vue";
+import { computed, ref, shallowRef } from "vue";
 import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
@@ -21,36 +21,36 @@ const setSelectedTaskId = vi.fn();
 const composableState = {
   closeDialog,
   confirmSelectedTask,
-  createTaskErrorMessage: shallowRef<string | null>(null),
+  createTaskErrorMessage: ref<string | null>(null),
   createTaskFromDialog,
-  createTaskTitle: shallowRef(""),
-  elapsedTimeLabel: shallowRef("01:00:00"),
+  createTaskTitle: ref(""),
+  elapsedTimeLabel: ref("01:00:00"),
   handlePrimaryAction,
-  isConfirmingSelection: shallowRef(false),
+  isConfirmingSelection: ref(false),
   isConfirmSelectionDisabled: computed(() => false),
   isCreateTaskDisabled: computed(() => false),
-  isCreatingTask: shallowRef(false),
-  isDialogOpen: shallowRef(false),
-  isLoadingProjects: shallowRef(false),
-  isLoadingSummary: shallowRef(false),
-  isLoadingTasks: shallowRef(false),
+  isCreatingTask: ref(false),
+  isDialogOpen: ref(false),
+  isLoadingProjects: ref(false),
+  isLoadingSummary: ref(false),
+  isLoadingTasks: ref(false),
   isPrimaryActionDisabled: computed(() => false),
   isPrimaryActionPending: computed(() => false),
   openDialog,
-  primaryActionLabel: shallowRef("Start"),
-  projectsErrorMessage: shallowRef<string | null>(null),
+  primaryActionLabel: ref("Start"),
+  projectsErrorMessage: ref<string | null>(null),
   projectOptions: shallowRef([]),
-  selectedProjectId: shallowRef<string | null>(null),
-  selectedTaskId: shallowRef<string | null>(null),
-  selectionUpdateErrorMessage: shallowRef<string | null>(null),
+  selectedProjectId: ref<string | null>(null),
+  selectedTaskId: ref<string | null>(null),
+  selectionUpdateErrorMessage: ref<string | null>(null),
   setCreateTaskTitle,
   setSelectedProjectId,
   setSelectedTaskId,
-  summaryErrorMessage: shallowRef<string | null>(null),
+  summaryErrorMessage: ref<string | null>(null),
   taskOptions: shallowRef([]),
-  tasksErrorMessage: shallowRef<string | null>(null),
-  timerContextLabel: shallowRef("Project Orion / Improve reports filters"),
-  timerStatusLabel: shallowRef("Last tracked task"),
+  tasksErrorMessage: ref<string | null>(null),
+  timerContextLabel: ref("Project Orion / Improve reports filters"),
+  timerStatusLabel: ref("Last tracked task"),
 };
 
 const mountedWrappers: VueWrapper[] = [];

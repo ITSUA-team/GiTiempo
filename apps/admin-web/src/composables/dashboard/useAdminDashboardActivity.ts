@@ -1,4 +1,4 @@
-import { computed, shallowRef, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
 
 import { ADMIN_DASHBOARD_ACTIVITY_PREVIEW_LIMIT } from '@/constants/admin-dashboard';
 import type { AdminDashboardActivityRow } from '@/lib/admin-dashboard-view-model';
@@ -18,7 +18,7 @@ export function useAdminDashboardActivity({
   loading,
   previewLimit = ADMIN_DASHBOARD_ACTIVITY_PREVIEW_LIMIT,
 }: UseAdminDashboardActivityOptions) {
-  const showAllActivity = shallowRef(false);
+  const showAllActivity = ref(false);
   const isActivityEmpty = computed(
     () =>
       initialLoaded.value &&

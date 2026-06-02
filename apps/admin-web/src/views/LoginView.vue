@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef } from "vue";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   AuthIntroPanel,
@@ -16,7 +16,7 @@ const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 
-const errorMessage = shallowRef<string | null>(null);
+const errorMessage = ref<string | null>(null);
 const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",

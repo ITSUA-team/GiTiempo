@@ -1,5 +1,5 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { computed, ref, shallowRef, type ComputedRef } from "vue";
+import { computed, ref, type ComputedRef } from "vue";
 
 import {
   buildProjectSearchSuggestions,
@@ -12,7 +12,7 @@ export function useProjectsSearch(
   visibleProjects: ComputedRef<ProjectResponse[]>,
   tasksByProjectId: ComputedRef<Record<string, TaskResponse[]>>,
 ) {
-  const selectedSearchValue = shallowRef<ProjectsSearchSuggestion | string | null>(
+  const selectedSearchValue = ref<ProjectsSearchSuggestion | string | null>(
     null,
   );
   const searchSuggestions = ref<ProjectsSearchSuggestion[]>([]);
