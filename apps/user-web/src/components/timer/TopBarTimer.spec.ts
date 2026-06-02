@@ -2,7 +2,7 @@
 
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, ref, shallowRef } from "vue";
+import { computed, defineComponent, ref, shallowRef } from "vue";
 import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
@@ -15,6 +15,7 @@ const createTaskFromDialog = vi.fn();
 const handlePrimaryAction = vi.fn();
 const openDialog = vi.fn();
 const setCreateTaskTitle = vi.fn();
+const setSelectedDescription = vi.fn();
 const setSelectedProjectId = vi.fn();
 const setSelectedTaskId = vi.fn();
 
@@ -40,10 +41,12 @@ const composableState = {
   primaryActionLabel: ref("Start"),
   projectsErrorMessage: ref<string | null>(null),
   projectOptions: shallowRef([]),
+  selectedDescription: ref(""),
   selectedProjectId: ref<string | null>(null),
   selectedTaskId: ref<string | null>(null),
   selectionUpdateErrorMessage: ref<string | null>(null),
   setCreateTaskTitle,
+  setSelectedDescription,
   setSelectedProjectId,
   setSelectedTaskId,
   summaryErrorMessage: ref<string | null>(null),
@@ -55,6 +58,39 @@ const composableState = {
 
 const mountedWrappers: VueWrapper[] = [];
 
+const TopBarTimerTaskDialogStub = defineComponent({
+  name: "TopBarTimerTaskDialog",
+  props: {
+    createTaskErrorMessage: { type: String, default: null },
+    createTaskTitle: { type: String, default: "" },
+    isConfirmSelectionDisabled: { type: Boolean, required: true },
+    isConfirmingSelection: { type: Boolean, required: true },
+    isCreateTaskDisabled: { type: Boolean, required: true },
+    isCreatingTask: { type: Boolean, required: true },
+    isLoadingProjects: { type: Boolean, required: true },
+    isLoadingTasks: { type: Boolean, required: true },
+    isOpen: { type: Boolean, required: true },
+    projectOptions: { type: Array, required: true },
+    projectsErrorMessage: { type: String, default: null },
+    selectedDescription: { type: String, default: "" },
+    selectedProjectId: { type: String, default: null },
+    selectedTaskId: { type: String, default: null },
+    selectionUpdateErrorMessage: { type: String, default: null },
+    taskOptions: { type: Array, required: true },
+    tasksErrorMessage: { type: String, default: null },
+  },
+  emits: [
+    "close",
+    "confirm",
+    "createTask",
+    "update:createTaskTitle",
+    "update:selectedDescription",
+    "update:selectedProjectId",
+    "update:selectedTaskId",
+  ],
+  template: '<div data-testid="top-bar-timer-task-dialog-stub" />',
+});
+
 vi.mock("@/composables/timer/useTopBarTimer", () => ({
   useTopBarTimer: () => composableState,
 }));
@@ -65,7 +101,7 @@ function mountTopBarTimer(options: { attachTo?: HTMLElement } = {}) {
     global: {
       plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
-        TopBarTimerTaskDialog: true,
+        TopBarTimerTaskDialog: TopBarTimerTaskDialogStub,
       },
     },
   });
@@ -86,6 +122,7 @@ describe("TopBarTimer", () => {
       handlePrimaryAction,
       openDialog,
       setCreateTaskTitle,
+      setSelectedDescription,
       setSelectedProjectId,
       setSelectedTaskId,
     }).forEach((spy) => spy.mockReset());
@@ -97,6 +134,9 @@ describe("TopBarTimer", () => {
     composableState.timerContextLabel.value =
       "Project Orion / Improve reports filters";
     composableState.timerStatusLabel.value = "Last tracked task";
+    composableState.selectedDescription.value = "";
+    composableState.selectedProjectId.value = null;
+    composableState.selectedTaskId.value = null;
     composableState.isPrimaryActionDisabled = computed(() => false);
   });
 
@@ -338,5 +378,19 @@ describe("TopBarTimer", () => {
 
     expect(closeDialog).toHaveBeenCalledTimes(1);
     expect(document.activeElement).toBe(changeAction.element);
+  });
+
+  it("passes description state through the task dialog and handles description updates", async () => {
+    composableState.selectedDescription.value = "Investigate release blocker";
+
+    const wrapper = mountTopBarTimer();
+    const dialog = wrapper.getComponent(TopBarTimerTaskDialogStub);
+
+    expect(dialog.props("selectedDescription")).toBe("Investigate release blocker");
+
+    dialog.vm.$emit("update:selectedDescription", "Updated description");
+    await wrapper.vm.$nextTick();
+
+    expect(setSelectedDescription).toHaveBeenCalledWith("Updated description");
   });
 });

@@ -4,6 +4,7 @@ import type {
   CreateTaskInput,
   CurrentTimeEntryResponse,
   ProjectResponse,
+  StartTimerInput,
   TaskResponse,
   TimeEntryListQuery,
   TimeEntryListResponse,
@@ -66,7 +67,7 @@ interface ProjectTasksClient {
 }
 
 interface StartTimerClient {
-  startTimer(taskId: string): Promise<TimeEntryResponse>;
+  startTimer(input: StartTimerInput): Promise<TimeEntryResponse>;
 }
 
 interface StopTimerClient {
@@ -173,10 +174,10 @@ async function invalidateQueryKeys(
   );
 }
 
-async function reconcileTimeEntryCachesAfterTimerMutation(
+async function reconcileTimeEntryCachesAfterTimeEntryMutation(
   queryClient: ReturnType<typeof useQueryClient>,
   scope: UserServerStateScope,
-  timer: TimeEntryResponse,
+  entry: TimeEntryResponse,
 ): Promise<void> {
   await queryClient.cancelQueries(
     { queryKey: timeEntriesKeys.all(scope) },
@@ -184,10 +185,10 @@ async function reconcileTimeEntryCachesAfterTimerMutation(
   );
 
   try {
-    reconcileTimeEntryListCaches(queryClient, scope, timer);
+    reconcileTimeEntryListCaches(queryClient, scope, entry);
   } catch (error) {
-    console.error("Could not reconcile time-entry caches after timer mutation", {
-      entryId: timer.id,
+    console.error("Could not reconcile time-entry caches after time-entry mutation", {
+      entryId: entry.id,
       error,
     });
   }
@@ -317,10 +318,10 @@ export const useStartTimerMutation = (options: UseStartTimerMutationOptions) => 
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (taskId: string) =>
-      options.client.startTimer(taskId),
+    mutationFn: (input: StartTimerInput) =>
+      options.client.startTimer(input),
     onSuccess: async (timer) => {
-      await reconcileTimeEntryCachesAfterTimerMutation(
+      await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,
         toValue(options.scope),
         timer,
@@ -339,7 +340,7 @@ export const useStopTimerMutation = (options: UseStopTimerMutationOptions) => {
   return useMutation({
     mutationFn: () => options.client.stopTimer(),
     onSuccess: async (timer) => {
-      await reconcileTimeEntryCachesAfterTimerMutation(
+      await reconcileTimeEntryCachesAfterTimeEntryMutation(
         queryClient,
         toValue(options.scope),
         timer,
@@ -378,7 +379,12 @@ export const useUpdateTimeEntryMutation = (
   return useMutation({
     mutationFn: ({ entryId, input }: { entryId: string; input: UpdateTimeEntryInput }) =>
       options.client.updateEntry(entryId, input),
-    onSuccess: async () => {
+    onSuccess: async (timer) => {
+      await reconcileTimeEntryCachesAfterTimeEntryMutation(
+        queryClient,
+        toValue(options.scope),
+        timer,
+      );
       await invalidateQueryKeys(
         queryClient,
         userMutationInvalidationKeys.afterTimeEntryMutation(toValue(options.scope)),

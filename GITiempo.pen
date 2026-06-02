@@ -19036,7 +19036,7 @@
       "y": -33,
       "name": "Top-Bar Timer Task Picker",
       "width": 720,
-      "height": "fit_content(594)",
+      "height": "fit_content(698)",
       "fill": "#F4F4F5",
       "layout": "vertical",
       "gap": 24,
@@ -19049,7 +19049,7 @@
       "y": -9,
       "name": "dialogRow",
       "width": "fill_container(672)",
-      "height": "fit_content(546)",
+      "height": "fit_content(650)",
       "justifyContent": "center"
     },
     {
@@ -19059,7 +19059,7 @@
       "y": -9,
       "name": "newEntryDialogVisible",
       "width": 560,
-      "height": 546,
+      "height": 650,
       "fill": "#FFFFFF",
       "cornerRadius": 10,
       "stroke": {
@@ -19211,6 +19211,52 @@
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "A6mNq2",
+          "name": "descriptionField",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "Q4pLx8",
+              "fill": "#1A1A1A",
+              "content": "Description",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "R7vKd3",
+              "name": "descriptionInput",
+              "width": "fill_container",
+              "height": 82,
+              "fill": "#FFFFFF",
+              "cornerRadius": 6,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#EEEEEE"
+              },
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "N2cHs5",
+                  "fill": "#666666",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Summarize PM scope changes for the reports table.",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
                 }
               ]
             }

@@ -155,7 +155,6 @@ export class TimeEntriesService {
     const hasRunningOnlyConflict =
       input.startedAt !== undefined ||
       input.endedAt !== undefined ||
-      input.description !== undefined ||
       input.isBillable !== undefined;
 
     const updatedId = await this.db.transaction(async (tx) => {
@@ -175,7 +174,9 @@ export class TimeEntriesService {
 
       if (!row.endedAt) {
         if (hasRunningOnlyConflict) {
-          throw new ConflictException('Stop the timer before updating it');
+          throw new ConflictException(
+            'Stop the timer before updating time or billable fields',
+          );
         }
 
         const nextTaskId =
@@ -188,6 +189,9 @@ export class TimeEntriesService {
           .update(timeEntries)
           .set({
             ...(nextTaskId !== row.taskId ? { taskId: nextTaskId } : {}),
+            ...(input.description !== undefined
+              ? { description: input.description }
+              : {}),
             updatedAt: new Date(),
           })
           .where(and(eq(timeEntries.id, row.id), isNull(timeEntries.endedAt)))
@@ -266,7 +270,12 @@ export class TimeEntriesService {
     input: StartTimerInput,
   ): Promise<TimeEntryResponse> {
     const { task } = await this.tasks.requireTrackableTask(user, input.taskId);
-    const result = await this.createRunningEntry(user, task.id, 'web');
+    const result = await this.createRunningEntry(
+      user,
+      task.id,
+      'web',
+      input.description ?? null,
+    );
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }
@@ -414,11 +423,13 @@ export class TimeEntriesService {
     user: AuthUser,
     taskId: string,
     source: TimeEntrySource,
+    description: string | null = null,
   ): Promise<TimeEntryResponse> {
     try {
       const [row] = await this.db
         .insert(timeEntries)
         .values({
+          description,
           workspaceId: user.workspaceId,
           taskId,
           userId: user.sub,

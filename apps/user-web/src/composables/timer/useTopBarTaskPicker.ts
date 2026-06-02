@@ -10,6 +10,7 @@ export function useTopBarTaskPicker() {
   const isDialogOpen = ref(false);
   const selectedProjectId = ref<string | null>(null);
   const selectedTaskId = ref<string | null>(null);
+  const selectedDescription = ref("");
   const createTaskTitle = ref("");
   const projectsErrorMessage = ref<string | null>(null);
   const tasksErrorMessage = ref<string | null>(null);
@@ -43,13 +44,16 @@ export function useTopBarTaskPicker() {
     taskCache.set(projectId, nextTasks);
   }
 
-  function openTaskPicker(context: { projectId: string; taskId: string } | null): void {
+  function openTaskPicker(
+    context: { projectId: string; taskId: string; description: string } | null,
+  ): void {
     isDialogOpen.value = true;
     createTaskErrorMessage.value = null;
     projectsErrorMessage.value = null;
     tasksErrorMessage.value = null;
     selectedProjectId.value = context?.projectId ?? null;
     selectedTaskId.value = context?.taskId ?? null;
+    selectedDescription.value = context?.description ?? "";
   }
 
   function closeDialog(): void {
@@ -68,6 +72,10 @@ export function useTopBarTaskPicker() {
 
   function setSelectedTaskId(taskId: string | null): void {
     selectedTaskId.value = taskId;
+  }
+
+  function setSelectedDescription(description: string): void {
+    selectedDescription.value = description;
   }
 
   function setCreateTaskTitle(title: string): void {
@@ -112,6 +120,10 @@ export function useTopBarTaskPicker() {
     };
   }
 
+  function getNormalizedDescription(): string | null {
+    return selectedDescription.value.trim() === "" ? null : selectedDescription.value;
+  }
+
   return {
     activeProjects,
     activeTasks,
@@ -119,6 +131,7 @@ export function useTopBarTaskPicker() {
     createTaskErrorMessage,
     createTaskTitle,
     getCachedTasks,
+    getNormalizedDescription,
     getSelectedTaskContext,
     isConfirmSelectionDisabled,
     isCreateTaskTitleEmpty,
@@ -126,6 +139,7 @@ export function useTopBarTaskPicker() {
     openTaskPicker,
     projects,
     projectsErrorMessage,
+    selectedDescription,
     selectedProject,
     selectedProjectId,
     selectedTask,
@@ -135,6 +149,7 @@ export function useTopBarTaskPicker() {
     setCreateTaskTitle,
     setProjects,
     setProjectsError,
+    setSelectedDescription,
     setSelectedProjectId,
     setSelectedTaskId,
     setTasks,
