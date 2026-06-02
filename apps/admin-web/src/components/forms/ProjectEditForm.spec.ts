@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ProjectEditForm from './ProjectEditForm.vue';
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: vi.fn(),
     successToast: vi.fn(),

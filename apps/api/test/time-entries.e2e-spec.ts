@@ -443,23 +443,92 @@ describe('Time entries (e2e)', () => {
     expect(stopAgain.status).toBe(404);
   });
 
-  it('rejects update and delete for running entries before stop', async () => {
+  it('allows task and description updates but rejects interval and delete for running entries before stop', async () => {
     const started = await request(app.getHttpServer())
       .post('/time-entries/timer/start')
       .set('Authorization', bearer(memberToken))
       .send({ taskId: platformTaskId });
     expect(started.status).toBe(201);
 
-    const update = await request(app.getHttpServer())
+    const suffix = randomUUID().slice(0, 8);
+    const nextTaskId = await createTask(
+      platformProjectId,
+      `Search task search Running Move ${suffix}`,
+    );
+
+    const reassign = await request(app.getHttpServer())
       .patch(`/time-entries/${started.body.id}`)
       .set('Authorization', bearer(memberToken))
-      .send({ description: 'Nope' });
-    expect(update.status).toBe(409);
+      .send({ taskId: nextTaskId });
+    expect(reassign.status).toBe(200);
+    expect(reassign.body.id).toBe(started.body.id);
+    expect(reassign.body.taskId).toBe(nextTaskId);
+    expect(reassign.body.task.title).toBe(
+      `Search task search Running Move ${suffix}`,
+    );
+    expect(reassign.body.endedAt).toBeNull();
+
+    const updateDescription = await request(app.getHttpServer())
+      .patch(`/time-entries/${started.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ description: 'Running note' });
+    expect(updateDescription.status).toBe(200);
+    expect(updateDescription.body.id).toBe(started.body.id);
+    expect(updateDescription.body.description).toBe('Running note');
+    expect(updateDescription.body.endedAt).toBeNull();
+
+    const updateInterval = await request(app.getHttpServer())
+      .patch(`/time-entries/${started.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ startedAt: '2026-05-01T10:00:00.000Z' });
+    expect(updateInterval.status).toBe(409);
+
+    const current = await request(app.getHttpServer())
+      .get('/time-entries/current')
+      .set('Authorization', bearer(memberToken));
+    expect(current.status).toBe(200);
+    expect(current.body.timeEntry.id).toBe(started.body.id);
+    expect(current.body.timeEntry.taskId).toBe(nextTaskId);
+    expect(current.body.timeEntry.description).toBe('Running note');
 
     const remove = await request(app.getHttpServer())
       .delete(`/time-entries/${started.body.id}`)
       .set('Authorization', bearer(memberToken));
     expect(remove.status).toBe(409);
+  });
+
+  it('allows task reassignment when the timer stops before the update arrives', async () => {
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: platformTaskId });
+    expect(started.status).toBe(201);
+
+    const stopped = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(memberToken));
+    expect(stopped.status).toBe(200);
+    expect(stopped.body.id).toBe(started.body.id);
+    expect(stopped.body.endedAt).not.toBeNull();
+
+    const suffix = randomUUID().slice(0, 8);
+    const nextTaskId = await createTask(
+      platformProjectId,
+      `Search task search Stopped Move ${suffix}`,
+    );
+
+    const reassign = await request(app.getHttpServer())
+      .patch(`/time-entries/${started.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: nextTaskId });
+    expect(reassign.status).toBe(200);
+    expect(reassign.body.id).toBe(started.body.id);
+    expect(reassign.body.taskId).toBe(nextTaskId);
+    expect(reassign.body.task.title).toBe(
+      `Search task search Stopped Move ${suffix}`,
+    );
+    expect(reassign.body.endedAt).toBe(stopped.body.endedAt);
+    expect(reassign.body.durationSeconds).toBe(stopped.body.durationSeconds);
   });
 
   it('lists visible project time entries as read-only team data', async () => {

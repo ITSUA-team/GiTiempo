@@ -24,9 +24,21 @@
       "types": "./src/http.ts",
       "default": "./src/http.ts"
     },
+    "./query": {
+      "types": "./src/query/index.ts",
+      "default": "./src/query/index.ts"
+    },
     "./session-storage": {
       "types": "./src/session-storage.ts",
       "default": "./src/session-storage.ts"
+    },
+    "./time": {
+      "types": "./src/time/index.ts",
+      "default": "./src/time/index.ts"
+    },
+    "./testing": {
+      "types": "./src/testing/router.ts",
+      "default": "./src/testing/router.ts"
     },
     "./validation": {
       "types": "./src/validation/index.ts",
@@ -46,6 +58,8 @@
   "dependencies": {
     "@gitiempo/shared": "workspace:*",
     "@primevue/forms": "^4.5.5",
+    "@tanstack/vue-query": "^5.100.14",
+    "date-fns": "^4.3.0",
     "firebase": "^12.4.0",
     "primevue": "^4.5.5",
     "vue": "^3.5.32",

@@ -12,6 +12,7 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
       createTaskErrorMessage: null,
       createTaskTitle: "Write release checklist",
       isConfirmSelectionDisabled: false,
+      isConfirmingSelection: false,
       isCreateTaskDisabled: false,
       isCreatingTask: false,
       isLoadingProjects: false,
@@ -34,8 +35,10 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
         },
       ],
       projectsErrorMessage: null,
+      selectedDescription: "",
       selectedProjectId: "project-1",
       selectedTaskId: "task-1",
+      selectionUpdateErrorMessage: null,
       taskOptions: [
         {
           createdAt: "2026-04-20T12:00:00.000Z",
@@ -54,9 +57,9 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
     global: {
       stubs: {
         Button: {
-          props: ["disabled", "fluid", "label"],
+          props: ["disabled", "fluid", "label", "loading"],
           template:
-            '<button :data-fluid="String(fluid)" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
+            '<button :data-fluid="String(fluid)" :data-loading="String(loading)" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Dialog: {
           props: {
@@ -79,6 +82,12 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
           template:
             '<select :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name ?? option.title }}</option></select>',
         },
+        Textarea: {
+          props: ["disabled", "modelValue"],
+          emits: ["update:modelValue"],
+          template:
+            '<textarea :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+        },
       },
     },
   });
@@ -98,6 +107,16 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.emitted("update:selectedProjectId")?.[0]).toEqual(["project-1"]);
     expect(wrapper.emitted("update:selectedTaskId")?.[0]).toEqual(["task-1"]);
+  });
+
+  it("emits description updates from the textarea field", async () => {
+    const wrapper = mountDialog();
+
+    await wrapper.get("textarea").setValue("Investigate release blocker");
+
+    expect(wrapper.emitted("update:selectedDescription")?.[0]).toEqual([
+      "Investigate release blocker",
+    ]);
   });
 
   it("emits create-task and confirm actions when the buttons are clicked", async () => {
@@ -159,6 +178,28 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.text()).toContain("Task title is required.");
     expect(confirmButton?.attributes("disabled")).toBeDefined();
+  });
+
+  it("renders inline active-timer update errors and confirm loading state", () => {
+    const wrapper = mountDialog({
+      isConfirmingSelection: true,
+      selectionUpdateErrorMessage: "Task is inactive",
+    });
+    const confirmButton = wrapper
+      .findAll("button")
+      .find((button) => button.text() === "Use selected task");
+
+    expect(wrapper.text()).toContain("Could not update the active timer task.");
+    expect(wrapper.text()).toContain("Task is inactive");
+    expect(confirmButton?.attributes("data-loading")).toBe("true");
+  });
+
+  it("renders the description field directly below task", () => {
+    const wrapper = mountDialog();
+    const labels = wrapper.findAll("label").map((label) => label.text().trim());
+
+    expect(labels.indexOf("Description")).toBeGreaterThan(labels.indexOf("Task"));
+    expect(labels.indexOf("Description")).toBeLessThan(labels.indexOf("Task title"));
   });
 
   it("uses mobile-friendly dialog sizing, scrolling, and stacked action rows", () => {

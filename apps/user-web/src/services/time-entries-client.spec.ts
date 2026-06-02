@@ -1,6 +1,38 @@
 import { describe, expect, it, vi } from "vitest";
+import { createAuthenticatedApiClient } from "@gitiempo/web-shared/http";
 
 import { createTimeEntriesClient } from "./time-entries-client";
+
+type FetchMock = typeof fetch;
+type RecordedRequestInit = {
+  body?: string;
+  headers?: Record<string, string>;
+  method?: string;
+};
+
+function getRecordedFetchRequest(fetchFn: ReturnType<typeof vi.fn<FetchMock>>) {
+  const call = fetchFn.mock.calls[0];
+
+  if (!call) {
+    throw new Error("Expected recorded fetch request");
+  }
+
+  const path = call[0];
+  const requestInit = call[1];
+
+  if (typeof path !== "string") {
+    throw new Error("Expected string request path");
+  }
+
+  if (!requestInit || typeof requestInit !== "object") {
+    throw new Error("Expected fetch request options");
+  }
+
+  return {
+    path,
+    requestInit: requestInit as RecordedRequestInit,
+  };
+}
 
 function jsonResponse(body: unknown, init: { status?: number } = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -13,6 +45,16 @@ function noContentResponse(init: { status?: number } = {}): Response {
   return new Response(null, {
     status: 204,
     ...init,
+  });
+}
+
+function createTestApiClient(fetchFn: typeof fetch, apiBaseUrl?: string) {
+  return createAuthenticatedApiClient({
+    apiBaseUrl,
+    fetchFn,
+    getToken: () => "access-token",
+    onRefreshFailed: vi.fn(),
+    refreshAccessToken: async () => "access-token",
   });
 }
 
@@ -37,11 +79,10 @@ describe("createTimeEntriesClient", () => {
       ]),
     );
     const client = createTimeEntriesClient({
-      apiBaseUrl: "https://api.example.test/",
-      fetchFn,
+      apiClient: createTestApiClient(fetchFn, "https://api.example.test/"),
     });
 
-    const projects = await client.listVisibleProjects("access-token");
+    const projects = await client.listVisibleProjects();
 
     expect(projects[0]?.name).toBe("Project Orion");
     expect(fetchFn).toHaveBeenCalledWith("https://api.example.test/projects", {
@@ -54,15 +95,15 @@ describe("createTimeEntriesClient", () => {
   });
 
   it("loads recent own entries with query parameters", async () => {
-    const fetchFn = vi.fn(async () =>
+    const fetchFn = vi.fn<FetchMock>(async () =>
       jsonResponse({
         items: [],
         meta: { limit: 10, page: 1, total: 0, totalPages: 0 },
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.listOwnEntries("access-token", { limit: 10, search: "reports" });
+    await client.listOwnEntries({ limit: 10, search: "reports" });
 
     expect(fetchFn).toHaveBeenCalledWith(
       "/time-entries?page=1&limit=10&search=reports",
@@ -83,9 +124,9 @@ describe("createTimeEntriesClient", () => {
         meta: { limit: 20, page: 2, total: 0, totalPages: 0 },
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.listOwnEntries("access-token", {
+    await client.listOwnEntries({
       dateFrom: "2026-04-01T00:00:00.000Z",
       dateTo: "2026-04-22T00:00:00.000Z",
       limit: 20,
@@ -122,11 +163,10 @@ describe("createTimeEntriesClient", () => {
         },
       ]),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
       client.listProjectTasks(
-        "access-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       ),
     ).resolves.toHaveLength(1);
@@ -155,10 +195,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await client.createTask(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       { title: "Write release checklist" },
     );
@@ -189,10 +228,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     const task = await client.updateTask(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       {
         status: "closed",
@@ -219,11 +257,10 @@ describe("createTimeEntriesClient", () => {
 
   it("handles task deletion with the no-content contract", async () => {
     const fetchFn = vi.fn(async () => noContentResponse());
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
       client.deleteTask(
-        "access-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       ),
     ).resolves.toBeUndefined();
@@ -245,11 +282,10 @@ describe("createTimeEntriesClient", () => {
         { status: 409 },
       ),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
       client.deleteTask(
-        "access-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       ),
     ).rejects.toThrow("Task has related time entries");
@@ -288,12 +324,11 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.startTimer(
-      "access-token",
-      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-    );
+    await client.startTimer({
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
 
     expect(fetchFn).toHaveBeenCalledWith("/time-entries/timer/start", {
       body: JSON.stringify({
@@ -304,6 +339,64 @@ describe("createTimeEntriesClient", () => {
         "Content-Type": "application/json",
       },
       method: "POST",
+    });
+  });
+
+  it("posts timer start requests with a nullable description", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        createdAt: "2026-04-21T09:00:00.000Z",
+        description: "Investigate release blocker",
+        durationSeconds: null,
+        endedAt: null,
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        isBillable: true,
+        project: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          name: "Project Orion",
+        },
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        source: "web",
+        startedAt: "2026-04-21T09:00:00.000Z",
+        githubIssue: null,
+        task: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+          title: "Improve reports filters",
+        },
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        updatedAt: "2026-04-21T09:00:00.000Z",
+        user: {
+          avatarUrl: null,
+          displayName: "Alexey Tsukanov",
+          email: "alexey@example.com",
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        },
+        userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+      }),
+    );
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+
+    await client.startTimer({
+      description: "Investigate release blocker",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    });
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+
+    const { path, requestInit } = getRecordedFetchRequest(fetchFn);
+
+    expect(path).toBe("/time-entries/timer/start");
+    expect(requestInit).toMatchObject({
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+    expect(JSON.parse(String(requestInit.body))).toEqual({
+      description: "Investigate release blocker",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
     });
   });
 
@@ -340,9 +433,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    const entry = await client.createManualEntry("access-token", {
+    const entry = await client.createManualEntry({
       endedAt: "2026-04-21T10:30:00.000Z",
       startedAt: "2026-04-21T09:00:00.000Z",
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
@@ -396,9 +489,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.stopTimer("access-token");
+    await client.stopTimer();
 
     expect(fetchFn).toHaveBeenCalledWith("/time-entries/timer/stop", {
       body: undefined,
@@ -411,9 +504,9 @@ describe("createTimeEntriesClient", () => {
 
   it("deletes entries using the no-content endpoint contract", async () => {
     const fetchFn = vi.fn(async () => noContentResponse());
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await client.deleteEntry("access-token", "entry-1");
+    await client.deleteEntry("entry-1");
 
     expect(fetchFn).toHaveBeenCalledWith("/time-entries/entry-1", {
       headers: {
@@ -456,10 +549,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await client.updateEntry(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
       { description: "Updated", isBillable: false },
     );
@@ -510,10 +602,9 @@ describe("createTimeEntriesClient", () => {
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await client.updateEntry(
-      "access-token",
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
       {
         taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9009",
@@ -533,6 +624,31 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("passes abort signals through list requests", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        items: [],
+        meta: { limit: 10, page: 1, total: 0, totalPages: 0 },
+      }),
+    );
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+    const controller = new AbortController();
+
+    await client.listOwnEntries({ limit: 10 }, { signal: controller.signal });
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/time-entries?page=1&limit=10",
+      {
+        body: undefined,
+        headers: {
+          Authorization: "Bearer access-token",
+        },
+        method: "GET",
+        signal: controller.signal,
+      },
+    );
+  });
+
   it("throws API error messages using repository message ordering", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse(
@@ -540,13 +656,12 @@ describe("createTimeEntriesClient", () => {
         { status: 409 },
       ),
     );
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
     await expect(
-      client.startTimer(
-        "access-token",
-        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-      ),
+      client.startTimer({
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      }),
     ).rejects.toThrow("A timer is already running");
   });
 
@@ -554,9 +669,9 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () => {
       throw new Error("network down");
     });
-    const client = createTimeEntriesClient({ fetchFn });
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    await expect(client.getCurrentTimer("access-token")).rejects.toThrow(
+    await expect(client.getCurrentTimer()).rejects.toThrow(
       "network down",
     );
   });

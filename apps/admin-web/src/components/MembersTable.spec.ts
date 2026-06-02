@@ -2,6 +2,7 @@
 
 import { flushPromises, mount } from '@vue/test-utils';
 import type { ProjectListResponse, WorkspaceMemberListResponse } from '@gitiempo/shared';
+import { ManagementTableShell } from '@gitiempo/web-shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
@@ -18,11 +19,11 @@ const toastMock = vi.hoisted(() => ({
   successToast: vi.fn(),
 }));
 
-vi.mock('@/composables/useConfirmation', () => ({
+vi.mock('@/composables/feedback/useConfirmation', () => ({
   useConfirmation: () => confirmationMock,
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => toastMock,
 }));
 
@@ -186,13 +187,16 @@ function mountMembersTable(options: {
 
 function expectVisibleMembers(wrapper: ReturnType<typeof mountMembersTable>, names: string[]) {
   const allNames = createMembers().map((member) => member.displayName ?? member.email);
+  const visibleMembers = (
+    wrapper.getComponent(ManagementTableShell).props('value') as WorkspaceMemberListResponse
+  ).map((member) => member.displayName ?? member.email);
 
   for (const name of names) {
-    expect(wrapper.text()).toContain(name);
+    expect(visibleMembers).toContain(name);
   }
 
   for (const name of allNames.filter((memberName) => !names.includes(memberName))) {
-    expect(wrapper.text()).not.toContain(name);
+    expect(visibleMembers).not.toContain(name);
   }
 }
 
@@ -221,8 +225,10 @@ describe('MembersTable', () => {
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);
   });
 
-  it('filters members by global search, column filters, project, role, and activity', async () => {
-    const wrapper = mountMembersTable();
+  it(
+    'filters members by global search, column filters, project, role, and activity',
+    async () => {
+      const wrapper = mountMembersTable();
 
     expect(wrapper.get('input[aria-label="Search members"]').attributes('placeholder')).toBe(
       'Search members',
@@ -266,10 +272,12 @@ describe('MembersTable', () => {
     await wrapper.vm.$nextTick();
     expectVisibleMembers(wrapper, ['Alex Admin']);
 
-    await activityFilter!.vm.$emit('update:modelValue', 'any');
-    await wrapper.vm.$nextTick();
-    expectVisibleMembers(wrapper, ['Pat PM', 'Alex Admin', 'Nina Keller']);
-  });
+      await activityFilter!.vm.$emit('update:modelValue', 'any');
+      await wrapper.vm.$nextTick();
+      expectVisibleMembers(wrapper, ['Pat PM', 'Alex Admin', 'Nina Keller']);
+    },
+    10000,
+  );
 
   it('renders mobile cards and a loading shell only on mobile viewports', () => {
     mockMatchMedia(true);

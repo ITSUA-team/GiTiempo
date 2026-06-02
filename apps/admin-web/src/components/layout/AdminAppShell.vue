@@ -14,8 +14,9 @@ import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link
 import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
 
-import { useToasts } from "@/composables/useToasts";
-import { routeNames } from "@/router";
+import { useToasts } from "@/composables/feedback/useToasts";
+import { appEnv } from "@/config/env";
+import { canAccessAdminRoute, routeNames } from "@/router";
 import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
 
@@ -30,19 +31,25 @@ const membersIcon = markRaw(UsersIcon);
 const projectsIcon = markRaw(FolderIcon);
 const settingsIcon = markRaw(Cog6ToothIcon);
 const userWorkspaceHref = getCounterpartWorkspaceHref({
-  configuredUrl: import.meta.env.VITE_USER_APP_URL,
+  configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
 
 let workspaceNameRequestToken: string | null = null;
 
-const navItems = computed(() => [
+const allNavItems = [
   { icon: dashboardIcon, label: "Dashboard", name: routeNames.dashboard },
   { icon: reportsIcon, label: "Reports", name: routeNames.reports },
   { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
   { icon: membersIcon, label: "Members", name: routeNames.members },
   { icon: projectsIcon, label: "Projects", name: routeNames.projects },
-]);
+];
+
+const navItems = computed(() => {
+  const role = authStore.profile?.role ?? null;
+
+  return allNavItems.filter((item) => canAccessAdminRoute(role, item.name));
+});
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
 const activeName = computed(() => {
@@ -68,7 +75,7 @@ watch(
     workspaceNameRequestToken = accessToken;
 
     try {
-      const workspace = await adminSettingsClient.getWorkspace(accessToken);
+      const workspace = await adminSettingsClient.getWorkspace();
       authStore.setWorkspaceName(workspace.name);
     } catch (error) {
       workspaceNameRequestToken = null;

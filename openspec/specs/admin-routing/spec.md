@@ -67,6 +67,30 @@ The `admin-web` router MUST treat the documented admin pages as authenticated de
 - **THEN** the router ignores that redirect value
 - **AND** the router redirects the user to the default authenticated admin destination
 
+### Requirement: Role-Scoped Admin Route Access
+
+The `admin-web` router and authenticated shell MUST keep role restrictions consistent so users cannot navigate to product areas their current workspace role cannot use.
+
+#### Scenario: Admin users can reach all admin product routes
+
+- **WHEN** an authenticated admin navigates through the admin-web product routes
+- **THEN** dashboard, reports, invoices, members, projects, add-project, and settings routes are available
+- **AND** the shell navigation exposes the product routes intended for admin users
+
+#### Scenario: PM users only see PM-safe admin routes
+
+- **WHEN** an authenticated PM uses admin-web
+- **THEN** the dashboard and reports routes are available
+- **AND** members, projects, add-project, invoices, and settings are denied until their PM-safe UI behavior is implemented
+- **AND** denied product routes redirect to the standalone 403 route
+- **AND** denied product routes are omitted from the authenticated shell navigation
+
+#### Scenario: Member users are denied admin product routes
+
+- **WHEN** an authenticated member navigates to an admin-web product route
+- **THEN** the router redirects to the standalone 403 route
+- **AND** the 403 route itself does not redirect back to another protected product route
+
 ### Requirement: Cross-SPA Switching Entry Points
 
 The web products MUST provide visible entry points between `user-web` and `admin-web` so users can switch workspaces from the application chrome or login experience. Those entry points MUST resolve their counterpart destination from the frontend's documented counterpart-app configuration instead of relying on duplicated inline localhost port literals in multiple app surfaces.

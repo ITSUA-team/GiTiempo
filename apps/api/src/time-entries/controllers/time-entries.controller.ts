@@ -131,9 +131,12 @@ export class TimeEntriesController {
 
   @Patch('time-entries/:id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update own completed time entry' })
+  @ApiOperation({ summary: 'Update own time entry' })
   @ApiOkResponse({ type: TimeEntryResponseDto })
-  @ApiConflictResponse({ description: 'Running entries must be stopped first' })
+  @ApiConflictResponse({
+    description:
+      'Running entries may update only task and description without stopping first',
+  })
   @ApiNotFoundResponse({ description: 'Time entry not found' })
   @ApiUnprocessableEntityResponse({ description: 'Task or project inactive' })
   @ZodSerializerDto(TimeEntryResponseDto)

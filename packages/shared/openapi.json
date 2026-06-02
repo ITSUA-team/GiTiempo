@@ -1520,7 +1520,7 @@
             "description": "Time entry not found"
           },
           "409": {
-            "description": "Running entries must be stopped first"
+            "description": "Running entries may update only task and description without stopping first"
           },
           "422": {
             "description": "Task or project inactive"
@@ -1531,7 +1531,7 @@
             "bearer": []
           }
         ],
-        "summary": "Update own completed time entry",
+        "summary": "Update own time entry",
         "tags": [
           "time-entries"
         ]
@@ -4186,6 +4186,11 @@
             "type": "string",
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
           }
         },
         "required": [

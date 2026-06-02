@@ -1,208 +1,33 @@
 import { defineStore } from "pinia";
-import { computed, shallowRef } from "vue";
-import type {
-  TokenPairResponse,
-  UpdateUserInput,
-  UserResponse,
-} from "@gitiempo/shared";
+import { computed } from "vue";
 import {
-  clearRefreshToken,
-  getRefreshToken,
-  setRefreshToken,
-} from "@gitiempo/web-shared/session-storage";
+  createAuthProfilePresentation,
+  createAuthSessionCore,
+} from "@gitiempo/web-shared/auth";
+
+import { queryClient } from "@/query-client";
 import { getAuthRuntime } from "@/services/auth-runtime";
 
-function applyTokenPair(
-  accessToken: { value: string | null },
-  tokenPair: TokenPairResponse,
-): void {
-  accessToken.value = tokenPair.accessToken;
-  setRefreshToken(tokenPair.refreshToken);
+function clearAuthenticatedQueryCache(): void {
+  queryClient.clear();
 }
 
 export const useAuthStore = defineStore("auth", () => {
-  const accessToken = shallowRef<string | null>(null);
-  const bootstrapComplete = shallowRef(false);
-  const isBootstrapping = shallowRef(false);
-  const profile = shallowRef<UserResponse | null>(null);
-  const isSubmitting = shallowRef(false);
-
-  let bootstrapPromise: Promise<void> | null = null;
-
-  const isAuthenticated = computed(() => accessToken.value !== null);
-  const displayName = computed(
-    () => profile.value?.displayName ?? "Workspace member",
-  );
-  const workspaceName = computed(() => "Workspace Alpha");
-  const userInitials = computed(() => {
-    const source =
-      profile.value?.displayName?.trim() ||
-      profile.value?.email ||
-      displayName.value;
-    const parts = source
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase());
-
-    return parts.join("") || "GT";
+  const session = createAuthSessionCore({
+    getAuthRuntime,
+    onClearSession: clearAuthenticatedQueryCache,
+    onLoginSuccess: clearAuthenticatedQueryCache,
   });
-
-  function clearSession(): void {
-    accessToken.value = null;
-    profile.value = null;
-    clearRefreshToken();
-  }
-
-  async function loadCurrentUser(nextAccessToken: string): Promise<void> {
-    try {
-      profile.value = await getAuthRuntime().getCurrentUser(nextAccessToken);
-    } catch {
-      profile.value = null;
-    }
-  }
-
-  async function bootstrapSession(): Promise<void> {
-    if (bootstrapComplete.value) {
-      return;
-    }
-
-    if (bootstrapPromise) {
-      return bootstrapPromise;
-    }
-
-    bootstrapPromise = (async () => {
-      isBootstrapping.value = true;
-
-      try {
-        const refreshToken = getRefreshToken();
-
-        if (!refreshToken) {
-          clearSession();
-          return;
-        }
-
-        const tokenPair = await getAuthRuntime().refreshSession(refreshToken);
-        applyTokenPair(accessToken, tokenPair);
-        await loadCurrentUser(tokenPair.accessToken);
-      } catch {
-        clearSession();
-      } finally {
-        bootstrapComplete.value = true;
-        isBootstrapping.value = false;
-        bootstrapPromise = null;
-      }
-    })();
-
-    return bootstrapPromise;
-  }
-
-  async function exchangeFirebaseToken(firebaseIdToken: string): Promise<void> {
-    const tokenPair =
-      await getAuthRuntime().loginWithFirebaseToken(firebaseIdToken);
-
-    applyTokenPair(accessToken, tokenPair);
-    await loadCurrentUser(tokenPair.accessToken);
-    bootstrapComplete.value = true;
-  }
-
-  async function withSubmitting(action: () => Promise<void>): Promise<void> {
-    isSubmitting.value = true;
-
-    try {
-      await action();
-    } catch (error) {
-      clearSession();
-      bootstrapComplete.value = true;
-      throw error;
-    } finally {
-      isSubmitting.value = false;
-    }
-  }
-
-  async function runLoginFlow(
-    getFirebaseIdToken: () => Promise<string>,
-  ): Promise<void> {
-    await withSubmitting(async () => {
-      const firebaseIdToken = await getFirebaseIdToken();
-      await exchangeFirebaseToken(firebaseIdToken);
-    });
-  }
-
-  async function loginWithFirebaseToken(firebaseIdToken: string): Promise<void> {
-    await withSubmitting(() => exchangeFirebaseToken(firebaseIdToken));
-  }
-
-  async function loginWithEmailPassword(
-    email: string,
-    password: string,
-  ): Promise<void> {
-    await runLoginFlow(() =>
-      getAuthRuntime().signInWithEmailPassword(email, password),
-    );
-  }
-
-  async function loginWithGoogle(): Promise<void> {
-    await runLoginFlow(() => getAuthRuntime().signInWithGoogle());
-  }
-
-  async function logout(): Promise<void> {
-    const refreshToken = getRefreshToken();
-    const currentAccessToken = accessToken.value;
-
-    try {
-      if (currentAccessToken && refreshToken) {
-        try {
-          await getAuthRuntime().logoutSession(
-            currentAccessToken,
-            refreshToken,
-          );
-        } catch {
-          // The local client session still needs to be cleared on logout.
-        }
-      }
-    } finally {
-      clearSession();
-      bootstrapComplete.value = true;
-
-      try {
-        await getAuthRuntime().signOutIdentityProvider();
-      } catch {
-        // The local API session is the source of truth for access control.
-      }
-    }
-  }
-
-  async function updateProfile(input: UpdateUserInput): Promise<UserResponse> {
-    if (!accessToken.value) {
-      throw new Error("Your session has expired. Please sign in again.");
-    }
-
-    const nextProfile = await getAuthRuntime().updateCurrentUser(
-      accessToken.value,
-      input,
-    );
-
-    profile.value = nextProfile;
-
-    return nextProfile;
-  }
+  const profilePresentation = createAuthProfilePresentation(session.profile, {
+    displayNameFallback: "Workspace member",
+  });
+  const workspaceName = computed(() => "Workspace Alpha");
 
   return {
-    accessToken,
-    bootstrapComplete,
-    bootstrapSession,
-    displayName,
-    isAuthenticated,
-    isBootstrapping,
-    isSubmitting,
-    loginWithFirebaseToken,
-    loginWithEmailPassword,
-    loginWithGoogle,
-    logout,
-    profile,
-    updateProfile,
-    userInitials,
+    ...session.baseSession,
+    ...profilePresentation,
+    loginWithFirebaseToken: session.loginWithFirebaseToken,
+    updateProfile: session.updateProfile,
     workspaceName,
   };
 });

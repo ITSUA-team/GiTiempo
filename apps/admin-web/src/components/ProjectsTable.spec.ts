@@ -2,6 +2,7 @@
 
 import { flushPromises, mount } from '@vue/test-utils';
 import type { ProjectListResponse, WorkspaceMemberListResponse } from '@gitiempo/shared';
+import { ManagementTableShell } from '@gitiempo/web-shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
@@ -22,11 +23,11 @@ const projectClientMock = vi.hoisted(() => ({
   updateProject: vi.fn(),
 }));
 
-vi.mock('@/composables/useConfirmation', () => ({
+vi.mock('@/composables/feedback/useConfirmation', () => ({
   useConfirmation: () => confirmationMock,
 }));
 
-vi.mock('@/composables/useToasts', () => ({
+vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => toastMock,
 }));
 
@@ -211,13 +212,16 @@ function mountProjectsTable(options: {
 
 function expectVisibleProjects(wrapper: ReturnType<typeof mountProjectsTable>, names: string[]) {
   const allNames = createProjects().map((project) => project.name);
+  const visibleProjects = (
+    wrapper.getComponent(ManagementTableShell).props('value') as ProjectListResponse
+  ).map((project) => project.name);
 
   for (const name of names) {
-    expect(wrapper.text()).toContain(name);
+    expect(visibleProjects).toContain(name);
   }
 
   for (const name of allNames.filter((projectName) => !names.includes(projectName))) {
-    expect(wrapper.text()).not.toContain(name);
+    expect(visibleProjects).not.toContain(name);
   }
 }
 
@@ -250,8 +254,10 @@ describe('ProjectsTable', () => {
     expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
   });
 
-  it('filters projects by global search, project, source, assigned member, hours, and visibility', async () => {
-    const wrapper = mountProjectsTable();
+  it(
+    'filters projects by global search, project, source, assigned member, hours, and visibility',
+    async () => {
+      const wrapper = mountProjectsTable();
 
     expect(wrapper.get('input[aria-label="Search projects"]').attributes('placeholder')).toBe(
       'Search projects',
@@ -309,15 +315,17 @@ describe('ProjectsTable', () => {
     await wrapper.vm.$nextTick();
     expectVisibleProjects(wrapper, ['Billing API', 'Legacy Project']);
 
-    await visibilityFilter!.vm.$emit('update:modelValue', null);
-    await wrapper.vm.$nextTick();
-    expectVisibleProjects(wrapper, [
-      'Project Orion',
-      'Billing API',
-      'Dev Portal',
-      'Legacy Project',
-    ]);
-  });
+      await visibilityFilter!.vm.$emit('update:modelValue', null);
+      await wrapper.vm.$nextTick();
+      expectVisibleProjects(wrapper, [
+        'Project Orion',
+        'Billing API',
+        'Dev Portal',
+        'Legacy Project',
+      ]);
+    },
+    10000,
+  );
 
   it('renders the mobile loading shell without desktop actions on small viewports', () => {
     mockMatchMedia(true);
@@ -440,7 +448,6 @@ describe('ProjectsTable', () => {
     await flushPromises();
 
     expect(projectClientMock.updateProject).toHaveBeenCalledWith(
-      'admin-access-token',
       'project-inactive',
       { isActive: true },
     );

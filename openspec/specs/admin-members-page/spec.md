@@ -3,9 +3,7 @@
 ## Purpose
 
 Define the admin Members management page behavior in `admin-web`.
-
 ## Requirements
-
 ### Requirement: Members Page Header And Stat Counters
 
 The admin Members page SHALL render a page header and three stat counters that reflect current workspace membership and invite state.
@@ -43,6 +41,46 @@ The Members page MUST render workspace members using the documented management t
 - **AND** the Member cell shows avatar, display name, and email
 - **AND** assignment count and last-active values come from the workspace member contract
 - **AND** the table uses the shared management table chrome instead of a parallel app-local copy
+
+### Requirement: Members Table Discovery Filters
+
+The Members page MUST render report-style table discovery controls that filter loaded member rows locally without changing backend scope.
+
+#### Scenario: Members table exposes search and column filters
+
+- **WHEN** workspace member, invite, and project membership data have loaded
+- **THEN** the table card header exposes a global search control with placeholder `Search members`
+- **AND** the desktop table renders a filter row directly below the column header with controls for member name/email, role, assigned projects, and last active
+- **AND** the Actions column does not render a filter control
+- **AND** the mobile card list renders equivalent search and filter controls above the cards
+
+#### Scenario: Members project filters require loaded project membership data
+
+- **GIVEN** workspace member data has loaded
+- **AND** project membership data is still loading
+- **WHEN** the Members page is still completing its initial load
+- **THEN** the page keeps the initial loading surface instead of rendering the Members table with empty assigned-project filter options
+- **AND** if project membership data fails during initial load, the page renders the retryable Members request-error surface
+- **AND** the table does not imply that loaded members have no assigned projects only because project data is unavailable
+
+#### Scenario: Members filters narrow loaded rows locally
+
+- **WHEN** the user enters global search text or selects role, assigned-project, or last-active filters
+- **THEN** visible member rows and mobile cards are limited to loaded members matching all active filters
+- **AND** global search matches member display name, email, formatted role, assigned project labels or counts, and formatted last-active text
+- **AND** assigned project labels come from the loaded project membership data used by the Members page
+- **AND** last-active filter options are `Any activity`, `Active today`, `Active this week`, and `No activity`
+- **AND** `Active today` uses the current browser-local calendar day
+- **AND** `Active this week` includes valid `lastActiveAt` values from browser-local Monday `00:00` through the current time
+- **AND** `No activity` includes members with missing or invalid `lastActiveAt`
+- **AND** clearing active filters restores all loaded members allowed by the page's role scope
+- **AND** no member-list API request is required solely for table filtering
+
+#### Scenario: Members filtering preserves management actions
+
+- **WHEN** a filtered member row is visible
+- **THEN** existing Assign PM, Edit, and Remove actions keep their accessibility labels, confirmation behavior, inline expansion behavior, and refresh events
+- **AND** if an expanded row becomes excluded by filters, the expanded state does not remain visible for a hidden row
 
 ### Requirement: Inline PM Assignment Expansion
 
@@ -82,3 +120,62 @@ The Members page MUST gate member removal behind a destructive confirmation dial
 - **AND** confirming issues a member-remove request, refreshes the member list on success, and shows success notification
 - **AND** cancelling sends no request
 - **AND** backend last-admin protection failures are surfaced without removing the member
+
+### Requirement: Pending Invitations Card
+The Admin Members page SHALL render pending workspace invitations in a separate card below the members table.
+
+#### Scenario: Pending invitations render documented fields
+- **GIVEN** the admin opens the Members page
+- **AND** pending invitations have loaded
+- **WHEN** the pending invitations card renders
+- **THEN** desktop and tablet layouts show Email, Role, Expires, and Actions columns
+- **AND** mobile layout renders stacked records with the same fields
+- **AND** the card uses the shared management-table/card visual language from the approved Admin Members design
+
+#### Scenario: Pending invitations empty state
+- **GIVEN** the invite list loads successfully with no pending invitations
+- **WHEN** the pending invitations card renders
+- **THEN** the page shows a distinct empty state for pending invitations
+- **AND** it does not render the request-error state
+
+#### Scenario: Pending invitations request error
+- **GIVEN** the members data required by the page is available
+- **AND** loading pending invitations fails
+- **WHEN** the pending invitations card renders
+- **THEN** the page shows a retryable request-error state scoped to pending invitations
+- **AND** the error state remains distinct from an empty invite list
+
+### Requirement: Pending Invitation Actions
+The Admin Members page MUST provide accessible icon-only `Resend invite` and `Cancel invite` actions for each pending invitation.
+
+#### Scenario: Resend pending invite
+- **GIVEN** the admin selects `Resend invite` for a pending invitation
+- **WHEN** the resend request succeeds
+- **THEN** the page shows success toast feedback
+- **AND** refreshes pending invite data
+
+#### Scenario: Resend pending invite failure
+- **GIVEN** the admin selects `Resend invite` for a pending invitation
+- **WHEN** the resend request fails
+- **THEN** the page shows error toast feedback using the backend message when available
+- **AND** keeps the pending invitation row visible
+
+#### Scenario: Cancel pending invite
+- **GIVEN** the admin selects `Cancel invite` for a pending invitation
+- **WHEN** the action is invoked
+- **THEN** the page opens the shared destructive confirmation dialog
+- **AND** confirming issues the cancel request, refreshes pending invite data, and shows success toast feedback
+- **AND** cancelling sends no request
+
+#### Scenario: Cancel pending invite failure
+- **GIVEN** the admin confirms `Cancel invite` for a pending invitation
+- **WHEN** the cancel request fails
+- **THEN** the page shows error toast feedback using the backend message when available
+- **AND** keeps the pending invitation row visible
+
+#### Scenario: Pending invitation actions are accessible
+- **GIVEN** the pending invitations card renders
+- **WHEN** row actions are visible
+- **THEN** each action is icon-only with a text tooltip
+- **AND** each action exposes an accessible label matching `Resend invite` or `Cancel invite`
+

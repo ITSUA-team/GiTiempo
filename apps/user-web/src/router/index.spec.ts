@@ -19,6 +19,19 @@ import InviteAcceptView from "@/views/InviteAcceptView.vue";
 import InvitePasswordSetupView from "@/views/InvitePasswordSetupView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 
+type LazyRouteComponent = () => Promise<{ default: unknown }>;
+
+async function expectLazyRouteComponent(
+  component: unknown,
+  expectedComponent: unknown,
+): Promise<void> {
+  expect(component).toBeTypeOf("function");
+
+  const loadedComponent = await (component as LazyRouteComponent)();
+
+  expect(loadedComponent.default).toBe(expectedComponent);
+}
+
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
     avatarUrl: null,
@@ -75,7 +88,7 @@ describe("app router auth guards", () => {
     expect(router.currentRoute.value.query.redirect).toBe("/time-entries");
   });
 
-  it("defines standalone authenticated 403 and 404 routes outside the app shell", () => {
+  it("defines standalone authenticated 403 and 404 routes outside the app shell", async () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -87,14 +100,20 @@ describe("app router auth guards", () => {
     expect(forbiddenRoute.name).toBe(routeNames.forbidden);
     expect(forbiddenRoute.meta.requiresAuth).toBe(true);
     expect(forbiddenRoute.matched).toHaveLength(1);
-    expect(forbiddenRoute.matched[0]?.components?.default).toBe(ForbiddenView);
+    await expectLazyRouteComponent(
+      forbiddenRoute.matched[0]?.components?.default,
+      ForbiddenView,
+    );
     expect(notFoundRoute.name).toBe(routeNames.notFound);
     expect(notFoundRoute.meta.requiresAuth).toBe(true);
     expect(notFoundRoute.matched).toHaveLength(1);
-    expect(notFoundRoute.matched[0]?.components?.default).toBe(NotFoundView);
+    await expectLazyRouteComponent(
+      notFoundRoute.matched[0]?.components?.default,
+      NotFoundView,
+    );
   });
 
-  it("defines the standalone invite accept route outside the app shell", () => {
+  it("defines the standalone invite accept route outside the app shell", async () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -105,10 +124,13 @@ describe("app router auth guards", () => {
     expect(inviteAcceptRoute.name).toBe(routeNames.inviteAccept);
     expect(inviteAcceptRoute.meta.allowAuthenticatedGuestFlow).toBe(true);
     expect(inviteAcceptRoute.matched).toHaveLength(1);
-    expect(inviteAcceptRoute.matched[0]?.components?.default).toBe(InviteAcceptView);
+    await expectLazyRouteComponent(
+      inviteAcceptRoute.matched[0]?.components?.default,
+      InviteAcceptView,
+    );
   });
 
-  it("defines the standalone password setup route outside the app shell", () => {
+  it("defines the standalone password setup route outside the app shell", async () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
       pinia: createPinia(),
@@ -121,9 +143,35 @@ describe("app router auth guards", () => {
     expect(passwordSetupRoute.name).toBe(routeNames.invitePasswordSetup);
     expect(passwordSetupRoute.meta.allowAuthenticatedGuestFlow).toBe(true);
     expect(passwordSetupRoute.matched).toHaveLength(1);
-    expect(passwordSetupRoute.matched[0]?.components?.default).toBe(
+    await expectLazyRouteComponent(
+      passwordSetupRoute.matched[0]?.components?.default,
       InvitePasswordSetupView,
     );
+  });
+
+  it("keeps login and shell eager while lazy-loading authenticated child views", () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const loginRoute = router.resolve("/login");
+    const protectedRoutes = [
+      "/",
+      "/time-entries",
+      "/projects",
+      "/profile",
+    ] as const;
+
+    expect(loginRoute.matched[0]?.components?.default).not.toBeTypeOf("function");
+
+    for (const path of protectedRoutes) {
+      const resolved = router.resolve(path);
+
+      expect(resolved.matched).toHaveLength(2);
+      expect(resolved.matched[0]?.components?.default).not.toBeTypeOf("function");
+      expect(resolved.matched[1]?.components?.default).toBeTypeOf("function");
+    }
   });
 
   it("keeps authenticated users on invite accept routes", async () => {

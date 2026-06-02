@@ -2,27 +2,30 @@
 import { computed, ref, shallowRef } from 'vue';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
 import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
+import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ReportsFilterForm from '@/components/reports/ReportsFilterForm.vue';
 import ReportsTable from '@/components/reports/ReportsTable.vue';
-import { useToasts } from '@/composables/useToasts';
-import { useReportsData } from '@/composables/useReportsData';
+import { useToasts } from '@/composables/feedback/useToasts';
+import { useReportsData } from '@/composables/reports/useReportsData';
 import { downloadReportExport } from '@/lib/report-download';
 import {
   createDefaultReportTableFilters,
   filterReportRows,
-  formatReportDuration,
   formatReportPercent,
   getReportDateRangeError,
   type ReportDateRange,
 } from '@/lib/report-view-model';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast, successToast } = useToasts();
+const accessToken = computed(() => authStore.accessToken);
+const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 
 const {
   dateRange,
@@ -39,13 +42,14 @@ const {
   selectedProjectId,
   summary,
 } = useReportsData({
-  accessToken: computed(() => authStore.accessToken),
+  accessToken,
   onError(message, error, action) {
     errorToast(message, {
       error,
       logContext: { action, feature: 'reports' },
     });
   },
+  scope,
 });
 
 const tableFilters = ref(createDefaultReportTableFilters());
@@ -65,13 +69,13 @@ const exportDisabled = computed(
 );
 
 const totalHoursLabel = computed(() =>
-  formatReportDuration(summary.value.totalSeconds),
+  formatPaddedHoursMinutesDuration(summary.value.totalSeconds),
 );
 const billableShareLabel = computed(() =>
   formatReportPercent(summary.value.billableShare),
 );
 const avgPerMemberLabel = computed(() =>
-  formatReportDuration(summary.value.avgPerMemberSeconds),
+  formatPaddedHoursMinutesDuration(summary.value.avgPerMemberSeconds),
 );
 const trackedHoursDescription = computed(() => {
   const count = summary.value.memberCount;
@@ -84,7 +88,7 @@ const topProjectDescription = computed(() => {
     return 'No tracked time';
   }
 
-  return `${formatReportDuration(seconds)} tracked this period`;
+  return `${formatPaddedHoursMinutesDuration(seconds)} tracked this period`;
 });
 
 async function handleExport(): Promise<void> {

@@ -3,6 +3,7 @@ import {
   createTaskSchema,
   currentTimeEntryResponseSchema,
   projectListResponseSchema,
+  type StartTimerInput,
   taskResponseSchema,
   startTimerSchema,
   taskListResponseSchema,
@@ -22,48 +23,38 @@ import {
   type UpdateTaskInput,
   type UpdateTimeEntryInput,
 } from "@gitiempo/shared";
-import {
-  getDefaultFetchFn,
-  getRequestUrl,
-  getResponseErrorMessage,
-  requestJson,
-} from "@gitiempo/web-shared/http";
+import type { AuthenticatedApiClient } from "@gitiempo/web-shared/http";
 
 /* eslint-disable no-unused-vars */
 
 interface TimeEntriesClientOptions {
-  apiBaseUrl?: string;
-  fetchFn?: typeof fetch;
+  apiClient: Pick<AuthenticatedApiClient, "requestJson" | "requestNoContent">;
 }
 
 export interface TimeEntriesClient {
   createManualEntry(
-    accessToken: string,
     input: CreateManualTimeEntryInput,
   ): Promise<TimeEntryResponse>;
   createTask(
-    accessToken: string,
     projectId: string,
     input: CreateTaskInput,
   ): Promise<TaskResponse>;
-  deleteTask(accessToken: string, taskId: string): Promise<void>;
-  deleteEntry(accessToken: string, entryId: string): Promise<void>;
-  getCurrentTimer(accessToken: string): Promise<CurrentTimeEntryResponse>;
+  deleteTask(taskId: string): Promise<void>;
+  deleteEntry(entryId: string): Promise<void>;
+  getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
   listOwnEntries(
-    accessToken: string,
     query?: Partial<TimeEntryListQuery>,
+    options?: { signal?: AbortSignal },
   ): Promise<TimeEntryListResponse>;
-  listProjectTasks(accessToken: string, projectId: string): Promise<TaskResponse[]>;
-  listVisibleProjects(accessToken: string): Promise<ProjectResponse[]>;
-  startTimer(accessToken: string, taskId: string): Promise<TimeEntryResponse>;
-  stopTimer(accessToken: string): Promise<TimeEntryResponse>;
+  listProjectTasks(projectId: string): Promise<TaskResponse[]>;
+  listVisibleProjects(): Promise<ProjectResponse[]>;
+  startTimer(input: StartTimerInput): Promise<TimeEntryResponse>;
+  stopTimer(): Promise<TimeEntryResponse>;
   updateEntry(
-    accessToken: string,
     entryId: string,
     input: UpdateTimeEntryInput,
   ): Promise<TimeEntryResponse>;
   updateTask(
-    accessToken: string,
     taskId: string,
     input: UpdateTaskInput,
   ): Promise<TaskResponse>;
@@ -101,143 +92,91 @@ function buildTimeEntryListQuery(query: Partial<TimeEntryListQuery> | undefined)
   return searchParams.toString();
 }
 
-async function requestNoContent(options: {
-  accessToken: string;
-  apiBaseUrl?: string;
-  fetchFn: typeof fetch;
-  path: string;
-}): Promise<void> {
-  const response = await options.fetchFn(getRequestUrl(options.apiBaseUrl, options.path), {
-    headers: {
-      Authorization: `Bearer ${options.accessToken}`,
-    },
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw new Error(await getResponseErrorMessage(response));
-  }
-}
-
 export function createTimeEntriesClient({
-  apiBaseUrl,
-  fetchFn = getDefaultFetchFn(),
-}: TimeEntriesClientOptions = {}): TimeEntriesClient {
+  apiClient,
+}: TimeEntriesClientOptions): TimeEntriesClient {
   return {
-    createManualEntry(accessToken, input) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
+    createManualEntry(input) {
+      return apiClient.requestJson({
         body: createManualTimeEntrySchema.parse(input),
-        fetchFn,
         method: "POST",
         path: "/time-entries",
         responseSchema: timeEntryResponseSchema,
       });
     },
-    createTask(accessToken, projectId, input) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
+    createTask(projectId, input) {
+      return apiClient.requestJson({
         body: createTaskSchema.parse(input),
-        fetchFn,
         method: "POST",
         path: `/projects/${projectId}/tasks`,
         responseSchema: taskListResponseSchema.element,
       });
     },
-    async deleteTask(accessToken, taskId) {
-      await requestNoContent({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
+    async deleteTask(taskId) {
+      await apiClient.requestNoContent({
+        method: "DELETE",
         path: `/tasks/${taskId}`,
       });
     },
-    async deleteEntry(accessToken, entryId) {
-      await requestNoContent({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
+    async deleteEntry(entryId) {
+      await apiClient.requestNoContent({
+        method: "DELETE",
         path: `/time-entries/${entryId}`,
       });
     },
-    getCurrentTimer(accessToken) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
+    getCurrentTimer() {
+      return apiClient.requestJson({
         path: "/time-entries/current",
         responseSchema: currentTimeEntryResponseSchema,
       });
     },
-    listOwnEntries(accessToken, query) {
+    listOwnEntries(query, options) {
       const search = buildTimeEntryListQuery(query);
 
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
+      return apiClient.requestJson({
         path: `/time-entries?${search}`,
         responseSchema: timeEntryListResponseSchema,
+        signal: options?.signal,
       });
     },
-    listProjectTasks(accessToken, projectId) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
+    listProjectTasks(projectId) {
+      return apiClient.requestJson({
         path: `/projects/${projectId}/tasks`,
         responseSchema: taskListResponseSchema,
       });
     },
-    listVisibleProjects(accessToken) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
+    listVisibleProjects() {
+      return apiClient.requestJson({
         path: "/projects",
         responseSchema: projectListResponseSchema,
       });
     },
-    startTimer(accessToken, taskId) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
-        body: startTimerSchema.parse({ taskId }),
-        fetchFn,
+    startTimer(input) {
+      return apiClient.requestJson({
+        body: startTimerSchema.parse(input),
         method: "POST",
         path: "/time-entries/timer/start",
         responseSchema: timeEntryResponseSchema,
       });
     },
-    stopTimer(accessToken) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
-        fetchFn,
+    stopTimer() {
+      return apiClient.requestJson({
         method: "POST",
         path: "/time-entries/timer/stop",
         responseSchema: timeEntryResponseSchema,
       });
     },
-    updateEntry(accessToken, entryId, input) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
+    updateEntry(entryId, input) {
+      return apiClient.requestJson({
         body: updateTimeEntrySchema.parse(input),
-        fetchFn,
         method: "PATCH",
         path: `/time-entries/${entryId}`,
         responseSchema: timeEntryResponseSchema,
       });
     },
-    updateTask(accessToken, taskId, input) {
-      return requestJson({
-        accessToken,
-        apiBaseUrl,
+    updateTask(taskId, input) {
+      return apiClient.requestJson({
         body: updateTaskSchema.parse(input),
-        fetchFn,
         method: "PATCH",
         path: `/tasks/${taskId}`,
         responseSchema: taskResponseSchema,

@@ -8,7 +8,7 @@ import { computed } from "vue";
 import Button from "primevue/button";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
 
-import { useTopBarTimer } from "@/composables/useTopBarTimer";
+import { useTopBarTimer } from "@/composables/timer/useTopBarTimer";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 
@@ -20,6 +20,7 @@ const {
   createTaskTitle,
   elapsedTimeLabel,
   handlePrimaryAction,
+  isConfirmingSelection,
   isConfirmSelectionDisabled,
   isCreateTaskDisabled,
   isCreatingTask,
@@ -33,9 +34,12 @@ const {
   primaryActionLabel,
   projectsErrorMessage,
   projectOptions,
+  selectedDescription,
   selectedProjectId,
   selectedTaskId,
+  selectionUpdateErrorMessage,
   setCreateTaskTitle,
+  setSelectedDescription,
   setSelectedProjectId,
   setSelectedTaskId,
   summaryErrorMessage,
@@ -173,6 +177,7 @@ const primaryActionIcon = computed(() =>
     :create-task-error-message="createTaskErrorMessage"
     :create-task-title="createTaskTitle"
     :is-confirm-selection-disabled="isConfirmSelectionDisabled"
+    :is-confirming-selection="isConfirmingSelection"
     :is-create-task-disabled="isCreateTaskDisabled"
     :is-creating-task="isCreatingTask"
     :is-loading-projects="isLoadingProjects"
@@ -180,14 +185,17 @@ const primaryActionIcon = computed(() =>
     :is-open="isDialogOpen"
     :project-options="projectOptions"
     :projects-error-message="projectsErrorMessage ?? summaryErrorMessage"
+    :selected-description="selectedDescription"
     :selected-project-id="selectedProjectId"
     :selected-task-id="selectedTaskId"
+    :selection-update-error-message="selectionUpdateErrorMessage"
     :task-options="taskOptions"
     :tasks-error-message="tasksErrorMessage"
     @close="closeDialog"
     @confirm="confirmSelectedTask"
     @create-task="createTaskFromDialog"
     @update:create-task-title="setCreateTaskTitle"
+    @update:selected-description="setSelectedDescription"
     @update:selected-project-id="setSelectedProjectId"
     @update:selected-task-id="setSelectedTaskId"
   />
