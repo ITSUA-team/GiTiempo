@@ -50,6 +50,8 @@ This creates two lifecycle models. User-web confirmations depend on page-local h
 - Update `apps/admin-web/src/App.vue` to import and render root `<Toast>` and `<ConfirmDialog>` before route content.
 - Remove Toast and ConfirmDialog host imports/rendering from `AdminAppShell.vue` and user-web route views that currently render page-level hosts.
 - Search both SPAs for remaining `<Toast>`, `<ConfirmDialog>`, and corresponding host imports to confirm only root `App.vue` files own the hosts.
+- Update `docs/ui/patterns.md` so future Toast and ConfirmDialog guidance matches root-only service-host ownership.
+- Add focused root `App.vue` tests that assert each SPA renders exactly one Toast and one ConfirmDialog host, including `admin-web` rendering `/login` under those root hosts.
 - Run frontend verification for both apps.
 
 ## Open Questions

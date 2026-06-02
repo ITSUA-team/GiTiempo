@@ -28,6 +28,8 @@ Use PrimeVue `<Dialog>`.
 
 Use `<Toast>` and `useToast()`.
 
+- Render exactly one `<Toast>` service host in the root `App.vue` of each SPA.
+- Do not render Toast hosts in shells, routes, pages, or leaf components.
 - Position: top right.
 - Success/info/warn auto-dismiss after 4000ms.
 - Errors require manual dismiss.
@@ -43,12 +45,13 @@ toast.add({ severity: 'error', summary: 'Error', detail: 'Could not save entry.'
 
 Use `<ConfirmDialog>` and `useConfirm()`.
 
+- Render exactly one `<ConfirmDialog>` service host in the root `App.vue` of each SPA.
+- Do not render ConfirmDialog hosts in shells, routes, pages, rows, cards, fields, or other leaf components.
 - Required before destructive actions.
 - Title uses `text-lg font-semibold`.
 - Body uses `text-sm text-text-muted`.
 - Footer order: cancel then destructive accept on the right.
-- Keep the `<ConfirmDialog>` host at the route, page-shell, or app-shell level. Do not hide global confirmation hosts inside leaf presentational components such as cards, rows, or fields just because only one local action currently needs confirmation.
-- Leaf components may emit events or call composables that use `useConfirm()`, but the rendered confirm host should stay with the surface that owns page-level infrastructure.
+- Leaf components may emit events or call composables that use `useConfirm()`, but the rendered confirm host stays with the root app infrastructure.
 
 ```typescript
 const confirm = useConfirm()

@@ -20,6 +20,6 @@ PrimeVue Toast and ConfirmDialog hosts are mounted at different levels across th
 ## Impact
 
 - Affected apps: `apps/user-web` and `apps/admin-web`.
-- Affected files include root `App.vue` files, admin authenticated shell overlay host usage, and user route-level ConfirmDialog host usage.
+- Affected files include root `App.vue` files, admin authenticated shell overlay host usage, user route-level ConfirmDialog host usage, and `docs/ui/patterns.md` overlay ownership guidance.
 - No backend API, shared contract, database, or dependency changes are expected.
 - Verification should cover both web apps because the change touches cross-SPA frontend infrastructure.

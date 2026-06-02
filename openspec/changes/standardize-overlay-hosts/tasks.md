@@ -20,3 +20,10 @@
 - [x] 3.3 Update any affected frontend tests that previously expected shell-local or page-local overlay hosts.
 - [x] 3.4 Run `pnpm --filter user-web lint` and `pnpm --filter user-web typecheck`.
 - [x] 3.5 Run `pnpm --filter admin-web lint` and `pnpm --filter admin-web typecheck`.
+
+## 4. Review Finding Follow-Up
+
+- [x] 4.1 Update `docs/ui/patterns.md` so Toast and ConfirmDialog service hosts are documented as root `App.vue` infrastructure only.
+- [x] 4.2 Add focused root `App.vue` tests for both SPAs that assert exactly one Toast host and one ConfirmDialog host are rendered.
+- [x] 4.3 Cover `admin-web` `/login` route under the root overlay hosts in the focused root app test.
+- [x] 4.4 Run the focused root app tests and rerun affected frontend verification.
