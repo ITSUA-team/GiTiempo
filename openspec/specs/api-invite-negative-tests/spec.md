@@ -119,3 +119,4 @@ The system SHALL NOT create a workspace_members row when invite resend fails for
 #### Scenario: No membership row after resend delivery failure
 - **WHEN** an admin attempts to resend a pending invite and delivery fails
 - **THEN** the workspace_members count for the workspace remains unchanged
+

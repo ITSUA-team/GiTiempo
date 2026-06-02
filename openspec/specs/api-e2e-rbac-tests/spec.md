@@ -89,3 +89,4 @@ The system SHALL reject requests without a valid JWT on all routes protected by 
 #### Scenario: No token on DELETE /invites/:id
 - **WHEN** a request is sent to DELETE /invites/:id without an Authorization header
 - **THEN** the system responds with 401 Unauthorized
+

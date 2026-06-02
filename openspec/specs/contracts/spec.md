@@ -416,3 +416,4 @@ The shared contracts SHALL define the response shape for GitHub authorization UR
 - **THEN** the payload SHALL match the shared GitHub auth URL contract
 - **AND** the payload SHALL include `authorizationUrl` as a string
 - **AND** the payload MUST NOT include access tokens, refresh tokens, PKCE verifier material, or token secrets
+

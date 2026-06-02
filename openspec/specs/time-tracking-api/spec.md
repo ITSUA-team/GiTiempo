@@ -295,3 +295,4 @@ The backend MUST allow authenticated users to list time entries for visible proj
 - **GIVEN** an authenticated user can view another user's time entry through a project list
 - **WHEN** the authenticated user attempts to update or delete that other user's entry through own-entry endpoints
 - **THEN** the backend responds with 404 Not Found
+

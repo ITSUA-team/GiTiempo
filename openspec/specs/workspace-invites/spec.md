@@ -158,3 +158,4 @@ The system SHALL reject resend for invites that are unavailable, non-pending, ou
 #### Scenario: Resend expired pending invite
 - **WHEN** an admin sends `POST /invites/:id/resend` for an invite with status "pending" where `expiresAt` is in the past
 - **THEN** the system responds with 410 Gone and message "Invite has expired"
+

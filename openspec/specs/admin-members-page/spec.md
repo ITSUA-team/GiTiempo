@@ -178,3 +178,4 @@ The Admin Members page MUST provide accessible icon-only `Resend invite` and `Ca
 - **WHEN** row actions are visible
 - **THEN** each action is icon-only with a text tooltip
 - **AND** each action exposes an accessible label matching `Resend invite` or `Cancel invite`
+
