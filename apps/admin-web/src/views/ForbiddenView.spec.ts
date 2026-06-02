@@ -3,6 +3,7 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppConfig } from "vue";
 import { createMemoryHistory } from "vue-router";
 import {
   WorkspaceRoles,
@@ -14,6 +15,14 @@ import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 import { waitForRoute } from "@gitiempo/web-shared/testing";
 import { createAppRouter, routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
+
+const testMocks = vi.hoisted(() => ({
+  navigateToExternalHref: vi.fn(),
+}));
+
+vi.mock("@/services/external-navigation", () => ({
+  navigateToExternalHref: testMocks.navigateToExternalHref,
+}));
 
 const RouteErrorPanelStub = {
   name: "RouteErrorPanel",
@@ -56,7 +65,10 @@ function createAuthProfile(role: WorkspaceRole): UserResponse {
   };
 }
 
-async function mountForbiddenView(role: WorkspaceRole) {
+async function mountForbiddenView(
+  role: WorkspaceRole,
+  options: { errorHandler?: AppConfig["errorHandler"] } = {},
+) {
   const pinia = createPinia();
   setActivePinia(pinia);
   const authStore = useAuthStore(pinia);
@@ -75,6 +87,9 @@ async function mountForbiddenView(role: WorkspaceRole) {
     router,
     wrapper: mount(ForbiddenView, {
       global: {
+        config: {
+          errorHandler: options.errorHandler,
+        },
         plugins: [pinia, router],
         stubs: {
           RouteErrorPanel: RouteErrorPanelStub,
@@ -87,6 +102,7 @@ async function mountForbiddenView(role: WorkspaceRole) {
 describe("ForbiddenView", () => {
   beforeEach(() => {
     clearRefreshToken();
+    testMocks.navigateToExternalHref.mockReset();
     vi.stubEnv("VITE_USER_APP_URL", "https://user.example.test/login");
   });
 
@@ -103,6 +119,35 @@ describe("ForbiddenView", () => {
     expect(wrapper.find('[data-testid="secondary-action"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain("Back to dashboard");
     expect(wrapper.get('[data-testid="copy"]').text()).not.toContain("dashboard");
+  });
+
+  it("switches member users to the configured user workspace URL", async () => {
+    const { wrapper } = await mountForbiddenView(WorkspaceRoles.Member);
+
+    await wrapper.get('[data-testid="primary-action"]').trigger("click");
+
+    expect(testMocks.navigateToExternalHref).toHaveBeenCalledOnce();
+    expect(testMocks.navigateToExternalHref).toHaveBeenCalledWith(
+      "https://user.example.test/login",
+    );
+  });
+
+  it("fails fast instead of falling back to the admin origin when the user workspace URL is missing", async () => {
+    vi.stubEnv("VITE_USER_APP_URL", "");
+    const errorHandler = vi.fn();
+    const { wrapper } = await mountForbiddenView(WorkspaceRoles.Member, {
+      errorHandler,
+    });
+
+    await wrapper.get('[data-testid="primary-action"]').trigger("click");
+
+    const handledError = errorHandler.mock.calls[0]?.[0];
+
+    expect(handledError).toBeInstanceOf(Error);
+    expect((handledError as Error).message).toBe(
+      "VITE_USER_APP_URL is required for admin /403 workspace recovery.",
+    );
+    expect(testMocks.navigateToExternalHref).not.toHaveBeenCalled();
   });
 
   it.each([WorkspaceRoles.Admin, WorkspaceRoles.PM])(

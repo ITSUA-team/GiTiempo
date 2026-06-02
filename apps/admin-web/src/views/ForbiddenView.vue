@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import { RouteErrorPanel } from "@gitiempo/web-shared";
 import { hasAllowedRole } from "@gitiempo/web-shared/router";
-import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 
 import { appEnv } from "@/config/env";
 import { routeNames } from "@/router";
+import { navigateToExternalHref } from "@/services/external-navigation";
 import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
 const authStore = useAuthStore();
-const userWorkspaceHref = getCounterpartWorkspaceHref({
-  configuredUrl: appEnv.userAppUrl,
-  fallbackPath: "/login",
-});
 const canReturnToDashboard = computed(() =>
   hasAllowedRole(
     router.resolve({ name: routeNames.dashboard }).meta.allowedRoles,
@@ -37,8 +33,20 @@ function goToDashboard(): void {
   void router.push({ name: routeNames.dashboard });
 }
 
+function getRequiredUserWorkspaceHref(): string {
+  const configuredUrl = appEnv.userAppUrl?.trim();
+
+  if (!configuredUrl) {
+    throw new Error(
+      "VITE_USER_APP_URL is required for admin /403 workspace recovery.",
+    );
+  }
+
+  return configuredUrl;
+}
+
 function switchWorkspace(): void {
-  window.location.assign(userWorkspaceHref);
+  navigateToExternalHref(getRequiredUserWorkspaceHref());
 }
 
 function handlePrimaryAction(): void {
