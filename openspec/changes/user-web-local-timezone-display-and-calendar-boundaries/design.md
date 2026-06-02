@@ -2,7 +2,7 @@
 
 The API stores and returns time-entry timestamps as ISO datetimes. The backend list endpoint already accepts absolute `dateFrom` and `dateTo` ISO boundaries, so local calendar behavior can be implemented by the frontend calculating the correct browser-local boundary instants before sending requests.
 
-The active `migrate-date-time-utils-to-date-fns` change currently says user-facing time-entry displays, filters, dashboard windows, and grouped day labels remain UTC-based. This proposal intentionally supersedes that assumption for member-facing `user-web` surfaces only.
+The prior `migrate-date-time-utils-to-date-fns` change kept user-facing time-entry displays, filters, dashboard windows, and grouped day labels UTC-based. This proposal intentionally supersedes that assumption for member-facing `user-web` surfaces only.
 
 ## Decisions
 
