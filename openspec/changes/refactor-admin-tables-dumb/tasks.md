@@ -39,3 +39,22 @@
 - [x] 5.3 Run `pnpm --filter admin-web typecheck` and fix type errors.
 - [x] 5.4 Perform a final admin Members and Projects design parity review against the approved `.pen` frames and document any PrimeVue-only deviations.
 - [x] 5.5 Run `openspec status --change "refactor-admin-tables-dumb"` and confirm the change remains apply-ready.
+
+## 6. Stricter Members Table Boundary
+
+- [x] 6.1 Move Members table filters, filter options, filtered rows, empty-state copy, expansion state, and expansion mode out of `MembersTable.vue` into `MembersView.vue` or a focused members-table composable.
+- [x] 6.2 Change `MembersTable.vue` to receive prepared rows/filter/expansion props and emit filter updates plus Assign PM, Edit, and Remove row intents without internal reactive state, computed derivation, watchers, or form rendering.
+- [x] 6.3 Move `MemberAssignPmPanel` and `MemberEditForm` rendering to the Members page owner while preserving save/cancel collapse and member refresh behavior.
+- [x] 6.4 Update table tests so `MembersTable.spec.ts` covers presentational rendering and emitted intents only.
+- [x] 6.5 Update Members page or composable tests to cover moved filtering, expansion pruning, Assign PM/Edit expansion save/cancel behavior, and existing removal orchestration.
+- [x] 6.6 Re-run `pnpm --filter admin-web test`, `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `openspec status --change "refactor-admin-tables-dumb"`.
+
+## 7. All Admin Table Boundary Audit
+
+- [x] 7.1 Audit admin table components (`MembersTable.vue`, `ProjectsTable.vue`, and `reports/ReportsTable.vue`) for admin API clients, auth stores, toast helpers, confirmation helpers, and mutation orchestration.
+- [x] 7.2 Move Projects table filters, filter options, filtered rows, empty-state copy, and expansion state out of `ProjectsTable.vue` into `ProjectsView.vue` or a focused projects-table composable.
+- [x] 7.3 Change `ProjectsTable.vue` to receive prepared rows/filter/expansion props and emit filter updates plus Edit, Archive, and Unarchive row intents without internal reactive state, computed derivation, watchers, or form rendering.
+- [x] 7.4 Move `ProjectEditForm` rendering to the Projects page owner while preserving save/cancel collapse, project refresh, and summary refresh behavior.
+- [x] 7.5 Move member assignment save, member role save, and project settings save API/toast orchestration out of inline expansion forms into `MembersView.vue` and `ProjectsView.vue`.
+- [x] 7.6 Update table, form, view, and composable tests for dumb table/form boundaries and moved orchestration.
+- [x] 7.7 Re-run `pnpm --filter admin-web test`, `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, focused boundary grep checks, and `openspec status --change "refactor-admin-tables-dumb"`.

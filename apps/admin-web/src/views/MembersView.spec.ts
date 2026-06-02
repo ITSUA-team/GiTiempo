@@ -7,15 +7,18 @@ import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
+  assignMember: vi.fn(),
   cancelInvite: vi.fn(),
   errorToast: vi.fn(),
   requireConfirmation: vi.fn(),
   removeMember: vi.fn(),
+  removeAssignment: vi.fn(),
   resendInvite: vi.fn(),
   successToast: vi.fn(),
   listInvites: vi.fn(),
   listMembers: vi.fn(),
   listProjects: vi.fn(),
+  updateMemberRole: vi.fn(),
 }));
 
 vi.mock('@/services/admin-members-client', () => ({
@@ -25,12 +28,15 @@ vi.mock('@/services/admin-members-client', () => ({
     listMembers: testMocks.listMembers,
     removeMember: testMocks.removeMember,
     resendInvite: testMocks.resendInvite,
+    updateMemberRole: testMocks.updateMemberRole,
   },
 }));
 
 vi.mock('@/services/admin-projects-client', () => ({
   adminProjectsClient: {
+    assignMember: testMocks.assignMember,
     listProjects: testMocks.listProjects,
+    removeAssignment: testMocks.removeAssignment,
   },
 }));
 
@@ -77,22 +83,75 @@ function createMember() {
 
 const MembersTableStub = {
   name: 'MembersTable',
-  emits: ['remove-member'],
+  emits: [
+    'assign-member',
+    'edit-member',
+    'remove-member',
+    'update:expandedRows',
+    'update:filters',
+  ],
   props: {
-    currentUserId: { type: String, default: null },
+    emptyDescription: { type: String, required: true },
+    expandedRows: { type: Object, required: true },
+    filters: { type: Object, required: true },
+    isMobileViewport: { type: Boolean, required: true },
+    lastActiveFilterOptions: { type: Array, required: true },
     loading: { type: Boolean, required: true },
-    members: { type: Array, required: true },
-    projects: { type: Array, required: true },
+    projectFilterOptions: { type: Array, required: true },
+    roleFilterOptions: { type: Array, required: true },
+    rows: { type: Array, required: true },
   },
   template:
     `<div data-testid="members-table">
-      {{ members.length }} members | {{ projects.length }} projects | loading={{ loading }} | currentUser={{ currentUserId }}
+      {{ rows.length }} rows | {{ projectFilterOptions.length }} project filters | loading={{ loading }} | search={{ filters.global }} | empty={{ emptyDescription }}
       <button
-        v-if="members[0]"
-        data-testid="member-remove-intent"
-        @click="$emit('remove-member', members[0])"
+        v-if="rows[0]"
+        data-testid="member-assign-intent"
+        @click="$emit('assign-member', rows[0].member)"
       />
+      <button
+        v-if="rows[0]"
+        data-testid="member-edit-intent"
+        @click="$emit('edit-member', rows[0].member)"
+      />
+      <button
+        v-if="rows[0]"
+        data-testid="member-remove-intent"
+        @click="$emit('remove-member', rows[0].member)"
+      />
+      <slot v-if="rows[0]" name="row-expansion" :row="rows[0]" />
     </div>`,
+};
+
+const MemberAssignPmPanelStub = {
+  name: 'MemberAssignPmPanel',
+  props: {
+    member: { type: Object, required: true },
+    projects: { type: Array, required: true },
+    saving: { type: Boolean, default: false },
+  },
+  template: `
+    <div data-testid="member-assign-panel">
+      Assign {{ member.email }} across {{ projects.length }} projects | saving={{ saving }}
+      <button data-testid="member-assign-save" @click="$emit('save', { projectIds: [] })" />
+      <button data-testid="member-assign-cancel" @click="$emit('cancelled')" />
+    </div>
+  `,
+};
+
+const MemberEditFormStub = {
+  name: 'MemberEditForm',
+  props: {
+    member: { type: Object, required: true },
+    saving: { type: Boolean, default: false },
+  },
+  template: `
+    <div data-testid="member-edit-panel">
+      Edit {{ member.email }} | saving={{ saving }}
+      <button data-testid="member-edit-save" @click="$emit('save', 'member')" />
+      <button data-testid="member-edit-cancel" @click="$emit('cancelled')" />
+    </div>
+  `,
 };
 
 const MemberInviteDialogStub = {
@@ -138,6 +197,15 @@ const SkeletonStub = {
   template: '<div data-testid="skeleton" />',
 };
 
+const membersViewStubs = {
+  MemberAssignPmPanel: MemberAssignPmPanelStub,
+  MemberEditForm: MemberEditFormStub,
+  MemberInviteDialog: MemberInviteDialogStub,
+  MembersTable: MembersTableStub,
+  PendingInvitationsCard: PendingInvitationsCardStub,
+  Skeleton: SkeletonStub,
+};
+
 function mountMembersView() {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -157,27 +225,29 @@ function mountMembersView() {
   return mount(MembersView, {
     global: {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-      stubs: {
-        MemberInviteDialog: MemberInviteDialogStub,
-        MembersTable: MembersTableStub,
-        PendingInvitationsCard: PendingInvitationsCardStub,
-        Skeleton: SkeletonStub,
-      },
+      stubs: membersViewStubs,
     },
   });
 }
 
 describe('MembersView', () => {
   beforeEach(() => {
+    testMocks.assignMember.mockReset();
     testMocks.cancelInvite.mockReset();
     testMocks.listMembers.mockReset();
     testMocks.listInvites.mockReset();
     testMocks.listProjects.mockReset();
     testMocks.errorToast.mockReset();
     testMocks.removeMember.mockReset();
+    testMocks.removeAssignment.mockReset();
     testMocks.requireConfirmation.mockReset();
     testMocks.resendInvite.mockReset();
     testMocks.successToast.mockReset();
+    testMocks.updateMemberRole.mockReset();
+
+    testMocks.assignMember.mockResolvedValue(undefined);
+    testMocks.removeAssignment.mockResolvedValue(undefined);
+    testMocks.updateMemberRole.mockResolvedValue(undefined);
   });
 
   it('shows the dedicated skeleton state before the first members load resolves, then renders loaded stats', async () => {
@@ -261,12 +331,7 @@ describe('MembersView', () => {
     const wrapper = mount(MembersView, {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          MemberInviteDialog: MemberInviteDialogStub,
-          MembersTable: MembersTableStub,
-          PendingInvitationsCard: PendingInvitationsCardStub,
-          Skeleton: SkeletonStub,
-        },
+        stubs: membersViewStubs,
       },
     });
 
@@ -292,7 +357,7 @@ describe('MembersView', () => {
     expect(wrapper.text()).toContain('Pending Invites');
     expect(wrapper.text()).toContain('PMs Assigned');
     expect(wrapper.get('[data-testid="members-table"]').text()).toContain(
-      '2 members | 1 projects | loading=false | currentUser=user-1',
+      '2 rows | 1 project filters | loading=false | search= | empty=No members match the current filters.',
     );
     expect(wrapper.get('[data-testid="pending-invitations-card"]').text()).toContain(
       '1 invites | loading=false | error=none',
@@ -316,12 +381,7 @@ describe('MembersView', () => {
     const wrapper = mount(MembersView, {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          MemberInviteDialog: MemberInviteDialogStub,
-          MembersTable: MembersTableStub,
-          PendingInvitationsCard: PendingInvitationsCardStub,
-          Skeleton: SkeletonStub,
-        },
+        stubs: membersViewStubs,
       },
     });
 
@@ -363,12 +423,7 @@ describe('MembersView', () => {
     const wrapper = mount(MembersView, {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          MemberInviteDialog: MemberInviteDialogStub,
-          MembersTable: MembersTableStub,
-          PendingInvitationsCard: PendingInvitationsCardStub,
-          Skeleton: SkeletonStub,
-        },
+        stubs: membersViewStubs,
       },
     });
 
@@ -451,7 +506,7 @@ describe('MembersView', () => {
 
     expect(testMocks.removeMember).toHaveBeenCalledWith('member-remove');
     expect(testMocks.listMembers).toHaveBeenCalledTimes(1);
-    expect(wrapper.get('[data-testid="members-table"]').text()).toContain('1 members');
+    expect(wrapper.get('[data-testid="members-table"]').text()).toContain('1 rows');
     expect(testMocks.errorToast).toHaveBeenCalledWith(
       'Last admin cannot be removed',
       expect.objectContaining({
@@ -459,6 +514,106 @@ describe('MembersView', () => {
       }),
     );
     expect(testMocks.successToast).not.toHaveBeenCalled();
+  });
+
+  it('opens assignment expansion from a table intent, saves, refreshes, and collapses', async () => {
+    const member = createMember();
+    const project = {
+      color: null,
+      createdAt: '2026-05-01T10:00:00.000Z',
+      description: null,
+      id: 'project-1',
+      isActive: true,
+      members: [
+        {
+          avatarUrl: null,
+          displayName: member.displayName,
+          email: member.email,
+          role: member.role,
+          userId: member.userId,
+        },
+      ],
+      name: 'Project Orion',
+      source: 'manual',
+      totalHours: 12,
+      updatedAt: '2026-05-01T10:00:00.000Z',
+      visibility: 'public',
+      workspaceId: member.workspaceId,
+    };
+
+    testMocks.listMembers
+      .mockResolvedValueOnce([member])
+      .mockResolvedValueOnce([member]);
+    testMocks.listProjects.mockResolvedValue([project]);
+    testMocks.listInvites.mockResolvedValue([]);
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-assign-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get('[data-testid="member-assign-panel"]').text()).toContain(
+      'Assign pat@example.com across 1 projects',
+    );
+
+    await wrapper.get('[data-testid="member-assign-save"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.removeAssignment).toHaveBeenCalledWith('project-1', 'user-2');
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+    expect(testMocks.successToast).toHaveBeenCalledWith(
+      'Project assignments for Pat PM saved.',
+    );
+    expect(wrapper.find('[data-testid="member-assign-panel"]').exists()).toBe(false);
+  });
+
+  it('opens edit expansion from a table intent, saves role, refreshes, and collapses', async () => {
+    testMocks.listMembers
+      .mockResolvedValueOnce([createMember()])
+      .mockResolvedValueOnce([createMember()]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    await wrapper.get('[data-testid="member-edit-save"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateMemberRole).toHaveBeenCalledWith('member-remove', {
+      role: 'member',
+    });
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+    expect(testMocks.successToast).toHaveBeenCalledWith(
+      'Role for Pat PM changed to member.',
+    );
+    expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
+  });
+
+  it('opens edit expansion from a table intent and cancel collapses without refresh', async () => {
+    testMocks.listMembers.mockResolvedValue([createMember()]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get('[data-testid="member-edit-panel"]').text()).toContain(
+      'Edit pat@example.com',
+    );
+
+    await wrapper.get('[data-testid="member-edit-cancel"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
   });
 
   it('keeps pending invite request failures scoped to the pending invitations card', async () => {
@@ -488,12 +643,7 @@ describe('MembersView', () => {
     const wrapper = mount(MembersView, {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          MemberInviteDialog: MemberInviteDialogStub,
-          MembersTable: MembersTableStub,
-          PendingInvitationsCard: PendingInvitationsCardStub,
-          Skeleton: SkeletonStub,
-        },
+        stubs: membersViewStubs,
       },
     });
 
@@ -562,12 +712,7 @@ describe('MembersView', () => {
     const wrapper = mount(MembersView, {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          MemberInviteDialog: MemberInviteDialogStub,
-          MembersTable: MembersTableStub,
-          PendingInvitationsCard: PendingInvitationsCardStub,
-          Skeleton: SkeletonStub,
-        },
+        stubs: membersViewStubs,
       },
     });
 
@@ -610,12 +755,7 @@ describe('MembersView', () => {
     const wrapper = mount(MembersView, {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          MemberInviteDialog: MemberInviteDialogStub,
-          MembersTable: MembersTableStub,
-          PendingInvitationsCard: PendingInvitationsCardStub,
-          Skeleton: SkeletonStub,
-        },
+        stubs: membersViewStubs,
       },
     });
 
@@ -663,12 +803,7 @@ describe('MembersView', () => {
     const wrapper = mount(MembersView, {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          MemberInviteDialog: MemberInviteDialogStub,
-          MembersTable: MembersTableStub,
-          PendingInvitationsCard: PendingInvitationsCardStub,
-          Skeleton: SkeletonStub,
-        },
+        stubs: membersViewStubs,
       },
     });
 
@@ -725,12 +860,7 @@ describe('MembersView', () => {
     const wrapper = mount(MembersView, {
       global: {
         plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          MemberInviteDialog: MemberInviteDialogStub,
-          MembersTable: MembersTableStub,
-          PendingInvitationsCard: PendingInvitationsCardStub,
-          Skeleton: SkeletonStub,
-        },
+        stubs: membersViewStubs,
       },
     });
 

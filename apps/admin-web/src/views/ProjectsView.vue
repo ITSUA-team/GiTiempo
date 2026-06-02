@@ -7,14 +7,22 @@ import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
-import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
+import {
+  SectionHeader,
+  StatCard,
+  SurfaceCard,
+  useIsMobileViewport,
+} from '@gitiempo/web-shared';
+import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
+import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
 import ProjectsTable from '@/components/ProjectsTable.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
+import { useProjectsTableState } from '@/composables/useProjectsTableState';
 import { routeNames } from '@/router';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
@@ -24,6 +32,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { requireConfirmation } = useConfirmation();
 const { errorToast, successToast } = useToasts();
+const isMobileViewport = useIsMobileViewport();
 
 const projects = ref<ProjectListResponse>([]);
 const summary = ref<ManagementProjectSummaryResponse>({
@@ -35,6 +44,25 @@ const members = ref<WorkspaceMemberListResponse>([]);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
 const initialLoaded = ref(false);
+const savingProjectEditId = ref<string | null>(null);
+
+const {
+  collapseRow: collapseProjectRow,
+  emptyDescription: projectTableEmptyDescription,
+  expandedRows: projectTableExpandedRows,
+  filters: projectTableFilters,
+  hoursFilterOptions,
+  memberFilterOptions,
+  rows: projectTableRows,
+  setExpandedRows: setProjectTableExpandedRows,
+  sourceFilterOptions,
+  toggleExpansion: toggleProjectExpansion,
+  updateFilters: updateProjectTableFilters,
+  visibilityFilterOptions,
+} = useProjectsTableState({
+  members,
+  projects,
+});
 
 function sortProjects(list: ProjectListResponse): ProjectListResponse {
   return [...list].sort((a, b) => {
@@ -108,6 +136,54 @@ async function refresh(): Promise<void> {
 
 function handleNewProject(): void {
   router.push({ name: routeNames.addProject });
+}
+
+function handleEditProject(project: ProjectResponse): void {
+  toggleProjectExpansion(project);
+}
+
+async function handleProjectEditSubmitted(
+  project: ProjectResponse,
+  input: ProjectEditFormInput,
+): Promise<void> {
+  const token = authStore.accessToken;
+
+  if (!token) {
+    return;
+  }
+
+  const currentMemberIds = new Set(project.members.map((member) => member.userId));
+  const nextMemberIds = new Set(input.memberIds);
+  const memberIdsToAdd = input.memberIds.filter((id) => !currentMemberIds.has(id));
+  const memberIdsToRemove = project.members
+    .map((member) => member.userId)
+    .filter((id) => !nextMemberIds.has(id));
+
+  savingProjectEditId.value = project.id;
+
+  try {
+    await adminProjectsClient.updateProject(project.id, {
+      visibility: input.visibility,
+    });
+
+    for (const userId of memberIdsToAdd) {
+      await adminProjectsClient.assignMember(project.id, userId);
+    }
+    for (const userId of memberIdsToRemove) {
+      await adminProjectsClient.removeAssignment(project.id, userId);
+    }
+
+    successToast(`${project.name} has been updated.`);
+    collapseProjectRow(project);
+    await refresh();
+  } catch (err) {
+    errorToast(err instanceof Error ? err.message : 'Failed to save project', {
+      error: err,
+      logContext: { action: 'update-project', feature: 'projects' },
+    });
+  } finally {
+    savingProjectEditId.value = null;
+  }
 }
 
 async function archiveProject(project: ProjectResponse): Promise<void> {
@@ -209,13 +285,33 @@ onMounted(fetchAll);
 
       <SurfaceCard padding-class="p-5">
         <ProjectsTable
-          :projects="projects"
-          :members="members"
+          :empty-description="projectTableEmptyDescription"
+          :expanded-rows="projectTableExpandedRows"
+          :filters="projectTableFilters"
+          :hours-filter-options="hoursFilterOptions"
+          :is-mobile-viewport="isMobileViewport"
           :loading="loading"
-          @edit-saved="refresh"
+          :member-filter-options="memberFilterOptions"
+          :rows="projectTableRows"
+          :source-filter-options="sourceFilterOptions"
+          :visibility-filter-options="visibilityFilterOptions"
           @archive="handleArchive"
+          @edit-project="handleEditProject"
           @unarchive="handleUnarchive"
-        />
+          @update:expanded-rows="setProjectTableExpandedRows"
+          @update:filters="updateProjectTableFilters"
+        >
+          <template #row-expansion="{ row }">
+            <ProjectEditForm
+              v-if="projectTableExpandedRows[row.id]"
+              :project="row.project"
+              :all-members="members"
+              :saving="savingProjectEditId === row.id"
+              @save="handleProjectEditSubmitted(row.project, $event)"
+              @cancelled="collapseProjectRow(row.project)"
+            />
+          </template>
+        </ProjectsTable>
       </SurfaceCard>
     </template>
   </div>

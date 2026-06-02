@@ -8,10 +8,12 @@ import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
+  assignMember: vi.fn(),
   errorToast: vi.fn(),
   getManagementSummary: vi.fn(),
   listMembers: vi.fn(),
   listProjects: vi.fn(),
+  removeAssignment: vi.fn(),
   requireConfirmation: vi.fn(),
   routerPush: vi.fn(),
   successToast: vi.fn(),
@@ -35,8 +37,10 @@ vi.mock('@/services/admin-members-client', () => ({
 
 vi.mock('@/services/admin-projects-client', () => ({
   adminProjectsClient: {
+    assignMember: testMocks.assignMember,
     getManagementSummary: testMocks.getManagementSummary,
     listProjects: testMocks.listProjects,
+    removeAssignment: testMocks.removeAssignment,
     updateProject: testMocks.updateProject,
   },
 }));
@@ -87,25 +91,63 @@ function createProject(options: { isActive?: boolean; name?: string } = {}) {
 
 const ProjectsTableStub = {
   name: 'ProjectsTable',
-  emits: ['archive', 'edit-saved', 'unarchive'],
+  emits: [
+    'archive',
+    'edit-project',
+    'unarchive',
+    'update:expandedRows',
+    'update:filters',
+  ],
   props: {
+    emptyDescription: { type: String, required: true },
+    expandedRows: { type: Object, required: true },
+    filters: { type: Object, required: true },
+    hoursFilterOptions: { type: Array, required: true },
+    isMobileViewport: { type: Boolean, required: true },
     loading: { type: Boolean, required: true },
-    members: { type: Array, required: true },
-    projects: { type: Array, required: true },
+    memberFilterOptions: { type: Array, required: true },
+    rows: { type: Array, required: true },
+    sourceFilterOptions: { type: Array, required: true },
+    visibilityFilterOptions: { type: Array, required: true },
   },
   template: `<div data-testid="projects-table">
-    {{ projects.length }} projects | {{ members.length }} members | loading={{ loading }}
+    {{ rows.length }} rows | {{ memberFilterOptions.length }} member filters | loading={{ loading }} | empty={{ emptyDescription }}
     <button
-      v-if="projects[0]"
+      v-if="rows[0]"
+      data-testid="project-edit-intent"
+      @click="$emit('edit-project', rows[0].project)"
+    />
+    <button
+      v-if="rows[0]"
       data-testid="project-archive-intent"
-      @click="$emit('archive', projects[0])"
+      @click="$emit('archive', rows[0].project)"
     />
     <button
-      v-if="projects[0]"
+      v-if="rows[0]"
       data-testid="project-unarchive-intent"
-      @click="$emit('unarchive', projects[0])"
+      @click="$emit('unarchive', rows[0].project)"
     />
+    <slot v-if="rows[0]" name="row-expansion" :row="rows[0]" />
   </div>`,
+};
+
+const ProjectEditFormStub = {
+  name: 'ProjectEditForm',
+  props: {
+    allMembers: { type: Array, required: true },
+    project: { type: Object, required: true },
+    saving: { type: Boolean, default: false },
+  },
+  template: `
+    <div data-testid="project-edit-form">
+      Edit {{ project.name }} with {{ allMembers.length }} members | saving={{ saving }}
+      <button
+        data-testid="project-edit-save"
+        @click="$emit('save', { visibility: 'private', memberIds: ['user-3'] })"
+      />
+      <button data-testid="project-edit-cancel" @click="$emit('cancelled')" />
+    </div>
+  `,
 };
 
 const SkeletonStub = {
@@ -124,6 +166,7 @@ function mountProjectsView() {
     global: {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
+        ProjectEditForm: ProjectEditFormStub,
         ProjectsTable: ProjectsTableStub,
         Skeleton: SkeletonStub,
       },
@@ -133,10 +176,12 @@ function mountProjectsView() {
 
 describe('ProjectsView', () => {
   beforeEach(() => {
+    testMocks.assignMember.mockReset();
     testMocks.errorToast.mockReset();
     testMocks.getManagementSummary.mockReset();
     testMocks.listMembers.mockReset();
     testMocks.listProjects.mockReset();
+    testMocks.removeAssignment.mockReset();
     testMocks.requireConfirmation.mockReset();
     testMocks.routerPush.mockReset();
     testMocks.successToast.mockReset();
@@ -149,6 +194,8 @@ describe('ProjectsView', () => {
     });
     testMocks.listMembers.mockResolvedValue([]);
     testMocks.listProjects.mockResolvedValue([]);
+    testMocks.assignMember.mockResolvedValue(undefined);
+    testMocks.removeAssignment.mockResolvedValue(undefined);
     testMocks.updateProject.mockResolvedValue(undefined);
   });
 
@@ -222,7 +269,7 @@ describe('ProjectsView', () => {
 
     expect(wrapper.findAll('[data-testid="skeleton"]')).toHaveLength(0);
     expect(wrapper.get('[data-testid="projects-table"]').text()).toContain(
-      '1 projects | 1 members | loading=false',
+      '1 rows | 1 member filters | loading=false | empty=No projects match the current filters.',
     );
   });
 
@@ -290,7 +337,7 @@ describe('ProjectsView', () => {
       isActive: false,
     });
     expect(testMocks.listProjects).toHaveBeenCalledTimes(1);
-    expect(wrapper.get('[data-testid="projects-table"]').text()).toContain('1 projects');
+    expect(wrapper.get('[data-testid="projects-table"]').text()).toContain('1 rows');
     expect(testMocks.errorToast).toHaveBeenCalledWith(
       'Project cannot be archived',
       expect.objectContaining({
@@ -321,6 +368,90 @@ describe('ProjectsView', () => {
     expect(testMocks.successToast).toHaveBeenCalledWith('Legacy Project is now active.');
   });
 
+  it('opens project edit expansion, saves settings, refreshes, and collapses', async () => {
+    const project = {
+      ...createProject(),
+      members: [
+        {
+          avatarUrl: null,
+          displayName: 'Pat PM',
+          email: 'pat@example.com',
+          role: 'pm' as const,
+          userId: 'user-2',
+        },
+      ],
+    };
+
+    testMocks.listProjects
+      .mockResolvedValueOnce([project])
+      .mockResolvedValueOnce([]);
+    testMocks.listMembers.mockResolvedValue([
+      {
+        avatarUrl: null,
+        displayName: 'Pat PM',
+        email: 'pat@example.com',
+        id: 'member-2',
+        joinedAt: '2026-05-01T10:00:00.000Z',
+        lastActiveAt: null,
+        projectsAssignedCount: 1,
+        role: 'pm',
+        userId: 'user-2',
+        workspaceId: '33333333-3333-4333-8333-333333333333',
+      },
+      {
+        avatarUrl: null,
+        displayName: 'Nina Keller',
+        email: 'nina@example.com',
+        id: 'member-3',
+        joinedAt: '2026-05-01T10:00:00.000Z',
+        lastActiveAt: null,
+        projectsAssignedCount: 0,
+        role: 'member',
+        userId: 'user-3',
+        workspaceId: '33333333-3333-4333-8333-333333333333',
+      },
+    ]);
+
+    const wrapper = mountProjectsView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get('[data-testid="project-edit-form"]').text()).toContain(
+      'Edit Project Orion with 2 members',
+    );
+
+    await wrapper.get('[data-testid="project-edit-save"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateProject).toHaveBeenCalledWith('project-active', {
+      visibility: 'private',
+    });
+    expect(testMocks.assignMember).toHaveBeenCalledWith('project-active', 'user-3');
+    expect(testMocks.removeAssignment).toHaveBeenCalledWith('project-active', 'user-2');
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
+    expect(testMocks.getManagementSummary).toHaveBeenCalledTimes(2);
+    expect(testMocks.successToast).toHaveBeenCalledWith('Project Orion has been updated.');
+    expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(false);
+  });
+
+  it('collapses project edit expansion on cancel without saving', async () => {
+    testMocks.listProjects.mockResolvedValue([createProject()]);
+
+    const wrapper = mountProjectsView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="project-edit-cancel"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(testMocks.updateProject).not.toHaveBeenCalled();
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(false);
+  });
+
   it('keeps project rows loaded when unarchive fails', async () => {
     testMocks.listProjects.mockResolvedValue([createProject({ isActive: false })]);
     testMocks.updateProject.mockRejectedValueOnce(new Error('Project cannot be restored'));
@@ -335,7 +466,7 @@ describe('ProjectsView', () => {
       isActive: true,
     });
     expect(testMocks.listProjects).toHaveBeenCalledTimes(1);
-    expect(wrapper.get('[data-testid="projects-table"]').text()).toContain('1 projects');
+    expect(wrapper.get('[data-testid="projects-table"]').text()).toContain('1 rows');
     expect(testMocks.errorToast).toHaveBeenCalledWith(
       'Project cannot be restored',
       expect.objectContaining({
