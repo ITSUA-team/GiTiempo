@@ -60,14 +60,14 @@
 - [x] 8.2 Add focused router coverage and OpenSpec scenarios for authenticated sessions with null or missing profile roles redirecting to `/403`.
 - [x] 8.3 Confirm PM-safe Dashboard and Reports coverage remains tied to existing page behavior: `useAdminDashboardData.spec.ts` covers PM dashboard clients avoiding member/invite management clients, and `ReportsView.spec.ts` covers API-backed reports, CSV export scope, invalid ranges, and export failures.
 - [x] 8.4 Coordinate with `add-lazy-loading` by keeping the RBAC route inventory aligned with the lazy-route inventory: dashboard, reports, invoices, members, projects, add-project, settings, `/403`, and 404.
-- [ ] 8.5 Add role-aware `/403` recovery behavior and coverage so member users are not sent from `/403` back to a denied admin product route.
-- [ ] 8.6 Harden shared protected-router redirect normalization and coverage for absolute URLs, protocol-relative URLs, malformed values, repeated/non-string query values, and valid same-app path/query/hash redirects.
-- [ ] 8.7 Run `pnpm --filter admin-web lint`.
-- [ ] 8.8 Run `pnpm --filter admin-web typecheck`.
-- [ ] 8.9 Run `pnpm --filter admin-web test`.
-- [ ] 8.10 Run `pnpm --filter @gitiempo/web-shared lint`.
-- [ ] 8.11 Run `pnpm --filter @gitiempo/web-shared typecheck`.
-- [ ] 8.12 Run `pnpm --filter @gitiempo/web-shared test`.
-- [ ] 8.13 Run `pnpm --filter user-web lint`.
-- [ ] 8.14 Run `pnpm --filter user-web typecheck`.
-- [ ] 8.15 Run `pnpm --filter user-web test`.
+- [x] 8.5 Add role-aware `/403` recovery behavior and coverage so member users are not sent from `/403` back to a denied admin product route.
+- [x] 8.6 Harden shared protected-router redirect normalization and coverage for absolute URLs, protocol-relative URLs, malformed values, repeated/non-string query values, and valid same-app path/query/hash redirects.
+- [x] 8.7 Run `pnpm --filter admin-web lint`.
+- [x] 8.8 Run `pnpm --filter admin-web typecheck`.
+- [x] 8.9 Run `pnpm --filter admin-web test`.
+- [x] 8.10 Run `pnpm --filter @gitiempo/web-shared lint`.
+- [x] 8.11 Run `pnpm --filter @gitiempo/web-shared typecheck`.
+- [x] 8.12 Run `pnpm --filter @gitiempo/web-shared test`.
+- [x] 8.13 Run `pnpm --filter user-web lint`.
+- [x] 8.14 Run `pnpm --filter user-web typecheck`.
+- [x] 8.15 Run `pnpm --filter user-web test`.

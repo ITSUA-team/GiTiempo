@@ -33,7 +33,6 @@ export interface ProtectedRouterAuthStore {
 }
 
 export interface ProtectedRouterRouteNames {
-  dashboard: RouteName;
   forbidden: RouteName;
   login: RouteName;
 }
@@ -48,6 +47,7 @@ export interface CreateProtectedRouterOptions<
   TPinia,
   TAuthStore extends ProtectedRouterAuthStore,
 > {
+  defaultAuthenticatedRoute: RouteLocationRaw;
   history?: RouterHistory;
   pinia: TPinia;
   routeNames: ProtectedRouterRouteNames;
@@ -67,19 +67,50 @@ function getRouteMeta(route: { meta: unknown }): ProtectedRouteMeta {
   return route.meta as ProtectedRouteMeta;
 }
 
+const sameAppRedirectBase = "https://gitiempo.local";
+
+function hasUnsafeRedirectCharacter(redirect: string): boolean {
+  for (const character of redirect) {
+    const characterCode = character.charCodeAt(0);
+
+    if (characterCode <= 0x20 || characterCode === 0x7F) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
   const redirect = to.query.redirect;
 
-  return typeof redirect === "string" && redirect.startsWith("/")
-    ? redirect
-    : null;
+  if (
+    typeof redirect !== "string" ||
+    !redirect.startsWith("/") ||
+    redirect.startsWith("//") ||
+    hasUnsafeRedirectCharacter(redirect)
+  ) {
+    return null;
+  }
+
+  try {
+    const targetUrl = new URL(redirect, sameAppRedirectBase);
+
+    if (targetUrl.origin !== sameAppRedirectBase) {
+      return null;
+    }
+
+    return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+  } catch {
+    return null;
+  }
 }
 
 function getDefaultAuthenticatedRoute(
   to: RouteLocationNormalized,
-  routeNames: ProtectedRouterRouteNames,
+  defaultAuthenticatedRoute: RouteLocationRaw,
 ): RouteLocationRaw {
-  return normalizeRedirectTarget(to) ?? { name: routeNames.dashboard };
+  return normalizeRedirectTarget(to) ?? defaultAuthenticatedRoute;
 }
 
 export function hasAllowedRole(
@@ -92,6 +123,7 @@ export function hasAllowedRole(
 async function handleAuthNavigation(
   to: RouteLocationNormalized,
   authStore: ProtectedRouterAuthStore,
+  defaultAuthenticatedRoute: RouteLocationRaw,
   routeNames: ProtectedRouterRouteNames,
 ): Promise<RouteLocationRaw | undefined> {
   const meta = getRouteMeta(to);
@@ -111,7 +143,7 @@ async function handleAuthNavigation(
   }
 
   if (meta.guestOnly && authStore.isAuthenticated) {
-    return getDefaultAuthenticatedRoute(to, routeNames);
+    return getDefaultAuthenticatedRoute(to, defaultAuthenticatedRoute);
   }
 
   if (
@@ -148,6 +180,7 @@ export function createProtectedRouter<
   TPinia,
   TAuthStore extends ProtectedRouterAuthStore,
 >({
+  defaultAuthenticatedRoute,
   history,
   pinia,
   routeNames,
@@ -162,7 +195,12 @@ export function createProtectedRouter<
   });
 
   router.beforeEach(async (to) => {
-    return handleAuthNavigation(to, useAuthStore(pinia), routeNames);
+    return handleAuthNavigation(
+      to,
+      useAuthStore(pinia),
+      defaultAuthenticatedRoute,
+      routeNames,
+    );
   });
 
   return router;

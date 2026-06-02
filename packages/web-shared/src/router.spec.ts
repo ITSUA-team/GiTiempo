@@ -60,6 +60,7 @@ function createRouterForStore(
   const pinia: TestPinia = { id: "test-pinia" };
   let receivedPinia: TestPinia | null = null;
   const router = createProtectedRouter({
+    defaultAuthenticatedRoute: { name: routeNames.dashboard },
     history: createMemoryHistory(),
     pinia,
     routeNames,
@@ -182,6 +183,73 @@ describe("createProtectedRouter", () => {
     const { router } = createRouterForStore(authStore);
 
     await router.push("/login?redirect=https://example.com/escape");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("preserves valid same-app redirect targets with query strings and hash fragments", async () => {
+    const authStore = createAuthStore({
+      isAuthenticated: true,
+      role: WorkspaceRoles.Admin,
+    });
+    const { router } = createRouterForStore(authStore);
+
+    await router.push(
+      "/login?redirect=%2Fsettings%3Ftab%3Dmembers%23audit-log",
+    );
+    await router.isReady();
+
+    expect(router.currentRoute.value.fullPath).toBe(
+      "/settings?tab=members#audit-log",
+    );
+  });
+
+  it("rejects protocol-relative authenticated redirect targets", async () => {
+    const authStore = createAuthStore({
+      isAuthenticated: true,
+      role: WorkspaceRoles.Admin,
+    });
+    const { router } = createRouterForStore(authStore);
+
+    await router.push("/login?redirect=%2F%2Fexample.com%2Fescape");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("rejects repeated authenticated redirect query values", async () => {
+    const authStore = createAuthStore({
+      isAuthenticated: true,
+      role: WorkspaceRoles.Admin,
+    });
+    const { router } = createRouterForStore(authStore);
+
+    await router.push({
+      name: routeNames.login,
+      query: { redirect: ["/settings", "/reports"] },
+    });
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
+  it("rejects non-string and malformed authenticated redirect values", async () => {
+    const authStore = createAuthStore({
+      isAuthenticated: true,
+      role: WorkspaceRoles.Admin,
+    });
+    const { router } = createRouterForStore(authStore);
+
+    await router.push({ name: routeNames.login, query: { redirect: null } });
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+
+    await router.push({
+      name: routeNames.login,
+      query: { redirect: "/settings\nnext" },
+    });
     await router.isReady();
 
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);

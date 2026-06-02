@@ -109,9 +109,13 @@ export function createAppRouter(options?: {
   const appPinia = options?.pinia ?? pinia;
 
   return createProtectedRouter({
+    defaultAuthenticatedRoute: { name: routeNames.dashboard },
     history: options?.history,
     pinia: appPinia,
-    routeNames,
+    routeNames: {
+      forbidden: routeNames.forbidden,
+      login: routeNames.login,
+    },
     routes: {
       protected: protectedRoutes,
       public: publicRoutes,
