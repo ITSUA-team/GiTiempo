@@ -3,6 +3,7 @@ import {
   createTaskSchema,
   currentTimeEntryResponseSchema,
   projectListResponseSchema,
+  type StartTimerInput,
   taskResponseSchema,
   startTimerSchema,
   taskListResponseSchema,
@@ -47,7 +48,7 @@ export interface TimeEntriesClient {
   ): Promise<TimeEntryListResponse>;
   listProjectTasks(projectId: string): Promise<TaskResponse[]>;
   listVisibleProjects(): Promise<ProjectResponse[]>;
-  startTimer(taskId: string): Promise<TimeEntryResponse>;
+  startTimer(input: StartTimerInput): Promise<TimeEntryResponse>;
   stopTimer(): Promise<TimeEntryResponse>;
   updateEntry(
     entryId: string,
@@ -150,9 +151,9 @@ export function createTimeEntriesClient({
         responseSchema: projectListResponseSchema,
       });
     },
-    startTimer(taskId) {
+    startTimer(input) {
       return apiClient.requestJson({
-        body: startTimerSchema.parse({ taskId }),
+        body: startTimerSchema.parse(input),
         method: "POST",
         path: "/time-entries/timer/start",
         responseSchema: timeEntryResponseSchema,
