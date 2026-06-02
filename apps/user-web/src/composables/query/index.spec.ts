@@ -257,7 +257,7 @@ describe("query timer reconciliation", () => {
     wrappers.push(mounted.wrapper);
 
     await flushPromises();
-    await mounted.startTimerMutation.mutateAsync(TEST_IDS.task);
+    await mounted.startTimerMutation.mutateAsync({ taskId: TEST_IDS.task });
     await flushPromises();
 
     const firstSignal = client.listOwnEntries.mock.calls[0]?.[1]?.signal;
@@ -349,7 +349,7 @@ describe("query timer reconciliation", () => {
     wrappers.push(mounted.wrapper);
 
     await expect(
-      mounted.startTimerMutation.mutateAsync(TEST_IDS.task),
+      mounted.startTimerMutation.mutateAsync({ taskId: TEST_IDS.task }),
     ).resolves.toEqual(
       expect.objectContaining({
         endedAt: null,

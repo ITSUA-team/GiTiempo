@@ -147,6 +147,7 @@ export const updateTimeEntrySchema = z
 export const startTimerSchema = z
   .object({
     taskId: z.uuid(),
+    description: z.string().max(2000).nullable().optional(),
   })
   .strict();
 
