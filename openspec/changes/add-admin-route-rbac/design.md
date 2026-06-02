@@ -35,11 +35,15 @@ Affected frontend rules come from `apps/admin-web/AGENTS.md`, `docs/ui/INDEX.md`
 
    The guard should continue to bootstrap any `requiresAuth` or `guestOnly` route first. Anonymous users still go to login with redirect preservation. Only authenticated users with a resolved profile role are eligible for the `allowedRoles` check; missing, null, or disallowed roles route to `/403` as authorization failures rather than login.
 
+   Preserved redirect targets remain in-app paths only. The shared guard must ignore absolute URLs, protocol-relative URLs, malformed redirect values, and repeated/non-string redirect query values, then fall back to the app-provided default authenticated route. Valid same-app path, query, and hash redirects stay supported so both SPAs preserve the existing post-login continuation behavior without opening cross-origin redirects.
+
    Alternative considered: redirect unknown roles to login. That would blur auth and authorization failures and could loop for valid authenticated users whose role is simply insufficient.
 
 3. Treat `/403` and `/404` as authenticated standalone exceptions without `allowedRoles`.
 
    Error pages must remain reachable for any signed-in workspace member after bootstrap. Adding `allowedRoles` to `/403` would risk redirect loops when the user already lacks access to the original destination.
+
+   Because members have no allowed admin product route in this change, the standalone `/403` recovery actions must not send them back to an admin product route that immediately denies again. For member users, the primary recovery action must switch to the configured user workspace destination. Admin and PM users may keep the documented `Back to dashboard` recovery because Dashboard is available to both roles.
 
 4. Filter shell navigation from resolved route metadata.
 

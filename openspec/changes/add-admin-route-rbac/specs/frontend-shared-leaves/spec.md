@@ -29,6 +29,13 @@ The frontend codebase SHALL use one shared protected-router factory for auth boo
 - **THEN** the shared router guard waits for auth bootstrap and redirects to the app's login route with the requested destination preserved
 - **AND** when an authenticated session opens a guest-only route, the guard redirects to a valid preserved in-app redirect target or to the app's default authenticated route
 
+#### Scenario: Shared factory rejects unsafe redirect targets
+
+- **WHEN** an authenticated session opens a guest-only route with a redirect query that is absolute, protocol-relative, malformed, repeated, or otherwise not a single same-app path
+- **THEN** the shared router guard ignores the redirect query
+- **AND** it redirects to the app-provided default authenticated route
+- **AND** valid same-app path redirects with query strings or hash fragments remain supported
+
 #### Scenario: Shared factory preserves public authenticated guest flows
 
 - **WHEN** `user-web` defines public invite or password-setup routes that are not guest-only routes

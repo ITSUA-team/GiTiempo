@@ -10,6 +10,18 @@ The authenticated `admin-web` shell MUST render navigation affordances only for 
 - **THEN** the standalone route-level page renders without admin shell chrome
 - **AND** the user is not offered sidebar, mobile navigation, or profile-menu route actions that would open admin-only or PM-only product routes
 
+#### Scenario: Member forbidden recovery does not loop
+
+- **WHEN** an authenticated user with workspace role `member` reaches the standalone admin-web `/403` route
+- **THEN** the primary recovery action switches to the configured user workspace destination
+- **AND** the page does not render `Back to dashboard` as the primary recovery action for the member role
+
+#### Scenario: Admin and PM forbidden recovery can return to dashboard
+
+- **WHEN** an authenticated user with workspace role `admin` or `pm` reaches the standalone admin-web `/403` route
+- **THEN** the page may render `Back to dashboard` as the primary recovery action
+- **AND** that primary action targets an admin product route available to the current role
+
 #### Scenario: PM sees only PM-allowed product navigation
 
 - **WHEN** an authenticated user with workspace role `pm` renders the admin-web shell
