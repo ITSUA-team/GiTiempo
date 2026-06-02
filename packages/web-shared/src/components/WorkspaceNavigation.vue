@@ -27,7 +27,7 @@ function clearLinkFocus(event: MouseEvent): void {
 
 <template>
   <aside
-    class="border-divider bg-surface hidden w-fit border-r sm:flex sm:flex-col"
+    class="border-divider bg-surface-primary hidden w-fit border-r sm:flex sm:flex-col"
   >
     <nav class="flex flex-1 flex-col gap-1 py-4">
       <RouterLink
@@ -56,7 +56,7 @@ function clearLinkFocus(event: MouseEvent): void {
   </aside>
 
   <nav
-    class="border-divider bg-surface fixed inset-x-0 bottom-0 z-20 flex h-16 border-t sm:hidden"
+    class="border-divider bg-surface-primary fixed inset-x-0 bottom-0 z-20 flex h-16 border-t sm:hidden"
   >
     <RouterLink
       v-for="item in props.items"

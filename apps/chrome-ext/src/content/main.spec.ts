@@ -188,7 +188,7 @@ describe("injected issue control", () => {
     expect(runtimeClient.openExtension).toHaveBeenCalledOnce();
   });
 
-  it("renders white snippet text on GitHub dark pages", async () => {
+  it("renders inverse token snippet text on GitHub dark pages", async () => {
     document.documentElement.setAttribute("data-color-mode", "dark");
 
     const mounted = mountInjectedIssueControl(
@@ -201,8 +201,8 @@ describe("injected issue control", () => {
 
     const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
 
-    expect(root.innerHTML).toContain("text-white");
-    expect(root.innerHTML).toContain("text-white/70");
+    expect(root.innerHTML).toContain("text-text-inverse");
+    expect(root.innerHTML).toContain("text-text-inverse-muted");
   });
 
   it("starts a timer from the idle injected state", async () => {
@@ -378,7 +378,7 @@ describe("injected issue control", () => {
     await Promise.resolve();
 
     root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
-    expect(root.innerHTML).toContain("text-white");
+    expect(root.innerHTML).toContain("text-text-inverse");
 
     mounted.destroy();
   });

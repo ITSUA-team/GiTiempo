@@ -24,7 +24,7 @@ const props = defineProps<{
     </header>
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-      <section class="border-divider bg-surface shadow-card rounded-lg border p-6">
+      <section class="border-divider bg-surface-primary shadow-card rounded-lg border p-6">
         <div class="flex flex-col gap-3">
           <h2 class="text-text-dark text-lg font-semibold">
             {{ props.primaryTitle }}
@@ -35,7 +35,7 @@ const props = defineProps<{
         </div>
       </section>
 
-      <section class="border-divider bg-surface shadow-card rounded-lg border p-6">
+      <section class="border-divider bg-surface-primary shadow-card rounded-lg border p-6">
         <div class="flex flex-col gap-3">
           <h2 class="text-text-dark text-lg font-semibold">
             Next step

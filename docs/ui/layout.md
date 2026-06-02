@@ -7,8 +7,8 @@
 
 User SPA and Admin SPA share the same shell:
 
-- Top bar: `bg-surface border-b border-divider h-16`.
-- Sidebar: `bg-surface border-r border-divider` icon-only content-fit rail on non-mobile breakpoints.
+- Top bar: `bg-surface-primary border-b border-divider h-16`.
+- Sidebar: `bg-surface-primary border-r border-divider` icon-only content-fit rail on non-mobile breakpoints.
 - Main content: `bg-app-bg p-6`.
 
 ### Top Bar

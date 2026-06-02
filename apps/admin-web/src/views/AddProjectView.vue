@@ -141,7 +141,7 @@ onMounted(loadMembers);
     </div>
 
     <div class="flex gap-5">
-      <div class="bg-surface flex flex-1 flex-col gap-3 rounded-lg p-4">
+      <div class="bg-surface-primary flex flex-1 flex-col gap-3 rounded-lg p-4">
         <h2 class="text-text-dark text-lg font-semibold">
           Add Project Manually
         </h2>
@@ -181,7 +181,7 @@ onMounted(loadMembers);
                 <label class="text-text-dark text-[13px] font-medium">
                   Source
                 </label>
-                <div class="border-divider text-text-dark bg-surface flex h-[34px] items-center rounded-[6px] border px-3 text-[14px] font-medium">
+                <div class="border-divider text-text-dark bg-surface-primary flex h-[34px] items-center rounded-[6px] border px-3 text-[14px] font-medium">
                   Manual
                 </div>
               </div>
@@ -244,7 +244,6 @@ onMounted(loadMembers);
               severity="secondary"
               outlined
               type="button"
-              :pt="{ root: { class: 'bg-surface' } }"
               :disabled="isSubmitting"
               @click="handleBack"
             />
@@ -257,7 +256,7 @@ onMounted(loadMembers);
         </Form>
       </div>
 
-      <div class="shadow-card bg-surface flex w-80 shrink-0 flex-col gap-3.5 rounded-lg p-5">
+      <div class="shadow-card bg-surface-primary flex w-80 shrink-0 flex-col gap-3.5 rounded-lg p-5">
         <h2 class="text-text-dark text-lg font-semibold">
           Project Source
         </h2>
