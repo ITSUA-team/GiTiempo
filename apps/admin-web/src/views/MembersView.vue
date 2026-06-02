@@ -67,6 +67,7 @@ const {
   emptyDescription: memberTableEmptyDescription,
   expandedRows: memberTableExpandedRows,
   expansionMode: memberTableExpansionMode,
+  filterHandlers: memberTableFilterHandlers,
   filters: memberTableFilters,
   lastActiveFilterOptions,
   projectFilterOptions,
@@ -74,7 +75,6 @@ const {
   rows: memberTableRows,
   setExpandedRows: setMemberTableExpandedRows,
   toggleExpansion: toggleMemberExpansion,
-  updateFilters: updateMemberTableFilters,
 } = useMembersTableState({
   currentUserId,
   members,
@@ -417,6 +417,7 @@ onMounted(fetchAll);
         <MembersTable
           :empty-description="memberTableEmptyDescription"
           :expanded-rows="memberTableExpandedRows"
+          :filter-handlers="memberTableFilterHandlers"
           :filters="memberTableFilters"
           :is-mobile-viewport="isMobileViewport"
           :last-active-filter-options="lastActiveFilterOptions"
@@ -424,11 +425,10 @@ onMounted(fetchAll);
           :project-filter-options="projectFilterOptions"
           :role-filter-options="roleFilterOptions"
           :rows="memberTableRows"
+          :set-expanded-rows="setMemberTableExpandedRows"
           @assign-member="handleAssignMember"
           @edit-member="handleEditMember"
           @remove-member="handleRemoveMember"
-          @update:expanded-rows="setMemberTableExpandedRows"
-          @update:filters="updateMemberTableFilters"
         >
           <template #row-expansion="{ row }">
             <MemberAssignPmPanel

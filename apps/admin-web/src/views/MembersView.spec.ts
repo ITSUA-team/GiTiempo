@@ -87,12 +87,11 @@ const MembersTableStub = {
     'assign-member',
     'edit-member',
     'remove-member',
-    'update:expandedRows',
-    'update:filters',
   ],
   props: {
     emptyDescription: { type: String, required: true },
     expandedRows: { type: Object, required: true },
+    filterHandlers: { type: Object, required: true },
     filters: { type: Object, required: true },
     isMobileViewport: { type: Boolean, required: true },
     lastActiveFilterOptions: { type: Array, required: true },
@@ -100,6 +99,7 @@ const MembersTableStub = {
     projectFilterOptions: { type: Array, required: true },
     roleFilterOptions: { type: Array, required: true },
     rows: { type: Array, required: true },
+    setExpandedRows: { type: Function, required: true },
   },
   template:
     `<div data-testid="members-table">

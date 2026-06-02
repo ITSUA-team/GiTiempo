@@ -15,8 +15,8 @@ import {
   managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
-  type ManagementTableColumn,
 } from '@gitiempo/web-shared';
+import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -30,28 +30,30 @@ import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue'
 import type {
   ProjectHoursFilter,
   ProjectsTableExpandedRows,
+  ProjectsTableExpandedRowsSetter,
+  ProjectsTableFilterHandlers,
   ProjectsTableFilterOption,
   ProjectsTableFilters,
   ProjectsTableRow,
-} from '@/components/projects-table';
+} from '@/lib/projects-table';
 
-const props = defineProps<{
+defineProps<{
   emptyDescription: string;
   expandedRows: ProjectsTableExpandedRows;
+  filterHandlers: ProjectsTableFilterHandlers;
   filters: ProjectsTableFilters;
   hoursFilterOptions: ProjectsTableFilterOption<ProjectHoursFilter>[];
   isMobileViewport: boolean;
   loading: boolean;
   memberFilterOptions: ProjectsTableFilterOption[];
   rows: ProjectsTableRow[];
+  setExpandedRows: ProjectsTableExpandedRowsSetter;
   sourceFilterOptions: ProjectsTableFilterOption<ProjectResponse['source']>[];
   visibilityFilterOptions: ProjectsTableFilterOption<ProjectResponse['visibility']>[];
 }>();
 
 const emit = defineEmits<{
   'edit-project': [project: ProjectResponse];
-  'update:expandedRows': [expandedRows: ProjectsTableExpandedRows];
-  'update:filters': [filters: ProjectsTableFilters];
   archive: [project: ProjectResponse];
   unarchive: [project: ProjectResponse];
 }>();
@@ -64,43 +66,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'visibility', label: 'Visibility', width: 120 },
   { key: 'actions', label: 'Actions', width: 150, align: 'end' },
 ];
-
-function updateFilters(patch: Partial<ProjectsTableFilters>): void {
-  emit('update:filters', {
-    ...props.filters,
-    ...patch,
-  });
-}
-
-function updateGlobalFilter(value: string | undefined): void {
-  updateFilters({ global: value ?? '' });
-}
-
-function updateProjectQueryFilter(value: string | undefined): void {
-  updateFilters({ projectQuery: value ?? '' });
-}
-
-function updateSourceFilter(value: ProjectResponse['source'] | null | undefined): void {
-  updateFilters({ source: value ?? null });
-}
-
-function updateMemberFilter(value: string[] | undefined): void {
-  updateFilters({ memberIds: value ?? [] });
-}
-
-function updateHoursFilter(value: ProjectHoursFilter | undefined): void {
-  updateFilters({ hours: value ?? 'any' });
-}
-
-function updateVisibilityFilter(
-  value: ProjectResponse['visibility'] | null | undefined,
-): void {
-  updateFilters({ visibility: value ?? null });
-}
-
-function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void {
-  emit('update:expandedRows', value ?? {});
-}
 </script>
 
 <template>
@@ -114,7 +79,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
             aria-label="Search projects"
             class="h-[38px] w-full rounded-[6px] text-[14px]"
             placeholder="Search projects"
-            @update:model-value="updateGlobalFilter"
+            @update:model-value="filterHandlers.setGlobal"
           />
         </IconField>
       </template>
@@ -135,7 +100,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
         :model-value="filters.projectQuery"
         class="h-[38px] w-full rounded-[6px] text-[14px]"
         placeholder="Filter project"
-        @update:model-value="updateProjectQueryFilter"
+        @update:model-value="filterHandlers.setProjectQuery"
       />
     </div>
 
@@ -154,7 +119,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
           placeholder="All sources"
           show-clear
           :pt="managementTableFilterSelectPt"
-          @update:model-value="updateSourceFilter"
+          @update:model-value="filterHandlers.setSource"
         />
       </div>
 
@@ -172,7 +137,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
           placeholder="All"
           show-clear
           :pt="managementTableFilterSelectPt"
-          @update:model-value="updateVisibilityFilter"
+          @update:model-value="filterHandlers.setVisibility"
         />
       </div>
     </div>
@@ -190,7 +155,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
           option-label="label"
           option-value="value"
           :pt="managementTableFilterSelectPt"
-          @update:model-value="updateHoursFilter"
+          @update:model-value="filterHandlers.setHours"
         />
       </div>
 
@@ -212,7 +177,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
           :max-selected-labels="1"
           selected-items-label="{0} members"
           :pt="managementTableFilterMultiSelectPt"
-          @update:model-value="updateMemberFilter"
+          @update:model-value="filterHandlers.setMemberIds"
         />
       </div>
     </div>
@@ -373,7 +338,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
     single-scroll
     table-class="min-w-[1010px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
-    @update:expanded-rows="updateExpandedRows"
+    @update:expanded-rows="setExpandedRows"
   >
     <template #filters>
       <div class="flex min-w-[1010px] flex-1 items-center">
@@ -383,7 +348,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
             aria-label="Filter projects by name"
             :class="managementTableFilterInputClass"
             placeholder="Filter project"
-            @update:model-value="updateProjectQueryFilter"
+            @update:model-value="filterHandlers.setProjectQuery"
           />
         </div>
 
@@ -397,7 +362,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
             placeholder="All sources"
             show-clear
             :pt="managementTableFilterSelectPt"
-            @update:model-value="updateSourceFilter"
+            @update:model-value="filterHandlers.setSource"
           />
         </div>
 
@@ -415,7 +380,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
             :max-selected-labels="1"
             selected-items-label="{0} members"
             :pt="managementTableFilterMultiSelectPt"
-            @update:model-value="updateMemberFilter"
+            @update:model-value="filterHandlers.setMemberIds"
           />
         </div>
 
@@ -427,7 +392,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
             option-label="label"
             option-value="value"
             :pt="managementTableFilterSelectPt"
-            @update:model-value="updateHoursFilter"
+            @update:model-value="filterHandlers.setHours"
           />
         </div>
 
@@ -441,7 +406,7 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
             placeholder="All"
             show-clear
             :pt="managementTableFilterSelectPt"
-            @update:model-value="updateVisibilityFilter"
+            @update:model-value="filterHandlers.setVisibility"
           />
         </div>
 

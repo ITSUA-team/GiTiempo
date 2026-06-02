@@ -11,14 +11,15 @@ import PrimeVue from 'primevue/config';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type {
   MemberLastActiveFilter,
   MembersTableExpandedRows,
+  MembersTableExpandedRowsSetter,
+  MembersTableFilterHandlers,
   MembersTableFilterOption,
   MembersTableFilters,
   MembersTableRow,
-} from '@/components/members-table';
+} from '@/lib/members-table';
 
 import MembersTable from './MembersTable.vue';
 
@@ -113,18 +114,31 @@ function createRows(members = createMembers()): MembersTableRow[] {
   }));
 }
 
+function createFilterHandlers(): MembersTableFilterHandlers {
+  return {
+    setGlobal: vi.fn(),
+    setLastActive: vi.fn(),
+    setMemberQuery: vi.fn(),
+    setProjectIds: vi.fn(),
+    setRole: vi.fn(),
+  };
+}
+
 function mountMembersTable(options: {
   expandedRows?: MembersTableExpandedRows;
+  filterHandlers?: MembersTableFilterHandlers;
   filters?: MembersTableFilters;
   isMobileViewport?: boolean;
   loading?: boolean;
   rows?: MembersTableRow[];
+  setExpandedRows?: MembersTableExpandedRowsSetter;
   slots?: Record<string, string>;
 } = {}) {
   return mount(MembersTable, {
     props: {
       emptyDescription: 'No members match the current filters.',
       expandedRows: options.expandedRows ?? {},
+      filterHandlers: options.filterHandlers ?? createFilterHandlers(),
       filters: options.filters ?? defaultFilters,
       isMobileViewport: options.isMobileViewport ?? false,
       lastActiveFilterOptions,
@@ -132,6 +146,7 @@ function mountMembersTable(options: {
       projectFilterOptions,
       roleFilterOptions,
       rows: options.rows ?? createRows(),
+      setExpandedRows: options.setExpandedRows ?? vi.fn(),
     },
     slots: options.slots,
     global: {
@@ -169,8 +184,9 @@ describe('MembersTable', () => {
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);
   });
 
-  it('emits filter updates without deriving or mutating the supplied rows', async () => {
-    const wrapper = mountMembersTable();
+  it('calls filter handlers without deriving or mutating the supplied rows', async () => {
+    const filterHandlers = createFilterHandlers();
+    const wrapper = mountMembersTable({ filterHandlers });
 
     expect(wrapper.get('input[aria-label="Search members"]').attributes('placeholder')).toBe(
       'Search members',
@@ -190,26 +206,25 @@ describe('MembersTable', () => {
     await selectFilters[1]!.vm.$emit('update:modelValue', 'inactive');
     await wrapper.findComponent(MultiSelect).vm.$emit('update:modelValue', ['project-1']);
 
-    expect(wrapper.emitted('update:filters')).toEqual([
-      [{ ...defaultFilters, global: 'orion' }],
-      [{ ...defaultFilters, memberQuery: 'pat' }],
-      [{ ...defaultFilters, role: 'admin' }],
-      [{ ...defaultFilters, lastActive: 'inactive' }],
-      [{ ...defaultFilters, projectIds: ['project-1'] }],
-    ]);
+    expect(filterHandlers.setGlobal).toHaveBeenCalledWith('orion');
+    expect(filterHandlers.setMemberQuery).toHaveBeenCalledWith('pat');
+    expect(filterHandlers.setRole).toHaveBeenCalledWith('admin');
+    expect(filterHandlers.setLastActive).toHaveBeenCalledWith('inactive');
+    expect(filterHandlers.setProjectIds).toHaveBeenCalledWith(['project-1']);
     expect(
       wrapper.getComponent(ManagementTableShell).props('value'),
     ).toEqual(createRows());
   });
 
-  it('emits expanded row updates from the table shell contract', async () => {
-    const wrapper = mountMembersTable();
+  it('calls the expanded row setter from the table shell contract', async () => {
+    const setExpandedRows: MembersTableExpandedRowsSetter = vi.fn();
+    const wrapper = mountMembersTable({ setExpandedRows });
 
     await wrapper
       .getComponent(ManagementTableShell)
       .vm.$emit('update:expandedRows', { 'member-1': true });
 
-    expect(wrapper.emitted('update:expandedRows')).toEqual([[{ 'member-1': true }]]);
+    expect(setExpandedRows).toHaveBeenCalledWith({ 'member-1': true });
   });
 
   it('renders mobile loading cards only on mobile viewports', () => {

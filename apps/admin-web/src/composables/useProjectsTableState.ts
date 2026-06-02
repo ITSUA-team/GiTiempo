@@ -5,14 +5,14 @@ import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
-
 import type {
   ProjectHoursFilter,
   ProjectsTableExpandedRows,
+  ProjectsTableFilterHandlers,
   ProjectsTableFilterOption,
   ProjectsTableFilters,
   ProjectsTableRow,
-} from '@/components/projects-table';
+} from '@/lib/projects-table';
 
 interface UseProjectsTableStateOptions {
   members: Ref<WorkspaceMemberListResponse>;
@@ -71,6 +71,26 @@ function textIncludes(value: string, search: string): boolean {
 export function useProjectsTableState({ members, projects }: UseProjectsTableStateOptions) {
   const filters = reactive<ProjectsTableFilters>(createDefaultFilters());
   const expandedRows = ref<ProjectsTableExpandedRows>({});
+  const filterHandlers: ProjectsTableFilterHandlers = {
+    setGlobal(value) {
+      filters.global = value ?? '';
+    },
+    setHours(value) {
+      filters.hours = value ?? 'any';
+    },
+    setMemberIds(value) {
+      filters.memberIds = value ?? [];
+    },
+    setProjectQuery(value) {
+      filters.projectQuery = value ?? '';
+    },
+    setSource(value) {
+      filters.source = value ?? null;
+    },
+    setVisibility(value) {
+      filters.visibility = value ?? null;
+    },
+  };
 
   const memberFilterOptions = computed<ProjectsTableFilterOption[]>(() =>
     members.value
@@ -169,15 +189,6 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
       : 'No projects have been created yet.',
   );
 
-  function updateFilters(nextFilters: ProjectsTableFilters): void {
-    filters.global = nextFilters.global;
-    filters.hours = nextFilters.hours;
-    filters.memberIds = [...nextFilters.memberIds];
-    filters.projectQuery = nextFilters.projectQuery;
-    filters.source = nextFilters.source;
-    filters.visibility = nextFilters.visibility;
-  }
-
   function setExpandedRows(nextRows: ProjectsTableExpandedRows | undefined): void {
     expandedRows.value = nextRows ?? {};
   }
@@ -209,6 +220,7 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
     collapseRow,
     emptyDescription,
     expandedRows,
+    filterHandlers,
     filters,
     hoursFilterOptions,
     memberFilterOptions,
@@ -216,7 +228,6 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
     setExpandedRows,
     sourceFilterOptions,
     toggleExpansion,
-    updateFilters,
     visibilityFilterOptions,
   };
 }

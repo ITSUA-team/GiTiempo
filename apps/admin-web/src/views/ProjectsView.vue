@@ -50,6 +50,7 @@ const {
   collapseRow: collapseProjectRow,
   emptyDescription: projectTableEmptyDescription,
   expandedRows: projectTableExpandedRows,
+  filterHandlers: projectTableFilterHandlers,
   filters: projectTableFilters,
   hoursFilterOptions,
   memberFilterOptions,
@@ -57,7 +58,6 @@ const {
   setExpandedRows: setProjectTableExpandedRows,
   sourceFilterOptions,
   toggleExpansion: toggleProjectExpansion,
-  updateFilters: updateProjectTableFilters,
   visibilityFilterOptions,
 } = useProjectsTableState({
   members,
@@ -287,19 +287,19 @@ onMounted(fetchAll);
         <ProjectsTable
           :empty-description="projectTableEmptyDescription"
           :expanded-rows="projectTableExpandedRows"
+          :filter-handlers="projectTableFilterHandlers"
           :filters="projectTableFilters"
           :hours-filter-options="hoursFilterOptions"
           :is-mobile-viewport="isMobileViewport"
           :loading="loading"
           :member-filter-options="memberFilterOptions"
           :rows="projectTableRows"
+          :set-expanded-rows="setProjectTableExpandedRows"
           :source-filter-options="sourceFilterOptions"
           :visibility-filter-options="visibilityFilterOptions"
           @archive="handleArchive"
           @edit-project="handleEditProject"
           @unarchive="handleUnarchive"
-          @update:expanded-rows="setProjectTableExpandedRows"
-          @update:filters="updateProjectTableFilters"
         >
           <template #row-expansion="{ row }">
             <ProjectEditForm

@@ -33,14 +33,17 @@ import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue'
 import type {
   MemberLastActiveFilter,
   MembersTableExpandedRows,
+  MembersTableExpandedRowsSetter,
+  MembersTableFilterHandlers,
   MembersTableFilterOption,
   MembersTableFilters,
   MembersTableRow,
-} from '@/components/members-table';
+} from '@/lib/members-table';
 
-const props = defineProps<{
+defineProps<{
   emptyDescription: string;
   expandedRows: MembersTableExpandedRows;
+  filterHandlers: MembersTableFilterHandlers;
   filters: MembersTableFilters;
   isMobileViewport: boolean;
   lastActiveFilterOptions: MembersTableFilterOption<MemberLastActiveFilter>[];
@@ -48,14 +51,13 @@ const props = defineProps<{
   projectFilterOptions: MembersTableFilterOption[];
   roleFilterOptions: MembersTableFilterOption<WorkspaceRole>[];
   rows: MembersTableRow[];
+  setExpandedRows: MembersTableExpandedRowsSetter;
 }>();
 
 const emit = defineEmits<{
   'assign-member': [member: WorkspaceMemberResponse];
   'edit-member': [member: WorkspaceMemberResponse];
   'remove-member': [member: WorkspaceMemberResponse];
-  'update:expandedRows': [expandedRows: MembersTableExpandedRows];
-  'update:filters': [filters: MembersTableFilters];
 }>();
 
 const columns: ManagementTableColumn[] = [
@@ -65,37 +67,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'lastActive', label: 'Last Active', width: 140 },
   { key: 'actions', label: 'Actions', width: 150, align: 'end' },
 ];
-
-function updateFilters(patch: Partial<MembersTableFilters>): void {
-  emit('update:filters', {
-    ...props.filters,
-    ...patch,
-  });
-}
-
-function updateGlobalFilter(value: string | undefined): void {
-  updateFilters({ global: value ?? '' });
-}
-
-function updateMemberQueryFilter(value: string | undefined): void {
-  updateFilters({ memberQuery: value ?? '' });
-}
-
-function updateRoleFilter(value: WorkspaceRole | null | undefined): void {
-  updateFilters({ role: value ?? null });
-}
-
-function updateProjectFilter(value: string[] | undefined): void {
-  updateFilters({ projectIds: value ?? [] });
-}
-
-function updateLastActiveFilter(value: MemberLastActiveFilter | undefined): void {
-  updateFilters({ lastActive: value ?? 'any' });
-}
-
-function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
-  emit('update:expandedRows', value ?? {});
-}
 </script>
 
 <template>
@@ -109,7 +80,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
             aria-label="Search members"
             class="h-[38px] w-full rounded-[6px] text-[14px]"
             placeholder="Search members"
-            @update:model-value="updateGlobalFilter"
+            @update:model-value="filterHandlers.setGlobal"
           />
         </IconField>
       </template>
@@ -130,7 +101,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
         :model-value="filters.memberQuery"
         class="h-[38px] w-full rounded-[6px] text-[14px]"
         placeholder="Filter name or email"
-        @update:model-value="updateMemberQueryFilter"
+        @update:model-value="filterHandlers.setMemberQuery"
       />
     </div>
 
@@ -149,7 +120,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
           placeholder="All roles"
           show-clear
           :pt="managementTableFilterSelectPt"
-          @update:model-value="updateRoleFilter"
+          @update:model-value="filterHandlers.setRole"
         />
       </div>
 
@@ -165,7 +136,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
           option-label="label"
           option-value="value"
           :pt="managementTableFilterSelectPt"
-          @update:model-value="updateLastActiveFilter"
+          @update:model-value="filterHandlers.setLastActive"
         />
       </div>
     </div>
@@ -188,7 +159,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
         :max-selected-labels="1"
         selected-items-label="{0} projects"
         :pt="managementTableFilterMultiSelectPt"
-        @update:model-value="updateProjectFilter"
+        @update:model-value="filterHandlers.setProjectIds"
       />
     </div>
   </div>
@@ -347,7 +318,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
     single-scroll
     table-class="min-w-[930px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
-    @update:expanded-rows="updateExpandedRows"
+    @update:expanded-rows="setExpandedRows"
   >
     <template #filters>
       <div class="flex min-w-[930px] flex-1 items-center">
@@ -357,7 +328,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
             aria-label="Filter members by name or email"
             :class="managementTableFilterInputClass"
             placeholder="Filter name or email"
-            @update:model-value="updateMemberQueryFilter"
+            @update:model-value="filterHandlers.setMemberQuery"
           />
         </div>
 
@@ -371,7 +342,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
             placeholder="All roles"
             show-clear
             :pt="managementTableFilterSelectPt"
-            @update:model-value="updateRoleFilter"
+            @update:model-value="filterHandlers.setRole"
           />
         </div>
 
@@ -389,7 +360,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
             :max-selected-labels="1"
             selected-items-label="{0} projects"
             :pt="managementTableFilterMultiSelectPt"
-            @update:model-value="updateProjectFilter"
+            @update:model-value="filterHandlers.setProjectIds"
           />
         </div>
 
@@ -401,7 +372,7 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
             option-label="label"
             option-value="value"
             :pt="managementTableFilterSelectPt"
-            @update:model-value="updateLastActiveFilter"
+            @update:model-value="filterHandlers.setLastActive"
           />
         </div>
 

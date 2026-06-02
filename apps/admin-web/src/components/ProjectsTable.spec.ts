@@ -8,14 +8,15 @@ import PrimeVue from 'primevue/config';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type {
   ProjectHoursFilter,
   ProjectsTableExpandedRows,
+  ProjectsTableExpandedRowsSetter,
+  ProjectsTableFilterHandlers,
   ProjectsTableFilterOption,
   ProjectsTableFilters,
   ProjectsTableRow,
-} from '@/components/projects-table';
+} from '@/lib/projects-table';
 
 import ProjectsTable from './ProjectsTable.vue';
 
@@ -114,24 +115,39 @@ function createRows(projects = createProjects()): ProjectsTableRow[] {
   }));
 }
 
+function createFilterHandlers(): ProjectsTableFilterHandlers {
+  return {
+    setGlobal: vi.fn(),
+    setHours: vi.fn(),
+    setMemberIds: vi.fn(),
+    setProjectQuery: vi.fn(),
+    setSource: vi.fn(),
+    setVisibility: vi.fn(),
+  };
+}
+
 function mountProjectsTable(options: {
   expandedRows?: ProjectsTableExpandedRows;
+  filterHandlers?: ProjectsTableFilterHandlers;
   filters?: ProjectsTableFilters;
   isMobileViewport?: boolean;
   loading?: boolean;
   rows?: ProjectsTableRow[];
+  setExpandedRows?: ProjectsTableExpandedRowsSetter;
   slots?: Record<string, string>;
 } = {}) {
   return mount(ProjectsTable, {
     props: {
       emptyDescription: 'No projects match the current filters.',
       expandedRows: options.expandedRows ?? {},
+      filterHandlers: options.filterHandlers ?? createFilterHandlers(),
       filters: options.filters ?? defaultFilters,
       hoursFilterOptions,
       isMobileViewport: options.isMobileViewport ?? false,
       loading: options.loading ?? false,
       memberFilterOptions,
       rows: options.rows ?? createRows(),
+      setExpandedRows: options.setExpandedRows ?? vi.fn(),
       sourceFilterOptions,
       visibilityFilterOptions,
     },
@@ -171,8 +187,9 @@ describe('ProjectsTable', () => {
     expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
   });
 
-  it('emits filter updates without deriving or mutating the supplied rows', async () => {
-    const wrapper = mountProjectsTable();
+  it('calls filter handlers without deriving or mutating the supplied rows', async () => {
+    const filterHandlers = createFilterHandlers();
+    const wrapper = mountProjectsTable({ filterHandlers });
 
     expect(wrapper.get('input[aria-label="Search projects"]').attributes('placeholder')).toBe(
       'Search projects',
@@ -194,25 +211,24 @@ describe('ProjectsTable', () => {
     await selectFilters[1]!.vm.$emit('update:modelValue', 'zero');
     await selectFilters[2]!.vm.$emit('update:modelValue', 'private');
 
-    expect(wrapper.emitted('update:filters')).toEqual([
-      [{ ...defaultFilters, global: 'archived' }],
-      [{ ...defaultFilters, projectQuery: 'billing' }],
-      [{ ...defaultFilters, source: 'manual' }],
-      [{ ...defaultFilters, memberIds: ['user-2'] }],
-      [{ ...defaultFilters, hours: 'zero' }],
-      [{ ...defaultFilters, visibility: 'private' }],
-    ]);
+    expect(filterHandlers.setGlobal).toHaveBeenCalledWith('archived');
+    expect(filterHandlers.setProjectQuery).toHaveBeenCalledWith('billing');
+    expect(filterHandlers.setSource).toHaveBeenCalledWith('manual');
+    expect(filterHandlers.setMemberIds).toHaveBeenCalledWith(['user-2']);
+    expect(filterHandlers.setHours).toHaveBeenCalledWith('zero');
+    expect(filterHandlers.setVisibility).toHaveBeenCalledWith('private');
     expect(wrapper.getComponent(ManagementTableShell).props('value')).toEqual(createRows());
   });
 
-  it('emits expanded row updates from the table shell contract', async () => {
-    const wrapper = mountProjectsTable();
+  it('calls the expanded row setter from the table shell contract', async () => {
+    const setExpandedRows: ProjectsTableExpandedRowsSetter = vi.fn();
+    const wrapper = mountProjectsTable({ setExpandedRows });
 
     await wrapper
       .getComponent(ManagementTableShell)
       .vm.$emit('update:expandedRows', { 'project-active': true });
 
-    expect(wrapper.emitted('update:expandedRows')).toEqual([[{ 'project-active': true }]]);
+    expect(setExpandedRows).toHaveBeenCalledWith({ 'project-active': true });
   });
 
   it('renders mobile loading cards only on mobile viewports', () => {

@@ -13,16 +13,16 @@ import {
   isSameLocalDateValue,
   isWithinLocalIsoWeekToDate,
 } from '@gitiempo/web-shared/time';
-
 import type {
   MemberExpansionMode,
   MemberLastActiveFilter,
   MembersTableExpandedRows,
   MembersTableExpansionModes,
+  MembersTableFilterHandlers,
   MembersTableFilterOption,
   MembersTableFilters,
   MembersTableRow,
-} from '@/components/members-table';
+} from '@/lib/members-table';
 
 interface UseMembersTableStateOptions {
   currentUserId: Readonly<Ref<string | null>>;
@@ -89,6 +89,23 @@ export function useMembersTableState({
   const filters = reactive<MembersTableFilters>(createDefaultFilters());
   const expandedRows = ref<MembersTableExpandedRows>({});
   const expansionMode = ref<MembersTableExpansionModes>({});
+  const filterHandlers: MembersTableFilterHandlers = {
+    setGlobal(value) {
+      filters.global = value ?? '';
+    },
+    setLastActive(value) {
+      filters.lastActive = value ?? 'any';
+    },
+    setMemberQuery(value) {
+      filters.memberQuery = value ?? '';
+    },
+    setProjectIds(value) {
+      filters.projectIds = value ?? [];
+    },
+    setRole(value) {
+      filters.role = value ?? null;
+    },
+  };
 
   const projectFilterOptions = computed<MembersTableFilterOption[]>(() =>
     [...projects.value]
@@ -212,14 +229,6 @@ export function useMembersTableState({
       : 'Invite members to get started.',
   );
 
-  function updateFilters(nextFilters: MembersTableFilters): void {
-    filters.global = nextFilters.global;
-    filters.lastActive = nextFilters.lastActive;
-    filters.memberQuery = nextFilters.memberQuery;
-    filters.projectIds = [...nextFilters.projectIds];
-    filters.role = nextFilters.role;
-  }
-
   function pruneExpansionState(visibleMemberIds: Set<string>): void {
     expandedRows.value = Object.fromEntries(
       Object.entries(expandedRows.value).filter(([id]) => visibleMemberIds.has(id)),
@@ -283,6 +292,7 @@ export function useMembersTableState({
     emptyDescription,
     expandedRows,
     expansionMode,
+    filterHandlers,
     filters,
     lastActiveFilterOptions,
     projectFilterOptions,
@@ -290,6 +300,5 @@ export function useMembersTableState({
     rows,
     setExpandedRows,
     toggleExpansion,
-    updateFilters,
   };
 }

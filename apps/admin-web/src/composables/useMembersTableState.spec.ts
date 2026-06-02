@@ -154,23 +154,59 @@ describe('useMembersTableState', () => {
   it('filters members by global search, member query, project, role, and activity', () => {
     const { state } = createState();
 
-    state.updateFilters({ ...state.filters, global: 'orion' });
+    state.filterHandlers.setGlobal('orion');
     expect(rowNames(state)).toEqual(['Pat PM', 'Alex Admin']);
 
-    state.updateFilters({ ...state.filters, global: '', memberQuery: 'nina' });
+    state.filterHandlers.setGlobal('');
+    state.filterHandlers.setMemberQuery('nina');
     expect(rowNames(state)).toEqual(['Nina Keller']);
 
-    state.updateFilters({ ...state.filters, memberQuery: '', role: 'admin' });
+    state.filterHandlers.setMemberQuery('');
+    state.filterHandlers.setRole('admin');
     expect(rowNames(state)).toEqual(['Alex Admin']);
 
-    state.updateFilters({ ...state.filters, role: null, projectIds: ['project-2'] });
+    state.filterHandlers.setRole(null);
+    state.filterHandlers.setProjectIds(['project-2']);
     expect(rowNames(state)).toEqual(['Nina Keller']);
 
-    state.updateFilters({ ...state.filters, projectIds: [], lastActive: 'inactive' });
+    state.filterHandlers.setProjectIds([]);
+    state.filterHandlers.setLastActive('inactive');
     expect(rowNames(state)).toEqual(['Alex Admin']);
 
-    state.updateFilters({ ...state.filters, lastActive: 'any' });
+    state.filterHandlers.setLastActive('any');
     expect(rowNames(state)).toEqual(['Pat PM', 'Alex Admin', 'Nina Keller']);
+  });
+
+  it('exposes filter handlers that normalize cleared controls', () => {
+    const { state } = createState();
+
+    state.filterHandlers.setGlobal('orion');
+    state.filterHandlers.setMemberQuery('pat');
+    state.filterHandlers.setRole('pm');
+    state.filterHandlers.setProjectIds(['project-1']);
+    state.filterHandlers.setLastActive('today');
+
+    expect(state.filters).toEqual({
+      global: 'orion',
+      lastActive: 'today',
+      memberQuery: 'pat',
+      projectIds: ['project-1'],
+      role: 'pm',
+    });
+
+    state.filterHandlers.setGlobal(undefined);
+    state.filterHandlers.setMemberQuery(undefined);
+    state.filterHandlers.setRole(undefined);
+    state.filterHandlers.setProjectIds(undefined);
+    state.filterHandlers.setLastActive(undefined);
+
+    expect(state.filters).toEqual({
+      global: '',
+      lastActive: 'any',
+      memberQuery: '',
+      projectIds: [],
+      role: null,
+    });
   });
 
   it('owns expansion state and prunes expanded rows when filters hide them', async () => {
@@ -185,7 +221,7 @@ describe('useMembersTableState', () => {
     expect(state.expandedRows.value).toEqual({ 'member-1': true });
     expect(state.expansionMode.value).toEqual({ 'member-1': 'edit' });
 
-    state.updateFilters({ ...state.filters, memberQuery: 'nina' });
+    state.filterHandlers.setMemberQuery('nina');
     await nextTick();
 
     expect(state.expandedRows.value).toEqual({});
