@@ -152,7 +152,6 @@ async function handleSave({
             outlined
             type="button"
             class="w-full sm:w-auto"
-            :pt="{ root: { class: 'bg-surface-primary' } }"
             @click="emit('cancelled')"
           />
           <Button

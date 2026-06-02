@@ -41,6 +41,15 @@ export const giTiempoThemePreset = definePreset(Aura, {
       },
     },
   },
+  components: {
+    button: {
+      css: `
+        .p-button-outlined.p-button-secondary {
+          background: var(--p-surface-0);
+        }
+      `,
+    },
+  },
 });
 
 export const giTiempoPrimeVueOptions = {

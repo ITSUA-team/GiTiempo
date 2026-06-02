@@ -244,7 +244,6 @@ onMounted(loadMembers);
               severity="secondary"
               outlined
               type="button"
-              :pt="{ root: { class: 'bg-surface-primary' } }"
               :disabled="isSubmitting"
               @click="handleBack"
             />
