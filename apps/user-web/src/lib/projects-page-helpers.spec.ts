@@ -105,11 +105,21 @@ describe("projects-page-helpers", () => {
     ]);
   });
 
-  it("formats updated labels relative to an explicit current time", () => {
-    const nowMs = Date.parse("2026-04-21T12:00:00.000Z");
+  it("formats updated labels relative to browser-local calendar days", () => {
+    const now = new Date(2026, 3, 21, 12, 0, 0, 0);
+    const todayTimestamp = new Date(2026, 3, 21, 10, 0, 0, 0).toISOString();
+    const yesterdayTimestamp = new Date(2026, 3, 20, 10, 0, 0, 0).toISOString();
+    const olderTimestamp = new Date(2026, 3, 19, 10, 0, 0, 0).toISOString();
 
-    expect(formatUpdatedLabel("2026-04-21T10:00:00.000Z", nowMs)).toBe("Today, 10:00");
-    expect(formatUpdatedLabel("2026-04-20T10:00:00.000Z", nowMs)).toBe("Yesterday, 10:00");
-    expect(formatUpdatedLabel("2026-04-19T10:00:00.000Z", nowMs)).toBe("Sun, 10:00");
+    expect(formatUpdatedLabel(todayTimestamp, now.getTime())).toBe("Today, 10:00");
+    expect(formatUpdatedLabel(yesterdayTimestamp, now.getTime())).toBe("Yesterday, 10:00");
+    expect(formatUpdatedLabel(olderTimestamp, now.getTime())).toBe("Sun, 10:00");
+  });
+
+  it("keeps late-utc timestamps on the same rendered local day", () => {
+    const now = new Date(2026, 3, 21, 12, 0, 0, 0);
+    const localEveningTimestamp = new Date(2026, 3, 21, 0, 30, 0, 0).toISOString();
+
+    expect(formatUpdatedLabel(localEveningTimestamp, now.getTime())).toBe("Today, 00:30");
   });
 });

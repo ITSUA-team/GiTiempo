@@ -1,5 +1,5 @@
 import type { TimeEntryListQuery } from '@gitiempo/shared';
-import { nextUtcDay, startOfUtcDay } from '@gitiempo/web-shared/time';
+import { nextLocalDay, startOfLocalDay } from '@gitiempo/web-shared/time';
 import { computed, ref, shallowRef } from 'vue';
 
 import {
@@ -36,8 +36,8 @@ export function useTimeEntryFilters() {
           : '';
 
     return {
-      dateFrom: startDate ? startOfUtcDay(startDate).toISOString() : undefined,
-      dateTo: endDate ? nextUtcDay(endDate).toISOString() : undefined,
+      dateFrom: startDate ? startOfLocalDay(startDate).toISOString() : undefined,
+      dateTo: endDate ? nextLocalDay(endDate).toISOString() : undefined,
       limit: pageSize.value,
       page: currentPage.value,
       projectId: selectedProjectId.value ?? undefined,

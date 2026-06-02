@@ -1,9 +1,9 @@
 import type { ProjectResponse, TaskResponse } from '@gitiempo/shared';
 import {
-  addUtcDays,
-  formatUtcTime,
-  formatUtcWeekday,
-  getUtcDateKey,
+  addLocalDays,
+  formatLocalTime,
+  formatLocalWeekday,
+  getLocalDateKey,
 } from '@gitiempo/web-shared/time';
 
 export interface ProjectsPageTaskGroup {
@@ -114,18 +114,18 @@ export function formatUpdatedLabel(
   isoDateTime: string,
   nowMs = Date.now(),
 ): string {
-  const dayKey = getUtcDateKey(isoDateTime);
+  const dayKey = getLocalDateKey(isoDateTime);
   const now = new Date(nowMs);
-  const todayKey = getUtcDateKey(now.toISOString());
-  const yesterdayKey = getUtcDateKey(addUtcDays(now, -1).toISOString());
+  const todayKey = getLocalDateKey(now);
+  const yesterdayKey = getLocalDateKey(addLocalDays(now, -1));
 
   if (dayKey === todayKey) {
-    return `Today, ${formatUtcTime(isoDateTime)}`;
+    return `Today, ${formatLocalTime(isoDateTime)}`;
   }
 
   if (dayKey === yesterdayKey) {
-    return `Yesterday, ${formatUtcTime(isoDateTime)}`;
+    return `Yesterday, ${formatLocalTime(isoDateTime)}`;
   }
 
-  return `${formatUtcWeekday(isoDateTime)}, ${formatUtcTime(isoDateTime)}`;
+  return `${formatLocalWeekday(isoDateTime)}, ${formatLocalTime(isoDateTime)}`;
 }

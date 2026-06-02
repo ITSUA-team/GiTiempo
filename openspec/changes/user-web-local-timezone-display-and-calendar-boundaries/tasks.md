@@ -7,18 +7,18 @@
 
 ## 2. User-Web Implementation
 
-- [ ] 2.1 Replace user-web UTC time-entry range labels with browser-local time labels while preserving running duration behavior.
-- [ ] 2.2 Group Time Entries by browser-local started-at day and render local day headings.
-- [ ] 2.3 Convert Time Entries DatePicker filters to browser-local day-start and next-browser-local-day-start ISO boundaries.
-- [ ] 2.4 Seed day-level manual-entry create dialogs from the rendered browser-local day.
-- [ ] 2.5 Calculate Dashboard `Today` and `This Week` stats/focus windows from browser-local day and Monday-start week boundaries.
-- [ ] 2.6 Format Projects task updated metadata and Profile GitHub timestamps as browser-local user-facing labels.
+- [x] 2.1 Replace user-web UTC time-entry range labels with browser-local time labels while preserving running duration behavior.
+- [x] 2.2 Group Time Entries by browser-local started-at day and render local day headings.
+- [x] 2.3 Convert Time Entries DatePicker filters to browser-local day-start and next-browser-local-day-start ISO boundaries.
+- [x] 2.4 Seed day-level manual-entry create dialogs from the rendered browser-local day.
+- [x] 2.5 Calculate Dashboard `Today` and `This Week` stats/focus windows from browser-local day and Monday-start week boundaries.
+- [x] 2.6 Format Projects task updated metadata and Profile GitHub timestamps as browser-local user-facing labels.
 
 ## 3. Verification
 
-- [ ] 3.1 Update focused user-web helper/component tests that currently assert UTC display, grouping, and dashboard window behavior.
-- [ ] 3.2 Add timezone-sensitive regression coverage using fixed timestamps that cross UTC/local day boundaries.
-- [ ] 3.3 Run `pnpm --filter user-web lint`.
-- [ ] 3.4 Run `pnpm --filter user-web typecheck`.
-- [ ] 3.5 Run `pnpm --filter user-web test`.
-- [ ] 3.6 If shared frontend date-time helpers are changed, also run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and relevant shared/admin tests.
+- [x] 3.1 Update focused user-web helper/component tests that currently assert UTC display, grouping, and dashboard window behavior.
+- [x] 3.2 Add timezone-sensitive regression coverage using fixed timestamps that cross UTC/local day boundaries.
+- [x] 3.3 Run `pnpm --filter user-web lint`.
+- [x] 3.4 Run `pnpm --filter user-web typecheck`.
+- [x] 3.5 Run `pnpm --filter user-web test`.
+- [x] 3.6 If shared frontend date-time helpers are changed, also run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and relevant shared/admin tests.

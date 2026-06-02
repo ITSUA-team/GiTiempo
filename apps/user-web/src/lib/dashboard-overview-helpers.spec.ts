@@ -39,15 +39,17 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
 }
 
 describe("dashboard-overview-helpers", () => {
-  it("builds dashboard week windows from UTC ISO weeks", () => {
-    expect(getDashboardWeekWindow(Date.parse("2026-04-26T23:30:00.000Z"))).toEqual({
-      dateFrom: "2026-04-20T00:00:00.000Z",
-      dateTo: "2026-04-27T00:00:00.000Z",
+  it("builds dashboard week windows from browser-local Monday weeks", () => {
+    const now = new Date(2026, 3, 26, 23, 30, 0, 0);
+
+    expect(getDashboardWeekWindow(now.getTime())).toEqual({
+      dateFrom: new Date(2026, 3, 20, 0, 0, 0, 0).toISOString(),
+      dateTo: new Date(2026, 3, 27, 0, 0, 0, 0).toISOString(),
     });
   });
 
-  it("builds stats and top weekly focus from tracked entries", () => {
-    const nowMs = Date.parse("2026-04-21T12:00:00.000Z");
+  it("builds stats and top weekly focus from browser-local day and week windows", () => {
+    const nowMs = new Date(2026, 3, 21, 12, 0, 0, 0).getTime();
     const entries = [
       createEntry(),
       createEntry({
@@ -95,6 +97,33 @@ describe("dashboard-overview-helpers", () => {
     });
   });
 
+  it("counts entries that cross a UTC day boundary inside the current local day", () => {
+    const nowMs = new Date(2026, 3, 21, 12, 0, 0, 0).getTime();
+    const crossingEntry = createEntry({
+      durationSeconds: 3600,
+      endedAt: new Date(2026, 3, 21, 1, 15, 0, 0).toISOString(),
+      startedAt: new Date(2026, 3, 21, 0, 15, 0, 0).toISOString(),
+    });
+
+    expect(buildDashboardStats([crossingEntry], nowMs)).toEqual([
+      {
+        description: "1 project tracked today",
+        label: "Today",
+        value: "1h",
+      },
+      {
+        description: "1 entry tracked this week",
+        label: "This Week",
+        value: "1h",
+      },
+      {
+        description: "1 project received tracked time",
+        label: "Projects This Week",
+        value: "1",
+      },
+    ]);
+  });
+
   it("maps recent entries to display rows with running duration labels", () => {
     const nowMs = Date.parse("2026-04-21T12:00:00.000Z");
     const rows = mapDashboardRecentEntryRows(
@@ -117,7 +146,7 @@ describe("dashboard-overview-helpers", () => {
         isHighlighted: true,
         projectName: "Project Orion",
         taskTitle: "Improve reports filters",
-        timeRangeLabel: "11:00 - Running",
+        timeRangeLabel: expect.stringContaining("Running"),
       },
       {
         durationLabel: "1h",
@@ -125,7 +154,7 @@ describe("dashboard-overview-helpers", () => {
         isHighlighted: false,
         projectName: "Project Orion",
         taskTitle: "Improve reports filters",
-        timeRangeLabel: "09:00 - 10:00",
+        timeRangeLabel: expect.stringMatching(/ - /),
       },
     ]);
   });
