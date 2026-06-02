@@ -1,8 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { useTimeEntryDialog } from "./useTimeEntryDialog";
 
 describe("useTimeEntryDialog", () => {
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Kiev");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("seeds day-level create dialogs from the rendered local day", () => {
     const dialog = useTimeEntryDialog();
 

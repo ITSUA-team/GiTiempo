@@ -1,5 +1,5 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   buildProjectSearchSuggestions,
@@ -41,6 +41,14 @@ function createTask(id: string, projectId: string, title: string, updatedAt: str
 }
 
 describe("projects-page-helpers", () => {
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Kiev");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("normalizes search and sorts tasks by updated time then title", () => {
     expect(normalizeSearchValue("  Billing  ")).toBe("billing");
     expect(

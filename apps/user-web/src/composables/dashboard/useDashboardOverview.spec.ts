@@ -3,7 +3,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type { TimeEntryListResponse, TimeEntryResponse } from "@gitiempo/shared";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { formatLocalTime } from "@gitiempo/web-shared/time";
 
@@ -121,6 +121,14 @@ function mountDashboardOverview(options?: {
 
 describe("useDashboardOverview", () => {
   const wrappers: VueWrapper[] = [];
+
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Kiev");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
 
   beforeEach(() => {
     vi.useFakeTimers();

@@ -1,5 +1,5 @@
 import type { TimeEntryResponse } from "@gitiempo/shared";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   buildDashboardStats,
@@ -39,6 +39,14 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
 }
 
 describe("dashboard-overview-helpers", () => {
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Kiev");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("builds dashboard week windows from browser-local Monday weeks", () => {
     const now = new Date(2026, 3, 26, 23, 30, 0, 0);
 
@@ -146,7 +154,7 @@ describe("dashboard-overview-helpers", () => {
         isHighlighted: true,
         projectName: "Project Orion",
         taskTitle: "Improve reports filters",
-        timeRangeLabel: expect.stringContaining("Running"),
+        timeRangeLabel: "14:00 - Running",
       },
       {
         durationLabel: "1h",
@@ -154,7 +162,7 @@ describe("dashboard-overview-helpers", () => {
         isHighlighted: false,
         projectName: "Project Orion",
         taskTitle: "Improve reports filters",
-        timeRangeLabel: expect.stringMatching(/ - /),
+        timeRangeLabel: "12:00 - 13:00",
       },
     ]);
   });

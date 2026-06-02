@@ -4,7 +4,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { computed, ref, shallowRef } from "vue";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as VueRouterModule from "vue-router";
 import type {
   GitHubConnectionStatusResponse,
@@ -129,6 +129,14 @@ async function mountProfileView() {
 }
 
 describe("ProfileView", () => {
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Kiev");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     resetAuthRuntimeForTesting();
     setAuthRuntimeForTesting(createRuntimeMock());
