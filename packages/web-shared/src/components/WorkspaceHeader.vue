@@ -3,7 +3,7 @@ import {
   computed,
   onBeforeUnmount,
   onMounted,
-  shallowRef,
+  ref,
   useTemplateRef,
   useSlots,
   type Component,
@@ -76,7 +76,7 @@ const emit = defineEmits<{
 }>();
 
 const profileMenuRegion = useTemplateRef<HTMLElement>("profileMenuRegion");
-const isProfileMenuOpen = shallowRef(false);
+const isProfileMenuOpen = ref(false);
 
 const profileTriggerRootClass = computed(() =>
   [

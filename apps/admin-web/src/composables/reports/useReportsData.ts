@@ -2,6 +2,7 @@ import {
   computed,
   nextTick,
   onUnmounted,
+  ref,
   shallowRef,
   watch,
   type ComputedRef,
@@ -84,17 +85,17 @@ export function useReportsData({
   onError,
   scope,
 }: UseReportsDataOptions) {
-  const selectedProjectId = shallowRef<string | null>(null);
-  const selectedMemberId = shallowRef<string | null>(null);
+  const selectedProjectId = ref<string | null>(null);
+  const selectedMemberId = ref<string | null>(null);
   const dateRange = shallowRef<ReportDateRange>(getDefaultReportDateRange());
-  const groupBy = shallowRef<ReportSetupFilters['groupBy']>('project');
+  const groupBy = ref<ReportSetupFilters['groupBy']>('project');
   const appliedFilters = shallowRef<ReportSetupFilters>({
     dateRange: dateRange.value,
     groupBy: groupBy.value,
     memberId: selectedMemberId.value,
     projectId: selectedProjectId.value,
   });
-  const currentAction = shallowRef('load-reports');
+  const currentAction = ref('load-reports');
   const projectsQuery = useAdminProjectsQuery({
     accessToken,
     client: projectsClient,

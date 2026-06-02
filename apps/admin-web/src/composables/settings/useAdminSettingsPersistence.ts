@@ -1,4 +1,4 @@
-import { shallowRef, type ComputedRef, type Ref } from 'vue';
+import { ref, type ComputedRef, type Ref } from 'vue';
 import type {
   WorkspaceResponse,
   WorkspaceSettingsResponse,
@@ -61,7 +61,7 @@ export function useAdminSettingsPersistence({
   onError,
   scope,
 }: UseAdminSettingsPersistenceOptions) {
-  const saving = shallowRef(false);
+  const saving = ref(false);
   const updateWorkspaceMutation = useUpdateWorkspaceMutation({
     client,
     accessToken,

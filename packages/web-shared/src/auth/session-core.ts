@@ -3,7 +3,7 @@ import type {
   UpdateUserInput,
   UserResponse,
 } from "@gitiempo/shared";
-import { computed, shallowRef } from "vue";
+import { computed, ref, shallowRef } from "vue";
 
 import {
   clearRefreshToken,
@@ -26,11 +26,11 @@ export function createAuthSessionCore({
   onClearSession,
   onLoginSuccess,
 }: AuthSessionCoreOptions) {
-  const accessToken = shallowRef<string | null>(null);
-  const bootstrapComplete = shallowRef(false);
-  const isBootstrapping = shallowRef(false);
+  const accessToken = ref<string | null>(null);
+  const bootstrapComplete = ref(false);
+  const isBootstrapping = ref(false);
   const profile = shallowRef<UserResponse | null>(null);
-  const isSubmitting = shallowRef(false);
+  const isSubmitting = ref(false);
 
   let bootstrapPromise: Promise<void> | null = null;
   let refreshAccessPromise: Promise<string> | null = null;

@@ -9,7 +9,7 @@ import {
   useDeleteTaskMutation,
   useUpdateTaskMutation,
 } from "@/composables/query";
-import { shallowRef, type ComputedRef } from "vue";
+import { ref, type ComputedRef } from "vue";
 
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -36,9 +36,9 @@ export function useProjectTaskMutations({
   toast,
 }: UseProjectTaskMutationsOptions) {
   const appToast = createAppToast(toast);
-  const isSavingDialog = shallowRef(false);
-  const isDeletingTaskId = shallowRef<string | null>(null);
-  const lastMutationErrorMessage = shallowRef<string | null>(null);
+  const isSavingDialog = ref(false);
+  const isDeletingTaskId = ref<string | null>(null);
+  const lastMutationErrorMessage = ref<string | null>(null);
   const createTaskMutation = useCreateTaskMutation({
     accessToken,
     client,

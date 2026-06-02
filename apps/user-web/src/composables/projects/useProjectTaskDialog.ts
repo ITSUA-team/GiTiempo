@@ -35,13 +35,13 @@ function defaultDialogErrors(): ProjectsDialogErrors {
 }
 
 export function useProjectTaskDialog() {
-  const dialogMode = shallowRef<DialogMode>(null);
+  const dialogMode = ref<DialogMode>(null);
   const editingTask = shallowRef<TaskResponse | null>(null);
-  const dialogProjectId = shallowRef<string | null>(null);
-  const dialogTaskTitle = shallowRef("");
-  const dialogTaskStatus = shallowRef<TaskStatus>("open");
+  const dialogProjectId = ref<string | null>(null);
+  const dialogTaskTitle = ref("");
+  const dialogTaskStatus = ref<TaskStatus>("open");
   const dialogErrors = ref<ProjectsDialogErrors>(defaultDialogErrors());
-  const dialogRequestErrorMessage = shallowRef<string | null>(null);
+  const dialogRequestErrorMessage = ref<string | null>(null);
   const isDialogOpen = computed(() => dialogMode.value !== null);
   const dialogTitle = computed(() =>
     dialogMode.value === "edit" ? "Edit task" : "New task",

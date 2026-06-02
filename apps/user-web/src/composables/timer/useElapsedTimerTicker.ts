@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, shallowRef, watch, type ComputedRef } from "vue";
+import { computed, onBeforeUnmount, ref, watch, type ComputedRef } from "vue";
 
 import { formatElapsedTime } from "@/lib/top-bar-timer-helpers";
 
@@ -15,7 +15,7 @@ export function useElapsedTimerTicker({
   runningStartedAt,
   setIntervalFn,
 }: UseElapsedTimerTickerOptions) {
-  const tickNowMs = shallowRef(now());
+  const tickNowMs = ref(now());
   const elapsedTimeLabel = computed(() =>
     formatElapsedTime(runningStartedAt.value, tickNowMs.value),
   );

@@ -1,4 +1,4 @@
-import { computed, shallowRef } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
@@ -127,20 +127,20 @@ function createReportState({
     dateRange: shallowRef<ReportDateRange>(null),
     exportCurrentReport: reportMocks.exportCurrentReport,
     getFilteredRows: vi.fn(),
-    groupBy: shallowRef<TimeReportGroupBy>('project'),
-    initialLoaded: shallowRef(!isInitialLoading),
+    groupBy: ref<TimeReportGroupBy>('project'),
+    initialLoaded: ref(!isInitialLoading),
     isEmpty: computed(() => reportRows.value.length === 0),
-    isInitialLoading: shallowRef(isInitialLoading),
-    loadError: shallowRef(loadError),
-    loading: shallowRef(loading),
+    isInitialLoading: ref(isInitialLoading),
+    loadError: ref(loadError),
+    loading: ref(loading),
     memberOptions: computed(() => [{ label: 'Alex Admin', value: 'member-1' }]),
     projectOptions: computed(() => [{ label: 'Project Orion', value: 'project-1' }]),
     projects: shallowRef([]),
     refresh: reportMocks.refresh,
-    reportResponse: shallowRef(null),
+    reportResponse: ref(null),
     rows: reportRows,
-    selectedMemberId: shallowRef<string | null>(null),
-    selectedProjectId: shallowRef<string | null>(null),
+    selectedMemberId: ref<string | null>(null),
+    selectedProjectId: ref<string | null>(null),
     summary: computed(() => ({
       ...summary,
       totalSeconds: rows.reduce((total, row) => total + row.totalSeconds, 0),
