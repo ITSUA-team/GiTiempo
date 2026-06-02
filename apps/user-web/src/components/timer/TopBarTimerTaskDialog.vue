@@ -4,6 +4,7 @@ import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
+import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
 import { computed } from "vue";
@@ -20,6 +21,7 @@ const props = defineProps<{
   isOpen: boolean;
   projectOptions: ProjectResponse[];
   projectsErrorMessage: string | null;
+  selectedDescription: string;
   selectedProjectId: string | null;
   selectedTaskId: string | null;
   selectionUpdateErrorMessage: string | null;
@@ -32,6 +34,7 @@ const emit = defineEmits<{
   confirm: [];
   createTask: [];
   "update:createTaskTitle": [value: string];
+  "update:selectedDescription": [value: string];
   "update:selectedProjectId": [value: string | null];
   "update:selectedTaskId": [value: string | null];
 }>();
@@ -47,6 +50,13 @@ const selectedTaskModel = computed({
   get: () => props.selectedTaskId,
   set: (value: string | null | undefined) => {
     emit("update:selectedTaskId", value ?? null);
+  },
+});
+
+const selectedDescriptionModel = computed({
+  get: () => props.selectedDescription,
+  set: (value: string) => {
+    emit("update:selectedDescription", value);
   },
 });
 
@@ -125,7 +135,7 @@ const isMobileViewport = useIsMobileViewport();
           input-id="top-bar-timer-project"
           option-label="name"
           option-value="id"
-          :disabled="props.isLoadingProjects"
+          :disabled="props.isLoadingProjects || props.isConfirmingSelection"
           :loading="props.isLoadingProjects"
           :options="props.projectOptions"
           placeholder="Select a project"
@@ -146,10 +156,27 @@ const isMobileViewport = useIsMobileViewport();
           input-id="top-bar-timer-task"
           option-label="title"
           option-value="id"
-          :disabled="!props.selectedProjectId || props.isLoadingTasks"
+          :disabled="!props.selectedProjectId || props.isLoadingTasks || props.isConfirmingSelection"
           :loading="props.isLoadingTasks"
           :options="props.taskOptions"
           placeholder="Select a task"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label
+          for="top-bar-timer-description"
+          class="text-text-dark text-[13px] font-medium"
+        >
+          Description
+        </label>
+        <Textarea
+          id="top-bar-timer-description"
+          v-model="selectedDescriptionModel"
+          auto-resize
+          fluid
+          rows="4"
+          :disabled="props.isConfirmingSelection"
         />
       </div>
 
@@ -209,7 +236,7 @@ const isMobileViewport = useIsMobileViewport();
               id="top-bar-timer-new-task-title"
               v-model="createTaskTitleModel"
               class="h-[38px] w-full"
-              :disabled="!props.selectedProjectId || props.isCreatingTask"
+              :disabled="!props.selectedProjectId || props.isCreatingTask || props.isConfirmingSelection"
               :invalid="!!props.createTaskErrorMessage"
             />
             <small
@@ -231,7 +258,7 @@ const isMobileViewport = useIsMobileViewport();
               type="button"
               class="w-full sm:w-auto"
               severity="secondary"
-              :disabled="props.isCreateTaskDisabled"
+              :disabled="props.isCreateTaskDisabled || props.isConfirmingSelection"
               :fluid="isMobileViewport"
               label="Create task"
               :loading="props.isCreatingTask"

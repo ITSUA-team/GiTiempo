@@ -167,6 +167,10 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - Use sequential PrimeVue `<Select>` controls for project and task selection.
 - The selected project must be visible to the current user.
 - The selected task must belong to the selected visible project.
+- The dialog includes an optional `Description` field directly below `Task`; it is a time-entry note, not task metadata.
+- Use PrimeVue `<Textarea>` for the description field.
+- When the timer is idle, the selected task and description become the draft used by the next `Start` action.
+- When the timer is already running, `Use selected task` updates the running entry's task and description without stopping the timer.
 - The dialog supports creating a new task inside the currently selected visible project.
 - Do not support creating a new project from this dialog.
 - The create-task form uses a single required task-title field backed by the existing task-create contract.

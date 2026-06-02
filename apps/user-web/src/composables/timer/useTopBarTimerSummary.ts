@@ -31,19 +31,47 @@ export function useTopBarTimerSummary({
   const appToast = createAppToast(toast);
   const currentTimer = shallowRef<TimeEntryResponse | null>(null);
   const selectedContext = shallowRef<SelectedTaskContext | null>(null);
+  const selectedDescription = shallowRef<string | null>(null);
+  const hasExplicitIdleSelection = shallowRef(false);
 
   function setSelectedContextFromTimer(timer: TimeEntryResponse): void {
+    hasExplicitIdleSelection.value = false;
     selectedContext.value = toSelectedTaskContext(timer);
   }
 
-  function getDialogSelectionFromCurrentState(): { projectId: string; taskId: string } | null {
+  function setSelectedDescriptionFromTimer(timer: TimeEntryResponse): void {
+    hasExplicitIdleSelection.value = false;
+    selectedDescription.value = timer.description ?? null;
+  }
+
+  function setIdleSelection(
+    context: SelectedTaskContext,
+    description: string | null,
+  ): void {
+    hasExplicitIdleSelection.value = true;
+    selectedContext.value = context;
+    selectedDescription.value = description;
+  }
+
+  function clearSelectedDescription(): void {
+    hasExplicitIdleSelection.value = false;
+    selectedDescription.value = null;
+  }
+
+  function getDialogSelectionFromCurrentState(): {
+    projectId: string;
+    taskId: string;
+    description: string;
+  } | null {
     return currentTimer.value
       ? {
+          description: currentTimer.value.description ?? "",
           projectId: currentTimer.value.project.id,
           taskId: currentTimer.value.task.id,
         }
       : selectedContext.value
         ? {
+            description: selectedDescription.value ?? "",
             projectId: selectedContext.value.projectId,
             taskId: selectedContext.value.taskId,
           }
@@ -118,12 +146,14 @@ export function useTopBarTimerSummary({
       if (timeEntry) {
         return {
           currentTimer: timeEntry,
+          selectedDescription: timeEntry.description ?? null,
           selectedContext: toSelectedTaskContext(timeEntry),
         };
       }
 
       return {
         currentTimer: null,
+        selectedDescription: null,
         selectedContext: await loadEligibleLastTrackedContext(),
       };
     },
@@ -151,7 +181,20 @@ export function useTopBarTimerSummary({
       if (!data) return;
 
       currentTimer.value = data.currentTimer;
+
+      if (data.currentTimer) {
+        hasExplicitIdleSelection.value = false;
+        selectedContext.value = data.selectedContext;
+        selectedDescription.value = data.selectedDescription;
+        return;
+      }
+
+      if (hasExplicitIdleSelection.value) {
+        return;
+      }
+
       selectedContext.value = data.selectedContext;
+      selectedDescription.value = data.selectedDescription;
     },
     { immediate: true },
   );
@@ -161,6 +204,8 @@ export function useTopBarTimerSummary({
 
     currentTimer.value = null;
     selectedContext.value = null;
+    selectedDescription.value = null;
+    hasExplicitIdleSelection.value = false;
     appToast.showErrorToast({
       detail: "Refresh and try again.",
       error,
@@ -171,11 +216,15 @@ export function useTopBarTimerSummary({
 
   return {
     currentTimer,
+    clearSelectedDescription,
     getDialogSelectionFromCurrentState,
     isLoadingSummary,
     refreshSummary,
     refreshSummaryAfterConflict,
     selectedContext,
+    selectedDescription,
+    setIdleSelection,
+    setSelectedDescriptionFromTimer,
     setSelectedContextFromTimer,
     summaryErrorMessage,
   };

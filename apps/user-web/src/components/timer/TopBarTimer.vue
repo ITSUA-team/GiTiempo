@@ -34,10 +34,12 @@ const {
   primaryActionLabel,
   projectsErrorMessage,
   projectOptions,
+  selectedDescription,
   selectedProjectId,
   selectedTaskId,
   selectionUpdateErrorMessage,
   setCreateTaskTitle,
+  setSelectedDescription,
   setSelectedProjectId,
   setSelectedTaskId,
   summaryErrorMessage,
@@ -185,6 +187,7 @@ const primaryActionIcon = computed(() =>
     :is-open="isDialogOpen"
     :project-options="projectOptions"
     :projects-error-message="projectsErrorMessage ?? summaryErrorMessage"
+    :selected-description="selectedDescription"
     :selected-project-id="selectedProjectId"
     :selected-task-id="selectedTaskId"
     :selection-update-error-message="selectionUpdateErrorMessage"
@@ -194,6 +197,7 @@ const primaryActionIcon = computed(() =>
     @confirm="confirmSelectedTask"
     @create-task="createTaskFromDialog"
     @update:create-task-title="setCreateTaskTitle"
+    @update:selected-description="setSelectedDescription"
     @update:selected-project-id="setSelectedProjectId"
     @update:selected-task-id="setSelectedTaskId"
   />
