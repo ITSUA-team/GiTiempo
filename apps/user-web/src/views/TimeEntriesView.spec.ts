@@ -243,7 +243,6 @@ async function mountView(
           props: ["label"],
           template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
-        ConfirmDialog: { template: "<div />" },
         DatePicker: {
           emits: ["update:modelValue"],
           props: ["inputId"],

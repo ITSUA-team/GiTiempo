@@ -4,7 +4,6 @@ import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
-import ToastService from "primevue/toastservice";
 import {
   WorkspaceRoles,
   type WorkspaceRole,
@@ -121,7 +120,7 @@ describe("AdminAppShell", () => {
             },
           },
         },
-        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
         stubs: {
           RouterView: RouterViewStub,
           WorkspaceHeader: WorkspaceHeaderStub,
@@ -175,7 +174,7 @@ describe("AdminAppShell", () => {
             },
           },
         },
-        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
         stubs: {
           RouterView: RouterViewStub,
           WorkspaceHeader: WorkspaceHeaderStub,

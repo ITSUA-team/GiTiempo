@@ -11,8 +11,6 @@ import {
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
-import ConfirmDialog from "primevue/confirmdialog";
-import Toast from "primevue/toast";
 
 import { useToasts } from "@/composables/feedback/useToasts";
 import { appEnv } from "@/config/env";
@@ -94,8 +92,6 @@ watch(
 
 <template>
   <div class="bg-app-bg text-text-dark min-h-screen">
-    <Toast />
-    <ConfirmDialog />
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
