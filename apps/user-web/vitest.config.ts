@@ -12,6 +12,11 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    environmentOptions: {
+      jsdom: {
+        url: "https://user.example.test/login",
+      },
+    },
     globals: true,
     testTimeout: 10_000,
   },
