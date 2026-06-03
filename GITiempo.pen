@@ -18211,7 +18211,6 @@
                   "id": "ecXQx",
                   "name": "idleTimerTaskDialog",
                   "width": 558,
-                  "height": 650,
                   "fill": "#FFFFFF",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
@@ -18244,7 +18243,7 @@
                           "fill": "#666666",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Choose a visible project and task, or create a new task before starting the timer.",
+                          "content": "Choose a visible project and task, or pick New task before starting the timer.",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
@@ -18310,7 +18309,7 @@
                     },
                     {
                       "type": "frame",
-                      "id": "sEoRE",
+                      "id": "MGcX8",
                       "name": "taskDialogField",
                       "width": "fill_container",
                       "layout": "vertical",
@@ -18318,7 +18317,8 @@
                       "children": [
                         {
                           "type": "text",
-                          "id": "IuwQ3",
+                          "id": "ELVjT",
+                          "name": "taskLabel",
                           "fill": "#1A1A1A",
                           "content": "Task",
                           "fontFamily": "Inter",
@@ -18327,7 +18327,7 @@
                         },
                         {
                           "type": "frame",
-                          "id": "ROIKZ",
+                          "id": "PXOix",
                           "name": "taskInput",
                           "width": "fill_container",
                           "height": 38,
@@ -18345,21 +18345,103 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "UeeEj",
-                              "fill": "#666666",
-                              "content": "Improve reports filters",
+                              "id": "NA6E8",
+                              "name": "selectedTask",
+                              "fill": "#1A1A1A",
+                              "content": "New task",
                               "fontFamily": "Inter",
                               "fontSize": 14,
-                              "fontWeight": "normal"
+                              "fontWeight": "500"
                             },
                             {
                               "type": "text",
-                              "id": "AVkwb",
+                              "id": "bzLK2",
+                              "name": "taskState",
                               "fill": "#5D2B85",
                               "content": "Selected",
                               "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "i1jiX",
+                          "name": "taskSelectHint",
+                          "fill": "#666666",
+                          "content": "Visible tasks are listed first. New task is the last option.",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "euUHp",
+                          "name": "newTaskField",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "vwwqm",
+                              "name": "newTaskLabel",
+                              "fill": "#1A1A1A",
+                              "content": "New task title",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "aS7ZH",
+                              "name": "newTaskInput",
+                              "width": "fill_container",
+                              "height": 38,
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ddq6s",
+                                  "name": "newTaskValue",
+                                  "fill": "#666666",
+                                  "content": "Write release checklist",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "C2gq9",
+                                  "name": "newTaskState",
+                                  "fill": "#666666",
+                                  "content": "Required",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "o9Zgqk",
+                              "name": "newTaskHint",
+                              "fill": "#666666",
+                              "content": "This task is created in Project Orion when you start the timer.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -18405,122 +18487,6 @@
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "normal"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "HZRbz",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 12,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "SLEAV",
-                          "fill": "#1A1A1A",
-                          "content": "Create new task in selected project",
-                          "fontFamily": "Inter",
-                          "fontSize": 13,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "vD0g1",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 6,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "PsyH4",
-                              "fill": "#1A1A1A",
-                              "content": "Task title",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "a9Rdf",
-                              "width": "fill_container",
-                              "height": 38,
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 6,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "space_between",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "Eg9nV",
-                                  "fill": "#666666",
-                                  "content": "Write release checklist",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 14,
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "N74gm",
-                                  "fill": "#666666",
-                                  "content": "Required",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 12,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "LJ1rJ",
-                          "width": "fill_container",
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "MX1GJ",
-                              "fill": "#666666",
-                              "content": "New task is created inside Project Orion only.",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "vZaso",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 6,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                8,
-                                14
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "J93aBB",
-                                  "fill": "#1A1A1A",
-                                  "content": "Create task",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "500"
-                                }
-                              ]
                             }
                           ]
                         }
@@ -18585,7 +18551,6 @@
                   "id": "sNkdj",
                   "name": "newEntryDialogVisible",
                   "width": 558,
-                  "height": 650,
                   "fill": "#FFFFFF",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
@@ -18618,7 +18583,7 @@
                           "fill": "#666666",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Move the running timer to a different task or stop it from here.",
+                          "content": "Move the running timer to a different task, or pick New task in the selected project.",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
@@ -18684,7 +18649,7 @@
                     },
                     {
                       "type": "frame",
-                      "id": "ndCiU",
+                      "id": "wWjLP",
                       "name": "taskDialogField",
                       "width": "fill_container",
                       "layout": "vertical",
@@ -18692,7 +18657,8 @@
                       "children": [
                         {
                           "type": "text",
-                          "id": "BExU0",
+                          "id": "OTAlb",
+                          "name": "taskLabel",
                           "fill": "#1A1A1A",
                           "content": "Task",
                           "fontFamily": "Inter",
@@ -18701,7 +18667,7 @@
                         },
                         {
                           "type": "frame",
-                          "id": "DlNq2",
+                          "id": "jP8Ro",
                           "name": "taskInput",
                           "width": "fill_container",
                           "height": 38,
@@ -18719,21 +18685,103 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "p7YYTF",
-                              "fill": "#666666",
-                              "content": "Improve reports filters",
+                              "id": "crx1n",
+                              "name": "selectedTask",
+                              "fill": "#1A1A1A",
+                              "content": "New task",
                               "fontFamily": "Inter",
                               "fontSize": 14,
-                              "fontWeight": "normal"
+                              "fontWeight": "500"
                             },
                             {
                               "type": "text",
-                              "id": "VMfg8",
+                              "id": "uQtQV",
+                              "name": "taskState",
                               "fill": "#5D2B85",
                               "content": "Selected",
                               "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "ashJt",
+                          "name": "taskSelectHint",
+                          "fill": "#666666",
+                          "content": "Visible tasks are listed first. New task is the last option.",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "R3ypu",
+                          "name": "newTaskField",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "o37Xw",
+                              "name": "newTaskLabel",
+                              "fill": "#1A1A1A",
+                              "content": "New task title",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "zP6xt",
+                              "name": "newTaskInput",
+                              "width": "fill_container",
+                              "height": 38,
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mCs8w",
+                                  "name": "newTaskValue",
+                                  "fill": "#666666",
+                                  "content": "Write release checklist",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "vS3ZR",
+                                  "name": "newTaskState",
+                                  "fill": "#666666",
+                                  "content": "Required",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "z4BPmm",
+                              "name": "newTaskHint",
+                              "fill": "#666666",
+                              "content": "This task is created in Project Orion when you change task.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         }
@@ -18779,122 +18827,6 @@
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "normal"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "ZBF7b",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 12,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "q3EV3",
-                          "fill": "#1A1A1A",
-                          "content": "Create new task in selected project",
-                          "fontFamily": "Inter",
-                          "fontSize": 13,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "XDk39",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 6,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "MaBRx",
-                              "fill": "#1A1A1A",
-                              "content": "Task title",
-                              "fontFamily": "Inter",
-                              "fontSize": 13,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "w3kMJH",
-                              "width": "fill_container",
-                              "height": 38,
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 6,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                0,
-                                12
-                              ],
-                              "justifyContent": "space_between",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "kLZOY",
-                                  "fill": "#666666",
-                                  "content": "Write release checklist",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 14,
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "DbFdM",
-                                  "fill": "#666666",
-                                  "content": "Required",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 12,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "eiW2U",
-                          "width": "fill_container",
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "sKaF0",
-                              "fill": "#666666",
-                              "content": "New task is created inside Project Orion only.",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "QC8l8",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 6,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                8,
-                                14
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "h5KXI",
-                                  "fill": "#1A1A1A",
-                                  "content": "Create task",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "500"
-                                }
-                              ]
                             }
                           ]
                         }
