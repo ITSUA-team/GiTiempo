@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import type { TimeEntryListResponse, TimeEntryResponse } from "@gitiempo/shared";
 import { describe, expect, it } from "vitest";
 

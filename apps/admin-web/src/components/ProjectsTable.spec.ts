@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { flushPromises, mount } from '@vue/test-utils';
 import type { ProjectListResponse, WorkspaceMemberListResponse } from '@gitiempo/shared';
 import { ManagementTableShell } from '@gitiempo/web-shared';

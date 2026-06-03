@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 /* eslint-disable vue/one-component-per-file */
 
 import { mount, type VueWrapper } from "@vue/test-utils";

@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, defineComponent, ref, shallowRef } from "vue";
