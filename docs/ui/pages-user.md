@@ -5,8 +5,9 @@
 
 ## Dashboard
 
+- User-facing date/time displays in `user-web` use the user's current browser-local timezone unless a page requirement explicitly says otherwise. Stored timestamps remain ISO instants; the frontend converts them locally for display labels and calendar boundaries.
 - Initial page load uses a skeleton that approximates the dashboard header, weekly insight/stat surfaces, and recent entries table before rendering empty states.
-- Weekly focus insight: full-width `<Card>` highlighting `Top Project This Week` and `Top Task This Week` using the user's current-week tracked entries.
+- Weekly focus insight: full-width `<Card>` highlighting `Top Project This Week` and `Top Task This Week` using the user's current browser-local-week tracked entries.
 - Weekly focus insight values should show the winning project/task labels plus tracked-duration context, and may include a compact relative-share indicator when it improves scannability.
 - Recent Time Entries: render the existing `<DataTable>` on tablet and desktop, and switch to stacked mobile cards below `640px`.
 - The mobile recent-entry cards keep the same record content as the desktop table: task title, project name, time range, duration, and highlighted running/current-entry state when applicable.
@@ -43,14 +44,15 @@
 
 - Initial page load uses a skeleton matching the header action row, filters, grouped entry cards, and pagination region.
 - Header actions include a primary PrimeVue `<Button>` labeled `+ New time entry` in the same row as the page title. It opens the shared manual time-entry PrimeVue `<Dialog>` without a preset day.
-- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup.
+- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. Date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
 - The task lookup placeholder copy is `Search tasks`.
 - The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
-- Entries grouped by day.
+- Entries are grouped by the entry started-at day in the user's current browser-local timezone.
 - Each day heading row includes its own PrimeVue `<Button>` labeled `+ New time entry` beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form.
+- Day-level create uses the rendered local day as the preset calendar day for `startedAt` and `endedAt`.
 - At and above `640px`, each day group keeps the existing table layout for entries.
 - Below `640px`, each day group renders stacked mobile cards instead of the fixed-width desktop table.
-- Entry row/card content includes task, project, time range, duration, and icon-only edit/delete actions with `Edit` and `Delete` tooltips for completed entries.
+- Entry row/card content includes task, project, time range, duration, and icon-only edit/delete actions with `Edit` and `Delete` tooltips for completed entries. Time-range labels use the user's current browser-local timezone.
 - Running entry highlighted with `bg-accent-tint`.
 - Running-entry mobile cards keep the same highlight treatment and do not expose edit/delete actions; stopping remains owned by the global top-bar timer.
 - Clicking `Edit` opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
@@ -77,7 +79,7 @@
 - Tasks for that project render beneath the project header inside the same section card.
 - At and above `640px`, each project section keeps the existing task table layout.
 - Below `640px`, each project section renders stacked mobile task cards instead of the fixed-width desktop task table.
-- Task rows/cards include task title, status, updated metadata, and icon-only edit/delete actions with `Edit` and `Delete` tooltips.
+- Task rows/cards include task title, status, updated metadata, and icon-only edit/delete actions with `Edit` and `Delete` tooltips. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
 - Clicking `Edit` opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
 - Page-level `+ New task` opens the dialog in create mode with a required project `<Select>`.
@@ -98,7 +100,7 @@
 - Display-name input is enabled and prefilled from the current user profile.
 - `Save changes` persists the latest valid display name and `Cancel` restores the latest persisted value.
 - A disabled placeholder row does not satisfy the editable display-name requirement.
-- GitHub connection card fields must reflect the current API contract only: `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt`.
+- GitHub connection card fields must reflect the current API contract only: `githubUserId`, `login`, `avatarUrl`, `connectedAt`, and `updatedAt`. `connectedAt` and `updatedAt` render as browser-local user-facing timestamps rather than raw ISO strings.
 - GitHub connection card required states: loading, request-error, disconnected, connected, and redirecting/connecting.
 - Connected state actions: `Reconnect` and `Disconnect`.
 - Disconnected state primary action: `Connect GitHub`.

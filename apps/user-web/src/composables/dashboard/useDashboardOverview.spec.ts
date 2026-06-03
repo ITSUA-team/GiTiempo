@@ -1,8 +1,9 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type { TimeEntryListResponse, TimeEntryResponse } from "@gitiempo/shared";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
+import { formatLocalTime } from "@gitiempo/web-shared/time";
 
 import { useDashboardOverview } from "./useDashboardOverview";
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
@@ -119,6 +120,14 @@ function mountDashboardOverview(options?: {
 describe("useDashboardOverview", () => {
   const wrappers: VueWrapper[] = [];
 
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Kiev");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-21T12:00:00.000Z"));
@@ -181,8 +190,8 @@ describe("useDashboardOverview", () => {
     );
     expect(client.listOwnEntries).toHaveBeenCalledWith(
       expect.objectContaining({
-        dateFrom: "2026-04-20T00:00:00.000Z",
-        dateTo: "2026-04-27T00:00:00.000Z",
+        dateFrom: new Date(2026, 3, 20, 0, 0, 0, 0).toISOString(),
+        dateTo: new Date(2026, 3, 27, 0, 0, 0, 0).toISOString(),
         page: 1,
       }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -324,8 +333,8 @@ describe("useDashboardOverview", () => {
 
     expect(client.listOwnEntries).toHaveBeenCalledWith(
       expect.objectContaining({
-        dateFrom: "2026-04-20T00:00:00.000Z",
-        dateTo: "2026-04-27T00:00:00.000Z",
+        dateFrom: new Date(2026, 3, 20, 0, 0, 0, 0).toISOString(),
+        dateTo: new Date(2026, 3, 27, 0, 0, 0, 0).toISOString(),
         page: 2,
       }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -371,7 +380,9 @@ describe("useDashboardOverview", () => {
 
     await flushPromises();
 
-    expect(dashboardOverview.recentEntryRows.value[0]?.timeRangeLabel).toBe("11:00 - Running");
+    expect(dashboardOverview.recentEntryRows.value[0]?.timeRangeLabel).toBe(
+      `${formatLocalTime("2026-04-21T11:00:00.000Z")} - Running`,
+    );
     expect(dashboardOverview.recentEntryRows.value[0]?.durationLabel).toBe("01:00:00");
 
     vi.advanceTimersByTime(2000);
@@ -413,7 +424,7 @@ describe("useDashboardOverview", () => {
       isHighlighted: true,
       projectName: "Project Orion",
       taskTitle: "Improve reports filters",
-      timeRangeLabel: "11:00 - Running",
+      timeRangeLabel: `${formatLocalTime("2026-04-21T11:00:00.000Z")} - Running`,
     });
     expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("1h");
     expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Project Orion");
@@ -471,7 +482,7 @@ describe("useDashboardOverview", () => {
       isHighlighted: false,
       projectName: "Project Orion",
       taskTitle: "Improve reports filters",
-      timeRangeLabel: "11:00 - 11:30",
+      timeRangeLabel: `${formatLocalTime("2026-04-21T11:00:00.000Z")} - ${formatLocalTime("2026-04-21T11:30:00.000Z")}`,
     });
     expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("30m");
     expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Project Orion");
