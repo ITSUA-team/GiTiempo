@@ -402,6 +402,45 @@ describe('Time entries (e2e)', () => {
     expect(own.body.taskId).toBe(platformTaskId);
   });
 
+  it('rejects manual and running timers for closed tasks', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const closedTaskId = await createTask(
+      platformProjectId,
+      `Search task search Closed Track ${suffix}`,
+    );
+    await db
+      .update(tasks)
+      .set({ status: 'closed' })
+      .where(eq(tasks.id, closedTaskId));
+
+    const manual = await request(app.getHttpServer())
+      .post('/time-entries')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        endedAt: '2026-05-01T11:00:00.000Z',
+        startedAt: '2026-05-01T10:00:00.000Z',
+        taskId: closedTaskId,
+      });
+    expect(manual.status).toBe(422);
+
+    const timer = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: closedTaskId });
+    expect(timer.status).toBe(422);
+
+    const closedTaskEntries = await db
+      .select({ id: timeEntries.id })
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, workspaceId),
+          eq(timeEntries.taskId, closedTaskId),
+        ),
+      );
+    expect(closedTaskEntries).toHaveLength(0);
+  });
+
   it('supports current timer, start conflict, and stop lifecycle', async () => {
     const emptyCurrent = await request(app.getHttpServer())
       .get('/time-entries/current')
@@ -766,6 +805,39 @@ describe('Time entries (e2e)', () => {
         ),
       );
     expect(assignments).toHaveLength(1);
+  });
+
+  it('rejects GitHub refs that point to closed tasks', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/closed-${suffix}`;
+    const issueNumber = 456;
+    const closedTaskId = await createTask(
+      platformProjectId,
+      `Search task search Closed GitHub ${suffix}`,
+    );
+
+    await db
+      .update(tasks)
+      .set({ status: 'closed' })
+      .where(eq(tasks.id, closedTaskId));
+    await createGitHubRefs(githubRepo, issueNumber, closedTaskId);
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        githubRepo,
+        issueNumber,
+        issueTitle: 'Closed GitHub issue',
+      });
+
+    expect(started.status).toBe(422);
+
+    const closedTaskEntries = await db
+      .select({ id: timeEntries.id })
+      .from(timeEntries)
+      .where(eq(timeEntries.taskId, closedTaskId));
+    expect(closedTaskEntries).toHaveLength(0);
   });
 
   it('rejects GitHub refs that point outside the current workspace', async () => {

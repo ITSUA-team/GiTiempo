@@ -18,7 +18,7 @@ User SPA and Admin SPA share the same shell:
 - The task information field inside the compact timer surface is always clickable and opens the centered task-picker dialog.
 - Running state: show live `HH:MM:SS`, current `Project / Task`, clickable task information, and a single stop action.
 - Not-running state: show the last tracked task context, clickable task information, and a start action that creates a new time entry for that task.
-- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
+- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user, and whose task is still open.
 - If there is no eligible last tracked task context, keep the same compact surface, keep the task information field clickable, and disable the start action.
 - While the timer summary is still loading, keep the compact surface rendered with a disabled action.
 - If the timer summary fails to load, keep the compact surface rendered in a disabled fallback state and surface the failure through the standard toast flow.

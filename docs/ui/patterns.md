@@ -210,8 +210,8 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 - Below `640px`, do not squeeze the compact center-area surface into the top row; use the mobile timer strip defined in `docs/ui/layout.md` while keeping the same state model, task-picker behavior, and accessibility requirements.
 - Running state shows the running label, live `HH:MM:SS`, clickable current `Project / Task`, and one stop action.
 - Not-running state shows the last tracked task context, clickable task information, and one start action that creates a new time entry for that task.
-- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
-- A completed timer entry or manual entry may seed the last tracked task context if the task remains trackable.
+- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user, and whose task is still open.
+- A completed timer entry or manual entry may seed the last tracked task context if the task remains trackable: visible, active, and open.
 - The `Start` action always creates a fresh running time entry. It must not resume or mutate the previous time entry record.
 - Clicking the task information field opens the centered task-picker dialog.
 - If there is no eligible last tracked task context, keep the same not-running surface, keep the task information field clickable, and disable the start action.

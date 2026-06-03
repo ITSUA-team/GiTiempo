@@ -626,6 +626,7 @@ describe('TimeEntriesService', () => {
       value: vi.fn().mockResolvedValue({
         id: 'task-1',
         isActive: true,
+        status: 'open',
       }),
     });
     Object.defineProperty(service, 'requireEntryResponse', {
@@ -639,5 +640,44 @@ describe('TimeEntriesService', () => {
     });
 
     expect(db.transaction).toHaveBeenCalledOnce();
+  });
+
+  it('rejects GitHub timers for closed tasks', async () => {
+    const tx = {
+      insert: vi.fn(),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+    );
+    Object.defineProperty(service, 'findOrCreateGitHubProject', {
+      value: vi.fn().mockResolvedValue({
+        project: { id: 'project-1', isActive: true },
+        created: true,
+      }),
+    });
+    Object.defineProperty(service, 'findOrCreateGitHubTask', {
+      value: vi.fn().mockResolvedValue({
+        id: 'task-1',
+        isActive: true,
+        status: 'closed',
+      }),
+    });
+
+    await expect(
+      service.startTimerFromGitHub(user, {
+        githubRepo: 'org/repo',
+        issueNumber: 123,
+        issueTitle: 'Issue title',
+      }),
+    ).rejects.toThrow('Task is closed');
+    expect(tx.insert).not.toHaveBeenCalled();
   });
 });

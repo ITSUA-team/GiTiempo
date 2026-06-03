@@ -161,6 +161,9 @@ export class TasksService {
     if (!result.task.isActive) {
       throw new UnprocessableEntityException('Task is inactive');
     }
+    if (result.task.status === 'closed') {
+      throw new UnprocessableEntityException('Task is closed');
+    }
     return result;
   }
 

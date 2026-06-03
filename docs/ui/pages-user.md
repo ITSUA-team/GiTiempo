@@ -22,8 +22,8 @@
 - Authenticated shell: every authenticated `user-web` page shows the compact timer surface on tablet and desktop, and the selected full-width mobile timer strip below `640px`.
 - Running top-bar state: show live `HH:MM:SS`, current `Project / Task`, clickable task information, and a stop action.
 - Not-running top-bar state: show the last tracked task context, clickable task information, and a start action that creates a new time entry for that task.
-- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
-- A completed timer entry or manual entry may seed the last tracked task context if that task is still visible and active.
+- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user, and whose task is still open.
+- A completed timer entry or manual entry may seed the last tracked task context if that task is still visible, active, and open.
 - The top-bar `Start` action creates a fresh running time entry. It must not resume or update the previous time entry record.
 - The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
 - When the timer is idle, the next top-bar `Start` action creates a fresh running time entry for the selected task and current dialog description.

@@ -109,4 +109,25 @@ describe('TasksService', () => {
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
     expect(db.update).not.toHaveBeenCalled();
   });
+
+  it('rejects closed tasks as untrackable', async () => {
+    const db = {
+      select: vi.fn().mockReturnValue(
+        selectRows([
+          {
+            ...taskRow,
+            status: 'closed',
+          },
+        ]),
+      ),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    await expect(
+      service.requireTrackableTask(user, taskRow.id),
+    ).rejects.toThrow('Task is closed');
+  });
 });

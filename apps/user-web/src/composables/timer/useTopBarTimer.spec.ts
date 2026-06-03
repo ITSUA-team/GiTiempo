@@ -64,13 +64,14 @@ function createTask(
   projectId: string,
   title: string,
   isActive = true,
+  status: TaskResponse['status'] = 'open',
 ): TaskResponse {
   return {
     createdAt: '2026-04-20T12:00:00.000Z',
     id,
     isActive,
     projectId,
-    status: 'open',
+    status,
     title,
     updatedAt: '2026-04-20T12:00:00.000Z',
     workspaceId: TEST_IDS.workspace,
@@ -318,6 +319,42 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.isPrimaryActionDisabled.value).toBe(true);
   });
 
+  it('ignores closed tasks when resolving the idle timer context', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValueOnce(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(
+        TEST_IDS.task,
+        TEST_IDS.project,
+        'Improve reports filters',
+        true,
+        'closed',
+      ),
+    ]);
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+
+    expect(topBarTimer.timerStatusLabel.value).toBe('No eligible task');
+    expect(topBarTimer.selectedContext.value).toBeNull();
+    expect(topBarTimer.isPrimaryActionDisabled.value).toBe(true);
+
+    await topBarTimer.handlePrimaryAction();
+
+    expect(client.startTimer).not.toHaveBeenCalled();
+  });
+
   it('loads picker options and confirms a selected task', async () => {
     const client = createClientMock();
 
@@ -349,6 +386,42 @@ describe('useTopBarTimer', () => {
       taskTitle: 'Improve reports filters',
     });
     expect(topBarTimer.selectedDescription.value).toBe('');
+  });
+
+  it('filters closed tasks out of timer picker options', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+      createTask('task-2', 'project-1', 'Closed release task', true, 'closed'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(topBarTimer.taskOptions.value).toEqual([
+      expect.objectContaining({ id: 'task-1', status: 'open' }),
+    ]);
+
+    topBarTimer.setSelectedTaskId('task-2');
+
+    expect(topBarTimer.selectedTask.value).toBeNull();
+    expect(topBarTimer.isConfirmSelectionDisabled.value).toBe(true);
+
+    await topBarTimer.confirmSelectedTask();
+
+    expect(topBarTimer.selectedContext.value).toBeNull();
   });
 
   it('keeps an idle description draft for the next start action', async () => {

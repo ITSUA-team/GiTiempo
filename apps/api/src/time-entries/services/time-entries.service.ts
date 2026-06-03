@@ -333,6 +333,9 @@ export class TimeEntriesService {
         if (!task.isActive) {
           throw new UnprocessableEntityException('Task is inactive');
         }
+        if (task.status === 'closed') {
+          throw new UnprocessableEntityException('Task is closed');
+        }
 
         const [entry] = await tx
           .insert(timeEntries)
