@@ -254,6 +254,20 @@ describe('ProjectsTable', () => {
     expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
   });
 
+  it('formats decimal total hours as a readable duration label', () => {
+    const wrapper = mountProjectsTable({
+      projects: [
+        {
+          ...createProjects()[0]!,
+          totalHours: 38.8888,
+        },
+      ],
+    });
+
+    expect(wrapper.text()).toContain('38h 53m');
+    expect(wrapper.text()).not.toContain('38.8888');
+  });
+
   it(
     'filters projects by global search, project, source, assigned member, hours, and visibility',
     async () => {
@@ -374,7 +388,7 @@ describe('ProjectsTable', () => {
             members: [],
             name: 'Project Orion',
             source: 'manual',
-            totalHours: 12,
+            totalHours: 12.5,
             updatedAt: '2026-05-01T10:00:00.000Z',
             visibility: 'public',
             workspaceId: 'workspace-1',
@@ -417,7 +431,7 @@ describe('ProjectsTable', () => {
     expect(mobileCards[0]?.text()).toContain('Project Orion');
     expect(mobileCards[0]?.text()).toContain('Manual');
     expect(mobileCards[0]?.text()).toContain('Public');
-    expect(mobileCards[0]?.text()).toContain('12h');
+    expect(mobileCards[0]?.text()).toContain('12h 30m');
     expect(mobileCards[1]?.text()).toContain('Legacy Project');
     expect(mobileCards[1]?.text()).toContain('Private');
 

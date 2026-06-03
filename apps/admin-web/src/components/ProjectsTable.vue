@@ -23,6 +23,7 @@ import {
   useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
+import { formatTrimmedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -40,6 +41,8 @@ import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 
 type ProjectHoursFilter = 'any' | 'tracked' | 'gte40' | 'zero';
+
+const SECONDS_PER_HOUR = 60 * 60;
 
 interface ProjectsTableFilters {
   global: string;
@@ -205,6 +208,10 @@ function formatAssignedMembers(project: ProjectResponse): string {
   return `${count} member${count === 1 ? '' : 's'}`;
 }
 
+function formatProjectTotalHours(project: ProjectResponse): string {
+  return formatTrimmedHoursMinutesDuration(project.totalHours * SECONDS_PER_HOUR);
+}
+
 function getProjectMemberLabels(project: ProjectResponse): string[] {
   return project.members.map((member) => member.displayName?.trim() || member.email);
 }
@@ -256,7 +263,7 @@ function matchesGlobalSearch(project: ProjectResponse): boolean {
     project.name,
     formatSource(project.source),
     formatAssignedMembers(project),
-    `${project.totalHours}h`,
+    formatProjectTotalHours(project),
     formatVisibility(project.visibility),
     project.isActive ? 'Active' : 'Archived',
     ...getProjectMemberLabels(project),
@@ -504,7 +511,7 @@ watch(filteredProjects, (projects) => {
         <MobileRecordMetadataList
           :items="[
             { label: 'Assigned members', value: formatAssignedMembers(project) },
-            { label: 'Hours', value: `${project.totalHours}h` },
+            { label: 'Hours', value: formatProjectTotalHours(project) },
           ]"
         />
 
@@ -667,7 +674,7 @@ watch(filteredProjects, (projects) => {
       :pt="managementTableColumnPt"
     >
       <template #body="{ data }">
-        <span class="text-text-dark text-[13px] font-semibold">{{ data.totalHours }}h</span>
+        <span class="text-text-dark text-[13px] font-semibold">{{ formatProjectTotalHours(data) }}</span>
       </template>
     </Column>
 
