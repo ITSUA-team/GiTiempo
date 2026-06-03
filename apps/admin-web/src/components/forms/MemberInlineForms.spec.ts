@@ -113,7 +113,7 @@ const stubs = {
   Form: { template: '<form><slot /></form>' },
   InputText: {
     props: ['id', 'modelValue'],
-    template: '<input :id="id" :value="modelValue" />',
+    template: '<input :id="id" :value="modelValue" v-bind="$attrs" />',
   },
   Select: {
     props: ['id', 'name'],
@@ -133,6 +133,9 @@ describe('member inline forms', () => {
     });
 
     expect(wrapper.get('[data-testid="member-edit-form-layout"]').classes()).toEqual(
+      expect.arrayContaining(['flex', 'flex-col', 'gap-2.5']),
+    );
+    expect(wrapper.get('[data-testid="member-edit-form-fields"]').classes()).toEqual(
       expect.arrayContaining(['flex-col', 'sm:flex-row', 'sm:items-end']),
     );
     expect(wrapper.get('[data-testid="member-edit-form-actions"]').classes()).toEqual(
@@ -141,6 +144,17 @@ describe('member inline forms', () => {
     expect(wrapper.get('label[for="edit-member-name"]').text()).toBe('Name');
     expect(wrapper.get('label[for="edit-member-email"]').text()).toBe('Email');
     expect(wrapper.get('label[for="edit-member-role"]').text()).toBe('Role');
+    expect(wrapper.get('#edit-member-name').attributes('readonly')).toBeDefined();
+    expect(wrapper.get('#edit-member-email').attributes('readonly')).toBeDefined();
+    expect(wrapper.get('#edit-member-name').attributes('aria-describedby')).toBe(
+      'member-readonly-fields-note',
+    );
+    expect(wrapper.get('#edit-member-email').attributes('aria-describedby')).toBe(
+      'member-readonly-fields-note',
+    );
+    expect(wrapper.get('#member-readonly-fields-note').text()).toBe(
+      'Editing name and email is not yet supported.',
+    );
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save');
   });
