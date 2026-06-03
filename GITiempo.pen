@@ -97,106 +97,47 @@
               "name": "wlCenter",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "Quzpy",
+                  "id": "Q9u2go",
                   "name": "surface",
                   "fill": "#F4F4F5",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "f37b8n",
-                      "name": "meta",
+                      "id": "EknFt",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "D8aLZ4",
+                          "id": "E2TPo",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "Last tracked task",
+                          "content": "Project Orion",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "VhW0v",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "T9XEw8",
-                              "fill": "#1A1A1A",
-                              "content": "Project Orion / Improve reports filters",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "PCNA6",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "IWxY4",
-                                  "fill": "#5D2B85",
-                                  "content": "Change",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "OIulP",
-                      "name": "button",
-                      "fill": "#5D2B85",
-                      "cornerRadius": 6,
-                      "stroke": "#5D2B85",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "ZMyMI",
-                          "fill": "#FFFFFF",
-                          "content": "Start",
+                          "id": "TDb32",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Improve reports filters",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -214,15 +155,6 @@
               "gap": 12,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "text",
-                  "id": "ubQHL",
-                  "fill": "$color-text-dark",
-                  "content": "Alexey Tsukanov",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
                 {
                   "type": "frame",
                   "id": "xtFMY",
@@ -244,16 +176,6 @@
                       "fontWeight": "600"
                     }
                   ]
-                },
-                {
-                  "type": "text",
-                  "id": "Qlot9",
-                  "name": "userSwitch",
-                  "fill": "#5D2B85",
-                  "content": "Admin workspace",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "600"
                 }
               ]
             }
@@ -2832,106 +2754,47 @@
               "name": "gvyCenter",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "Yy4Xb",
+                  "id": "j7JZ6u",
                   "name": "idleSurface",
                   "fill": "#F4F4F5",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "GMS1Q",
-                      "name": "meta",
+                      "id": "GrJZs",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "F5zuG",
+                          "id": "q4Vbou",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "Last tracked task",
+                          "content": "Project Atlas",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "tIroy",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "LwHMj",
-                              "fill": "#1A1A1A",
-                              "content": "Project Atlas / Plan kickoff notes",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "NOP9A",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "nnkWd",
-                                  "fill": "#5D2B85",
-                                  "content": "Change",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "I7avO",
-                      "name": "button",
-                      "fill": "#5D2B85",
-                      "cornerRadius": 6,
-                      "stroke": "#5D2B85",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "He4dJ",
-                          "fill": "#FFFFFF",
-                          "content": "Start",
+                          "id": "IU80l",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Plan kickoff notes",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -2949,15 +2812,6 @@
               "gap": 12,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "text",
-                  "id": "CTyvA",
-                  "fill": "$color-text-dark",
-                  "content": "Alexey Tsukanov",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
                 {
                   "type": "frame",
                   "id": "O4UNt",
@@ -5052,106 +4906,47 @@
               "name": "klCenter",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "igFGT",
+                  "id": "d5pkCu",
                   "name": "surface",
                   "fill": "#F4F4F5",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "sO8c5",
-                      "name": "meta",
+                      "id": "W4yZZi",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "uqiYh",
+                          "id": "Vn4Cg",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "Last tracked task",
+                          "content": "Sprint Planning",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "n3hiO",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "nz8Ns",
-                              "fill": "#1A1A1A",
-                              "content": "Sprint Planning / Prepare agenda",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "MOGaq",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "wpVAJ",
-                                  "fill": "#5D2B85",
-                                  "content": "Change",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "x0OC2P",
-                      "name": "button",
-                      "fill": "#5D2B85",
-                      "cornerRadius": 6,
-                      "stroke": "#5D2B85",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "bskQG",
-                          "fill": "#FFFFFF",
-                          "content": "Start",
+                          "id": "D8scU",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Prepare agenda",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -5169,15 +4964,6 @@
               "gap": 12,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "text",
-                  "id": "G85OJ",
-                  "fill": "$color-text-dark",
-                  "content": "Alexey Tsukanov",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
                 {
                   "type": "frame",
                   "id": "AjDKs",
@@ -5197,34 +4983,6 @@
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "xMcLn",
-                  "name": "adminLink",
-                  "height": 32,
-                  "fill": "#FFFFFF",
-                  "cornerRadius": 6,
-                  "stroke": "#EEEEEE",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    0,
-                    12
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "t63C9k",
-                      "name": "adminLabel",
-                      "fill": "#5D2B85",
-                      "content": "Admin workspace",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "500"
                     }
                   ]
                 }
@@ -12942,106 +12700,47 @@
               "name": "jfxCenter",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "WhJJH",
+                  "id": "uNVwp",
                   "name": "surface",
                   "fill": "#F4F4F5",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "OvqG1",
-                      "name": "meta",
+                      "id": "QpWXV",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "ddWoo",
+                          "id": "Yt9KR",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "Last tracked task",
+                          "content": "Client Portal",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "hd5PN",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "r7Xg1W",
-                              "fill": "#1A1A1A",
-                              "content": "Client Portal / Review QA fixes",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "RPH0O",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "dPb3o",
-                                  "fill": "#5D2B85",
-                                  "content": "Change",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "j3X2eP",
-                      "name": "button",
-                      "fill": "#5D2B85",
-                      "cornerRadius": 6,
-                      "stroke": "#5D2B85",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "sB6vv",
-                          "fill": "#FFFFFF",
-                          "content": "Start",
+                          "id": "UHqEn",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Review QA fixes",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -13059,15 +12758,6 @@
               "gap": 12,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "text",
-                  "id": "umwgI",
-                  "fill": "$color-text-dark",
-                  "content": "Alexey Tsukanov",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
                 {
                   "type": "frame",
                   "id": "35Zlu",
@@ -16784,106 +16474,47 @@
               "name": "uyCenter",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "hJ1uz",
+                  "id": "EWpN3",
                   "name": "surface",
                   "fill": "#F4F4F5",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "ATxzU",
-                      "name": "meta",
+                      "id": "WHCfP",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "hDQGu",
+                          "id": "l3B7E",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "Last tracked task",
+                          "content": "Project Orion",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "W1l4jg",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "Tcabm",
-                              "fill": "#1A1A1A",
-                              "content": "Project Orion / Confirm release notes",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "OZh6w",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "udWXE",
-                                  "fill": "#5D2B85",
-                                  "content": "Change",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "Ntdbz",
-                      "name": "button",
-                      "fill": "#5D2B85",
-                      "cornerRadius": 6,
-                      "stroke": "#5D2B85",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "LQOkZ",
-                          "fill": "#FFFFFF",
-                          "content": "Start",
+                          "id": "T5upE",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Confirm release notes",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -16901,15 +16532,6 @@
               "gap": 12,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "text",
-                  "id": "wZtgU",
-                  "fill": "$color-text-dark",
-                  "content": "Alexey Tsukanov",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
                 {
                   "type": "frame",
                   "id": "wc3S7",
@@ -18099,7 +17721,7 @@
               "name": "center",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
@@ -18111,114 +17733,56 @@
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "S2kn8",
-                      "name": "meta",
-                      "layout": "vertical",
-                      "gap": 2,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "XB21r",
-                          "fill": "#666666",
-                          "content": "Running timer",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "qzoE0",
-                          "name": "row",
-                          "gap": 8,
-                          "alignItems": "end",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "FH2XY",
-                              "fill": "#5D2B85",
-                              "content": "01:42:18",
-                              "fontFamily": "Inter",
-                              "fontSize": 16,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "O3SdkT",
-                              "gap": 6,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "aj7tp",
-                                  "fill": "#1A1A1A",
-                                  "content": "Project Orion / Improve reports filters",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 12,
-                                  "fontWeight": "normal"
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "gz4y4",
-                                  "fill": "#FFFFFF",
-                                  "cornerRadius": 999,
-                                  "stroke": "#EEEEEE",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "padding": [
-                                    2,
-                                    8
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "g0yof",
-                                      "fill": "#5D2B85",
-                                      "content": "Change",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 11,
-                                      "fontWeight": "500"
-                                    }
-                                  ]
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "nC6J5",
-                      "name": "button",
-                      "fill": "#FFFFFF",
-                      "cornerRadius": 6,
-                      "stroke": "#EEEEEE",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
+                      "id": "V5MM3Z",
+                      "name": "info",
+                      "gap": 12,
                       "alignItems": "center",
                       "children": [
                         {
+                          "type": "frame",
+                          "id": "qz2Uh",
+                          "name": "taskMeta",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "h8UG1O",
+                              "name": "projectName",
+                              "fill": "#666666",
+                              "content": "Project Orion",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "BglsE",
+                              "name": "taskName",
+                              "fill": "#1A1A1A",
+                              "content": "Improve reports filters",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
                           "type": "text",
-                          "id": "Ygj0k",
-                          "fill": "#1A1A1A",
-                          "content": "Stop",
+                          "id": "qiBXw",
+                          "name": "elapsed",
+                          "fill": "#5D2B85",
+                          "content": "01:42:18",
                           "fontFamily": "Inter",
-                          "fontSize": 13,
+                          "fontSize": 20,
                           "fontWeight": "600"
                         }
                       ]
@@ -18234,15 +17798,6 @@
               "gap": 12,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "text",
-                  "id": "b2lAWQ",
-                  "fill": "$color-text-muted",
-                  "content": "Workspace member",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
                 {
                   "type": "frame",
                   "id": "SODsg",
@@ -18356,7 +17911,7 @@
               "name": "center",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
@@ -18368,94 +17923,35 @@
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "KNlJp",
-                      "name": "meta",
+                      "id": "yv2h2",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "eCX2m",
+                          "id": "jtXtI",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "Last tracked task",
+                          "content": "Project Orion",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "Y9zxW",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "mvrVo",
-                              "fill": "#1A1A1A",
-                              "content": "Project Orion / Improve reports filters",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "hCpLb",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "IHcJD",
-                                  "fill": "#5D2B85",
-                                  "content": "Change",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "n9lKy",
-                      "name": "button",
-                      "fill": "#5D2B85",
-                      "cornerRadius": 6,
-                      "stroke": "#5D2B85",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "ES2Ui",
-                          "fill": "#FFFFFF",
-                          "content": "Start",
+                          "id": "R6YnJ",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Improve reports filters",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -18473,15 +17969,6 @@
               "gap": 12,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "text",
-                  "id": "e5Oxqr",
-                  "fill": "$color-text-muted",
-                  "content": "Workspace member",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
                 {
                   "type": "frame",
                   "id": "bAmed",
@@ -18595,7 +18082,7 @@
               "name": "center",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
@@ -18607,94 +18094,35 @@
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "j13zdm",
-                      "name": "meta",
+                      "id": "wHi67",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "LX8uI",
+                          "id": "kYI7s",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "No eligible task",
+                          "content": "No visible project",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "TtxeL",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "ugHjU",
-                              "fill": "#666666",
-                              "content": "Choose a visible task to enable Start.",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "Z61Ngh",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "IPmsZ",
-                                  "fill": "#5D2B85",
-                                  "content": "Open",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "MOshD",
-                      "name": "button",
-                      "fill": "#F4F4F5",
-                      "cornerRadius": 6,
-                      "stroke": "#EEEEEE",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "vX7AM",
+                          "id": "G5YIf",
+                          "name": "taskName",
                           "fill": "#666666",
-                          "content": "Start",
+                          "content": "Choose a visible task to start.",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -18712,15 +18140,6 @@
               "gap": 12,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "text",
-                  "id": "m2sUR",
-                  "fill": "$color-text-muted",
-                  "content": "Workspace member",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
                 {
                   "type": "frame",
                   "id": "m6jNd",
@@ -18753,14 +18172,802 @@
       "type": "frame",
       "id": "LKDTn",
       "x": 1680,
-      "y": -124,
+      "y": -856,
       "name": "Top-Bar Timer Task Picker",
       "width": 720,
-      "height": "fit_content(712)",
       "fill": "#F4F4F5",
       "layout": "vertical",
       "gap": 24,
-      "padding": 24
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "aJFyh",
+          "name": "popupVariants",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "hwxdH",
+              "name": "idlePopupWrap",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EpCNe",
+                  "name": "idlePopupLabel",
+                  "fill": "#1A1A1A",
+                  "content": "Idle popup",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "ecXQx",
+                  "name": "idleTimerTaskDialog",
+                  "width": 558,
+                  "height": 650,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": "#EEEEEE",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "aiEzW",
+                      "name": "dialogHeader",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sadzI",
+                          "fill": "#1A1A1A",
+                          "content": "Start timer",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jkk8Y",
+                          "fill": "#666666",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Choose a visible project and task, or create a new task before starting the timer.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FsQjx",
+                      "name": "projectDialogField",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WQf14",
+                          "fill": "#1A1A1A",
+                          "content": "Project",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fHHaz",
+                          "name": "projectInput",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "CMmng",
+                              "fill": "#1A1A1A",
+                              "content": "Project Orion",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Dhxpw",
+                              "fill": "#666666",
+                              "content": "Visible",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sEoRE",
+                      "name": "taskDialogField",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "IuwQ3",
+                          "fill": "#1A1A1A",
+                          "content": "Task",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ROIKZ",
+                          "name": "taskInput",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "UeeEj",
+                              "fill": "#666666",
+                              "content": "Improve reports filters",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "AVkwb",
+                              "fill": "#5D2B85",
+                              "content": "Selected",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "IlGFa",
+                      "name": "descriptionField",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cmOVk",
+                          "fill": "#1A1A1A",
+                          "content": "Description",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "u5Lio",
+                          "name": "descriptionInput",
+                          "width": "fill_container",
+                          "height": 82,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Ha1ts",
+                              "fill": "#666666",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Summarize PM scope changes for the reports table.",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HZRbz",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SLEAV",
+                          "fill": "#1A1A1A",
+                          "content": "Create new task in selected project",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vD0g1",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "PsyH4",
+                              "fill": "#1A1A1A",
+                              "content": "Task title",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "a9Rdf",
+                              "width": "fill_container",
+                              "height": 38,
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Eg9nV",
+                                  "fill": "#666666",
+                                  "content": "Write release checklist",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "N74gm",
+                                  "fill": "#666666",
+                                  "content": "Required",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LJ1rJ",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "MX1GJ",
+                              "fill": "#666666",
+                              "content": "New task is created inside Project Orion only.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "vZaso",
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "J93aBB",
+                                  "fill": "#1A1A1A",
+                                  "content": "Create task",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wxnso",
+                      "name": "actions",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "m7QsjQ",
+                          "name": "save",
+                          "fill": "#5D2B85",
+                          "cornerRadius": 6,
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "t99iA",
+                              "fill": "#FFFFFF",
+                              "content": "Start timer",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "I41IN",
+              "name": "runningPopupWrap",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "o32rw",
+                  "name": "runningPopupLabel",
+                  "fill": "#1A1A1A",
+                  "content": "Running popup",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "sNkdj",
+                  "name": "newEntryDialogVisible",
+                  "width": 558,
+                  "height": 650,
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": "#EEEEEE",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "v6OVU",
+                      "name": "dialogHeader",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YzWSd",
+                          "fill": "#1A1A1A",
+                          "content": "Update timer task",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "hG40w",
+                          "fill": "#666666",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Move the running timer to a different task or stop it from here.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hBfDl",
+                      "name": "projectDialogField",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "T5kb5",
+                          "fill": "#1A1A1A",
+                          "content": "Project",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jCOX9",
+                          "name": "projectInput",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "V6jf9",
+                              "fill": "#1A1A1A",
+                              "content": "Project Orion",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "gqqR8",
+                              "fill": "#666666",
+                              "content": "Visible",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ndCiU",
+                      "name": "taskDialogField",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "BExU0",
+                          "fill": "#1A1A1A",
+                          "content": "Task",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "DlNq2",
+                          "name": "taskInput",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "p7YYTF",
+                              "fill": "#666666",
+                              "content": "Improve reports filters",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "VMfg8",
+                              "fill": "#5D2B85",
+                              "content": "Selected",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "A6mNq2",
+                      "name": "descriptionField",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Q4pLx8",
+                          "fill": "#1A1A1A",
+                          "content": "Description",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "R7vKd3",
+                          "name": "descriptionInput",
+                          "width": "fill_container",
+                          "height": 82,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "N2cHs5",
+                              "fill": "#666666",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Summarize PM scope changes for the reports table.",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZBF7b",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "q3EV3",
+                          "fill": "#1A1A1A",
+                          "content": "Create new task in selected project",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XDk39",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "MaBRx",
+                              "fill": "#1A1A1A",
+                              "content": "Task title",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "w3kMJH",
+                              "width": "fill_container",
+                              "height": 38,
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "kLZOY",
+                                  "fill": "#666666",
+                                  "content": "Write release checklist",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "DbFdM",
+                                  "fill": "#666666",
+                                  "content": "Required",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "eiW2U",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "sKaF0",
+                              "fill": "#666666",
+                              "content": "New task is created inside Project Orion only.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "QC8l8",
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "h5KXI",
+                                  "fill": "#1A1A1A",
+                                  "content": "Create task",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "PKw1w",
+                      "name": "actions",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "lC4rX",
+                          "name": "changeTask",
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "RYCWj",
+                              "fill": "#1A1A1A",
+                              "content": "Change task",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OmtZQ",
+                          "name": "stop",
+                          "fill": "#5D2B85",
+                          "cornerRadius": 6,
+                          "stroke": "#5D2B85",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Xj0sf",
+                              "name": "stopLabel",
+                              "fill": "#FFFFFF",
+                              "content": "Stop timer",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "frame",
@@ -18771,362 +18978,6 @@
       "width": "fill_container(672)",
       "height": "fit_content(650)",
       "justifyContent": "center"
-    },
-    {
-      "type": "frame",
-      "id": "sNkdj",
-      "x": 1761,
-      "y": -76,
-      "name": "newEntryDialogVisible",
-      "width": 558,
-      "height": 650,
-      "fill": "#FFFFFF",
-      "cornerRadius": 10,
-      "stroke": "#EEEEEE",
-      "strokeWidth": 1,
-      "strokeAlignment": "inner",
-      "layout": "vertical",
-      "gap": 16,
-      "padding": 24,
-      "children": [
-        {
-          "type": "frame",
-          "id": "v6OVU",
-          "name": "dialogHeader",
-          "width": "fill_container",
-          "layout": "vertical",
-          "gap": 6,
-          "children": [
-            {
-              "type": "text",
-              "id": "YzWSd",
-              "fill": "#1A1A1A",
-              "content": "Change timer task",
-              "fontFamily": "Inter",
-              "fontSize": 18,
-              "fontWeight": "600"
-            },
-            {
-              "type": "text",
-              "id": "hG40w",
-              "fill": "#666666",
-              "textGrowth": "fixed-width",
-              "width": "fill_container",
-              "content": "Select a visible project and task, or create a new task inside the selected project.",
-              "fontFamily": "Inter",
-              "fontSize": 13,
-              "fontWeight": "normal"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "hBfDl",
-          "name": "projectDialogField",
-          "width": "fill_container",
-          "layout": "vertical",
-          "gap": 6,
-          "children": [
-            {
-              "type": "text",
-              "id": "T5kb5",
-              "fill": "#1A1A1A",
-              "content": "Project",
-              "fontFamily": "Inter",
-              "fontSize": 13,
-              "fontWeight": "500"
-            },
-            {
-              "type": "frame",
-              "id": "jCOX9",
-              "name": "projectInput",
-              "width": "fill_container",
-              "height": 38,
-              "fill": "#FFFFFF",
-              "cornerRadius": 6,
-              "stroke": "#EEEEEE",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
-              "padding": [
-                0,
-                12
-              ],
-              "justifyContent": "space_between",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "V6jf9",
-                  "fill": "#1A1A1A",
-                  "content": "Project Orion",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "500"
-                },
-                {
-                  "type": "text",
-                  "id": "gqqR8",
-                  "fill": "#666666",
-                  "content": "Visible",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "ndCiU",
-          "name": "taskDialogField",
-          "width": "fill_container",
-          "layout": "vertical",
-          "gap": 6,
-          "children": [
-            {
-              "type": "text",
-              "id": "BExU0",
-              "fill": "#1A1A1A",
-              "content": "Task",
-              "fontFamily": "Inter",
-              "fontSize": 13,
-              "fontWeight": "500"
-            },
-            {
-              "type": "frame",
-              "id": "DlNq2",
-              "name": "taskInput",
-              "width": "fill_container",
-              "height": 38,
-              "fill": "#FFFFFF",
-              "cornerRadius": 6,
-              "stroke": "#EEEEEE",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
-              "padding": [
-                0,
-                12
-              ],
-              "justifyContent": "space_between",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "p7YYTF",
-                  "fill": "#666666",
-                  "content": "Improve reports filters",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "VMfg8",
-                  "fill": "#5D2B85",
-                  "content": "Selected",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "500"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "A6mNq2",
-          "name": "descriptionField",
-          "width": "fill_container",
-          "layout": "vertical",
-          "gap": 6,
-          "children": [
-            {
-              "type": "text",
-              "id": "Q4pLx8",
-              "fill": "#1A1A1A",
-              "content": "Description",
-              "fontFamily": "Inter",
-              "fontSize": 13,
-              "fontWeight": "500"
-            },
-            {
-              "type": "frame",
-              "id": "R7vKd3",
-              "name": "descriptionInput",
-              "width": "fill_container",
-              "height": 82,
-              "fill": "#FFFFFF",
-              "cornerRadius": 6,
-              "stroke": "#EEEEEE",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
-              "padding": 12,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "N2cHs5",
-                  "fill": "#666666",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "Summarize PM scope changes for the reports table.",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "ZBF7b",
-          "width": "fill_container",
-          "layout": "vertical",
-          "gap": 12,
-          "children": [
-            {
-              "type": "text",
-              "id": "q3EV3",
-              "fill": "#1A1A1A",
-              "content": "Create new task in selected project",
-              "fontFamily": "Inter",
-              "fontSize": 13,
-              "fontWeight": "500"
-            },
-            {
-              "type": "frame",
-              "id": "XDk39",
-              "width": "fill_container",
-              "layout": "vertical",
-              "gap": 6,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "MaBRx",
-                  "fill": "#1A1A1A",
-                  "content": "Task title",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "500"
-                },
-                {
-                  "type": "frame",
-                  "id": "w3kMJH",
-                  "width": "fill_container",
-                  "height": 38,
-                  "fill": "#FFFFFF",
-                  "cornerRadius": 6,
-                  "stroke": "#EEEEEE",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    0,
-                    12
-                  ],
-                  "justifyContent": "space_between",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "kLZOY",
-                      "fill": "#666666",
-                      "content": "Write release checklist",
-                      "fontFamily": "Inter",
-                      "fontSize": 14,
-                      "fontWeight": "500"
-                    },
-                    {
-                      "type": "text",
-                      "id": "DbFdM",
-                      "fill": "#666666",
-                      "content": "Required",
-                      "fontFamily": "Inter",
-                      "fontSize": 12,
-                      "fontWeight": "500"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "eiW2U",
-              "width": "fill_container",
-              "justifyContent": "space_between",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "sKaF0",
-                  "fill": "#666666",
-                  "content": "New task is created inside Project Orion only.",
-                  "fontFamily": "Inter",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "QC8l8",
-                  "fill": "#FFFFFF",
-                  "cornerRadius": 6,
-                  "stroke": "#EEEEEE",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "padding": [
-                    8,
-                    14
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "h5KXI",
-                      "fill": "#1A1A1A",
-                      "content": "Create task",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "500"
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "PKw1w",
-          "name": "actions",
-          "width": "fill_container",
-          "gap": 10,
-          "justifyContent": "end",
-          "children": [
-            {
-              "type": "frame",
-              "id": "lC4rX",
-              "name": "save",
-              "fill": "#5D2B85",
-              "cornerRadius": 6,
-              "padding": [
-                10,
-                16
-              ],
-              "children": [
-                {
-                  "type": "text",
-                  "id": "RYCWj",
-                  "fill": "#FFFFFF",
-                  "content": "Use selected task",
-                  "fontFamily": "Inter",
-                  "fontSize": 14,
-                  "fontWeight": "600"
-                }
-              ]
-            }
-          ]
-        }
-      ]
     },
     {
       "type": "frame",
@@ -20242,106 +20093,47 @@
               "name": "wlCenter",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "NrYYn",
+                  "id": "at8EH",
                   "name": "surface",
                   "fill": "#F4F4F5",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "GFupS",
-                      "name": "meta",
+                      "id": "l019B2",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "R9oXFg",
+                          "id": "ImoUC",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "Last tracked task",
+                          "content": "Project Orion",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "io5eu",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "Junlo",
-                              "fill": "#1A1A1A",
-                              "content": "Project Orion / Improve reports filters",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "GfWyF",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "Omi65",
-                                  "fill": "#5D2B85",
-                                  "content": "Change",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "Dz0O1",
-                      "name": "button",
-                      "fill": "#5D2B85",
-                      "cornerRadius": 6,
-                      "stroke": "#5D2B85",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "ZqWmI",
-                          "fill": "#FFFFFF",
-                          "content": "Start",
+                          "id": "IDe6Z",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Improve reports filters",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -20375,15 +20167,6 @@
                   ],
                   "alignItems": "center",
                   "children": [
-                    {
-                      "type": "text",
-                      "id": "AbWZP",
-                      "fill": "$color-text-dark",
-                      "content": "Alexey Tsukanov",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "500"
-                    },
                     {
                       "type": "frame",
                       "id": "MepAs",
@@ -22929,45 +22712,8 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "Lzmla",
-                  "width": 132,
-                  "height": 38,
-                  "fill": "$color-brand",
-                  "cornerRadius": 6,
-                  "stroke": "$color-brand",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "gap": 5,
-                  "padding": [
-                    0,
-                    10
-                  ],
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "icon",
-                      "id": "Wk1Ni",
-                      "width": 13,
-                      "height": 13,
-                      "icon": "play",
-                      "library": "lucide",
-                      "fill": "#FFFFFF"
-                    },
-                    {
-                      "type": "text",
-                      "id": "dI9nv",
-                      "fill": "#FFFFFF",
-                      "content": "Start",
-                      "fontFamily": "$font-sans",
-                      "fontSize": 12,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "P5ocn",
+                  "name": "taskTimerButton",
                   "width": 132,
                   "height": 38,
                   "fill": "$color-surface",
@@ -22996,7 +22742,7 @@
                       "type": "text",
                       "id": "uUxbQ",
                       "fill": "$color-brand",
-                      "content": "Change",
+                      "content": "Task & timer",
                       "fontFamily": "$font-sans",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -23007,27 +22753,30 @@
             },
             {
               "type": "frame",
-              "id": "p1cILf",
-              "width": "fill_container",
+              "id": "lrPjK",
+              "name": "taskMeta",
+              "width": 226,
               "layout": "vertical",
-              "gap": 4,
+              "gap": 3,
               "children": [
                 {
                   "type": "text",
-                  "id": "skluL",
+                  "id": "K834Kf",
+                  "name": "projectName",
                   "fill": "$color-text-muted",
-                  "content": "Last tracked task",
+                  "content": "Project Orion",
                   "fontFamily": "$font-sans",
                   "fontSize": 11,
                   "fontWeight": "500"
                 },
                 {
                   "type": "text",
-                  "id": "QjgxT",
+                  "id": "C1vRb5",
+                  "name": "taskName",
                   "fill": "$color-text-dark",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Project Orion / Improve reports filters",
+                  "content": "Improve reports filters",
                   "fontFamily": "$font-sans",
                   "fontSize": 13,
                   "fontWeight": "600"
@@ -23064,7 +22813,7 @@
               "fill": "$color-text-muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "Actions are stacked on the left with task context on the right as readable metadata.",
+              "content": "Use the task and timer button to choose a task, then start or stop from the popup.",
               "fontFamily": "$font-sans",
               "fontSize": 13,
               "fontWeight": "normal"
@@ -23394,106 +23143,47 @@
               "name": "wlCenter",
               "width": "fill_container",
               "height": "fill_container",
-              "justifyContent": "center",
+              "justifyContent": "end",
               "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
-                  "id": "RbDzf",
+                  "id": "x7JiWw",
                   "name": "surface",
                   "fill": "#F4F4F5",
                   "cornerRadius": 10,
                   "stroke": "#EEEEEE",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
-                  "gap": 10,
                   "padding": [
-                    6,
-                    10
+                    8,
+                    12
                   ],
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "hiOwB",
-                      "name": "meta",
+                      "id": "k17sH",
+                      "name": "info",
                       "layout": "vertical",
                       "gap": 2,
                       "children": [
                         {
                           "type": "text",
-                          "id": "U6pltK",
+                          "id": "mVyNv",
+                          "name": "projectName",
                           "fill": "#666666",
-                          "content": "Last tracked task",
+                          "content": "Project Orion",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "500"
                         },
                         {
-                          "type": "frame",
-                          "id": "RqdZA",
-                          "gap": 6,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "FTVso",
-                              "fill": "#1A1A1A",
-                              "content": "Project Orion / Improve reports filters",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "XggjX",
-                              "fill": "#FFFFFF",
-                              "cornerRadius": 999,
-                              "stroke": "#EEEEEE",
-                              "strokeWidth": 1,
-                              "strokeAlignment": "inner",
-                              "padding": [
-                                2,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "NbYcb",
-                                  "fill": "#5D2B85",
-                                  "content": "Change",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "kQi4r",
-                      "name": "button",
-                      "fill": "#5D2B85",
-                      "cornerRadius": 6,
-                      "stroke": "#5D2B85",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "padding": [
-                        6,
-                        10
-                      ],
-                      "justifyContent": "center",
-                      "alignItems": "center",
-                      "children": [
-                        {
                           "type": "text",
-                          "id": "RC6XJ",
-                          "fill": "#FFFFFF",
-                          "content": "Start",
+                          "id": "FsgUu",
+                          "name": "taskName",
+                          "fill": "#1A1A1A",
+                          "content": "Improve reports filters",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -23512,16 +23202,6 @@
               "alignItems": "center",
               "children": [
                 {
-                  "type": "text",
-                  "id": "LgTxY",
-                  "name": "adminWorkspaceLink",
-                  "fill": "$color-brand",
-                  "content": "Admin workspace",
-                  "fontFamily": "Inter",
-                  "fontSize": 13,
-                  "fontWeight": "600"
-                },
-                {
                   "type": "frame",
                   "id": "HHajs",
                   "name": "profileDropdownTrigger",
@@ -23537,15 +23217,6 @@
                   ],
                   "alignItems": "center",
                   "children": [
-                    {
-                      "type": "text",
-                      "id": "KL7x2",
-                      "fill": "$color-text-dark",
-                      "content": "Alexey Tsukanov",
-                      "fontFamily": "Inter",
-                      "fontSize": 13,
-                      "fontWeight": "500"
-                    },
                     {
                       "type": "frame",
                       "id": "SxVkL",
@@ -26091,45 +25762,8 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "V812a",
-                  "width": 132,
-                  "height": 38,
-                  "fill": "$color-brand",
-                  "cornerRadius": 6,
-                  "stroke": "$color-brand",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "gap": 5,
-                  "padding": [
-                    0,
-                    10
-                  ],
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "icon",
-                      "id": "RhXIW",
-                      "width": 13,
-                      "height": 13,
-                      "icon": "play",
-                      "library": "lucide",
-                      "fill": "#FFFFFF"
-                    },
-                    {
-                      "type": "text",
-                      "id": "b4lT0x",
-                      "fill": "#FFFFFF",
-                      "content": "Start",
-                      "fontFamily": "$font-sans",
-                      "fontSize": 12,
-                      "fontWeight": "600"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "O22cFI",
+                  "name": "taskTimerButton",
                   "width": 132,
                   "height": 38,
                   "fill": "$color-surface",
@@ -26158,7 +25792,7 @@
                       "type": "text",
                       "id": "DViA6",
                       "fill": "$color-brand",
-                      "content": "Change",
+                      "content": "Task & timer",
                       "fontFamily": "$font-sans",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -26169,27 +25803,30 @@
             },
             {
               "type": "frame",
-              "id": "Zg3zi",
-              "width": "fill_container",
+              "id": "fUTf8",
+              "name": "taskMeta",
+              "width": 226,
               "layout": "vertical",
-              "gap": 4,
+              "gap": 3,
               "children": [
                 {
                   "type": "text",
-                  "id": "t56BKr",
+                  "id": "AGkT8",
+                  "name": "projectName",
                   "fill": "$color-text-muted",
-                  "content": "Last tracked task",
+                  "content": "Project Orion",
                   "fontFamily": "$font-sans",
                   "fontSize": 11,
                   "fontWeight": "500"
                 },
                 {
                   "type": "text",
-                  "id": "GmzPh",
+                  "id": "AtAqt",
+                  "name": "taskName",
                   "fill": "$color-text-dark",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Project Orion / Improve reports filters",
+                  "content": "Improve reports filters",
                   "fontFamily": "$font-sans",
                   "fontSize": 13,
                   "fontWeight": "600"
@@ -26226,7 +25863,7 @@
               "fill": "$color-text-muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "Actions are stacked on the left with task context on the right as readable metadata.",
+              "content": "Use the task and timer button to choose a task, then start or stop from the popup.",
               "fontFamily": "$font-sans",
               "fontSize": 13,
               "fontWeight": "normal"

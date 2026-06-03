@@ -159,24 +159,24 @@ Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
 
 ## Top-Bar Timer Task Picker
 
-Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-bar timer task information field.
+Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-bar timer surface.
 
-- The task information field in the compact top-bar timer is always clickable, including when start is disabled.
-- The dialog is the primary place to switch the selected task context for timer start/stop behavior in `user-web`.
+- The full compact top-bar timer surface is always clickable, including when start is disabled.
+- The dialog is the primary place to switch the selected task context and to trigger timer start/stop behavior in `user-web`.
 - Use visible `Project -> Task` selection only.
 - Use sequential PrimeVue `<Select>` controls for project and task selection.
 - The selected project must be visible to the current user.
 - The selected task must belong to the selected visible project.
 - The dialog includes an optional `Description` field directly below `Task`; it is a time-entry note, not task metadata.
 - Use PrimeVue `<Textarea>` for the description field.
-- When the timer is idle, the selected task and description become the draft used by the next `Start` action.
-- When the timer is already running, `Use selected task` updates the running entry's task and description without stopping the timer.
+- When the timer is idle, the popup primary action is `Start timer`, and the selected task and description become the draft for the new running entry.
+- When the timer is already running, secondary `Change task` updates the running entry's task and description without stopping the timer, and primary `Stop timer` sits to its right in the same popup.
 - The dialog supports creating a new task inside the currently selected visible project.
 - Do not support creating a new project from this dialog.
 - The create-task form uses a single required task-title field backed by the existing task-create contract.
-- When task creation succeeds, keep the dialog open with the new task selected and let the user confirm with `Use selected task`.
+- When task creation succeeds, keep the dialog open with the new task selected and let the user confirm with the state-appropriate timer action.
 - The dialog must clearly separate task selection from task creation so the user always knows whether they are picking an existing task or creating a new one.
-- On mobile, keep the task-picker dialog near full width, block background scroll, make the dialog content scrollable, and stack create/confirm action rows so Project -> Task selection remains usable in the mobile timer flow. The footer primary action is full width on mobile.
+- On mobile, keep the task-picker dialog near full width, block background scroll, make the dialog content scrollable, and stack task-creation plus timer-action rows so Project -> Task selection remains usable in the mobile timer flow. The footer primary action is full width on mobile.
 - Loading, empty, validation-error, and request-error states must stay distinct.
 - The dialog must not include manual interval entry controls; manual entry remains on Time Entries only.
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
@@ -208,17 +208,17 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 
 - This compact center-area surface is the tablet/desktop timer pattern for authenticated `user-web` top bars. Do not apply it to `admin-web` unless the docs are updated explicitly.
 - Below `640px`, do not squeeze the compact center-area surface into the top row; use the mobile timer strip defined in `docs/ui/layout.md` while keeping the same state model, task-picker behavior, and accessibility requirements.
-- Running state shows the running label, live `HH:MM:SS`, clickable current `Project / Task`, and one stop action.
-- Not-running state shows the last tracked task context, clickable task information, and one start action that creates a new time entry for that task.
+- Running state shows project on the first line, task on the second line, and live `HH:MM:SS` inside one clickable compact timer surface that leads into the popup-owned timer actions.
+- Not-running state shows the same two-line project/task structure in the clickable compact timer surface instead of a shell-level start action.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
 - A completed timer entry or manual entry may seed the last tracked task context if the task remains trackable.
-- The `Start` action always creates a fresh running time entry. It must not resume or mutate the previous time entry record.
-- Clicking the task information field opens the centered task-picker dialog.
-- If there is no eligible last tracked task context, keep the same not-running surface, keep the task information field clickable, and disable the start action.
-- While the timer summary is loading, render the same surface shape with the action disabled.
-- If the timer summary fails to load, keep the surface shape visible, disable the action, and use standard toast feedback for the failure.
-- Keep the tablet/desktop compact component small enough to fit the existing `h-16` top bar.
-- Hide or truncate the context text first on smaller tablet/desktop widths before compressing the elapsed-time value or removing the action.
+- The popup `Start timer` action always creates a fresh running time entry. It must not resume or mutate the previous time entry record.
+- Clicking the compact timer surface opens the centered task-picker dialog.
+- If there is no eligible last tracked task context, keep the same not-running surface and keep the compact timer surface clickable so the popup can seed a new startable task context.
+- While the timer summary is loading, render the same surface shape with the popup entry point visible.
+- If the timer summary fails to load, keep the surface shape visible and use standard toast feedback for the failure.
+- Keep the tablet/desktop compact component at content width so it still fits the existing `h-16` top bar and stays aligned to the avatar side without stretching across the center slot.
+- Hide or truncate the context text first on smaller tablet/desktop widths before compressing the elapsed-time value inside the running surface.
 
 ## Pagination
 

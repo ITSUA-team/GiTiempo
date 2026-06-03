@@ -20,24 +20,24 @@
 
 - There is no dedicated Timer page in the authenticated `user-web` MVP navigation.
 - Authenticated shell: every authenticated `user-web` page shows the compact timer surface on tablet and desktop, and the selected full-width mobile timer strip below `640px`.
-- Running top-bar state: show live `HH:MM:SS`, current `Project / Task`, clickable task information, and a stop action.
-- Not-running top-bar state: show the last tracked task context, clickable task information, and a start action that creates a new time entry for that task.
+- Running top-bar state: show the project on the first line, task on the second line, and live `HH:MM:SS` inside the clickable compact timer surface.
+- Not-running top-bar state: show the last tracked project/task context inside the same compact timer surface instead of a shell-level start action.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
 - A completed timer entry or manual entry may seed the last tracked task context if that task is still visible and active.
-- The top-bar `Start` action creates a fresh running time entry. It must not resume or update the previous time entry record.
+- Starting from the popup creates a fresh running time entry. It must not resume or update the previous time entry record.
 - The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
-- When the timer is idle, the next top-bar `Start` action creates a fresh running time entry for the selected task and current dialog description.
-- When the timer is already running, confirming the task-picker dialog updates the running entry's task and description without stopping the timer.
-- If there is no eligible last tracked task context, keep the same not-running top-bar layout, keep the task information field clickable, and disable the start action.
-- While the top-bar timer summary is loading, keep the layout visible and disable the action.
+- When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description.
+- When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
+- If there is no eligible last tracked task context, keep the same not-running top-bar layout and keep the compact timer surface clickable so the popup can seed a new startable task context.
+- While the top-bar timer summary is loading, keep the layout visible with the popup entry point intact.
 - If the top-bar timer summary fails to load, keep the layout visible in a disabled fallback state and surface the failure through toast feedback.
-- Clicking the task information field opens the centered task-picker dialog.
-- On mobile, the Start/Stop action and Change task affordance live in the left side of the strip so they remain reachable when the profile menu opens from the top-right identity area.
-- On mobile, task status, running elapsed time, and `Project / Task` context render as right-side metadata; the Change action remains the guaranteed task-picker entry point if metadata is partially covered.
+- Clicking the compact timer surface opens the centered task-picker dialog. The surface should hug its content width and stay aligned to the avatar side instead of expanding across the full center area.
+- On mobile, a single `Task & timer` opener lives on the left side of the strip so it remains reachable when the profile menu opens from the top-right identity area.
+- On mobile, the right-side metadata uses project on the first line and task on the second line, with running elapsed time shown there when applicable; the opener remains the guaranteed task-picker entry point if metadata is partially covered.
 - The task-picker dialog uses visible Project -> Task selection only for task targeting; it also includes the optional time-entry description field.
 - The dialog also supports creating a new task inside the currently selected visible project.
 - The dialog does not support creating a new project.
-- When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with `Use selected task`.
+- When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with the state-appropriate timer action.
 - Manual interval entry stays on Time Entries only. It does not move into the top-bar timer surface or task-picker dialog.
 
 ## Time Entries Page
