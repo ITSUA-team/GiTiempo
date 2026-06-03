@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type {
   CreateTaskInput,
   TaskResponse,
@@ -20,6 +20,7 @@ import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { tasks } from '../schemas/tasks.schema';
 
 export type TaskRow = typeof tasks.$inferSelect;
+type QueryExecutor = Pick<DrizzleDB, 'select' | 'update'>;
 
 @Injectable()
 export class TasksService {
@@ -88,14 +89,41 @@ export class TasksService {
       throw new UnprocessableEntityException('Project is inactive');
     }
 
+    const updatedAt = new Date();
+    const updateValues = {
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+      updatedAt,
+    };
+    const shouldStopRunningEntries =
+      input.status === 'closed' && task.status !== 'closed';
+
+    if (shouldStopRunningEntries) {
+      const row = await this.db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(tasks)
+          .set(updateValues)
+          .where(eq(tasks.id, task.id))
+          .returning();
+
+        if (!updated) throw new NotFoundException('Task not found');
+
+        await this.stopRunningEntriesForTask(
+          tx,
+          user.workspaceId,
+          task.id,
+          updatedAt,
+        );
+        return updated;
+      });
+
+      return this.toResponse(row);
+    }
+
     const [row] = await this.db
       .update(tasks)
-      .set({
-        ...(input.title !== undefined ? { title: input.title } : {}),
-        ...(input.status !== undefined ? { status: input.status } : {}),
-        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-        updatedAt: new Date(),
-      })
+      .set(updateValues)
       .where(eq(tasks.id, task.id))
       .returning();
 
@@ -180,6 +208,37 @@ export class TasksService {
     };
   }
 
+  private async stopRunningEntriesForTask(
+    db: QueryExecutor,
+    workspaceId: string,
+    taskId: string,
+    closedAt: Date,
+  ): Promise<void> {
+    const runningEntries = await db
+      .select({ id: timeEntries.id, startedAt: timeEntries.startedAt })
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, workspaceId),
+          eq(timeEntries.taskId, taskId),
+          isNull(timeEntries.endedAt),
+        ),
+      );
+
+    for (const entry of runningEntries) {
+      const endedAt = getTimerCloseTime(entry.startedAt, closedAt);
+
+      await db
+        .update(timeEntries)
+        .set({
+          endedAt,
+          durationSeconds: calculateDurationSeconds(entry.startedAt, endedAt),
+          updatedAt: endedAt,
+        })
+        .where(and(eq(timeEntries.id, entry.id), isNull(timeEntries.endedAt)));
+    }
+  }
+
   private handleTimeEntryReferenceConflict(error: unknown): void {
     const pgError = getPostgresError(error);
     if (
@@ -189,6 +248,19 @@ export class TasksService {
       throw new ConflictException('Task has related time entries');
     }
   }
+}
+
+function getTimerCloseTime(startedAt: Date, closedAt: Date): Date {
+  return closedAt.getTime() > startedAt.getTime()
+    ? closedAt
+    : new Date(startedAt.getTime() + 1000);
+}
+
+function calculateDurationSeconds(startedAt: Date, endedAt: Date): number {
+  return Math.max(
+    1,
+    Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000),
+  );
 }
 
 function getPostgresError(error: unknown): {
