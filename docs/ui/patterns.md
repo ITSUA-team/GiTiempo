@@ -10,7 +10,8 @@ Use PrimeVue `<Dialog>`.
 - Backdrop opacity is overridden in the preset.
 - Dialog panel uses `bg-surface-primary rounded-lg shadow-modal`.
 - Common widths: 480px for forms, larger for content-heavy dialogs.
-- Footer uses `flex justify-end gap-2`.
+- Footer uses `flex justify-end gap-2` and contains the primary action only for non-destructive form dialogs.
+- Non-destructive form dialogs rely on the built-in top-right close control for dismissal instead of a footer `Cancel` button.
 - Destructive dialogs use `severity="danger"` for the main action.
 - `dismissableMask` stays enabled only for non-destructive dialogs.
 
@@ -18,7 +19,6 @@ Use PrimeVue `<Dialog>`.
 <Dialog v-model:visible="showDialog" modal header="Create Invoice" :style="{ width: '480px' }">
   <template #default><!-- form content --></template>
   <template #footer>
-    <Button label="Cancel" severity="secondary" variant="text" @click="showDialog = false" />
     <Button label="Save" @click="handleSave" />
   </template>
 </Dialog>
@@ -176,7 +176,7 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - The create-task form uses a single required task-title field backed by the existing task-create contract.
 - When task creation succeeds, keep the dialog open with the new task selected and let the user confirm with `Use selected task`.
 - The dialog must clearly separate task selection from task creation so the user always knows whether they are picking an existing task or creating a new one.
-- On mobile, keep the task-picker dialog near full width, block background scroll, make the dialog content scrollable, and stack create/confirm action rows so Project -> Task selection remains usable in the mobile timer flow. Footer buttons are full width on mobile with `Use selected task` first and `Cancel` second.
+- On mobile, keep the task-picker dialog near full width, block background scroll, make the dialog content scrollable, and stack create/confirm action rows so Project -> Task selection remains usable in the mobile timer flow. The footer primary action is full width on mobile.
 - Loading, empty, validation-error, and request-error states must stay distinct.
 - The dialog must not include manual interval entry controls; manual entry remains on Time Entries only.
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
