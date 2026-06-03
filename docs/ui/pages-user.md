@@ -50,20 +50,20 @@
 - The task lookup placeholder copy is `Search tasks`.
 - The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
 - Entries are grouped by the entry started-at day in the user's current browser-local timezone.
-- Each day heading row includes its own PrimeVue `<Button>` labeled `+ New time entry` beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form.
+- Each day heading row includes its own primary icon-only PrimeVue `<Button>` with a `plus` icon beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form and uses tooltip/accessibility copy `New time entry`.
 - Day-level create uses the rendered local day as the preset calendar day for `startedAt` and `endedAt`.
 - At and above `640px`, each day group keeps the existing table layout for entries.
 - Below `640px`, each day group renders stacked mobile cards instead of the fixed-width desktop table.
-- Entry row/card content includes task, project, time range, duration, and icon-only edit/delete actions with `Edit` and `Delete` tooltips for completed entries. Time-range labels use the user's current browser-local timezone.
+- Entry row/card content includes a clickable task name, project, time range, and duration. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. Time-range labels use the user's current browser-local timezone.
 - Running entry highlighted with `bg-accent-tint`.
 - Running-entry mobile cards keep the same highlight treatment and do not expose edit/delete actions; stopping remains owned by the global top-bar timer.
-- Clicking `Edit` opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
+- Clicking the task name opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
 - Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
 - The shared time-entry dialog uses these fields in both create and edit modes: project `<Select>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
 - Create mode initializes `isBillable` from the selected task's default billable value and still lets the user override it before saving.
 - Edit mode allows changing the selected project and task in addition to `startedAt`, `endedAt`, `description`, and `isBillable`.
 - This create/edit surface must ship as a true popup dialog overlay. Do not render it inline inside the Time Entries page layout.
-- Delete uses the shared confirmation dialog pattern before removing an entry.
+- Delete is triggered from inside the edit dialog and uses the shared confirmation dialog pattern before removing an entry.
 - Pagination uses PrimeVue `<Paginator>` below the grouped entry sections.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 
@@ -80,19 +80,19 @@
 - `Status` and `Updated` filters narrow task rows and only keep project groups that still contain at least one matching task.
 - Clearing the search restores the full grouped project list.
 - Content is grouped by visible project instead of by day.
-- Each project section header shows the project name on the left and a secondary PrimeVue `<Button>` labeled `+ Add task` on the right.
+- Each project section header shows the project name on the left and a primary icon-only PrimeVue `<Button>` with a `plus` icon on the right. The action uses tooltip/accessibility copy `Add task`.
 - Tasks for that project render beneath the project header inside the same section card.
 - At and above `640px`, each project section keeps the existing task table layout.
 - Below `640px`, each project section renders stacked mobile task cards instead of the fixed-width desktop task table.
-- Task rows/cards include task title, status, updated metadata, and icon-only edit/delete actions with `Edit` and `Delete` tooltips. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
-- Clicking `Edit` opens the shared task PrimeVue `<Dialog>` in update mode.
+- Task rows/cards include a clickable task title, status, and updated metadata. The task title opens the shared task edit dialog, and the row no longer carries separate edit/delete icon actions. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
+- Clicking the task title opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
-- Project-level `+ Add task` opens the same dialog in create mode with that project already selected.
+- The project-level add-task icon action opens the same dialog in create mode with that project already selected.
 - Create mode includes `Default billable for time entries` and initializes it from the selected project's default billable value.
 - Update mode pre-fills the selected project, task title, and editable task fields, including the task-level default billable value.
 - If a task default billable value changes after time entries already exist for that task, save the new default immediately for future entries, then show a follow-up popup that asks only whether existing time entries for that task should also be updated.
 - The task dialog must ship as a true popup dialog overlay. Do not render create or update forms inline inside the Projects page layout.
-- Delete uses the shared confirmation dialog pattern before permanently removing the task.
+- Delete is triggered from inside the task edit dialog and uses the shared confirmation dialog pattern before permanently removing the task.
 - Task deletion is available only when the task has no related time entries.
 - Tasks with related time entries return a `409 Conflict` from the backend when deletion is attempted, and the Projects page surfaces that message without removing the task locally.
 - Task responses do not include `canDelete`, `hasTimeEntries`, or other delete-eligibility metadata, so the Projects page must not rely on precomputed delete availability.

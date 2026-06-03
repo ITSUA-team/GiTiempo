@@ -33,15 +33,18 @@
 
 - Invoice list table with status tags.
 - Invoice list table is searchable with placeholder `Search invoices` and uses column filters for invoice id/name, project, amount, and status.
-- `Create Invoice` sits in the invoices table header next to the search control and opens a modal dialog.
-- Dialog fields: project, date range, hourly rate, discount, total amount.
+- An icon-only primary action sits in the invoices table header next to the search control and opens the modal dialog. Use tooltip/accessibility copy `Create invoice`.
+- Invoice id/name is the edit entry point and opens the popup. Do not keep a separate Actions column in the table.
+- The shared invoice dialog uses title `Invoice` for existing rows and covers both create and edit/detail states with fields for project, date range, hourly rate, discount, and total amount.
+- Status-specific invoice actions live inside the popup instead of the table row, and `Delete invoice` remains inside the dialog for editable invoices.
 
 ## Members Page
 
 - Initial page load uses a skeleton matching the stats header, stat cards, and members table before rendering empty or request-error states.
-- Members table with avatar, role, projects assigned, last active, and icon-only row actions with text tooltips.
+- Members table shows avatar, role, projects assigned, and last active. The member name is the edit entry point and opens the inline member settings section.
 - Members table is searchable with placeholder `Search members` and uses column filters for member name/email, role, assigned projects, and last active.
-- `Invite Member` sits in the members table header next to the search control and opens the invite flow.
+- An icon-only primary action sits in the members table header next to the search control and opens the invite flow. Use tooltip/accessibility copy `Invite member`.
+- The inline member settings section owns assignment changes and the destructive `Remove member` action; do not keep separate edit/delete icons in the main members rows.
 - Pending invitations render in a separate card below the members table using the same management-table/card visual language. Desktop/tablet columns are Email, Role, Expires, and Actions; mobile renders stacked cards with the same fields.
 - Pending invitation row actions are icon-only controls with text tooltips and accessible labels: `Resend invite` and `Cancel invite`. `Resend invite` calls the admin-only resend endpoint, shows success/error toast feedback, and refreshes pending invite data. `Cancel invite` uses the shared destructive confirmation dialog before issuing the existing cancel request.
 - Empty pending invitations state is distinct from request-error state; failed resend or cancel keeps the row visible and surfaces the backend message.
@@ -50,9 +53,11 @@
 ## Projects Page
 
 - Initial page load uses a skeleton matching the stats header, stat cards, and projects table before rendering empty or request-error states.
-- Project list table includes project name, source, assigned members, total hours, visibility, and icon-only row actions with text tooltips.
+- Project list table includes project name, source, assigned members, total hours, and visibility. It does not keep a separate row-actions column.
 - Project list table is searchable with placeholder `Search projects` and uses column filters for project name, source, assigned members, total hours, and visibility.
-- `New Project` sits in the projects table header next to the search control.
+- An icon-only primary action sits in the projects table header next to the search control. Use tooltip/accessibility copy `New project`.
+- The project name is the edit entry point and opens the inline project settings section instead of using a row-level edit icon.
+- The status-specific secondary action lives inside the inline project settings section instead of the table row: active projects show `Archive project`, and archived projects show `Unarchive project`.
 - Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<Select>`, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
 - Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks`.
 - When a project default billable value changes after tasks or time entries already exist in that project, save the new default immediately for future tasks, then show a follow-up popup that asks only whether existing tasks and existing time entries in that project should also be updated.

@@ -10,13 +10,13 @@ Use PrimeVue `<Dialog>`.
 - Backdrop opacity is overridden in the preset.
 - Dialog panel uses `bg-surface-primary rounded-lg shadow-modal`.
 - Common widths: 480px for forms, larger for content-heavy dialogs.
-- Footer uses `flex justify-end gap-2` and contains the primary action only for non-destructive form dialogs.
+- Footer uses `flex justify-end gap-2` and contains the primary action only for non-destructive form dialogs unless the dialog owns contextual entity actions that should not stay in a table row.
 - Non-destructive form dialogs rely on the built-in top-right close control for dismissal instead of a footer `Cancel` button.
 - Destructive dialogs use `severity="danger"` for the main action.
 - `dismissableMask` stays enabled only for non-destructive dialogs.
 
 ```vue
-<Dialog v-model:visible="showDialog" modal header="Create Invoice" :style="{ width: '480px' }">
+<Dialog v-model:visible="showDialog" modal header="Invoice" :style="{ width: '480px' }">
   <template #default><!-- form content --></template>
   <template #footer>
     <Button label="Save" @click="handleSave" />
@@ -159,19 +159,29 @@ Use a lightweight filter set for the user Projects page.
 - `Status` and `Updated` continue narrowing task rows after the text search is applied and remove project groups that no longer have matching tasks.
 - Clearing the search and resetting the selects restores the full grouped list.
 
+## Entry Action Icons
+
+Use icon-only create-entry actions when the surrounding section title already provides the entity context.
+
+- User views use filled primary square actions for day-level and project-level create entry points.
+- Admin table headers use filled primary square actions for create/invite entry points.
+- Match the icon to the entity when possible; use a generic `plus` only when the surrounding header already makes the entity obvious.
+- Every icon-only action still needs visible tooltip text and an accessible label that keeps the original action verb explicit.
+
 ## Time Entry Dialogs
 
 Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
 
-- The header-level and day-level `+ New time entry` actions should open the shared dialog in create mode.
+- The header-level and day-level icon-only `New time entry` actions should open the shared dialog in create mode.
 - The day-level create action pre-populates the selected day in the form.
-- Row-level `Edit` actions should open the same shared dialog in edit mode.
+- The row task/title click target should open the same shared dialog in edit mode.
 - Edit mode pre-fills the selected entry's current project, task, `startedAt`, `endedAt`, description, and `isBillable` state.
 - Required fields follow the time-entry form contract: project, task, `startedAt`, and `endedAt`.
 - Optional fields are description and `isBillable`.
 - Create mode initializes `isBillable` from the selected task's default billable value and still allows a per-entry override before save.
 - Use PrimeVue `<Textarea>` for description and `<Checkbox binary>` for billable state.
 - Default copy differs by mode: create uses `New time entry` and `Save entry`; edit uses `Edit time entry` and `Save changes`.
+- Edit mode should include the destructive delete action inside the dialog instead of in the table row.
 - The design mockup may live as a separate reference frame, but implementation must render it as an actual modal popup, not as inline page content.
 
 ## Top-Bar Timer Task Picker
