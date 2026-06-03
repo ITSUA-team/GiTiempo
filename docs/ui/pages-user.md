@@ -27,7 +27,9 @@
 - Starting from the popup creates a fresh running time entry. It must not resume or update the previous time entry record.
 - The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
 - The `Task` select lists visible tasks first and appends `New task` as the last option.
+- When `Task = New task`, the created task inherits the selected project's default `isBillable` value.
 - When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description.
+- The fresh running time entry initializes `isBillable` from the selected task's default billable value before any per-entry override.
 - When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
 - If there is no eligible last tracked task context, keep the same not-running top-bar layout and keep the compact timer surface clickable so the popup can seed a new startable task context.
 - While the top-bar timer summary is loading, keep the layout visible with the popup entry point intact.
@@ -58,6 +60,7 @@
 - Clicking `Edit` opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
 - Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
 - The shared time-entry dialog uses these fields in both create and edit modes: project `<Select>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
+- Create mode initializes `isBillable` from the selected task's default billable value and still lets the user override it before saving.
 - Edit mode allows changing the selected project and task in addition to `startedAt`, `endedAt`, `description`, and `isBillable`.
 - This create/edit surface must ship as a true popup dialog overlay. Do not render it inline inside the Time Entries page layout.
 - Delete uses the shared confirmation dialog pattern before removing an entry.
@@ -68,10 +71,13 @@
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, the search row, and grouped project sections.
 - The page uses the same high-level structure as Time Entries: top-bar breadcrumb, grouped content sections, and a card/table shell for each group.
-- A filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`.
-- The combined search filters already loaded visible projects and tasks on the frontend. Do not document it as a backend free-text search endpoint.
+- A lightweight filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<Select>` controls.
+- The combined search and the structured filters operate on already loaded visible projects and tasks on the frontend. Do not document them as backend free-text or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
+- `Status` options are `All statuses`, `Open`, and `Closed`.
+- `Updated` options are `Any time`, `Today`, `Last 7 days`, and `Older`.
+- `Status` and `Updated` filters narrow task rows and only keep project groups that still contain at least one matching task.
 - Clearing the search restores the full grouped project list.
 - Content is grouped by visible project instead of by day.
 - Each project section header shows the project name on the left and a secondary PrimeVue `<Button>` labeled `+ Add task` on the right.
@@ -82,7 +88,9 @@
 - Clicking `Edit` opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
 - Project-level `+ Add task` opens the same dialog in create mode with that project already selected.
-- Update mode pre-fills the selected project, task title, and editable task fields.
+- Create mode includes `Default billable for time entries` and initializes it from the selected project's default billable value.
+- Update mode pre-fills the selected project, task title, and editable task fields, including the task-level default billable value.
+- If a task default billable value changes after time entries already exist for that task, save the new default immediately for future entries, then show a follow-up popup that asks only whether existing time entries for that task should also be updated.
 - The task dialog must ship as a true popup dialog overlay. Do not render create or update forms inline inside the Projects page layout.
 - Delete uses the shared confirmation dialog pattern before permanently removing the task.
 - Task deletion is available only when the task has no related time entries.

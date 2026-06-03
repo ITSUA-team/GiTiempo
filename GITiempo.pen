@@ -4435,6 +4435,75 @@
                         },
                         {
                           "type": "frame",
+                          "id": "H9Z0i",
+                          "name": "defaultBillableField",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wEtPK",
+                              "name": "billableLabel",
+                              "fill": "#1A1A1A",
+                              "content": "Default billable for time entries",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "GOmXR",
+                              "name": "billableInput",
+                              "width": "fill_container",
+                              "height": 38,
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "N8zil",
+                                  "name": "billableCheck",
+                                  "width": 16,
+                                  "height": 16,
+                                  "fill": "#5D2B85",
+                                  "cornerRadius": 4
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "F6pM9Z",
+                                  "name": "billableText",
+                                  "fill": "#1A1A1A",
+                                  "content": "Billable by default",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "vLDSU",
+                              "name": "billableHint",
+                              "fill": "#666666",
+                              "content": "New time entries for this task inherit this value.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
                           "id": "NlNxH",
                           "name": "actions",
                           "width": "fill_container",
@@ -4688,6 +4757,75 @@
                                   "fontWeight": "500"
                                 }
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ZrzUS",
+                          "name": "defaultBillableField",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "imcrh",
+                              "name": "billableLabel",
+                              "fill": "#1A1A1A",
+                              "content": "Default billable for time entries",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FtyuM",
+                              "name": "billableInput",
+                              "width": "fill_container",
+                              "height": 38,
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "x5TZf",
+                                  "name": "billableCheck",
+                                  "width": 16,
+                                  "height": 16,
+                                  "fill": "#5D2B85",
+                                  "cornerRadius": 4
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "UW8Ym",
+                                  "name": "billableText",
+                                  "fill": "#1A1A1A",
+                                  "content": "Billable by default",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "lFuWU",
+                              "name": "billableHint",
+                              "fill": "#666666",
+                              "content": "New time entries for this task inherit this value.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -11250,6 +11388,65 @@
                                 },
                                 {
                                   "type": "frame",
+                                  "id": "l0f5PC",
+                                  "name": "billableSelectWrap",
+                                  "width": 200,
+                                  "layout": "vertical",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ISI49",
+                                      "name": "billableLabel",
+                                      "fill": "#1A1A1A",
+                                      "content": "New task billable default",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "uRP2B",
+                                      "name": "billableInput",
+                                      "width": "fill_container",
+                                      "height": 38,
+                                      "fill": "#FFFFFF",
+                                      "cornerRadius": 6,
+                                      "stroke": "#EEEEEE",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "gap": 10,
+                                      "padding": [
+                                        0,
+                                        12
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "wYzaI",
+                                          "name": "billableCheck",
+                                          "width": 16,
+                                          "height": 16,
+                                          "fill": "#5D2B85",
+                                          "cornerRadius": 4
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "H1GOhV",
+                                          "name": "billableText",
+                                          "fill": "#1A1A1A",
+                                          "content": "Billable by default",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
                                   "id": "xMII9",
                                   "name": "cancelBtn",
                                   "fill": "$color-surface",
@@ -16824,6 +17021,75 @@
                                   ]
                                 }
                               ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "N2xQN",
+                              "name": "f4Billable",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "L6GPlp",
+                                  "name": "billableLabel",
+                                  "fill": "#1A1A1A",
+                                  "content": "Default billable for new tasks",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "wH1xt",
+                                  "name": "billableInput",
+                                  "width": "fill_container",
+                                  "height": 34,
+                                  "fill": "#FFFFFF",
+                                  "cornerRadius": 6,
+                                  "stroke": "#EEEEEE",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "gap": 10,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "B3lMc",
+                                      "name": "billableCheck",
+                                      "width": 16,
+                                      "height": 16,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 4
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "peiLT",
+                                      "name": "billableText",
+                                      "fill": "#1A1A1A",
+                                      "content": "Billable by default",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "L8XHuM",
+                                  "name": "billableHint",
+                                  "fill": "#666666",
+                                  "content": "New tasks in this project inherit this value unless changed later.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
@@ -17075,7 +17341,6 @@
               "id": "B2rXaf",
               "name": "newEntryDialogVisible",
               "width": 560,
-              "height": 546,
               "fill": "#FFFFFF",
               "cornerRadius": 10,
               "stroke": "#EEEEEE",
@@ -17379,38 +17644,60 @@
                 },
                 {
                   "type": "frame",
-                  "id": "EOypW",
-                  "name": "billable",
+                  "id": "JDcSI",
+                  "name": "billableField",
                   "width": "fill_container",
-                  "height": 38,
-                  "fill": "#FFFFFF",
-                  "cornerRadius": 6,
-                  "stroke": "#EEEEEE",
-                  "strokeWidth": 1,
-                  "strokeAlignment": "inner",
-                  "gap": 10,
-                  "padding": [
-                    0,
-                    12
-                  ],
-                  "alignItems": "center",
+                  "layout": "vertical",
+                  "gap": 6,
                   "children": [
                     {
                       "type": "frame",
-                      "id": "votCs",
-                      "width": 16,
-                      "height": 16,
-                      "fill": "#5D2B85",
-                      "cornerRadius": 4
+                      "id": "Rt2aE",
+                      "name": "billableInput",
+                      "width": "fill_container",
+                      "height": 38,
+                      "fill": "#FFFFFF",
+                      "cornerRadius": 6,
+                      "stroke": "#EEEEEE",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N06cKU",
+                          "name": "billableCheck",
+                          "width": 16,
+                          "height": 16,
+                          "fill": "#5D2B85",
+                          "cornerRadius": 4
+                        },
+                        {
+                          "type": "text",
+                          "id": "dcK60",
+                          "name": "billableText",
+                          "fill": "#1A1A1A",
+                          "content": "Billable entry",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
                     },
                     {
                       "type": "text",
-                      "id": "EVsBI",
-                      "fill": "#1A1A1A",
-                      "content": "Billable entry",
+                      "id": "WgGnX",
+                      "name": "billableHint",
+                      "fill": "#666666",
+                      "content": "Create mode starts from the selected task default. You can override it per entry.",
                       "fontFamily": "Inter",
-                      "fontSize": 14,
-                      "fontWeight": "500"
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -18230,7 +18517,7 @@
                           "id": "i1jiX",
                           "name": "taskSelectHint",
                           "fill": "#666666",
-                          "content": "Visible tasks are listed first. New task is the last option.",
+                          "content": "Visible tasks are listed first. New task is the last option. New time entries inherit the selected task billable default.",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -18298,7 +18585,7 @@
                               "id": "o9Zgqk",
                               "name": "newTaskHint",
                               "fill": "#666666",
-                              "content": "This task is created in Project Orion when you start the timer.",
+                              "content": "This task is created in Project Orion and inherits the project billable default when you start the timer.",
                               "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -18570,7 +18857,7 @@
                           "id": "ashJt",
                           "name": "taskSelectHint",
                           "fill": "#666666",
-                          "content": "Visible tasks are listed first. New task is the last option.",
+                          "content": "Visible tasks are listed first. New task is the last option. New time entries inherit the selected task billable default.",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -18638,7 +18925,7 @@
                               "id": "z4BPmm",
                               "name": "newTaskHint",
                               "fill": "#666666",
-                              "content": "This task is created in Project Orion when you change task.",
+                              "content": "This task is created in Project Orion and inherits the project billable default when you change task.",
                               "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -25806,6 +26093,370 @@
                   "icon": "user",
                   "library": "lucide",
                   "fill": "$color-text-muted"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "exo6M",
+      "x": 10867,
+      "y": 380,
+      "name": "Billable Default Update Dialogs",
+      "width": 900,
+      "height": 420,
+      "fill": "#F4F4F5",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "Q7YVI",
+          "name": "dialogsHeader",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "DYBvd",
+              "name": "title",
+              "fill": "#1A1A1A",
+              "content": "Billable Default Update Dialogs",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "L8FCu",
+              "name": "copy",
+              "fill": "#666666",
+              "content": "Standalone popup references for updating project and task billable defaults when existing records are already present.",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "wCL1I",
+          "name": "dialogsRow",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "AsXCZ",
+              "name": "projectWrap",
+              "width": "fill_container",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "c3lh9c",
+                  "name": "Update project billable default?",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": "#EEEEEE",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "MzfoN",
+                      "name": "dialogTitle",
+                      "fill": "#1A1A1A",
+                      "content": "Update project billable default?",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "c5sCoK",
+                      "name": "dialogCopy",
+                      "fill": "#666666",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The new project default is already saved for future tasks. Choose whether to also update existing tasks and time entries in Project Orion.",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QYDgI",
+                      "name": "options",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WUCqg",
+                          "name": "optionRow",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 10,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "fUnXv",
+                              "name": "check",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "#5D2B85",
+                              "cornerRadius": 4
+                            },
+                            {
+                              "type": "text",
+                              "id": "D2ITa",
+                              "name": "label",
+                              "fill": "#1A1A1A",
+                              "content": "Update existing tasks in this project",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "IK1DD",
+                          "name": "optionRow",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 10,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "fybuB",
+                              "name": "check",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 4,
+                              "stroke": "#C9C9C9",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner"
+                            },
+                            {
+                              "type": "text",
+                              "id": "nbVsL",
+                              "name": "label",
+                              "fill": "#1A1A1A",
+                              "content": "Update existing time entries in this project",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SHEje",
+                      "name": "actions",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "padding": [
+                        8,
+                        0,
+                        0,
+                        0
+                      ],
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "VbFNz",
+                          "name": "primary",
+                          "fill": "#5D2B85",
+                          "cornerRadius": 6,
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "npggk",
+                              "name": "primaryText",
+                              "fill": "#FFFFFF",
+                              "content": "Update existing records",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "z6SVE",
+              "name": "taskWrap",
+              "width": "fill_container",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "k0RHp",
+                  "name": "Update task billable default?",
+                  "width": "fill_container",
+                  "fill": "#FFFFFF",
+                  "cornerRadius": 10,
+                  "stroke": "#EEEEEE",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "q7rOjx",
+                      "name": "dialogTitle",
+                      "fill": "#1A1A1A",
+                      "content": "Update task billable default?",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "AH6Ls",
+                      "name": "dialogCopy",
+                      "fill": "#666666",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The new task default is already saved for future time entries. Choose whether to also update existing time entries for Improve reports filters.",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n7shv",
+                      "name": "options",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "eXogh",
+                          "name": "optionRow",
+                          "width": "fill_container",
+                          "height": 38,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 6,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "gap": 10,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "B8nXoj",
+                              "name": "check",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "#5D2B85",
+                              "cornerRadius": 4
+                            },
+                            {
+                              "type": "text",
+                              "id": "Uy1Eu",
+                              "name": "label",
+                              "fill": "#1A1A1A",
+                              "content": "Update existing time entries for this task",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "buCFn",
+                      "name": "actions",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "padding": [
+                        8,
+                        0,
+                        0,
+                        0
+                      ],
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "tarxK",
+                          "name": "primary",
+                          "fill": "#5D2B85",
+                          "cornerRadius": 6,
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wWF2F",
+                              "name": "primaryText",
+                              "fill": "#FFFFFF",
+                              "content": "Update existing records",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }

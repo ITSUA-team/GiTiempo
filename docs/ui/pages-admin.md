@@ -53,8 +53,9 @@
 - Project list table includes project name, source, assigned members, total hours, visibility, and icon-only row actions with text tooltips.
 - Project list table is searchable with placeholder `Search projects` and uses column filters for project name, source, assigned members, total hours, and visibility.
 - `New Project` sits in the projects table header next to the search control.
-- Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<Select>`, followed by `Cancel` and `Save` actions.
-- Manual project creation uses the authenticated Add Project page at `/projects/new`.
+- Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<Select>`, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
+- Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks`.
+- When a project default billable value changes after tasks or time entries already exist in that project, save the new default immediately for future tasks, then show a follow-up popup that asks only whether existing tasks and existing time entries in that project should also be updated.
 
 ## Settings Page
 

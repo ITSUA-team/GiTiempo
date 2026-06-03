@@ -64,6 +64,20 @@ confirm.require({
 })
 ```
 
+## Billable Default Update Dialogs
+
+Use PrimeVue `<Dialog>` for non-destructive propagation choices after a project or task default billable value changes.
+
+- Show this popup only when the edited project or task already has downstream records that can inherit the changed default.
+- The new default value is already saved for future records before this popup appears.
+- Project variant title: `Update project billable default?`
+- Task variant title: `Update task billable default?`
+- Project variant offers checkbox choices for updating existing tasks in the project and existing time entries in the project.
+- Task variant offers a checkbox choice for updating existing time entries for the task.
+- Dismissing the popup leaves existing records unchanged.
+- Primary action is `Update existing records`.
+- These popups are follow-up dialogs for inheritance propagation only. They do not replace the normal project or task save surface.
+
 ## Date And Time Pickers
 
 Use `<DatePicker>`.
@@ -131,17 +145,19 @@ Use PrimeVue `<AutoComplete>` when the UI helps the user find or filter tasks by
 />
 ```
 
-## Combined Projects And Tasks Search
+## User Projects Filters
 
-Use PrimeVue `<AutoComplete>` when the UI helps the user search already loaded project and task names from the frontend.
+Use a lightweight filter set for the user Projects page.
 
-- The user Projects page uses a single combined search field instead of separate project and task filters.
-- Placeholder copy: `Search projects or tasks`.
+- Keep a combined PrimeVue `<AutoComplete>` search field with placeholder copy `Search projects or tasks`.
 - Suggestions may include both project names and task names from the currently loaded visible data set.
-- This search filters frontend-visible data only. Do not document it as a backend search endpoint.
+- Add a `Status` PrimeVue `<Select>` with `All statuses`, `Open`, and `Closed`.
+- Add an `Updated` PrimeVue `<Select>` with `Any time`, `Today`, `Last 7 days`, and `Older`.
+- All filters operate on frontend-visible data only. Do not document them as backend search or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
-- Clearing the field restores the full grouped list.
+- `Status` and `Updated` continue narrowing task rows after the text search is applied and remove project groups that no longer have matching tasks.
+- Clearing the search and resetting the selects restores the full grouped list.
 
 ## Time Entry Dialogs
 
@@ -153,6 +169,7 @@ Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
 - Edit mode pre-fills the selected entry's current project, task, `startedAt`, `endedAt`, description, and `isBillable` state.
 - Required fields follow the time-entry form contract: project, task, `startedAt`, and `endedAt`.
 - Optional fields are description and `isBillable`.
+- Create mode initializes `isBillable` from the selected task's default billable value and still allows a per-entry override before save.
 - Use PrimeVue `<Textarea>` for description and `<Checkbox binary>` for billable state.
 - Default copy differs by mode: create uses `New time entry` and `Save entry`; edit uses `Edit time entry` and `Save changes`.
 - The design mockup may live as a separate reference frame, but implementation must render it as an actual modal popup, not as inline page content.
@@ -168,9 +185,11 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - The selected project must be visible to the current user.
 - The selected task must belong to the selected visible project.
 - The `Task` select lists visible tasks first and appends `New task` as the last option.
+- When `Task = New task`, the created task inherits the selected project's default billable value.
 - The dialog includes an optional `Description` field directly below `Task`; it is a time-entry note, not task metadata.
 - Use PrimeVue `<Textarea>` for the description field.
 - When the timer is idle, the popup primary action is `Start timer`, and the selected task and description become the draft for the new running entry.
+- The running-entry draft initializes `isBillable` from the selected task's default billable value.
 - When the timer is already running, secondary `Change task` updates the running entry's task and description without stopping the timer, and primary `Stop timer` sits to its right in the same popup.
 - The dialog supports creating a new task inside the currently selected visible project through the `Task` select.
 - Do not support creating a new project from this dialog.
