@@ -259,14 +259,19 @@ describe("TopBarTimer", () => {
     expect(wrapper.get('[data-testid="top-bar-timer-mobile-actions"]').text()).toContain(
       "Change",
     );
-    expect(wrapper.get('[data-testid="top-bar-timer-mobile-context"]').text()).toContain(
+    const mobileContext = wrapper.get('[data-testid="top-bar-timer-mobile-context"]');
+
+    expect(mobileContext.classes()).toContain("flex-col");
+    expect(mobileContext.classes()).toContain("items-start");
+    expect(mobileContext.find(".line-clamp-2").exists()).toBe(true);
+    expect(mobileContext.text()).toContain(
       "Last tracked task",
     );
-    expect(wrapper.get('[data-testid="top-bar-timer-mobile-context"]').text()).toContain(
+    expect(mobileContext.text()).toContain(
       "Project Orion / Improve reports filters",
     );
     expect(
-      wrapper.get('[data-testid="top-bar-timer-mobile-context"]').attributes("aria-label"),
+      mobileContext.attributes("aria-label"),
     ).toBe("Change timer task");
     expect(wrapper.find('[data-testid="top-bar-timer-context"]').exists()).toBe(false);
   });
