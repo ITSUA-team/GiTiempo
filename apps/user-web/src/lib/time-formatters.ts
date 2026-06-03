@@ -1,21 +1,23 @@
 import type { TimeEntryResponse } from '@gitiempo/shared';
 import {
+  formatLocalCalendarDate,
+  formatLocalTime,
   formatCompactDuration,
   formatRunningDuration,
-  formatUtcTime,
 } from '@gitiempo/web-shared/time';
 
 export {
-  addUtcDays,
+  addLocalDays,
   formatCompactDuration,
   formatElapsedDuration,
+  formatLocalDayLabel,
+  formatLocalTime,
+  formatLocalWeekday,
   formatRunningDuration,
-  formatUtcDayLabel,
-  formatUtcTime,
-  getUtcDateKey,
-  nextUtcDay,
-  startOfUtcDay,
-  startOfUtcIsoWeek,
+  getLocalDateKey,
+  nextLocalDay,
+  startOfLocalDay,
+  startOfLocalIsoWeek,
 } from '@gitiempo/web-shared/time';
 
 export function formatTimeEntryDuration(
@@ -32,11 +34,15 @@ export function formatTimeEntryDuration(
 export function formatTimeEntryTimeRange(
   entry: Pick<TimeEntryResponse, 'endedAt' | 'startedAt'>,
 ): string {
-  const start = formatUtcTime(entry.startedAt);
+  const start = formatLocalTime(entry.startedAt);
 
   if (entry.endedAt === null) {
     return `${start} - Running`;
   }
 
-  return `${start} - ${formatUtcTime(entry.endedAt)}`;
+  return `${start} - ${formatLocalTime(entry.endedAt)}`;
+}
+
+export function formatLocalTimestampLabel(isoDateTime: string): string {
+  return `${formatLocalCalendarDate(isoDateTime)}, ${formatLocalTime(isoDateTime)}`;
 }
