@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import {
-  ArrowsRightLeftIcon,
-  PlayIcon,
-  StopIcon,
-} from "@heroicons/vue/24/outline";
+import { PlayIcon, StopIcon } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
 import Button from "primevue/button";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
@@ -134,28 +130,37 @@ const primaryActionIcon = computed(() =>
 
       <Button
         type="button"
-        class="h-[38px] w-full justify-center rounded-sm text-xs font-semibold"
+        class="border-divider bg-surface-primary text-brand h-[38px] w-full justify-center rounded-sm text-xs font-semibold"
         aria-label="Change timer task"
         severity="secondary"
         variant="outlined"
         data-testid="top-bar-timer-change-task"
         @click="openDialog"
       >
-        <ArrowsRightLeftIcon
+        <svg
           aria-hidden="true"
-          class="size-3.5"
-        />
-        <span>Change</span>
+          class="text-brand size-3.5"
+          data-testid="top-bar-timer-change-task-icon"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+        >
+          <path d="M16 3h5v5" />
+          <path d="M4 20 21 3" />
+          <path d="M21 16v5h-5" />
+          <path d="M15 15l6 6" />
+          <path d="M4 4l5 5" />
+        </svg>
+        <span class="text-brand">Change</span>
       </Button>
     </div>
 
-    <Button
-      type="button"
-      variant="text"
-      aria-label="Change timer task"
-      class="min-w-0 flex-1 flex-col items-start justify-start gap-0 p-0 text-left"
+    <div
+      class="flex min-w-0 flex-1 flex-col items-start justify-start gap-0 text-left"
       data-testid="top-bar-timer-mobile-context"
-      @click="openDialog"
     >
       <span class="text-text-muted flex w-full min-w-0 items-center gap-2 text-[11px] leading-none font-medium">
         <span class="truncate">{{ timerStatusLabel }}</span>
@@ -172,7 +177,7 @@ const primaryActionIcon = computed(() =>
       <span class="text-text-dark mt-1 line-clamp-2 w-full text-[13px] leading-snug font-semibold whitespace-normal">
         {{ timerContextLabel }}
       </span>
-    </Button>
+    </div>
   </section>
 
   <TopBarTimerTaskDialog

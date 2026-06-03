@@ -261,6 +261,8 @@ describe("TopBarTimer", () => {
     );
     const mobileContext = wrapper.get('[data-testid="top-bar-timer-mobile-context"]');
 
+    expect(mobileContext.element.tagName).toBe("DIV");
+    expect(mobileContext.attributes("aria-label")).toBeUndefined();
     expect(mobileContext.classes()).toContain("flex-col");
     expect(mobileContext.classes()).toContain("items-start");
     expect(mobileContext.find(".line-clamp-2").exists()).toBe(true);
@@ -270,9 +272,6 @@ describe("TopBarTimer", () => {
     expect(mobileContext.text()).toContain(
       "Project Orion / Improve reports filters",
     );
-    expect(
-      mobileContext.attributes("aria-label"),
-    ).toBe("Change timer task");
     expect(wrapper.find('[data-testid="top-bar-timer-context"]').exists()).toBe(false);
   });
 
@@ -284,6 +283,16 @@ describe("TopBarTimer", () => {
     await wrapper.get('[data-testid="top-bar-timer-change-task"]').trigger("click");
 
     expect(openDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not open task selection from mobile timer metadata", async () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountTopBarTimer();
+
+    await wrapper.get('[data-testid="top-bar-timer-mobile-context"]').trigger("click");
+
+    expect(openDialog).not.toHaveBeenCalled();
   });
 
   it("keeps the mobile Start, Stop, and Change controls accessible and actionable", async () => {
@@ -302,6 +311,12 @@ describe("TopBarTimer", () => {
     expect(changeAction.text()).toContain("Change");
     expect(changeAction.attributes("aria-label")).toBe("Change timer task");
     expect(changeAction.attributes("disabled")).toBeUndefined();
+    expect(changeAction.classes()).toContain("bg-surface-primary");
+    expect(changeAction.classes()).toContain("border-divider");
+    expect(changeAction.classes()).toContain("text-brand");
+    expect(
+      changeAction.find('[data-testid="top-bar-timer-change-task-icon"]').classes(),
+    ).toContain("text-brand");
 
     await primaryAction.trigger("click");
     await changeAction.trigger("click");
@@ -353,7 +368,7 @@ describe("TopBarTimer", () => {
     );
     expect(
       wrapper.get('[data-testid="top-bar-timer-mobile-context"]').attributes("aria-label"),
-    ).toBe("Change timer task");
+    ).toBeUndefined();
     expect(
       wrapper.get('[data-testid="top-bar-timer-mobile-context"] .tabular-nums').attributes(
         "aria-hidden",
