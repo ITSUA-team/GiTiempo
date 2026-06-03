@@ -43,8 +43,7 @@
 
 ## Time Entries Page
 
-- Initial page load uses a skeleton matching the header action row, filters, grouped entry cards, and pagination region.
-- Header actions include a primary PrimeVue `<Button>` labeled `+ New time entry` in the same row as the page title. It opens the shared manual time-entry PrimeVue `<Dialog>` without a preset day.
+- Initial page load uses a skeleton matching the top-bar breadcrumb state, filters, grouped entry cards, and pagination region.
 - Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. Date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
 - The task lookup placeholder copy is `Search tasks`.
 - The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
@@ -67,9 +66,8 @@
 
 ## Projects Page
 
-- Initial page load uses a skeleton matching the header action row, search row, and grouped project sections.
-- Header actions include a primary PrimeVue `<Button>` labeled `+ New task` in the same row as the page title.
-- The page uses the same high-level structure as Time Entries: page header row, grouped content sections, and a card/table shell for each group.
+- Initial page load uses a skeleton matching the top-bar breadcrumb state, the search row, and grouped project sections.
+- The page uses the same high-level structure as Time Entries: top-bar breadcrumb, grouped content sections, and a card/table shell for each group.
 - A filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`.
 - The combined search filters already loaded visible projects and tasks on the frontend. Do not document it as a backend free-text search endpoint.
 - Project-name matches keep the full matching project group visible.
@@ -83,7 +81,6 @@
 - Task rows/cards include task title, status, updated metadata, and icon-only edit/delete actions with `Edit` and `Delete` tooltips. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
 - Clicking `Edit` opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
-- Page-level `+ New task` opens the dialog in create mode with a required project `<Select>`.
 - Project-level `+ Add task` opens the same dialog in create mode with that project already selected.
 - Update mode pre-fills the selected project, task title, and editable task fields.
 - The task dialog must ship as a true popup dialog overlay. Do not render create or update forms inline inside the Projects page layout.

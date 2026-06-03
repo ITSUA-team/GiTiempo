@@ -1,4 +1,4 @@
-<!-- Scope: shell layout, nav, breakpoints, page headers -->
+<!-- Scope: shell layout, nav, breakpoints, top-bar page context -->
 <!-- Read when: building app chrome, responsive behavior, or top-level screen scaffolding -->
 
 # Layout
@@ -50,10 +50,11 @@ User SPA and Admin SPA share the same shell:
 
 MVP is desktop-first. Mobile is required but less polished.
 
-## Page Header Pattern
+## Top-Bar Breadcrumb Pattern
 
-Every page uses the same header block:
+Every authenticated content page uses the same compact page-context treatment in the top bar brand area:
 
-- Title: `text-2xl font-semibold text-text-dark`.
-- Subtitle: `text-sm font-normal text-text-muted`.
-- Primary CTA: right-aligned and vertically centered with the title.
+- Leading crumb: app name.
+- Trailing crumb: current page name.
+- Visual treatment: breadcrumb-style inline labels in the top bar instead of a large in-content title/subtitle block.
+- Page-level primary CTAs, when present, stay in their own right-aligned content action row below the top bar.

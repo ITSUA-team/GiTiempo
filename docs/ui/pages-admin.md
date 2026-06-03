@@ -19,7 +19,7 @@
 ## Reports Page
 
 - Initial report load uses a skeleton matching the reports header, setup controls, summary cards, and results table.
-- Report setup bar: project, member, date range, group-by.
+- Report setup bar: project, member, date range, group-by, and `Export CSV` in the same row.
 - Report setup controls define the backend CSV export scope and do not change the loaded table rows or summary cards by themselves.
 - Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
 - Summary totals row above the results table reflects the loaded backend-generated project-member report data.
@@ -33,7 +33,7 @@
 
 - Invoice list table with status tags.
 - Invoice list table is searchable with placeholder `Search invoices` and uses column filters for invoice id/name, project, amount, and status.
-- Create Invoice flow uses a modal dialog.
+- `Create Invoice` sits in the invoices table header next to the search control and opens a modal dialog.
 - Dialog fields: project, date range, hourly rate, discount, total amount.
 
 ## Members Page
@@ -41,7 +41,7 @@
 - Initial page load uses a skeleton matching the stats header, stat cards, and members table before rendering empty or request-error states.
 - Members table with avatar, role, projects assigned, last active, and icon-only row actions with text tooltips.
 - Members table is searchable with placeholder `Search members` and uses column filters for member name/email, role, assigned projects, and last active.
-- Invite member opens a dialog.
+- `Invite Member` sits in the members table header next to the search control and opens the invite flow.
 - Pending invitations render in a separate card below the members table using the same management-table/card visual language. Desktop/tablet columns are Email, Role, Expires, and Actions; mobile renders stacked cards with the same fields.
 - Pending invitation row actions are icon-only controls with text tooltips and accessible labels: `Resend invite` and `Cancel invite`. `Resend invite` calls the admin-only resend endpoint, shows success/error toast feedback, and refreshes pending invite data. `Cancel invite` uses the shared destructive confirmation dialog before issuing the existing cancel request.
 - Empty pending invitations state is distinct from request-error state; failed resend or cancel keeps the row visible and surfaces the backend message.
@@ -52,13 +52,14 @@
 - Initial page load uses a skeleton matching the stats header, stat cards, and projects table before rendering empty or request-error states.
 - Project list table includes project name, source, assigned members, total hours, visibility, and icon-only row actions with text tooltips.
 - Project list table is searchable with placeholder `Search projects` and uses column filters for project name, source, assigned members, total hours, and visibility.
+- `New Project` sits in the projects table header next to the search control.
 - Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<Select>`, followed by `Cancel` and `Save` actions.
 - Manual project creation uses the authenticated Add Project page at `/projects/new`.
 
 ## Settings Page
 
 - Single-column workspace settings form inside the authenticated admin shell.
-- Header copy: `Settings` with `Configure workspace defaults, billing preferences, and organization details.`
+- Settings uses the shared top-bar breadcrumb pattern instead of a large in-content title/subtitle block.
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
 - Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
 - `Time zone` uses a full-width PrimeVue `<Select>` below the Default hourly rate + Currency row, enables filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source.
