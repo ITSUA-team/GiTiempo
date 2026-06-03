@@ -26,6 +26,7 @@
 - A completed timer entry or manual entry may seed the last tracked task context if that task is still visible and active.
 - Starting from the popup creates a fresh running time entry. It must not resume or update the previous time entry record.
 - The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
+- The `Task` select lists visible tasks first and appends `New task` as the last option.
 - When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description.
 - When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
 - If there is no eligible last tracked task context, keep the same not-running top-bar layout and keep the compact timer surface clickable so the popup can seed a new startable task context.
@@ -35,7 +36,7 @@
 - On mobile, a single `Task & timer` opener lives on the left side of the strip so it remains reachable when the profile menu opens from the top-right identity area.
 - On mobile, the right-side metadata uses project on the first line and task on the second line, with running elapsed time shown there when applicable; the opener remains the guaranteed task-picker entry point if metadata is partially covered.
 - The task-picker dialog uses visible Project -> Task selection only for task targeting; it also includes the optional time-entry description field.
-- The dialog also supports creating a new task inside the currently selected visible project.
+- When `Task` is set to `New task`, show a single required new-task title input directly below the task select and create that task inside the currently selected visible project.
 - The dialog does not support creating a new project.
 - When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with the state-appropriate timer action.
 - Manual interval entry stays on Time Entries only. It does not move into the top-bar timer surface or task-picker dialog.

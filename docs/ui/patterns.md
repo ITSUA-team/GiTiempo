@@ -167,16 +167,17 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - Use sequential PrimeVue `<Select>` controls for project and task selection.
 - The selected project must be visible to the current user.
 - The selected task must belong to the selected visible project.
+- The `Task` select lists visible tasks first and appends `New task` as the last option.
 - The dialog includes an optional `Description` field directly below `Task`; it is a time-entry note, not task metadata.
 - Use PrimeVue `<Textarea>` for the description field.
 - When the timer is idle, the popup primary action is `Start timer`, and the selected task and description become the draft for the new running entry.
 - When the timer is already running, secondary `Change task` updates the running entry's task and description without stopping the timer, and primary `Stop timer` sits to its right in the same popup.
-- The dialog supports creating a new task inside the currently selected visible project.
+- The dialog supports creating a new task inside the currently selected visible project through the `Task` select.
 - Do not support creating a new project from this dialog.
-- The create-task form uses a single required task-title field backed by the existing task-create contract.
+- When `Task` is set to `New task`, show a single required task-title input directly below the task select, backed by the existing task-create contract.
 - When task creation succeeds, keep the dialog open with the new task selected and let the user confirm with the state-appropriate timer action.
-- The dialog must clearly separate task selection from task creation so the user always knows whether they are picking an existing task or creating a new one.
-- On mobile, keep the task-picker dialog near full width, block background scroll, make the dialog content scrollable, and stack task-creation plus timer-action rows so Project -> Task selection remains usable in the mobile timer flow. The footer primary action is full width on mobile.
+- The dialog must clearly show that the new-task input is conditional on `Task = New task`, so the user always knows whether they are picking an existing task or creating a new one.
+- On mobile, keep the task-picker dialog near full width, block background scroll, make the dialog content scrollable, and stack the conditional new-task input plus timer-action rows so Project -> Task selection remains usable in the mobile timer flow. The footer primary action is full width on mobile.
 - Loading, empty, validation-error, and request-error states must stay distinct.
 - The dialog must not include manual interval entry controls; manual entry remains on Time Entries only.
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
