@@ -67,7 +67,7 @@ Read this file first. Load only the linked section files needed for the task.
 
 - `setup.md`: Tailwind theme tokens, PrimeVue preset setup, import paths, CSS layer ordering.
 - `components.md`: Design tokens, component conventions, shared component-level rules.
-- `layout.md`: App shell, sidebar navigation, breakpoints, page header pattern.
+- `layout.md`: App shell, sidebar navigation, breakpoints, top-bar breadcrumb pattern.
 - `pages-user.md`: Dashboard, timer, time entries, projects, profile.
 - `pages-admin.md`: Dashboard, reports, invoices, members, projects, settings.
 - `chrome-ext.md`: Popup dimensions, injected page control states, and extension UI constraints.
@@ -78,7 +78,7 @@ Read this file first. Load only the linked section files needed for the task.
 
 - For any implementation task, read only `INDEX.md` plus the smallest relevant section file set.
 - Task routing:
-- shell, sidebar, top bar, breakpoints, or page header work: `layout.md`
+- shell, sidebar, top bar, breakpoints, or top-bar breadcrumb work: `layout.md`
 - shared component styling, forms, tables, empty/loading/error states, or token usage: `components.md`
 - user-facing page structure or page-specific UI: `pages-user.md`
 - admin-facing page structure or page-specific UI: `pages-admin.md`
