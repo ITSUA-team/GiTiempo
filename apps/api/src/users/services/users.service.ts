@@ -110,7 +110,6 @@ export class UsersService {
       .set({
         email: input.email,
         displayName: firebaseDisplayNameFallback(input.displayName),
-        avatarUrl: input.avatarUrl ?? null,
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -123,10 +122,10 @@ export class UsersService {
    * Upserts a local user keyed by `firebase_uid`. Called during login
    * after Firebase verification succeeds.
    *
-   * On conflict we refresh `email`, `avatar_url`, and `updated_at` from the
-   * Firebase identity. Display name is locally editable, so Firebase only
-   * seeds it while the local value is still empty. `id` and `created_at` are
-   * immutable.
+   * On conflict we refresh `email` and `updated_at` from the Firebase identity.
+   * Display name is locally editable, so Firebase only seeds it while the local
+   * value is still empty. Avatar URL is also locally editable and nullable, so
+   * Firebase only seeds it on insert. `id` and `created_at` are immutable.
    */
   async upsertFromFirebase(input: UpsertFromFirebaseInput): Promise<UserRow> {
     const now = new Date();
@@ -143,7 +142,6 @@ export class UsersService {
         set: {
           email: input.email,
           displayName: firebaseDisplayNameFallback(input.displayName),
-          avatarUrl: input.avatarUrl ?? null,
           updatedAt: now,
         },
       })
