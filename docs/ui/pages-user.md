@@ -9,8 +9,10 @@
 - Initial page load uses a skeleton that approximates the dashboard header, weekly insight/stat surfaces, and recent entries table before rendering empty states.
 - Weekly focus insight: full-width `<Card>` highlighting `Top Project This Week` and `Top Task This Week` using the user's current browser-local-week tracked entries.
 - Weekly focus insight values should show the winning project/task labels plus tracked-duration context, and may include a compact relative-share indicator when it improves scannability.
+- When the winning task is backed by a synced GitHub issue, show a compact external-link icon next to the task name that opens the source issue in a new browser tab.
 - Recent Time Entries: render the existing `<DataTable>` on tablet and desktop, and switch to stacked mobile cards below `640px`.
 - The mobile recent-entry cards keep the same record content as the desktop table: task title, project name, time range, duration, and highlighted running/current-entry state when applicable.
+- Dashboard recent-entry task names keep their current row behavior, and synced GitHub tasks add a separate external-link icon beside the task name that opens the source issue in a new browser tab.
 - The section-level `View all` action remains available in both desktop/table and mobile-card layouts.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
@@ -22,6 +24,7 @@
 - Authenticated shell: every authenticated `user-web` page shows the compact timer surface on tablet and desktop, and the selected full-width mobile timer strip below `640px`.
 - Running top-bar state: show the project on the first line, task on the second line, and live `HH:MM:SS` inside the clickable compact timer surface.
 - Not-running top-bar state: show the last tracked project/task context inside the same compact timer surface instead of a shell-level start action.
+- When the shown task is backed by a synced GitHub issue, add a compact external-link icon beside the task line inside the surface. The icon opens the source issue in a new browser tab and does not replace the timer-surface click target.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
 - A completed timer entry or manual entry may seed the last tracked task context if that task is still visible and active.
 - Starting from the popup creates a fresh running time entry. It must not resume or update the previous time entry record.
@@ -54,7 +57,7 @@
 - Day-level create uses the rendered local day as the preset calendar day for `startedAt` and `endedAt`.
 - At and above `640px`, each day group keeps the existing table layout for entries.
 - Below `640px`, each day group renders stacked mobile cards instead of the fixed-width desktop table.
-- Entry row/card content includes a clickable task name, project, time range, and duration. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. Time-range labels use the user's current browser-local timezone.
+- Entry row/card content includes a clickable task name, project, time range, and duration. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the task name that opens the source issue in a new browser tab. Time-range labels use the user's current browser-local timezone.
 - Running entry highlighted with `bg-accent-tint`.
 - Running-entry mobile cards keep the same highlight treatment and do not expose edit/delete actions; stopping remains owned by the global top-bar timer.
 - Clicking the task name opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
@@ -84,7 +87,7 @@
 - Tasks for that project render beneath the project header inside the same section card.
 - At and above `640px`, each project section keeps the existing task table layout.
 - Below `640px`, each project section renders stacked mobile task cards instead of the fixed-width desktop task table.
-- Task rows/cards include a clickable task title, status, and updated metadata. The task title opens the shared task edit dialog, and the row no longer carries separate edit/delete icon actions. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
+- Task rows/cards include a clickable task title, status, and updated metadata. The task title opens the shared task edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the title that opens the source issue in a new browser tab. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
 - Clicking the task title opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
 - The project-level add-task icon action opens the same dialog in create mode with that project already selected.

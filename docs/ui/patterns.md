@@ -168,6 +168,15 @@ Use icon-only create-entry actions when the surrounding section title already pr
 - Match the icon to the entity when possible; use a generic `plus` only when the surrounding header already makes the entity obvious.
 - Every icon-only action still needs visible tooltip text and an accessible label that keeps the original action verb explicit.
 
+## External Task Links
+
+Use a separate icon-only external link next to the task name when the task is backed by a synced GitHub issue.
+
+- Keep the task name behavior intact; the external-link icon must not replace the existing edit or selection click target on the task label itself.
+- The icon opens the source GitHub issue in a new browser tab.
+- Use a compact `arrow-up-right` style icon aligned to the task name baseline or centerline without adding a full button treatment around the row.
+- Show this icon only for externally linked tasks. Local/manual tasks do not render it.
+
 ## Time Entry Dialogs
 
 Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
