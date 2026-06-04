@@ -26,6 +26,40 @@ The frontend codebase MUST place browser-only leaf logic in a shared frontend lo
 - **THEN** it uses the same shared frontend workspace-link resolver
 - **AND** configured counterpart workspace URL behavior stays consistent across both SPAs
 
+### Requirement: Shared Frontend Date-Time Leaves Preserve Time Tracking Semantics
+
+The frontend codebase SHALL centralize repeated browser-safe date, time, calendar-boundary, and duration helper logic in a shared frontend leaf when the behavior is used by both SPAs or by multiple time-tracking/reporting surfaces.
+
+#### Scenario: Repeated date-time helpers use one shared owner
+
+- **WHEN** `user-web` and `admin-web`, or multiple feature surfaces within those apps, need the same date key, time label, duration label, elapsed timer label, or calendar-boundary behavior
+- **THEN** those surfaces SHALL consume one shared frontend helper implementation instead of maintaining parallel local helper logic
+- **AND** app-local code SHALL keep only domain-specific wrapper wording or feature composition that is not shared behavior.
+
+#### Scenario: UTC time-entry boundaries remain UTC based
+
+- **WHEN** user-facing time-entry displays, filters, dashboard windows, or grouped day labels are derived from stored time-entry ISO timestamps
+- **THEN** UTC date keys, UTC day starts, and UTC ISO week windows SHALL remain based on UTC calendar boundaries
+- **AND** the migration SHALL NOT replace those behaviors with local-timezone day or week calculations.
+
+#### Scenario: Local DatePicker report ranges remain local-calendar based
+
+- **WHEN** admin report setup converts a PrimeVue DatePicker date range into report API `dateFrom` and `dateTo` query timestamps
+- **THEN** the selected local calendar days SHALL still map to local day-start and next-local-day-start ISO boundaries
+- **AND** the report query SHALL preserve the existing closed-open date window semantics.
+
+#### Scenario: Duration and running timer labels stay stable
+
+- **WHEN** frontend surfaces render compact durations, report durations, completed time-entry durations, or running timer elapsed labels
+- **THEN** the user-visible label formats SHALL remain consistent with existing product behavior
+- **AND** running elapsed labels SHALL continue to clamp negative elapsed seconds to zero before rendering `HH:MM:SS`.
+
+#### Scenario: Shared date-time helpers are frontend leaves only
+
+- **WHEN** the shared date-time utility module is introduced
+- **THEN** it SHALL live in a browser-safe frontend package such as `@gitiempo/web-shared`
+- **AND** it SHALL NOT move API contracts, backend persistence rules, route/view orchestration, query composables, or page-specific report/time-entry view models into the shared utility boundary.
+
 ### Requirement: Shared Frontend Extraction Preserves App-Level Ownership
 
 The frontend codebase MUST keep route-level composition and app-specific orchestration local unless a larger abstraction has at least two stable call sites and no product-specific behavior leakage.
@@ -45,6 +79,34 @@ The frontend codebase SHALL extract Vue UI components into `@gitiempo/web-shared
 - **WHEN** both SPAs contain the same shell or login sub-region with the same structure and interaction behavior
 - **THEN** that sub-region may be implemented as a shared Vue component
 - **AND** product-specific copy, navigation items, and app-only layout decisions remain configurable or local to each SPA
+
+### Requirement: Repeated Design-System Surfaces Are Shared As Small Vue Leaves
+
+The frontend codebase SHALL extract repeated, documented design-system surfaces into small PrimeVue-based Vue leaves in `@gitiempo/web-shared` when the surface has a stable props, slots, and emits contract and app-level orchestration can remain local.
+
+#### Scenario: Documented shared UI pattern is extracted
+
+- **WHEN** a page header, section header, card shell, stat card, management table chrome, loading block, empty state, or request-error state is documented as a shared UI pattern and is needed by more than one stable surface
+- **THEN** the shared structure SHALL be implemented or reused as a small Vue component in `@gitiempo/web-shared`
+- **AND** consuming apps SHALL provide product-specific copy, data, navigation targets, actions, and slots through the component contract.
+
+#### Scenario: Shared component remains design-system aligned
+
+- **WHEN** a shared Vue leaf renders standard UI controls or display surfaces
+- **THEN** it SHALL use PrimeVue components when equivalents exist
+- **AND** it SHALL use shared token utilities, the shared PrimeVue preset, and documented `pt` overrides instead of raw hex values, raw duplicate controls, `!important` utilities, or deep selectors.
+
+#### Scenario: Route-level ownership stays app-local
+
+- **WHEN** a design-system surface moves into `@gitiempo/web-shared`
+- **THEN** route maps, route guards, Pinia stores, auth/session orchestration, page-level data loading, and product-specific shell composition SHALL remain in the consuming app
+- **AND** the shared component SHALL NOT import app route names, app stores, or app HTTP clients.
+
+#### Scenario: Single-use extraction requires documented stability
+
+- **WHEN** a shared Vue leaf is extracted before two live app call sites exist
+- **THEN** the docs or active specs SHALL already define the surface as a reusable standard pattern
+- **AND** the component contract SHALL remain small enough to avoid hiding product-specific behavior behind optional props.
 
 ### Requirement: Shared Vue Components Use PrimeVue For Standard UI
 
@@ -266,22 +328,26 @@ The frontend codebase SHALL use frontend-scoped markup review to surface class o
 - **AND** the warning surface stays focused on frontend/shared markup rather than unrelated packages
 
 ### Requirement: Extension Reuses Only Browser-Safe Shared Frontend Leaves
-Chrome extension code SHALL reuse shared frontend tokens and contract-safe helpers only when they are browser-extension safe and do not pull SPA-only runtime dependencies.
+
+Chrome extension code SHALL remain Tailwind-only and reuse shared frontend tokens and contract-safe helpers only when they are browser-extension safe and do not pull SPA-only runtime dependencies.
 
 #### Scenario: Extension imports shared token styling without SPA bootstrap
+
 - **WHEN** the Chrome extension needs GiTiempo design tokens
-- **THEN** it imports the shared token CSS or generated Tailwind token surface needed for extension styling
-- **AND** it does not import PrimeVue setup, Vue Router setup, Pinia stores, or SPA app bootstrap modules
+- **THEN** it SHALL import the shared token CSS or use an equivalent generated Tailwind token surface needed for extension styling
+- **AND** it SHALL NOT import PrimeVue setup, PrimeVue components, Vue Router setup, Pinia stores, or SPA app bootstrap modules.
 
 #### Scenario: Extension keeps runtime helpers extension-owned when storage differs
+
 - **WHEN** the Chrome extension needs token persistence, tab messaging, content-script messaging, or browser-extension storage behavior
-- **THEN** that behavior is implemented in an extension-owned runtime boundary
-- **AND** shared SPA helpers are not reused if they assume `localStorage`, router state, app shell state, or DOM ownership outside the extension
+- **THEN** that behavior SHALL be implemented in an extension-owned runtime boundary
+- **AND** shared SPA helpers SHALL NOT be reused if they assume `localStorage`, router state, app shell state, or DOM ownership outside the extension.
 
 #### Scenario: Extension may consume shared contracts
+
 - **WHEN** the Chrome extension constructs or validates contract-facing API payloads and responses
-- **THEN** it may consume browser-safe schemas or types from `@gitiempo/shared`
-- **AND** browser-only extension runtime helpers are not moved into `@gitiempo/shared`
+- **THEN** it MAY consume browser-safe schemas or types from `@gitiempo/shared`
+- **AND** browser-only extension runtime helpers SHALL NOT be moved into `@gitiempo/shared`.
 
 ### Requirement: Shared Mobile Record List Leaves
 The frontend shared package SHALL provide only neutral, presentational leaves for mobile record-list rendering when the same viewport and card shell behavior is used by both SPAs.

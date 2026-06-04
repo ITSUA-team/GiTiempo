@@ -5,17 +5,28 @@ import type {
   WorkspaceInviteListResponse,
   WorkspaceInviteResponse,
   WorkspaceMemberListResponse,
+  WorkspaceMemberResponse,
+  WorkspaceRole,
 } from '@gitiempo/shared';
-import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
+import {
+  SectionHeader,
+  StatCard,
+  SurfaceCard,
+  useIsMobileViewport,
+} from '@gitiempo/web-shared';
+import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
+import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
+import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
 import PendingInvitationsCard from '@/components/PendingInvitationsCard.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
+import { useMembersTableState } from '@/composables/useMembersTableState';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -23,6 +34,7 @@ import { useAuthStore } from '@/stores/auth';
 const authStore = useAuthStore();
 const { requireConfirmation } = useConfirmation();
 const { errorToast, successToast } = useToasts();
+const isMobileViewport = useIsMobileViewport();
 
 const members = ref<WorkspaceMemberListResponse>([]);
 const invites = ref<WorkspaceInviteListResponse>([]);
@@ -35,6 +47,8 @@ const initialLoaded = ref(false);
 const inviteDialogVisible = ref(false);
 const resendingInviteId = ref<string | null>(null);
 const cancelingInviteId = ref<string | null>(null);
+const savingMemberAssignmentId = ref<string | null>(null);
+const savingMemberRoleId = ref<string | null>(null);
 
 interface LoadDataOptions {
   errorAction: string;
@@ -48,6 +62,24 @@ interface LoadInvitesOptions {
 }
 
 const currentUserId = computed(() => authStore.profile?.id ?? null);
+const {
+  collapseRow: collapseMemberRow,
+  emptyDescription: memberTableEmptyDescription,
+  expandedRows: memberTableExpandedRows,
+  expansionMode: memberTableExpansionMode,
+  filters: memberTableFilters,
+  lastActiveFilterOptions,
+  projectFilterOptions,
+  roleFilterOptions,
+  rows: memberTableRows,
+  setExpandedRows: setMemberTableExpandedRows,
+  toggleExpansion: toggleMemberExpansion,
+  updateFilters: updateMemberTableFilters,
+} = useMembersTableState({
+  currentUserId,
+  members,
+  projects,
+});
 const pendingInviteRows = computed(() =>
   invites.value.filter((invite) => invite.status === 'pending'),
 );
@@ -163,6 +195,125 @@ function handleInviteCreated(): void {
   refreshPendingInvites();
 }
 
+function getMemberDisplayName(member: WorkspaceMemberResponse): string {
+  return member.displayName?.trim() || member.email;
+}
+
+function handleRemoveMember(member: WorkspaceMemberResponse): void {
+  const memberName = getMemberDisplayName(member);
+
+  requireConfirmation(
+    `${memberName} will be removed from this workspace. This action cannot be undone.`,
+    'Remove member?',
+    'Remove',
+    async () => {
+      const token = authStore.accessToken;
+
+      if (!token) {
+        return;
+      }
+
+      try {
+        await adminMembersClient.removeMember(member.id);
+        successToast(`${memberName} has been removed.`);
+        await refreshMembers();
+      } catch (err) {
+        errorToast(err instanceof Error ? err.message : 'Failed to remove member', {
+          error: err,
+          logContext: { action: 'remove-member', feature: 'members' },
+        });
+      }
+    },
+  );
+}
+
+function handleAssignMember(member: WorkspaceMemberResponse): void {
+  toggleMemberExpansion(member, 'assign');
+}
+
+function handleEditMember(member: WorkspaceMemberResponse): void {
+  toggleMemberExpansion(member, 'edit');
+}
+
+async function handleAssignmentsSubmitted(
+  member: WorkspaceMemberResponse,
+  input: MemberAssignFormInput,
+): Promise<void> {
+  const token = authStore.accessToken;
+
+  if (!token) {
+    return;
+  }
+
+  const currentAssignedIds = new Set(
+    projects.value
+      .filter((project) =>
+        project.isActive &&
+        project.members.some((projectMember) => projectMember.userId === member.userId),
+      )
+      .map((project) => project.id),
+  );
+  const nextAssignedIds = new Set(input.projectIds);
+  const projectIdsToAdd = input.projectIds.filter((id) => !currentAssignedIds.has(id));
+  const projectIdsToRemove = [...currentAssignedIds].filter(
+    (id) => !nextAssignedIds.has(id),
+  );
+
+  savingMemberAssignmentId.value = member.id;
+
+  try {
+    for (const projectId of projectIdsToAdd) {
+      await adminProjectsClient.assignMember(projectId, member.userId);
+    }
+    for (const projectId of projectIdsToRemove) {
+      await adminProjectsClient.removeAssignment(projectId, member.userId);
+    }
+
+    successToast(`Project assignments for ${getMemberDisplayName(member)} saved.`);
+    collapseMemberRow(member);
+    await refreshMembers();
+  } catch (err) {
+    errorToast(err instanceof Error ? err.message : 'Failed to save assignments', {
+      error: err,
+      logContext: { action: 'save-project-assignments', feature: 'members' },
+    });
+  } finally {
+    savingMemberAssignmentId.value = null;
+  }
+}
+
+async function handleRoleSubmitted(
+  member: WorkspaceMemberResponse,
+  role: WorkspaceRole,
+): Promise<void> {
+  if (role === member.role) {
+    collapseMemberRow(member);
+    return;
+  }
+
+  const token = authStore.accessToken;
+
+  if (!token) {
+    return;
+  }
+
+  savingMemberRoleId.value = member.id;
+
+  try {
+    await adminMembersClient.updateMemberRole(member.id, { role });
+    successToast(`Role for ${getMemberDisplayName(member)} changed to ${role}.`);
+    collapseMemberRow(member);
+    await refreshMembers();
+  } catch (err) {
+    errorToast(err instanceof Error ? err.message : 'Failed to update role', {
+      error: err,
+      logContext: { action: 'update-member-role', feature: 'members' },
+    });
+  } finally {
+    savingMemberRoleId.value = null;
+  }
+}
+
 async function handleResendInvite(invite: WorkspaceInviteResponse): Promise<void> {
   const token = authStore.accessToken;
 
@@ -264,14 +415,45 @@ onMounted(fetchAll);
 
       <SurfaceCard padding-class="p-5">
         <MembersTable
-          :members="members"
-          :projects="projects"
+          :empty-description="memberTableEmptyDescription"
+          :expanded-rows="memberTableExpandedRows"
+          :filters="memberTableFilters"
+          :is-mobile-viewport="isMobileViewport"
+          :last-active-filter-options="lastActiveFilterOptions"
           :loading="loading"
-          :current-user-id="currentUserId"
-          @member-removed="refreshMembers"
-          @role-updated="refreshMembers"
-          @assignments-updated="refreshMembers"
-        />
+          :project-filter-options="projectFilterOptions"
+          :role-filter-options="roleFilterOptions"
+          :rows="memberTableRows"
+          @assign-member="handleAssignMember"
+          @edit-member="handleEditMember"
+          @remove-member="handleRemoveMember"
+          @update:expanded-rows="setMemberTableExpandedRows"
+          @update:filters="updateMemberTableFilters"
+        >
+          <template #row-expansion="{ row }">
+            <MemberAssignPmPanel
+              v-if="
+                memberTableExpansionMode[row.id] === 'assign' &&
+                  memberTableExpandedRows[row.id]
+              "
+              :member="row.member"
+              :projects="projects"
+              :saving="savingMemberAssignmentId === row.id"
+              @save="handleAssignmentsSubmitted(row.member, $event)"
+              @cancelled="collapseMemberRow(row.member)"
+            />
+            <MemberEditForm
+              v-else-if="
+                memberTableExpansionMode[row.id] === 'edit' &&
+                  memberTableExpandedRows[row.id]
+              "
+              :member="row.member"
+              :saving="savingMemberRoleId === row.id"
+              @save="handleRoleSubmitted(row.member, $event)"
+              @cancelled="collapseMemberRow(row.member)"
+            />
+          </template>
+        </MembersTable>
       </SurfaceCard>
 
       <PendingInvitationsCard
