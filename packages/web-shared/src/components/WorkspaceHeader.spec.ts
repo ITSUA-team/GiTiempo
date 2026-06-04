@@ -21,6 +21,7 @@ const baseProps = {
 type HeaderProps = typeof baseProps & {
   settingsIcon?: Component;
   settingsLabel?: string;
+  showSettings?: boolean;
 };
 
 type TestMenuItem = {
@@ -453,5 +454,19 @@ describe("WorkspaceHeader", () => {
 
     expect(profileLink.text()).toContain("Profile");
     expect(wrapper.find('[data-testid="custom-profile-icon"]').exists()).toBe(true);
+  });
+
+  it("omits the settings action when the app disables it", async () => {
+    const wrapper = mountHeader({
+      props: {
+        showSettings: false,
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-trigger"]').trigger("click");
+
+    expect(wrapper.find('[data-testid="profile-menu-settings"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="profile-menu-counterpart"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-menu-sign-out"]').exists()).toBe(true);
   });
 });

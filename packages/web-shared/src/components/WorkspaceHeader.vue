@@ -55,6 +55,7 @@ const props = withDefaults(
     productName?: string;
     settingsIcon?: Component;
     settingsLabel?: string;
+    showSettings?: boolean;
     settingsTo: RouteLocationRaw;
     userInitials: string;
     workspaceName: string;
@@ -64,6 +65,7 @@ const props = withDefaults(
     productName: "GiTiempo",
     settingsIcon: undefined,
     settingsLabel: "Settings",
+    showSettings: true,
     workspaceShortName: "GT",
   },
 );
@@ -96,30 +98,40 @@ const profileAvatarRootClass = computed(() =>
     .join(" "),
 );
 
-const profileMenuItems = computed<(ProfileMenuItem | { separator: true })[]>(() => [
-  {
-    href: props.counterpartHref,
-    key: "workspace",
-    label: props.counterpartLabel,
-  },
-  {
-    key: "settings",
-    label: props.settingsLabel,
-    route: props.settingsTo,
-  },
-  {
-    separator: true,
-  },
-  {
-    command: () => {
-      closeProfileMenu({ restoreFocus: true });
-      emit("signOut");
+const profileMenuItems = computed<(ProfileMenuItem | { separator: true })[]>(() => {
+  const items: (ProfileMenuItem | { separator: true })[] = [
+    {
+      href: props.counterpartHref,
+      key: "workspace",
+      label: props.counterpartLabel,
     },
-    destructive: true,
-    key: "sign-out",
-    label: "Sign out",
-  },
-]);
+  ];
+
+  if (props.showSettings) {
+    items.push({
+      key: "settings",
+      label: props.settingsLabel,
+      route: props.settingsTo,
+    });
+  }
+
+  items.push(
+    {
+      separator: true,
+    },
+    {
+      command: () => {
+        closeProfileMenu({ restoreFocus: true });
+        emit("signOut");
+      },
+      destructive: true,
+      key: "sign-out",
+      label: "Sign out",
+    },
+  );
+
+  return items;
+});
 
 function focusProfileTrigger(): void {
   profileMenuRegion.value
