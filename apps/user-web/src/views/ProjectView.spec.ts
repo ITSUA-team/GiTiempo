@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type {

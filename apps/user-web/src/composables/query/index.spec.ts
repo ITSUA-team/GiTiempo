@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type { TimeEntryListResponse, TimeEntryResponse } from "@gitiempo/shared";
