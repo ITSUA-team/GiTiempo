@@ -143,7 +143,6 @@ async function mountView(client = createClientMock()) {
           template:
             '<button type="button" :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
         },
-        ConfirmDialog: { template: "<div />" },
         ProjectTaskDialog: {
           emits: ["close", "save", "update:projectId", "update:status", "update:title"],
           props: [
