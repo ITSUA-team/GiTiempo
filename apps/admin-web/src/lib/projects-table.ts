@@ -32,6 +32,15 @@ export interface ProjectsTableFilterHandlers {
   >;
 }
 
+export interface ProjectsTableFilterUpdate {
+  global?: string | undefined;
+  hours?: ProjectHoursFilter | undefined;
+  memberIds?: string[] | undefined;
+  projectQuery?: string | undefined;
+  source?: ProjectResponse['source'] | null | undefined;
+  visibility?: ProjectResponse['visibility'] | null | undefined;
+}
+
 export interface ProjectsTableRow {
   assignedMembersLabel: string;
   hoursLabel: string;
@@ -46,6 +55,3 @@ export interface ProjectsTableRow {
 }
 
 export type ProjectsTableExpandedRows = Record<string, boolean>;
-export type ProjectsTableExpandedRowsSetter = ProjectsTableValueSetter<
-  ProjectsTableExpandedRows | undefined
->;

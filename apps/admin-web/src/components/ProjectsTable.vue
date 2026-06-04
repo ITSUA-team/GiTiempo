@@ -30,9 +30,8 @@ import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue'
 import type {
   ProjectHoursFilter,
   ProjectsTableExpandedRows,
-  ProjectsTableExpandedRowsSetter,
-  ProjectsTableFilterHandlers,
   ProjectsTableFilterOption,
+  ProjectsTableFilterUpdate,
   ProjectsTableFilters,
   ProjectsTableRow,
 } from '@/lib/projects-table';
@@ -40,14 +39,12 @@ import type {
 defineProps<{
   emptyDescription: string;
   expandedRows: ProjectsTableExpandedRows;
-  filterHandlers: ProjectsTableFilterHandlers;
   filters: ProjectsTableFilters;
   hoursFilterOptions: ProjectsTableFilterOption<ProjectHoursFilter>[];
   isMobileViewport: boolean;
   loading: boolean;
   memberFilterOptions: ProjectsTableFilterOption[];
   rows: ProjectsTableRow[];
-  setExpandedRows: ProjectsTableExpandedRowsSetter;
   sourceFilterOptions: ProjectsTableFilterOption<ProjectResponse['source']>[];
   visibilityFilterOptions: ProjectsTableFilterOption<ProjectResponse['visibility']>[];
 }>();
@@ -56,7 +53,45 @@ const emit = defineEmits<{
   'edit-project': [project: ProjectResponse];
   archive: [project: ProjectResponse];
   unarchive: [project: ProjectResponse];
+  'update:expandedRows': [expandedRows: ProjectsTableExpandedRows | undefined];
+  'update:filters': [filters: ProjectsTableFilterUpdate];
 }>();
+
+function updateFilters(filters: ProjectsTableFilterUpdate): void {
+  emit('update:filters', filters);
+}
+
+function updateGlobalFilter(value: string | undefined): void {
+  updateFilters({ global: value });
+}
+
+function updateProjectQueryFilter(value: string | undefined): void {
+  updateFilters({ projectQuery: value });
+}
+
+function updateMemberIdsFilter(value: string[] | undefined): void {
+  updateFilters({ memberIds: value });
+}
+
+function updateSourceFilter(
+  value: ProjectResponse['source'] | null | undefined,
+): void {
+  updateFilters({ source: value });
+}
+
+function updateHoursFilter(value: ProjectHoursFilter | undefined): void {
+  updateFilters({ hours: value });
+}
+
+function updateVisibilityFilter(
+  value: ProjectResponse['visibility'] | null | undefined,
+): void {
+  updateFilters({ visibility: value });
+}
+
+function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void {
+  emit('update:expandedRows', value);
+}
 
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
@@ -79,7 +114,7 @@ const columns: ManagementTableColumn[] = [
             aria-label="Search projects"
             class="h-[38px] w-full rounded-[6px] text-[14px]"
             placeholder="Search projects"
-            @update:model-value="filterHandlers.setGlobal"
+            @update:model-value="updateGlobalFilter"
           />
         </IconField>
       </template>
@@ -100,7 +135,7 @@ const columns: ManagementTableColumn[] = [
         :model-value="filters.projectQuery"
         class="h-[38px] w-full rounded-[6px] text-[14px]"
         placeholder="Filter project"
-        @update:model-value="filterHandlers.setProjectQuery"
+        @update:model-value="updateProjectQueryFilter"
       />
     </div>
 
@@ -119,7 +154,7 @@ const columns: ManagementTableColumn[] = [
           placeholder="All sources"
           show-clear
           :pt="managementTableFilterSelectPt"
-          @update:model-value="filterHandlers.setSource"
+          @update:model-value="updateSourceFilter"
         />
       </div>
 
@@ -137,7 +172,7 @@ const columns: ManagementTableColumn[] = [
           placeholder="All"
           show-clear
           :pt="managementTableFilterSelectPt"
-          @update:model-value="filterHandlers.setVisibility"
+          @update:model-value="updateVisibilityFilter"
         />
       </div>
     </div>
@@ -155,7 +190,7 @@ const columns: ManagementTableColumn[] = [
           option-label="label"
           option-value="value"
           :pt="managementTableFilterSelectPt"
-          @update:model-value="filterHandlers.setHours"
+          @update:model-value="updateHoursFilter"
         />
       </div>
 
@@ -177,7 +212,7 @@ const columns: ManagementTableColumn[] = [
           :max-selected-labels="1"
           selected-items-label="{0} members"
           :pt="managementTableFilterMultiSelectPt"
-          @update:model-value="filterHandlers.setMemberIds"
+          @update:model-value="updateMemberIdsFilter"
         />
       </div>
     </div>
@@ -338,7 +373,7 @@ const columns: ManagementTableColumn[] = [
     single-scroll
     table-class="min-w-[1010px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
-    @update:expanded-rows="setExpandedRows"
+    @update:expanded-rows="updateExpandedRows"
   >
     <template #filters>
       <div class="flex min-w-[1010px] flex-1 items-center">
@@ -348,7 +383,7 @@ const columns: ManagementTableColumn[] = [
             aria-label="Filter projects by name"
             :class="managementTableFilterInputClass"
             placeholder="Filter project"
-            @update:model-value="filterHandlers.setProjectQuery"
+            @update:model-value="updateProjectQueryFilter"
           />
         </div>
 
@@ -362,7 +397,7 @@ const columns: ManagementTableColumn[] = [
             placeholder="All sources"
             show-clear
             :pt="managementTableFilterSelectPt"
-            @update:model-value="filterHandlers.setSource"
+            @update:model-value="updateSourceFilter"
           />
         </div>
 
@@ -380,7 +415,7 @@ const columns: ManagementTableColumn[] = [
             :max-selected-labels="1"
             selected-items-label="{0} members"
             :pt="managementTableFilterMultiSelectPt"
-            @update:model-value="filterHandlers.setMemberIds"
+            @update:model-value="updateMemberIdsFilter"
           />
         </div>
 
@@ -392,7 +427,7 @@ const columns: ManagementTableColumn[] = [
             option-label="label"
             option-value="value"
             :pt="managementTableFilterSelectPt"
-            @update:model-value="filterHandlers.setHours"
+            @update:model-value="updateHoursFilter"
           />
         </div>
 
@@ -406,7 +441,7 @@ const columns: ManagementTableColumn[] = [
             placeholder="All"
             show-clear
             :pt="managementTableFilterSelectPt"
-            @update:model-value="filterHandlers.setVisibility"
+            @update:model-value="updateVisibilityFilter"
           />
         </div>
 

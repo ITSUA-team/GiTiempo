@@ -95,23 +95,23 @@ const ProjectsTableStub = {
     'archive',
     'edit-project',
     'unarchive',
+    'update:expandedRows',
+    'update:filters',
   ],
   props: {
     emptyDescription: { type: String, required: true },
     expandedRows: { type: Object, required: true },
-    filterHandlers: { type: Object, required: true },
     filters: { type: Object, required: true },
     hoursFilterOptions: { type: Array, required: true },
     isMobileViewport: { type: Boolean, required: true },
     loading: { type: Boolean, required: true },
     memberFilterOptions: { type: Array, required: true },
     rows: { type: Array, required: true },
-    setExpandedRows: { type: Function, required: true },
     sourceFilterOptions: { type: Array, required: true },
     visibilityFilterOptions: { type: Array, required: true },
   },
   template: `<div data-testid="projects-table">
-    {{ rows.length }} rows | {{ memberFilterOptions.length }} member filters | loading={{ loading }} | empty={{ emptyDescription }}
+    {{ rows.length }} rows | {{ memberFilterOptions.length }} member filters | loading={{ loading }} | search={{ filters.global }} | empty={{ emptyDescription }}
     <button
       v-if="rows[0]"
       data-testid="project-edit-intent"
@@ -126,6 +126,10 @@ const ProjectsTableStub = {
       v-if="rows[0]"
       data-testid="project-unarchive-intent"
       @click="$emit('unarchive', rows[0].project)"
+    />
+    <button
+      data-testid="project-filter-intent"
+      @click="$emit('update:filters', { global: 'orion' })"
     />
     <slot v-if="rows[0]" name="row-expansion" :row="rows[0]" />
   </div>`,
@@ -269,7 +273,23 @@ describe('ProjectsView', () => {
 
     expect(wrapper.findAll('[data-testid="skeleton"]')).toHaveLength(0);
     expect(wrapper.get('[data-testid="projects-table"]').text()).toContain(
-      '1 rows | 1 member filters | loading=false | empty=No projects match the current filters.',
+      '1 rows | 1 member filters | loading=false | search= | empty=No projects match the current filters.',
+    );
+  });
+
+  it('applies filter updates emitted by the projects table', async () => {
+    testMocks.listProjects.mockResolvedValue([
+      createProject(),
+      createProject({ isActive: false }),
+    ]);
+
+    const wrapper = mountProjectsView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-intent"]').trigger('click');
+
+    expect(wrapper.get('[data-testid="projects-table"]').text()).toContain(
+      '1 rows | 0 member filters | loading=false | search=orion',
     );
   });
 

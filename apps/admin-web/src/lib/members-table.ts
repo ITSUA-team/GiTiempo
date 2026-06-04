@@ -30,6 +30,14 @@ export interface MembersTableFilterHandlers {
   setRole: MembersTableValueSetter<WorkspaceRole | null | undefined>;
 }
 
+export interface MembersTableFilterUpdate {
+  global?: string | undefined;
+  lastActive?: MemberLastActiveFilter | undefined;
+  memberQuery?: string | undefined;
+  projectIds?: string[] | undefined;
+  role?: WorkspaceRole | null | undefined;
+}
+
 export interface MembersTableRow {
   avatarImage: string | undefined;
   avatarLabel: string | undefined;
@@ -47,6 +55,3 @@ export interface MembersTableRow {
 
 export type MembersTableExpandedRows = Record<string, boolean>;
 export type MembersTableExpansionModes = Record<string, MemberExpansionMode>;
-export type MembersTableExpandedRowsSetter = MembersTableValueSetter<
-  MembersTableExpandedRows | undefined
->;

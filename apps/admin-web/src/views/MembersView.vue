@@ -27,6 +27,7 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useMembersTableState } from '@/composables/useMembersTableState';
+import type { MembersTableFilterUpdate } from '@/lib/members-table';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -83,6 +84,24 @@ const {
 const pendingInviteRows = computed(() =>
   invites.value.filter((invite) => invite.status === 'pending'),
 );
+
+function handleMemberTableFiltersUpdate(update: MembersTableFilterUpdate): void {
+  if ('global' in update) {
+    memberTableFilterHandlers.setGlobal(update.global);
+  }
+  if ('lastActive' in update) {
+    memberTableFilterHandlers.setLastActive(update.lastActive);
+  }
+  if ('memberQuery' in update) {
+    memberTableFilterHandlers.setMemberQuery(update.memberQuery);
+  }
+  if ('projectIds' in update) {
+    memberTableFilterHandlers.setProjectIds(update.projectIds);
+  }
+  if ('role' in update) {
+    memberTableFilterHandlers.setRole(update.role);
+  }
+}
 
 const activeMembers = computed(() => members.value.length);
 const pendingInvites = computed<number | string>(() =>
@@ -417,7 +436,6 @@ onMounted(fetchAll);
         <MembersTable
           :empty-description="memberTableEmptyDescription"
           :expanded-rows="memberTableExpandedRows"
-          :filter-handlers="memberTableFilterHandlers"
           :filters="memberTableFilters"
           :is-mobile-viewport="isMobileViewport"
           :last-active-filter-options="lastActiveFilterOptions"
@@ -425,10 +443,11 @@ onMounted(fetchAll);
           :project-filter-options="projectFilterOptions"
           :role-filter-options="roleFilterOptions"
           :rows="memberTableRows"
-          :set-expanded-rows="setMemberTableExpandedRows"
           @assign-member="handleAssignMember"
           @edit-member="handleEditMember"
           @remove-member="handleRemoveMember"
+          @update:expanded-rows="setMemberTableExpandedRows"
+          @update:filters="handleMemberTableFiltersUpdate"
         >
           <template #row-expansion="{ row }">
             <MemberAssignPmPanel

@@ -87,11 +87,12 @@ const MembersTableStub = {
     'assign-member',
     'edit-member',
     'remove-member',
+    'update:expandedRows',
+    'update:filters',
   ],
   props: {
     emptyDescription: { type: String, required: true },
     expandedRows: { type: Object, required: true },
-    filterHandlers: { type: Object, required: true },
     filters: { type: Object, required: true },
     isMobileViewport: { type: Boolean, required: true },
     lastActiveFilterOptions: { type: Array, required: true },
@@ -99,7 +100,6 @@ const MembersTableStub = {
     projectFilterOptions: { type: Array, required: true },
     roleFilterOptions: { type: Array, required: true },
     rows: { type: Array, required: true },
-    setExpandedRows: { type: Function, required: true },
   },
   template:
     `<div data-testid="members-table">
@@ -118,6 +118,10 @@ const MembersTableStub = {
         v-if="rows[0]"
         data-testid="member-remove-intent"
         @click="$emit('remove-member', rows[0].member)"
+      />
+      <button
+        data-testid="member-filter-intent"
+        @click="$emit('update:filters', { global: 'pat' })"
       />
       <slot v-if="rows[0]" name="row-expansion" :row="rows[0]" />
     </div>`,
@@ -363,6 +367,31 @@ describe('MembersView', () => {
       '1 invites | loading=false | error=none',
     );
     expect(testMocks.errorToast).not.toHaveBeenCalled();
+  });
+
+  it('applies filter updates emitted by the members table', async () => {
+    testMocks.listMembers.mockResolvedValue([
+      createMember(),
+      {
+        ...createMember(),
+        displayName: 'Alex Admin',
+        email: 'alex@example.com',
+        id: 'member-admin',
+        role: 'admin',
+        userId: 'user-1',
+      },
+    ]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.listProjects.mockResolvedValue([]);
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-filter-intent"]').trigger('click');
+
+    expect(wrapper.get('[data-testid="members-table"]').text()).toContain(
+      '1 rows | 0 project filters | loading=false | search=pat',
+    );
   });
 
   it('renders request errors with a retry action', async () => {
