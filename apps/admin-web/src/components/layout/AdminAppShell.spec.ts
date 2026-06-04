@@ -6,8 +6,10 @@ import { createMemoryHistory } from "vue-router";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 import {
   WorkspaceRoles,
+  type UserResponse,
   type WorkspaceRole,
 } from "@gitiempo/shared";
+import ToastService from "primevue/toastservice";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 import AdminAppShell from "./AdminAppShell.vue";
@@ -23,6 +25,18 @@ const RouterViewStub = {
   name: "RouterView",
   template: '<div data-testid="router-view" />',
 };
+
+function createAuthProfile(role: WorkspaceRole = WorkspaceRoles.Admin): UserResponse {
+  return {
+    avatarUrl: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    displayName: "Admin User",
+    email: "admin@example.com",
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    role,
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+}
 
 vi.mock("@/services/admin-settings-client", () => ({
   adminSettingsClient: {
@@ -43,6 +57,7 @@ const WorkspaceHeaderStub = {
     "displayName",
     "settingsIcon",
     "settingsLabel",
+    "showSettings",
     "settingsTo",
     "userInitials",
     "workspaceName",
@@ -52,7 +67,7 @@ const WorkspaceHeaderStub = {
     <header>
       <span>{{ workspaceName }}</span>
       <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
-      <RouterLink data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
+      <RouterLink v-if="showSettings" data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
       <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
     </header>
   `,
@@ -138,6 +153,9 @@ describe("AdminAppShell", () => {
     );
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(false);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Settings"]')).toHaveLength(0);
     expect(settingsLinks).toHaveLength(1);
 
@@ -221,5 +239,81 @@ describe("AdminAppShell", () => {
         logContext: { action: "load-workspace-name", feature: "admin-shell" },
       }),
     );
+  });
+
+  it("filters shell navigation and settings for PM users", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "pm-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = createAuthProfile(WorkspaceRoles.PM);
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute('data-tooltip', String(binding.value));
+            },
+          },
+        },
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(0);
+    expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(0);
+    expect(wrapper.find('[data-testid="profile-menu-settings"]').exists()).toBe(false);
+    expect(wrapper.findAll('a[href="/settings"]')).toHaveLength(0);
+  });
+
+  it("keeps Projects active for admins on the add-project route", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "admin-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = createAuthProfile();
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/projects/new");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        directives: {
+          tooltip: {
+            mounted(el, binding) {
+              el.setAttribute('data-tooltip', String(binding.value));
+            },
+          },
+        },
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions], ToastService],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll('a[aria-label="Projects"][aria-current="page"]')).toHaveLength(2);
   });
 });

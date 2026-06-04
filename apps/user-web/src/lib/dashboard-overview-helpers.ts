@@ -1,9 +1,10 @@
 import type { TimeEntryResponse } from '@gitiempo/shared';
 import {
-  addUtcDays,
+  addLocalDays,
   formatCompactDuration,
-  startOfUtcDay,
-  startOfUtcIsoWeek,
+  nextLocalDay,
+  startOfLocalDay,
+  startOfLocalIsoWeek,
 } from '@gitiempo/web-shared/time';
 
 import {
@@ -56,11 +57,11 @@ export function getDashboardWeekWindow(nowMs: number): {
   dateTo: string;
 } {
   const nowDate = new Date(nowMs);
-  const weekStart = startOfUtcIsoWeek(nowDate);
+  const weekStart = startOfLocalIsoWeek(nowDate);
 
   return {
     dateFrom: weekStart.toISOString(),
-    dateTo: addUtcDays(weekStart, 7).toISOString(),
+    dateTo: addLocalDays(weekStart, 7).toISOString(),
   };
 }
 
@@ -69,10 +70,10 @@ export function buildDashboardStats(
   nowMs: number,
 ): DashboardStat[] {
   const nowDate = new Date(nowMs);
-  const todayStartMs = startOfUtcDay(nowDate).getTime();
-  const tomorrowStartMs = addUtcDays(startOfUtcDay(nowDate), 1).getTime();
-  const weekStartMs = startOfUtcIsoWeek(nowDate).getTime();
-  const nextWeekStartMs = addUtcDays(startOfUtcIsoWeek(nowDate), 7).getTime();
+  const todayStartMs = startOfLocalDay(nowDate).getTime();
+  const tomorrowStartMs = nextLocalDay(nowDate).getTime();
+  const weekStartMs = startOfLocalIsoWeek(nowDate).getTime();
+  const nextWeekStartMs = addLocalDays(startOfLocalIsoWeek(nowDate), 7).getTime();
 
   let todayTrackedSeconds = 0;
   let weekTrackedSeconds = 0;
@@ -136,8 +137,8 @@ export function buildDashboardWeeklyFocus(
   nowMs: number,
 ): DashboardWeeklyFocus {
   const nowDate = new Date(nowMs);
-  const weekStartMs = startOfUtcIsoWeek(nowDate).getTime();
-  const nextWeekStartMs = addUtcDays(startOfUtcIsoWeek(nowDate), 7).getTime();
+  const weekStartMs = startOfLocalIsoWeek(nowDate).getTime();
+  const nextWeekStartMs = addLocalDays(startOfLocalIsoWeek(nowDate), 7).getTime();
   const projectMap = new Map<string, FocusAccumulator>();
   const taskMap = new Map<string, FocusAccumulator>();
   let totalTrackedSeconds = 0;

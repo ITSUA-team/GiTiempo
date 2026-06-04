@@ -85,13 +85,14 @@ Use PrimeVue `<Button>`. Do not recreate app buttons with raw HTML unless the su
 
 ### Form Inputs
 
-Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<Select>`, `<AutoComplete>`, `<Checkbox>`, and `<DatePicker>` as appropriate for the field type. For form payloads that are shared between apps or map to API contracts, validate with Zod before submitting.
+Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<AutoComplete>`, `<Checkbox>`, and `<DatePicker>` as appropriate for the field type. For form payloads that are shared between apps or map to API contracts, validate with Zod before submitting.
 
 - Wrap in `<div class="flex flex-col gap-1">` with a real `<label>`.
 - Single-line height: `h-[38px]`.
 - Background: `bg-surface-primary`.
 - Error state: `invalid` prop plus `<small class="text-xs text-destructive">`.
 - Full width: `class="w-full"`.
+- App single-select pickers default to PrimeVue `<AutoComplete dropdown forceSelection>` so users can type to narrow the option list while still choosing one valid value.
 
 ```vue
 <div class="flex flex-col gap-1">

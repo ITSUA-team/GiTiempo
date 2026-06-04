@@ -1,19 +1,19 @@
 import type { TimeEntryResponse } from '@gitiempo/shared';
-import { formatUtcDayLabel, getUtcDateKey } from '@gitiempo/web-shared/time';
+import { formatLocalDayLabel, getLocalDateKey } from '@gitiempo/web-shared/time';
 
 export {
-  addUtcDays,
+  addLocalDays,
   formatCompactDuration,
   formatElapsedDuration,
+  formatLocalDayLabel,
+  formatLocalTime,
   formatRunningDuration,
   formatTimeEntryDuration,
   formatTimeEntryTimeRange,
-  formatUtcDayLabel,
-  formatUtcTime,
-  getUtcDateKey,
-  nextUtcDay,
-  startOfUtcDay,
-  startOfUtcIsoWeek,
+  getLocalDateKey,
+  nextLocalDay,
+  startOfLocalDay,
+  startOfLocalIsoWeek,
 } from '@/lib/time-formatters';
 
 export interface TimeEntriesDayGroup {
@@ -22,14 +22,14 @@ export interface TimeEntriesDayGroup {
   items: TimeEntryResponse[];
 }
 
-export function groupTimeEntriesByUtcDay(
+export function groupTimeEntriesByLocalDay(
   entries: TimeEntryResponse[],
   nowMs: number,
 ): TimeEntriesDayGroup[] {
   const groups = new Map<string, TimeEntryResponse[]>();
 
   for (const entry of entries) {
-    const key = getUtcDateKey(entry.startedAt);
+    const key = getLocalDateKey(entry.startedAt);
     const currentItems = groups.get(key) ?? [];
 
     currentItems.push(entry);
@@ -38,7 +38,7 @@ export function groupTimeEntriesByUtcDay(
 
   return Array.from(groups.entries()).map(([dateKey, items]) => ({
     dateKey,
-    heading: formatUtcDayLabel(dateKey, nowMs),
+    heading: formatLocalDayLabel(dateKey, nowMs),
     items,
   }));
 }

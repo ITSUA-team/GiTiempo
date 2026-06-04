@@ -10,11 +10,12 @@ import {
 } from '@heroicons/vue/24/outline';
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
+import { hasAllowedRole } from "@gitiempo/web-shared/router";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { useToasts } from "@/composables/feedback/useToasts";
 import { appEnv } from "@/config/env";
-import { canAccessAdminRoute, routeNames } from "@/router";
+import { routeNames } from "@/router";
 import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
 
@@ -35,19 +36,28 @@ const userWorkspaceHref = getCounterpartWorkspaceHref({
 
 let workspaceNameRequestToken: string | null = null;
 
-const allNavItems = [
+const baseNavItems = [
   { icon: dashboardIcon, label: "Dashboard", name: routeNames.dashboard },
   { icon: reportsIcon, label: "Reports", name: routeNames.reports },
   { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
   { icon: membersIcon, label: "Members", name: routeNames.members },
   { icon: projectsIcon, label: "Projects", name: routeNames.projects },
-];
-
-const navItems = computed(() => {
-  const role = authStore.profile?.role ?? null;
-
-  return allNavItems.filter((item) => canAccessAdminRoute(role, item.name));
-});
+] as const;
+const currentRole = computed(() => authStore.profile?.role ?? null);
+const navItems = computed(() =>
+  baseNavItems.filter((item) =>
+    hasAllowedRole(
+      router.resolve({ name: item.name }).meta.allowedRoles,
+      currentRole.value,
+    ),
+  ),
+);
+const showSettings = computed(() =>
+  hasAllowedRole(
+    router.resolve({ name: routeNames.settings }).meta.allowedRoles,
+    currentRole.value,
+  ),
+);
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
 const activeName = computed(() => {
@@ -99,6 +109,7 @@ watch(
       :settings-icon="settingsIcon"
       settings-label="Settings"
       :settings-to="{ name: routeNames.settings }"
+      :show-settings="showSettings"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"
       @sign-out="handleSignOut"
