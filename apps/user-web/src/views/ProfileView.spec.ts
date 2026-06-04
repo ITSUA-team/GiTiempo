@@ -4,7 +4,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { computed, ref, shallowRef } from "vue";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as VueRouterModule from "vue-router";
 import type {
   GitHubConnectionStatusResponse,
@@ -129,6 +129,14 @@ async function mountProfileView() {
 }
 
 describe("ProfileView", () => {
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Kiev");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     resetAuthRuntimeForTesting();
     setAuthRuntimeForTesting(createRuntimeMock());
@@ -156,9 +164,26 @@ describe("ProfileView", () => {
 
   it("wires the identity form and GitHub surface without a duplicate sign-out action", async () => {
     const { wrapper } = await mountProfileView();
+    const connectedAt = new Date("2026-05-01T10:15:00.000Z");
+    const updatedAt = new Date("2026-05-04T08:45:00.000Z");
+    const formatDate = (value: Date) =>
+      new Intl.DateTimeFormat("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(value);
+    const formatTime = (value: Date) =>
+      value.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        hour12: false,
+        minute: "2-digit",
+      });
 
     expect(wrapper.text()).toContain("Profile");
     expect(wrapper.text()).toContain("GitHub Connection");
+    expect(wrapper.text()).toContain(`${formatDate(connectedAt)}, ${formatTime(connectedAt)}`);
+    expect(wrapper.text()).toContain(`${formatDate(updatedAt)}, ${formatTime(updatedAt)}`);
+    expect(wrapper.text()).not.toContain("2026-05-01T10:15:00.000Z");
     expect(wrapper.text()).not.toContain("Avatar");
     expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);
   });
