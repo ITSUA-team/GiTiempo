@@ -69,6 +69,14 @@ Use this skill when:
 - Do not introduce PrimeVue `responsiveLayout` or another parallel responsive-table convention for surfaces that follow the admin/user record-list pattern.
 - Do not replace desktop tables with cards on tablet or desktop unless the docs or active spec explicitly change the surface model.
 
+## Admin Management Table Boundary
+
+- For admin management tables such as Members and Projects, keep table and inline-form leaves presentational. They may render, validate local inputs, and emit typed row or save intents, but they must not own API clients, auth-store checks, toast/confirm orchestration, or refresh logic.
+- Prepare rows, filter values, filter options, empty-state copy, expanded-row state, and viewport-dependent branch selection before data reaches the presentational table. Keep that derivation in the route view or in a focused table-state composable aligned to one surface.
+- Use typed emits or `v-model`-style update events for filter and expanded-row changes. Do not pass callback bags or setter props into dumb table components as an alternate control channel.
+- When an expanded row hosts a product-specific form such as member assignment, member edit, or project edit, keep the form leaf responsible for field UI and payload validation only. The parent route or feature composable owns auth checks, mutations, success/error toasts, confirmation, refresh, and expansion collapse.
+- Do not move product-specific admin row markup or mutation helpers into `packages/web-shared` just to force reuse. Extract only the smallest stable leaf after behavior is proven identical.
+
 ## PrimeVue Exception Protocol
 
 - The only acceptable reason to deviate from the approved `.pen` design is a conflict with required PrimeVue component behavior, accessibility semantics, or stable component structure.
