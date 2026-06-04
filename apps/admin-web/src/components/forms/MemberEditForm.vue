@@ -7,63 +7,36 @@ import { z } from 'zod';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
-import { ref } from 'vue';
-
-import { adminMembersClient } from '@/services/admin-members-client';
-import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/feedback/useToasts';
 
 const props = defineProps<{
   member: WorkspaceMemberResponse;
+  saving?: boolean;
 }>();
 
 const emit = defineEmits<{
-  saved: [];
   cancelled: [];
+  save: [role: WorkspaceRole];
 }>();
-
-const authStore = useAuthStore();
-const { successToast, errorToast } = useToasts();
-const saving = ref(false);
 
 const editRoleSchema = z.object({ role: z.enum(['admin', 'pm', 'member']) });
 const resolver = zodResolver(editRoleSchema);
 
 const initialValues = { role: props.member.role };
 
-async function handleSave({
+function handleSave({
   valid,
   values,
 }: {
   valid: boolean;
   values: Record<string, unknown>;
-}): Promise<void> {
-  if (!valid || saving.value) return;
-
-  const token = authStore.accessToken;
-  if (!token) return;
-
-  const role = values.role as WorkspaceRole;
-
-  if (role === props.member.role) {
-    emit('cancelled');
+}): void {
+  if (!valid || props.saving) {
     return;
   }
 
-  saving.value = true;
+  const role = values.role as WorkspaceRole;
 
-  try {
-    await adminMembersClient.updateMemberRole(props.member.id, { role });
-    successToast('Member updated.');
-    emit('saved');
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to update role', {
-      error: err,
-      logContext: { action: 'update-member-role', feature: 'members' },
-    });
-  } finally {
-    saving.value = false;
-  }
+  emit('save', role);
 }
 </script>
 

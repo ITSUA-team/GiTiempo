@@ -4,12 +4,7 @@ import {
   ArrowUturnLeftIcon,
   PencilSquareIcon,
 } from '@heroicons/vue/24/outline';
-import { computed, reactive, ref, watch } from 'vue';
-import type {
-  ProjectListResponse,
-  ProjectResponse,
-  WorkspaceMemberListResponse,
-} from '@gitiempo/shared';
+import type { ProjectResponse } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
   ManagementTableRowAction,
@@ -20,10 +15,8 @@ import {
   managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
-  useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
-import { formatTrimmedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -34,56 +27,71 @@ import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
-import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
-import { useConfirmation } from '@/composables/feedback/useConfirmation';
-import { useToasts } from '@/composables/feedback/useToasts';
-import { adminProjectsClient } from '@/services/admin-projects-client';
-import { useAuthStore } from '@/stores/auth';
+import type {
+  ProjectHoursFilter,
+  ProjectsTableExpandedRows,
+  ProjectsTableFilterOption,
+  ProjectsTableFilterUpdate,
+  ProjectsTableFilters,
+  ProjectsTableRow,
+} from '@/lib/projects-table';
 
-type ProjectHoursFilter = 'any' | 'tracked' | 'gte40' | 'zero';
-
-const SECONDS_PER_HOUR = 60 * 60;
-
-interface ProjectsTableFilters {
-  global: string;
-  hours: ProjectHoursFilter;
-  memberIds: string[];
-  projectQuery: string;
-  source: ProjectResponse['source'] | null;
-  visibility: ProjectResponse['visibility'] | null;
-}
-
-interface FilterOption<TValue extends string = string> {
-  label: string;
-  value: TValue;
-}
-
-const props = defineProps<{
-  projects: ProjectListResponse;
-  members: WorkspaceMemberListResponse;
+defineProps<{
+  emptyDescription: string;
+  expandedRows: ProjectsTableExpandedRows;
+  filters: ProjectsTableFilters;
+  hoursFilterOptions: ProjectsTableFilterOption<ProjectHoursFilter>[];
+  isMobileViewport: boolean;
   loading: boolean;
+  memberFilterOptions: ProjectsTableFilterOption[];
+  rows: ProjectsTableRow[];
+  sourceFilterOptions: ProjectsTableFilterOption<ProjectResponse['source']>[];
+  visibilityFilterOptions: ProjectsTableFilterOption<ProjectResponse['visibility']>[];
 }>();
 
 const emit = defineEmits<{
-  'edit-saved': [];
-  archive: [];
-  unarchive: [];
+  'edit-project': [project: ProjectResponse];
+  archive: [project: ProjectResponse];
+  unarchive: [project: ProjectResponse];
+  'update:expandedRows': [expandedRows: ProjectsTableExpandedRows | undefined];
+  'update:filters': [filters: ProjectsTableFilterUpdate];
 }>();
 
-const authStore = useAuthStore();
-const { successToast, errorToast } = useToasts();
-const { requireConfirmation } = useConfirmation();
-const isMobileViewport = useIsMobileViewport();
-const expandedRows = ref<Record<string, boolean>>({});
+function updateFilters(filters: ProjectsTableFilterUpdate): void {
+  emit('update:filters', filters);
+}
 
-const filters = reactive<ProjectsTableFilters>({
-  global: '',
-  hours: 'any',
-  memberIds: [],
-  projectQuery: '',
-  source: null,
-  visibility: null,
-});
+function updateGlobalFilter(value: string | undefined): void {
+  updateFilters({ global: value });
+}
+
+function updateProjectQueryFilter(value: string | undefined): void {
+  updateFilters({ projectQuery: value });
+}
+
+function updateMemberIdsFilter(value: string[] | undefined): void {
+  updateFilters({ memberIds: value });
+}
+
+function updateSourceFilter(
+  value: ProjectResponse['source'] | null | undefined,
+): void {
+  updateFilters({ source: value });
+}
+
+function updateHoursFilter(value: ProjectHoursFilter | undefined): void {
+  updateFilters({ hours: value });
+}
+
+function updateVisibilityFilter(
+  value: ProjectResponse['visibility'] | null | undefined,
+): void {
+  updateFilters({ visibility: value });
+}
+
+function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void {
+  emit('update:expandedRows', value);
+}
 
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
@@ -93,214 +101,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'visibility', label: 'Visibility', width: 120 },
   { key: 'actions', label: 'Actions', width: 150, align: 'end' },
 ];
-
-const sourceFilterOptions: FilterOption<ProjectResponse['source']>[] = [
-  { label: 'GitHub Repo', value: 'github' },
-  { label: 'Manual', value: 'manual' },
-];
-
-const hoursFilterOptions: FilterOption<ProjectHoursFilter>[] = [
-  { label: 'Any', value: 'any' },
-  { label: 'Tracked', value: 'tracked' },
-  { label: '40h+', value: 'gte40' },
-  { label: 'No hours', value: 'zero' },
-];
-
-const visibilityFilterOptions: FilterOption<ProjectResponse['visibility']>[] = [
-  { label: 'Public', value: 'public' },
-  { label: 'Private', value: 'private' },
-];
-
-const memberFilterOptions = computed<FilterOption[]>(() =>
-  props.members
-    .map((member) => ({
-      label: member.displayName?.trim() || member.email,
-      value: member.userId,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label)),
-);
-
-function handleEdit(project: ProjectResponse): void {
-  if (expandedRows.value[project.id]) {
-    const next = { ...expandedRows.value };
-    delete next[project.id];
-    expandedRows.value = next;
-    return;
-  }
-
-  expandedRows.value = { [project.id]: true };
-}
-
-function collapseRow(project: ProjectResponse): void {
-  const next = { ...expandedRows.value };
-  delete next[project.id];
-  expandedRows.value = next;
-}
-
-function handleEditSaved(project: ProjectResponse): void {
-  collapseRow(project);
-  emit('edit-saved');
-}
-
-function handleEditCancelled(project: ProjectResponse): void {
-  collapseRow(project);
-}
-
-async function handleArchive(project: ProjectResponse): Promise<void> {
-  const token = authStore.accessToken;
-  if (!token) {
-    return;
-  }
-
-  try {
-    await adminProjectsClient.updateProject(project.id, {
-      isActive: false,
-    });
-    successToast(`${project.name} has been archived.`);
-    emit('archive');
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to archive project', {
-      error: err,
-      logContext: { action: 'archive-project', feature: 'projects' },
-    });
-  }
-}
-
-function confirmArchive(project: ProjectResponse): void {
-  requireConfirmation(
-    `"${project.name}" will be archived and hidden from non-admin users.`,
-    'Archive project?',
-    'Archive',
-    () => handleArchive(project),
-  );
-}
-
-async function handleUnarchive(project: ProjectResponse): Promise<void> {
-  const token = authStore.accessToken;
-  if (!token) {
-    return;
-  }
-
-  try {
-    await adminProjectsClient.updateProject(project.id, {
-      isActive: true,
-    });
-    successToast(`${project.name} is now active.`);
-    emit('unarchive');
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to unarchive project', {
-      error: err,
-      logContext: { action: 'unarchive-project', feature: 'projects' },
-    });
-  }
-}
-
-function formatSource(source: string): string {
-  return source === 'github' ? 'GitHub Repo' : 'Manual';
-}
-
-function formatVisibility(visibility: ProjectResponse['visibility']): string {
-  return visibility === 'public' ? 'Public' : 'Private';
-}
-
-function formatAssignedMembers(project: ProjectResponse): string {
-  const count = project.members.length;
-  return `${count} member${count === 1 ? '' : 's'}`;
-}
-
-function formatProjectTotalHours(project: ProjectResponse): string {
-  return formatTrimmedHoursMinutesDuration(project.totalHours * SECONDS_PER_HOUR);
-}
-
-function getProjectMemberLabels(project: ProjectResponse): string[] {
-  return project.members.map((member) => member.displayName?.trim() || member.email);
-}
-
-function textIncludes(value: string, search: string): boolean {
-  return value.toLowerCase().includes(search);
-}
-
-function matchesProjectQuery(project: ProjectResponse): boolean {
-  const query = filters.projectQuery.trim().toLowerCase();
-
-  return !query || textIncludes(project.name, query);
-}
-
-function matchesMemberFilter(project: ProjectResponse): boolean {
-  if (filters.memberIds.length === 0) {
-    return true;
-  }
-
-  const projectMemberIds = new Set(project.members.map((member) => member.userId));
-
-  return filters.memberIds.some((memberId) => projectMemberIds.has(memberId));
-}
-
-function matchesHoursFilter(project: ProjectResponse): boolean {
-  if (filters.hours === 'tracked') {
-    return project.totalHours > 0;
-  }
-
-  if (filters.hours === 'gte40') {
-    return project.totalHours >= 40;
-  }
-
-  if (filters.hours === 'zero') {
-    return project.totalHours === 0;
-  }
-
-  return true;
-}
-
-function matchesGlobalSearch(project: ProjectResponse): boolean {
-  const search = filters.global.trim().toLowerCase();
-
-  if (!search) {
-    return true;
-  }
-
-  const haystack = [
-    project.name,
-    formatSource(project.source),
-    formatAssignedMembers(project),
-    formatProjectTotalHours(project),
-    formatVisibility(project.visibility),
-    project.isActive ? 'Active' : 'Archived',
-    ...getProjectMemberLabels(project),
-    ...project.members.map((member) => member.email),
-  ].join(' ');
-
-  return textIncludes(haystack, search);
-}
-
-const filteredProjects = computed(() =>
-  props.projects.filter(
-    (project) =>
-      matchesGlobalSearch(project) &&
-      matchesProjectQuery(project) &&
-      (!filters.source || project.source === filters.source) &&
-      matchesMemberFilter(project) &&
-      matchesHoursFilter(project) &&
-      (!filters.visibility || project.visibility === filters.visibility),
-  ),
-);
-
-const projectsEmptyDescription = computed(() =>
-  props.projects.length > 0
-    ? 'No projects match the current filters.'
-    : 'No projects have been created yet.',
-);
-
-watch(filteredProjects, (projects) => {
-  const visibleProjectIds = new Set(projects.map((project) => project.id));
-  const nextExpandedRows = Object.fromEntries(
-    Object.entries(expandedRows.value).filter(([id]) => visibleProjectIds.has(id)),
-  );
-
-  if (Object.keys(nextExpandedRows).length !== Object.keys(expandedRows.value).length) {
-    expandedRows.value = nextExpandedRows;
-  }
-});
 </script>
 
 <template>
@@ -310,10 +110,11 @@ watch(filteredProjects, (projects) => {
         <IconField class="w-full sm:w-[260px]">
           <InputIcon class="pi pi-search text-text-muted" />
           <InputText
-            v-model="filters.global"
+            :model-value="filters.global"
             aria-label="Search projects"
             class="h-[38px] w-full rounded-[6px] text-[14px]"
             placeholder="Search projects"
+            @update:model-value="updateGlobalFilter"
           />
         </IconField>
       </template>
@@ -331,9 +132,10 @@ watch(filteredProjects, (projects) => {
       >Project</label>
       <InputText
         id="mobile-project-name-filter"
-        v-model="filters.projectQuery"
+        :model-value="filters.projectQuery"
         class="h-[38px] w-full rounded-[6px] text-[14px]"
         placeholder="Filter project"
+        @update:model-value="updateProjectQueryFilter"
       />
     </div>
 
@@ -345,13 +147,14 @@ watch(filteredProjects, (projects) => {
         >Source</label>
         <Select
           id="mobile-project-source-filter"
-          v-model="filters.source"
+          :model-value="filters.source"
           :options="sourceFilterOptions"
           option-label="label"
           option-value="value"
           placeholder="All sources"
           show-clear
           :pt="managementTableFilterSelectPt"
+          @update:model-value="updateSourceFilter"
         />
       </div>
 
@@ -362,13 +165,14 @@ watch(filteredProjects, (projects) => {
         >Visibility</label>
         <Select
           id="mobile-project-visibility-filter"
-          v-model="filters.visibility"
+          :model-value="filters.visibility"
           :options="visibilityFilterOptions"
           option-label="label"
           option-value="value"
           placeholder="All"
           show-clear
           :pt="managementTableFilterSelectPt"
+          @update:model-value="updateVisibilityFilter"
         />
       </div>
     </div>
@@ -381,11 +185,12 @@ watch(filteredProjects, (projects) => {
         >Hours</label>
         <Select
           id="mobile-project-hours-filter"
-          v-model="filters.hours"
+          :model-value="filters.hours"
           :options="hoursFilterOptions"
           option-label="label"
           option-value="value"
           :pt="managementTableFilterSelectPt"
+          @update:model-value="updateHoursFilter"
         />
       </div>
 
@@ -396,7 +201,7 @@ watch(filteredProjects, (projects) => {
         >Assigned members</label>
         <MultiSelect
           id="mobile-project-members-filter"
-          v-model="filters.memberIds"
+          :model-value="filters.memberIds"
           :options="memberFilterOptions"
           display="chip"
           filter
@@ -407,6 +212,7 @@ watch(filteredProjects, (projects) => {
           :max-selected-labels="1"
           selected-items-label="{0} members"
           :pt="managementTableFilterMultiSelectPt"
+          @update:model-value="updateMemberIdsFilter"
         />
       </div>
     </div>
@@ -463,28 +269,28 @@ watch(filteredProjects, (projects) => {
       </MobileRecordCard>
     </template>
 
-    <template v-else-if="filteredProjects.length > 0">
+    <template v-else-if="rows.length > 0">
       <MobileRecordCard
-        v-for="project in filteredProjects"
-        :key="project.id"
+        v-for="row in rows"
+        :key="row.id"
         data-testid="project-mobile-card"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <h3
               class="truncate text-[15px] font-semibold"
-              :class="project.isActive ? 'text-text-dark' : 'text-text-muted'"
+              :class="row.nameClass"
             >
-              {{ project.name }}
+              {{ row.name }}
             </h3>
             <p class="text-text-muted text-[13px]">
-              {{ formatSource(project.source) }}
+              {{ row.sourceLabel }}
             </p>
           </div>
 
-          <template v-if="project.isActive">
+          <template v-if="row.isActive">
             <Tag
-              v-if="project.visibility === 'public'"
+              v-if="row.visibility === 'public'"
               value="Public"
               :pt="{
                 root: 'inline-flex shrink-0 items-center rounded-[6px] bg-accent-tint px-2 py-1 text-[12px] font-semibold leading-none text-brand',
@@ -500,7 +306,7 @@ watch(filteredProjects, (projects) => {
           </template>
           <Tag
             v-else
-            :value="project.visibility === 'public' ? 'Public' : 'Private'"
+            :value="row.visibilityLabel"
             :pt="{
               root: 'inline-flex shrink-0 items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
               label: 'text-text-muted',
@@ -510,43 +316,40 @@ watch(filteredProjects, (projects) => {
 
         <MobileRecordMetadataList
           :items="[
-            { label: 'Assigned members', value: formatAssignedMembers(project) },
-            { label: 'Hours', value: formatProjectTotalHours(project) },
+            { label: 'Assigned members', value: row.assignedMembersLabel },
+            { label: 'Hours', value: row.hoursLabel },
           ]"
         />
 
         <template #actions>
-          <template v-if="project.isActive">
+          <template v-if="row.isActive">
             <ManagementTableRowAction
-              :data-testid="`project-mobile-edit-${project.id}`"
+              :data-testid="`project-mobile-edit-${row.id}`"
               :icon="PencilSquareIcon"
               label="Edit"
-              @click="handleEdit(project)"
+              @click="emit('edit-project', row.project)"
             />
             <ManagementTableRowAction
-              :data-testid="`project-mobile-archive-${project.id}`"
+              :data-testid="`project-mobile-archive-${row.id}`"
               :icon="ArchiveBoxIcon"
               label="Archive"
               tone="destructive"
-              @click="confirmArchive(project)"
+              @click="emit('archive', row.project)"
             />
           </template>
           <ManagementTableRowAction
             v-else
-            :data-testid="`project-mobile-unarchive-${project.id}`"
+            :data-testid="`project-mobile-unarchive-${row.id}`"
             :icon="ArrowUturnLeftIcon"
             label="Unarchive"
             tone="muted"
-            @click="handleUnarchive(project)"
+            @click="emit('unarchive', row.project)"
           />
         </template>
 
-        <ProjectEditForm
-          v-if="expandedRows[project.id]"
-          :project="project"
-          :all-members="members"
-          @saved="handleEditSaved(project)"
-          @cancelled="handleEditCancelled(project)"
+        <slot
+          name="row-expansion"
+          :row="row"
         />
       </MobileRecordCard>
     </template>
@@ -554,15 +357,15 @@ watch(filteredProjects, (projects) => {
     <EmptyStateBlock
       v-else
       title="No projects found"
-      :description="projectsEmptyDescription"
+      :description="emptyDescription"
     />
   </div>
 
   <ManagementTableShell
     v-else
-    v-model:expanded-rows="expandedRows"
+    :expanded-rows="expandedRows"
     :columns="columns"
-    :value="filteredProjects"
+    :value="rows"
     :loading="loading"
     data-key="id"
     header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[1010px] items-center border-b font-sans text-[13px] font-semibold"
@@ -570,21 +373,23 @@ watch(filteredProjects, (projects) => {
     single-scroll
     table-class="min-w-[1010px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
+    @update:expanded-rows="updateExpandedRows"
   >
     <template #filters>
       <div class="flex min-w-[1010px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
           <InputText
-            v-model="filters.projectQuery"
+            :model-value="filters.projectQuery"
             aria-label="Filter projects by name"
             :class="managementTableFilterInputClass"
             placeholder="Filter project"
+            @update:model-value="updateProjectQueryFilter"
           />
         </div>
 
         <div class="w-[140px] px-3">
           <Select
-            v-model="filters.source"
+            :model-value="filters.source"
             :options="sourceFilterOptions"
             aria-label="Filter projects by source"
             option-label="label"
@@ -592,12 +397,13 @@ watch(filteredProjects, (projects) => {
             placeholder="All sources"
             show-clear
             :pt="managementTableFilterSelectPt"
+            @update:model-value="updateSourceFilter"
           />
         </div>
 
         <div class="w-[220px] px-3">
           <MultiSelect
-            v-model="filters.memberIds"
+            :model-value="filters.memberIds"
             :options="memberFilterOptions"
             aria-label="Filter projects by assigned members"
             display="chip"
@@ -609,23 +415,25 @@ watch(filteredProjects, (projects) => {
             :max-selected-labels="1"
             selected-items-label="{0} members"
             :pt="managementTableFilterMultiSelectPt"
+            @update:model-value="updateMemberIdsFilter"
           />
         </div>
 
         <div class="w-[120px] px-3 text-right">
           <Select
-            v-model="filters.hours"
+            :model-value="filters.hours"
             :options="hoursFilterOptions"
             aria-label="Filter projects by hours"
             option-label="label"
             option-value="value"
             :pt="managementTableFilterSelectPt"
+            @update:model-value="updateHoursFilter"
           />
         </div>
 
         <div class="w-[120px] px-3">
           <Select
-            v-model="filters.visibility"
+            :model-value="filters.visibility"
             :options="visibilityFilterOptions"
             aria-label="Filter projects by visibility"
             option-label="label"
@@ -633,6 +441,7 @@ watch(filteredProjects, (projects) => {
             placeholder="All"
             show-clear
             :pt="managementTableFilterSelectPt"
+            @update:model-value="updateVisibilityFilter"
           />
         </div>
 
@@ -644,7 +453,7 @@ watch(filteredProjects, (projects) => {
       <template #body="{ data }">
         <span
           class="text-[14px] leading-none font-semibold"
-          :class="data.isActive ? 'text-text-dark' : 'text-text-muted'"
+          :class="data.nameClass"
         >{{ data.name }}</span>
       </template>
     </Column>
@@ -655,7 +464,7 @@ watch(filteredProjects, (projects) => {
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
-          formatSource(data.source)
+          data.sourceLabel
         }}</span>
       </template>
     </Column>
@@ -665,7 +474,7 @@ watch(filteredProjects, (projects) => {
       :pt="managementTableColumnPt"
     >
       <template #body="{ data }">
-        <span class="text-text-muted text-[13px] font-normal">{{ formatAssignedMembers(data) }}</span>
+        <span class="text-text-muted text-[13px] font-normal">{{ data.assignedMembersLabel }}</span>
       </template>
     </Column>
 
@@ -674,7 +483,7 @@ watch(filteredProjects, (projects) => {
       :pt="managementTableColumnPt"
     >
       <template #body="{ data }">
-        <span class="text-text-dark text-[13px] font-semibold">{{ formatProjectTotalHours(data) }}</span>
+        <span class="text-text-dark text-[13px] font-semibold">{{ data.hoursLabel }}</span>
       </template>
     </Column>
 
@@ -701,7 +510,7 @@ watch(filteredProjects, (projects) => {
         </template>
         <Tag
           v-else
-          :value="data.visibility === 'public' ? 'Public' : 'Private'"
+          :value="data.visibilityLabel"
           :pt="{
             root: 'inline-flex items-center rounded-[6px] bg-divider px-2 py-1 text-[12px] font-semibold leading-none',
             label: 'text-text-muted',
@@ -721,14 +530,14 @@ watch(filteredProjects, (projects) => {
               :data-testid="`project-edit-${data.id}`"
               :icon="PencilSquareIcon"
               label="Edit"
-              @click="handleEdit(data)"
+              @click="emit('edit-project', data.project)"
             />
             <ManagementTableRowAction
               :data-testid="`project-archive-${data.id}`"
               :icon="ArchiveBoxIcon"
               label="Archive"
               tone="destructive"
-              @click="confirmArchive(data)"
+              @click="emit('archive', data.project)"
             />
           </template>
           <template v-else>
@@ -737,7 +546,7 @@ watch(filteredProjects, (projects) => {
               :icon="ArrowUturnLeftIcon"
               label="Unarchive"
               tone="muted"
-              @click="handleUnarchive(data)"
+              @click="emit('unarchive', data.project)"
             />
           </template>
         </div>
@@ -745,18 +554,16 @@ watch(filteredProjects, (projects) => {
     </Column>
 
     <template #expansion="{ data }">
-      <ProjectEditForm
-        :project="data"
-        :all-members="members"
-        @saved="handleEditSaved(data)"
-        @cancelled="handleEditCancelled(data)"
+      <slot
+        name="row-expansion"
+        :row="data"
       />
     </template>
 
     <template #empty>
       <EmptyStateBlock
         title="No projects found"
-        :description="projectsEmptyDescription"
+        :description="emptyDescription"
       />
     </template>
   </ManagementTableShell>

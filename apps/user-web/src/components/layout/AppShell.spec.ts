@@ -50,7 +50,7 @@ describe("AppShell", () => {
         },
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
         stubs: {
-          DashboardOverview: {
+          RouterView: {
             template: '<div data-testid="dashboard-overview" />',
           },
           TopBarTimer: {
