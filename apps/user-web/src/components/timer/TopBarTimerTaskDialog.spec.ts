@@ -77,10 +77,10 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
         },
         ProgressSpinner: { template: '<div data-testid="spinner" />' },
         Select: {
-          props: ["disabled", "modelValue", "options"],
+          props: ["disabled", "modelValue", "options", "overlayClass", "pt"],
           emits: ["update:modelValue"],
           template:
-            '<select :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name ?? option.title }}</option></select>',
+            '<select :data-label-pt-class="pt?.label?.class" :data-list-container-pt-class="pt?.listContainer?.class" :data-option-label-pt-class="pt?.optionLabel?.class" :data-overlay-class="overlayClass" :data-root-pt-class="pt?.root?.class" :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name ?? option.title }}</option></select>',
         },
         Textarea: {
           props: ["disabled", "modelValue"],
@@ -212,6 +212,7 @@ describe("TopBarTimerTaskDialog", () => {
     );
     const footer = wrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]');
     const footerButtons = footer.findAll("button");
+    const selectFields = wrapper.findAll("select");
     const createTaskButton = wrapper
       .findAll("button")
       .find((button) => button.text() === "Create task");
@@ -242,6 +243,16 @@ describe("TopBarTimerTaskDialog", () => {
     expect(confirmButton?.classes()).toContain("w-full");
     expect(createTaskButton?.attributes("data-fluid")).toBe("true");
     expect(confirmButton?.attributes("data-fluid")).toBe("true");
+    for (const selectField of selectFields) {
+      expect(selectField.classes()).toContain("min-w-0");
+      expect(selectField.classes()).toContain("max-w-full");
+      expect(selectField.attributes("data-root-pt-class")).toContain("min-w-0");
+      expect(selectField.attributes("data-label-pt-class")).toBe("truncate");
+      expect(selectField.attributes("data-overlay-class")).toBe(
+        "max-w-[calc(100vw-2rem)]",
+      );
+      expect(selectField.attributes("data-option-label-pt-class")).toBe("truncate");
+    }
   });
 
   it("keeps action buttons intrinsic and cancel-first in DOM order on tablet and desktop", () => {

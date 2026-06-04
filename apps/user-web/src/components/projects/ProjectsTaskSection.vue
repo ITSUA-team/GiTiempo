@@ -97,7 +97,10 @@ function getStatusPt(task: TaskResponse) {
         data-testid="project-task-mobile-card"
       >
         <div class="flex min-w-0 flex-col gap-2">
-          <p class="text-text-dark truncate text-sm font-medium">
+          <p
+            class="text-text-dark text-sm font-medium break-words whitespace-normal"
+            data-testid="project-task-mobile-title"
+          >
             {{ task.title }}
           </p>
 
@@ -158,7 +161,10 @@ function getStatusPt(task: TaskResponse) {
 
       <Column :pt="managementTableColumnPt">
         <template #body="slotProps">
-          <div class="text-text-dark truncate text-sm font-medium">
+          <div
+            class="text-text-dark text-sm font-medium break-words whitespace-normal"
+            data-testid="project-task-title"
+          >
             {{ slotProps.data.title }}
           </div>
         </template>
