@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount } from '@vue/test-utils';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import PrimeVue from 'primevue/config';
