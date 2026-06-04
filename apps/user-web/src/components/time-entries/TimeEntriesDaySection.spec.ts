@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it } from 'vitest';

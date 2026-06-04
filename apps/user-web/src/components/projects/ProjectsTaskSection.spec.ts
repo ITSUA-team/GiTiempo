@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount } from "@vue/test-utils";
 import type { TaskResponse } from "@gitiempo/shared";
 import PrimeVue from "primevue/config";

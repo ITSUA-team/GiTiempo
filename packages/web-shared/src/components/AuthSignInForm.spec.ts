@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { flushPromises, mount } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
 import { describe, expect, it } from "vitest";

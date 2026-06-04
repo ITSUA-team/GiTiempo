@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount } from "@vue/test-utils";
 import { defineComponent, h, markRaw } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";

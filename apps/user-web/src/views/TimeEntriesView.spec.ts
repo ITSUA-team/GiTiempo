@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -263,7 +261,6 @@ async function mountView(
           props: ["label"],
           template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
-        ConfirmDialog: { template: "<div />" },
         DatePicker: {
           emits: ["update:modelValue"],
           props: ["inputId"],

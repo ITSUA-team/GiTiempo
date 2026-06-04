@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount } from "@vue/test-utils";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 

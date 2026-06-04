@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
-import ConfirmDialog from "primevue/confirmdialog";
 import InputText from "primevue/inputtext";
 import { updateUserSchema } from "@gitiempo/shared";
 import { createAppToast, runWithFeedback } from "@gitiempo/web-shared";
@@ -97,8 +96,6 @@ async function handleSaveProfile(): Promise<void> {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <ConfirmDialog />
-
     <PageHeader
       subtitle="Manage your personal settings and session access."
       title="Profile"
