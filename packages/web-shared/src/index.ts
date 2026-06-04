@@ -3,6 +3,7 @@ export * from "./browser-history";
 export * from "./feedback";
 export * from "./components";
 export * from "./query";
+export * from "./router";
 export * from "./session-storage";
 export * from "./validation";
 export * from "./viewport";

@@ -1,9 +1,4 @@
 import {
-  createMemoryHistory,
-  createRouter,
-  createWebHistory,
-  type RouteLocationNormalized,
-  type RouteLocationRaw,
   type RouteRecordRaw,
   type Router,
   type RouterHistory,
@@ -13,6 +8,7 @@ import {
   WorkspaceRoles,
   type WorkspaceRole,
 } from '@gitiempo/shared';
+import { createProtectedRouter } from '@gitiempo/web-shared/router';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
 import LoginView from '@/views/LoginView.vue';
@@ -43,60 +39,31 @@ export const routeNames = {
 } as const;
 
 type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
+type AdminNonProductRouteName =
+  | typeof routeNames.forbidden
+  | typeof routeNames.login
+  | typeof routeNames.notFound;
+type AdminProductRouteName = Exclude<AdminRouteName, AdminNonProductRouteName>;
 
-const adminOnlyRoles = [WorkspaceRoles.Admin] as const satisfies readonly WorkspaceRole[];
-const adminAndPmRoles = [
+const adminOnlyRoles = [
+  WorkspaceRoles.Admin,
+] as const satisfies readonly WorkspaceRole[];
+const managementRoles = [
   WorkspaceRoles.Admin,
   WorkspaceRoles.PM,
 ] as const satisfies readonly WorkspaceRole[];
 
 export const adminRouteAllowedRoles = {
   [routeNames.addProject]: adminOnlyRoles,
-  [routeNames.dashboard]: adminAndPmRoles,
+  [routeNames.dashboard]: managementRoles,
   [routeNames.invoices]: adminOnlyRoles,
   [routeNames.members]: adminOnlyRoles,
   [routeNames.projects]: adminOnlyRoles,
-  [routeNames.reports]: adminAndPmRoles,
+  [routeNames.reports]: managementRoles,
   [routeNames.settings]: adminOnlyRoles,
-} as const satisfies Partial<Record<AdminRouteName, readonly WorkspaceRole[]>>;
+} as const satisfies Record<AdminProductRouteName, readonly WorkspaceRole[]>;
 
-function isRoleAllowed(
-  role: WorkspaceRole | null | undefined,
-  allowedRoles?: readonly WorkspaceRole[],
-): boolean {
-  return !allowedRoles || (!!role && allowedRoles.includes(role));
-}
-
-export function canAccessAdminRoute(
-  role: WorkspaceRole | null | undefined,
-  routeName: string | symbol | null | undefined,
-): boolean {
-  if (typeof routeName !== 'string') {
-    return true;
-  }
-
-  const allowedRoles = adminRouteAllowedRoles[
-    routeName as keyof typeof adminRouteAllowedRoles
-  ];
-
-  return isRoleAllowed(role, allowedRoles);
-}
-
-function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
-  const redirect = to.query.redirect;
-
-  return typeof redirect === 'string' && redirect.startsWith('/')
-    ? redirect
-    : null;
-}
-
-function getDefaultAuthenticatedRoute(
-  to: RouteLocationNormalized,
-): RouteLocationRaw {
-  return normalizeRedirectTarget(to) ?? { name: routeNames.dashboard };
-}
-
-const routes: RouteRecordRaw[] = [
+const publicRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: routeNames.login,
@@ -105,71 +72,68 @@ const routes: RouteRecordRaw[] = [
       guestOnly: true,
     },
   },
+];
+
+const protectedRoutes: RouteRecordRaw[] = [
   {
-    path: '/',
-    component: AdminAppShell,
+    path: '',
+    name: routeNames.dashboard,
+    component: DashboardView,
     meta: {
-      requiresAuth: true,
+      allowedRoles: adminRouteAllowedRoles[routeNames.dashboard],
     },
-    children: [
-      {
-        path: '',
-        name: routeNames.dashboard,
-        component: DashboardView,
-        meta: {
-          allowedRoles: adminRouteAllowedRoles[routeNames.dashboard],
-        },
-      },
-      {
-        path: 'reports',
-        name: routeNames.reports,
-        component: ReportsView,
-        meta: {
-          allowedRoles: adminRouteAllowedRoles[routeNames.reports],
-        },
-      },
-      {
-        path: 'invoices',
-        name: routeNames.invoices,
-        component: InvoicesView,
-        meta: {
-          allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
-        },
-      },
-      {
-        path: 'members',
-        name: routeNames.members,
-        component: MembersView,
-        meta: {
-          allowedRoles: adminRouteAllowedRoles[routeNames.members],
-        },
-      },
-      {
-        path: 'projects',
-        name: routeNames.projects,
-        component: ProjectsView,
-        meta: {
-          allowedRoles: adminRouteAllowedRoles[routeNames.projects],
-        },
-      },
-      {
-        path: 'projects/new',
-        name: routeNames.addProject,
-        component: AddProjectMockView,
-        meta: {
-          allowedRoles: adminRouteAllowedRoles[routeNames.addProject],
-        },
-      },
-      {
-        path: 'settings',
-        name: routeNames.settings,
-        component: SettingsView,
-        meta: {
-          allowedRoles: adminRouteAllowedRoles[routeNames.settings],
-        },
-      },
-    ],
   },
+  {
+    path: 'reports',
+    name: routeNames.reports,
+    component: ReportsView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.reports],
+    },
+  },
+  {
+    path: 'invoices',
+    name: routeNames.invoices,
+    component: InvoicesView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
+    },
+  },
+  {
+    path: 'members',
+    name: routeNames.members,
+    component: MembersView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.members],
+    },
+  },
+  {
+    path: 'projects',
+    name: routeNames.projects,
+    component: ProjectsView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.projects],
+    },
+  },
+  {
+    path: 'projects/new',
+    name: routeNames.addProject,
+    component: AddProjectMockView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.addProject],
+    },
+  },
+  {
+    path: 'settings',
+    name: routeNames.settings,
+    component: SettingsView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.settings],
+    },
+  },
+];
+
+const standaloneRoutes: RouteRecordRaw[] = [
   {
     path: '/403',
     name: routeNames.forbidden,
@@ -188,56 +152,31 @@ const routes: RouteRecordRaw[] = [
   },
 ];
 
-function createAppHistory(): RouterHistory {
-  return typeof window === 'undefined'
-    ? createMemoryHistory()
-    : createWebHistory();
-}
-
-async function handleAuthNavigation(
-  to: RouteLocationNormalized,
-  authStore: ReturnType<typeof useAuthStore>,
-): Promise<RouteLocationRaw | undefined> {
-  if (to.meta.requiresAuth || to.meta.guestOnly) {
-    await authStore.bootstrapSession();
-  }
-
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return {
-      name: routeNames.login,
-      query: { redirect: to.fullPath },
-    };
-  }
-
-  if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return getDefaultAuthenticatedRoute(to);
-  }
-
-  if (
-    to.meta.requiresAuth &&
-    !isRoleAllowed(authStore.profile?.role, to.meta.allowedRoles)
-  ) {
-    return { name: routeNames.forbidden };
-  }
-
-  return undefined;
-}
-
 export function createAppRouter(options?: {
   history?: RouterHistory;
   pinia?: Pinia;
 }): Router {
   const appPinia = options?.pinia ?? pinia;
-  const router = createRouter({
-    history: options?.history ?? createAppHistory(),
-    routes,
-  });
 
-  router.beforeEach(async (to) => {
-    return handleAuthNavigation(to, useAuthStore(appPinia));
+  return createProtectedRouter({
+    defaultAuthenticatedRoute: { name: routeNames.dashboard },
+    history: options?.history,
+    pinia: appPinia,
+    routeNames: {
+      forbidden: routeNames.forbidden,
+      login: routeNames.login,
+    },
+    routes: {
+      protected: protectedRoutes,
+      public: publicRoutes,
+      standalone: standaloneRoutes,
+    },
+    shellComponent: AdminAppShell,
+    shellMeta: {
+      allowedRoles: managementRoles,
+    },
+    useAuthStore,
   });
-
-  return router;
 }
 
 export const router = createAppRouter();
