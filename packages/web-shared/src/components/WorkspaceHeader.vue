@@ -309,7 +309,7 @@ onBeforeUnmount(() => {
         id="profile_menu"
         :model="profileMenuItems"
         aria-label="Profile actions"
-        class="border-divider bg-surface-primary shadow-popover before:border-divider before:bg-surface-primary absolute top-full right-0 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
+        class="border-divider bg-surface-primary shadow-popover before:border-divider before:bg-surface-primary absolute top-full right-0 z-30 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
         data-testid="profile-menu"
       >
         <template #item="{ item, props: itemProps }">
