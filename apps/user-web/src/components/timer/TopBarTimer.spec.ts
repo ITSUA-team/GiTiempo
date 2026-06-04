@@ -175,6 +175,15 @@ describe("TopBarTimer", () => {
     expect(wrapper.get('[data-testid="top-bar-timer"]').attributes("aria-label")).toBe(
       "Open task and timer",
     );
+    expect(wrapper.get('[data-testid="top-bar-timer"]').classes()).toContain(
+      "h-[47px]",
+    );
+    expect(wrapper.get('[data-testid="top-bar-timer"]').classes()).toContain(
+      "ring-inset",
+    );
+    expect(wrapper.get('[data-testid="top-bar-timer-context"]').classes()).not.toContain(
+      "flex-1",
+    );
     expect(wrapper.find('[data-testid="top-bar-timer-mobile-actions"]').exists()).toBe(
       false,
     );

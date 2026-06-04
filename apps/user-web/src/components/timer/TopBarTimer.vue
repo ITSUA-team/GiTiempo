@@ -55,25 +55,22 @@ const showsElapsedTime = computed(
 <template>
   <Button
     v-if="!isMobileViewport"
+    unstyled
     type="button"
     aria-label="Open task and timer"
+    class="ring-divider bg-app-bg text-text-dark hover:bg-app-bg focus-visible:outline-brand flex h-[47px] max-w-[min(360px,100%)] min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-left ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2"
     data-layout="desktop"
     data-testid="top-bar-timer"
-    variant="text"
-    :pt="{
-      root: 'border-divider bg-app-bg text-text-dark flex min-w-0 max-w-[min(360px,100%)] items-center gap-3 rounded-lg border px-3 py-2 text-left shadow-none transition hover:bg-app-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
-      label: 'hidden',
-    }"
     @click="openDialog"
   >
     <span
-      class="flex min-w-0 flex-1 flex-col gap-0.5"
+      class="flex min-w-0 flex-col gap-0.5"
       data-testid="top-bar-timer-context"
     >
-      <span class="text-text-muted truncate text-[11px] leading-none font-medium">
+      <span class="text-text-muted truncate text-[11px] leading-[13px] font-medium">
         {{ timerProjectLabel }}
       </span>
-      <span class="text-text-dark truncate text-[13px] leading-tight font-semibold">
+      <span class="text-text-dark truncate text-[13px] leading-4 font-semibold">
         {{ timerTaskLabel }}
       </span>
     </span>

@@ -20,6 +20,7 @@ const baseProps = {
 
 type HeaderProps = typeof baseProps & {
   pageName?: string;
+  profileContextLabel?: string;
   settingsIcon?: Component;
   settingsLabel?: string;
   showSettings?: boolean;
@@ -307,6 +308,8 @@ describe("WorkspaceHeader", () => {
     expect(document.activeElement).toBe(trigger.element);
     expect(trigger.attributes("aria-expanded")).toBe("false");
     expect(trigger.attributes("aria-haspopup")).toBe("menu");
+    expect(trigger.classes()).toContain("size-8");
+    expect(trigger.classes()).toContain("rounded-full");
     expect(trigger.classes()).toContain("border-0");
     expect(avatar.classes()).toContain("border-0");
     expect(avatar.classes()).not.toContain("border-brand");
@@ -318,7 +321,13 @@ describe("WorkspaceHeader", () => {
     const counterpartAction = wrapper.get('[data-testid="profile-menu-counterpart"]');
 
     expect(trigger.attributes("aria-expanded")).toBe("true");
-    expect(trigger.classes()).toContain("border-divider");
+    expect(trigger.classes()).toContain("ring-divider");
+    expect(trigger.classes()).toContain("h-10");
+    expect(trigger.classes()).toContain("px-1.5");
+    expect(trigger.classes()).toContain("py-1");
+    expect(trigger.classes()).toContain("ring-1");
+    expect(trigger.classes()).toContain("ring-inset");
+    expect(trigger.classes()).toContain("rounded-lg");
     expect(avatar.classes()).toContain("border-2");
     expect(avatar.classes()).toContain("border-brand");
     expect(wrapper.find('[data-testid="profile-menu"] [role="menu"]').exists()).toBe(
@@ -334,7 +343,13 @@ describe("WorkspaceHeader", () => {
       "z-30",
     );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
-      "before:right-5",
+      "mt-5",
+    );
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "h-40",
+    );
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "before:right-4",
     );
     expect(wrapper.findAll('[data-testid="profile-menu"] [role="menuitem"]')).toHaveLength(
       3,
@@ -351,9 +366,34 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.emitted("signOut")).toHaveLength(1);
     expect(document.activeElement).toBe(trigger.element);
     expect(trigger.attributes("aria-expanded")).toBe("false");
+    expect(trigger.classes()).toContain("size-8");
     expect(trigger.classes()).toContain("border-0");
     expect(avatar.classes()).toContain("border-0");
     expect(avatar.classes()).not.toContain("border-brand");
+  });
+
+  it("keeps admin profile context outside the trigger until the menu opens", async () => {
+    const wrapper = mountHeader({
+      props: {
+        profileContextLabel: "GiTiempo Studio",
+      },
+    });
+    const profileRegion = wrapper.get('[data-testid="profile-menu-region"]');
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+
+    expect(profileRegion.text()).toContain("GiTiempo Studio");
+    expect(trigger.text()).not.toContain("GiTiempo Studio");
+    expect(trigger.classes()).toContain("size-8");
+
+    await trigger.trigger("click");
+
+    expect(trigger.text()).toContain("GiTiempo Studio");
+    expect(trigger.classes()).toContain("h-10");
+    expect(trigger.classes()).toContain("gap-3");
+    expect(trigger.classes()).toContain("px-1.5");
+    expect(trigger.classes()).toContain("py-1");
+    expect(trigger.classes()).toContain("ring-inset");
+    expect(trigger.classes()).not.toContain("w-11");
   });
 
   it("activates sign out through the real PrimeVue menu keyboard handler", async () => {

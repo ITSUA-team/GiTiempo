@@ -85,19 +85,21 @@ const isProfileMenuOpen = ref(false);
 const profileTriggerLabel = computed(
   () => `Open profile menu for ${props.displayName}`,
 );
+const openProfileTriggerClass =
+  "ring-divider bg-surface-primary h-10 gap-3 rounded-lg px-1.5 py-1 ring-1 ring-inset";
 
 const profileTriggerRootClass = computed(() =>
   [
-    "focus-visible:outline-brand flex items-center transition focus-visible:outline-2 focus-visible:outline-offset-2",
+    "focus-visible:outline-brand flex items-center justify-center transition focus-visible:outline-2 focus-visible:outline-offset-2",
     isProfileMenuOpen.value
-      ? "border-divider bg-surface-primary h-10 gap-3 rounded-lg border px-1.5 py-1"
-      : "h-8 gap-3 rounded-lg border-0 bg-transparent p-0 hover:bg-app-bg",
+      ? openProfileTriggerClass
+      : "size-8 rounded-full border-0 bg-transparent p-0 hover:bg-app-bg",
   ].join(" "),
 );
 
 const profileAvatarRootClass = computed(() =>
   [
-    "bg-accent-tint text-xs font-semibold text-brand",
+    "bg-accent-tint text-brand flex items-center justify-center rounded-full text-xs font-semibold leading-[14px]",
     isProfileMenuOpen.value ? "border-2 border-brand" : "border-0",
   ]
     .filter(Boolean)
@@ -184,7 +186,7 @@ function handleSettingsClick(
 
 function getMenuActionClass(item: ProfileMenuSlotItem): string {
   const baseClass =
-    "hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2";
+    "hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm leading-[17px] transition focus-visible:outline-2 focus-visible:outline-offset-2";
 
   switch (item.key) {
     case "workspace":
@@ -245,20 +247,20 @@ onBeforeUnmount(() => {
 
 <template>
   <header
-    class="border-divider bg-surface-primary sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 border-b px-4 sm:h-16 sm:grid-rows-1 sm:px-6"
+    class="bg-surface-primary after:bg-divider sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 px-4 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:content-[''] sm:h-16 sm:grid-rows-1 sm:px-6"
   >
     <div class="row-start-1 flex items-center gap-3">
       <div
-        class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs font-semibold"
+        class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs leading-[14px] font-semibold"
       >
         {{ props.workspaceShortName }}
       </div>
       <div class="flex min-w-0 items-center gap-2">
-        <p class="text-text-dark truncate text-base font-semibold">
+        <p class="text-text-dark truncate text-base leading-[19px] font-semibold">
           {{ props.productName }}
         </p>
-        <span class="text-text-muted text-[13px] font-medium">/</span>
-        <p class="text-text-dark truncate text-[13px] font-semibold">
+        <span class="text-text-subtle text-[13px] leading-4 font-medium">/</span>
+        <p class="text-text-dark truncate text-[13px] leading-4 font-semibold">
           {{ props.pageName }}
         </p>
       </div>
@@ -279,28 +281,32 @@ onBeforeUnmount(() => {
       class="relative col-start-3 row-start-1 flex items-center gap-3"
       data-testid="profile-menu-region"
     >
+      <span
+        v-if="props.profileContextLabel && !isProfileMenuOpen"
+        class="text-text-muted hidden text-right text-[13px] leading-4 font-medium sm:block"
+      >
+        {{ props.profileContextLabel }}
+      </span>
+
       <Button
+        unstyled
         type="button"
         aria-controls="profile_menu"
         :aria-expanded="isProfileMenuOpen"
         aria-haspopup="menu"
         :aria-label="profileTriggerLabel"
+        :class="profileTriggerRootClass"
         data-testid="profile-menu-trigger"
-        variant="text"
-        :pt="{
-          root: {
-            class: profileTriggerRootClass,
-          },
-        }"
         @click="toggleProfileMenu"
       >
         <span
-          v-if="props.profileContextLabel"
-          class="text-text-muted hidden text-right text-[13px] font-medium sm:block"
+          v-if="props.profileContextLabel && isProfileMenuOpen"
+          class="text-text-muted hidden text-right text-[13px] leading-4 font-medium sm:block"
         >
           {{ props.profileContextLabel }}
         </span>
         <Avatar
+          unstyled
           :label="props.userInitials"
           shape="circle"
           class="size-8"
@@ -310,6 +316,9 @@ onBeforeUnmount(() => {
             root: {
               class: profileAvatarRootClass,
             },
+            label: {
+              class: 'leading-[14px]',
+            },
           }"
         />
       </Button>
@@ -317,10 +326,16 @@ onBeforeUnmount(() => {
       <Menu
         v-if="isProfileMenuOpen"
         id="profile_menu"
+        unstyled
         :model="profileMenuItems"
         aria-label="Profile actions"
-        class="border-divider bg-surface-primary shadow-popover before:border-divider before:bg-surface-primary absolute top-full right-0 z-30 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
+        class="ring-divider bg-surface-primary shadow-popover before:ring-divider before:bg-surface-primary absolute top-full right-0 z-30 mt-5 h-40 w-[264px] rounded-lg p-1.5 ring-1 ring-inset before:absolute before:top-0 before:right-4 before:size-3 before:rotate-45 before:ring-1 before:content-[''] before:ring-inset"
         data-testid="profile-menu"
+        :pt="{
+          list: 'm-0 flex list-none flex-col gap-1 p-0',
+          item: 'm-0 p-0',
+          separator: 'bg-divider my-0 h-px border-0',
+        }"
       >
         <template #item="{ item, props: itemProps }">
           <a
