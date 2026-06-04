@@ -4,6 +4,21 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UsersService } from './users.service';
 import { DRIZZLE } from '../../db/db.constants';
 
+function getSqlText(value: unknown): string {
+  const queryChunks = (value as { queryChunks?: unknown[] }).queryChunks ?? [];
+
+  return queryChunks
+    .map((chunk) => {
+      if (typeof chunk !== 'object' || chunk === null || !('value' in chunk)) {
+        return '';
+      }
+      const chunkValue = (chunk as { value?: unknown }).value;
+
+      return Array.isArray(chunkValue) ? chunkValue.join('') : '';
+    })
+    .join('');
+}
+
 /**
  * Helper that builds a chainable Drizzle mock covering the two query
  * shapes used by the service:
@@ -166,6 +181,43 @@ describe('UsersService', () => {
       await expect(
         service.updateById(sampleRow.id, workspaceId, { displayName: 'x' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('updateFromFirebase', () => {
+    it('preserves a locally saved display name during Firebase login sync', async () => {
+      await build({ updateRows: [sampleRow] });
+
+      await service.updateFromFirebase(sampleRow.id, {
+        avatarUrl: null,
+        displayName: null,
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      const setArg = dbMock._spies.set.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(getSqlText(setArg.displayName)).toContain('COALESCE(');
+    });
+  });
+
+  describe('upsertFromFirebase', () => {
+    it('only seeds display name on conflict when the local value is empty', async () => {
+      await build({ insertRows: [sampleRow] });
+
+      await service.upsertFromFirebase({
+        avatarUrl: null,
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      const conflictArg = dbMock._spies.onConflictDoUpdate.mock.calls[0][0] as {
+        set: Record<string, unknown>;
+      };
+      expect(getSqlText(conflictArg.set.displayName)).toContain('COALESCE(');
     });
   });
 });
