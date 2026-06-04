@@ -27,7 +27,6 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useMembersTableState } from '@/composables/useMembersTableState';
-import type { MembersTableFilterUpdate } from '@/lib/members-table';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -68,7 +67,6 @@ const {
   emptyDescription: memberTableEmptyDescription,
   expandedRows: memberTableExpandedRows,
   expansionMode: memberTableExpansionMode,
-  filterHandlers: memberTableFilterHandlers,
   filters: memberTableFilters,
   lastActiveFilterOptions,
   projectFilterOptions,
@@ -76,6 +74,7 @@ const {
   rows: memberTableRows,
   setExpandedRows: setMemberTableExpandedRows,
   toggleExpansion: toggleMemberExpansion,
+  updateFilters: updateMemberTableFilters,
 } = useMembersTableState({
   currentUserId,
   members,
@@ -84,24 +83,6 @@ const {
 const pendingInviteRows = computed(() =>
   invites.value.filter((invite) => invite.status === 'pending'),
 );
-
-function handleMemberTableFiltersUpdate(update: MembersTableFilterUpdate): void {
-  if ('global' in update) {
-    memberTableFilterHandlers.setGlobal(update.global);
-  }
-  if ('lastActive' in update) {
-    memberTableFilterHandlers.setLastActive(update.lastActive);
-  }
-  if ('memberQuery' in update) {
-    memberTableFilterHandlers.setMemberQuery(update.memberQuery);
-  }
-  if ('projectIds' in update) {
-    memberTableFilterHandlers.setProjectIds(update.projectIds);
-  }
-  if ('role' in update) {
-    memberTableFilterHandlers.setRole(update.role);
-  }
-}
 
 const activeMembers = computed(() => members.value.length);
 const pendingInvites = computed<number | string>(() =>
@@ -447,7 +428,7 @@ onMounted(fetchAll);
           @edit-member="handleEditMember"
           @remove-member="handleRemoveMember"
           @update:expanded-rows="setMemberTableExpandedRows"
-          @update:filters="handleMemberTableFiltersUpdate"
+          @update:filters="updateMemberTableFilters"
         >
           <template #row-expansion="{ row }">
             <MemberAssignPmPanel

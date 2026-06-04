@@ -18,8 +18,8 @@ import type {
   MemberLastActiveFilter,
   MembersTableExpandedRows,
   MembersTableExpansionModes,
-  MembersTableFilterHandlers,
   MembersTableFilterOption,
+  MembersTableFilterUpdate,
   MembersTableFilters,
   MembersTableRow,
 } from '@/lib/members-table';
@@ -89,23 +89,24 @@ export function useMembersTableState({
   const filters = reactive<MembersTableFilters>(createDefaultFilters());
   const expandedRows = ref<MembersTableExpandedRows>({});
   const expansionMode = ref<MembersTableExpansionModes>({});
-  const filterHandlers: MembersTableFilterHandlers = {
-    setGlobal(value) {
-      filters.global = value ?? '';
-    },
-    setLastActive(value) {
-      filters.lastActive = value ?? 'any';
-    },
-    setMemberQuery(value) {
-      filters.memberQuery = value ?? '';
-    },
-    setProjectIds(value) {
-      filters.projectIds = value ?? [];
-    },
-    setRole(value) {
-      filters.role = value ?? null;
-    },
-  };
+
+  function updateFilters(update: MembersTableFilterUpdate): void {
+    if ('global' in update) {
+      filters.global = update.global ?? '';
+    }
+    if ('lastActive' in update) {
+      filters.lastActive = update.lastActive ?? 'any';
+    }
+    if ('memberQuery' in update) {
+      filters.memberQuery = update.memberQuery ?? '';
+    }
+    if ('projectIds' in update) {
+      filters.projectIds = update.projectIds ?? [];
+    }
+    if ('role' in update) {
+      filters.role = update.role ?? null;
+    }
+  }
 
   const projectFilterOptions = computed<MembersTableFilterOption[]>(() =>
     [...projects.value]
@@ -292,7 +293,6 @@ export function useMembersTableState({
     emptyDescription,
     expandedRows,
     expansionMode,
-    filterHandlers,
     filters,
     lastActiveFilterOptions,
     projectFilterOptions,
@@ -300,5 +300,6 @@ export function useMembersTableState({
     rows,
     setExpandedRows,
     toggleExpansion,
+    updateFilters,
   };
 }

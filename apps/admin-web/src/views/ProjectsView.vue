@@ -23,7 +23,6 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useProjectsTableState } from '@/composables/useProjectsTableState';
-import type { ProjectsTableFilterUpdate } from '@/lib/projects-table';
 import { routeNames } from '@/router';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
@@ -51,7 +50,6 @@ const {
   collapseRow: collapseProjectRow,
   emptyDescription: projectTableEmptyDescription,
   expandedRows: projectTableExpandedRows,
-  filterHandlers: projectTableFilterHandlers,
   filters: projectTableFilters,
   hoursFilterOptions,
   memberFilterOptions,
@@ -59,32 +57,12 @@ const {
   setExpandedRows: setProjectTableExpandedRows,
   sourceFilterOptions,
   toggleExpansion: toggleProjectExpansion,
+  updateFilters: updateProjectTableFilters,
   visibilityFilterOptions,
 } = useProjectsTableState({
   members,
   projects,
 });
-
-function handleProjectTableFiltersUpdate(update: ProjectsTableFilterUpdate): void {
-  if ('global' in update) {
-    projectTableFilterHandlers.setGlobal(update.global);
-  }
-  if ('hours' in update) {
-    projectTableFilterHandlers.setHours(update.hours);
-  }
-  if ('memberIds' in update) {
-    projectTableFilterHandlers.setMemberIds(update.memberIds);
-  }
-  if ('projectQuery' in update) {
-    projectTableFilterHandlers.setProjectQuery(update.projectQuery);
-  }
-  if ('source' in update) {
-    projectTableFilterHandlers.setSource(update.source);
-  }
-  if ('visibility' in update) {
-    projectTableFilterHandlers.setVisibility(update.visibility);
-  }
-}
 
 function sortProjects(list: ProjectListResponse): ProjectListResponse {
   return [...list].sort((a, b) => {
@@ -321,7 +299,7 @@ onMounted(fetchAll);
           @edit-project="handleEditProject"
           @unarchive="handleUnarchive"
           @update:expanded-rows="setProjectTableExpandedRows"
-          @update:filters="handleProjectTableFiltersUpdate"
+          @update:filters="updateProjectTableFilters"
         >
           <template #row-expansion="{ row }">
             <ProjectEditForm

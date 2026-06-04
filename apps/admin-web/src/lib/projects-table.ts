@@ -16,22 +16,6 @@ export interface ProjectsTableFilterOption<TValue extends string = string> {
   value: TValue;
 }
 
-// eslint-disable-next-line no-unused-vars
-type ProjectsTableValueSetter<TValue> = (value: TValue) => void;
-
-export interface ProjectsTableFilterHandlers {
-  setGlobal: ProjectsTableValueSetter<string | undefined>;
-  setHours: ProjectsTableValueSetter<ProjectHoursFilter | undefined>;
-  setMemberIds: ProjectsTableValueSetter<string[] | undefined>;
-  setProjectQuery: ProjectsTableValueSetter<string | undefined>;
-  setSource: ProjectsTableValueSetter<
-    ProjectResponse['source'] | null | undefined
-  >;
-  setVisibility: ProjectsTableValueSetter<
-    ProjectResponse['visibility'] | null | undefined
-  >;
-}
-
 export interface ProjectsTableFilterUpdate {
   global?: string | undefined;
   hours?: ProjectHoursFilter | undefined;

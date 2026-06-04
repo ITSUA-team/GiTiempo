@@ -179,39 +179,41 @@ describe('useProjectsTableState', () => {
   it('filters projects by global search, project, source, assigned member, hours, and visibility', () => {
     const { state } = createState();
 
-    state.filterHandlers.setGlobal('archived');
+    state.updateFilters({ global: 'archived' });
     expect(rowNames(state)).toEqual(['Legacy Project']);
 
-    state.filterHandlers.setGlobal('');
-    state.filterHandlers.setProjectQuery('billing');
+    state.updateFilters({ global: '' });
+    state.updateFilters({ projectQuery: 'billing' });
     expect(rowNames(state)).toEqual(['Billing API']);
 
-    state.filterHandlers.setProjectQuery('');
-    state.filterHandlers.setSource('manual');
+    state.updateFilters({ projectQuery: '' });
+    state.updateFilters({ source: 'manual' });
     expect(rowNames(state)).toEqual(['Billing API', 'Dev Portal', 'Legacy Project']);
 
-    state.filterHandlers.setSource(null);
-    state.filterHandlers.setMemberIds(['user-3']);
+    state.updateFilters({ source: null });
+    state.updateFilters({ memberIds: ['user-3'] });
     expect(rowNames(state)).toEqual(['Billing API']);
 
-    state.filterHandlers.setMemberIds([]);
-    state.filterHandlers.setHours('zero');
+    state.updateFilters({ memberIds: [] });
+    state.updateFilters({ hours: 'zero' });
     expect(rowNames(state)).toEqual(['Dev Portal']);
 
-    state.filterHandlers.setHours('any');
-    state.filterHandlers.setVisibility('private');
+    state.updateFilters({ hours: 'any' });
+    state.updateFilters({ visibility: 'private' });
     expect(rowNames(state)).toEqual(['Billing API', 'Legacy Project']);
   });
 
-  it('exposes filter handlers that normalize cleared controls', () => {
+  it('applies filter updates and normalizes cleared controls', () => {
     const { state } = createState();
 
-    state.filterHandlers.setGlobal('archived');
-    state.filterHandlers.setProjectQuery('billing');
-    state.filterHandlers.setSource('manual');
-    state.filterHandlers.setMemberIds(['user-3']);
-    state.filterHandlers.setHours('zero');
-    state.filterHandlers.setVisibility('private');
+    state.updateFilters({
+      global: 'archived',
+      hours: 'zero',
+      memberIds: ['user-3'],
+      projectQuery: 'billing',
+      source: 'manual',
+      visibility: 'private',
+    });
 
     expect(state.filters).toEqual({
       global: 'archived',
@@ -222,12 +224,14 @@ describe('useProjectsTableState', () => {
       visibility: 'private',
     });
 
-    state.filterHandlers.setGlobal(undefined);
-    state.filterHandlers.setProjectQuery(undefined);
-    state.filterHandlers.setSource(undefined);
-    state.filterHandlers.setMemberIds(undefined);
-    state.filterHandlers.setHours(undefined);
-    state.filterHandlers.setVisibility(undefined);
+    state.updateFilters({
+      global: undefined,
+      hours: undefined,
+      memberIds: undefined,
+      projectQuery: undefined,
+      source: undefined,
+      visibility: undefined,
+    });
 
     expect(state.filters).toEqual({
       global: '',
@@ -246,7 +250,7 @@ describe('useProjectsTableState', () => {
     state.toggleExpansion(project);
     expect(state.expandedRows.value).toEqual({ 'project-active': true });
 
-    state.filterHandlers.setProjectQuery('billing');
+    state.updateFilters({ projectQuery: 'billing' });
     await nextTick();
 
     expect(state.expandedRows.value).toEqual({});

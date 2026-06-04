@@ -8,8 +8,8 @@ import type {
 import type {
   ProjectHoursFilter,
   ProjectsTableExpandedRows,
-  ProjectsTableFilterHandlers,
   ProjectsTableFilterOption,
+  ProjectsTableFilterUpdate,
   ProjectsTableFilters,
   ProjectsTableRow,
 } from '@/lib/projects-table';
@@ -71,26 +71,27 @@ function textIncludes(value: string, search: string): boolean {
 export function useProjectsTableState({ members, projects }: UseProjectsTableStateOptions) {
   const filters = reactive<ProjectsTableFilters>(createDefaultFilters());
   const expandedRows = ref<ProjectsTableExpandedRows>({});
-  const filterHandlers: ProjectsTableFilterHandlers = {
-    setGlobal(value) {
-      filters.global = value ?? '';
-    },
-    setHours(value) {
-      filters.hours = value ?? 'any';
-    },
-    setMemberIds(value) {
-      filters.memberIds = value ?? [];
-    },
-    setProjectQuery(value) {
-      filters.projectQuery = value ?? '';
-    },
-    setSource(value) {
-      filters.source = value ?? null;
-    },
-    setVisibility(value) {
-      filters.visibility = value ?? null;
-    },
-  };
+
+  function updateFilters(update: ProjectsTableFilterUpdate): void {
+    if ('global' in update) {
+      filters.global = update.global ?? '';
+    }
+    if ('hours' in update) {
+      filters.hours = update.hours ?? 'any';
+    }
+    if ('memberIds' in update) {
+      filters.memberIds = update.memberIds ?? [];
+    }
+    if ('projectQuery' in update) {
+      filters.projectQuery = update.projectQuery ?? '';
+    }
+    if ('source' in update) {
+      filters.source = update.source ?? null;
+    }
+    if ('visibility' in update) {
+      filters.visibility = update.visibility ?? null;
+    }
+  }
 
   const memberFilterOptions = computed<ProjectsTableFilterOption[]>(() =>
     members.value
@@ -220,7 +221,6 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
     collapseRow,
     emptyDescription,
     expandedRows,
-    filterHandlers,
     filters,
     hoursFilterOptions,
     memberFilterOptions,
@@ -228,6 +228,7 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
     setExpandedRows,
     sourceFilterOptions,
     toggleExpansion,
+    updateFilters,
     visibilityFilterOptions,
   };
 }

@@ -19,17 +19,6 @@ export interface MembersTableFilterOption<TValue extends string = string> {
   value: TValue;
 }
 
-// eslint-disable-next-line no-unused-vars
-type MembersTableValueSetter<TValue> = (value: TValue) => void;
-
-export interface MembersTableFilterHandlers {
-  setGlobal: MembersTableValueSetter<string | undefined>;
-  setLastActive: MembersTableValueSetter<MemberLastActiveFilter | undefined>;
-  setMemberQuery: MembersTableValueSetter<string | undefined>;
-  setProjectIds: MembersTableValueSetter<string[] | undefined>;
-  setRole: MembersTableValueSetter<WorkspaceRole | null | undefined>;
-}
-
 export interface MembersTableFilterUpdate {
   global?: string | undefined;
   lastActive?: MemberLastActiveFilter | undefined;
