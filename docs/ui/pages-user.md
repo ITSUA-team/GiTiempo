@@ -40,7 +40,7 @@
 - Clicking the compact timer surface opens the centered task-picker dialog. The surface should hug its content width and stay aligned to the avatar side instead of expanding across the full center area.
 - On mobile, a single `Task & timer` opener lives on the left side of the strip so it remains reachable when the profile menu opens from the top-right identity area.
 - On mobile, the right-side metadata uses project on the first line and task on the second line, with running elapsed time shown there when applicable; the opener remains the guaranteed task-picker entry point if metadata is partially covered.
-- The task-picker dialog uses visible Project -> Task selection only for task targeting; it also includes the optional time-entry description field.
+- The task-picker dialog uses predictive Project -> Task selection only for task targeting; it also includes the optional time-entry description field.
 - When `Task` is set to `New task`, show a single required new-task title input directly below the task select and create that task inside the currently selected visible project.
 - The dialog does not support creating a new project.
 - When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with the state-appropriate timer action.
@@ -49,7 +49,7 @@
 ## Time Entries Page
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, filters, grouped entry cards, and pagination region.
-- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. Date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
+- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<AutoComplete dropdown forceSelection>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. Date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
 - The task lookup placeholder copy is `Search tasks`.
 - The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
 - Entries are grouped by the entry started-at day in the user's current browser-local timezone.
@@ -62,7 +62,7 @@
 - Running-entry mobile cards keep the same highlight treatment and do not expose edit/delete actions; stopping remains owned by the global top-bar timer.
 - Clicking the task name opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
 - Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
-- The shared time-entry dialog uses these fields in both create and edit modes: project `<Select>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
+- The shared time-entry dialog uses these fields in both create and edit modes: project `<AutoComplete dropdown forceSelection>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
 - Create mode initializes `isBillable` from the selected task's default billable value and still lets the user override it before saving.
 - Edit mode allows changing the selected project and task in addition to `startedAt`, `endedAt`, `description`, and `isBillable`.
 - This create/edit surface must ship as a true popup dialog overlay. Do not render it inline inside the Time Entries page layout.
@@ -74,14 +74,15 @@
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, the search row, and grouped project sections.
 - The page uses the same high-level structure as Time Entries: top-bar breadcrumb, grouped content sections, and a card/table shell for each group.
-- A lightweight filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<Select>` controls.
+- A lightweight filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<AutoComplete dropdown forceSelection>` controls.
+- Search suggestions include both project names and task names from the currently loaded visible data set, and project suggestions render their main label in bold so they stand apart from task suggestions.
 - The combined search and the structured filters operate on already loaded visible projects and tasks on the frontend. Do not document them as backend free-text or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
 - `Status` options are `All statuses`, `Open`, and `Closed`.
 - `Updated` options are `Any time`, `Today`, `Last 7 days`, and `Older`.
 - `Status` and `Updated` filters narrow task rows and only keep project groups that still contain at least one matching task.
-- Clearing the search restores the full grouped project list.
+- Clearing the search and resetting the predictive single-selects restores the full grouped project list.
 - Content is grouped by visible project instead of by day.
 - Each project section header shows the project name on the left and a primary icon-only PrimeVue `<Button>` with a `plus` icon on the right. The action uses tooltip/accessibility copy `Add task`.
 - Tasks for that project render beneath the project header inside the same section card.

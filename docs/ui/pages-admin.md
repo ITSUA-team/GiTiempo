@@ -20,6 +20,7 @@
 
 - Initial report load uses a skeleton matching the reports header, setup controls, summary cards, and results table.
 - Report setup bar: project, member, date range, group-by, and `Export CSV` in the same row.
+- Project, member, and group-by use PrimeVue `<AutoComplete dropdown forceSelection>` single-select inputs in that setup row; date range keeps the existing `<DatePicker>` treatment.
 - Report setup controls define the backend CSV export scope and do not change the loaded table rows or summary cards by themselves.
 - Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
 - Summary totals row above the results table reflects the loaded backend-generated project-member report data.
@@ -35,7 +36,7 @@
 - Invoice list table is searchable with placeholder `Search invoices` and uses column filters for invoice id/name, project, amount, and status.
 - An icon-only primary action sits in the invoices table header next to the search control and opens the modal dialog. Use tooltip/accessibility copy `Create invoice`.
 - Invoice id/name is the edit entry point and opens the popup. Do not keep a separate Actions column in the table.
-- The shared invoice dialog uses title `Invoice` for existing rows and covers both create and edit/detail states with fields for project, date range, hourly rate, discount, and total amount.
+- The shared invoice dialog uses title `Invoice` for existing rows and covers both create and edit/detail states with fields for project `<AutoComplete dropdown forceSelection>`, date range, hourly rate, discount, and total amount.
 - Status-specific invoice actions live inside the popup instead of the table row, and `Delete invoice` remains inside the dialog for editable invoices.
 
 ## Members Page
@@ -58,7 +59,7 @@
 - An icon-only primary action sits in the projects table header next to the search control. Use tooltip/accessibility copy `New project`.
 - The project name is the edit entry point and opens the inline project settings section instead of using a row-level edit icon.
 - The status-specific secondary action lives inside the inline project settings section instead of the table row: active projects show `Archive project`, and archived projects show `Unarchive project`.
-- Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<Select>`, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
+- Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<AutoComplete dropdown forceSelection>`, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
 - Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks`.
 - When a project default billable value changes after tasks or time entries already exist in that project, save the new default immediately for future tasks, then show a follow-up popup that asks only whether existing tasks and existing time entries in that project should also be updated.
 
@@ -68,7 +69,7 @@
 - Settings uses the shared top-bar breadcrumb pattern instead of a large in-content title/subtitle block.
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
 - Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
-- `Time zone` uses a full-width PrimeVue `<Select>` below the Default hourly rate + Currency row, enables filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source.
+- `Currency` and `Time zone` use PrimeVue `<AutoComplete dropdown forceSelection>` single-select inputs. `Time zone` stays full width below the Default hourly rate + Currency row, enables filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
 - Initial load reads workspace identity from `/workspace` and workspace settings from `/workspace/settings`.

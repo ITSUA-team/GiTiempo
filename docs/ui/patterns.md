@@ -94,29 +94,31 @@ Use `<DatePicker>`.
 
 ## Cascading Task Selector
 
-Use sequential PrimeVue `<Select>` controls.
+Use sequential PrimeVue `<AutoComplete dropdown forceSelection>` controls.
 
 - Project -> Task.
-- Enable `filter` on each select.
+- Use PrimeVue `<AutoComplete dropdown forceSelection>` for each level.
 - Disable each level until the previous one has a value.
 - Use `:loading` while downstream options are fetched.
 - This pattern is used inside the centered top-bar task-picker dialog.
 
 ```vue
-<Select
+<AutoComplete
   v-model="selectedProject"
-  :options="projects"
+  :suggestions="projectSuggestions"
   optionLabel="name"
   placeholder="Project"
-  filter
+  forceSelection
+  dropdown
   class="w-full"
 />
-<Select
+<AutoComplete
   v-model="selectedTask"
-  :options="tasks"
+  :suggestions="taskSuggestions"
   optionLabel="title"
   placeholder="Task"
-  filter
+  forceSelection
+  dropdown
   :disabled="!selectedProject"
   :loading="loadingTasks"
   class="w-full"
@@ -150,14 +152,15 @@ Use PrimeVue `<AutoComplete>` when the UI helps the user find or filter tasks by
 Use a lightweight filter set for the user Projects page.
 
 - Keep a combined PrimeVue `<AutoComplete>` search field with placeholder copy `Search projects or tasks`.
-- Suggestions may include both project names and task names from the currently loaded visible data set.
-- Add a `Status` PrimeVue `<Select>` with `All statuses`, `Open`, and `Closed`.
-- Add an `Updated` PrimeVue `<Select>` with `Any time`, `Today`, `Last 7 days`, and `Older`.
+- Suggestions include both project names and task names from the currently loaded visible data set.
+- Project suggestions render their main label in bold so they are visually distinct from task suggestions.
+- Add a `Status` PrimeVue `<AutoComplete dropdown forceSelection>` with `All statuses`, `Open`, and `Closed`.
+- Add an `Updated` PrimeVue `<AutoComplete dropdown forceSelection>` with `Any time`, `Today`, `Last 7 days`, and `Older`.
 - All filters operate on frontend-visible data only. Do not document them as backend search or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
 - `Status` and `Updated` continue narrowing task rows after the text search is applied and remove project groups that no longer have matching tasks.
-- Clearing the search and resetting the selects restores the full grouped list.
+- Clearing the search and resetting the predictive single-selects restores the full grouped list.
 
 ## Entry Action Icons
 
@@ -200,7 +203,7 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - The full compact top-bar timer surface is always clickable, including when start is disabled.
 - The dialog is the primary place to switch the selected task context and to trigger timer start/stop behavior in `user-web`.
 - Use visible `Project -> Task` selection only.
-- Use sequential PrimeVue `<Select>` controls for project and task selection.
+- Use sequential PrimeVue `<AutoComplete dropdown forceSelection>` controls for project and task selection.
 - The selected project must be visible to the current user.
 - The selected task must belong to the selected visible project.
 - The `Task` select lists visible tasks first and appends `New task` as the last option.
