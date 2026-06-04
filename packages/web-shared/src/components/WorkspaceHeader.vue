@@ -98,7 +98,7 @@ const profileTriggerRootClass = computed(() =>
 const profileAvatarRootClass = computed(() =>
   [
     "bg-accent-tint text-xs font-semibold text-brand",
-    isProfileMenuOpen.value ? "ring-2 ring-brand" : "",
+    isProfileMenuOpen.value ? "border-2 border-brand" : "border-0",
   ]
     .filter(Boolean)
     .join(" "),

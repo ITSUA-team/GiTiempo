@@ -308,7 +308,8 @@ describe("WorkspaceHeader", () => {
     expect(trigger.attributes("aria-expanded")).toBe("false");
     expect(trigger.attributes("aria-haspopup")).toBe("menu");
     expect(trigger.classes()).toContain("border-0");
-    expect(avatar.classes()).not.toContain("ring-brand");
+    expect(avatar.classes()).toContain("border-0");
+    expect(avatar.classes()).not.toContain("border-brand");
 
     await trigger.trigger("click");
 
@@ -318,7 +319,8 @@ describe("WorkspaceHeader", () => {
 
     expect(trigger.attributes("aria-expanded")).toBe("true");
     expect(trigger.classes()).toContain("border-divider");
-    expect(avatar.classes()).toContain("ring-brand");
+    expect(avatar.classes()).toContain("border-2");
+    expect(avatar.classes()).toContain("border-brand");
     expect(wrapper.find('[data-testid="profile-menu"] [role="menu"]').exists()).toBe(
       true,
     );
@@ -350,7 +352,8 @@ describe("WorkspaceHeader", () => {
     expect(document.activeElement).toBe(trigger.element);
     expect(trigger.attributes("aria-expanded")).toBe("false");
     expect(trigger.classes()).toContain("border-0");
-    expect(avatar.classes()).not.toContain("ring-brand");
+    expect(avatar.classes()).toContain("border-0");
+    expect(avatar.classes()).not.toContain("border-brand");
   });
 
   it("activates sign out through the real PrimeVue menu keyboard handler", async () => {
