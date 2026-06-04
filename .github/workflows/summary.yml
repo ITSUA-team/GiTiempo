@@ -1,0 +1,26 @@
+name: Move Issue to In Test on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  move_to_test:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Linked Issue Number
+        id: get_issue
+        run: |
+          ISSUE_NUM=$(echo "${{ github.event.pull_request.body }}" | grep -oPi '(ref|related to) #\K\d+')
+          echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+
+      - name: Update Issue Status in Project
+        if: steps.get_issue.outputs.issue_number != ''
+        uses: titoportas/update-project-fields@v0.1.0
+        with:
+          project-url: https://github.com/orgs/<YOUR_ORG>/projects/<PROJECT_NUMBER>
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          item-number: ${{ steps.get_issue.outputs.issue_number }}
+          field: Status
+          field-value: Testing
