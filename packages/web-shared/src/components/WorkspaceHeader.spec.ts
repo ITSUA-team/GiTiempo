@@ -282,6 +282,7 @@ describe("WorkspaceHeader", () => {
 
     expect(profileMenu.attributes("class")).toContain("absolute");
     expect(profileMenu.attributes("class")).toContain("right-0");
+    expect(profileMenu.attributes("class")).toContain("z-30");
     expect(profileMenu.element.contains(primaryAction.element)).toBe(false);
     expect(profileMenu.element.contains(changeAction.element)).toBe(false);
     expect(primaryAction.isVisible()).toBe(true);
@@ -319,6 +320,9 @@ describe("WorkspaceHeader", () => {
     );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
       "right-0",
+    );
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "z-30",
     );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
       "before:right-5",

@@ -68,6 +68,14 @@ const createTaskTitleModel = computed({
 });
 
 const isMobileViewport = useIsMobileViewport();
+const taskSelectOverlayClass = "max-w-[calc(100vw-2rem)]";
+const taskSelectPt = {
+  label: { class: "truncate" },
+  listContainer: { class: "max-w-full" },
+  option: { class: "min-w-0" },
+  optionLabel: { class: "truncate" },
+  root: { class: "max-w-full min-w-0" },
+} as const;
 </script>
 
 <template>
@@ -130,15 +138,18 @@ const isMobileViewport = useIsMobileViewport();
         </label>
         <Select
           v-model="selectedProjectModel"
+          class="max-w-full min-w-0"
           filter
           fluid
           input-id="top-bar-timer-project"
+          :overlay-class="taskSelectOverlayClass"
           option-label="name"
           option-value="id"
           :disabled="props.isLoadingProjects || props.isConfirmingSelection"
           :loading="props.isLoadingProjects"
           :options="props.projectOptions"
           placeholder="Select a project"
+          :pt="taskSelectPt"
         />
       </div>
 
@@ -151,15 +162,18 @@ const isMobileViewport = useIsMobileViewport();
         </label>
         <Select
           v-model="selectedTaskModel"
+          class="max-w-full min-w-0"
           filter
           fluid
           input-id="top-bar-timer-task"
+          :overlay-class="taskSelectOverlayClass"
           option-label="title"
           option-value="id"
           :disabled="!props.selectedProjectId || props.isLoadingTasks || props.isConfirmingSelection"
           :loading="props.isLoadingTasks"
           :options="props.taskOptions"
           placeholder="Select a task"
+          :pt="taskSelectPt"
         />
       </div>
 
