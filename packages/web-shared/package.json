@@ -28,6 +28,10 @@
       "types": "./src/query/index.ts",
       "default": "./src/query/index.ts"
     },
+    "./router": {
+      "types": "./src/router.ts",
+      "default": "./src/router.ts"
+    },
     "./session-storage": {
       "types": "./src/session-storage.ts",
       "default": "./src/session-storage.ts"
