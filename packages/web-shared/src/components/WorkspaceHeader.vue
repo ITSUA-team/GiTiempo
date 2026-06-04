@@ -52,7 +52,9 @@ const props = withDefaults(
     counterpartHref: string;
     counterpartLabel: string;
     displayName: string;
+    pageName: string;
     productName?: string;
+    profileContextLabel?: string;
     settingsIcon?: Component;
     settingsLabel?: string;
     showSettings?: boolean;
@@ -63,6 +65,7 @@ const props = withDefaults(
   }>(),
   {
     productName: "GiTiempo",
+    profileContextLabel: undefined,
     settingsIcon: undefined,
     settingsLabel: "Settings",
     showSettings: true,
@@ -79,13 +82,16 @@ const emit = defineEmits<{
 
 const profileMenuRegion = useTemplateRef<HTMLElement>("profileMenuRegion");
 const isProfileMenuOpen = ref(false);
+const profileTriggerLabel = computed(
+  () => `Open profile menu for ${props.displayName}`,
+);
 
 const profileTriggerRootClass = computed(() =>
   [
-    "focus-visible:outline-brand flex h-10 items-center gap-3 rounded-lg border px-1.5 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2",
+    "focus-visible:outline-brand flex items-center transition focus-visible:outline-2 focus-visible:outline-offset-2",
     isProfileMenuOpen.value
-      ? "border-divider bg-surface-primary"
-      : "border-transparent bg-transparent hover:bg-app-bg",
+      ? "border-divider bg-surface-primary h-10 gap-3 rounded-lg border px-1.5 py-1"
+      : "h-8 gap-3 rounded-lg border-0 bg-transparent p-0 hover:bg-app-bg",
   ].join(" "),
 );
 
@@ -247,22 +253,23 @@ onBeforeUnmount(() => {
       >
         {{ props.workspaceShortName }}
       </div>
-      <div class="flex flex-col gap-0.5">
-        <p class="text-base font-semibold">
+      <div class="flex min-w-0 items-center gap-2">
+        <p class="text-text-dark truncate text-base font-semibold">
           {{ props.productName }}
         </p>
-        <p class="text-text-muted text-xs">
-          {{ props.workspaceName }}
+        <span class="text-text-muted text-[13px] font-medium">/</span>
+        <p class="text-text-dark truncate text-[13px] font-semibold">
+          {{ props.pageName }}
         </p>
       </div>
     </div>
 
     <div
       v-if="hasCenterSlot"
-      class="col-span-3 row-start-2 -mx-4 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:mx-0 sm:px-2"
+      class="col-span-3 row-start-2 -mx-4 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:mx-0"
       data-testid="workspace-header-center-row"
     >
-      <div class="flex justify-center">
+      <div class="flex justify-start sm:justify-end">
         <slot name="center" />
       </div>
     </div>
@@ -277,7 +284,7 @@ onBeforeUnmount(() => {
         aria-controls="profile_menu"
         :aria-expanded="isProfileMenuOpen"
         aria-haspopup="menu"
-        aria-label="Open profile menu"
+        :aria-label="profileTriggerLabel"
         data-testid="profile-menu-trigger"
         variant="text"
         :pt="{
@@ -287,8 +294,11 @@ onBeforeUnmount(() => {
         }"
         @click="toggleProfileMenu"
       >
-        <span class="text-text-dark hidden text-right text-[13px] font-medium sm:block">
-          {{ props.displayName }}
+        <span
+          v-if="props.profileContextLabel"
+          class="text-text-muted hidden text-right text-[13px] font-medium sm:block"
+        >
+          {{ props.profileContextLabel }}
         </span>
         <Avatar
           :label="props.userInitials"

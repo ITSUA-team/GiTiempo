@@ -10,7 +10,7 @@ import { mockMatchMedia } from "@/test/mockMatchMedia";
 const closeDialog = vi.fn();
 const confirmSelectedTask = vi.fn();
 const createTaskFromDialog = vi.fn();
-const handlePrimaryAction = vi.fn();
+const handleDialogPrimaryAction = vi.fn();
 const openDialog = vi.fn();
 const setCreateTaskTitle = vi.fn();
 const setSelectedDescription = vi.fn();
@@ -24,17 +24,18 @@ const composableState = {
   createTaskFromDialog,
   createTaskTitle: ref(""),
   elapsedTimeLabel: ref("01:00:00"),
-  handlePrimaryAction,
+  handleDialogPrimaryAction,
   isConfirmingSelection: ref(false),
   isConfirmSelectionDisabled: computed(() => false),
   isCreateTaskDisabled: computed(() => false),
   isCreatingTask: ref(false),
+  isDialogPrimaryActionDisabled: computed(() => false),
   isDialogOpen: ref(false),
   isLoadingProjects: ref(false),
   isLoadingSummary: ref(false),
   isLoadingTasks: ref(false),
-  isPrimaryActionDisabled: computed(() => false),
   isPrimaryActionPending: computed(() => false),
+  isTimerRunning: ref(false),
   openDialog,
   primaryActionLabel: ref("Start"),
   projectsErrorMessage: ref<string | null>(null),
@@ -50,8 +51,11 @@ const composableState = {
   summaryErrorMessage: ref<string | null>(null),
   taskOptions: shallowRef([]),
   tasksErrorMessage: ref<string | null>(null),
+  timerActionErrorMessage: ref<string | null>(null),
   timerContextLabel: ref("Project Orion / Improve reports filters"),
+  timerProjectLabel: ref("Project Orion"),
   timerStatusLabel: ref("Last tracked task"),
+  timerTaskLabel: ref("Improve reports filters"),
 };
 
 const mountedWrappers: VueWrapper[] = [];
@@ -68,6 +72,9 @@ const TopBarTimerTaskDialogStub = defineComponent({
     isLoadingProjects: { type: Boolean, required: true },
     isLoadingTasks: { type: Boolean, required: true },
     isOpen: { type: Boolean, required: true },
+    isPrimaryActionDisabled: { type: Boolean, required: true },
+    isPrimaryActionPending: { type: Boolean, required: true },
+    primaryActionLabel: { type: String, required: true },
     projectOptions: { type: Array, required: true },
     projectsErrorMessage: { type: String, default: null },
     selectedDescription: { type: String, default: "" },
@@ -75,12 +82,14 @@ const TopBarTimerTaskDialogStub = defineComponent({
     selectedTaskId: { type: String, default: null },
     selectionUpdateErrorMessage: { type: String, default: null },
     taskOptions: { type: Array, required: true },
+    timerActionErrorMessage: { type: String, default: null },
     tasksErrorMessage: { type: String, default: null },
   },
   emits: [
     "close",
     "confirm",
     "createTask",
+    "primaryAction",
     "update:createTaskTitle",
     "update:selectedDescription",
     "update:selectedProjectId",
@@ -117,7 +126,7 @@ describe("TopBarTimer", () => {
       closeDialog,
       confirmSelectedTask,
       createTaskFromDialog,
-      handlePrimaryAction,
+      handleDialogPrimaryAction,
       openDialog,
       setCreateTaskTitle,
       setSelectedDescription,
@@ -127,15 +136,18 @@ describe("TopBarTimer", () => {
 
     composableState.primaryActionLabel.value = "Start";
     composableState.elapsedTimeLabel.value = "01:00:00";
+    composableState.isTimerRunning.value = false;
     composableState.isLoadingSummary.value = false;
     composableState.summaryErrorMessage.value = null;
     composableState.timerContextLabel.value =
       "Project Orion / Improve reports filters";
+    composableState.timerProjectLabel.value = "Project Orion";
     composableState.timerStatusLabel.value = "Last tracked task";
+    composableState.timerTaskLabel.value = "Improve reports filters";
     composableState.selectedDescription.value = "";
     composableState.selectedProjectId.value = null;
     composableState.selectedTaskId.value = null;
-    composableState.isPrimaryActionDisabled = computed(() => false);
+    composableState.isDialogPrimaryActionDisabled = computed(() => false);
   });
 
   afterEach(() => {
@@ -154,69 +166,51 @@ describe("TopBarTimer", () => {
     expect(wrapper.get('[data-testid="top-bar-timer"]').attributes("data-layout")).toBe(
       "desktop",
     );
-    expect(wrapper.get('[data-testid="top-bar-timer-context"]').text()).toBe(
-      "Project Orion / Improve reports filters",
+    expect(wrapper.get('[data-testid="top-bar-timer-context"]').text()).toContain(
+      "Project Orion",
     );
-    expect(wrapper.get('[data-testid="top-bar-timer-context"]').attributes("aria-label")).toBe(
-      "Change timer task",
+    expect(wrapper.get('[data-testid="top-bar-timer-context"]').text()).toContain(
+      "Improve reports filters",
+    );
+    expect(wrapper.get('[data-testid="top-bar-timer"]').attributes("aria-label")).toBe(
+      "Open task and timer",
     );
     expect(wrapper.find('[data-testid="top-bar-timer-mobile-actions"]').exists()).toBe(
       false,
     );
+    expect(wrapper.find('[data-testid="top-bar-timer-primary-action"]').exists()).toBe(
+      false,
+    );
   });
 
-  it("keeps the timer context field clickable", async () => {
+  it("opens task selection from the desktop compact timer surface", async () => {
     const wrapper = mountTopBarTimer();
 
-    await wrapper.get('[data-testid="top-bar-timer-context"]').trigger("click");
+    await wrapper.get('[data-testid="top-bar-timer"]').trigger("click");
 
     expect(openDialog).toHaveBeenCalledTimes(1);
   });
 
-  it("disables the primary action when the state is not actionable", () => {
-    composableState.isPrimaryActionDisabled = computed(() => true);
-
-    const wrapper = mountTopBarTimer();
-
-    expect(
-      wrapper.get('[data-testid="top-bar-timer-primary-action"]').attributes("disabled"),
-    ).toBeDefined();
-  });
-
-  it("routes start and stop button clicks through the composable", async () => {
-    const wrapper = mountTopBarTimer();
-
-    await wrapper.get('[data-testid="top-bar-timer-primary-action"]').trigger("click");
-
-    expect(handlePrimaryAction).toHaveBeenCalledTimes(1);
-
-    composableState.primaryActionLabel.value = "Stop";
-    await wrapper.vm.$nextTick();
-    await wrapper.get('[data-testid="top-bar-timer-primary-action"]').trigger("click");
-
-    expect(handlePrimaryAction).toHaveBeenCalledTimes(2);
-  });
-
-  it("keeps the compact surface visible and disables the action while loading", () => {
+  it("keeps the compact surface visible while loading", () => {
     composableState.isLoadingSummary.value = true;
-    composableState.isPrimaryActionDisabled = computed(() => true);
 
     const wrapper = mountTopBarTimer();
 
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);
-    expect(wrapper.get('[data-testid="top-bar-timer-context"]').text()).toBe(
-      "Project Orion / Improve reports filters",
+    expect(wrapper.get('[data-testid="top-bar-timer-context"]').text()).toContain(
+      "Project Orion",
     );
-    expect(
-      wrapper.get('[data-testid="top-bar-timer-primary-action"]').attributes("disabled"),
-    ).toBeDefined();
+    expect(wrapper.get('[data-testid="top-bar-timer-context"]').text()).toContain(
+      "Improve reports filters",
+    );
     expect(wrapper.text()).not.toContain("01:00:00");
   });
 
-  it("keeps the compact surface visible and disables the action after a summary failure", () => {
+  it("keeps the compact surface visible after a summary failure", () => {
     composableState.summaryErrorMessage.value = "network down";
-    composableState.isPrimaryActionDisabled = computed(() => true);
+    composableState.timerProjectLabel.value = "No eligible task";
     composableState.timerStatusLabel.value = "No eligible task";
+    composableState.timerTaskLabel.value = "Choose a visible project and task.";
     composableState.timerContextLabel.value =
       "Choose a visible project and task to start tracking time.";
 
@@ -225,25 +219,25 @@ describe("TopBarTimer", () => {
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);
     expect(wrapper.text()).toContain("No eligible task");
     expect(wrapper.find('[data-testid="top-bar-timer-context"]').exists()).toBe(true);
-    expect(
-      wrapper.get('[data-testid="top-bar-timer-primary-action"]').attributes("disabled"),
-    ).toBeDefined();
+    expect(wrapper.text()).toContain("Choose a visible project and task.");
   });
 
   it("renders the live elapsed label only in the running stop state", async () => {
     composableState.primaryActionLabel.value = "Stop";
+    composableState.isTimerRunning.value = true;
 
     const wrapper = mountTopBarTimer();
 
     expect(wrapper.text()).toContain("01:00:00");
 
     composableState.primaryActionLabel.value = "Start";
+    composableState.isTimerRunning.value = false;
     await wrapper.vm.$nextTick();
 
     expect(wrapper.text()).not.toContain("01:00:00");
   });
 
-  it("renders the selected mobile timer strip with left actions and right metadata", () => {
+  it("renders the selected mobile timer strip with an opener and right metadata", () => {
     mockMatchMedia(true);
 
     const wrapper = mountTopBarTimer();
@@ -251,12 +245,10 @@ describe("TopBarTimer", () => {
     expect(wrapper.get('[data-testid="top-bar-timer"]').attributes("data-layout")).toBe(
       "mobile",
     );
-    expect(wrapper.get('[data-testid="top-bar-timer-mobile-actions"]').text()).toContain(
-      "Start",
+    expect(wrapper.get('[data-testid="top-bar-timer-mobile-opener"]').text()).toContain(
+      "Task & timer",
     );
-    expect(wrapper.get('[data-testid="top-bar-timer-mobile-actions"]').text()).toContain(
-      "Change",
-    );
+    expect(wrapper.find('[data-testid="top-bar-timer-mobile-actions"]').exists()).toBe(false);
     const mobileContext = wrapper.get('[data-testid="top-bar-timer-mobile-context"]');
 
     expect(mobileContext.element.tagName).toBe("DIV");
@@ -265,20 +257,20 @@ describe("TopBarTimer", () => {
     expect(mobileContext.classes()).toContain("items-start");
     expect(mobileContext.find(".line-clamp-2").exists()).toBe(true);
     expect(mobileContext.text()).toContain(
-      "Last tracked task",
+      "Project Orion",
     );
     expect(mobileContext.text()).toContain(
-      "Project Orion / Improve reports filters",
+      "Improve reports filters",
     );
     expect(wrapper.find('[data-testid="top-bar-timer-context"]').exists()).toBe(false);
   });
 
-  it("keeps the mobile Change action available for task selection", async () => {
+  it("keeps the mobile Task & timer opener available for task selection", async () => {
     mockMatchMedia(true);
 
     const wrapper = mountTopBarTimer();
 
-    await wrapper.get('[data-testid="top-bar-timer-change-task"]').trigger("click");
+    await wrapper.get('[data-testid="top-bar-timer-mobile-opener"]').trigger("click");
 
     expect(openDialog).toHaveBeenCalledTimes(1);
   });
@@ -293,73 +285,32 @@ describe("TopBarTimer", () => {
     expect(openDialog).not.toHaveBeenCalled();
   });
 
-  it("keeps the mobile Start, Stop, and Change controls accessible and actionable", async () => {
+  it("keeps the mobile opener accessible and actionable", async () => {
     mockMatchMedia(true);
 
     const wrapper = mountTopBarTimer();
 
-    const primaryAction = wrapper.get(
-      '[data-testid="top-bar-timer-mobile-actions"] [data-testid="top-bar-timer-primary-action"]',
-    );
-    const changeAction = wrapper.get('[data-testid="top-bar-timer-change-task"]');
+    const opener = wrapper.get('[data-testid="top-bar-timer-mobile-opener"]');
 
-    expect(primaryAction.text()).toContain("Start");
-    expect(primaryAction.attributes("aria-label")).toBe("Start");
-    expect(primaryAction.attributes("disabled")).toBeUndefined();
-    expect(changeAction.text()).toContain("Change");
-    expect(changeAction.attributes("aria-label")).toBe("Change timer task");
-    expect(changeAction.attributes("disabled")).toBeUndefined();
-    expect(changeAction.classes()).toContain("bg-surface-primary");
-    expect(changeAction.classes()).toContain("border-divider");
-    expect(changeAction.classes()).toContain("text-brand");
-    expect(
-      changeAction.find('[data-testid="top-bar-timer-change-task-icon"]').classes(),
-    ).toContain("text-brand");
+    expect(opener.text()).toContain("Task & timer");
+    expect(opener.attributes("disabled")).toBeUndefined();
 
-    await primaryAction.trigger("click");
-    await changeAction.trigger("click");
+    await opener.trigger("click");
 
-    expect(handlePrimaryAction).toHaveBeenCalledTimes(1);
     expect(openDialog).toHaveBeenCalledTimes(1);
-
-    composableState.primaryActionLabel.value = "Stop";
-    await wrapper.vm.$nextTick();
-
-    const stopAction = wrapper.get(
-      '[data-testid="top-bar-timer-mobile-actions"] [data-testid="top-bar-timer-primary-action"]',
-    );
-
-    expect(stopAction.text()).toContain("Stop");
-    expect(stopAction.attributes("aria-label")).toBe("Stop");
-
-    await stopAction.trigger("click");
-
-    expect(handlePrimaryAction).toHaveBeenCalledTimes(2);
-  });
-
-  it("uses disabled semantics for non-actionable mobile timer primary actions", () => {
-    mockMatchMedia(true);
-    composableState.isPrimaryActionDisabled = computed(() => true);
-
-    const wrapper = mountTopBarTimer();
-
-    expect(
-      wrapper.get('[data-testid="top-bar-timer-primary-action"]').attributes("disabled"),
-    ).toBeDefined();
-    expect(
-      wrapper.get('[data-testid="top-bar-timer-change-task"]').attributes("disabled"),
-    ).toBeUndefined();
   });
 
   it("shows the running elapsed label in the mobile strip metadata", () => {
     mockMatchMedia(true);
     composableState.primaryActionLabel.value = "Stop";
+    composableState.isTimerRunning.value = true;
+    composableState.timerProjectLabel.value = "Project Orion";
     composableState.timerStatusLabel.value = "Running timer";
 
     const wrapper = mountTopBarTimer();
 
     expect(wrapper.get('[data-testid="top-bar-timer-mobile-context"]').text()).toContain(
-      "Running timer",
+      "Project Orion",
     );
     expect(wrapper.get('[data-testid="top-bar-timer-mobile-context"]').text()).toContain(
       "01:00:00",
@@ -384,7 +335,7 @@ describe("TopBarTimer", () => {
     mockMatchMedia(true);
 
     const wrapper = mountTopBarTimer({ attachTo: document.body });
-    const changeAction = wrapper.get('[data-testid="top-bar-timer-change-task"]');
+    const changeAction = wrapper.get('[data-testid="top-bar-timer-mobile-opener"]');
 
     (changeAction.element as HTMLElement).focus();
     await changeAction.trigger("click");
@@ -410,5 +361,15 @@ describe("TopBarTimer", () => {
     await wrapper.vm.$nextTick();
 
     expect(setSelectedDescription).toHaveBeenCalledWith("Updated description");
+  });
+
+  it("routes dialog primary actions through the composable", async () => {
+    const wrapper = mountTopBarTimer();
+    const dialog = wrapper.getComponent(TopBarTimerTaskDialogStub);
+
+    dialog.vm.$emit("primaryAction");
+    await wrapper.vm.$nextTick();
+
+    expect(handleDialogPrimaryAction).toHaveBeenCalledTimes(1);
   });
 });

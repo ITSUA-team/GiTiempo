@@ -19,13 +19,17 @@ const props = defineProps<{
   isLoadingProjects: boolean;
   isLoadingTasks: boolean;
   isOpen: boolean;
+  isPrimaryActionDisabled: boolean;
+  isPrimaryActionPending: boolean;
   projectOptions: ProjectResponse[];
+  primaryActionLabel: string;
   projectsErrorMessage: string | null;
   selectedDescription: string;
   selectedProjectId: string | null;
   selectedTaskId: string | null;
   selectionUpdateErrorMessage: string | null;
   taskOptions: TaskResponse[];
+  timerActionErrorMessage: string | null;
   tasksErrorMessage: string | null;
 }>();
 
@@ -33,6 +37,7 @@ const emit = defineEmits<{
   close: [];
   confirm: [];
   createTask: [];
+  primaryAction: [];
   "update:createTaskTitle": [value: string];
   "update:selectedDescription": [value: string];
   "update:selectedProjectId": [value: string | null];
@@ -68,6 +73,17 @@ const createTaskTitleModel = computed({
 });
 
 const isMobileViewport = useIsMobileViewport();
+const dialogTitle = computed(() =>
+  props.primaryActionLabel === "Stop" ? "Update timer task" : "Start timer",
+);
+const dialogDescription = computed(() =>
+  props.primaryActionLabel === "Stop"
+    ? "Move the running timer to a different task, or stop it when work is complete."
+    : "Choose a visible project and task, or create a new task before starting the timer.",
+);
+const primaryButtonLabel = computed(() =>
+  props.primaryActionLabel === "Stop" ? "Stop timer" : "Start timer",
+);
 const taskSelectOverlayClass = "max-w-[calc(100vw-2rem)]";
 const taskSelectPt = {
   label: { class: "truncate" },
@@ -96,10 +112,10 @@ const taskSelectPt = {
     <template #header>
       <div class="flex flex-col gap-1">
         <h2 class="text-text-dark text-lg font-semibold">
-          Change timer task
+          {{ dialogTitle }}
         </h2>
         <p class="text-text-muted text-[13px]">
-          Select a visible project and task, or create a new task inside the selected project.
+          {{ dialogDescription }}
         </p>
       </div>
     </template>
@@ -126,6 +142,18 @@ const taskSelectPt = {
         </p>
         <p class="text-destructive mt-1 text-xs">
           {{ props.selectionUpdateErrorMessage }}
+        </p>
+      </div>
+
+      <div
+        v-if="props.timerActionErrorMessage"
+        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
+      >
+        <p class="text-destructive text-sm font-medium">
+          Could not {{ props.primaryActionLabel === 'Stop' ? 'stop' : 'start' }} the timer.
+        </p>
+        <p class="text-destructive mt-1 text-xs">
+          {{ props.timerActionErrorMessage }}
         </p>
       </div>
 
@@ -292,12 +320,12 @@ const taskSelectPt = {
         data-testid="top-bar-timer-task-dialog-footer"
       >
         <Button
-          v-if="isMobileViewport"
+          v-if="isMobileViewport && props.primaryActionLabel === 'Stop'"
           type="button"
           class="w-full"
           :disabled="props.isConfirmSelectionDisabled"
           :fluid="true"
-          label="Use selected task"
+          label="Change task"
           :loading="props.isConfirmingSelection"
           @click="emit('confirm')"
         />
@@ -311,14 +339,25 @@ const taskSelectPt = {
           @click="emit('close')"
         />
         <Button
-          v-if="!isMobileViewport"
+          v-if="!isMobileViewport && props.primaryActionLabel === 'Stop'"
           type="button"
           class="w-auto"
           :disabled="props.isConfirmSelectionDisabled"
           :fluid="false"
-          label="Use selected task"
+          label="Change task"
           :loading="props.isConfirmingSelection"
+          severity="secondary"
+          variant="outlined"
           @click="emit('confirm')"
+        />
+        <Button
+          type="button"
+          :class="isMobileViewport ? 'w-full' : 'w-auto'"
+          :disabled="props.isPrimaryActionDisabled"
+          :fluid="isMobileViewport"
+          :label="primaryButtonLabel"
+          :loading="props.isPrimaryActionPending"
+          @click="emit('primaryAction')"
         />
       </div>
     </template>

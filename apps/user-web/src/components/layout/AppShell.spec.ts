@@ -59,6 +59,7 @@ describe("AppShell", () => {
               "counterpartHref",
               "counterpartLabel",
               "displayName",
+              "pageName",
               "settingsIcon",
               "settingsLabel",
               "settingsTo",
@@ -68,6 +69,7 @@ describe("AppShell", () => {
             emits: ["signOut"],
             template: `
               <header>
+                <span data-testid="workspace-header-page-name">{{ pageName }}</span>
                 <div data-testid="workspace-header-center-row">
                   <slot name="center" />
                 </div>
@@ -85,6 +87,9 @@ describe("AppShell", () => {
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
 
     expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Dashboard",
+    );
     expect(settingsLink.text()).toBe("Profile");
     expect(settingsLink.attributes("href")).toBe("/profile");
     expect(wrapper.find('[data-testid="dashboard-overview"]').exists()).toBe(true);

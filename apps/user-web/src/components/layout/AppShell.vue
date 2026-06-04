@@ -26,6 +26,20 @@ const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
+const pageName = computed(() => {
+  switch (route.name) {
+    case routeNames.dashboard:
+      return "Dashboard";
+    case routeNames.timeEntries:
+      return "Time Entries";
+    case routeNames.project:
+      return "Projects";
+    case routeNames.profile:
+      return "Profile";
+    default:
+      return "Dashboard";
+  }
+});
 
 const navItems = computed(() => [
   {
@@ -58,6 +72,7 @@ async function handleSignOut(): Promise<void> {
       :counterpart-href="adminWorkspaceHref"
       counterpart-label="Admin workspace"
       :display-name="authStore.displayName"
+      :page-name="pageName"
       :settings-icon="profileIcon"
       settings-label="Profile"
       :settings-to="{ name: routeNames.profile }"

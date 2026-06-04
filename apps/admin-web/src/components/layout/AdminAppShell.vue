@@ -58,6 +58,26 @@ const showSettings = computed(() =>
     currentRole.value,
   ),
 );
+const pageName = computed(() => {
+  switch (route.name) {
+    case routeNames.dashboard:
+      return 'Dashboard';
+    case routeNames.reports:
+      return 'Reports';
+    case routeNames.invoices:
+      return 'Invoices';
+    case routeNames.members:
+      return 'Members';
+    case routeNames.projects:
+      return 'Projects';
+    case routeNames.addProject:
+      return 'New Project';
+    case routeNames.settings:
+      return 'Settings';
+    default:
+      return 'Dashboard';
+  }
+});
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
 const activeName = computed(() => {
@@ -106,6 +126,9 @@ watch(
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
       :display-name="authStore.displayName"
+      :page-name="pageName"
+      product-name="GiTiempo Admin"
+      :profile-context-label="authStore.workspaceName"
       :settings-icon="settingsIcon"
       settings-label="Settings"
       :settings-to="{ name: routeNames.settings }"

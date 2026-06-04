@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { PlayIcon, StopIcon } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
 import Button from "primevue/button";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
@@ -15,17 +14,18 @@ const {
   createTaskFromDialog,
   createTaskTitle,
   elapsedTimeLabel,
-  handlePrimaryAction,
+  handleDialogPrimaryAction,
   isConfirmingSelection,
   isConfirmSelectionDisabled,
   isCreateTaskDisabled,
   isCreatingTask,
+  isDialogPrimaryActionDisabled,
   isDialogOpen,
   isLoadingProjects,
   isLoadingSummary,
   isLoadingTasks,
-  isPrimaryActionDisabled,
   isPrimaryActionPending,
+  isTimerRunning,
   openDialog,
   primaryActionLabel,
   projectsErrorMessage,
@@ -41,63 +41,52 @@ const {
   summaryErrorMessage,
   taskOptions,
   tasksErrorMessage,
-  timerContextLabel,
-  timerStatusLabel,
+  timerActionErrorMessage,
+  timerProjectLabel,
+  timerTaskLabel,
 } = useTopBarTimer();
 
 const isMobileViewport = useIsMobileViewport();
 const showsElapsedTime = computed(
-  () => !isLoadingSummary.value && primaryActionLabel.value === "Stop",
-);
-const primaryActionIcon = computed(() =>
-  primaryActionLabel.value === "Stop" ? StopIcon : PlayIcon,
+  () => !isLoadingSummary.value && isTimerRunning.value,
 );
 </script>
 
 <template>
-  <section
+  <Button
     v-if="!isMobileViewport"
-    class="border-divider bg-app-bg flex min-w-0 items-center gap-2 rounded-lg border px-3 py-1.5"
+    type="button"
+    aria-label="Open task and timer"
     data-layout="desktop"
     data-testid="top-bar-timer"
+    variant="text"
+    :pt="{
+      root: 'border-divider bg-app-bg text-text-dark flex min-w-0 max-w-[min(360px,100%)] items-center gap-3 rounded-lg border px-3 py-2 text-left shadow-none transition hover:bg-app-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+      label: 'hidden',
+    }"
+    @click="openDialog"
   >
-    <div class="min-w-0 flex-1">
-      <p class="text-text-muted text-[11px] leading-none font-medium">
-        {{ timerStatusLabel }}
-      </p>
-      <Button
-        type="button"
-        variant="text"
-        :label="timerContextLabel"
-        aria-label="Change timer task"
-        class="text-text-dark mt-1 max-w-full justify-start p-0 text-left text-[13px] font-medium"
-        :pt="{ label: { class: 'truncate' } }"
-        data-testid="top-bar-timer-context"
-        @click="openDialog"
-      />
-    </div>
+    <span
+      class="flex min-w-0 flex-1 flex-col gap-0.5"
+      data-testid="top-bar-timer-context"
+    >
+      <span class="text-text-muted truncate text-[11px] leading-none font-medium">
+        {{ timerProjectLabel }}
+      </span>
+      <span class="text-text-dark truncate text-[13px] leading-tight font-semibold">
+        {{ timerTaskLabel }}
+      </span>
+    </span>
 
-    <p
+    <span
       v-if="showsElapsedTime"
       aria-live="off"
       class="text-brand shrink-0 text-sm font-semibold tabular-nums"
       data-testid="top-bar-timer-elapsed"
     >
       {{ elapsedTimeLabel }}
-    </p>
-
-    <Button
-      type="button"
-      size="small"
-      class="shrink-0"
-      :disabled="isPrimaryActionDisabled"
-      :label="primaryActionLabel"
-      :loading="isPrimaryActionPending"
-      :severity="primaryActionLabel === 'Stop' ? 'secondary' : undefined"
-      data-testid="top-bar-timer-primary-action"
-      @click="handlePrimaryAction"
-    />
-  </section>
+    </span>
+  </Button>
 
   <section
     v-else
@@ -105,65 +94,20 @@ const primaryActionIcon = computed(() =>
     data-layout="mobile"
     data-testid="top-bar-timer"
   >
-    <div
-      class="z-10 flex w-[132px] shrink-0 flex-col gap-[7px]"
-      data-testid="top-bar-timer-mobile-actions"
-    >
-      <Button
-        type="button"
-        class="h-[38px] w-full justify-center rounded-sm text-xs font-semibold"
-        :aria-label="primaryActionLabel"
-        :disabled="isPrimaryActionDisabled"
-        :loading="isPrimaryActionPending"
-        :severity="primaryActionLabel === 'Stop' ? 'secondary' : undefined"
-        data-testid="top-bar-timer-primary-action"
-        @click="handlePrimaryAction"
-      >
-        <component
-          :is="primaryActionIcon"
-          v-if="!isPrimaryActionPending"
-          aria-hidden="true"
-          class="size-3.5"
-        />
-        <span>{{ primaryActionLabel }}</span>
-      </Button>
-
-      <Button
-        type="button"
-        class="border-divider bg-surface-primary text-brand h-[38px] w-full justify-center rounded-sm text-xs font-semibold"
-        aria-label="Change timer task"
-        severity="secondary"
-        variant="outlined"
-        data-testid="top-bar-timer-change-task"
-        @click="openDialog"
-      >
-        <svg
-          aria-hidden="true"
-          class="text-brand size-3.5"
-          data-testid="top-bar-timer-change-task-icon"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-        >
-          <path d="M16 3h5v5" />
-          <path d="M4 20 21 3" />
-          <path d="M21 16v5h-5" />
-          <path d="M15 15l6 6" />
-          <path d="M4 4l5 5" />
-        </svg>
-        <span class="text-brand">Change</span>
-      </Button>
-    </div>
+    <Button
+      type="button"
+      class="z-10 h-[38px] w-[132px] shrink-0 justify-center rounded-sm text-xs font-semibold"
+      label="Task & timer"
+      data-testid="top-bar-timer-mobile-opener"
+      @click="openDialog"
+    />
 
     <div
       class="flex min-w-0 flex-1 flex-col items-start justify-start gap-0 text-left"
       data-testid="top-bar-timer-mobile-context"
     >
       <span class="text-text-muted flex w-full min-w-0 items-center gap-2 text-[11px] leading-none font-medium">
-        <span class="truncate">{{ timerStatusLabel }}</span>
+        <span class="truncate">{{ timerProjectLabel }}</span>
         <span
           v-if="showsElapsedTime"
           aria-hidden="true"
@@ -175,7 +119,7 @@ const primaryActionIcon = computed(() =>
         </span>
       </span>
       <span class="text-text-dark mt-1 line-clamp-2 w-full text-[13px] leading-snug font-semibold whitespace-normal">
-        {{ timerContextLabel }}
+        {{ timerTaskLabel }}
       </span>
     </div>
   </section>
@@ -187,9 +131,12 @@ const primaryActionIcon = computed(() =>
     :is-confirming-selection="isConfirmingSelection"
     :is-create-task-disabled="isCreateTaskDisabled"
     :is-creating-task="isCreatingTask"
+    :is-primary-action-disabled="isDialogPrimaryActionDisabled"
+    :is-primary-action-pending="isPrimaryActionPending"
     :is-loading-projects="isLoadingProjects"
     :is-loading-tasks="isLoadingTasks"
     :is-open="isDialogOpen"
+    :primary-action-label="primaryActionLabel"
     :project-options="projectOptions"
     :projects-error-message="projectsErrorMessage ?? summaryErrorMessage"
     :selected-description="selectedDescription"
@@ -197,10 +144,12 @@ const primaryActionIcon = computed(() =>
     :selected-task-id="selectedTaskId"
     :selection-update-error-message="selectionUpdateErrorMessage"
     :task-options="taskOptions"
+    :timer-action-error-message="timerActionErrorMessage"
     :tasks-error-message="tasksErrorMessage"
     @close="closeDialog"
     @confirm="confirmSelectedTask"
     @create-task="createTaskFromDialog"
+    @primary-action="handleDialogPrimaryAction"
     @update:create-task-title="setCreateTaskTitle"
     @update:selected-description="setSelectedDescription"
     @update:selected-project-id="setSelectedProjectId"

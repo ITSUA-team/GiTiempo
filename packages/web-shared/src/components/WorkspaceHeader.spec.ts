@@ -12,12 +12,14 @@ const baseProps = {
   counterpartHref: "https://admin.example.test/login",
   counterpartLabel: "Admin workspace",
   displayName: "Alexey Tsukanov",
+  pageName: "Dashboard",
   settingsTo: "/profile",
   userInitials: "AT",
   workspaceName: "Workspace Alpha",
 };
 
 type HeaderProps = typeof baseProps & {
+  pageName?: string;
   settingsIcon?: Component;
   settingsLabel?: string;
   showSettings?: boolean;
@@ -201,16 +203,20 @@ describe("WorkspaceHeader", () => {
     document.body.innerHTML = "";
   });
 
-  it("renders workspace identity without standalone counterpart link", () => {
+  it("renders breadcrumb identity without standalone counterpart link", () => {
     const wrapper = mountHeader();
 
     expect(wrapper.text()).toContain("GiTiempo");
-    expect(wrapper.text()).toContain("Workspace Alpha");
-    expect(wrapper.text()).toContain("Alexey Tsukanov");
+    expect(wrapper.text()).toContain("Dashboard");
+    expect(wrapper.text()).not.toContain("Workspace Alpha");
+    expect(wrapper.text()).not.toContain("Alexey Tsukanov");
     expect(wrapper.text()).toContain("AT");
     expect(wrapper.find(`a[href="${baseProps.counterpartHref}"]`).exists()).toBe(false);
-    expect(wrapper.get('[aria-label="Open profile menu"]').text()).toContain(
+    expect(wrapper.get('[data-testid="profile-menu-trigger"]').text()).toContain(
       "AT",
+    );
+    expect(wrapper.get('[data-testid="profile-menu-trigger"]').attributes("aria-label")).toBe(
+      "Open profile menu for Alexey Tsukanov",
     );
     expect(wrapper.findAll("[aria-label]")).toHaveLength(1);
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(
@@ -232,9 +238,10 @@ describe("WorkspaceHeader", () => {
 
     expect(centerRow.classes()).toContain("row-start-2");
     expect(centerRow.classes()).toContain("sm:row-start-1");
+    expect(centerRow.classes()).not.toContain("sm:px-2");
     expect(centerSlot.text()).toBe("Running timer");
     expect(wrapper.findAll('[data-testid="header-center-slot"]')).toHaveLength(1);
-    expect(wrapper.text()).toContain("Alexey Tsukanov");
+    expect(wrapper.text()).not.toContain("Alexey Tsukanov");
   });
 
   it("keeps mobile timer actions usable beside the top-right profile menu overlay", async () => {
@@ -300,7 +307,7 @@ describe("WorkspaceHeader", () => {
     expect(document.activeElement).toBe(trigger.element);
     expect(trigger.attributes("aria-expanded")).toBe("false");
     expect(trigger.attributes("aria-haspopup")).toBe("menu");
-    expect(trigger.classes()).toContain("border-transparent");
+    expect(trigger.classes()).toContain("border-0");
     expect(avatar.classes()).not.toContain("ring-brand");
 
     await trigger.trigger("click");
@@ -342,7 +349,7 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.emitted("signOut")).toHaveLength(1);
     expect(document.activeElement).toBe(trigger.element);
     expect(trigger.attributes("aria-expanded")).toBe("false");
-    expect(trigger.classes()).toContain("border-transparent");
+    expect(trigger.classes()).toContain("border-0");
     expect(avatar.classes()).not.toContain("ring-brand");
   });
 

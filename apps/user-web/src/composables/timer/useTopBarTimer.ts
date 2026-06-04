@@ -104,6 +104,28 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
     return 'Choose a visible project and task to start tracking time.';
   });
+  const timerProjectLabel = computed(() => {
+    if (summary.currentTimer.value) {
+      return summary.currentTimer.value.project.name;
+    }
+
+    if (summary.selectedContext.value) {
+      return summary.selectedContext.value.projectName;
+    }
+
+    return timerStatusLabel.value;
+  });
+  const timerTaskLabel = computed(() => {
+    if (summary.currentTimer.value) {
+      return summary.currentTimer.value.task.title;
+    }
+
+    if (summary.selectedContext.value) {
+      return summary.selectedContext.value.taskTitle;
+    }
+
+    return 'Choose a visible project and task.';
+  });
   const primaryActionLabel = computed(() =>
     isTimerRunning.value ? 'Stop' : 'Start',
   );
@@ -136,6 +158,24 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       !picker.selectedProjectId.value ||
       taskCreation.isCreatingTask.value ||
       picker.isCreateTaskTitleEmpty.value
+    );
+  });
+  const isDialogPrimaryActionDisabled = computed(() => {
+    if (
+      timerActions.isPrimaryActionPending.value ||
+      summary.isLoadingSummary.value ||
+      updateTimeEntryMutation.isPending.value
+    ) {
+      return true;
+    }
+
+    if (isTimerRunning.value) {
+      return false;
+    }
+
+    return (
+      picker.getSelectedTaskContext() === null ||
+      summary.summaryErrorMessage.value !== null
     );
   });
 
@@ -253,6 +293,30 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     await timerActions.handlePrimaryAction();
   }
 
+  async function handleDialogPrimaryAction(): Promise<void> {
+    if (updateTimeEntryMutation.isPending.value) {
+      return;
+    }
+
+    selectionUpdateErrorMessage.value = null;
+
+    if (!isTimerRunning.value) {
+      const context = picker.getSelectedTaskContext();
+
+      if (!context) {
+        return;
+      }
+
+      summary.setIdleSelection(context, picker.getNormalizedDescription());
+    }
+
+    await timerActions.handlePrimaryAction();
+
+    if (timerActions.timerActionErrorMessage.value === null) {
+      closeDialog();
+    }
+  }
+
   watch(picker.selectedProjectId, async (nextProjectId, previousProjectId) => {
     if (!picker.isDialogOpen.value) {
       return;
@@ -289,11 +353,13 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     createTaskTitle: picker.createTaskTitle,
     currentTimer: summary.currentTimer,
     elapsedTimeLabel,
+    handleDialogPrimaryAction,
     handlePrimaryAction,
     isConfirmSelectionDisabled,
     isConfirmingSelection: updateTimeEntryMutation.isPending,
     isCreateTaskDisabled,
     isCreatingTask: taskCreation.isCreatingTask,
+    isDialogPrimaryActionDisabled,
     isDialogOpen: picker.isDialogOpen,
     isLoadingProjects: taskOptions.isLoadingProjects,
     isLoadingSummary: summary.isLoadingSummary,
@@ -322,6 +388,8 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     tasksErrorMessage: picker.tasksErrorMessage,
     timerActionErrorMessage: timerActions.timerActionErrorMessage,
     timerContextLabel,
+    timerProjectLabel,
     timerStatusLabel,
+    timerTaskLabel,
   };
 }
