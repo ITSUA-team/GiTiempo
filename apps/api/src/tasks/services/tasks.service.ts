@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type {
   CreateTaskInput,
   TaskResponse,
@@ -96,25 +96,31 @@ export class TasksService {
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       updatedAt,
     };
-    const shouldStopRunningEntries =
-      input.status === 'closed' && task.status !== 'closed';
+    const shouldHandleTaskClose = input.status === 'closed';
 
-    if (shouldStopRunningEntries) {
+    if (shouldHandleTaskClose) {
       const row = await this.db.transaction(async (tx) => {
+        const lockedTask = await this.requireTaskRowForUpdate(
+          tx,
+          user.workspaceId,
+          task.id,
+        );
         const [updated] = await tx
           .update(tasks)
           .set(updateValues)
-          .where(eq(tasks.id, task.id))
+          .where(eq(tasks.id, lockedTask.id))
           .returning();
 
         if (!updated) throw new NotFoundException('Task not found');
 
-        await this.stopRunningEntriesForTask(
-          tx,
-          user.workspaceId,
-          task.id,
-          updatedAt,
-        );
+        if (lockedTask.status !== 'closed') {
+          await this.stopRunningEntriesForTask(
+            tx,
+            user.workspaceId,
+            lockedTask.id,
+            updatedAt,
+          );
+        }
         return updated;
       });
 
@@ -183,16 +189,27 @@ export class TasksService {
     taskId: string,
   ): Promise<{ task: TaskRow; project: ProjectRow }> {
     const result = await this.requireVisibleTask(user, taskId);
-    if (!result.project.isActive) {
-      throw new UnprocessableEntityException('Project is inactive');
-    }
-    if (!result.task.isActive) {
-      throw new UnprocessableEntityException('Task is inactive');
-    }
-    if (result.task.status === 'closed') {
-      throw new UnprocessableEntityException('Task is closed');
-    }
+    this.assertTrackableTask(result.task, result.project);
     return result;
+  }
+
+  async requireTrackableTaskForUpdate(
+    user: AuthUser,
+    taskId: string,
+    db: Pick<DrizzleDB, 'select'>,
+  ): Promise<{ task: TaskRow; project: ProjectRow }> {
+    const task = await this.requireTaskRowForUpdate(
+      db,
+      user.workspaceId,
+      taskId,
+    );
+    const project = await this.projects.requireVisibleProject(
+      user,
+      task.projectId,
+    );
+
+    this.assertTrackableTask(task, project);
+    return { task, project };
   }
 
   private toResponse(row: TaskRow): TaskResponse {
@@ -214,9 +231,22 @@ export class TasksService {
     taskId: string,
     closedAt: Date,
   ): Promise<void> {
-    const runningEntries = await db
-      .select({ id: timeEntries.id, startedAt: timeEntries.startedAt })
-      .from(timeEntries)
+    const endedAt = sql<Date>`CASE
+      WHEN ${closedAt}::timestamptz > ${timeEntries.startedAt}
+        THEN ${closedAt}::timestamptz
+      ELSE ${timeEntries.startedAt} + interval '1 second'
+    END`;
+
+    await db
+      .update(timeEntries)
+      .set({
+        durationSeconds: sql<number>`GREATEST(
+          1,
+          FLOOR(EXTRACT(EPOCH FROM (${endedAt} - ${timeEntries.startedAt})))::integer
+        )`,
+        endedAt,
+        updatedAt: endedAt,
+      })
       .where(
         and(
           eq(timeEntries.workspaceId, workspaceId),
@@ -224,18 +254,32 @@ export class TasksService {
           isNull(timeEntries.endedAt),
         ),
       );
+  }
 
-    for (const entry of runningEntries) {
-      const endedAt = getTimerCloseTime(entry.startedAt, closedAt);
+  private async requireTaskRowForUpdate(
+    db: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    taskId: string,
+  ): Promise<TaskRow> {
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
+      .limit(1)
+      .for('update');
+    if (!task) throw new NotFoundException('Task not found');
+    return task;
+  }
 
-      await db
-        .update(timeEntries)
-        .set({
-          endedAt,
-          durationSeconds: calculateDurationSeconds(entry.startedAt, endedAt),
-          updatedAt: endedAt,
-        })
-        .where(and(eq(timeEntries.id, entry.id), isNull(timeEntries.endedAt)));
+  private assertTrackableTask(task: TaskRow, project: ProjectRow): void {
+    if (!project.isActive) {
+      throw new UnprocessableEntityException('Project is inactive');
+    }
+    if (!task.isActive) {
+      throw new UnprocessableEntityException('Task is inactive');
+    }
+    if (task.status === 'closed') {
+      throw new UnprocessableEntityException('Task is closed');
     }
   }
 
@@ -248,19 +292,6 @@ export class TasksService {
       throw new ConflictException('Task has related time entries');
     }
   }
-}
-
-function getTimerCloseTime(startedAt: Date, closedAt: Date): Date {
-  return closedAt.getTime() > startedAt.getTime()
-    ? closedAt
-    : new Date(startedAt.getTime() + 1000);
-}
-
-function calculateDurationSeconds(startedAt: Date, endedAt: Date): number {
-  return Math.max(
-    1,
-    Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000),
-  );
 }
 
 function getPostgresError(error: unknown): {

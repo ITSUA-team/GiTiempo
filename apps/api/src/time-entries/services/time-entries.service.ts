@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -41,6 +40,7 @@ import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { users } from '../../users/schemas/users.schema';
 import { UsersActivityService } from '../../users/services/users-activity.service';
+import { calculateDurationSeconds } from '../time-entry-duration';
 import { timeEntries } from '../schemas/time-entries.schema';
 
 type QueryExecutor = Pick<DrizzleDB, 'select' | 'insert' | 'update' | 'delete'>;
@@ -111,28 +111,35 @@ export class TimeEntriesService {
     user: AuthUser,
     input: CreateManualTimeEntryInput,
   ): Promise<TimeEntryResponse> {
-    const { task } = await this.tasks.requireTrackableTask(user, input.taskId);
     const startedAt = new Date(input.startedAt);
     const endedAt = new Date(input.endedAt);
     const durationSeconds = calculateDurationSeconds(startedAt, endedAt);
 
-    const [row] = await this.db
-      .insert(timeEntries)
-      .values({
-        workspaceId: user.workspaceId,
-        taskId: task.id,
-        userId: user.sub,
-        startedAt,
-        endedAt,
-        durationSeconds,
-        description: input.description ?? null,
-        isBillable: input.isBillable ?? true,
-        source: 'manual',
-      })
-      .returning({ id: timeEntries.id });
-    if (!row) throw new Error('Failed to create time entry');
+    const entryId = await this.db.transaction(async (tx) => {
+      const { task } = await this.tasks.requireTrackableTaskForUpdate(
+        user,
+        input.taskId,
+        tx,
+      );
+      const [row] = await tx
+        .insert(timeEntries)
+        .values({
+          workspaceId: user.workspaceId,
+          taskId: task.id,
+          userId: user.sub,
+          startedAt,
+          endedAt,
+          durationSeconds,
+          description: input.description ?? null,
+          isBillable: input.isBillable ?? true,
+          source: 'manual',
+        })
+        .returning({ id: timeEntries.id });
+      if (!row) throw new Error('Failed to create time entry');
+      return row.id;
+    });
 
-    const result = await this.requireEntryResponse(this.db, row.id);
+    const result = await this.requireEntryResponse(this.db, entryId);
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }
@@ -181,8 +188,13 @@ export class TimeEntriesService {
 
         const nextTaskId =
           input.taskId !== undefined && input.taskId !== row.taskId
-            ? (await this.tasks.requireTrackableTask(user, input.taskId)).task
-                .id
+            ? (
+                await this.tasks.requireTrackableTaskForUpdate(
+                  user,
+                  input.taskId,
+                  tx,
+                )
+              ).task.id
             : row.taskId;
 
         const [updated] = await tx
@@ -202,7 +214,13 @@ export class TimeEntriesService {
 
       const nextTaskId =
         input.taskId !== undefined && input.taskId !== row.taskId
-          ? (await this.tasks.requireTrackableTask(user, input.taskId)).task.id
+          ? (
+              await this.tasks.requireTrackableTaskForUpdate(
+                user,
+                input.taskId,
+                tx,
+              )
+            ).task.id
           : row.taskId;
       const startedAt =
         input.startedAt !== undefined
@@ -269,10 +287,9 @@ export class TimeEntriesService {
     user: AuthUser,
     input: StartTimerInput,
   ): Promise<TimeEntryResponse> {
-    const { task } = await this.tasks.requireTrackableTask(user, input.taskId);
     const result = await this.createRunningEntry(
       user,
-      task.id,
+      input.taskId,
       'web',
       input.description ?? null,
     );
@@ -330,10 +347,16 @@ export class TimeEntriesService {
           issueKey,
           input.issueTitle,
         );
-        if (!task.isActive) {
+        const lockedTask = await this.requireTaskRowForUpdate(
+          tx,
+          user.workspaceId,
+          project.id,
+          task.id,
+        );
+        if (!lockedTask.isActive) {
           throw new UnprocessableEntityException('Task is inactive');
         }
-        if (task.status === 'closed') {
+        if (lockedTask.status === 'closed') {
           throw new UnprocessableEntityException('Task is closed');
         }
 
@@ -341,7 +364,7 @@ export class TimeEntriesService {
           .insert(timeEntries)
           .values({
             workspaceId: user.workspaceId,
-            taskId: task.id,
+            taskId: lockedTask.id,
             userId: user.sub,
             startedAt: new Date(),
             source: 'extension',
@@ -429,20 +452,28 @@ export class TimeEntriesService {
     description: string | null = null,
   ): Promise<TimeEntryResponse> {
     try {
-      const [row] = await this.db
-        .insert(timeEntries)
-        .values({
-          description,
-          workspaceId: user.workspaceId,
+      const entryId = await this.db.transaction(async (tx) => {
+        const { task } = await this.tasks.requireTrackableTaskForUpdate(
+          user,
           taskId,
-          userId: user.sub,
-          startedAt: new Date(),
-          source,
-        })
-        .returning({ id: timeEntries.id });
-      if (!row) throw new Error('Failed to start timer');
+          tx,
+        );
+        const [row] = await tx
+          .insert(timeEntries)
+          .values({
+            description,
+            workspaceId: user.workspaceId,
+            taskId: task.id,
+            userId: user.sub,
+            startedAt: new Date(),
+            source,
+          })
+          .returning({ id: timeEntries.id });
+        if (!row) throw new Error('Failed to start timer');
+        return row.id;
+      });
 
-      return this.requireEntryResponse(this.db, row.id);
+      return this.requireEntryResponse(this.db, entryId);
     } catch (error) {
       this.handleRunningTimerConflict(error);
       throw error;
@@ -863,6 +894,28 @@ export class TimeEntriesService {
     return task;
   }
 
+  private async requireTaskRowForUpdate(
+    db: QueryExecutor,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+  ): Promise<TaskRow> {
+    const [task] = await db
+      .select()
+      .from(tasksTable)
+      .where(
+        and(
+          eq(tasksTable.id, taskId),
+          eq(tasksTable.workspaceId, workspaceId),
+          eq(tasksTable.projectId, projectId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (!task) throw new NotFoundException('Task not found');
+    return task;
+  }
+
   private handleRunningTimerConflict(error: unknown): void {
     const pgError = getPostgresError(error);
     if (
@@ -892,15 +945,4 @@ function getPostgresError(error: unknown): {
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
-}
-
-export function calculateDurationSeconds(
-  startedAt: Date,
-  endedAt: Date,
-): number {
-  const durationMs = endedAt.getTime() - startedAt.getTime();
-  if (durationMs <= 0) {
-    throw new BadRequestException('endedAt must be later than startedAt');
-  }
-  return Math.max(1, Math.floor(durationMs / 1000));
 }

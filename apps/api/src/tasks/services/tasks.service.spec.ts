@@ -42,8 +42,10 @@ function selectRows(rows: unknown[]) {
   return { from };
 }
 
-function selectRowsWithoutLimit(rows: unknown[]) {
-  const where = vi.fn().mockResolvedValue(rows);
+function selectRowsForUpdate(rows: unknown[]) {
+  const forUpdate = vi.fn().mockResolvedValue(rows);
+  const limit = vi.fn().mockReturnValue({ for: forUpdate });
+  const where = vi.fn().mockReturnValue({ limit });
   const from = vi.fn().mockReturnValue({ where });
   return { from };
 }
@@ -137,14 +139,7 @@ describe('TasksService', () => {
       const entryWhere = vi.fn().mockResolvedValue(undefined);
       const entrySet = vi.fn().mockReturnValue({ where: entryWhere });
       const tx = {
-        select: vi.fn().mockReturnValue(
-          selectRowsWithoutLimit([
-            {
-              id: 'entry-1',
-              startedAt: new Date('2026-01-01T10:00:00.000Z'),
-            },
-          ]),
-        ),
+        select: vi.fn().mockReturnValue(selectRowsForUpdate([taskRow])),
         update: vi.fn((table) =>
           table === tasks ? { set: taskSet } : { set: entrySet },
         ),
@@ -169,11 +164,13 @@ describe('TasksService', () => {
       expect(taskSet).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'closed', updatedAt: closedAt }),
       );
-      expect(entrySet).toHaveBeenCalledWith({
-        durationSeconds: 3600,
-        endedAt: closedAt,
-        updatedAt: closedAt,
-      });
+      expect(entrySet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          durationSeconds: expect.anything(),
+          endedAt: expect.anything(),
+          updatedAt: expect.anything(),
+        }),
+      );
     } finally {
       vi.useRealTimers();
     }
