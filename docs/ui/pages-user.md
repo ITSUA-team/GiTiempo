@@ -9,8 +9,10 @@
 - Initial page load uses a skeleton that approximates the dashboard header, weekly insight/stat surfaces, and recent entries table before rendering empty states.
 - Weekly focus insight: full-width `<Card>` highlighting `Top Project This Week` and `Top Task This Week` using the user's current browser-local-week tracked entries.
 - Weekly focus insight values should show the winning project/task labels plus tracked-duration context, and may include a compact relative-share indicator when it improves scannability.
+- When the winning task is backed by a synced GitHub issue, show a compact external-link icon next to the task name that opens the source issue in a new browser tab.
 - Recent Time Entries: render the existing `<DataTable>` on tablet and desktop, and switch to stacked mobile cards below `640px`.
 - The mobile recent-entry cards keep the same record content as the desktop table: task title, project name, time range, duration, and highlighted running/current-entry state when applicable.
+- Dashboard recent-entry task names keep their current row behavior, and synced GitHub tasks add a separate external-link icon beside the task name that opens the source issue in a new browser tab.
 - The section-level `View all` action remains available in both desktop/table and mobile-card layouts.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
@@ -20,73 +22,89 @@
 
 - There is no dedicated Timer page in the authenticated `user-web` MVP navigation.
 - Authenticated shell: every authenticated `user-web` page shows the compact timer surface on tablet and desktop, and the selected full-width mobile timer strip below `640px`.
+<<<<<<< HEAD
 - Running top-bar state: show live `HH:MM:SS`, current `Project / Task`, clickable task information, and a stop action.
 - Not-running top-bar state: show the last tracked task context, clickable task information, and a start action that creates a new time entry for that task.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user, and whose task is still open.
 - A completed timer entry or manual entry may seed the last tracked task context if that task is still visible, active, and open.
 - The top-bar `Start` action creates a fresh running time entry. It must not resume or update the previous time entry record.
+=======
+- Running top-bar state: show the project on the first line, task on the second line, and live `HH:MM:SS` inside the clickable compact timer surface.
+- Not-running top-bar state: show the last tracked project/task context inside the same compact timer surface instead of a shell-level start action.
+- When the shown task is backed by a synced GitHub issue, add a compact external-link icon beside the task line inside the surface. The icon opens the source issue in a new browser tab and does not replace the timer-surface click target.
+- Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
+- A completed timer entry or manual entry may seed the last tracked task context if that task is still visible and active.
+- Starting from the popup creates a fresh running time entry. It must not resume or update the previous time entry record.
+>>>>>>> origin/main
 - The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
-- When the timer is idle, the next top-bar `Start` action creates a fresh running time entry for the selected task and current dialog description.
-- When the timer is already running, confirming the task-picker dialog updates the running entry's task and description without stopping the timer.
-- If there is no eligible last tracked task context, keep the same not-running top-bar layout, keep the task information field clickable, and disable the start action.
-- While the top-bar timer summary is loading, keep the layout visible and disable the action.
+- The `Task` select lists visible tasks first and appends `New task` as the last option.
+- When `Task = New task`, the created task inherits the selected project's default `isBillable` value.
+- When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description.
+- The fresh running time entry initializes `isBillable` from the selected task's default billable value before any per-entry override.
+- When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
+- If there is no eligible last tracked task context, keep the same not-running top-bar layout and keep the compact timer surface clickable so the popup can seed a new startable task context.
+- While the top-bar timer summary is loading, keep the layout visible with the popup entry point intact.
 - If the top-bar timer summary fails to load, keep the layout visible in a disabled fallback state and surface the failure through toast feedback.
-- Clicking the task information field opens the centered task-picker dialog.
-- On mobile, the Start/Stop action and Change task affordance live in the left side of the strip so they remain reachable when the profile menu opens from the top-right identity area.
-- On mobile, task status, running elapsed time, and `Project / Task` context render as right-side metadata; the Change action remains the guaranteed task-picker entry point if metadata is partially covered.
-- The task-picker dialog uses visible Project -> Task selection only for task targeting; it also includes the optional time-entry description field.
-- The dialog also supports creating a new task inside the currently selected visible project.
+- Clicking the compact timer surface opens the centered task-picker dialog. The surface should hug its content width and stay aligned to the avatar side instead of expanding across the full center area.
+- On mobile, a single `Task & timer` opener lives on the left side of the strip so it remains reachable when the profile menu opens from the top-right identity area.
+- On mobile, the right-side metadata uses project on the first line and task on the second line, with running elapsed time shown there when applicable; the opener remains the guaranteed task-picker entry point if metadata is partially covered.
+- The task-picker dialog uses predictive Project -> Task selection only for task targeting; it also includes the optional time-entry description field.
+- When `Task` is set to `New task`, show a single required new-task title input directly below the task select and create that task inside the currently selected visible project.
 - The dialog does not support creating a new project.
-- When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with `Use selected task`.
+- When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with the state-appropriate timer action.
 - Manual interval entry stays on Time Entries only. It does not move into the top-bar timer surface or task-picker dialog.
 
 ## Time Entries Page
 
-- Initial page load uses a skeleton matching the header action row, filters, grouped entry cards, and pagination region.
-- Header actions include a primary PrimeVue `<Button>` labeled `+ New time entry` in the same row as the page title. It opens the shared manual time-entry PrimeVue `<Dialog>` without a preset day.
-- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<Select>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. Date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
+- Initial page load uses a skeleton matching the top-bar breadcrumb state, filters, grouped entry cards, and pagination region.
+- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<AutoComplete dropdown forceSelection>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. Date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
 - The task lookup placeholder copy is `Search tasks`.
 - The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
 - Entries are grouped by the entry started-at day in the user's current browser-local timezone.
-- Each day heading row includes its own PrimeVue `<Button>` labeled `+ New time entry` beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form.
+- Each day heading row includes its own primary icon-only PrimeVue `<Button>` with a `plus` icon beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form and uses tooltip/accessibility copy `New time entry`.
 - Day-level create uses the rendered local day as the preset calendar day for `startedAt` and `endedAt`.
 - At and above `640px`, each day group keeps the existing table layout for entries.
 - Below `640px`, each day group renders stacked mobile cards instead of the fixed-width desktop table.
-- Entry row/card content includes task, project, time range, duration, and icon-only edit/delete actions with `Edit` and `Delete` tooltips for completed entries. Time-range labels use the user's current browser-local timezone.
+- Entry row/card content includes a clickable task name, project, time range, and duration. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the task name that opens the source issue in a new browser tab. Time-range labels use the user's current browser-local timezone.
 - Running entry highlighted with `bg-accent-tint`.
 - Running-entry mobile cards keep the same highlight treatment and do not expose edit/delete actions; stopping remains owned by the global top-bar timer.
-- Clicking `Edit` opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
+- Clicking the task name opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
 - Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
-- The shared time-entry dialog uses these fields in both create and edit modes: project `<Select>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
+- The shared time-entry dialog uses these fields in both create and edit modes: project `<AutoComplete dropdown forceSelection>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
+- Create mode initializes `isBillable` from the selected task's default billable value and still lets the user override it before saving.
 - Edit mode allows changing the selected project and task in addition to `startedAt`, `endedAt`, `description`, and `isBillable`.
 - This create/edit surface must ship as a true popup dialog overlay. Do not render it inline inside the Time Entries page layout.
-- Delete uses the shared confirmation dialog pattern before removing an entry.
+- Delete is triggered from inside the edit dialog and uses the shared confirmation dialog pattern before removing an entry.
 - Pagination uses PrimeVue `<Paginator>` below the grouped entry sections.
 - Keep loading, empty, and request-error states distinct instead of collapsing failed loads into empty data.
 
 ## Projects Page
 
-- Initial page load uses a skeleton matching the header action row, search row, and grouped project sections.
-- Header actions include a primary PrimeVue `<Button>` labeled `+ New task` in the same row as the page title.
-- The page uses the same high-level structure as Time Entries: page header row, grouped content sections, and a card/table shell for each group.
-- A filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`.
-- The combined search filters already loaded visible projects and tasks on the frontend. Do not document it as a backend free-text search endpoint.
+- Initial page load uses a skeleton matching the top-bar breadcrumb state, the search row, and grouped project sections.
+- The page uses the same high-level structure as Time Entries: top-bar breadcrumb, grouped content sections, and a card/table shell for each group.
+- A lightweight filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<AutoComplete dropdown forceSelection>` controls.
+- Search suggestions include both project names and task names from the currently loaded visible data set, and project suggestions render their main label in bold so they stand apart from task suggestions.
+- The combined search and the structured filters operate on already loaded visible projects and tasks on the frontend. Do not document them as backend free-text or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
-- Clearing the search restores the full grouped project list.
+- `Status` options are `All statuses`, `Open`, and `Closed`.
+- `Updated` options are `Any time`, `Today`, `Last 7 days`, and `Older`.
+- `Status` and `Updated` filters narrow task rows and only keep project groups that still contain at least one matching task.
+- Clearing the search and resetting the predictive single-selects restores the full grouped project list.
 - Content is grouped by visible project instead of by day.
-- Each project section header shows the project name on the left and a secondary PrimeVue `<Button>` labeled `+ Add task` on the right.
+- Each project section header shows the project name on the left and a primary icon-only PrimeVue `<Button>` with a `plus` icon on the right. The action uses tooltip/accessibility copy `Add task`.
 - Tasks for that project render beneath the project header inside the same section card.
 - At and above `640px`, each project section keeps the existing task table layout.
 - Below `640px`, each project section renders stacked mobile task cards instead of the fixed-width desktop task table.
-- Task rows/cards include task title, status, updated metadata, and icon-only edit/delete actions with `Edit` and `Delete` tooltips. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
-- Clicking `Edit` opens the shared task PrimeVue `<Dialog>` in update mode.
+- Task rows/cards include a clickable task title, status, and updated metadata. The task title opens the shared task edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the title that opens the source issue in a new browser tab. Updated metadata uses browser-local `Today`/`Yesterday`/weekday-plus-time formatting.
+- Clicking the task title opens the shared task PrimeVue `<Dialog>` in update mode.
 - The same task dialog is used for both create and update flows.
-- Page-level `+ New task` opens the dialog in create mode with a required project `<Select>`.
-- Project-level `+ Add task` opens the same dialog in create mode with that project already selected.
-- Update mode pre-fills the selected project, task title, and editable task fields.
+- The project-level add-task icon action opens the same dialog in create mode with that project already selected.
+- Create mode includes `Default billable for time entries` and initializes it from the selected project's default billable value.
+- Update mode pre-fills the selected project, task title, and editable task fields, including the task-level default billable value.
+- If a task default billable value changes after time entries already exist for that task, save the new default immediately for future entries, then show a follow-up popup that asks only whether existing time entries for that task should also be updated.
 - The task dialog must ship as a true popup dialog overlay. Do not render create or update forms inline inside the Projects page layout.
-- Delete uses the shared confirmation dialog pattern before permanently removing the task.
+- Delete is triggered from inside the task edit dialog and uses the shared confirmation dialog pattern before permanently removing the task.
 - Task deletion is available only when the task has no related time entries.
 - Tasks with related time entries return a `409 Conflict` from the backend when deletion is attempted, and the Projects page surfaces that message without removing the task locally.
 - Task responses do not include `canDelete`, `hasTimeEntries`, or other delete-eligibility metadata, so the Projects page must not rely on precomputed delete availability.
