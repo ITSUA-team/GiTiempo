@@ -68,7 +68,7 @@ function createProject(
     members: [],
     name,
     source: 'manual',
-    totalHours: 12,
+    totalSeconds: 43200,
     updatedAt,
     visibility: 'public',
     workspaceId,

@@ -39,7 +39,7 @@ import { projects } from '../schemas/projects.schema';
 export type ProjectRow = typeof projects.$inferSelect;
 type ProjectResponseRow = ProjectRow & {
   source: ProjectSource;
-  totalHours: number | string | null;
+  totalSeconds: number | string | null;
   members?: unknown;
 };
 type ProjectAssignmentRow = Omit<ProjectAssignmentResponse, 'assignedAt'> & {
@@ -565,13 +565,13 @@ export class ProjectsService {
         WHERE "project_external_refs"."project_id" = "projects"."id"
           AND "project_external_refs"."provider" = 'github'
       ) THEN 'github' ELSE 'manual' END`,
-      totalHours: sql<number>`COALESCE((
+      totalSeconds: sql<number>`COALESCE((
         SELECT SUM("time_entries"."duration_seconds")
         FROM "time_entries"
         INNER JOIN "tasks" ON "tasks"."id" = "time_entries"."task_id"
         WHERE "tasks"."project_id" = "projects"."id"
           AND "time_entries"."duration_seconds" IS NOT NULL
-      ), 0)::double precision / 3600`,
+      ), 0)`,
       members: sql<unknown>`COALESCE((
         SELECT json_agg(json_build_object(
           'userId', "project_assignments"."user_id",
@@ -606,7 +606,7 @@ export class ProjectsService {
       color: row.color,
       visibility: row.visibility,
       source: row.source,
-      totalHours: toNumber(row.totalHours),
+      totalSeconds: Math.trunc(toNumber(row.totalSeconds)),
       members,
       isActive: row.isActive,
       createdAt: row.createdAt.toISOString(),

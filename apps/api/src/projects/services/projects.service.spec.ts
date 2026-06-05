@@ -40,7 +40,7 @@ const projectRow = {
 const projectResponseRow = {
   ...projectRow,
   source: 'manual' as const,
-  totalHours: 0,
+  totalSeconds: 0,
   members: [
     {
       userId: '00000000-0000-4000-8000-000000000001',
@@ -128,6 +128,7 @@ describe('ProjectsService', () => {
     const result = await service.createProject(pmUser, { name: 'Project' });
 
     expect(result.id).toBe(projectRow.id);
+    expect(result.totalSeconds).toBe(0);
     expect(result.members).toHaveLength(1);
     expect(result.members[0]?.userId).toBe(
       '00000000-0000-4000-8000-000000000001',
@@ -210,13 +211,13 @@ describe('ProjectsService', () => {
         .mockResolvedValueOnce({
           ...archivedRow,
           source: 'manual',
-          totalHours: 0,
+          totalSeconds: 0,
           members: [],
         })
         .mockResolvedValueOnce({
           ...unarchivedRow,
           source: 'manual',
-          totalHours: 0,
+          totalSeconds: 0,
           members: [],
         }),
     });
@@ -229,7 +230,9 @@ describe('ProjectsService', () => {
     });
 
     expect(archived.isActive).toBe(false);
+    expect(archived.totalSeconds).toBe(0);
     expect(unarchived.isActive).toBe(true);
+    expect(unarchived.totalSeconds).toBe(0);
     expect(set).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ isActive: false }),

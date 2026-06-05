@@ -76,7 +76,7 @@ function createProjects(): ProjectListResponse {
       members: [],
       name: 'Project Orion',
       source: 'github',
-      totalHours: 148,
+      totalSeconds: 532800,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'public',
       workspaceId: 'workspace-1',
@@ -90,7 +90,7 @@ function createProjects(): ProjectListResponse {
       members: [],
       name: 'Legacy Project',
       source: 'manual',
-      totalHours: 4,
+      totalSeconds: 14400,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'private',
       workspaceId: 'workspace-1',
@@ -101,7 +101,7 @@ function createProjects(): ProjectListResponse {
 function createRows(projects = createProjects()): ProjectsTableRow[] {
   return projects.map((project) => ({
     assignedMembersLabel: `${project.members.length} members`,
-    hoursLabel: `${project.totalHours}h`,
+    hoursLabel: `${project.totalSeconds / 3600}h`,
     id: project.id,
     isActive: project.isActive,
     name: project.name,
@@ -173,7 +173,7 @@ describe('ProjectsTable', () => {
   it('renders supplied readable duration labels without deriving decimal hours', () => {
     const project = {
       ...createProjects()[0]!,
-      totalHours: 38.8888,
+      totalSeconds: 139980,
     };
     const row = {
       ...createRows([project])[0]!,

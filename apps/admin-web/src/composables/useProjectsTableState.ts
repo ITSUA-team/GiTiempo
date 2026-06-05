@@ -15,8 +15,6 @@ import type {
   ProjectsTableRow,
 } from '@/lib/projects-table';
 
-const SECONDS_PER_HOUR = 60 * 60;
-
 interface UseProjectsTableStateOptions {
   members: Ref<WorkspaceMemberListResponse>;
   projects: Ref<ProjectListResponse>;
@@ -64,7 +62,7 @@ function formatAssignedMembers(project: ProjectResponse): string {
 }
 
 function formatProjectTotalHours(project: ProjectResponse): string {
-  return formatTrimmedHoursMinutesDuration(project.totalHours * SECONDS_PER_HOUR);
+  return formatTrimmedHoursMinutesDuration(project.totalSeconds);
 }
 
 function getProjectMemberLabels(project: ProjectResponse): string[] {
@@ -127,15 +125,15 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
 
   function matchesHoursFilter(project: ProjectResponse): boolean {
     if (filters.hours === 'tracked') {
-      return project.totalHours > 0;
+      return project.totalSeconds > 0;
     }
 
     if (filters.hours === 'gte40') {
-      return project.totalHours >= 40;
+      return project.totalSeconds >= 40 * 60 * 60;
     }
 
     if (filters.hours === 'zero') {
-      return project.totalHours === 0;
+      return project.totalSeconds === 0;
     }
 
     return true;
