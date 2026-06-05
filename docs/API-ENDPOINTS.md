@@ -57,7 +57,7 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 
 | Method | Path                           | Auth | Role     | Description                                                                                                                                      |
 | ------ | ------------------------------ | ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GET    | `/projects`                    | JWT  | Any      | List visible workspace projects with `description`, `visibility`, derived `source`, `totalHours` from completed time entries, and assigned members. |
+| GET    | `/projects`                    | JWT  | Any      | List visible workspace projects with `description`, `visibility`, derived `source`, `totalSeconds` from completed time entries, and assigned members. |
 | POST   | `/projects`                    | JWT  | Admin/PM | Create a provider-neutral project with optional `description`. PM creators are automatically assigned to the created project.                     |
 | GET    | `/projects/management-summary` | JWT  | Admin/PM | Get management counts: `activeProjects`, `privateProjects`, and `publicProjects`.                                                                |
 | GET    | `/projects/my-summary`         | JWT  | Any      | Get personal summary: `visibleProjects`, `trackedHoursWeek`, and `trackedHoursMonth`.                                                            |
@@ -65,6 +65,8 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | PATCH  | `/projects/:id`                | JWT  | Admin/PM | Update project metadata including nullable `description`. Admins can update metadata and `isActive`; PMs can update visible active project metadata except `isActive`. Members cannot edit. |
 
 `GET /projects` derives `source` as `manual | github` from `project_external_refs`; it is not stored on `projects`.
+
+Project time totals are exposed in seconds. `totalSeconds` is derived from completed time entries by summing `duration_seconds` through project tasks and returning zero when no completed entries exist.
 
 `GET /projects/:id` returns the list-level project fields plus `providerSummary`, `trackedSummary` (`totalSeconds`, `billableSeconds`, `billableShare`, `lastActivityAt`), and `assignedMembersSummary` (`count`, up to three `previewMembers`, `remainingCount`) for project header rendering.
 

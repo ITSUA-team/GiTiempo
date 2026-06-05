@@ -148,7 +148,8 @@ The shared contracts SHALL define stable project request and response shapes for
 - **WHEN** frontend or backend code consumes the response
 - **THEN** the payload matches the shared project list response contract
 - **AND** each project includes core provider-neutral project fields
-- **AND** each project includes `description`, `visibility`, derived `source`, `totalHours`, assigned `members`, and active state
+- **AND** each project includes `description`, `visibility`, derived `source`, `totalSeconds`, assigned `members`, and active state
+- **AND** each project excludes `totalHours`
 - **AND** each project excludes provider-specific external reference fields
 
 #### Scenario: Single-project detail response uses shared schema
@@ -416,4 +417,3 @@ The shared contracts SHALL define the response shape for GitHub authorization UR
 - **THEN** the payload SHALL match the shared GitHub auth URL contract
 - **AND** the payload SHALL include `authorizationUrl` as a string
 - **AND** the payload MUST NOT include access tokens, refresh tokens, PKCE verifier material, or token secrets
-
