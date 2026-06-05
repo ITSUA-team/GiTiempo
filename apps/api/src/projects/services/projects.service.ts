@@ -467,16 +467,17 @@ export class ProjectsService {
   async requireVisibleProject(
     user: AuthUser,
     projectId: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
   ): Promise<ProjectRow> {
     const membership = await this.members.requireActiveMembership(
       user.sub,
       user.workspaceId,
     );
     if (membership.role === 'admin') {
-      return this.requireProjectInWorkspace(user.workspaceId, projectId);
+      return this.requireProjectInWorkspace(user.workspaceId, projectId, db);
     }
 
-    const [row] = await this.db
+    const [row] = await db
       .select({ project: projects })
       .from(projects)
       .leftJoin(
@@ -503,12 +504,9 @@ export class ProjectsService {
   private async requireProjectInWorkspace(
     workspaceId: string,
     projectId: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
   ): Promise<ProjectRow> {
-    const row = await this.findProjectInWorkspace(
-      workspaceId,
-      projectId,
-      this.db,
-    );
+    const row = await this.findProjectInWorkspace(workspaceId, projectId, db);
     if (!row) throw new NotFoundException('Project not found');
     return row;
   }

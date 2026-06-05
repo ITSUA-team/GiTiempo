@@ -196,4 +196,27 @@ describe('TasksService', () => {
       service.requireTrackableTask(user, taskRow.id),
     ).rejects.toThrow('Task is closed');
   });
+
+  it('uses the transactional selector for project visibility during update checks', async () => {
+    const tx = {
+      select: vi.fn().mockReturnValue(selectRowsForUpdate([taskRow])),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService({} as never, projects as never);
+
+    const result = await service.requireTrackableTaskForUpdate(
+      user,
+      taskRow.id,
+      tx as never,
+    );
+
+    expect(projects.requireVisibleProject).toHaveBeenCalledWith(
+      user,
+      taskRow.projectId,
+      tx,
+    );
+    expect(result).toEqual({ task: taskRow, project: projectRow });
+  });
 });

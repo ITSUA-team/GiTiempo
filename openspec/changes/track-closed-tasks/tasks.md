@@ -24,5 +24,5 @@
 - [x] 4.2 Run `pnpm --filter @gitiempo/api lint`.
 - [x] 4.3 Run `pnpm --filter @gitiempo/api typecheck`.
 - [x] 4.4 Run `pnpm --filter @gitiempo/api test`.
-- [ ] 4.5 Run relevant API e2e tests after migrated and seeded Postgres is available.
+- [x] 4.5 Run relevant API e2e tests after migrated and seeded Postgres is available.
 - [x] 4.6 Run `openspec validate track-closed-tasks --strict`.

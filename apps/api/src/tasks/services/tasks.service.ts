@@ -206,6 +206,7 @@ export class TasksService {
     const project = await this.projects.requireVisibleProject(
       user,
       task.projectId,
+      db,
     );
 
     this.assertTrackableTask(task, project);
