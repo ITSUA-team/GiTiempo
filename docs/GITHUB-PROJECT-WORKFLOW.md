@@ -58,6 +58,7 @@ Rules:
 - add issues to the board one by one
 - verify issue membership from the issue itself, not only from the board view
 - if an issue is linked to the project but not visible in the UI, check filters first
+- when a pull request is covered by an issue, add the issue reference to the PR body so merge automation can update the project status
 
 ## Authentication Check
 
@@ -106,6 +107,20 @@ Recommended flow:
 4. repeat for the next issue
 
 Do not bulk-add issues when you need predictable verification.
+
+## Pull Request Issue References
+
+The `Move Issue to In Test on PR Merge` GitHub Actions workflow reads the merged PR body to find the issue it should update. If a PR is covered by an issue, include one of these lines in the PR body before merging:
+
+```markdown
+related to #<issue-number>
+```
+
+```markdown
+ref #<issue-number>
+```
+
+The referenced issue must already be linked to project `GiTimpo`. If the PR body does not contain a supported issue reference, or the issue is not linked to project `7`, the workflow skips the project status update.
 
 ## Set Status To Backlog
 
