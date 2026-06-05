@@ -46,7 +46,11 @@ export function useTopBarTimerActions({
     () => isStartingTimer.value || isStoppingTimer.value,
   );
 
-  async function handlePrimaryAction(): Promise<void> {
+  function clearTimerActionError(): void {
+    timerActionErrorMessage.value = null;
+  }
+
+  async function handlePrimaryAction(): Promise<boolean> {
     timerActionErrorMessage.value = null;
 
     if (isTimerRunning.value) {
@@ -57,6 +61,7 @@ export function useTopBarTimerActions({
         summary.setSelectedContextFromTimer(stoppedTimer);
         summary.clearSelectedDescription();
         appToast.showSuccessToast("Timer stopped", "Your running timer has been stopped.");
+        return true;
       } catch (error) {
         const message = getErrorMessage(error);
 
@@ -67,7 +72,7 @@ export function useTopBarTimerActions({
             "Timer already stopped",
             "The timer status has been refreshed.",
           );
-          return;
+          return true;
         }
 
         timerActionErrorMessage.value = message;
@@ -77,13 +82,12 @@ export function useTopBarTimerActions({
           logContext: { action: "stop-timer", feature: "top-bar-timer" },
           summary: "Could not stop the timer",
         });
+        return false;
       }
-
-      return;
     }
 
     if (!summary.selectedContext.value) {
-      return;
+      return false;
     }
 
     try {
@@ -101,6 +105,7 @@ export function useTopBarTimerActions({
         summary.setSelectedDescriptionFromTimer(summary.currentTimer.value);
       }
       appToast.showSuccessToast("Timer started", "Your timer is now running.");
+      return true;
     } catch (error) {
       const message = getErrorMessage(error);
       const toastCopy = getStartTimerErrorToastCopy(message);
@@ -113,10 +118,12 @@ export function useTopBarTimerActions({
         summary: toastCopy.summary,
       });
       await summary.refreshSummaryAfterConflict(error);
+      return false;
     }
   }
 
   return {
+    clearTimerActionError,
     handlePrimaryAction,
     isPrimaryActionPending,
     isStartingTimer,

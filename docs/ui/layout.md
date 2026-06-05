@@ -24,7 +24,7 @@ User SPA and Admin SPA share the same shell:
 - If the timer summary fails to load, keep the compact surface rendered in a fallback state and surface the failure through the standard toast flow.
 - Mobile timer strip: place a single `Task & timer` opener on the left, and render a two-line project/task stack on the right with elapsed running time when applicable.
 - The mobile timer opener must remain outside the top-right profile menu area; if the profile menu overlaps any timer content, only non-critical task metadata may be covered.
-- Right: user avatar wrapped by the profile dropdown trigger.
+- Right: `user-web` uses an avatar-only profile dropdown trigger with no visible member-name text; `admin-web` may continue to show identity and scope text beside the avatar.
 - When both SPAs exist, include the counterpart workspace switch as the first action in the shared profile dropdown so users can move between user-web and admin-web without changing URLs manually.
 
 ### Sidebar Navigation

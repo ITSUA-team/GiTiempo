@@ -141,6 +141,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   async function openDialog(): Promise<void> {
     selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
     picker.openTaskPicker(summary.getDialogSelectionFromCurrentState());
 
     try {
@@ -163,11 +164,13 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   function closeDialog(): void {
     selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
     picker.closeDialog();
   }
 
   function setSelectedProjectId(projectId: string | null): void {
     selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
     const shouldClearSelectedTask =
       picker.selectedProjectId.value !== projectId;
 
@@ -180,7 +183,14 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   function setSelectedTaskId(taskId: string | null): void {
     selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
     picker.setSelectedTaskId(taskId);
+  }
+
+  function setSelectedDescription(description: string): void {
+    selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
+    picker.setSelectedDescription(description);
   }
 
   async function confirmSelectedTask(): Promise<void> {
@@ -253,6 +263,59 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     await timerActions.handlePrimaryAction();
   }
 
+  async function startTimerFromDialog(): Promise<void> {
+    const context = picker.getSelectedTaskContext();
+
+    if (!context || updateTimeEntryMutation.isPending.value) {
+      return;
+    }
+
+    selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
+    summary.setIdleSelection(context, picker.getNormalizedDescription());
+
+    const didStartTimer = await timerActions.handlePrimaryAction();
+
+    if (didStartTimer && summary.currentTimer.value) {
+      closeDialog();
+    }
+  }
+
+  async function stopTimerFromDialog(): Promise<void> {
+    selectionUpdateErrorMessage.value = null;
+    const didStopTimer = await timerActions.handlePrimaryAction();
+
+    if (didStopTimer && !summary.currentTimer.value) {
+      closeDialog();
+    }
+  }
+
+  const isDialogPrimaryActionDisabled = computed(() => {
+    if (isTimerRunning.value) {
+      return (
+        timerActions.isPrimaryActionPending.value ||
+        updateTimeEntryMutation.isPending.value
+      );
+    }
+
+    return (
+      isConfirmSelectionDisabled.value ||
+      timerActions.isPrimaryActionPending.value
+    );
+  });
+
+  const isDialogSecondaryActionDisabled = computed(() => {
+    if (!isTimerRunning.value) {
+      return true;
+    }
+
+    return (
+      isConfirmSelectionDisabled.value ||
+      timerActions.isPrimaryActionPending.value ||
+      updateTimeEntryMutation.isPending.value
+    );
+  });
+
   watch(picker.selectedProjectId, async (nextProjectId, previousProjectId) => {
     if (!picker.isDialogOpen.value) {
       return;
@@ -288,6 +351,8 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     createTaskFromDialog: taskCreation.createTaskFromDialog,
     createTaskTitle: picker.createTaskTitle,
     currentTimer: summary.currentTimer,
+    isDialogPrimaryActionDisabled,
+    isDialogSecondaryActionDisabled,
     elapsedTimeLabel,
     handlePrimaryAction,
     isConfirmSelectionDisabled,
@@ -308,15 +373,17 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     refreshSummary: summary.refreshSummary,
     selectedContext: summary.selectedContext,
     selectedDescription: picker.selectedDescription,
+    setSelectedDescription,
     selectedProjectId: picker.selectedProjectId,
     selectedProject: picker.selectedProject,
     selectedTask: picker.selectedTask,
     selectedTaskId: picker.selectedTaskId,
     selectionUpdateErrorMessage,
     setCreateTaskTitle: picker.setCreateTaskTitle,
-    setSelectedDescription: picker.setSelectedDescription,
     setSelectedProjectId,
     setSelectedTaskId,
+    startTimerFromDialog,
+    stopTimerFromDialog,
     summaryErrorMessage: summary.summaryErrorMessage,
     taskOptions: picker.activeTasks,
     tasksErrorMessage: picker.tasksErrorMessage,
