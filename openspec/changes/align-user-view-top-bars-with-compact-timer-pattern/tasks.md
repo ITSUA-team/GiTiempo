@@ -28,4 +28,4 @@
 - [x] 5.1 Run `pnpm --filter @gitiempo/web-shared lint`, `pnpm --filter @gitiempo/web-shared typecheck`, and `pnpm --filter @gitiempo/web-shared test`.
 - [x] 5.2 Run `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
 - [x] 5.3 Because `packages/web-shared` changes are in scope, run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`.
-- [x] 5.4 Run the smallest practical browser or screenshot parity check for the affected user-web top bars at desktop and mobile widths.
+- [ ] 5.4 Run the smallest practical browser or screenshot parity check for the affected user-web top bars at desktop and mobile widths. Local browser check reached the rendered `user-web` login screen only; authenticated top-bar parity still needs a valid local session/backend or an approved render harness.

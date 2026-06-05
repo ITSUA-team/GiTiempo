@@ -96,7 +96,7 @@ const surfaceSecondaryLabel = computed(() => {
     <button
       type="button"
       aria-label="Open timer"
-      class="border-divider bg-app-bg hover:bg-surface-primary focus-visible:outline-brand flex max-w-full min-w-0 items-center gap-3 rounded-lg border px-3 py-1.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 cursor-pointer"
+      class="border-divider bg-app-bg hover:bg-surface-primary focus-visible:outline-brand flex max-w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg border px-3 py-1.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2"
       data-testid="top-bar-timer-surface"
       @click="openDialog"
     >
