@@ -114,7 +114,10 @@ export function useTopBarTimerSummary({
         }
 
         const task = projectTasks.find(
-          (candidate) => candidate.id === entry.task.id && candidate.isActive,
+          (candidate) =>
+            candidate.id === entry.task.id &&
+            candidate.isActive &&
+            candidate.status === "open",
         );
 
         if (!task) {

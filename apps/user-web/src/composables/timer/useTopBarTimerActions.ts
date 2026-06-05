@@ -1,4 +1,5 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
+import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import type { StartTimerInput } from "@gitiempo/shared";
 import {
   useStartTimerMutation,
@@ -57,7 +58,19 @@ export function useTopBarTimerActions({
         summary.clearSelectedDescription();
         appToast.showSuccessToast("Timer stopped", "Your running timer has been stopped.");
       } catch (error) {
-        timerActionErrorMessage.value = getErrorMessage(error);
+        const message = getErrorMessage(error);
+
+        if (isApiErrorStatus(error, [404])) {
+          await summary.refreshSummaryAfterConflict(error);
+          timerActionErrorMessage.value = null;
+          appToast.showInfoToast(
+            "Timer already stopped",
+            "The timer status has been refreshed.",
+          );
+          return;
+        }
+
+        timerActionErrorMessage.value = message;
         appToast.showErrorToast({
           detail: "Please try again.",
           error,
@@ -90,13 +103,14 @@ export function useTopBarTimerActions({
       appToast.showSuccessToast("Timer started", "Your timer is now running.");
     } catch (error) {
       const message = getErrorMessage(error);
+      const toastCopy = getStartTimerErrorToastCopy(message);
 
       timerActionErrorMessage.value = message;
       appToast.showErrorToast({
-        detail: "Please try again.",
+        detail: toastCopy.detail,
         error,
         logContext: { action: "start-timer", feature: "top-bar-timer" },
-        summary: "Could not start the timer",
+        summary: toastCopy.summary,
       });
       await summary.refreshSummaryAfterConflict(error);
     }
@@ -108,5 +122,22 @@ export function useTopBarTimerActions({
     isStartingTimer,
     isStoppingTimer,
     timerActionErrorMessage,
+  };
+}
+
+function getStartTimerErrorToastCopy(message: string): {
+  detail: string;
+  summary: string;
+} {
+  if (message.toLowerCase().includes("task is closed")) {
+    return {
+      detail: "Choose an open task to start tracking time.",
+      summary: "Couldn't track closed task",
+    };
+  }
+
+  return {
+    detail: "Please try again.",
+    summary: "Could not start the timer",
   };
 }

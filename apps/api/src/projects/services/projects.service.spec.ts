@@ -59,6 +59,14 @@ function selectRows(rows: unknown[]) {
   return { from };
 }
 
+function selectJoinedRows(rows: unknown[]) {
+  const limit = vi.fn().mockResolvedValue(rows);
+  const where = vi.fn().mockReturnValue({ limit });
+  const leftJoin = vi.fn().mockReturnValue({ where });
+  const from = vi.fn().mockReturnValue({ leftJoin });
+  return { from };
+}
+
 function collectDateParams(value: unknown): string[] {
   const dates: string[] = [];
   const seen = new WeakSet<object>();
@@ -241,6 +249,29 @@ describe('ProjectsService', () => {
       2,
       expect.objectContaining({ isActive: true }),
     );
+  });
+
+  it('uses the provided selector when checking project visibility', async () => {
+    const db = { select: vi.fn() };
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValue(selectJoinedRows([{ project: projectRow }])),
+    };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'pm' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+
+    const result = await service.requireVisibleProject(
+      pmUser,
+      projectRow.id,
+      tx as never,
+    );
+
+    expect(tx.select).toHaveBeenCalledOnce();
+    expect(db.select).not.toHaveBeenCalled();
+    expect(result).toEqual(projectRow);
   });
 
   it('uses UTC ISO-week and month starts for my tracked-hour summary', async () => {

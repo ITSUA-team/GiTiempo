@@ -242,8 +242,10 @@ async function mountView(
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
+          props: ["inputId", "suggestions"],
           template: `
-            <div>
+            <div :data-testid="inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'">
+              <p v-for="suggestion in suggestions" :key="suggestion.id">{{ suggestion.title }}</p>
               <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
               <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
                 id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
@@ -325,6 +327,7 @@ async function mountView(
             "endedAt",
             "isOpen",
             "startedAt",
+            "taskSuggestions",
             "valueDescription",
           ],
           methods: {
@@ -338,6 +341,9 @@ async function mountView(
               <p data-testid="dialog-started-value">{{ formatDialogTime(startedAt) }}</p>
               <p data-testid="dialog-ended-value">{{ formatDialogTime(endedAt) }}</p>
               <p data-testid="dialog-request-error">{{ dialogErrorMessage }}</p>
+              <div data-testid="dialog-task-suggestions">
+                <p v-for="suggestion in taskSuggestions" :key="suggestion.id">{{ suggestion.title }}</p>
+              </div>
               <button data-testid="dialog-project-admin" type="button" @click="$emit('update:projectId', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002')">Project</button>
               <button data-testid="dialog-task-admin" type="button" @click="$emit('update:taskValue', {
                 id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
@@ -617,6 +623,47 @@ describe("TimeEntriesView", () => {
       search: "Ship admin polish",
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
+  });
+
+  it("filters closed tasks from manual entry selection without hiding historical filters", async () => {
+    const closedTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2999",
+      projectId: TEST_IDS.projectAdmin,
+      status: "closed",
+      title: "Ship closed archive",
+    });
+    const client = createClientMock({
+      tasksByProject: {
+        [TEST_IDS.projectAdmin]: [
+          createTask({
+            id: TEST_IDS.taskAdmin,
+            projectId: TEST_IDS.projectAdmin,
+            title: "Ship admin polish",
+          }),
+          closedTask,
+        ],
+      },
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-select"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-search"]').trigger("click");
+
+    const filterSuggestions = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    expect(filterSuggestions.text()).toContain("Ship admin polish");
+    expect(filterSuggestions.text()).toContain("Ship closed archive");
+
+    await wrapper.get('[data-testid="time-entries-header-create"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).not.toContain("Ship closed archive");
   });
 
   it("creates a manual entry and refreshes the current list page", async () => {

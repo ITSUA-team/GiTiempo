@@ -62,13 +62,14 @@ function createTask(
   projectId: string,
   title: string,
   isActive = true,
+  status: TaskResponse['status'] = 'open',
 ): TaskResponse {
   return {
     createdAt: '2026-04-20T12:00:00.000Z',
     id,
     isActive,
     projectId,
-    status: 'open',
+    status,
     title,
     updatedAt: '2026-04-20T12:00:00.000Z',
     workspaceId: TEST_IDS.workspace,
@@ -316,6 +317,42 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.isPrimaryActionDisabled.value).toBe(true);
   });
 
+  it('ignores closed tasks when resolving the idle timer context', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValueOnce(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(
+        TEST_IDS.task,
+        TEST_IDS.project,
+        'Improve reports filters',
+        true,
+        'closed',
+      ),
+    ]);
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+
+    expect(topBarTimer.timerStatusLabel.value).toBe('No eligible task');
+    expect(topBarTimer.selectedContext.value).toBeNull();
+    expect(topBarTimer.isPrimaryActionDisabled.value).toBe(true);
+
+    await topBarTimer.handlePrimaryAction();
+
+    expect(client.startTimer).not.toHaveBeenCalled();
+  });
+
   it('loads picker options and confirms a selected task', async () => {
     const client = createClientMock();
 
@@ -347,6 +384,42 @@ describe('useTopBarTimer', () => {
       taskTitle: 'Improve reports filters',
     });
     expect(topBarTimer.selectedDescription.value).toBe('');
+  });
+
+  it('filters closed tasks out of timer picker options', async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+      createTask('task-2', 'project-1', 'Closed release task', true, 'closed'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(topBarTimer.taskOptions.value).toEqual([
+      expect.objectContaining({ id: 'task-1', status: 'open' }),
+    ]);
+
+    topBarTimer.setSelectedTaskId('task-2');
+
+    expect(topBarTimer.selectedTask.value).toBeNull();
+    expect(topBarTimer.isConfirmSelectionDisabled.value).toBe(true);
+
+    await topBarTimer.confirmSelectedTask();
+
+    expect(topBarTimer.selectedContext.value).toBeNull();
   });
 
   it('keeps an idle description draft for the next start action', async () => {
@@ -647,6 +720,43 @@ describe('useTopBarTimer', () => {
     );
   });
 
+  it('shows closed-task copy when a stale selection cannot start', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValue(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+    client.startTimer.mockRejectedValueOnce(
+      new ApiError('Task is closed', { status: 422 }),
+    );
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.handlePrimaryAction();
+    await flushPromises();
+
+    expect(topBarTimer.timerActionErrorMessage.value).toBe('Task is closed');
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: 'Choose an open task to start tracking time.',
+        severity: 'error',
+        summary: "Couldn't track closed task",
+      }),
+    );
+  });
+
   it('stops the timer with success toast feedback', async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
@@ -819,6 +929,55 @@ describe('useTopBarTimer', () => {
         detail: 'Please try again.',
         severity: 'error',
         summary: 'Could not stop the timer',
+      }),
+    );
+  });
+
+  it('refreshes and informs when the running timer was already stopped', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.getCurrentTimer
+      .mockResolvedValueOnce({
+        timeEntry: createRunningEntry(),
+      })
+      .mockResolvedValueOnce({ timeEntry: null });
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listOwnEntries.mockResolvedValueOnce(
+      createOwnEntriesResponse([createCompletedEntry()]),
+    );
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+    client.stopTimer.mockRejectedValueOnce(
+      new ApiError('Running timer not found', { status: 404 }),
+    );
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.handlePrimaryAction();
+    await flushPromises();
+
+    expect(client.getCurrentTimer).toHaveBeenCalledTimes(2);
+    expect(topBarTimer.currentTimer.value).toBeNull();
+    expect(topBarTimer.primaryActionLabel.value).toBe('Start');
+    expect(topBarTimer.timerStatusLabel.value).toBe('Last tracked task');
+    expect(topBarTimer.timerContextLabel.value).toBe(
+      'Project Orion / Improve reports filters',
+    );
+    expect(topBarTimer.timerActionErrorMessage.value).toBeNull();
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: 'The timer status has been refreshed.',
+        severity: 'info',
+        summary: 'Timer already stopped',
       }),
     );
   });
