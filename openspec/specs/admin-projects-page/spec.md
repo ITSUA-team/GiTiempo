@@ -47,13 +47,13 @@ The admin Projects page MUST display all workspace projects in a searchable, col
 
 - **WHEN** the admin enters global search text or selects Project, Source, Assigned members, Hours, or Visibility filters
 - **THEN** visible project rows and mobile cards are limited to loaded projects matching all active filters
-- **AND** global search matches project name, source label, assigned member names or emails or count, total hours, visibility label, and archived row status when rendered
+- **AND** global search matches project name, source label, assigned member names or emails or count, formatted total time, visibility label, and archived row status when rendered
 - **AND** assigned-member filter options come from `GET /workspace-members`
 - **AND** assigned-member row matching uses loaded project member assignments
 - **AND** hours filter options are `Any`, `Tracked`, `40h+`, and `No hours`
-- **AND** `Tracked` matches loaded rows with `totalHours > 0`
-- **AND** `40h+` matches loaded rows with `totalHours >= 40`
-- **AND** `No hours` matches loaded rows with `totalHours === 0`
+- **AND** `Tracked` matches loaded rows with `totalSeconds > 0`
+- **AND** `40h+` matches loaded rows with `totalSeconds >= 144000`
+- **AND** `No hours` matches loaded rows with `totalSeconds === 0`
 - **AND** clearing active filters restores all loaded projects allowed by the page's role scope
 - **AND** filtering does not require a projects API request solely for table discovery
 
