@@ -4,23 +4,73 @@ on:
   pull_request:
     types: [closed]
 
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
 jobs:
   move_to_test:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      HAS_PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN != '' }}
+      REPO_OWNER: ITSUA-team
+      REPO_NAME: GiTiempo
+      PROJECT_ID: PVT_kwDOCqTlmM4BU1Mp
+      PROJECT_NUMBER: "7"
+      STATUS_FIELD_ID: PVTSSF_lADOCqTlmM4BU1MpzhEhrEI
+      TESTING_OPTION_ID: df73e18b
     steps:
       - name: Get Linked Issue Number
         id: get_issue
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          ISSUE_NUM=$(echo "${{ github.event.pull_request.body }}" | grep -oPi '(ref|related to) #\K\d+')
+          ISSUE_NUM=$(printf '%s\n' "$PR_BODY" | perl -ne 'if (/(?:ref|related to) #(\d+)/i) { print "$1\n"; exit }' || true)
           echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
 
       - name: Update Issue Status in Project
         if: steps.get_issue.outputs.issue_number != ''
-        uses: titoportas/update-project-fields@v0.1.0
-        with:
-          project-url: https://github.com/orgs/<YOUR_ORG>/projects/<PROJECT_NUMBER>
-          github-token: ${{ secrets.PROJECT_TOKEN }}
-          item-number: ${{ steps.get_issue.outputs.issue_number }}
-          field: Status
-          field-value: Testing
+        env:
+          ISSUE_NUMBER: ${{ steps.get_issue.outputs.issue_number }}
+        run: |
+          if [ "$HAS_PROJECT_TOKEN" != "true" ]; then
+            echo "::warning::PROJECT_TOKEN is not configured; skipping project status update."
+            exit 0
+          fi
+
+          ITEM_ID=$(gh api graphql \
+            -F owner="$REPO_OWNER" \
+            -F name="$REPO_NAME" \
+            -F number="$ISSUE_NUMBER" \
+            -f query='
+              query($owner: String!, $name: String!, $number: Int!) {
+                repository(owner: $owner, name: $name) {
+                  issue(number: $number) {
+                    projectItems(first: 20) {
+                      nodes {
+                        id
+                        project {
+                          number
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ' \
+            --jq ".data.repository.issue.projectItems.nodes[] | select(.project.number == $PROJECT_NUMBER) | .id" \
+            | head -n 1)
+
+          if [ -z "$ITEM_ID" ]; then
+            echo "::notice::Issue #$ISSUE_NUMBER is not linked to project $PROJECT_NUMBER; skipping status update."
+            exit 0
+          fi
+
+          gh project item-edit \
+            --id "$ITEM_ID" \
+            --project-id "$PROJECT_ID" \
+            --field-id "$STATUS_FIELD_ID" \
+            --single-select-option-id "$TESTING_OPTION_ID"
