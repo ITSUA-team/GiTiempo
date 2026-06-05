@@ -27,7 +27,7 @@ describe("projectListResponseSchema", () => {
     expect(result[0]?.totalSeconds).toBe(43200);
   });
 
-  it("rejects the legacy totalHours field", () => {
+  it("requires totalSeconds even when legacy totalHours is present", () => {
     const result = projectListResponseSchema.safeParse([
       {
         ...baseProject,
