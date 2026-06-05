@@ -22,7 +22,7 @@ export const projectResponseSchema = z.object({
   color: z.string().nullable(),
   visibility: projectVisibilitySchema,
   source: projectSourceSchema,
-  totalHours: z.number().min(0),
+  totalSeconds: z.number().int().min(0),
   members: z.array(projectMemberSchema),
   isActive: z.boolean(),
   createdAt: z.iso.datetime(),

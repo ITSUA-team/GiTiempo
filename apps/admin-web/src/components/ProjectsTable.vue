@@ -15,8 +15,8 @@ import {
   managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
+  type ManagementTableColumn,
 } from '@gitiempo/web-shared';
-import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';

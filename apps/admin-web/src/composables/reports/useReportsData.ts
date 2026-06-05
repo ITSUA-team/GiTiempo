@@ -61,7 +61,7 @@ function getVisibleProjectsForScope(
 ): ProjectResponse[] {
   if (!projectId) {
     return projects.filter(
-      (project) => project.isActive && project.totalHours > 0,
+      (project) => project.isActive && project.totalSeconds > 0,
     );
   }
 

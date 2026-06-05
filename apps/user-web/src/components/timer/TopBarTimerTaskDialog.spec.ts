@@ -26,7 +26,7 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
           members: [],
           name: "Project Orion",
           source: "manual",
-          totalHours: 12,
+          totalSeconds: 43200,
           updatedAt: "2026-04-20T12:00:00.000Z",
           visibility: "public",
           workspaceId: "workspace-1",

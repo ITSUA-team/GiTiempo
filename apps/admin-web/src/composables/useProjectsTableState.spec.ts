@@ -74,7 +74,7 @@ function createProjects(): ProjectListResponse {
       ],
       name: 'Project Orion',
       source: 'github',
-      totalHours: 148,
+      totalSeconds: 532800,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'public',
       workspaceId: 'workspace-1',
@@ -96,7 +96,7 @@ function createProjects(): ProjectListResponse {
       ],
       name: 'Billing API',
       source: 'manual',
-      totalHours: 86,
+      totalSeconds: 309600,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'private',
       workspaceId: 'workspace-1',
@@ -110,7 +110,7 @@ function createProjects(): ProjectListResponse {
       members: [],
       name: 'Dev Portal',
       source: 'manual',
-      totalHours: 0,
+      totalSeconds: 0,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'public',
       workspaceId: 'workspace-1',
@@ -124,7 +124,7 @@ function createProjects(): ProjectListResponse {
       members: [],
       name: 'Legacy Project',
       source: 'manual',
-      totalHours: 4,
+      totalSeconds: 14400,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'private',
       workspaceId: 'workspace-1',
@@ -174,6 +174,25 @@ describe('useProjectsTableState', () => {
       { label: 'Pat PM', value: 'user-2' },
     ]);
     expect(state.emptyDescription.value).toBe('No projects match the current filters.');
+  });
+
+  it('formats decimal total hours as readable duration labels', () => {
+    const members = ref(createMembers());
+    const projects = ref<ProjectListResponse>([
+      {
+        ...createProjects()[0]!,
+        totalSeconds: 139980,
+      },
+    ]);
+    const state = useProjectsTableState({ members, projects });
+
+    expect(state.rows.value[0]?.hoursLabel).toBe('38h 53m');
+
+    state.updateFilters({ global: '38h 53m' });
+    expect(rowNames(state)).toEqual(['Project Orion']);
+
+    state.updateFilters({ global: '139980' });
+    expect(rowNames(state)).toEqual([]);
   });
 
   it('filters projects by global search, project, source, assigned member, hours, and visibility', () => {

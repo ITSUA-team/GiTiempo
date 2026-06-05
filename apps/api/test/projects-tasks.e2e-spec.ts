@@ -231,7 +231,7 @@ describe('Projects and tasks (e2e)', () => {
       visibility: 'private',
       source: 'manual',
     });
-    expect(typeof platform.totalHours).toBe('number');
+    expect(typeof platform.totalSeconds).toBe('number');
 
     const memberRes = await request(app.getHttpServer())
       .get('/projects')
@@ -256,7 +256,7 @@ describe('Projects and tasks (e2e)', () => {
     expect(createRes.status).toBe(201);
     expect(createRes.body.visibility).toBe('private');
     expect(createRes.body.source).toBe('manual');
-    expect(createRes.body.totalHours).toBe(0);
+    expect(createRes.body.totalSeconds).toBe(0);
     // PM is auto-assigned, so the create response must reflect that immediately
     expect(Array.isArray(createRes.body.members)).toBe(true);
     expect(createRes.body.members).toHaveLength(1);
@@ -1029,7 +1029,7 @@ describe('Projects and tasks (e2e)', () => {
       .get(`/projects/${publicProject.body.id}`)
       .set('Authorization', bearer(otherMemberToken));
     expect(projectWithHours.status).toBe(200);
-    expect(projectWithHours.body.totalHours).toBe(0.5);
+    expect(projectWithHours.body.totalSeconds).toBe(1800);
 
     const stopped = await request(app.getHttpServer())
       .post('/time-entries/timer/stop')
