@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
-function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialog>["$props"]> = {}) {
+type DialogProps = Partial<InstanceType<typeof TopBarTimerTaskDialog>["$props"]>;
+
+function mountDialog(overrides: DialogProps = {}) {
   return mount(TopBarTimerTaskDialog, {
     props: {
       createTaskErrorMessage: null,
@@ -16,6 +18,10 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
       isLoadingProjects: false,
       isLoadingTasks: false,
       isOpen: true,
+      isPrimaryActionDisabled: false,
+      isPrimaryActionPending: false,
+      isTimerRunning: false,
+      primaryActionLabel: "Start timer",
       projectOptions: [
         {
           color: null,
@@ -50,14 +56,22 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
         },
       ],
       tasksErrorMessage: null,
+      timerActionErrorMessage: null,
       ...overrides,
     },
     global: {
       stubs: {
         Button: {
-          props: ["disabled", "fluid", "label", "loading"],
+          props: [
+            "disabled",
+            "fluid",
+            "label",
+            "loading",
+            "severity",
+            "text",
+          ],
           template:
-            '<button :data-fluid="String(fluid)" :data-loading="String(loading)" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
+            '<button :class="$attrs.class" :data-fluid="String(fluid)" :data-loading="String(loading)" :data-severity="severity ?? \'default\'" :data-text="String(text ?? false)" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Dialog: {
           props: {
@@ -65,7 +79,7 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
             pt: { type: Object, required: true },
           },
           template:
-            '<div data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-content-class="pt.content" :data-footer-class="pt.footer" :data-root-class="pt.root"><slot name="header" /><slot /><slot name="footer" /></div>',
+            '<div v-if="$attrs.visible !== false" data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-content-class="pt.content" :data-footer-class="pt.footer" :data-root-class="pt.root"><slot name="header" /><slot /><slot name="footer" /></div>',
         },
         InputText: {
           props: ["modelValue", "disabled", "invalid"],
@@ -78,7 +92,7 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
           props: ["disabled", "modelValue", "options", "overlayClass", "pt"],
           emits: ["update:modelValue"],
           template:
-            '<select :data-label-pt-class="pt?.label?.class" :data-list-container-pt-class="pt?.listContainer?.class" :data-option-label-pt-class="pt?.optionLabel?.class" :data-overlay-class="overlayClass" :data-root-pt-class="pt?.root?.class" :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name ?? option.title }}</option></select>',
+            '<select :class="$attrs.class" :data-label-pt-class="pt?.label?.class" :data-list-container-pt-class="pt?.listContainer?.class" :data-option-label-pt-class="pt?.optionLabel?.class" :data-overlay-class="overlayClass" :data-root-pt-class="pt?.root?.class" :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name ?? option.title }}</option></select>',
         },
         Textarea: {
           props: ["disabled", "modelValue"],
@@ -89,6 +103,10 @@ function mountDialog(overrides: Partial<InstanceType<typeof TopBarTimerTaskDialo
       },
     },
   });
+}
+
+function findButtonByLabel(wrapper: ReturnType<typeof mountDialog>, label: string) {
+  return wrapper.findAll("button").find((button) => button.text() === label);
 }
 
 describe("TopBarTimerTaskDialog", () => {
@@ -117,20 +135,28 @@ describe("TopBarTimerTaskDialog", () => {
     ]);
   });
 
-  it("emits create-task and confirm actions when the buttons are clicked", async () => {
+  it("emits create-task and start-timer actions in the idle flow", async () => {
     const wrapper = mountDialog();
-    const createTaskButton = wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Create task");
-    const confirmButton = wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Use selected task");
 
-    await createTaskButton?.trigger("click");
-    await confirmButton?.trigger("click");
+    await findButtonByLabel(wrapper, "Create task")?.trigger("click");
+    await findButtonByLabel(wrapper, "Start timer")?.trigger("click");
 
     expect(wrapper.emitted("createTask")?.length).toBeGreaterThan(0);
+    expect(wrapper.emitted("primary-action")?.length).toBeGreaterThan(0);
+    expect(wrapper.emitted("confirm")).toBeUndefined();
+  });
+
+  it("emits change-task and stop-timer actions in the running flow", async () => {
+    const wrapper = mountDialog({
+      isTimerRunning: true,
+      primaryActionLabel: "Stop timer",
+    });
+
+    await findButtonByLabel(wrapper, "Change task")?.trigger("click");
+    await findButtonByLabel(wrapper, "Stop timer")?.trigger("click");
+
     expect(wrapper.emitted("confirm")?.length).toBeGreaterThan(0);
+    expect(wrapper.emitted("primary-action")?.length).toBeGreaterThan(0);
   });
 
   it("renders a distinct task-loading state for the selected project", () => {
@@ -163,33 +189,49 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.text()).toContain("Create one below or choose a different project.");
   });
 
-  it("renders create-task validation feedback and keeps confirm disabled until a task is selected", () => {
+  it("renders create-task validation feedback and keeps idle start disabled until a task is selected", () => {
     const wrapper = mountDialog({
       createTaskErrorMessage: "Task title is required.",
-      isConfirmSelectionDisabled: true,
+      isPrimaryActionDisabled: true,
       selectedTaskId: null,
       taskOptions: [],
     });
-    const confirmButton = wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Use selected task");
+    const primaryButton = findButtonByLabel(wrapper, "Start timer");
 
     expect(wrapper.text()).toContain("Task title is required.");
-    expect(confirmButton?.attributes("disabled")).toBeDefined();
+    expect(primaryButton?.attributes("disabled")).toBeDefined();
   });
 
-  it("renders inline active-timer update errors and confirm loading state", () => {
+  it("renders inline running-task update errors and confirm loading state", () => {
     const wrapper = mountDialog({
       isConfirmingSelection: true,
+      isTimerRunning: true,
+      primaryActionLabel: "Stop timer",
       selectionUpdateErrorMessage: "Task is inactive",
     });
-    const confirmButton = wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Use selected task");
+    const confirmButton = findButtonByLabel(wrapper, "Change task");
 
     expect(wrapper.text()).toContain("Could not update the active timer task.");
     expect(wrapper.text()).toContain("Task is inactive");
     expect(confirmButton?.attributes("data-loading")).toBe("true");
+  });
+
+  it("renders start and stop timer errors with state-specific copy", () => {
+    const idleWrapper = mountDialog({
+      timerActionErrorMessage: "Task is closed",
+    });
+
+    expect(idleWrapper.text()).toContain("Could not start the timer.");
+    expect(idleWrapper.text()).toContain("Task is closed");
+
+    const runningWrapper = mountDialog({
+      isTimerRunning: true,
+      primaryActionLabel: "Stop timer",
+      timerActionErrorMessage: "Timer not found",
+    });
+
+    expect(runningWrapper.text()).toContain("Could not stop the timer.");
+    expect(runningWrapper.text()).toContain("Timer not found");
   });
 
   it("renders the description field directly below task", () => {
@@ -200,7 +242,7 @@ describe("TopBarTimerTaskDialog", () => {
     expect(labels.indexOf("Description")).toBeLessThan(labels.indexOf("Task title"));
   });
 
-  it("uses mobile-friendly dialog sizing, scrolling, and stacked action rows", () => {
+  it("uses mobile-friendly dialog sizing and idle footer order", () => {
     mockMatchMedia(true);
 
     const wrapper = mountDialog();
@@ -211,68 +253,84 @@ describe("TopBarTimerTaskDialog", () => {
     const footer = wrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]');
     const footerButtons = footer.findAll("button");
     const selectFields = wrapper.findAll("select");
-    const createTaskButton = wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Create task");
-    const confirmButton = wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Use selected task");
+    const createTaskButton = findButtonByLabel(wrapper, "Create task");
+    const primaryButton = findButtonByLabel(wrapper, "Start timer");
 
     expect(dialog.attributes("data-block-scroll")).toBe("true");
-    expect(dialog.attributes("data-root-class")).toContain(
-      "w-[calc(100vw-1rem)]",
-    );
-    expect(dialog.attributes("data-root-class")).toContain(
-      "sm:w-[min(560px,calc(100vw-2rem))]",
-    );
+    expect(dialog.attributes("data-root-class")).toContain("w-[calc(100vw-1rem)]");
+    expect(dialog.attributes("data-root-class")).toContain("sm:w-[min(560px,calc(100vw-2rem))]");
     expect(dialog.attributes("data-content-class")).toContain("overflow-y-auto");
     expect(createTaskActions.classes()).toContain("flex-col");
     expect(createTaskActions.classes()).toContain("w-full");
     expect(createTaskActions.classes()).toContain("sm:flex-row");
     expect(footer.classes()).toContain("flex-col");
     expect(footer.classes()).toContain("w-full");
-    expect(footer.classes()).not.toContain("sm:flex-row");
-    expect(footer.classes()).not.toContain("flex-row");
     expect(footerButtons.map((button) => button.text())).toEqual([
-      "Use selected task",
+      "Start timer",
       "Cancel",
     ]);
     expect(createTaskButton?.classes()).toContain("w-full");
-    expect(confirmButton?.classes()).toContain("w-full");
+    expect(primaryButton?.classes()).toContain("w-full");
     expect(createTaskButton?.attributes("data-fluid")).toBe("true");
-    expect(confirmButton?.attributes("data-fluid")).toBe("true");
+    expect(primaryButton?.attributes("data-fluid")).toBe("true");
     for (const selectField of selectFields) {
       expect(selectField.classes()).toContain("min-w-0");
       expect(selectField.classes()).toContain("max-w-full");
       expect(selectField.attributes("data-root-pt-class")).toContain("min-w-0");
       expect(selectField.attributes("data-label-pt-class")).toBe("truncate");
-      expect(selectField.attributes("data-overlay-class")).toBe(
-        "max-w-[calc(100vw-2rem)]",
-      );
+      expect(selectField.attributes("data-overlay-class")).toBe("max-w-[calc(100vw-2rem)]");
       expect(selectField.attributes("data-option-label-pt-class")).toBe("truncate");
     }
   });
 
-  it("keeps action buttons intrinsic and cancel-first in DOM order on tablet and desktop", () => {
-    const wrapper = mountDialog();
-    const footer = wrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]');
-    const footerButtons = footer.findAll("button");
-    const createTaskButton = wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Create task");
-    const confirmButton = wrapper
-      .findAll("button")
-      .find((button) => button.text() === "Use selected task");
+  it("keeps the mobile running footer ordered as stop, change, then cancel", () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountDialog({
+      isTimerRunning: true,
+      primaryActionLabel: "Stop timer",
+    });
+    const footerButtons = wrapper
+      .get('[data-testid="top-bar-timer-task-dialog-footer"]')
+      .findAll("button");
 
     expect(footerButtons.map((button) => button.text())).toEqual([
+      "Stop timer",
+      "Change task",
       "Cancel",
-      "Use selected task",
     ]);
-    expect(footer.classes()).toContain("flex-row");
-    expect(footer.classes()).toContain("justify-end");
-    expect(footer.classes()).not.toContain("flex-col");
-    expect(createTaskButton?.attributes("data-fluid")).toBe("false");
-    expect(confirmButton?.attributes("data-fluid")).toBe("false");
-    expect(confirmButton?.classes()).toContain("w-auto");
+  });
+
+  it("keeps action buttons intrinsic and desktop footer order aligned with the timer state", () => {
+    const idleWrapper = mountDialog();
+    const idleButtons = idleWrapper
+      .get('[data-testid="top-bar-timer-task-dialog-footer"]')
+      .findAll("button");
+
+    expect(idleButtons.map((button) => button.text())).toEqual([
+      "Cancel",
+      "Start timer",
+    ]);
+    expect(idleWrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]').classes()).toContain(
+      "flex-row",
+    );
+    expect(findButtonByLabel(idleWrapper, "Start timer")?.classes()).toContain("w-auto");
+
+    const runningWrapper = mountDialog({
+      isTimerRunning: true,
+      primaryActionLabel: "Stop timer",
+    });
+    const runningButtons = runningWrapper
+      .get('[data-testid="top-bar-timer-task-dialog-footer"]')
+      .findAll("button");
+
+    expect(runningButtons.map((button) => button.text())).toEqual([
+      "Cancel",
+      "Change task",
+      "Stop timer",
+    ]);
+    expect(findButtonByLabel(runningWrapper, "Change task")?.attributes("data-severity")).toBe(
+      "secondary",
+    );
   });
 });

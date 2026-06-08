@@ -19,6 +19,10 @@ const props = defineProps<{
   isLoadingProjects: boolean;
   isLoadingTasks: boolean;
   isOpen: boolean;
+  isPrimaryActionDisabled: boolean;
+  isPrimaryActionPending: boolean;
+  isTimerRunning: boolean;
+  primaryActionLabel: string;
   projectOptions: ProjectResponse[];
   projectsErrorMessage: string | null;
   selectedDescription: string;
@@ -27,12 +31,14 @@ const props = defineProps<{
   selectionUpdateErrorMessage: string | null;
   taskOptions: TaskResponse[];
   tasksErrorMessage: string | null;
+  timerActionErrorMessage: string | null;
 }>();
 
 const emit = defineEmits<{
   close: [];
   confirm: [];
   createTask: [];
+  "primary-action": [];
   "update:createTaskTitle": [value: string];
   "update:selectedDescription": [value: string];
   "update:selectedProjectId": [value: string | null];
@@ -96,15 +102,27 @@ const taskSelectPt = {
     <template #header>
       <div class="flex flex-col gap-1">
         <h2 class="text-text-dark text-lg font-semibold">
-          Change timer task
+          Task &amp; timer
         </h2>
         <p class="text-text-muted text-[13px]">
-          Select a visible project and task, or create a new task inside the selected project.
+          Select a visible project and task, update the current timer when needed, or create a new task inside the selected project.
         </p>
       </div>
     </template>
 
     <div class="flex flex-col gap-4">
+      <div
+        v-if="props.timerActionErrorMessage"
+        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
+      >
+        <p class="text-destructive text-sm font-medium">
+          {{ props.isTimerRunning ? "Could not stop the timer." : "Could not start the timer." }}
+        </p>
+        <p class="text-destructive mt-1 text-xs">
+          {{ props.timerActionErrorMessage }}
+        </p>
+      </div>
+
       <div
         v-if="props.projectsErrorMessage"
         class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
@@ -295,9 +313,19 @@ const taskSelectPt = {
           v-if="isMobileViewport"
           type="button"
           class="w-full"
+          :disabled="props.isPrimaryActionDisabled"
+          :fluid="true"
+          :label="props.primaryActionLabel"
+          :loading="props.isPrimaryActionPending"
+          @click="emit('primary-action')"
+        />
+        <Button
+          v-if="isMobileViewport && props.isTimerRunning"
+          type="button"
+          class="w-full"
           :disabled="props.isConfirmSelectionDisabled"
           :fluid="true"
-          label="Use selected task"
+          label="Change task"
           :loading="props.isConfirmingSelection"
           @click="emit('confirm')"
         />
@@ -311,14 +339,26 @@ const taskSelectPt = {
           @click="emit('close')"
         />
         <Button
-          v-if="!isMobileViewport"
+          v-if="!isMobileViewport && props.isTimerRunning"
           type="button"
           class="w-auto"
           :disabled="props.isConfirmSelectionDisabled"
           :fluid="false"
-          label="Use selected task"
+          label="Change task"
           :loading="props.isConfirmingSelection"
+          severity="secondary"
+          text
           @click="emit('confirm')"
+        />
+        <Button
+          v-if="!isMobileViewport"
+          type="button"
+          :class="isMobileViewport ? 'w-full' : 'w-auto'"
+          :fluid="isMobileViewport"
+          :disabled="props.isPrimaryActionDisabled"
+          :label="props.primaryActionLabel"
+          :loading="props.isPrimaryActionPending"
+          @click="emit('primary-action')"
         />
       </div>
     </template>

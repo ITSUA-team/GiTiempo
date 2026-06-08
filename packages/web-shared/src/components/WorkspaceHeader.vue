@@ -25,6 +25,8 @@ type ProfileMenuItem = {
   route?: RouteLocationRaw;
 };
 
+type CenterContentAlign = "center" | "end";
+
 type ProfileMenuSlotItem = {
   destructive?: boolean;
   key?: ProfileMenuItemKey;
@@ -51,10 +53,12 @@ const props = withDefaults(
   defineProps<{
     counterpartHref: string;
     counterpartLabel: string;
+    centerContentAlign?: CenterContentAlign;
     displayName: string;
     productName?: string;
     settingsIcon?: Component;
     settingsLabel?: string;
+    showDisplayName?: boolean;
     showSettings?: boolean;
     settingsTo: RouteLocationRaw;
     userInitials: string;
@@ -62,9 +66,11 @@ const props = withDefaults(
     workspaceShortName?: string;
   }>(),
   {
+    centerContentAlign: "center",
     productName: "GiTiempo",
     settingsIcon: undefined,
     settingsLabel: "Settings",
+    showDisplayName: true,
     showSettings: true,
     workspaceShortName: "GT",
   },
@@ -96,6 +102,15 @@ const profileAvatarRootClass = computed(() =>
   ]
     .filter(Boolean)
     .join(" "),
+);
+
+const centerRowContentClass = computed(() =>
+  [
+    "flex w-full",
+    props.centerContentAlign === "end"
+      ? "justify-start sm:justify-end"
+      : "justify-start sm:justify-center",
+  ].join(" "),
 );
 
 const profileMenuItems = computed<(ProfileMenuItem | { separator: true })[]>(() => {
@@ -262,7 +277,10 @@ onBeforeUnmount(() => {
       class="col-span-3 row-start-2 -mx-4 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:mx-0 sm:px-2"
       data-testid="workspace-header-center-row"
     >
-      <div class="flex justify-center">
+      <div
+        :class="centerRowContentClass"
+        data-testid="workspace-header-center-content"
+      >
         <slot name="center" />
       </div>
     </div>
@@ -287,7 +305,10 @@ onBeforeUnmount(() => {
         }"
         @click="toggleProfileMenu"
       >
-        <span class="text-text-dark hidden text-right text-[13px] font-medium sm:block">
+        <span
+          v-if="props.showDisplayName"
+          class="text-text-dark hidden text-right text-[13px] font-medium sm:block"
+        >
           {{ props.displayName }}
         </span>
         <Avatar
