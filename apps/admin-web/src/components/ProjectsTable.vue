@@ -133,7 +133,7 @@ const columns: ManagementTableColumn[] = [
           >
             <FolderPlusIcon
               aria-hidden="true"
-              class="text-text-inverse size-4"
+              class="text-text-inverse size-4 stroke-2"
             />
           </Button>
         </div>
