@@ -113,64 +113,42 @@ The user-web authenticated shell MUST expose timer start, stop, and task-context
 
 - **WHEN** the user activates the timer task information field or mobile task-change affordance
 - **THEN** a centered task-picker dialog opens
-- **AND** the dialog uses visible Project -> Task selection only
+- **AND** the dialog uses visible Project -> Task selection plus an optional Description field
 - **AND** the dialog does not include manual interval entry controls
 
 ### Requirement: Top-Bar Timer Task Picker
 
-The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context or create a new task inside the selected visible project, MUST remain usable from the mobile timer strip, and MUST support reassigning the task of the currently running timer.
+The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context, add an optional time-entry description, or create a new task inside the selected visible project, and MUST remain usable from the mobile timer strip.
 
-#### Scenario: Existing task selected for idle timer context
+#### Scenario: Existing task and description selected for idle timer context
 
-- **GIVEN** the top-bar timer task picker is open
-- **AND** no timer is currently running
-- **WHEN** the user selects a visible project and one of that project's tasks
+- **GIVEN** the top-bar timer task picker is open while the timer is idle
+- **WHEN** the user selects a visible project, one of that project's tasks, and enters a description
 - **THEN** the dialog allows confirmation with `Use selected task`
 - **AND** the top-bar timer context updates to the selected `Project / Task`
-- **AND** a subsequent idle start action starts a fresh timer for that task
+- **AND** a subsequent idle start action starts a fresh timer for that task with the submitted description
+- **AND** the previous time entry record is not resumed or mutated
 
-#### Scenario: Running timer task is preselected
+#### Scenario: Idle timer can start with no description
 
-- **GIVEN** the authenticated user has a running timer
-- **WHEN** the user opens the top-bar timer task picker
-- **THEN** the dialog preselects the running timer's current project and task
-- **AND** loading task options does not clear that preselected task unless the user selects a different project
+- **GIVEN** the top-bar timer task picker is open while the timer is idle
+- **WHEN** the user selects a visible project and task and leaves Description empty
+- **THEN** the dialog allows confirmation with `Use selected task`
+- **AND** a subsequent idle start action starts a fresh timer for that task with no description
 
-#### Scenario: Running timer task is reassigned
+#### Scenario: Running timer task and description are updated without stopping
 
-- **GIVEN** the authenticated user has a running timer
-- **AND** the top-bar timer task picker is open
-- **WHEN** the user selects a different visible active task and confirms the selection
-- **THEN** the app updates the running time entry to that task without stopping the timer
-- **AND** the timer surface refreshes from the authoritative current timer state
-- **AND** the dialog closes after the refreshed timer state is applied
+- **GIVEN** the top-bar timer task picker is open while a timer is running
+- **WHEN** the user selects a visible project, one of that project's tasks, changes Description, and confirms with `Use selected task`
+- **THEN** the app updates the running entry's task and description
+- **AND** the timer remains running
+- **AND** the top-bar timer context updates from the authoritative response
 
-#### Scenario: Running timer stops before task reassignment completes
+#### Scenario: Running timer description can be cleared
 
-- **GIVEN** the authenticated user has a running timer
-- **AND** the top-bar timer task picker is open
-- **WHEN** the timer stops before the selected task update completes successfully
-- **THEN** the app treats the task update as a successful correction to the same time entry
-- **AND** the timer surface refreshes from the authoritative current timer state
-- **AND** the dialog closes even when the refreshed timer state shows no running timer
-
-#### Scenario: Current running task confirmation does not update
-
-- **GIVEN** the authenticated user has a running timer
-- **AND** the top-bar timer task picker is open with the running timer's current task selected
-- **WHEN** the user confirms the selection
-- **THEN** the app does not send a running-entry task update
-- **AND** the dialog closes without changing the visible timer context
-
-#### Scenario: Running timer task update failure keeps picker open
-
-- **GIVEN** the authenticated user has a running timer
-- **AND** the top-bar timer task picker is open
-- **WHEN** the user selects a different task and the running-entry task update fails
-- **THEN** the dialog remains open
-- **AND** the dialog shows inline error feedback
-- **AND** the visible current task does not switch to the failed selection
-- **AND** not-found, authorization, validation, visibility, or conflict responses refresh the authoritative timer summary
+- **GIVEN** the top-bar timer task picker is open while a running timer has a description
+- **WHEN** the user clears Description and confirms with `Use selected task`
+- **THEN** the app clears the running entry description without stopping the timer
 
 #### Scenario: New task created inside selected project
 
@@ -186,6 +164,14 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **THEN** the dialog renders a state specific to that condition
 - **AND** failed requests are not collapsed into empty-data messaging
 
+#### Scenario: Running update failure keeps dialog retryable
+
+- **GIVEN** the top-bar timer task picker is open while a timer is running
+- **WHEN** the running task or description update fails
+- **THEN** the failure is surfaced through standard toast feedback
+- **AND** the app refreshes authoritative timer state when the failure indicates timer-state conflict
+- **AND** the dialog inputs remain available for retry unless the refreshed state makes the selection invalid
+
 #### Scenario: Mobile task picker keeps full-width actions usable
 
 - **GIVEN** the authenticated user opens the task picker from the mobile timer strip Change affordance
@@ -193,7 +179,7 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **THEN** the dialog uses a near-full-width mobile layout with scrollable content
 - **AND** the footer actions render as full-width stacked buttons
 - **AND** `Use selected task` renders before `Cancel` in the mobile stacked button and keyboard order
-- **AND** the dialog still separates existing task selection from creating a new task inside the selected visible project
+- **AND** the dialog still separates existing task selection and Description from creating a new task inside the selected visible project
 
 ### Requirement: Time Entries Page Record Management
 
@@ -595,4 +581,32 @@ The user app SHALL synchronize visible Dashboard weekly aggregate state, Dashboa
 - **GIVEN** the Dashboard or Time Entries page has visible time-entry list state
 - **WHEN** a top-bar timer start or stop action fails
 - **THEN** visible list state SHALL remain based on the previously loaded or reconciled entries.
+
+### Requirement: User Pages Use Browser-Local Timezone Semantics
+
+Member-facing `user-web` pages SHALL use the authenticated user's current browser-local timezone for timestamp labels and calendar-boundary behavior unless a page requirement explicitly defines a different timezone source.
+
+#### Scenario: Dashboard current-week and current-day windows are browser local
+
+- **WHEN** Dashboard stats, weekly focus, or recent-entry labels derive `Today`, `This Week`, or entry time-range context from stored time-entry timestamps
+- **THEN** the page uses the user's current browser-local calendar day and browser-local Monday-start week boundaries
+- **AND** the page does not derive those user-facing windows from UTC day or UTC ISO-week boundaries
+
+#### Scenario: Time Entries list groups and filters by browser-local calendar days
+
+- **WHEN** the Time Entries page groups rows/cards by day or converts DatePicker day selections into `dateFrom` and `dateTo` query timestamps
+- **THEN** it groups entries by the started-at day in the user's current browser-local timezone
+- **AND** it converts selected calendar days into browser-local day-start and next-browser-local-day-start ISO boundaries before calling the API
+
+#### Scenario: Day-level create presets use the selected local day
+
+- **WHEN** the user opens the day-level `+ New time entry` action from a rendered day group
+- **THEN** the create dialog presets `startedAt` and `endedAt` on that rendered browser-local calendar day
+- **AND** it does not seed those presets by treating the selected day key as a UTC midnight boundary
+
+#### Scenario: Profile GitHub timestamps render as local labels
+
+- **WHEN** the Profile page renders `connectedAt` and `updatedAt` from the GitHub connection status contract
+- **THEN** it formats those contract timestamps as user-facing labels in the authenticated user's current browser-local timezone
+- **AND** it does not render the raw ISO strings directly in the connected account metadata view
 
