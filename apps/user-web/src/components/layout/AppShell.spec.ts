@@ -107,6 +107,24 @@ describe("AppShell", () => {
     expect(profileLinks).toHaveLength(1);
     expect(timerLinks).toHaveLength(0);
 
+    await router.push({ name: routeNames.timeEntries });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Time Entries",
+    );
+
+    await router.push({ name: routeNames.project });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Projects",
+    );
+
+    await router.push({ name: routeNames.profile });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Profile",
+    );
+
     await wrapper.get('[data-testid="profile-menu-sign-out"]').trigger("click");
     await flushPromises();
 

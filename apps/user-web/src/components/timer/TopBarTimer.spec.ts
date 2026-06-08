@@ -173,6 +173,7 @@ describe("TopBarTimer", () => {
     expect(surface.attributes("data-layout")).toBe("desktop");
     expect(surface.attributes("aria-label")).toBe("Open task and timer");
     expect(surface.classes()).toContain("h-[47px]");
+    expect(surface.classes()).toContain("ml-auto");
     expect(surface.classes()).toContain("ring-inset");
     expect(context.text()).toContain("Project Orion");
     expect(context.text()).toContain("Improve reports filters");
@@ -222,8 +223,10 @@ describe("TopBarTimer", () => {
     composableState.primaryActionLabel.value = "Stop";
 
     const wrapper = mountTopBarTimer();
+    const elapsed = wrapper.get('[data-testid="top-bar-timer-elapsed"]');
 
     expect(wrapper.text()).toContain("01:00:00");
+    expect(elapsed.classes()).toContain("text-xl");
 
     composableState.isTimerRunning.value = false;
     composableState.primaryActionLabel.value = "Start";

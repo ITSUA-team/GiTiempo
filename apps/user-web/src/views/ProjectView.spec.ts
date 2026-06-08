@@ -189,7 +189,7 @@ describe("ProjectView", () => {
     primeVueMocks.toastAdd.mockClear();
   });
 
-  it("renders the header, search field, grouped sections, and page-level actions", async () => {
+  it("renders the search field, grouped sections, and project-level actions", async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValueOnce([
@@ -203,14 +203,15 @@ describe("ProjectView", () => {
 
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Projects");
+    expect(wrapper.text()).not.toContain(
+      "Create, update, and organize tasks across your visible projects.",
+    );
     expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(
       true,
     );
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Improve reports filters");
 
-    await wrapper.get('[data-testid="projects-header-create"]').trigger("click");
     await wrapper.get('[data-testid="project-section-add"]').trigger("click");
     await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
     await wrapper.get('[data-testid="project-section-delete"]').trigger("click");

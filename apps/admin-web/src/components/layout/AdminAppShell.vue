@@ -33,6 +33,15 @@ const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
+const pageNamesByRouteName: Record<string, string> = {
+  [routeNames.addProject]: 'New Project',
+  [routeNames.dashboard]: 'Dashboard',
+  [routeNames.invoices]: 'Invoices',
+  [routeNames.members]: 'Members',
+  [routeNames.projects]: 'Projects',
+  [routeNames.reports]: 'Reports',
+  [routeNames.settings]: 'Settings',
+};
 
 let workspaceNameRequestToken: string | null = null;
 
@@ -58,26 +67,11 @@ const showSettings = computed(() =>
     currentRole.value,
   ),
 );
-const pageName = computed(() => {
-  switch (route.name) {
-    case routeNames.dashboard:
-      return 'Dashboard';
-    case routeNames.reports:
-      return 'Reports';
-    case routeNames.invoices:
-      return 'Invoices';
-    case routeNames.members:
-      return 'Members';
-    case routeNames.projects:
-      return 'Projects';
-    case routeNames.addProject:
-      return 'New Project';
-    case routeNames.settings:
-      return 'Settings';
-    default:
-      return 'Dashboard';
-  }
-});
+const pageName = computed(
+  () =>
+    pageNamesByRouteName[route.name?.toString() ?? ''] ??
+    pageNamesByRouteName[routeNames.dashboard],
+);
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
 const activeName = computed(() => {

@@ -57,7 +57,7 @@ const showsElapsedTime = computed(
     unstyled
     type="button"
     aria-label="Open task and timer"
-    class="ring-divider bg-app-bg text-text-dark hover:bg-app-bg focus-visible:outline-brand flex h-[47px] max-w-[min(360px,100%)] min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-left ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2"
+    class="ring-divider bg-app-bg text-text-dark hover:bg-app-bg focus-visible:outline-brand ml-auto flex h-[47px] max-w-[min(360px,100%)] min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-left ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2"
     data-layout="desktop"
     data-testid="top-bar-timer"
     @click="openDialog"
@@ -77,7 +77,7 @@ const showsElapsedTime = computed(
     <span
       v-if="showsElapsedTime"
       aria-live="off"
-      class="text-brand shrink-0 text-sm font-semibold tabular-nums"
+      class="text-brand shrink-0 text-xl leading-6 font-semibold tabular-nums"
       data-testid="top-bar-timer-elapsed"
     >
       {{ elapsedTimeLabel }}
