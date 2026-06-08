@@ -99,13 +99,6 @@ const pageState = computed(() =>
     isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
   }),
 );
-const canCreateTasks = computed(
-  () =>
-    data.visibleProjects.value.length > 0 &&
-    !data.isLoadingProjects.value &&
-    !data.isLoadingTasks.value,
-);
-
 async function saveDialog(): Promise<void> {
   const validInput = dialog.validateDialog();
 
@@ -251,14 +244,9 @@ async function retryLoadPage(): Promise<void> {
             No projects or tasks match this view
           </h2>
           <p class="text-text-muted text-sm">
-            Clear the search or create a new task in one of your visible projects.
+            Clear the search or use a project section add action when projects are visible.
           </p>
         </div>
-        <Button
-          label="+ New task"
-          :disabled="!canCreateTasks"
-          @click="openCreateDialog()"
-        />
       </SurfaceCard>
 
       <div

@@ -4,6 +4,7 @@ import Column from "primevue/column";
 import Tag from "primevue/tag";
 import {
   PencilSquareIcon,
+  PlusIcon,
   TrashIcon,
 } from "@heroicons/vue/24/outline";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
@@ -77,14 +78,20 @@ function getStatusPt(task: TaskResponse) {
       </div>
 
       <Button
+        v-tooltip.bottom="'Add task'"
         data-testid="project-section-add-task"
+        aria-label="Add task"
         type="button"
-        label="+ Add task"
-        severity="secondary"
-        variant="outlined"
-        size="small"
+        :pt="{
+          root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
+        }"
         @click="emit('addTask', props.project.id)"
-      />
+      >
+        <PlusIcon
+          aria-hidden="true"
+          class="text-text-inverse size-4"
+        />
+      </Button>
     </div>
 
     <div

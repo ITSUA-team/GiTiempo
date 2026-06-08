@@ -21,6 +21,7 @@ import {
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
+import Button from 'primevue/button';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -54,6 +55,7 @@ defineProps<{
 const emit = defineEmits<{
   'assign-member': [member: WorkspaceMemberResponse];
   'edit-member': [member: WorkspaceMemberResponse];
+  'invite-member': [];
   'remove-member': [member: WorkspaceMemberResponse];
   'update:expandedRows': [expandedRows: MembersTableExpandedRows | undefined];
   'update:filters': [filters: MembersTableFilterUpdate];
@@ -102,16 +104,33 @@ const columns: ManagementTableColumn[] = [
   <div class="mb-4">
     <SectionHeader title="Members Table">
       <template #actions>
-        <IconField class="w-full sm:w-[280px]">
-          <InputIcon class="pi pi-search text-text-muted" />
-          <InputText
-            :model-value="filters.global"
-            aria-label="Search members"
-            class="h-[38px] w-full rounded-[6px] text-[14px]"
-            placeholder="Search members"
-            @update:model-value="updateGlobalFilter"
-          />
-        </IconField>
+        <div class="flex w-full items-center gap-3 sm:w-auto">
+          <IconField class="w-full sm:w-[280px]">
+            <InputIcon class="pi pi-search text-text-muted" />
+            <InputText
+              :model-value="filters.global"
+              aria-label="Search members"
+              class="h-[38px] w-full rounded-[6px] text-[14px]"
+              placeholder="Search members"
+              @update:model-value="updateGlobalFilter"
+            />
+          </IconField>
+          <Button
+            v-tooltip.bottom="'Invite member'"
+            aria-label="Invite member"
+            data-testid="members-table-invite"
+            type="button"
+            :pt="{
+              root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
+            }"
+            @click="emit('invite-member')"
+          >
+            <UserPlusIcon
+              aria-hidden="true"
+              class="text-text-inverse size-4"
+            />
+          </Button>
+        </div>
       </template>
     </SectionHeader>
   </div>
