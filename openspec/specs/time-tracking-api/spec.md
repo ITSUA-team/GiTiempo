@@ -46,10 +46,10 @@ The backend MUST allow authenticated workspace members to list only their own ti
 - **THEN** the backend excludes the other user's entries from the response
 
 ### Requirement: Manual Time Entries Can Be Created
-The backend MUST allow authenticated workspace members to create completed manual time entries against visible active tasks.
+The backend MUST allow authenticated workspace members to create completed manual time entries against visible active open tasks.
 
 #### Scenario: User creates a valid manual entry
-- **GIVEN** an authenticated workspace member has visibility to an active task in an active project
+- **GIVEN** an authenticated workspace member has visibility to an active open task in an active project
 - **WHEN** the member creates a manual entry with valid start and end times
 - **THEN** the backend stores a completed time entry owned by that member
 - **AND** the entry source is `manual`
@@ -58,7 +58,7 @@ The backend MUST allow authenticated workspace members to create completed manua
 #### Scenario: User creates manual entry for public project task
 - **GIVEN** an authenticated workspace member is not assigned to a project
 - **AND** the project is public and active
-- **AND** the task is active
+- **AND** the task is active and open
 - **WHEN** the member creates a manual entry for that task
 - **THEN** the backend stores a completed time entry owned by that member
 
@@ -77,8 +77,13 @@ The backend MUST allow authenticated workspace members to create completed manua
 - **WHEN** an authenticated member attempts to create a manual entry for that task
 - **THEN** the backend rejects the request with 422 Unprocessable Entity
 
+#### Scenario: Manual entry cannot target closed task
+- **GIVEN** an authenticated workspace member has visibility to a closed task
+- **WHEN** the member attempts to create a manual entry for that task
+- **THEN** the backend rejects the request with 422 Unprocessable Entity
+
 ### Requirement: Own Time Entries Can Be Read Updated And Deleted
-The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active task, and MUST allow limited task and description updates to their own running time entry while preventing running-entry interval, billable, and delete mutations. This broadens the prior running task-only reassignment behavior by allowing `description` as the only additional running-entry update field.
+The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active open task, and MUST allow limited task and description updates to their own running time entry when target tasks remain visible, active, and open while preventing running-entry interval, billable, and delete mutations. This broadens the prior running task-only reassignment behavior by allowing `description` as the only additional running-entry update field.
 
 #### Scenario: User reads own entry
 - **GIVEN** an authenticated user owns a time entry
@@ -98,7 +103,7 @@ The backend MUST allow authenticated users to read, update, and delete their own
 
 #### Scenario: User moves completed entry to a visible active task
 - **GIVEN** an authenticated user owns a completed time entry
-- **AND** the user has visibility to another active task in an active project
+- **AND** the user has visibility to another active open task in an active project
 - **WHEN** the user updates the entry with that task identifier
 - **THEN** the backend applies the task change
 - **AND** the response includes the new task and project display context
@@ -118,9 +123,16 @@ The backend MUST allow authenticated users to read, update, and delete their own
 - **THEN** the backend rejects the request with 422 Unprocessable Entity
 - **AND** the original entry task remains unchanged
 
+#### Scenario: User cannot move completed entry to closed task
+- **GIVEN** an authenticated user owns a completed time entry
+- **AND** the requested task is closed
+- **WHEN** the user attempts to update the entry with that task identifier
+- **THEN** the backend rejects the request with 422 Unprocessable Entity
+- **AND** the original entry task remains unchanged
+
 #### Scenario: User updates running entry task and description
 - **GIVEN** an authenticated user owns a running time entry
-- **AND** the user has visibility to another active task in an active project
+- **AND** the user has visibility to another active open task in an active project
 - **WHEN** the user updates the running entry with `taskId` and `description`
 - **THEN** the backend applies the task and description changes without stopping the timer
 - **AND** the response includes the new task and project display context
@@ -151,6 +163,13 @@ The backend MUST allow authenticated users to read, update, and delete their own
 - **THEN** the backend rejects the request with 422 Unprocessable Entity
 - **AND** the original running entry task remains unchanged
 
+#### Scenario: User cannot move running entry to closed task
+- **GIVEN** an authenticated user owns a running time entry
+- **AND** the requested task is closed
+- **WHEN** the user attempts to update the running entry with that task identifier
+- **THEN** the backend rejects the request with 422 Unprocessable Entity
+- **AND** the original running entry task remains unchanged
+
 #### Scenario: User deletes completed entry
 - **GIVEN** an authenticated user owns a completed time entry
 - **WHEN** the user deletes the entry
@@ -175,18 +194,18 @@ The backend MUST expose the authenticated user's current running timer state.
 - **THEN** the backend returns an explicit empty current-timer response
 
 ### Requirement: Timer Can Be Started Against Existing Task
-The backend MUST allow an authenticated workspace member to start one running timer against a visible active task and optionally store a time-entry description on that running timer.
+The backend MUST allow an authenticated workspace member to start one running timer against a visible active open task and optionally store a time-entry description on that running timer.
 
 #### Scenario: User starts timer with no active timer
 - **GIVEN** an authenticated user has no running timer
-- **AND** the user has visibility to an active task in an active project
+- **AND** the user has visibility to an active open task in an active project
 - **WHEN** the user starts a timer for that task
 - **THEN** the backend creates a running time entry owned by that user
 - **AND** the entry source is `web`
 
 #### Scenario: User starts timer with description
 - **GIVEN** an authenticated user has no running timer
-- **AND** the user has visibility to an active task in an active project
+- **AND** the user has visibility to an active open task in an active project
 - **WHEN** the user starts a timer for that task with a valid `description`
 - **THEN** the backend creates a running time entry owned by that user
 - **AND** stores the submitted description on the entry
@@ -196,7 +215,7 @@ The backend MUST allow an authenticated workspace member to start one running ti
 - **GIVEN** an authenticated user has no running timer
 - **AND** the user is not assigned to a project
 - **AND** the project is public and active
-- **AND** the task is active
+- **AND** the task is active and open
 - **WHEN** the user starts a timer for that task
 - **THEN** the backend creates a running time entry owned by that user
 
@@ -215,6 +234,11 @@ The backend MUST allow an authenticated workspace member to start one running ti
 - **WHEN** an authenticated user attempts to start a timer for that task
 - **THEN** the backend rejects the request with 422 Unprocessable Entity
 
+#### Scenario: User cannot start timer for closed task
+- **GIVEN** an authenticated user has visibility to a closed task
+- **WHEN** the user attempts to start a timer for that task
+- **THEN** the backend rejects the request with 422 Unprocessable Entity
+
 ### Requirement: Running Timer Can Be Stopped
 The backend MUST allow an authenticated user to stop their current running timer and convert it into a completed time entry.
 
@@ -231,7 +255,7 @@ The backend MUST allow an authenticated user to stop their current running timer
 - **THEN** the backend responds with 404 Not Found
 
 ### Requirement: Chrome Extension Can Start Timer From GitHub Issue
-The backend MUST provide a Chrome Extension-facing endpoint that starts a timer from GitHub issue data and lazily creates local project/task records when necessary.
+The backend MUST provide a Chrome Extension-facing endpoint that starts a timer from GitHub issue data and lazily creates local project/task records when necessary, but it MUST NOT start a timer for an existing closed local task mapping.
 
 #### Scenario: Extension starts timer for new GitHub issue
 - **GIVEN** an authenticated user has no running timer
@@ -242,10 +266,16 @@ The backend MUST provide a Chrome Extension-facing endpoint that starts a timer 
 - **AND** creates a running time entry with source `extension`
 
 #### Scenario: Extension reuses existing GitHub issue mapping
-- **GIVEN** local provider references already map the submitted GitHub issue to a task
+- **GIVEN** local provider references already map the submitted GitHub issue to an active open task
 - **WHEN** the extension starts a timer for that issue
 - **THEN** the backend reuses the existing project and task records
 - **AND** creates a running time entry for the authenticated user
+
+#### Scenario: Extension cannot start timer for closed mapped task
+- **GIVEN** local provider references already map the submitted GitHub issue to a closed task
+- **WHEN** the extension starts a timer for that issue
+- **THEN** the backend rejects the request with 422 Unprocessable Entity
+- **AND** the backend does not create a running time entry
 
 #### Scenario: Extension start preserves non-admin visibility
 - **GIVEN** an authenticated non-admin user starts a timer for a newly created GitHub project

@@ -65,6 +65,15 @@ The system MUST allow any active workspace member with project visibility to rea
 - **WHEN** the requester updates valid mutable task fields
 - **THEN** the system applies the update
 
+#### Scenario: Closing a task stops running time entries
+
+- **GIVEN** the requester has visibility to a task's active project
+- **AND** one or more users have running time entries for that task
+- **WHEN** the requester updates the task status to `closed`
+- **THEN** the system closes those running time entries
+- **AND** each closed entry receives an end time and positive stored duration
+- **AND** future current-timer lookups no longer return those entries as running
+
 #### Scenario: Task cannot be updated in inactive project
 
 - **GIVEN** a task belongs to an inactive project
@@ -145,10 +154,10 @@ The system MUST expose task responses without provider-specific integration fiel
 - **AND** the response does not expose provider-specific external reference fields
 
 ### Requirement: Visible Active Tasks Can Receive Time Tracking
-The system MUST allow time tracking only against tasks that the requester can see and that remain active under an active project.
+The system MUST allow time tracking only against tasks that the requester can see and that remain active and open under an active project.
 
 #### Scenario: Visible active task accepts time tracking
-- **GIVEN** the requester has visibility to an active task in an active project
+- **GIVEN** the requester has visibility to an active open task in an active project
 - **WHEN** the requester creates a manual entry or starts a timer for that task
 - **THEN** the system accepts the task as a valid tracking target
 
@@ -159,6 +168,11 @@ The system MUST allow time tracking only against tasks that the requester can se
 
 #### Scenario: Inactive task cannot receive time tracking
 - **GIVEN** a task is inactive
+- **WHEN** a requester creates a manual entry or starts a timer for that task
+- **THEN** the system responds with 422 Unprocessable Entity
+
+#### Scenario: Closed task cannot receive time tracking
+- **GIVEN** a task is closed
 - **WHEN** a requester creates a manual entry or starts a timer for that task
 - **THEN** the system responds with 422 Unprocessable Entity
 
