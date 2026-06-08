@@ -7,8 +7,8 @@ The `admin-web` router MUST enforce role requirements for authenticated product 
 #### Scenario: Product route role matrix is explicit
 
 - **WHEN** the admin-web router defines role-restricted product routes
-- **THEN** Dashboard and Reports allow workspace roles `admin` and `pm`
-- **AND** Invoices, Members, Projects, Add Project, and Settings allow only workspace role `admin`
+- **THEN** Dashboard, Reports, and Invoices allow workspace roles `admin` and `pm`
+- **AND** Members, Projects, Add Project, and Settings allow only workspace role `admin`
 - **AND** route-level `/403` and authenticated not-found routes remain authenticated standalone routes without product-page role restrictions
 
 #### Scenario: Member is denied access to the admin shell entry

@@ -53,7 +53,7 @@ Affected frontend rules come from `apps/admin-web/AGENTS.md`, `docs/ui/INDEX.md`
 
 5. Start with current page capabilities rather than ideal future role scopes.
 
-   Dashboard and Reports are available to `admin` and `pm`. Members, Settings, Add Project, and current Projects page behavior are admin-only because they call admin-only member/workspace endpoints. Invoices remains admin-only until invoice requirements define PM access.
+   Dashboard, Reports, and Invoices are available to `admin` and `pm`, with PM invoice behavior remaining constrained by the documented assigned-project invoice scope. Members, Settings, Add Project, and current Projects page behavior are admin-only because they call admin-only member/workspace endpoints.
 
 6. Share the protected-router factory, not the route map.
 

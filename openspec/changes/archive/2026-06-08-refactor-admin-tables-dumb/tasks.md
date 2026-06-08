@@ -14,13 +14,13 @@
 
 ## 3. Projects Table Ownership
 
-- [x] 3.1 Update `ProjectsTable.vue` so desktop and mobile `Archive` actions emit `archive` with the selected project instead of opening confirmation or calling project APIs.
-- [x] 3.2 Update `ProjectsTable.vue` so desktop and mobile `Unarchive` actions emit `unarchive` with the selected project instead of calling project APIs.
+- [x] 3.1 Keep `ProjectsTable.vue` archive and unarchive controls out of desktop and mobile row/card actions, with status actions rendered by page-owned inline project settings content.
+- [x] 3.2 Update inline project settings archive and unarchive actions so they emit `archive` or `unarchive` with the selected project instead of calling project APIs.
 - [x] 3.3 Remove `ProjectsTable.vue` dependencies on admin API clients, auth store, confirmation helpers, and toast helpers.
-- [x] 3.4 Keep Projects table filtering, desktop/mobile rendering, edit expansion, row collapse behavior, active/archived action visibility, labels, tooltips, and `data-testid` values unchanged.
+- [x] 3.4 Keep Projects table filtering, desktop/mobile rendering, edit expansion, row collapse behavior, inline settings action visibility, labels, tooltips, and `data-testid` values unchanged.
 - [x] 3.5 Move archive confirmation, access-token early return, `{ isActive: false }` update, success toast, error toast, and projects/summary refresh orchestration into `ProjectsView.vue` or a focused projects-page composable.
 - [x] 3.6 Move unarchive access-token early return, `{ isActive: true }` update, success toast, error toast, and projects/summary refresh orchestration into `ProjectsView.vue` or the same focused projects-page composable.
-- [x] 3.7 Wire `ProjectsView.vue` to handle the table's `archive` and `unarchive` intents while preserving existing `edit-saved` refresh behavior.
+- [x] 3.7 Wire `ProjectsView.vue` to handle inline settings `archive` and `unarchive` intents while preserving existing `edit-saved` refresh behavior.
 
 ## 4. Tests
 
@@ -28,7 +28,7 @@
 - [x] 4.2 Add or update `MembersTable.spec.ts` coverage proving desktop and mobile `Remove` actions emit `remove-member` with the selected member and do not require orchestration services.
 - [x] 4.3 Add or update `MembersView.spec.ts` or a members-page composable spec for successful confirmed member removal, cancellation without a request, and failed removal error feedback.
 - [x] 4.4 Update `ProjectsTable.spec.ts` to remove project client, auth store, toast, and confirmation mocks from table-level archive/unarchive tests.
-- [x] 4.5 Add or update `ProjectsTable.spec.ts` coverage proving desktop and mobile `Archive` and `Unarchive` actions emit the selected project and do not require orchestration services.
+- [x] 4.5 Add or update `ProjectsTable.spec.ts` coverage proving desktop and mobile table rendering does not own Archive or Unarchive orchestration services.
 - [x] 4.6 Add or update `ProjectsView.spec.ts` or a projects-page composable spec for successful confirmed archive, archive cancellation without a request, failed archive feedback, successful unarchive, and failed unarchive feedback.
 - [x] 4.7 Preserve existing table filter, expansion, desktop/mobile rendering, and page loading/error tests.
 
@@ -53,7 +53,7 @@
 
 - [x] 7.1 Audit admin table components (`MembersTable.vue`, `ProjectsTable.vue`, and `reports/ReportsTable.vue`) for admin API clients, auth stores, toast helpers, confirmation helpers, and mutation orchestration.
 - [x] 7.2 Move Projects table filters, filter options, filtered rows, empty-state copy, and expansion state out of `ProjectsTable.vue` into `ProjectsView.vue` or a focused projects-table composable.
-- [x] 7.3 Change `ProjectsTable.vue` to receive prepared rows/filter/expansion props and emit filter updates plus Edit, Archive, and Unarchive row intents without internal reactive state, computed derivation, watchers, or form rendering.
+- [x] 7.3 Change `ProjectsTable.vue` to receive prepared rows/filter/expansion props and emit filter updates plus Edit row intents without internal reactive state, computed derivation, watchers, form rendering, or archive/unarchive row actions.
 - [x] 7.4 Move `ProjectEditForm` rendering to the Projects page owner while preserving save/cancel collapse, project refresh, and summary refresh behavior.
 - [x] 7.5 Move member assignment save, member role save, and project settings save API/toast orchestration out of inline expansion forms into `MembersView.vue` and `ProjectsView.vue`.
 - [x] 7.6 Update table, form, view, and composable tests for dumb table/form boundaries and moved orchestration.

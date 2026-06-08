@@ -8,7 +8,7 @@ The nearest app guidance in `apps/admin-web/AGENTS.md` keeps full route pages an
 
 **Goals:**
 
-- Make `MembersTable.vue` and `ProjectsTable.vue` fully presentational by receiving prepared table rows, filter values/options, empty-state copy, viewport mode, expanded rows, and row-expansion slot content from their parents, then emitting typed row-level intents and filter/expanded-row updates.
+- Make `MembersTable.vue` and `ProjectsTable.vue` fully presentational by receiving prepared table rows, filter values/options, empty-state copy, viewport mode, expanded rows, and row-expansion slot content from their parents, then emitting typed row-level intents and filter/expanded-row updates. Project archive/unarchive intents stay inside the page-owned inline settings content rather than row/card table actions.
 - Make inline expansion forms presentational by keeping validation/control rendering local while emitting typed save payloads to the route view.
 - Move member removal and project archive/unarchive orchestration to the route view or a focused admin-web composable so API calls, confirmations, success/error toasts, and refresh logic are tested at the owner boundary.
 - Preserve existing user-visible behavior, accessibility labels/tooltips, refresh behavior, and error handling.
@@ -25,8 +25,8 @@ The nearest app guidance in `apps/admin-web/AGENTS.md` keeps full route pages an
 - Move Members and Projects table filtering, prepared display-row derivation, expansion state, and expansion-mode state to route views or focused table-state composables.
   - Rationale: the stricter dumb/presentational boundary now applies to all admin table components. Tables should render supplied rows and forward user intents.
   - Alternative considered: keep filter and expansion state in table components as presentational UI state. That conflicts with the clarified requirement and keeps tables harder to isolate.
-- Replace table-owned mutations with typed emits carrying the affected row payload.
-  - Rationale: parent owners need row context for confirmation copy and API calls, while table components only need to report user intent from desktop and mobile action controls.
+- Replace table-owned mutations with typed emits from the page-owned interaction surface carrying the affected row payload.
+  - Rationale: parent owners need row context for confirmation copy and API calls, while table components only need to report filter/edit intent from desktop and mobile controls. Project archive/unarchive controls remain in the inline settings content documented by the UI source of truth.
   - Alternative considered: emit only IDs. That would force parents to re-find rows for names/copy and creates more edge cases when loaded data changes during confirmation.
 - Put orchestration in the existing route views first, then extract focused composables only if route code becomes broad.
   - Rationale: this is an app-local refactor with one page owner per mutation family. A composable is useful for testability or view thinness, but an up-front shared abstraction would be unnecessary.
@@ -57,5 +57,4 @@ The nearest app guidance in `apps/admin-web/AGENTS.md` keeps full route pages an
 
 ## Open Questions
 
-- Whether the implementation should keep orchestration directly in route views or extract focused composables will be decided after the first pass based on view size and test clarity.
-- The approved `GITiempo.pen` admin Members and Projects frames need to be opened in the Pencil editor before implementation sign-off because the current tool session could not access them.
+- None. The implementation keeps orchestration in page-owned route views or focused app-local composables, and the approved `GITiempo.pen` admin Members and Projects frames were inspected during implementation sign-off.
