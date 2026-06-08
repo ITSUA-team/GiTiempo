@@ -71,11 +71,13 @@ async function handleSignOut(): Promise<void> {
     <WorkspaceHeader
       :counterpart-href="adminWorkspaceHref"
       counterpart-label="Admin workspace"
+      center-content-align="end"
       :display-name="authStore.displayName"
       :page-name="pageName"
       :settings-icon="profileIcon"
       settings-label="Profile"
       :settings-to="{ name: routeNames.profile }"
+      :show-display-name="false"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"
       @sign-out="handleSignOut"

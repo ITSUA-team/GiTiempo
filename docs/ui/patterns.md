@@ -203,7 +203,7 @@ Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
 
 Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-bar timer surface.
 
-- The full compact top-bar timer surface is always clickable, including when start is disabled.
+- The full compact top-bar timer surface is always clickable, including when the current timer summary is loading, unavailable, or not yet startable.
 - The dialog is the primary place to switch the selected task context and to trigger timer start/stop behavior in `user-web`.
 - Use visible `Project -> Task` selection only.
 - Use sequential PrimeVue `<AutoComplete dropdown forceSelection>` controls for project and task selection.
@@ -213,9 +213,9 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - When `Task = New task`, the created task inherits the selected project's default billable value.
 - The dialog includes an optional `Description` field directly below `Task`; it is a time-entry note, not task metadata.
 - Use PrimeVue `<Textarea>` for the description field.
-- When the timer is idle, the popup primary action is `Start timer`, and the selected task and description become the draft for the new running entry.
+- When the timer is idle, the popup primary action is `Start timer`, and the selected task and description become the draft for the new running entry. There is no separate shell-level start button outside the popup.
 - The running-entry draft initializes `isBillable` from the selected task's default billable value.
-- When the timer is already running, secondary `Change task` updates the running entry's task and description without stopping the timer, and primary `Stop timer` sits to its right in the same popup.
+- When the timer is already running, secondary `Change task` updates the running entry's task and description without stopping the timer, and primary `Stop timer` sits to its right in the same popup. These actions do not reappear as separate shell-level controls.
 - The dialog supports creating a new task inside the currently selected visible project through the `Task` select.
 - Do not support creating a new project from this dialog.
 - When `Task` is set to `New task`, show a single required task-title input directly below the task select, backed by the existing task-create contract.
@@ -255,6 +255,7 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 - Below `640px`, do not squeeze the compact center-area surface into the top row; use the mobile timer strip defined in `docs/ui/layout.md` while keeping the same state model, task-picker behavior, and accessibility requirements.
 - Running state shows project on the first line, task on the second line, and live `HH:MM:SS` inside one clickable compact timer surface that leads into the popup-owned timer actions.
 - Not-running state shows the same two-line project/task structure in the clickable compact timer surface instead of a shell-level start action.
+- The compact timer surface sits against the avatar side of the header center area at content width instead of stretching across the center slot.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
 - A completed timer entry or manual entry may seed the last tracked task context if the task remains trackable.
 - The popup `Start timer` action always creates a fresh running time entry. It must not resume or mutate the previous time entry record.

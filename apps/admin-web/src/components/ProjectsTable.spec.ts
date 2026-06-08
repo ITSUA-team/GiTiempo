@@ -76,7 +76,7 @@ function createProjects(): ProjectListResponse {
       members: [],
       name: 'Project Orion',
       source: 'github',
-      totalHours: 148,
+      totalSeconds: 532800,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'public',
       workspaceId: 'workspace-1',
@@ -90,7 +90,7 @@ function createProjects(): ProjectListResponse {
       members: [],
       name: 'Legacy Project',
       source: 'manual',
-      totalHours: 4,
+      totalSeconds: 14400,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'private',
       workspaceId: 'workspace-1',
@@ -101,7 +101,7 @@ function createProjects(): ProjectListResponse {
 function createRows(projects = createProjects()): ProjectsTableRow[] {
   return projects.map((project) => ({
     assignedMembersLabel: `${project.members.length} members`,
-    hoursLabel: `${project.totalHours}h`,
+    hoursLabel: `${project.totalSeconds / 3600}h`,
     id: project.id,
     isActive: project.isActive,
     name: project.name,
@@ -170,6 +170,22 @@ describe('ProjectsTable', () => {
     expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
   });
 
+  it('renders supplied readable duration labels without deriving decimal hours', () => {
+    const project = {
+      ...createProjects()[0]!,
+      totalSeconds: 139980,
+    };
+    const row = {
+      ...createRows([project])[0]!,
+      hoursLabel: '38h 53m',
+    };
+
+    const wrapper = mountProjectsTable({ rows: [row] });
+
+    expect(wrapper.text()).toContain('38h 53m');
+    expect(wrapper.text()).not.toContain('38.8888');
+  });
+
   it('emits filter updates without deriving or mutating the supplied rows', async () => {
     const wrapper = mountProjectsTable();
 
@@ -231,7 +247,13 @@ describe('ProjectsTable', () => {
   it('renders supplied mobile card fields, actions, and expansion slot content', async () => {
     const activeProject = createProjects()[0]!;
     const archivedProject = createProjects()[1]!;
-    const rows = createRows([activeProject, archivedProject]);
+    const rows = [
+      {
+        ...createRows([activeProject])[0]!,
+        hoursLabel: '12h 30m',
+      },
+      createRows([archivedProject])[0]!,
+    ];
     const wrapper = mountProjectsTable({
       isMobileViewport: true,
       rows,
@@ -246,7 +268,7 @@ describe('ProjectsTable', () => {
     expect(mobileCards[0]?.text()).toContain('Project Orion');
     expect(mobileCards[0]?.text()).toContain('GitHub Repo');
     expect(mobileCards[0]?.text()).toContain('Public');
-    expect(mobileCards[0]?.text()).toContain('148h');
+    expect(mobileCards[0]?.text()).toContain('12h 30m');
     expect(mobileCards[1]?.text()).toContain('Legacy Project');
     expect(mobileCards[1]?.text()).toContain('Private');
     expect(wrapper.get('[data-testid="row-expansion"]').text()).toBe('Project Orion');

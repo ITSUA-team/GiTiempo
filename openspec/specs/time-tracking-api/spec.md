@@ -77,8 +77,8 @@ The backend MUST allow authenticated workspace members to create completed manua
 - **WHEN** an authenticated member attempts to create a manual entry for that task
 - **THEN** the backend rejects the request with 422 Unprocessable Entity
 
-### Requirement: Own Completed Time Entries Can Be Read Updated And Deleted
-The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active task. The backend MUST also allow task-only reassignment for the authenticated user's own running time entry, while preventing other mutation of running entries until the timer is stopped. Task-only reassignment through the own-entry update endpoint MUST remain valid for the same owned entry if it stops before the update request is processed.
+### Requirement: Own Time Entries Can Be Read Updated And Deleted
+The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active task, and MUST allow limited task and description updates to their own running time entry while preventing running-entry interval, billable, and delete mutations. This broadens the prior running task-only reassignment behavior by allowing `description` as the only additional running-entry update field.
 
 #### Scenario: User reads own entry
 - **GIVEN** an authenticated user owns a time entry
@@ -118,47 +118,38 @@ The backend MUST allow authenticated users to read, update, and delete their own
 - **THEN** the backend rejects the request with 422 Unprocessable Entity
 - **AND** the original entry task remains unchanged
 
-#### Scenario: User moves running entry to a visible active task
+#### Scenario: User updates running entry task and description
 - **GIVEN** an authenticated user owns a running time entry
 - **AND** the user has visibility to another active task in an active project
-- **WHEN** the user updates the running entry with only that task identifier
-- **THEN** the backend applies the task change without stopping the timer
+- **WHEN** the user updates the running entry with `taskId` and `description`
+- **THEN** the backend applies the task and description changes without stopping the timer
 - **AND** the response includes the new task and project display context
-- **AND** the entry remains running with no ended time or stored duration
+- **AND** the entry remains running with empty end time and duration
 
-#### Scenario: User moves an entry after it stops during reassignment
+#### Scenario: User clears running entry description
 - **GIVEN** an authenticated user owns a running time entry
-- **AND** the time entry is stopped before a task-only update request is processed
-- **AND** the user has visibility to another active task in an active project
-- **WHEN** the user updates that now-completed entry with only that task identifier
-- **THEN** the backend applies the task change
-- **AND** the response includes the new task and project display context
-- **AND** the entry remains completed with its ended time and stored duration unchanged
+- **WHEN** the user updates the running entry with `description: null`
+- **THEN** the backend clears the description without stopping the timer
+
+#### Scenario: User cannot update running entry interval or billable fields
+- **GIVEN** an authenticated user owns a running time entry
+- **WHEN** the user attempts to update `startedAt`, `endedAt`, or `isBillable`
+- **THEN** the backend rejects the request and instructs the user to stop the timer first
+- **AND** the running entry remains unchanged
 
 #### Scenario: User cannot move running entry to invisible private task
 - **GIVEN** an authenticated user owns a running time entry
 - **AND** the user lacks visibility to a private task's project
-- **WHEN** the user attempts to update the running entry with only that task identifier
+- **WHEN** the user attempts to update the running entry with that task identifier
 - **THEN** the backend responds with 404 Not Found
 - **AND** the original running entry task remains unchanged
 
 #### Scenario: User cannot move running entry to inactive work
 - **GIVEN** an authenticated user owns a running time entry
 - **AND** the requested task or its parent project is inactive
-- **WHEN** the user attempts to update the running entry with only that task identifier
+- **WHEN** the user attempts to update the running entry with that task identifier
 - **THEN** the backend rejects the request with 422 Unprocessable Entity
 - **AND** the original running entry task remains unchanged
-
-#### Scenario: User cannot update non-task fields on a running entry
-- **GIVEN** an authenticated user owns a running time entry
-- **WHEN** the user attempts to update description, start time, end time, or billable state through the own-entry endpoint
-- **THEN** the backend rejects the request and instructs the user to stop the timer first
-
-#### Scenario: User cannot submit mixed running entry updates
-- **GIVEN** an authenticated user owns a running time entry
-- **WHEN** the user attempts to update both the task identifier and any completed-entry field
-- **THEN** the backend rejects the request without applying the task change
-- **AND** the response instructs the user to stop the timer first
 
 #### Scenario: User deletes completed entry
 - **GIVEN** an authenticated user owns a completed time entry
@@ -184,13 +175,21 @@ The backend MUST expose the authenticated user's current running timer state.
 - **THEN** the backend returns an explicit empty current-timer response
 
 ### Requirement: Timer Can Be Started Against Existing Task
-The backend MUST allow an authenticated workspace member to start one running timer against a visible active task.
+The backend MUST allow an authenticated workspace member to start one running timer against a visible active task and optionally store a time-entry description on that running timer.
 
 #### Scenario: User starts timer with no active timer
 - **GIVEN** an authenticated user has no running timer
 - **AND** the user has visibility to an active task in an active project
 - **WHEN** the user starts a timer for that task
 - **THEN** the backend creates a running time entry owned by that user
+- **AND** the entry source is `web`
+
+#### Scenario: User starts timer with description
+- **GIVEN** an authenticated user has no running timer
+- **AND** the user has visibility to an active task in an active project
+- **WHEN** the user starts a timer for that task with a valid `description`
+- **THEN** the backend creates a running time entry owned by that user
+- **AND** stores the submitted description on the entry
 - **AND** the entry source is `web`
 
 #### Scenario: User starts timer for public project task
@@ -295,4 +294,3 @@ The backend MUST allow authenticated users to list time entries for visible proj
 - **GIVEN** an authenticated user can view another user's time entry through a project list
 - **WHEN** the authenticated user attempts to update or delete that other user's entry through own-entry endpoints
 - **THEN** the backend responds with 404 Not Found
-

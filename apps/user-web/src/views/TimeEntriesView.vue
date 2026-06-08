@@ -125,7 +125,9 @@ async function loadFilterProjectTasks(projectId: string) {
 }
 
 async function loadDialogProjectTasks(projectId: string) {
-  return taskOptions.loadTargetProjectTaskOptions(projectId, dialog);
+  return taskOptions.loadTargetProjectTaskOptions(projectId, dialog, {
+    trackableOnly: true,
+  });
 }
 
 async function applyFilters(): Promise<void> {

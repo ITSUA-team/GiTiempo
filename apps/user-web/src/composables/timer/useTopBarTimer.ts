@@ -135,24 +135,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const isNewTaskSelected = computed(
     () => picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID,
   );
-  const isPrimaryActionDisabled = computed(() => {
-    if (
-      timerActions.isPrimaryActionPending.value ||
-      summary.isLoadingSummary.value ||
-      updateTimeEntryMutation.isPending.value
-    ) {
-      return true;
-    }
-
-    if (isTimerRunning.value) {
-      return false;
-    }
-
-    return (
-      !summary.selectedContext.value ||
-      summary.summaryErrorMessage.value !== null
-    );
-  });
   const isCreateTaskDisabled = computed(() => {
     return (
       !picker.selectedProjectId.value ||
@@ -196,9 +178,21 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       summary.summaryErrorMessage.value !== null
     );
   });
+  const isDialogSecondaryActionDisabled = computed(() => {
+    if (!isTimerRunning.value) {
+      return true;
+    }
+
+    return (
+      isConfirmSelectionDisabled.value ||
+      timerActions.isPrimaryActionPending.value ||
+      updateTimeEntryMutation.isPending.value
+    );
+  });
 
   async function openDialog(): Promise<void> {
     selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
     picker.openTaskPicker(summary.getDialogSelectionFromCurrentState());
 
     try {
@@ -221,11 +215,13 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   function closeDialog(): void {
     selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
     picker.closeDialog();
   }
 
   function setSelectedProjectId(projectId: string | null): void {
     selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
     const shouldClearSelectedTask =
       picker.selectedProjectId.value !== projectId;
 
@@ -238,7 +234,14 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   function setSelectedTaskId(taskId: string | null): void {
     selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
     picker.setSelectedTaskId(taskId);
+  }
+
+  function setSelectedDescription(description: string): void {
+    selectionUpdateErrorMessage.value = null;
+    timerActions.clearTimerActionError();
+    picker.setSelectedDescription(description);
   }
 
   async function confirmSelectedTask(): Promise<void> {
@@ -308,14 +311,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     closeDialog();
   }
 
-  async function handlePrimaryAction(): Promise<void> {
-    if (updateTimeEntryMutation.isPending.value) {
-      return;
-    }
-
-    await timerActions.handlePrimaryAction();
-  }
-
   async function handleDialogPrimaryAction(): Promise<void> {
     if (updateTimeEntryMutation.isPending.value) {
       return;
@@ -338,11 +333,27 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       summary.setIdleSelection(context, picker.getNormalizedDescription());
     }
 
-    await timerActions.handlePrimaryAction();
+    const didMutateTimer = await timerActions.handlePrimaryAction();
 
-    if (timerActions.timerActionErrorMessage.value === null) {
+    if (didMutateTimer) {
       closeDialog();
     }
+  }
+
+  async function startTimerFromDialog(): Promise<void> {
+    if (isTimerRunning.value) {
+      return;
+    }
+
+    await handleDialogPrimaryAction();
+  }
+
+  async function stopTimerFromDialog(): Promise<void> {
+    if (!isTimerRunning.value) {
+      return;
+    }
+
+    await handleDialogPrimaryAction();
   }
 
   watch(picker.selectedProjectId, async (nextProjectId, previousProjectId) => {
@@ -382,17 +393,16 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     currentTimer: summary.currentTimer,
     elapsedTimeLabel,
     handleDialogPrimaryAction,
-    handlePrimaryAction,
     isConfirmSelectionDisabled,
     isConfirmingSelection: updateTimeEntryMutation.isPending,
     isCreateTaskDisabled,
     isCreatingTask: taskCreation.isCreatingTask,
     isDialogPrimaryActionDisabled,
     isDialogOpen: picker.isDialogOpen,
+    isDialogSecondaryActionDisabled,
     isLoadingProjects: taskOptions.isLoadingProjects,
     isLoadingSummary: summary.isLoadingSummary,
     isLoadingTasks: taskOptions.isLoadingTasks,
-    isPrimaryActionDisabled,
     isPrimaryActionPending: timerActions.isPrimaryActionPending,
     isTimerRunning,
     openDialog,
@@ -402,15 +412,17 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     refreshSummary: summary.refreshSummary,
     selectedContext: summary.selectedContext,
     selectedDescription: picker.selectedDescription,
-    selectedProjectId: picker.selectedProjectId,
     selectedProject: picker.selectedProject,
+    selectedProjectId: picker.selectedProjectId,
     selectedTask: picker.selectedTask,
     selectedTaskId: picker.selectedTaskId,
     selectionUpdateErrorMessage,
     setCreateTaskTitle: picker.setCreateTaskTitle,
-    setSelectedDescription: picker.setSelectedDescription,
+    setSelectedDescription,
     setSelectedProjectId,
     setSelectedTaskId,
+    startTimerFromDialog,
+    stopTimerFromDialog,
     summaryErrorMessage: summary.summaryErrorMessage,
     taskOptions: picker.activeTasks,
     tasksErrorMessage: picker.tasksErrorMessage,

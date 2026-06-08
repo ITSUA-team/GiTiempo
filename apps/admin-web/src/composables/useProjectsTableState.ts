@@ -5,6 +5,7 @@ import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
+import { formatTrimmedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import type {
   ProjectHoursFilter,
   ProjectsTableExpandedRows,
@@ -58,6 +59,10 @@ function formatVisibility(visibility: ProjectResponse['visibility']): string {
 function formatAssignedMembers(project: ProjectResponse): string {
   const count = project.members.length;
   return `${count} member${count === 1 ? '' : 's'}`;
+}
+
+function formatProjectTotalHours(project: ProjectResponse): string {
+  return formatTrimmedHoursMinutesDuration(project.totalSeconds);
 }
 
 function getProjectMemberLabels(project: ProjectResponse): string[] {
@@ -120,15 +125,15 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
 
   function matchesHoursFilter(project: ProjectResponse): boolean {
     if (filters.hours === 'tracked') {
-      return project.totalHours > 0;
+      return project.totalSeconds > 0;
     }
 
     if (filters.hours === 'gte40') {
-      return project.totalHours >= 40;
+      return project.totalSeconds >= 40 * 60 * 60;
     }
 
     if (filters.hours === 'zero') {
-      return project.totalHours === 0;
+      return project.totalSeconds === 0;
     }
 
     return true;
@@ -145,7 +150,7 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
       project.name,
       formatSource(project.source),
       formatAssignedMembers(project),
-      `${project.totalHours}h`,
+      formatProjectTotalHours(project),
       formatVisibility(project.visibility),
       project.isActive ? 'Active' : 'Archived',
       ...getProjectMemberLabels(project),
@@ -158,7 +163,7 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
   function createRow(project: ProjectResponse): ProjectsTableRow {
     return {
       assignedMembersLabel: formatAssignedMembers(project),
-      hoursLabel: `${project.totalHours}h`,
+      hoursLabel: formatProjectTotalHours(project),
       id: project.id,
       isActive: project.isActive,
       name: project.name,

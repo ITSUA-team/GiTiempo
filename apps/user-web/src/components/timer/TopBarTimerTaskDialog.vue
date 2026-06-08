@@ -38,16 +38,16 @@ const props = defineProps<{
   isOpen: boolean;
   isPrimaryActionDisabled: boolean;
   isPrimaryActionPending: boolean;
-  projectOptions: ProjectResponse[];
   primaryActionLabel: string;
+  projectOptions: ProjectResponse[];
   projectsErrorMessage: string | null;
   selectedDescription: string;
   selectedProjectId: string | null;
   selectedTaskId: string | null;
   selectionUpdateErrorMessage: string | null;
   taskOptions: TaskResponse[];
-  timerActionErrorMessage: string | null;
   tasksErrorMessage: string | null;
+  timerActionErrorMessage: string | null;
 }>();
 
 const emit = defineEmits<{

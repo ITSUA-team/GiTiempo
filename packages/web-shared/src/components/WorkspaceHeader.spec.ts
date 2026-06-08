@@ -19,10 +19,12 @@ const baseProps = {
 };
 
 type HeaderProps = typeof baseProps & {
+  centerContentAlign?: "center" | "end";
   pageName?: string;
   profileContextLabel?: string;
   settingsIcon?: Component;
   settingsLabel?: string;
+  showDisplayName?: boolean;
   showSettings?: boolean;
 };
 
@@ -228,6 +230,9 @@ describe("WorkspaceHeader", () => {
 
   it("renders app-owned center slot content in the responsive center row", () => {
     const wrapper = mountHeader({
+      props: {
+        centerContentAlign: "end",
+      },
       slots: {
         center:
           '<div class="rounded-lg border px-3 py-1" data-testid="header-center-slot">Running timer</div>',
@@ -240,9 +245,24 @@ describe("WorkspaceHeader", () => {
     expect(centerRow.classes()).toContain("row-start-2");
     expect(centerRow.classes()).toContain("sm:row-start-1");
     expect(centerRow.classes()).not.toContain("sm:px-2");
+    expect(wrapper.get('[data-testid="workspace-header-center-content"]').classes()).toContain(
+      "sm:justify-end",
+    );
     expect(centerSlot.text()).toBe("Running timer");
     expect(wrapper.findAll('[data-testid="header-center-slot"]')).toHaveLength(1);
     expect(wrapper.text()).not.toContain("Alexey Tsukanov");
+  });
+
+  it("supports an avatar-only profile trigger when the consuming app hides display text", () => {
+    const wrapper = mountHeader({
+      props: {
+        showDisplayName: false,
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Alexey Tsukanov");
+    expect(wrapper.get('[data-testid="profile-menu-trigger"]').text()).toContain("AT");
+    expect(wrapper.get('[data-testid="profile-avatar"]')).toBeTruthy();
   });
 
   it("keeps mobile timer actions usable beside the top-right profile menu overlay", async () => {

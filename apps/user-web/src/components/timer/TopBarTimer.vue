@@ -15,11 +15,11 @@ const {
   elapsedTimeLabel,
   handleDialogPrimaryAction,
   isConfirmingSelection,
-  isConfirmSelectionDisabled,
   isCreateTaskDisabled,
   isCreatingTask,
   isDialogPrimaryActionDisabled,
   isDialogOpen,
+  isDialogSecondaryActionDisabled,
   isLoadingProjects,
   isLoadingSummary,
   isLoadingTasks,
@@ -119,7 +119,7 @@ const showsElapsedTime = computed(
 
     <div
       class="flex min-w-0 flex-1 flex-col items-start justify-start gap-0 text-left"
-      data-testid="top-bar-timer-mobile-context"
+      data-testid="top-bar-timer-mobile-metadata"
     >
       <span class="text-text-muted flex w-full min-w-0 items-center gap-2 text-[11px] leading-none font-medium">
         <span class="truncate">{{ timerProjectLabel }}</span>
@@ -127,7 +127,7 @@ const showsElapsedTime = computed(
           v-if="showsElapsedTime"
           aria-hidden="true"
           aria-live="off"
-          class="text-brand shrink-0 tabular-nums"
+          class="text-brand shrink-0 text-[11px] font-semibold tabular-nums"
           data-testid="top-bar-timer-elapsed"
         >
           {{ elapsedTimeLabel }}
@@ -142,15 +142,15 @@ const showsElapsedTime = computed(
   <TopBarTimerTaskDialog
     :create-task-error-message="createTaskErrorMessage"
     :create-task-title="createTaskTitle"
-    :is-confirm-selection-disabled="isConfirmSelectionDisabled"
+    :is-confirm-selection-disabled="isDialogSecondaryActionDisabled"
     :is-confirming-selection="isConfirmingSelection"
     :is-create-task-disabled="isCreateTaskDisabled"
     :is-creating-task="isCreatingTask"
-    :is-primary-action-disabled="isDialogPrimaryActionDisabled"
-    :is-primary-action-pending="isPrimaryActionPending"
     :is-loading-projects="isLoadingProjects"
     :is-loading-tasks="isLoadingTasks"
     :is-open="isDialogOpen"
+    :is-primary-action-disabled="isDialogPrimaryActionDisabled"
+    :is-primary-action-pending="isPrimaryActionPending"
     :primary-action-label="primaryActionLabel"
     :project-options="projectOptions"
     :projects-error-message="projectsErrorMessage ?? summaryErrorMessage"
@@ -159,8 +159,8 @@ const showsElapsedTime = computed(
     :selected-task-id="selectedTaskId"
     :selection-update-error-message="selectionUpdateErrorMessage"
     :task-options="taskOptions"
-    :timer-action-error-message="timerActionErrorMessage"
     :tasks-error-message="tasksErrorMessage"
+    :timer-action-error-message="timerActionErrorMessage"
     @close="closeDialog"
     @confirm="confirmSelectedTask"
     @primary-action="handleDialogPrimaryAction"
