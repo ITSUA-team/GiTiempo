@@ -2,7 +2,7 @@
 
 - [x] 1.1 Extend `apps/admin-web/src/router/route-meta.d.ts` with typed `allowedRoles?: readonly WorkspaceRole[]` metadata.
 - [x] 1.2 Add a small shared RBAC helper that accepts route `allowedRoles` plus the current profile role and returns whether access is allowed.
-- [x] 1.3 Annotate authenticated admin product routes with role requirements: admin/PM for Dashboard and Reports, admin-only for Members, Projects, Add Project, Settings, and Invoices.
+- [x] 1.3 Annotate authenticated admin product routes with role requirements: admin/PM for Dashboard, Reports, and Invoices; admin-only for Members, Projects, Add Project, and Settings.
 - [x] 1.4 Keep `/403`, authenticated 404, and login route metadata free from product-page `allowedRoles` restrictions that could create redirect loops.
 
 ## 2. Router Guard Behavior

@@ -5,7 +5,7 @@ Admin Members and Projects table components currently own API mutations, auth-st
 ## What Changes
 
 - Refactor `MembersTable.vue` so it receives prepared rows, filter values/options, expansion state, and row-expansion content from the Members page or a focused composable, and emits member row intents instead of owning filtering, expansion, forms, confirmation, API mutation, toast feedback, or refresh behavior.
-- Refactor `ProjectsTable.vue` so it receives prepared rows, filter values/options, expansion state, and row-expansion content from the Projects page or a focused composable, and emits project row intents instead of owning filtering, expansion, forms, confirmation, API mutation, toast feedback, summary refresh, or row refresh behavior.
+- Refactor `ProjectsTable.vue` so it receives prepared rows, filter values/options, expansion state, and row-expansion content from the Projects page or a focused composable, emits filter and edit intents, and leaves archive/unarchive intents to page-owned inline settings content instead of owning filtering, expansion, forms, confirmation, API mutation, toast feedback, summary refresh, or row refresh behavior.
 - Refactor inline Members and Projects expansion forms so they validate/render controls and emit typed save payloads, while page owners perform API calls, auth checks, toast feedback, refreshes, and collapse behavior.
 - Preserve existing table rendering, filtering results, responsive desktop/mobile branches, inline edit/assignment expansion behavior, row action labels/tooltips, and success/error user feedback.
 - Update tests so table specs assert presentational rendering and emitted intents, while view/composable specs cover mutation orchestration and failure paths.

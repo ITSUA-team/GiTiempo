@@ -193,9 +193,9 @@ The members, projects, and settings pages MUST support the documented administra
 - WHEN the page renders
 - THEN it shows a stats header with title, description, and a primary `Invite Member` action
 - AND it shows stat cards covering active members, pending invites, and assigned PMs
-- AND it shows a members table with member identity, role, project assignment count, last activity, and actions
-- AND it exposes inline PM assignment only for non-admin member rows
-- AND it exposes inline edit and confirmed removal flows through the members table action column
+- AND it shows a members table with member identity, role, project assignment count, last activity, and page-owned row intents
+- AND it exposes page-owned inline PM assignment only for non-admin member rows
+- AND it exposes page-owned inline edit and confirmed removal flows triggered by table intents
 
 #### Scenario: Workspace settings view
 

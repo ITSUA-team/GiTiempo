@@ -127,6 +127,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 **POST /time-entries** body: `{ taskId: string, startedAt: string, endedAt: string, description?: string | null, isBillable?: boolean }`
 
 - Creates a completed manual time entry, not a running timer.
+- `taskId` must reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`, while invisible private work remains `404 Not Found`.
 - `startedAt` and `endedAt` are ISO 8601 datetimes.
 - `endedAt` must be later than `startedAt`.
 - `isBillable` defaults to `true` when omitted.
@@ -135,11 +136,14 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 - Completed entries may update `taskId`, `startedAt`, `endedAt`, `description`, and `isBillable`.
 - Running entries may update `taskId` and `description` only; `startedAt`, `endedAt`, and `isBillable` still require stopping the timer first.
-- `taskId` may be changed to move the entry to another visible active task.
+- `taskId` may be changed to move the entry to another visible active open task; closed or inactive targets are rejected with `422 Unprocessable Entity`, while invisible private targets remain `404 Not Found`.
 - If both `startedAt` and `endedAt` are provided, `endedAt` must be later than `startedAt`.
 
 **POST /time-entries/timer/start** body: `{ taskId: string, description?: string | null }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string }`
+
+- `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
+- `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
 
 **GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`, `search?`
 

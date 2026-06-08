@@ -91,8 +91,8 @@ The `admin-web` router and authenticated shell MUST keep role restrictions consi
 #### Scenario: Product route role matrix is explicit
 
 - **WHEN** the admin-web router defines role-restricted product routes
-- **THEN** Dashboard and Reports allow workspace roles `admin` and `pm`
-- **AND** Invoices, Members, Projects, Add Project, and Settings allow only workspace role `admin`
+- **THEN** Dashboard, Reports, and Invoices allow workspace roles `admin` and `pm`
+- **AND** Members, Projects, Add Project, and Settings allow only workspace role `admin`
 - **AND** route-level `/403` and authenticated not-found routes remain authenticated standalone routes without product-page role restrictions
 
 #### Scenario: Admin users can reach all admin product routes
@@ -110,8 +110,8 @@ The `admin-web` router and authenticated shell MUST keep role restrictions consi
 #### Scenario: PM users only see PM-safe admin routes
 
 - **WHEN** an authenticated PM uses admin-web
-- **THEN** the dashboard and reports routes are available
-- **AND** members, projects, add-project, invoices, and settings are denied until their PM-safe UI behavior is implemented
+- **THEN** the dashboard, reports, and invoices routes are available
+- **AND** members, projects, add-project, and settings are denied until their PM-safe UI behavior is implemented
 - **AND** denied product routes redirect to the standalone 403 route
 - **AND** denied product routes are omitted from the authenticated shell navigation
 
