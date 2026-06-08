@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { computed, markRaw, watch } from "vue";
-import {
-  ChartBarSquareIcon,
-  Cog6ToothIcon,
-  DocumentTextIcon,
-  FolderIcon,
-  Squares2X2Icon,
-  UsersIcon,
-} from '@heroicons/vue/24/outline';
+import { computed, watch } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { hasAllowedRole } from "@gitiempo/web-shared/router";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
+import {
+  ADMIN_BASE_NAV_ITEMS,
+  ADMIN_COUNTERPART_LABEL,
+  ADMIN_PAGE_NAMES_BY_ROUTE_NAME,
+  ADMIN_SETTINGS_ICON,
+  ADMIN_SETTINGS_LABEL,
+} from "@/constants/admin-shell";
 import { useToasts } from "@/composables/feedback/useToasts";
 import { appEnv } from "@/config/env";
-import { routeNames } from "@/router";
+import { routeNames } from "@/constants/routes";
 import { adminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
 
@@ -23,38 +22,16 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
-const dashboardIcon = markRaw(Squares2X2Icon);
-const reportsIcon = markRaw(ChartBarSquareIcon);
-const invoicesIcon = markRaw(DocumentTextIcon);
-const membersIcon = markRaw(UsersIcon);
-const projectsIcon = markRaw(FolderIcon);
-const settingsIcon = markRaw(Cog6ToothIcon);
 const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
-const pageNamesByRouteName: Record<string, string> = {
-  [routeNames.addProject]: 'New Project',
-  [routeNames.dashboard]: 'Dashboard',
-  [routeNames.invoices]: 'Invoices',
-  [routeNames.members]: 'Members',
-  [routeNames.projects]: 'Projects',
-  [routeNames.reports]: 'Reports',
-  [routeNames.settings]: 'Settings',
-};
 
 let workspaceNameRequestToken: string | null = null;
 
-const baseNavItems = [
-  { icon: dashboardIcon, label: "Dashboard", name: routeNames.dashboard },
-  { icon: reportsIcon, label: "Reports", name: routeNames.reports },
-  { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
-  { icon: membersIcon, label: "Members", name: routeNames.members },
-  { icon: projectsIcon, label: "Projects", name: routeNames.projects },
-] as const;
 const currentRole = computed(() => authStore.profile?.role ?? null);
 const navItems = computed(() =>
-  baseNavItems.filter((item) =>
+  ADMIN_BASE_NAV_ITEMS.filter((item) =>
     hasAllowedRole(
       router.resolve({ name: item.name }).meta.allowedRoles,
       currentRole.value,
@@ -69,8 +46,8 @@ const showSettings = computed(() =>
 );
 const pageName = computed(
   () =>
-    pageNamesByRouteName[route.name?.toString() ?? ''] ??
-    pageNamesByRouteName[routeNames.dashboard],
+    ADMIN_PAGE_NAMES_BY_ROUTE_NAME[route.name?.toString() ?? ''] ??
+    ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.dashboard],
 );
 
 // TODO: Replace with an `activeNames` prop on WorkspaceNavigation when a second project subpage arrives.
@@ -118,13 +95,13 @@ watch(
   <div class="bg-app-bg text-text-dark min-h-screen">
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
-      counterpart-label="User workspace"
+      :counterpart-label="ADMIN_COUNTERPART_LABEL"
       :display-name="authStore.displayName"
       :page-name="pageName"
       product-name="GiTiempo Admin"
       :profile-context-label="authStore.workspaceName"
-      :settings-icon="settingsIcon"
-      settings-label="Settings"
+      :settings-icon="ADMIN_SETTINGS_ICON"
+      :settings-label="ADMIN_SETTINGS_LABEL"
       :settings-to="{ name: routeNames.settings }"
       :show-settings="showSettings"
       :user-initials="authStore.userInitials"
