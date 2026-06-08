@@ -34,6 +34,7 @@
 - When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description.
 - The fresh running time entry initializes `isBillable` from the selected task's default billable value before any per-entry override.
 - When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
+- The authenticated user-web profile trigger is avatar-only in the top bar; visible member-name text does not appear beside the avatar.
 - If there is no eligible last tracked task context, keep the same not-running top-bar layout and keep the compact timer surface clickable so the popup can seed a new startable task context.
 - While the top-bar timer summary is loading, keep the layout visible with the popup entry point intact.
 - If the top-bar timer summary fails to load, keep the layout visible in a disabled fallback state and surface the failure through toast feedback.

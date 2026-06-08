@@ -11,11 +11,11 @@
 - All form fields need associated `<label>` elements.
 - Icon-only buttons need `aria-label`.
 - Custom interactive elements must support keyboard navigation.
-- For the compact top-bar timer, keep the rendered action text explicit (`Start`, `Stop`) even if the surface becomes visually compact.
+- For the compact top-bar timer, the shell surface or mobile opener must expose an accessible name that clearly opens timer actions, such as `Open timer` or `Task and timer`.
 - Do not make the live `HH:MM:SS` timer assertive; avoid announcing every second to screen readers.
-- Disabled timer actions must use proper disabled semantics, not only muted styling.
-- The compact top-bar timer task information field must be keyboard reachable and expose an accessible name such as `Change timer task`.
-- The centered task-picker dialog must restore focus to the invoking task information field when it closes.
+- Disabled popup timer actions must use proper disabled semantics, not only muted styling.
+- The compact top-bar timer surface and the mobile `Task & timer` opener must be keyboard reachable.
+- The centered task-picker dialog must restore focus to the invoking compact timer surface or mobile opener when it closes.
 - The create-task title field inside the task-picker dialog must have a visible label and error text tied to the field.
 
 ## Covered By PrimeVue
