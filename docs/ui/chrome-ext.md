@@ -1,5 +1,5 @@
-<!-- Scope: extension popup UI and injected GitHub issue-page timer UI -->
-<!-- Read when: building the Chrome extension popup, injected GitHub issue-page UI, or sharing tokens with the extension -->
+<!-- Scope: extension popup UI and injected GitHub issue-page / project-pane timer UI -->
+<!-- Read when: building the Chrome extension popup, injected GitHub issue-page UI, injected GitHub Projects issue-pane UI, or sharing tokens with the extension -->
 
 # Chrome Extension UI
 
@@ -8,7 +8,7 @@
 - Tailwind only. PrimeVue is not loaded.
 - Keep popup bundle lightweight.
 - Reuse the same design tokens by importing the shared theme CSS into the extension build.
-- The extension has two surfaces: the popup and the injected timer control on GitHub issue pages.
+- The extension has two surfaces: the popup and the injected timer control on supported GitHub issue surfaces.
 - Use shared token utilities for status colors instead of raw hex classes in extension markup.
 
 ## Popup Layout
@@ -38,7 +38,7 @@
 
 - Keep the branded popup shell visible.
 - Keep the same branded header treatment as the authenticated no-timer popup state.
-- Show concise guidance: `Open a GitHub issue page to start a timer.`
+- Show concise guidance: `Open a supported GitHub issue to start a timer.`
 - Disable or hide Start Timer because issue metadata is unavailable.
 - Keep a link to open the full User SPA.
 
@@ -56,12 +56,16 @@
 - Keep the branded header visible without requiring a user badge.
 - Retry action link.
 
-## Injected GitHub Issue Page UI
+## Injected GitHub Issue UI
 
-- The injected control appears on `github.com/<owner>/<repo>/issues/<number>` pages.
-- Insert it at the start of the page `main` content container so it reads as a page-local timer surface rather than a floating unrelated widget.
+- The injected control appears on two supported GitHub issue surfaces:
+  - direct issue pages at `github.com/<owner>/<repo>/issues/<number>`
+  - GitHub Projects issue panes reached from URLs such as `github.com/orgs/<org>/projects/<number>/views/<view>?pane=issue&issue=<owner>|<repo>|<number>`
+- On direct issue pages, insert it at the start of the page `main` content container so it reads as a page-local timer surface rather than a floating unrelated widget.
+- On GitHub Projects issue panes, insert it immediately above the element with id `issue-viewer-sticky-header`.
 - Keep the injected control visually lighter than the popup shell: no standalone `bg-surface-primary` card, border, or shadow wrapper.
 - Match the injected issue header and helper-copy text color to the active GitHub page theme: use `text-text-inverse` and `text-text-inverse-muted` on GitHub dark mode and dark/muted token text on GitHub light mode, while keeping action colors aligned with extension tokens such as `bg-brand`, `text-brand`, and `bg-destructive`.
+- On GitHub Projects issue panes, keep the vertical spacing tighter than the direct issue-page version so the control reads as part of the pane stack rather than as a page section.
 
 ### Injected Idle State
 

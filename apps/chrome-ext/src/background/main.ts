@@ -10,6 +10,7 @@ const apiClient = createExtensionApiClient({ config });
 const contentScriptMatches = [
   "https://github.com/*/*/issues/*",
   "https://github.com/*/*/pull/*",
+  "https://github.com/orgs/*/projects/*",
 ];
 
 async function loadSnapshot(): Promise<RuntimeSnapshot> {

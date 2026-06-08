@@ -26161,6 +26161,197 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "M57VUp",
+      "x": 17270,
+      "y": -1100,
+      "name": "GitHub Projects Issue Pane",
+      "clip": true,
+      "width": 440,
+      "height": 620,
+      "fill": "#F4F4F5",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "udQ2l",
+          "x": 20,
+          "y": 20,
+          "name": "Placement Title",
+          "fill": "$color-text-dark",
+          "content": "Injected Projects Issue Pane",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "600"
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 10,
+          "id": "yXSzl",
+          "x": 20,
+          "y": 58,
+          "name": "Pane Surface",
+          "fill": "#FFFFFF",
+          "width": 400,
+          "height": 522,
+          "stroke": "#EEEEEE",
+          "strokeWidth": 1
+        },
+        {
+          "type": "frame",
+          "id": "pMAYW",
+          "x": 20,
+          "y": 74,
+          "name": "Injected App Card",
+          "width": "fill_container(280)",
+          "fill": "$color-app-bg",
+          "cornerRadius": "$radius-lg",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "xuR81",
+              "name": "extBlabel",
+              "fill": "$color-text-muted",
+              "content": "ITSUA-team/GiTiempo · #181",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "O0Xuf",
+              "name": "extBtitle",
+              "fill": "$color-text-dark",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Improve reports filters",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "Y9Cu0W",
+              "name": "extBmeta",
+              "fill": "$color-text-muted",
+              "content": "Start tracking directly from this GitHub issue.",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "arpcN",
+          "x": 20,
+          "y": 190,
+          "name": "Start Timer Button",
+          "fill": "$color-brand",
+          "cornerRadius": "$radius-sm",
+          "padding": [
+            12,
+            18
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "rRYet",
+              "name": "extBbtnText",
+              "fill": "$color-surface",
+              "content": "Start Timer",
+              "fontFamily": "Inter",
+              "fontSize": 15,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "D0nH4",
+          "x": 20,
+          "y": 250,
+          "name": "Header Divider",
+          "fill": "#EEEEEE",
+          "width": 400,
+          "height": 1
+        },
+        {
+          "type": "text",
+          "id": "dMmgy",
+          "x": 40,
+          "y": 272,
+          "name": "Sticky Header Label",
+          "fill": "$color-text-muted",
+          "content": "issue-viewer-sticky-header",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "500"
+        },
+        {
+          "type": "text",
+          "id": "PU7UC",
+          "x": 40,
+          "y": 297,
+          "name": "Sticky Header Title",
+          "fill": "$color-text-dark",
+          "textGrowth": "fixed-width",
+          "width": "fill_container(248)",
+          "content": "Issue details",
+          "fontFamily": "Inter",
+          "fontSize": 16,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "J5JqIO",
+          "x": 40,
+          "y": 338,
+          "name": "Body Copy 1",
+          "fill": "$color-text-muted",
+          "textGrowth": "fixed-width",
+          "width": 340,
+          "content": "Status, assignees, and metadata begin below the sticky header.",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "Ouy0J",
+          "x": 40,
+          "y": 382,
+          "name": "Body Copy 2",
+          "fill": "$color-text-muted",
+          "textGrowth": "fixed-width",
+          "width": 340,
+          "content": "The GiTiempo control is anchored immediately above the sticky header so it remains part of the issue pane flow.",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "cMVnm",
+          "x": 40,
+          "y": 442,
+          "name": "Body Copy 3",
+          "fill": "$color-text-muted",
+          "textGrowth": "fixed-width",
+          "width": 340,
+          "content": "This keeps the timer context attached to the task details instead of reading like a page-wide banner.",
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
     }
   ],
   "variables": {

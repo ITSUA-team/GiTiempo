@@ -161,6 +161,7 @@ describe("createExtensionApiClient", () => {
       issueTitle: "Improve reports filters",
       issueUrl: "https://github.com/octo/repo/issues/184",
       kind: "supported",
+      surface: "issue-page",
     });
 
     expect(fetchFn).toHaveBeenCalledWith(
@@ -295,6 +296,7 @@ describe("createExtensionApiClient", () => {
         issueTitle: "Improve reports filters",
         issueUrl: "https://github.com/octo/repo/issues/184",
         kind: "supported",
+        surface: "issue-page",
       }),
     ]);
 
