@@ -82,6 +82,30 @@ The Members page MUST render report-style table discovery controls that filter l
 - **THEN** existing Assign PM, Edit, and Remove actions keep their accessibility labels, confirmation behavior, inline expansion behavior, and refresh events
 - **AND** if an expanded row becomes excluded by filters, the expanded state does not remain visible for a hidden row
 
+### Requirement: Members Table Is A Dumb Presentational Table
+
+The Members table rendering component MUST NOT own member filtering, filtered-row derivation, expansion state, expansion-mode state, or edit/assignment form rendering.
+
+#### Scenario: Members page owns table view model
+
+- **GIVEN** the Members page has loaded members and project membership data
+- **WHEN** the page renders the Members table
+- **THEN** the page or a focused page composable derives the visible member table rows, filter options, empty-state copy, expanded rows, and expansion mode
+- **AND** the Members table receives those values as props and emits updates or row intents without storing or deriving them internally
+
+#### Scenario: Members table forwards presentational intents
+
+- **GIVEN** the Members table renders prepared desktop rows or mobile cards
+- **WHEN** the admin changes a search/filter control or invokes Assign PM, Edit, or Remove
+- **THEN** the table emits the corresponding filter update or row intent with the selected member
+- **AND** the table itself does not filter members, toggle expansion, collapse rows, render edit/assignment forms, call APIs, show toasts, or open confirmations
+
+#### Scenario: Members table remains presentational after removal refactor
+
+- **WHEN** the Members table is mounted for isolated component testing
+- **THEN** it can render supplied rows, filters, mobile cards, row-expansion slots, and row action controls without providing admin API clients, auth stores, toast services, confirmation services, project membership derivation, or edit/assignment form components
+- **AND** existing Assign PM, Edit, and Remove action labels, tooltips, row expansion behavior, and filter behavior remain unchanged from the user's perspective
+
 ### Requirement: Inline PM Assignment Expansion
 
 The Members page MUST provide an inline assignment expansion under non-admin member rows.
@@ -96,6 +120,14 @@ The Members page MUST provide an inline assignment expansion under non-admin mem
 - **AND** cancel collapses without sending requests
 - **AND** admin member rows do not show the Assign PM action
 
+#### Scenario: Members assignment expansion form emits save payload
+
+- **GIVEN** the Members page renders member assignment expansion content
+- **WHEN** the admin submits assignment changes
+- **THEN** the expansion form emits a typed save payload
+- **AND** the Members page or focused composable performs auth checks, member/project API calls, success/error toast feedback, member refresh, and row collapse
+- **AND** the expansion form itself does not import admin API clients, auth stores, toast helpers, or confirmation helpers
+
 ### Requirement: Edit Member Inline Form
 
 The Members page MUST provide an inline edit panel that updates a member's role.
@@ -107,6 +139,14 @@ The Members page MUST provide an inline edit panel that updates a member's role.
 - **THEN** the panel shows Name, Email, and editable Role fields in that order
 - **AND** saving a role change issues a member-role update, collapses on success, refreshes the member list, and shows success notification
 - **AND** backend last-admin protection failures keep the panel open and surface the rejection
+
+#### Scenario: Members role edit expansion form emits save payload
+
+- **GIVEN** the Members page renders role edit expansion content
+- **WHEN** the admin submits role changes
+- **THEN** the expansion form emits a typed save payload
+- **AND** the Members page or focused composable performs auth checks, member/project API calls, success/error toast feedback, member refresh, and row collapse
+- **AND** the expansion form itself does not import admin API clients, auth stores, toast helpers, or confirmation helpers
 
 ### Requirement: Remove Member Confirmation
 
@@ -120,6 +160,26 @@ The Members page MUST gate member removal behind a destructive confirmation dial
 - **AND** confirming issues a member-remove request, refreshes the member list on success, and shows success notification
 - **AND** cancelling sends no request
 - **AND** backend last-admin protection failures are surfaced without removing the member
+
+### Requirement: Members Table Emits Removal Intent
+
+The Members page MUST keep member-removal API orchestration outside the Members table rendering component while preserving the existing remove-member user flow.
+
+#### Scenario: Members table remove action emits intent
+
+- **GIVEN** the Members table renders a member row in either desktop table or mobile card layout
+- **WHEN** the admin invokes the row's `Remove` action
+- **THEN** the table emits a `remove-member` intent with the selected member
+- **AND** the table itself does not open the confirmation dialog, call the member-remove API, refresh loaded members, or show toast feedback
+
+#### Scenario: Members page handles confirmed removal
+
+- **GIVEN** the Members page receives a `remove-member` intent from the Members table
+- **WHEN** the page handles the intent
+- **THEN** it opens the shared destructive confirmation dialog using the selected member's display name or email
+- **AND** confirming issues the member-remove request, refreshes the member list on success, and shows success toast feedback
+- **AND** cancelling sends no member-remove request
+- **AND** backend last-admin protection failures or other API errors are surfaced through error toast feedback without removing the row from loaded data
 
 ### Requirement: Pending Invitations Card
 The Admin Members page SHALL render pending workspace invitations in a separate card below the members table.
@@ -178,4 +238,3 @@ The Admin Members page MUST provide accessible icon-only `Resend invite` and `Ca
 - **WHEN** row actions are visible
 - **THEN** each action is icon-only with a text tooltip
 - **AND** each action exposes an accessible label matching `Resend invite` or `Cancel invite`
-
