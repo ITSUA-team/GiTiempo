@@ -11,7 +11,6 @@ import {
   SurfaceCard,
 } from "@gitiempo/web-shared";
 
-import PageHeader from "@/components/layout/PageHeader.vue";
 import ProjectTaskDialog from "@/components/projects/ProjectTaskDialog.vue";
 import ProjectsTaskSection from "@/components/projects/ProjectsTaskSection.vue";
 import { useProjectsData } from "@/composables/projects/useProjectsData";
@@ -23,6 +22,8 @@ import { resolveDataPageState } from "@/lib/page-state";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import {
   formatUpdatedLabel,
+  type ProjectStatusFilterOption,
+  type ProjectUpdatedFilterOption,
   type ProjectsSearchSuggestion,
 } from "@/lib/projects-page-helpers";
 import { useAuthStore } from "@/stores/auth";
@@ -87,9 +88,17 @@ const {
 const {
   filteredProjectGroups,
   handleSearchComplete,
+  handleStatusFilterComplete,
+  handleUpdatedFilterComplete,
   searchSuggestions,
   selectedSearchValue,
+  selectedStatusFilter,
+  selectedUpdatedFilter,
   setSearchValue,
+  setStatusFilterValue,
+  setUpdatedFilterValue,
+  statusFilterSuggestions,
+  updatedFilterSuggestions,
 } = search;
 const { isDeletingTaskId, isSavingDialog } = mutations;
 const { requestErrorMessage, visibleProjects } = data;
@@ -160,13 +169,32 @@ async function retryLoadPage(): Promise<void> {
         />
       </div>
 
-      <div class="flex max-w-[360px] flex-col gap-1.5">
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Skeleton
-          width="4rem"
+          width="22.5rem"
           height="1rem"
         />
         <Skeleton
-          width="100%"
+          width="11.25rem"
+          height="1rem"
+        />
+        <Skeleton
+          width="11.25rem"
+          height="1rem"
+        />
+      </div>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <Skeleton
+          width="22.5rem"
+          height="2.75rem"
+        />
+        <Skeleton
+          width="11.25rem"
+          height="2.75rem"
+        />
+        <Skeleton
+          width="11.25rem"
           height="2.75rem"
         />
       </div>
@@ -213,41 +241,97 @@ async function retryLoadPage(): Promise<void> {
     </template>
 
     <template v-else>
-      <PageHeader
-        subtitle="Create, update, and organize tasks across your visible projects."
-        title="Projects"
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:flex-wrap"
+        data-testid="projects-filters"
       >
-        <template #actions>
-          <Button
-            data-testid="projects-header-create"
-            label="+ New task"
-            :disabled="!canCreateTasks"
-            @click="openCreateDialog()"
-          />
-        </template>
-      </PageHeader>
+        <div class="flex w-full flex-col gap-1.5 sm:w-[360px]">
+          <label
+            for="projects-search"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Search
+          </label>
+          <AutoComplete
+            data-testid="projects-search-filter"
+            input-id="projects-search"
+            option-label="label"
+            placeholder="Search projects or tasks"
+            :model-value="selectedSearchValue"
+            :suggestions="searchSuggestions"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            fluid
+            :min-length="0"
+            @complete="handleSearchComplete($event.query)"
+            @update:model-value="setSearchValue(($event ?? null) as ProjectsSearchSuggestion | string | null)"
+          >
+            <template #option="slotProps">
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-text-dark text-sm"
+                  :class="slotProps.option.kind === 'project' ? 'font-semibold' : 'font-medium'"
+                >
+                  {{ slotProps.option.label }}
+                </span>
+                <span class="text-text-muted text-xs">
+                  {{ slotProps.option.meta }}
+                </span>
+              </div>
+            </template>
+          </AutoComplete>
+        </div>
 
-      <div class="flex max-w-[360px] flex-col gap-1.5">
-        <label
-          for="projects-search"
-          class="text-text-dark text-[13px] font-medium"
-        >
-          Search
-        </label>
-        <AutoComplete
-          input-id="projects-search"
-          option-label="label"
-          placeholder="Search projects or tasks"
-          :model-value="selectedSearchValue"
-          :suggestions="searchSuggestions"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
-          fluid
-          :min-length="0"
-          @complete="handleSearchComplete($event.query)"
-          @update:model-value="setSearchValue(($event ?? null) as ProjectsSearchSuggestion | string | null)"
-        />
+        <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">
+          <label
+            for="projects-status-filter"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Status
+          </label>
+          <AutoComplete
+            data-testid="projects-status-filter"
+            input-id="projects-status-filter"
+            option-label="label"
+            placeholder="All statuses"
+            :model-value="selectedStatusFilter"
+            :suggestions="statusFilterSuggestions"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            fluid
+            force-selection
+            :min-length="0"
+            @complete="handleStatusFilterComplete($event.query)"
+            @update:model-value="setStatusFilterValue(($event ?? null) as ProjectStatusFilterOption | string | null)"
+          />
+        </div>
+
+        <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">
+          <label
+            for="projects-updated-filter"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Updated
+          </label>
+          <AutoComplete
+            data-testid="projects-updated-filter"
+            input-id="projects-updated-filter"
+            option-label="label"
+            placeholder="Any time"
+            :model-value="selectedUpdatedFilter"
+            :suggestions="updatedFilterSuggestions"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            fluid
+            force-selection
+            :min-length="0"
+            @complete="handleUpdatedFilterComplete($event.query)"
+            @update:model-value="setUpdatedFilterValue(($event ?? null) as ProjectUpdatedFilterOption | string | null)"
+          />
+        </div>
       </div>
 
       <SurfaceCard
@@ -283,7 +367,7 @@ async function retryLoadPage(): Promise<void> {
             No projects or tasks match this view
           </h2>
           <p class="text-text-muted text-sm">
-            Clear the search or create a new task in one of your visible projects.
+            Clear the filters or create a new task in one of your visible projects.
           </p>
         </div>
         <Button
