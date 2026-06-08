@@ -31,6 +31,8 @@ describe("getCounterpartWorkspaceHref", () => {
   });
 
   it("uses fallback path when window is unavailable", () => {
+    vi.stubGlobal("window", undefined);
+
     expect(
       getCounterpartWorkspaceHref({
         fallbackPath: "/login",

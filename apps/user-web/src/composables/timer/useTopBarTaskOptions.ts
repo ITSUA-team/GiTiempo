@@ -1,7 +1,7 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 import { useQueryClient } from "@tanstack/vue-query";
-import { shallowRef, type ComputedRef } from "vue";
+import { ref, type ComputedRef } from "vue";
 
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -22,8 +22,8 @@ export function useTopBarTaskOptions({
   scope,
 }: UseTopBarTaskOptionsOptions) {
   const queryClient = useQueryClient();
-  const isLoadingProjects = shallowRef(false);
-  const isLoadingTasks = shallowRef(false);
+  const isLoadingProjects = ref(false);
+  const isLoadingTasks = ref(false);
   let taskRequestId = 0;
 
   async function ensureProjectsLoaded(): Promise<ProjectResponse[]> {

@@ -4,6 +4,61 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UsersService } from './users.service';
 import { DRIZZLE } from '../../db/db.constants';
 
+type UserRowMock = typeof sampleRow;
+
+function hasQueryChunks(value: unknown): value is { queryChunks: unknown[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'queryChunks' in value &&
+    Array.isArray((value as { queryChunks?: unknown }).queryChunks)
+  );
+}
+
+function isStringChunk(chunk: unknown): boolean {
+  return (
+    typeof chunk === 'object' &&
+    chunk !== null &&
+    chunk.constructor.name === 'StringChunk'
+  );
+}
+
+function evaluateSqlChunk(chunk: unknown, currentRow: UserRowMock): unknown {
+  if (typeof chunk !== 'object' || chunk === null) return chunk;
+  const columnName = (chunk as { name?: unknown }).name;
+
+  if (columnName === 'display_name') return currentRow.displayName;
+  if (columnName === 'avatar_url') return currentRow.avatarUrl;
+
+  return undefined;
+}
+
+function evaluateSetValue(value: unknown, currentRow: UserRowMock): unknown {
+  if (!hasQueryChunks(value)) return value;
+
+  for (const chunk of value.queryChunks) {
+    if (isStringChunk(chunk)) continue;
+    const candidate = evaluateSqlChunk(chunk, currentRow);
+
+    if (candidate !== null && candidate !== undefined) return candidate;
+  }
+
+  return null;
+}
+
+function applySet(
+  row: UserRowMock,
+  setArg: Record<string, unknown>,
+): UserRowMock {
+  const nextRow = { ...row };
+
+  for (const [key, value] of Object.entries(setArg)) {
+    nextRow[key as keyof UserRowMock] = evaluateSetValue(value, row) as never;
+  }
+
+  return nextRow;
+}
+
 /**
  * Helper that builds a chainable Drizzle mock covering the two query
  * shapes used by the service:
@@ -18,21 +73,41 @@ function makeDbMock(opts: {
   updateRows?: unknown[];
   insertRows?: unknown[];
 }) {
+  let updateSetArg: Record<string, unknown> = {};
+  let conflictSetArg: Record<string, unknown> | null = null;
   const limit = vi.fn().mockResolvedValue(opts.selectRows ?? []);
   const whereSelect = vi.fn().mockReturnValue({ limit });
   const innerJoin = vi.fn().mockReturnValue({ where: whereSelect });
   const from = vi.fn().mockReturnValue({ where: whereSelect, innerJoin });
   const select = vi.fn().mockReturnValue({ from });
 
-  const returningUpdate = vi.fn().mockResolvedValue(opts.updateRows ?? []);
+  const returningUpdate = vi.fn(async () =>
+    (opts.updateRows ?? []).map((row) =>
+      applySet(row as UserRowMock, updateSetArg),
+    ),
+  );
   const whereUpdate = vi.fn().mockReturnValue({ returning: returningUpdate });
-  const set = vi.fn().mockReturnValue({ where: whereUpdate });
+  const set = vi.fn((input: Record<string, unknown>) => {
+    updateSetArg = input;
+
+    return { where: whereUpdate };
+  });
   const update = vi.fn().mockReturnValue({ set });
 
-  const returningInsert = vi.fn().mockResolvedValue(opts.insertRows ?? []);
-  const onConflictDoUpdate = vi
-    .fn()
-    .mockReturnValue({ returning: returningInsert });
+  const returningInsert = vi.fn(async () =>
+    (opts.insertRows ?? []).map((row) =>
+      conflictSetArg
+        ? applySet(row as UserRowMock, conflictSetArg)
+        : (row as UserRowMock),
+    ),
+  );
+  const onConflictDoUpdate = vi.fn(
+    (input: { set: Record<string, unknown> }) => {
+      conflictSetArg = input.set;
+
+      return { returning: returningInsert };
+    },
+  );
   const values = vi.fn().mockReturnValue({ onConflictDoUpdate });
   const insert = vi.fn().mockReturnValue({ values });
 
@@ -166,6 +241,52 @@ describe('UsersService', () => {
       await expect(
         service.updateById(sampleRow.id, workspaceId, { displayName: 'x' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('updateFromFirebase', () => {
+    it('preserves locally saved profile fields during Firebase login sync', async () => {
+      await build({
+        updateRows: [
+          {
+            ...sampleRow,
+            avatarUrl: 'https://cdn.example.com/local-avatar.png',
+          },
+        ],
+      });
+
+      const result = await service.updateFromFirebase(sampleRow.id, {
+        avatarUrl: 'https://cdn.example.com/firebase-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(result.displayName).toBe('Alice');
+      expect(result.avatarUrl).toBe('https://cdn.example.com/local-avatar.png');
+    });
+  });
+
+  describe('upsertFromFirebase', () => {
+    it('preserves locally saved profile fields on Firebase conflict sync', async () => {
+      await build({
+        insertRows: [
+          {
+            ...sampleRow,
+            avatarUrl: 'https://cdn.example.com/local-avatar.png',
+          },
+        ],
+      });
+
+      const result = await service.upsertFromFirebase({
+        avatarUrl: 'https://cdn.example.com/firebase-avatar.png',
+        displayName: 'Firebase Alice',
+        email: sampleRow.email,
+        firebaseUid: sampleRow.firebaseUid,
+      });
+
+      expect(result.displayName).toBe('Alice');
+      expect(result.avatarUrl).toBe('https://cdn.example.com/local-avatar.png');
     });
   });
 });

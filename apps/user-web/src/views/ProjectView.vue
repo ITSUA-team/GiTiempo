@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import ConfirmDialog from "primevue/confirmdialog";
 import Skeleton from "primevue/skeleton";
 import { computed } from "vue";
 import { useConfirm } from "primevue/useconfirm";
@@ -143,8 +142,6 @@ async function retryLoadPage(): Promise<void> {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <ConfirmDialog />
-
     <template v-if="pageState === 'loading'">
       <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-2">
@@ -197,7 +194,7 @@ async function retryLoadPage(): Promise<void> {
             />
           </div>
 
-          <div class="border-divider bg-surface flex flex-col rounded-lg border">
+          <div class="border-divider bg-surface-primary flex flex-col rounded-lg border">
             <Skeleton
               width="100%"
               height="2.75rem"

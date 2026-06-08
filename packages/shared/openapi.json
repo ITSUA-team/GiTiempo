@@ -2973,9 +2973,10 @@
               "github"
             ]
           },
-          "totalHours": {
-            "type": "number",
-            "minimum": 0
+          "totalSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "members": {
             "type": "array",
@@ -3040,7 +3041,7 @@
           "color",
           "visibility",
           "source",
-          "totalHours",
+          "totalSeconds",
           "members",
           "isActive",
           "createdAt",
@@ -3165,9 +3166,10 @@
               "github"
             ]
           },
-          "totalHours": {
-            "type": "number",
-            "minimum": 0
+          "totalSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "members": {
             "type": "array",
@@ -3357,7 +3359,7 @@
           "color",
           "visibility",
           "source",
-          "totalHours",
+          "totalSeconds",
           "members",
           "isActive",
           "createdAt",

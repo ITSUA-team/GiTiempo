@@ -4,7 +4,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type {
   UserResponse,
   UpdateUserInput,
@@ -22,6 +22,12 @@ export interface UpsertFromFirebaseInput {
   email: string;
   displayName?: string | null;
   avatarUrl?: string | null;
+}
+
+function firebaseDisplayNameFallback(displayName: string | null | undefined) {
+  const nextDisplayName = displayName ?? null;
+
+  return sql<string | null>`COALESCE(${users.displayName}, ${nextDisplayName})`;
 }
 
 @Injectable()
@@ -103,8 +109,7 @@ export class UsersService {
       .update(users)
       .set({
         email: input.email,
-        displayName: input.displayName ?? null,
-        avatarUrl: input.avatarUrl ?? null,
+        displayName: firebaseDisplayNameFallback(input.displayName),
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -117,9 +122,10 @@ export class UsersService {
    * Upserts a local user keyed by `firebase_uid`. Called during login
    * after Firebase verification succeeds.
    *
-   * On conflict we refresh `email`, `display_name`, `avatar_url`, and
-   * `updated_at` so the local profile stays in sync with the Firebase
-   * identity. `id` and `created_at` are immutable.
+   * On conflict we refresh `email` and `updated_at` from the Firebase identity.
+   * Display name is locally editable, so Firebase only seeds it while the local
+   * value is still empty. Avatar URL is also locally editable and nullable, so
+   * Firebase only seeds it on insert. `id` and `created_at` are immutable.
    */
   async upsertFromFirebase(input: UpsertFromFirebaseInput): Promise<UserRow> {
     const now = new Date();
@@ -135,8 +141,7 @@ export class UsersService {
         target: users.firebaseUid,
         set: {
           email: input.email,
-          displayName: input.displayName ?? null,
-          avatarUrl: input.avatarUrl ?? null,
+          displayName: firebaseDisplayNameFallback(input.displayName),
           updatedAt: now,
         },
       })

@@ -118,7 +118,7 @@ const titleModel = computed({
         <div
           v-if="props.mode === 'edit'"
           aria-labelledby="project-task-project-label"
-          class="border-divider bg-surface text-text-dark flex h-[38px] items-center rounded-md border px-3 text-sm"
+          class="border-divider bg-surface-primary text-text-dark flex h-[38px] items-center rounded-md border px-3 text-sm"
           role="textbox"
           aria-readonly="true"
         >

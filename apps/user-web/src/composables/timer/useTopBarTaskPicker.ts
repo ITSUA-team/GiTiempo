@@ -1,5 +1,5 @@
 import { createTaskSchema, type ProjectResponse, type TaskResponse } from "@gitiempo/shared";
-import { computed, ref, shallowRef } from "vue";
+import { computed, ref } from "vue";
 
 import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 
@@ -7,16 +7,18 @@ export function useTopBarTaskPicker() {
   const projects = ref<ProjectResponse[]>([]);
   const tasks = ref<TaskResponse[]>([]);
   const taskCache = new Map<string, TaskResponse[]>();
-  const isDialogOpen = shallowRef(false);
-  const selectedProjectId = shallowRef<string | null>(null);
-  const selectedTaskId = shallowRef<string | null>(null);
-  const selectedDescription = shallowRef("");
-  const createTaskTitle = shallowRef("");
-  const projectsErrorMessage = shallowRef<string | null>(null);
-  const tasksErrorMessage = shallowRef<string | null>(null);
-  const createTaskErrorMessage = shallowRef<string | null>(null);
+  const isDialogOpen = ref(false);
+  const selectedProjectId = ref<string | null>(null);
+  const selectedTaskId = ref<string | null>(null);
+  const selectedDescription = ref("");
+  const createTaskTitle = ref("");
+  const projectsErrorMessage = ref<string | null>(null);
+  const tasksErrorMessage = ref<string | null>(null);
+  const createTaskErrorMessage = ref<string | null>(null);
   const activeProjects = computed(() => projects.value.filter((project) => project.isActive));
-  const activeTasks = computed(() => tasks.value.filter((task) => task.isActive));
+  const activeTasks = computed(() =>
+    tasks.value.filter((task) => task.isActive && task.status === "open"),
+  );
   const selectedProject = computed(
     () => activeProjects.value.find((project) => project.id === selectedProjectId.value) ?? null,
   );
@@ -24,7 +26,7 @@ export function useTopBarTaskPicker() {
     () => activeTasks.value.find((task) => task.id === selectedTaskId.value) ?? null,
   );
   const isConfirmSelectionDisabled = computed(
-    () => !selectedProjectId.value || !selectedTaskId.value,
+    () => !selectedProject.value || !selectedTask.value,
   );
   const isCreateTaskTitleEmpty = computed(() => createTaskTitle.value.trim().length === 0);
 

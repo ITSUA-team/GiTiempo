@@ -3,7 +3,7 @@ import {
   computed,
   onBeforeUnmount,
   onMounted,
-  shallowRef,
+  ref,
   useTemplateRef,
   useSlots,
   type Component,
@@ -24,6 +24,8 @@ type ProfileMenuItem = {
   label: string;
   route?: RouteLocationRaw;
 };
+
+type CenterContentAlign = "center" | "end";
 
 type ProfileMenuSlotItem = {
   destructive?: boolean;
@@ -51,19 +53,25 @@ const props = withDefaults(
   defineProps<{
     counterpartHref: string;
     counterpartLabel: string;
+    centerContentAlign?: CenterContentAlign;
     displayName: string;
     productName?: string;
     settingsIcon?: Component;
     settingsLabel?: string;
+    showDisplayName?: boolean;
+    showSettings?: boolean;
     settingsTo: RouteLocationRaw;
     userInitials: string;
     workspaceName: string;
     workspaceShortName?: string;
   }>(),
   {
+    centerContentAlign: "center",
     productName: "GiTiempo",
     settingsIcon: undefined,
     settingsLabel: "Settings",
+    showDisplayName: true,
+    showSettings: true,
     workspaceShortName: "GT",
   },
 );
@@ -76,13 +84,13 @@ const emit = defineEmits<{
 }>();
 
 const profileMenuRegion = useTemplateRef<HTMLElement>("profileMenuRegion");
-const isProfileMenuOpen = shallowRef(false);
+const isProfileMenuOpen = ref(false);
 
 const profileTriggerRootClass = computed(() =>
   [
     "focus-visible:outline-brand flex h-10 items-center gap-3 rounded-lg border px-1.5 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2",
     isProfileMenuOpen.value
-      ? "border-divider bg-surface"
+      ? "border-divider bg-surface-primary"
       : "border-transparent bg-transparent hover:bg-app-bg",
   ].join(" "),
 );
@@ -96,30 +104,49 @@ const profileAvatarRootClass = computed(() =>
     .join(" "),
 );
 
-const profileMenuItems = computed<(ProfileMenuItem | { separator: true })[]>(() => [
-  {
-    href: props.counterpartHref,
-    key: "workspace",
-    label: props.counterpartLabel,
-  },
-  {
-    key: "settings",
-    label: props.settingsLabel,
-    route: props.settingsTo,
-  },
-  {
-    separator: true,
-  },
-  {
-    command: () => {
-      closeProfileMenu({ restoreFocus: true });
-      emit("signOut");
+const centerRowContentClass = computed(() =>
+  [
+    "flex w-full",
+    props.centerContentAlign === "end"
+      ? "justify-start sm:justify-end"
+      : "justify-start sm:justify-center",
+  ].join(" "),
+);
+
+const profileMenuItems = computed<(ProfileMenuItem | { separator: true })[]>(() => {
+  const items: (ProfileMenuItem | { separator: true })[] = [
+    {
+      href: props.counterpartHref,
+      key: "workspace",
+      label: props.counterpartLabel,
     },
-    destructive: true,
-    key: "sign-out",
-    label: "Sign out",
-  },
-]);
+  ];
+
+  if (props.showSettings) {
+    items.push({
+      key: "settings",
+      label: props.settingsLabel,
+      route: props.settingsTo,
+    });
+  }
+
+  items.push(
+    {
+      separator: true,
+    },
+    {
+      command: () => {
+        closeProfileMenu({ restoreFocus: true });
+        emit("signOut");
+      },
+      destructive: true,
+      key: "sign-out",
+      label: "Sign out",
+    },
+  );
+
+  return items;
+});
 
 function focusProfileTrigger(): void {
   profileMenuRegion.value
@@ -227,7 +254,7 @@ onBeforeUnmount(() => {
 
 <template>
   <header
-    class="border-divider bg-surface sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 border-b px-4 sm:h-16 sm:grid-rows-1 sm:px-6"
+    class="border-divider bg-surface-primary sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 border-b px-4 sm:h-16 sm:grid-rows-1 sm:px-6"
   >
     <div class="row-start-1 flex items-center gap-3">
       <div
@@ -250,7 +277,10 @@ onBeforeUnmount(() => {
       class="col-span-3 row-start-2 -mx-4 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:mx-0 sm:px-2"
       data-testid="workspace-header-center-row"
     >
-      <div class="flex justify-center">
+      <div
+        :class="centerRowContentClass"
+        data-testid="workspace-header-center-content"
+      >
         <slot name="center" />
       </div>
     </div>
@@ -275,7 +305,10 @@ onBeforeUnmount(() => {
         }"
         @click="toggleProfileMenu"
       >
-        <span class="text-text-dark hidden text-right text-[13px] font-medium sm:block">
+        <span
+          v-if="props.showDisplayName"
+          class="text-text-dark hidden text-right text-[13px] font-medium sm:block"
+        >
           {{ props.displayName }}
         </span>
         <Avatar
@@ -297,7 +330,7 @@ onBeforeUnmount(() => {
         id="profile_menu"
         :model="profileMenuItems"
         aria-label="Profile actions"
-        class="border-divider bg-surface shadow-popover before:border-divider before:bg-surface absolute top-full right-0 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
+        class="border-divider bg-surface-primary shadow-popover before:border-divider before:bg-surface-primary absolute top-full right-0 z-30 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
         data-testid="profile-menu"
       >
         <template #item="{ item, props: itemProps }">

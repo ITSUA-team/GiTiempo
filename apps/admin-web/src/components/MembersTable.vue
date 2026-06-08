@@ -4,12 +4,9 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from '@heroicons/vue/24/outline';
-import { computed, reactive, ref, watch } from 'vue';
 import type {
-  ProjectListResponse,
-  WorkspaceRole,
-  WorkspaceMemberListResponse,
   WorkspaceMemberResponse,
+  WorkspaceRole,
 } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
@@ -17,20 +14,12 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
-  formatWorkspaceRole,
   managementTableColumnPt,
   managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
-  useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
-import {
-  formatLocalCalendarDate,
-  hasValidDate,
-  isSameLocalDateValue,
-  isWithinLocalIsoWeekToDate,
-} from '@gitiempo/web-shared/time';
 import Avatar from 'primevue/avatar';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
@@ -39,57 +28,66 @@ import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
+
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
-import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
-import MemberEditForm from '@/components/forms/MemberEditForm.vue';
-import { useConfirmation } from '@/composables/feedback/useConfirmation';
-import { adminMembersClient } from '@/services/admin-members-client';
-import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/feedback/useToasts';
+import type {
+  MemberLastActiveFilter,
+  MembersTableExpandedRows,
+  MembersTableFilterOption,
+  MembersTableFilterUpdate,
+  MembersTableFilters,
+  MembersTableRow,
+} from '@/lib/members-table';
 
-type MemberLastActiveFilter = 'any' | 'today' | 'thisWeek' | 'inactive';
-
-interface MembersTableFilters {
-  global: string;
-  lastActive: MemberLastActiveFilter;
-  memberQuery: string;
-  projectIds: string[];
-  role: WorkspaceRole | null;
-}
-
-interface FilterOption<TValue extends string = string> {
-  label: string;
-  value: TValue;
-}
-
-const props = defineProps<{
-  members: WorkspaceMemberListResponse;
-  projects: ProjectListResponse;
+defineProps<{
+  emptyDescription: string;
+  expandedRows: MembersTableExpandedRows;
+  filters: MembersTableFilters;
+  isMobileViewport: boolean;
+  lastActiveFilterOptions: MembersTableFilterOption<MemberLastActiveFilter>[];
   loading: boolean;
-  currentUserId: string | null;
+  projectFilterOptions: MembersTableFilterOption[];
+  roleFilterOptions: MembersTableFilterOption<WorkspaceRole>[];
+  rows: MembersTableRow[];
 }>();
 
 const emit = defineEmits<{
-  'member-removed': [];
-  'role-updated': [];
-  'assignments-updated': [];
+  'assign-member': [member: WorkspaceMemberResponse];
+  'edit-member': [member: WorkspaceMemberResponse];
+  'remove-member': [member: WorkspaceMemberResponse];
+  'update:expandedRows': [expandedRows: MembersTableExpandedRows | undefined];
+  'update:filters': [filters: MembersTableFilterUpdate];
 }>();
 
-const authStore = useAuthStore();
-const { successToast, errorToast } = useToasts();
-const { requireConfirmation } = useConfirmation();
-const isMobileViewport = useIsMobileViewport();
+function updateFilters(filters: MembersTableFilterUpdate): void {
+  emit('update:filters', filters);
+}
 
-const expandedRows = ref<Record<string, boolean>>({});
-const expansionMode = ref<Record<string, 'assign' | 'edit'>>({});
+function updateGlobalFilter(value: string | undefined): void {
+  updateFilters({ global: value });
+}
 
-const filters = reactive<MembersTableFilters>({
-  global: '',
-  lastActive: 'any',
-  memberQuery: '',
-  projectIds: [],
-  role: null,
-});
+function updateMemberQueryFilter(value: string | undefined): void {
+  updateFilters({ memberQuery: value });
+}
+
+function updateProjectIdsFilter(value: string[] | undefined): void {
+  updateFilters({ projectIds: value });
+}
+
+function updateRoleFilter(value: WorkspaceRole | null | undefined): void {
+  updateFilters({ role: value });
+}
+
+function updateLastActiveFilter(
+  value: MemberLastActiveFilter | undefined,
+): void {
+  updateFilters({ lastActive: value });
+}
+
+function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
+  emit('update:expandedRows', value);
+}
 
 const columns: ManagementTableColumn[] = [
   { key: 'member', label: 'Member', width: 'fill' },
@@ -98,215 +96,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'lastActive', label: 'Last Active', width: 140 },
   { key: 'actions', label: 'Actions', width: 150, align: 'end' },
 ];
-
-const roleFilterOptions: FilterOption<WorkspaceRole>[] = [
-  { label: 'Admin', value: 'admin' },
-  { label: 'PM', value: 'pm' },
-  { label: 'Member', value: 'member' },
-];
-
-const lastActiveFilterOptions: FilterOption<MemberLastActiveFilter>[] = [
-  { label: 'Any activity', value: 'any' },
-  { label: 'Active today', value: 'today' },
-  { label: 'Active this week', value: 'thisWeek' },
-  { label: 'No activity', value: 'inactive' },
-];
-
-const projectFilterOptions = computed<FilterOption[]>(() =>
-  [...props.projects]
-    .map((project) => ({ label: project.name, value: project.id }))
-    .sort((a, b) => a.label.localeCompare(b.label)),
-);
-
-function getInitials(member: WorkspaceMemberResponse): string {
-  const source = member.displayName?.trim() || member.email;
-  const parts = source
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase());
-
-  return parts.join('') || '??';
-}
-
-function getProjectsAssignedCount(member: WorkspaceMemberResponse): number {
-  return member.projectsAssignedCount;
-}
-
-function formatProjectsAssigned(member: WorkspaceMemberResponse): string {
-  const count = getProjectsAssignedCount(member);
-  return `${count} project${count === 1 ? '' : 's'}`;
-}
-
-function getMemberDisplayName(member: WorkspaceMemberResponse): string {
-  return member.displayName?.trim() || member.email;
-}
-
-function matchesLastActiveFilter(member: WorkspaceMemberResponse): boolean {
-  if (filters.lastActive === 'any') {
-    return true;
-  }
-
-  if (filters.lastActive === 'inactive') {
-    return !hasValidDate(member.lastActiveAt);
-  }
-
-  const now = new Date();
-
-  if (filters.lastActive === 'today') {
-    return isSameLocalDateValue(member.lastActiveAt, now);
-  }
-
-  return isWithinLocalIsoWeekToDate(member.lastActiveAt, now);
-}
-
-function getMemberProjectOptions(member: WorkspaceMemberResponse): FilterOption[] {
-  return props.projects
-    .filter((project) =>
-      project.members.some((projectMember) => projectMember.userId === member.userId),
-    )
-    .map((project) => ({ label: project.name, value: project.id }));
-}
-
-function textIncludes(value: string, search: string): boolean {
-  return value.toLowerCase().includes(search);
-}
-
-function matchesMemberQuery(member: WorkspaceMemberResponse): boolean {
-  const query = filters.memberQuery.trim().toLowerCase();
-
-  if (!query) {
-    return true;
-  }
-
-  return [getMemberDisplayName(member), member.email]
-    .join(' ')
-    .toLowerCase()
-    .includes(query);
-}
-
-function matchesProjectFilter(member: WorkspaceMemberResponse): boolean {
-  if (filters.projectIds.length === 0) {
-    return true;
-  }
-
-  const assignedProjectIds = new Set(
-    getMemberProjectOptions(member).map((project) => project.value),
-  );
-
-  return filters.projectIds.some((projectId) => assignedProjectIds.has(projectId));
-}
-
-function matchesGlobalSearch(member: WorkspaceMemberResponse): boolean {
-  const search = filters.global.trim().toLowerCase();
-
-  if (!search) {
-    return true;
-  }
-
-  const projectLabels = getMemberProjectOptions(member).map((project) => project.label);
-  const haystack = [
-    getMemberDisplayName(member),
-    member.email,
-    formatWorkspaceRole(member.role),
-    formatProjectsAssigned(member),
-    formatLocalCalendarDate(member.lastActiveAt),
-    ...projectLabels,
-  ].join(' ');
-
-  return textIncludes(haystack, search);
-}
-
-const filteredMembers = computed(() =>
-  props.members.filter(
-    (member) =>
-      matchesGlobalSearch(member) &&
-      matchesMemberQuery(member) &&
-      (!filters.role || member.role === filters.role) &&
-      matchesProjectFilter(member) &&
-      matchesLastActiveFilter(member),
-  ),
-);
-
-const membersEmptyDescription = computed(() =>
-  props.members.length > 0
-    ? 'No members match the current filters.'
-    : 'Invite members to get started.',
-);
-
-function isSelf(member: WorkspaceMemberResponse): boolean {
-  return props.currentUserId !== null && member.userId === props.currentUserId;
-}
-
-watch(filteredMembers, (members) => {
-  const visibleMemberIds = new Set(members.map((member) => member.id));
-  const nextExpandedRows = Object.fromEntries(
-    Object.entries(expandedRows.value).filter(([id]) => visibleMemberIds.has(id)),
-  );
-
-  if (Object.keys(nextExpandedRows).length !== Object.keys(expandedRows.value).length) {
-    expandedRows.value = nextExpandedRows;
-    expansionMode.value = Object.fromEntries(
-      Object.entries(expansionMode.value).filter(([id]) => visibleMemberIds.has(id)),
-    );
-  }
-});
-
-function toggleExpansion(
-  member: WorkspaceMemberResponse,
-  mode: 'assign' | 'edit',
-): void {
-  if (
-    expandedRows.value[member.id] &&
-    expansionMode.value[member.id] === mode
-  ) {
-    const next = { ...expandedRows.value };
-    delete next[member.id];
-    expandedRows.value = next;
-  } else {
-    expansionMode.value = { ...expansionMode.value, [member.id]: mode };
-    expandedRows.value = { [member.id]: true };
-  }
-}
-
-function collapseRow(member: WorkspaceMemberResponse): void {
-  const next = { ...expandedRows.value };
-  delete next[member.id];
-  expandedRows.value = next;
-}
-
-function handleAssignSaved(member: WorkspaceMemberResponse): void {
-  collapseRow(member);
-  emit('assignments-updated');
-}
-
-function handleEditSaved(member: WorkspaceMemberResponse): void {
-  collapseRow(member);
-  emit('role-updated');
-}
-
-function handleRemove(member: WorkspaceMemberResponse): void {
-  requireConfirmation(
-    `${member.displayName ?? member.email} will be removed from this workspace. This action cannot be undone.`,
-    'Remove member?',
-    'Remove',
-    async () => {
-      const token = authStore.accessToken;
-      if (!token) return;
-
-      try {
-        await adminMembersClient.removeMember(member.id);
-        successToast(`${member.displayName ?? member.email} has been removed.`);
-        emit('member-removed');
-      } catch (err) {
-        errorToast(err instanceof Error ? err.message : 'Failed to remove member', {
-          error: err,
-          logContext: { action: 'remove-member', feature: 'members' },
-        });
-      }
-    },
-  );
-}
 </script>
 
 <template>
@@ -316,10 +105,11 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         <IconField class="w-full sm:w-[280px]">
           <InputIcon class="pi pi-search text-text-muted" />
           <InputText
-            v-model="filters.global"
+            :model-value="filters.global"
             aria-label="Search members"
             class="h-[38px] w-full rounded-[6px] text-[14px]"
             placeholder="Search members"
+            @update:model-value="updateGlobalFilter"
           />
         </IconField>
       </template>
@@ -337,9 +127,10 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       >Member</label>
       <InputText
         id="mobile-member-name-filter"
-        v-model="filters.memberQuery"
+        :model-value="filters.memberQuery"
         class="h-[38px] w-full rounded-[6px] text-[14px]"
         placeholder="Filter name or email"
+        @update:model-value="updateMemberQueryFilter"
       />
     </div>
 
@@ -351,13 +142,14 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         >Role</label>
         <Select
           id="mobile-member-role-filter"
-          v-model="filters.role"
+          :model-value="filters.role"
           :options="roleFilterOptions"
           option-label="label"
           option-value="value"
           placeholder="All roles"
           show-clear
           :pt="managementTableFilterSelectPt"
+          @update:model-value="updateRoleFilter"
         />
       </div>
 
@@ -368,11 +160,12 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         >Last active</label>
         <Select
           id="mobile-member-last-active-filter"
-          v-model="filters.lastActive"
+          :model-value="filters.lastActive"
           :options="lastActiveFilterOptions"
           option-label="label"
           option-value="value"
           :pt="managementTableFilterSelectPt"
+          @update:model-value="updateLastActiveFilter"
         />
       </div>
     </div>
@@ -384,7 +177,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       >Projects assigned</label>
       <MultiSelect
         id="mobile-member-projects-filter"
-        v-model="filters.projectIds"
+        :model-value="filters.projectIds"
         :options="projectFilterOptions"
         display="chip"
         filter
@@ -395,6 +188,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
         :max-selected-labels="1"
         selected-items-label="{0} projects"
         :pt="managementTableFilterMultiSelectPt"
+        @update:model-value="updateProjectIdsFilter"
       />
     </div>
   </div>
@@ -460,16 +254,16 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       </MobileRecordCard>
     </template>
 
-    <template v-else-if="filteredMembers.length > 0">
+    <template v-else-if="rows.length > 0">
       <MobileRecordCard
-        v-for="member in filteredMembers"
-        :key="member.id"
+        v-for="row in rows"
+        :key="row.id"
         data-testid="member-mobile-card"
       >
         <div class="flex items-start gap-3">
           <Avatar
-            :image="member.avatarUrl ?? undefined"
-            :label="!member.avatarUrl ? getInitials(member) : undefined"
+            :image="row.avatarImage"
+            :label="row.avatarLabel"
             shape="circle"
             class="size-9 shrink-0"
             :pt="{
@@ -478,67 +272,58 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           />
           <div class="min-w-0 flex-1">
             <h3 class="text-text-dark truncate text-[15px] font-semibold">
-              {{ member.displayName ?? member.email }}
+              {{ row.primaryLabel }}
             </h3>
             <p
-              v-if="member.displayName"
+              v-if="row.secondaryLabel"
               class="text-text-muted truncate text-[12px]"
             >
-              {{ member.email }}
+              {{ row.secondaryLabel }}
             </p>
           </div>
         </div>
 
         <MobileRecordMetadataList
           :items="[
-            { label: 'Role', value: formatWorkspaceRole(member.role) },
-            { label: 'Projects', value: formatProjectsAssigned(member) },
+            { label: 'Role', value: row.roleLabel },
+            { label: 'Projects', value: row.projectsAssignedLabel },
             {
               label: 'Last active',
-              value: formatLocalCalendarDate(member.lastActiveAt),
+              value: row.lastActiveLabel,
               fullWidth: true,
             },
           ]"
         />
 
         <template
-          v-if="!isSelf(member)"
+          v-if="row.canManage"
           #actions
         >
           <ManagementTableRowAction
-            v-if="member.role !== 'admin'"
-            :data-testid="`member-mobile-assign-pm-${member.id}`"
+            v-if="row.canAssignPm"
+            :data-testid="`member-mobile-assign-pm-${row.id}`"
             :icon="UserPlusIcon"
             label="Assign PM"
-            @click="toggleExpansion(member, 'assign')"
+            @click="emit('assign-member', row.member)"
           />
           <ManagementTableRowAction
-            :data-testid="`member-mobile-edit-${member.id}`"
+            :data-testid="`member-mobile-edit-${row.id}`"
             :icon="PencilSquareIcon"
             label="Edit"
-            @click="toggleExpansion(member, 'edit')"
+            @click="emit('edit-member', row.member)"
           />
           <ManagementTableRowAction
-            :data-testid="`member-mobile-remove-${member.id}`"
+            :data-testid="`member-mobile-remove-${row.id}`"
             :icon="TrashIcon"
             label="Remove"
             tone="destructive"
-            @click="handleRemove(member)"
+            @click="emit('remove-member', row.member)"
           />
         </template>
 
-        <MemberAssignPmPanel
-          v-if="expansionMode[member.id] === 'assign' && expandedRows[member.id]"
-          :member="member"
-          :projects="projects"
-          @saved="handleAssignSaved(member)"
-          @cancelled="collapseRow(member)"
-        />
-        <MemberEditForm
-          v-else-if="expansionMode[member.id] === 'edit' && expandedRows[member.id]"
-          :member="member"
-          @saved="handleEditSaved(member)"
-          @cancelled="collapseRow(member)"
+        <slot
+          name="row-expansion"
+          :row="row"
         />
       </MobileRecordCard>
     </template>
@@ -546,15 +331,15 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     <EmptyStateBlock
       v-else
       title="No members found"
-      :description="membersEmptyDescription"
+      :description="emptyDescription"
     />
   </div>
 
   <ManagementTableShell
     v-else
-    v-model:expanded-rows="expandedRows"
+    :expanded-rows="expandedRows"
     :columns="columns"
-    :value="filteredMembers"
+    :value="rows"
     :loading="loading"
     data-key="id"
     header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[930px] items-center border-b font-sans text-[13px] font-semibold"
@@ -562,21 +347,23 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     single-scroll
     table-class="min-w-[930px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
+    @update:expanded-rows="updateExpandedRows"
   >
     <template #filters>
       <div class="flex min-w-[930px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
           <InputText
-            v-model="filters.memberQuery"
+            :model-value="filters.memberQuery"
             aria-label="Filter members by name or email"
             :class="managementTableFilterInputClass"
             placeholder="Filter name or email"
+            @update:model-value="updateMemberQueryFilter"
           />
         </div>
 
         <div class="w-[120px] px-3">
           <Select
-            v-model="filters.role"
+            :model-value="filters.role"
             :options="roleFilterOptions"
             aria-label="Filter members by role"
             option-label="label"
@@ -584,12 +371,13 @@ function handleRemove(member: WorkspaceMemberResponse): void {
             placeholder="All roles"
             show-clear
             :pt="managementTableFilterSelectPt"
+            @update:model-value="updateRoleFilter"
           />
         </div>
 
         <div class="w-[220px] px-3">
           <MultiSelect
-            v-model="filters.projectIds"
+            :model-value="filters.projectIds"
             :options="projectFilterOptions"
             aria-label="Filter members by assigned projects"
             display="chip"
@@ -601,17 +389,19 @@ function handleRemove(member: WorkspaceMemberResponse): void {
             :max-selected-labels="1"
             selected-items-label="{0} projects"
             :pt="managementTableFilterMultiSelectPt"
+            @update:model-value="updateProjectIdsFilter"
           />
         </div>
 
         <div class="w-[140px] px-3">
           <Select
-            v-model="filters.lastActive"
+            :model-value="filters.lastActive"
             :options="lastActiveFilterOptions"
             aria-label="Filter members by last active"
             option-label="label"
             option-value="value"
             :pt="managementTableFilterSelectPt"
+            @update:model-value="updateLastActiveFilter"
           />
         </div>
 
@@ -624,8 +414,8 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       <template #body="{ data }">
         <div class="flex items-center gap-3">
           <Avatar
-            :image="data.avatarUrl ?? undefined"
-            :label="!data.avatarUrl ? getInitials(data) : undefined"
+            :image="data.avatarImage"
+            :label="data.avatarLabel"
             shape="circle"
             class="size-8"
             :pt="{
@@ -634,12 +424,12 @@ function handleRemove(member: WorkspaceMemberResponse): void {
           />
           <div class="flex flex-col">
             <span class="text-text-dark text-[14px] font-semibold">
-              {{ data.displayName ?? data.email }}
+              {{ data.primaryLabel }}
             </span>
             <span
-              v-if="data.displayName"
+              v-if="data.secondaryLabel"
               class="text-text-muted text-[12px]"
-            >{{ data.email }}</span>
+            >{{ data.secondaryLabel }}</span>
           </div>
         </div>
       </template>
@@ -651,8 +441,8 @@ function handleRemove(member: WorkspaceMemberResponse): void {
       :pt="managementTableColumnPt"
     >
       <template #body="{ data }">
-        <span class="text-[13px] font-bold text-black">{{
-          formatWorkspaceRole(data.role)
+        <span class="text-text-dark text-[13px] font-bold">{{
+          data.roleLabel
         }}</span>
       </template>
     </Column>
@@ -664,7 +454,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
-          formatProjectsAssigned(data)
+          data.projectsAssignedLabel
         }}</span>
       </template>
     </Column>
@@ -676,7 +466,7 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     >
       <template #body="{ data }">
         <span class="text-text-muted text-[13px] font-normal">{{
-          formatLocalCalendarDate(data.lastActiveAt)
+          data.lastActiveLabel
         }}</span>
       </template>
     </Column>
@@ -688,53 +478,44 @@ function handleRemove(member: WorkspaceMemberResponse): void {
     >
       <template #body="{ data }">
         <div class="flex items-center justify-end gap-2">
-          <template v-if="!isSelf(data)">
+          <template v-if="data.canManage">
             <ManagementTableRowAction
-              v-if="data.role !== 'admin'"
+              v-if="data.canAssignPm"
               :data-testid="`member-assign-pm-${data.id}`"
               :icon="UserPlusIcon"
               label="Assign PM"
-              @click="toggleExpansion(data, 'assign')"
+              @click="emit('assign-member', data.member)"
             />
             <ManagementTableRowAction
               :data-testid="`member-edit-${data.id}`"
               :icon="PencilSquareIcon"
               label="Edit"
-              @click="toggleExpansion(data, 'edit')"
+              @click="emit('edit-member', data.member)"
             />
             <ManagementTableRowAction
               :data-testid="`member-remove-${data.id}`"
               :icon="TrashIcon"
               label="Remove"
               tone="destructive"
-              @click="handleRemove(data)"
+              @click="emit('remove-member', data.member)"
             />
           </template>
         </div>
       </template>
     </Column>
 
-    <!-- Expansion: Assign PM panel or Edit form -->
+    <!-- Expansion: supplied by page owner -->
     <template #expansion="{ data }">
-      <MemberAssignPmPanel
-        v-if="expansionMode[data.id] === 'assign'"
-        :member="data"
-        :projects="projects"
-        @saved="handleAssignSaved(data)"
-        @cancelled="collapseRow(data)"
-      />
-      <MemberEditForm
-        v-else-if="expansionMode[data.id] === 'edit'"
-        :member="data"
-        @saved="handleEditSaved(data)"
-        @cancelled="collapseRow(data)"
+      <slot
+        name="row-expansion"
+        :row="data"
       />
     </template>
 
     <template #empty>
       <EmptyStateBlock
         title="No members found"
-        :description="membersEmptyDescription"
+        :description="emptyDescription"
       />
     </template>
   </ManagementTableShell>

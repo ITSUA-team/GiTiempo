@@ -40,21 +40,51 @@ function defaultFormErrors(): TimeEntryFormErrors {
   };
 }
 
+function createLocalPresetDate(
+  dayKey: string,
+  hour: number,
+): Date | null {
+  const [yearText, monthText, dayText] = dayKey.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
+    return null;
+  }
+
+  const value = new Date(year, month - 1, day, hour, 0, 0, 0);
+
+  if (
+    value.getFullYear() !== year ||
+    value.getMonth() !== month - 1 ||
+    value.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return value;
+}
+
 export function useTimeEntryDialog() {
-  const dialogMode = shallowRef<TimeEntryDialogMode>(null);
+  const dialogMode = ref<TimeEntryDialogMode>(null);
   const editingEntry = shallowRef<TimeEntryResponse | null>(null);
-  const dialogProjectId = shallowRef<string | null>(null);
+  const dialogProjectId = ref<string | null>(null);
   const dialogTaskValue = shallowRef<TaskLookupValue>(null);
   const dialogStartedAt = shallowRef<Date | null>(null);
   const dialogEndedAt = shallowRef<Date | null>(null);
-  const dialogDescription = shallowRef("");
-  const dialogIsBillable = shallowRef(false);
+  const dialogDescription = ref("");
+  const dialogIsBillable = ref(false);
   const dialogErrors = ref<TimeEntryFormErrors>(defaultFormErrors());
-  const dialogRequestErrorMessage = shallowRef<string | null>(null);
+  const dialogRequestErrorMessage = ref<string | null>(null);
   const dialogTaskOptions = ref<TaskLookupOption[]>([]);
   const dialogTaskSuggestions = ref<TaskLookupOption[]>([]);
-  const dialogTasksErrorMessage = shallowRef<string | null>(null);
-  const isLoadingDialogTasks = shallowRef(false);
+  const dialogTasksErrorMessage = ref<string | null>(null);
+  const isLoadingDialogTasks = ref(false);
   let taskRequestId = 0;
 
   const activeDialogTask = computed(() =>
@@ -110,8 +140,8 @@ export function useTimeEntryDialog() {
       return;
     }
 
-    dialogStartedAt.value = new Date(`${day}T09:00:00.000Z`);
-    dialogEndedAt.value = new Date(`${day}T10:00:00.000Z`);
+    dialogStartedAt.value = createLocalPresetDate(day, 9);
+    dialogEndedAt.value = createLocalPresetDate(day, 10);
   }
 
   function openEditDialogState(entry: TimeEntryResponse): void {

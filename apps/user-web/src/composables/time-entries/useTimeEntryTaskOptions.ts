@@ -1,3 +1,4 @@
+import type { TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 import { computed } from "vue";
 
@@ -7,6 +8,10 @@ import { toTaskLookupOption, type TaskLookupOption } from "./time-entry-task-loo
 
 interface UseTimeEntryTaskOptionsOptions {
   client: TimeEntriesClient;
+}
+
+interface LoadTaskOptionsOptions {
+  trackableOnly?: boolean;
 }
 
 /* eslint-disable no-unused-vars */
@@ -22,28 +27,37 @@ interface TaskOptionsTarget {
 export function useTimeEntryTaskOptions({
   client,
 }: UseTimeEntryTaskOptionsOptions) {
-  const taskCache = new Map<string, TaskLookupOption[]>();
-  const cachedTaskOptions = computed(() => Array.from(taskCache.values()).flat());
+  const taskCache = new Map<string, TaskResponse[]>();
+  const cachedTaskOptions = computed(() =>
+    Array.from(taskCache.values())
+      .flat()
+      .filter((task) => task.isActive)
+      .map(toTaskLookupOption),
+  );
 
-  async function loadProjectTaskOptions(projectId: string): Promise<TaskLookupOption[]> {
-    const cached = taskCache.get(projectId);
+  async function loadProjectTaskOptions(
+    projectId: string,
+    options: LoadTaskOptionsOptions = {},
+  ): Promise<TaskLookupOption[]> {
+    let tasks = taskCache.get(projectId);
 
-    if (cached) {
-      return cached;
+    if (!tasks) {
+      tasks = await client.listProjectTasks(projectId);
+      taskCache.set(projectId, tasks);
     }
 
-    const nextTasks = (await client.listProjectTasks(projectId))
-      .filter((task) => task.isActive)
+    return tasks
+      .filter(
+        (task) =>
+          task.isActive && (!options.trackableOnly || task.status === "open"),
+      )
       .map(toTaskLookupOption);
-
-    taskCache.set(projectId, nextTasks);
-
-    return nextTasks;
   }
 
   async function loadTargetProjectTaskOptions(
     projectId: string,
     target: TaskOptionsTarget,
+    options: LoadTaskOptionsOptions = {},
   ): Promise<TaskLookupOption[]> {
     const requestId = target.beginTaskRequest();
 
@@ -51,7 +65,7 @@ export function useTimeEntryTaskOptions({
     target.setTasksError(null);
 
     try {
-      const tasks = await loadProjectTaskOptions(projectId);
+      const tasks = await loadProjectTaskOptions(projectId, options);
 
       if (target.isCurrentTaskRequest(requestId)) {
         target.setTaskOptions(tasks);

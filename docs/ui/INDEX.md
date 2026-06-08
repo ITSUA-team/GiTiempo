@@ -36,10 +36,11 @@ Read this file first. Load only the linked section files needed for the task.
 |---|---|---|---|
 | Brand Purple | `bg-brand`, `text-brand`, `border-brand` | `#5D2B85` | Primary accent, active states, filled actions |
 | Accent Tint | `bg-accent-tint` | `#E8E1F5` | Selected rows, soft badges, hover states |
-| Surface | `bg-surface` | `#FFFFFF` | Cards, dialogs, inputs |
+| Surface Primary | `bg-surface-primary` | `#FFFFFF` | Cards, dialogs, inputs |
 | App Background | `bg-app-bg` | `#F4F4F5` | Main app canvas |
 | Text Dark | `text-text-dark` | `#1A1A1A` | Headings, primary body text |
 | Text Muted | `text-text-muted` | `#666666` | Secondary metadata |
+| Text Inverse | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand/destructive/dark surfaces |
 | Divider | `border-divider` | `#EEEEEE` | Borders and separators |
 | Destructive | `text-destructive`, `border-destructive` | `#D32F2F` | Delete and disconnect actions |
 
@@ -66,7 +67,7 @@ Read this file first. Load only the linked section files needed for the task.
 
 - `setup.md`: Tailwind theme tokens, PrimeVue preset setup, import paths, CSS layer ordering.
 - `components.md`: Design tokens, component conventions, shared component-level rules.
-- `layout.md`: App shell, sidebar navigation, breakpoints, page header pattern.
+- `layout.md`: App shell, sidebar navigation, breakpoints, top-bar breadcrumb pattern.
 - `pages-user.md`: Dashboard, timer, time entries, projects, profile.
 - `pages-admin.md`: Dashboard, reports, invoices, members, projects, settings.
 - `chrome-ext.md`: Popup dimensions, injected page control states, and extension UI constraints.
@@ -77,7 +78,7 @@ Read this file first. Load only the linked section files needed for the task.
 
 - For any implementation task, read only `INDEX.md` plus the smallest relevant section file set.
 - Task routing:
-- shell, sidebar, top bar, breakpoints, or page header work: `layout.md`
+- shell, sidebar, top bar, breakpoints, or top-bar breadcrumb work: `layout.md`
 - shared component styling, forms, tables, empty/loading/error states, or token usage: `components.md`
 - user-facing page structure or page-specific UI: `pages-user.md`
 - admin-facing page structure or page-specific UI: `pages-admin.md`

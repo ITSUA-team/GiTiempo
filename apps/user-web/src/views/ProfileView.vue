@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
-import ConfirmDialog from "primevue/confirmdialog";
 import InputText from "primevue/inputtext";
 import { updateUserSchema } from "@gitiempo/shared";
 import { createAppToast, runWithFeedback } from "@gitiempo/web-shared";
-import { computed, shallowRef, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import PageHeader from "@/components/layout/PageHeader.vue";
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
@@ -18,9 +17,9 @@ const authStore = useAuthStore();
 const toast = useToast();
 const appToast = createAppToast(toast);
 
-const displayNameDraft = shallowRef(authStore.profile?.displayName ?? "");
-const displayNameErrorMessage = shallowRef<string | null>(null);
-const isSavingProfile = shallowRef(false);
+const displayNameDraft = ref(authStore.profile?.displayName ?? "");
+const displayNameErrorMessage = ref<string | null>(null);
+const isSavingProfile = ref(false);
 
 const {
   connect,
@@ -97,8 +96,6 @@ async function handleSaveProfile(): Promise<void> {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <ConfirmDialog />
-
     <PageHeader
       subtitle="Manage your personal settings and session access."
       title="Profile"

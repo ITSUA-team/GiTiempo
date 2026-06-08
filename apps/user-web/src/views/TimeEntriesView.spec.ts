@@ -1,8 +1,6 @@
-// @vitest-environment jsdom
-
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ProjectResponse,
   TaskResponse,
@@ -55,6 +53,14 @@ const TEST_IDS = {
 
 const mountedWrappers: VueWrapper[] = [];
 
+beforeAll(() => {
+  vi.stubEnv("TZ", "Europe/Kiev");
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
+
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
   return {
     color: null,
@@ -65,7 +71,7 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     members: [],
     name: "Project Orion",
     source: "manual",
-    totalHours: 12,
+    totalSeconds: 43200,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
     workspaceId: TEST_IDS.workspace,
@@ -121,6 +127,16 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
     githubIssue,
     ...entryOverrides,
   };
+}
+
+function formatLocalWallClock(value: Date | string | null | undefined): string {
+  if (!value) {
+    return "none";
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
 function createEntryListResponse(
@@ -226,8 +242,10 @@ async function mountView(
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
+          props: ["inputId", "suggestions"],
           template: `
-            <div>
+            <div :data-testid="inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'">
+              <p v-for="suggestion in suggestions" :key="suggestion.id">{{ suggestion.title }}</p>
               <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
               <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
                 id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
@@ -243,7 +261,6 @@ async function mountView(
           props: ["label"],
           template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
-        ConfirmDialog: { template: "<div />" },
         DatePicker: {
           emits: ["update:modelValue"],
           props: ["inputId"],
@@ -251,7 +268,7 @@ async function mountView(
             <button
               :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
               type="button"
-              @click="$emit('update:modelValue', [new Date('2026-04-01T00:00:00.000Z'), new Date('2026-04-21T00:00:00.000Z')])"
+              @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
             >Date</button>
           `,
         },
@@ -273,7 +290,7 @@ async function mountView(
               <p>{{ group.heading }}</p>
                 <div v-for="entry in group.items" :key="entry.id">
                   <p>{{ entry.id }} {{ entry.task.title }}</p>
-                  <p>{{ formatTimeRange(entry) }}</p>
+                  <p :data-testid="'time-entry-range-' + entry.id">{{ formatTimeRange(entry) }}</p>
                   <p>{{ formatDuration(entry) }}</p>
                   <button
                     v-if="entry.endedAt !== null"
@@ -305,11 +322,28 @@ async function mountView(
             "update:startedAt",
             "update:taskValue",
           ],
-          props: ["dialogErrorMessage", "isOpen", "valueDescription"],
+          props: [
+            "dialogErrorMessage",
+            "endedAt",
+            "isOpen",
+            "startedAt",
+            "taskSuggestions",
+            "valueDescription",
+          ],
+          methods: {
+            formatDialogTime(value: Date | null | undefined): string {
+              return formatLocalWallClock(value);
+            },
+          },
           template: `
             <div v-if="isOpen" data-testid="time-entry-dialog">
               <p data-testid="dialog-description-value">{{ valueDescription }}</p>
+              <p data-testid="dialog-started-value">{{ formatDialogTime(startedAt) }}</p>
+              <p data-testid="dialog-ended-value">{{ formatDialogTime(endedAt) }}</p>
               <p data-testid="dialog-request-error">{{ dialogErrorMessage }}</p>
+              <div data-testid="dialog-task-suggestions">
+                <p v-for="suggestion in taskSuggestions" :key="suggestion.id">{{ suggestion.title }}</p>
+              </div>
               <button data-testid="dialog-project-admin" type="button" @click="$emit('update:projectId', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002')">Project</button>
               <button data-testid="dialog-task-admin" type="button" @click="$emit('update:taskValue', {
                 id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
@@ -396,6 +430,91 @@ describe("TimeEntriesView", () => {
     expect(primeVueMocks.confirmRequire).toHaveBeenCalledTimes(1);
   });
 
+  it("opens edit with the same browser-local times shown in the table", async () => {
+    const startedAt = new Date(2026, 3, 21, 9, 0, 0, 0).toISOString();
+    const endedAt = new Date(2026, 3, 21, 10, 30, 0, 0).toISOString();
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([
+        createEntry({
+          endedAt,
+          startedAt,
+        }),
+      ]),
+    });
+    const { wrapper } = await mountView(client);
+    const expectedTimeRange = `${formatLocalWallClock(startedAt)} - ${formatLocalWallClock(endedAt)}`;
+
+    await flushPromises();
+
+    expect(startedAt).toBe("2026-04-21T06:00:00.000Z");
+    expect(expectedTimeRange).toBe("09:00 - 10:30");
+    expect(wrapper.get(`[data-testid="time-entry-range-${TEST_IDS.completedEntry}"]`).text()).toBe(
+      expectedTimeRange,
+    );
+
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-started-value"]').text()).toBe(
+      formatLocalWallClock(startedAt),
+    );
+    expect(wrapper.get('[data-testid="dialog-ended-value"]').text()).toBe(
+      formatLocalWallClock(endedAt),
+    );
+  });
+
+  it("updates the table to the API-returned browser-local times after edit save", async () => {
+    const startedAt = new Date(2026, 3, 21, 9, 0, 0, 0).toISOString();
+    const endedAt = new Date(2026, 3, 21, 10, 30, 0, 0).toISOString();
+    const updatedStartedAt = new Date(2026, 3, 21, 12, 15, 0, 0).toISOString();
+    const updatedEndedAt = new Date(2026, 3, 21, 13, 45, 0, 0).toISOString();
+    const initialEntry = createEntry({
+      endedAt,
+      startedAt,
+    });
+    const updatedEntry = createEntry({
+      durationSeconds: 5400,
+      endedAt: updatedEndedAt,
+      id: TEST_IDS.completedEntry,
+      startedAt: updatedStartedAt,
+      updatedAt: updatedEndedAt,
+    });
+    const initialResponse = createEntryListResponse([initialEntry]);
+    const updatedResponse = createEntryListResponse([updatedEntry]);
+    const client = createClientMock({ entriesResponse: initialResponse });
+
+    client.listOwnEntries.mockResolvedValueOnce(initialResponse).mockResolvedValue(updatedResponse);
+    client.updateEntry.mockResolvedValueOnce(updatedEntry);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    expect(wrapper.get(`[data-testid="time-entry-range-${TEST_IDS.completedEntry}"]`).text()).toBe(
+      `${formatLocalWallClock(startedAt)} - ${formatLocalWallClock(endedAt)}`,
+    );
+
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-started"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-ended"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.updateEntry).toHaveBeenCalledWith(
+      TEST_IDS.completedEntry,
+      expect.objectContaining({
+        endedAt: "2026-04-21T10:45:00.000Z",
+        startedAt: "2026-04-21T09:15:00.000Z",
+      }),
+    );
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+    expect(wrapper.get(`[data-testid="time-entry-range-${TEST_IDS.completedEntry}"]`).text()).toBe(
+      `${formatLocalWallClock(updatedStartedAt)} - ${formatLocalWallClock(updatedEndedAt)}`,
+    );
+  });
+
   it("updates grouped entry state after a top-bar stop reconciliation", async () => {
     const initialRunningResponse = createEntryListResponse([
       createEntry({
@@ -422,7 +541,7 @@ describe("TimeEntriesView", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(wrapper.text()).toContain("09:00 - Running");
+    expect(wrapper.text()).toContain("Running");
     expect(wrapper.text()).toContain("02:00:05");
     expect(wrapper.text()).toContain("Stop from the top bar");
     expect(wrapper.find('[data-testid="time-entry-edit-entry-completed"]').exists()).toBe(false);
@@ -431,9 +550,8 @@ describe("TimeEntriesView", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(wrapper.text()).toContain("09:00 - 10:30");
+    expect(wrapper.text()).not.toContain("Running");
     expect(wrapper.text()).toContain("1h 30m");
-    expect(wrapper.text()).not.toContain("Stop from the top bar");
     expect(wrapper.find('[data-testid="time-entry-edit-entry-completed"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(true);
 
@@ -497,14 +615,55 @@ describe("TimeEntriesView", () => {
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
     );
     expect(client.listOwnEntries.mock.calls.map((call) => call[0])).toContainEqual({
-      dateFrom: "2026-04-01T00:00:00.000Z",
-      dateTo: "2026-04-22T00:00:00.000Z",
+      dateFrom: new Date(2026, 3, 1, 0, 0, 0, 0).toISOString(),
+      dateTo: new Date(2026, 3, 22, 0, 0, 0, 0).toISOString(),
       limit: 20,
       page: 2,
       projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
       search: "Ship admin polish",
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
+  });
+
+  it("filters closed tasks from manual entry selection without hiding historical filters", async () => {
+    const closedTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2999",
+      projectId: TEST_IDS.projectAdmin,
+      status: "closed",
+      title: "Ship closed archive",
+    });
+    const client = createClientMock({
+      tasksByProject: {
+        [TEST_IDS.projectAdmin]: [
+          createTask({
+            id: TEST_IDS.taskAdmin,
+            projectId: TEST_IDS.projectAdmin,
+            title: "Ship admin polish",
+          }),
+          closedTask,
+        ],
+      },
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-select"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-search"]').trigger("click");
+
+    const filterSuggestions = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    expect(filterSuggestions.text()).toContain("Ship admin polish");
+    expect(filterSuggestions.text()).toContain("Ship closed archive");
+
+    await wrapper.get('[data-testid="time-entries-header-create"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).not.toContain("Ship closed archive");
   });
 
   it("creates a manual entry and refreshes the current list page", async () => {

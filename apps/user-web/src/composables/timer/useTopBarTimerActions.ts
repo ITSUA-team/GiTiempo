@@ -1,10 +1,11 @@
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
+import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import type { StartTimerInput } from "@gitiempo/shared";
 import {
   useStartTimerMutation,
   useStopTimerMutation,
 } from "@/composables/query";
-import { computed, shallowRef, type ComputedRef } from "vue";
+import { computed, ref, type ComputedRef } from "vue";
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -28,7 +29,7 @@ export function useTopBarTimerActions({
   toast,
 }: UseTopBarTimerActionsOptions) {
   const appToast = createAppToast(toast);
-  const timerActionErrorMessage = shallowRef<string | null>(null);
+  const timerActionErrorMessage = ref<string | null>(null);
   const startTimerMutation = useStartTimerMutation({
     accessToken,
     client,
@@ -45,7 +46,11 @@ export function useTopBarTimerActions({
     () => isStartingTimer.value || isStoppingTimer.value,
   );
 
-  async function handlePrimaryAction(): Promise<void> {
+  function clearTimerActionError(): void {
+    timerActionErrorMessage.value = null;
+  }
+
+  async function handlePrimaryAction(): Promise<boolean> {
     timerActionErrorMessage.value = null;
 
     if (isTimerRunning.value) {
@@ -56,21 +61,33 @@ export function useTopBarTimerActions({
         summary.setSelectedContextFromTimer(stoppedTimer);
         summary.clearSelectedDescription();
         appToast.showSuccessToast("Timer stopped", "Your running timer has been stopped.");
+        return true;
       } catch (error) {
-        timerActionErrorMessage.value = getErrorMessage(error);
+        const message = getErrorMessage(error);
+
+        if (isApiErrorStatus(error, [404])) {
+          await summary.refreshSummaryAfterConflict(error);
+          timerActionErrorMessage.value = null;
+          appToast.showInfoToast(
+            "Timer already stopped",
+            "The timer status has been refreshed.",
+          );
+          return true;
+        }
+
+        timerActionErrorMessage.value = message;
         appToast.showErrorToast({
           detail: "Please try again.",
           error,
           logContext: { action: "stop-timer", feature: "top-bar-timer" },
           summary: "Could not stop the timer",
         });
+        return false;
       }
-
-      return;
     }
 
     if (!summary.selectedContext.value) {
-      return;
+      return false;
     }
 
     try {
@@ -88,25 +105,46 @@ export function useTopBarTimerActions({
         summary.setSelectedDescriptionFromTimer(summary.currentTimer.value);
       }
       appToast.showSuccessToast("Timer started", "Your timer is now running.");
+      return true;
     } catch (error) {
       const message = getErrorMessage(error);
+      const toastCopy = getStartTimerErrorToastCopy(message);
 
       timerActionErrorMessage.value = message;
       appToast.showErrorToast({
-        detail: "Please try again.",
+        detail: toastCopy.detail,
         error,
         logContext: { action: "start-timer", feature: "top-bar-timer" },
-        summary: "Could not start the timer",
+        summary: toastCopy.summary,
       });
       await summary.refreshSummaryAfterConflict(error);
+      return false;
     }
   }
 
   return {
+    clearTimerActionError,
     handlePrimaryAction,
     isPrimaryActionPending,
     isStartingTimer,
     isStoppingTimer,
     timerActionErrorMessage,
+  };
+}
+
+function getStartTimerErrorToastCopy(message: string): {
+  detail: string;
+  summary: string;
+} {
+  if (message.toLowerCase().includes("task is closed")) {
+    return {
+      detail: "Choose an open task to start tracking time.",
+      summary: "Couldn't track closed task",
+    };
+  }
+
+  return {
+    detail: "Please try again.",
+    summary: "Could not start the timer",
   };
 }

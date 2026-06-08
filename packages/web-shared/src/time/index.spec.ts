@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
+  addLocalDays,
   addUtcDays,
   formatAutoRelativeTime,
   formatCompactDuration,
   formatElapsedDuration,
   formatLocalCalendarDate,
+  formatLocalDayLabel,
+  formatLocalTime,
+  formatLocalWeekday,
   formatPaddedHoursMinutesDuration,
   formatRelativeTime,
   formatRunningDuration,
@@ -14,17 +18,29 @@ import {
   formatUtcTime,
   formatUtcWeekday,
   getLocalIsoWeekRange,
+  getLocalDateKey,
   getUtcDateKey,
   hasValidDate,
   isSameLocalDateValue,
   isWithinLocalIsoWeekToDate,
+  nextLocalDay,
   nextLocalDayStartIso,
   nextUtcDay,
   parseDateInput,
+  startOfLocalDay,
+  startOfLocalIsoWeek,
   startOfLocalDayIso,
   startOfUtcDay,
   startOfUtcIsoWeek,
 } from './index';
+
+beforeAll(() => {
+  vi.stubEnv('TZ', 'Europe/Kiev');
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('shared date-time helpers', () => {
   it('formats UTC keys, labels, times, and weekdays without local timezone drift', () => {
@@ -39,6 +55,29 @@ describe('shared date-time helpers', () => {
     expect(formatUtcDayLabel('2026-04-01', nowMs)).toBe('Apr 1');
   });
 
+  it('formats local keys, labels, times, and weekdays from browser-local dates', () => {
+    const localNow = new Date(2026, 3, 21, 12, 0, 0, 0);
+    const localTimestamp = new Date(2026, 3, 21, 0, 30, 0, 0);
+    const olderLocalTimestamp = new Date(2026, 3, 19, 8, 45, 0, 0);
+    const localIso = localTimestamp.toISOString();
+    const olderLocalIso = olderLocalTimestamp.toISOString();
+
+    expect(formatUtcTime('2026-04-21T09:00:00.000Z')).toBe('09:00');
+    expect(formatLocalTime('2026-04-21T09:00:00.000Z')).toBe('12:00');
+    expect(getLocalDateKey(localIso)).toBe('2026-04-21');
+    expect(formatLocalTime(localIso)).toBe('00:30');
+    expect(formatLocalWeekday(olderLocalIso)).toBe('Sun');
+    expect(formatLocalDayLabel('2026-04-21', localNow.getTime())).toBe(
+      'Today, Apr 21',
+    );
+    expect(formatLocalDayLabel('2026-04-20', localNow.getTime())).toBe(
+      'Yesterday, Apr 20',
+    );
+    expect(formatLocalDayLabel('2026-04-19', localNow.getTime())).toBe(
+      'Apr 19',
+    );
+  });
+
   it('calculates UTC day and ISO week boundaries', () => {
     const date = new Date('2026-04-26T23:30:00.000Z');
 
@@ -49,6 +88,19 @@ describe('shared date-time helpers', () => {
     );
     expect(addUtcDays(startOfUtcIsoWeek(date), 7).toISOString()).toBe(
       '2026-04-27T00:00:00.000Z',
+    );
+  });
+
+  it('calculates local day and Monday-start week boundaries as Date values', () => {
+    const date = new Date(2026, 3, 26, 23, 30, 0, 0);
+
+    expect(startOfLocalDay(date)).toEqual(new Date(2026, 3, 26, 0, 0, 0, 0));
+    expect(nextLocalDay(date)).toEqual(new Date(2026, 3, 27, 0, 0, 0, 0));
+    expect(startOfLocalIsoWeek(date)).toEqual(
+      new Date(2026, 3, 20, 0, 0, 0, 0),
+    );
+    expect(addLocalDays(startOfLocalIsoWeek(date), 7)).toEqual(
+      new Date(2026, 3, 27, 0, 0, 0, 0),
     );
   });
 

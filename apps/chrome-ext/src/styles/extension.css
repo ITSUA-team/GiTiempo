@@ -6,7 +6,7 @@
 :root {
   font-family: "Inter", sans-serif;
   color: var(--color-text-dark);
-  background: var(--color-surface);
+  background: var(--color-surface-primary);
 }
 
 html,

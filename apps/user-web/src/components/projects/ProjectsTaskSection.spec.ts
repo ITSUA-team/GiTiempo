@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount } from "@vue/test-utils";
 import type { TaskResponse } from "@gitiempo/shared";
 import PrimeVue from "primevue/config";
@@ -39,7 +37,7 @@ describe("ProjectsTaskSection", () => {
           members: [],
           name: "Project Orion",
           source: "manual",
-          totalHours: 12,
+          totalSeconds: 43200,
           updatedAt: "2026-04-20T12:00:00.000Z",
           visibility: "public",
           workspaceId: "workspace-1",
@@ -122,7 +120,7 @@ describe("ProjectsTaskSection", () => {
           members: [],
           name: "Project Orion",
           source: "manual",
-          totalHours: 12,
+          totalSeconds: 43200,
           updatedAt: "2026-04-20T12:00:00.000Z",
           visibility: "public",
           workspaceId: "workspace-1",
@@ -142,10 +140,14 @@ describe("ProjectsTaskSection", () => {
     });
 
     const mobileCards = wrapper.findAll('[data-testid="project-task-mobile-card"]');
+    const mobileTitles = wrapper.findAll('[data-testid="project-task-mobile-title"]');
     const editButton = wrapper.get('[data-testid="project-task-mobile-edit-task-1"]');
     const deleteButton = wrapper.get('[data-testid="project-task-mobile-delete-task-1"]');
 
     expect(mobileCards).toHaveLength(2);
+    expect(mobileTitles[0]?.classes()).not.toContain('truncate');
+    expect(mobileTitles[0]?.classes()).toContain('break-words');
+    expect(mobileTitles[0]?.classes()).toContain('whitespace-normal');
     expect(mobileCards[0]?.text()).toContain('Improve reports filters');
     expect(mobileCards[0]?.text()).toContain('Open');
     expect(mobileCards[0]?.text()).toContain('Today, 10:00');
@@ -189,7 +191,7 @@ describe("ProjectsTaskSection", () => {
           members: [],
           name: "Project Orion",
           source: "manual",
-          totalHours: 12,
+          totalSeconds: 43200,
           updatedAt: "2026-04-20T12:00:00.000Z",
           visibility: "public",
           workspaceId: "workspace-1",
@@ -213,6 +215,15 @@ describe("ProjectsTaskSection", () => {
     expect(wrapper.text()).toContain("Status");
     expect(wrapper.text()).toContain("Updated");
     expect(wrapper.text()).toContain("Improve reports filters");
+    expect(wrapper.get('[data-testid="project-task-title"]').classes()).not.toContain(
+      "truncate",
+    );
+    expect(wrapper.get('[data-testid="project-task-title"]').classes()).toContain(
+      "break-words",
+    );
+    expect(wrapper.get('[data-testid="project-task-title"]').classes()).toContain(
+      "whitespace-normal",
+    );
   });
 
   it("uses the shared management empty state for projects without active tasks", () => {
@@ -231,7 +242,7 @@ describe("ProjectsTaskSection", () => {
           members: [],
           name: "Project Orion",
           source: "manual",
-          totalHours: 12,
+          totalSeconds: 43200,
           updatedAt: "2026-04-20T12:00:00.000Z",
           visibility: "public",
           workspaceId: "workspace-1",

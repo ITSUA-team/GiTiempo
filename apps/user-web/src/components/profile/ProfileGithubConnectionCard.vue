@@ -7,6 +7,7 @@ import Tag from "primevue/tag";
 import type { GitHubConnectionStatusResponse } from "@gitiempo/shared";
 
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
+import { formatLocalTimestampLabel } from "@/lib/time-formatters";
 
 const props = defineProps<{
   isConnecting: boolean;
@@ -57,6 +58,17 @@ const statusTagConfig = computed(() => {
       return null;
   }
 });
+
+const connectedAtLabel = computed(() =>
+  props.value?.status === "connected"
+    ? formatLocalTimestampLabel(props.value.account.connectedAt)
+    : "",
+);
+const updatedAtLabel = computed(() =>
+  props.value?.status === "connected"
+    ? formatLocalTimestampLabel(props.value.account.updatedAt)
+    : "",
+);
 </script>
 
 <template>
@@ -140,14 +152,14 @@ const statusTagConfig = computed(() => {
           Connected at
         </dt>
         <dd class="text-text-dark m-0 text-left font-medium sm:text-right">
-          {{ props.value.account.connectedAt }}
+          {{ connectedAtLabel }}
         </dd>
 
         <dt class="text-text-muted">
           Updated at
         </dt>
         <dd class="text-text-dark m-0 text-left font-medium sm:text-right">
-          {{ props.value.account.updatedAt }}
+          {{ updatedAtLabel }}
         </dd>
       </dl>
 

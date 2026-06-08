@@ -7,10 +7,8 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { timeEntries } from '../schemas/time-entries.schema';
-import {
-  calculateDurationSeconds,
-  TimeEntriesService,
-} from './time-entries.service';
+import { calculateDurationSeconds } from '../time-entry-duration';
+import { TimeEntriesService } from './time-entries.service';
 
 const user: AuthUser = {
   sub: 'user-1',
@@ -106,7 +104,7 @@ describe('TimeEntriesService', () => {
       transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
-      requireTrackableTask: vi
+      requireTrackableTaskForUpdate: vi
         .fn()
         .mockResolvedValue({ task: { id: 'task-2' } }),
     };
@@ -219,7 +217,7 @@ describe('TimeEntriesService', () => {
       transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
-      requireTrackableTask: vi.fn(),
+      requireTrackableTaskForUpdate: vi.fn(),
     };
     const service = new TimeEntriesService(
       db as never,
@@ -237,7 +235,7 @@ describe('TimeEntriesService', () => {
       }),
     ).rejects.toBeInstanceOf(ConflictException);
 
-    expect(tasks.requireTrackableTask).not.toHaveBeenCalled();
+    expect(tasks.requireTrackableTaskForUpdate).not.toHaveBeenCalled();
   });
 
   it('propagates invisible task reassignment failures for running entries', async () => {
@@ -257,7 +255,7 @@ describe('TimeEntriesService', () => {
       transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
-      requireTrackableTask: vi
+      requireTrackableTaskForUpdate: vi
         .fn()
         .mockRejectedValue(new NotFoundException('Task not found')),
     };
@@ -291,7 +289,7 @@ describe('TimeEntriesService', () => {
       transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
-      requireTrackableTask: vi
+      requireTrackableTaskForUpdate: vi
         .fn()
         .mockRejectedValue(
           new UnprocessableEntityException('Task is inactive'),
@@ -328,7 +326,7 @@ describe('TimeEntriesService', () => {
       transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
-      requireTrackableTask: vi
+      requireTrackableTaskForUpdate: vi
         .fn()
         .mockResolvedValue({ task: { id: 'task-2' } }),
     };
@@ -346,7 +344,11 @@ describe('TimeEntriesService', () => {
     await service.updateOwnEntry(user, runningEntry.id, { taskId: 'task-2' });
 
     expect(db.transaction).toHaveBeenCalledOnce();
-    expect(tasks.requireTrackableTask).toHaveBeenCalledWith(user, 'task-2');
+    expect(tasks.requireTrackableTaskForUpdate).toHaveBeenCalledWith(
+      user,
+      'task-2',
+      tx,
+    );
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
         taskId: 'task-2',
@@ -393,9 +395,10 @@ describe('TimeEntriesService', () => {
       constraint: 'time_entries_running_unique',
     });
     const values = vi.fn().mockReturnValue({ returning });
-    const db = { insert: vi.fn().mockReturnValue({ values }) };
+    const tx = { insert: vi.fn().mockReturnValue({ values }) };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
     const tasks = {
-      requireTrackableTask: vi.fn().mockResolvedValue({
+      requireTrackableTaskForUpdate: vi.fn().mockResolvedValue({
         task: { id: 'task-1' },
         project: { id: 'project-1', isActive: true },
       }),
@@ -416,9 +419,10 @@ describe('TimeEntriesService', () => {
   it('starts web timers with an optional description', async () => {
     const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
     const values = vi.fn().mockReturnValue({ returning });
-    const db = { insert: vi.fn().mockReturnValue({ values }) };
+    const tx = { insert: vi.fn().mockReturnValue({ values }) };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
     const tasks = {
-      requireTrackableTask: vi.fn().mockResolvedValue({
+      requireTrackableTaskForUpdate: vi.fn().mockResolvedValue({
         project: { id: 'project-1', isActive: true },
         task: { id: 'task-1', isActive: true },
       }),
@@ -445,6 +449,11 @@ describe('TimeEntriesService', () => {
       taskId: 'task-1',
     });
 
+    expect(tasks.requireTrackableTaskForUpdate).toHaveBeenCalledWith(
+      user,
+      'task-1',
+      tx,
+    );
     expect(values).toHaveBeenCalledWith(
       expect.objectContaining({
         description: 'Investigate release blocker',
@@ -482,12 +491,10 @@ describe('TimeEntriesService', () => {
   it('creates manual entries with computed duration and source', async () => {
     const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
     const values = vi.fn().mockReturnValue({ returning });
-    const db = {
-      insert: vi.fn().mockReturnValue({ values }),
-      select: vi.fn().mockReturnValue(selectRows([])),
-    };
+    const tx = { insert: vi.fn().mockReturnValue({ values }) };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
     const tasks = {
-      requireTrackableTask: vi.fn().mockResolvedValue({
+      requireTrackableTaskForUpdate: vi.fn().mockResolvedValue({
         task: { id: 'task-1' },
         project: { id: 'project-1', isActive: true },
       }),
@@ -509,6 +516,11 @@ describe('TimeEntriesService', () => {
       endedAt: '2026-01-01T11:00:00.000Z',
     });
 
+    expect(tasks.requireTrackableTaskForUpdate).toHaveBeenCalledWith(
+      user,
+      'task-1',
+      tx,
+    );
     expect(values).toHaveBeenCalledWith(
       expect.objectContaining({
         durationSeconds: 3600,
@@ -530,7 +542,7 @@ describe('TimeEntriesService', () => {
       transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
-      requireTrackableTask: vi.fn().mockResolvedValue({
+      requireTrackableTaskForUpdate: vi.fn().mockResolvedValue({
         project: { id: 'project-2', isActive: true },
         task: { id: 'task-2', isActive: true },
       }),
@@ -548,7 +560,11 @@ describe('TimeEntriesService', () => {
 
     await service.updateOwnEntry(user, completedEntry.id, { taskId: 'task-2' });
 
-    expect(tasks.requireTrackableTask).toHaveBeenCalledWith(user, 'task-2');
+    expect(tasks.requireTrackableTaskForUpdate).toHaveBeenCalledWith(
+      user,
+      'task-2',
+      tx,
+    );
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
         durationSeconds: 3600,
@@ -566,7 +582,7 @@ describe('TimeEntriesService', () => {
       transaction: vi.fn((callback) => callback(tx)),
     };
     const tasks = {
-      requireTrackableTask: vi
+      requireTrackableTaskForUpdate: vi
         .fn()
         .mockRejectedValue(
           new UnprocessableEntityException('Task is inactive'),
@@ -588,7 +604,17 @@ describe('TimeEntriesService', () => {
 
   it('starts GitHub timer transactionally', async () => {
     const tx = {
-      select: vi.fn().mockReturnValue(selectRows([])),
+      select: vi.fn().mockReturnValue(
+        selectRowsForUpdate([
+          {
+            id: 'task-1',
+            isActive: true,
+            projectId: 'project-1',
+            status: 'open',
+            workspaceId: user.workspaceId,
+          },
+        ]),
+      ),
       insert: vi.fn((table) => {
         if (table === timeEntries) {
           return {
@@ -626,6 +652,7 @@ describe('TimeEntriesService', () => {
       value: vi.fn().mockResolvedValue({
         id: 'task-1',
         isActive: true,
+        status: 'open',
       }),
     });
     Object.defineProperty(service, 'requireEntryResponse', {
@@ -639,5 +666,56 @@ describe('TimeEntriesService', () => {
     });
 
     expect(db.transaction).toHaveBeenCalledOnce();
+    expect(tx.select).toHaveBeenCalled();
+  });
+
+  it('rejects GitHub timers for closed tasks', async () => {
+    const tx = {
+      select: vi.fn().mockReturnValue(
+        selectRowsForUpdate([
+          {
+            id: 'task-1',
+            isActive: true,
+            projectId: 'project-1',
+            status: 'closed',
+            workspaceId: user.workspaceId,
+          },
+        ]),
+      ),
+      insert: vi.fn(),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+    );
+    Object.defineProperty(service, 'findOrCreateGitHubProject', {
+      value: vi.fn().mockResolvedValue({
+        project: { id: 'project-1', isActive: true },
+        created: true,
+      }),
+    });
+    Object.defineProperty(service, 'findOrCreateGitHubTask', {
+      value: vi.fn().mockResolvedValue({
+        id: 'task-1',
+        isActive: true,
+        status: 'closed',
+      }),
+    });
+
+    await expect(
+      service.startTimerFromGitHub(user, {
+        githubRepo: 'org/repo',
+        issueNumber: 123,
+        issueTitle: 'Issue title',
+      }),
+    ).rejects.toThrow('Task is closed');
+    expect(tx.insert).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import type { TimeEntryListQuery } from '@gitiempo/shared';
-import { nextUtcDay, startOfUtcDay } from '@gitiempo/web-shared/time';
+import { nextLocalDay, startOfLocalDay } from '@gitiempo/web-shared/time';
 import { computed, ref, shallowRef } from 'vue';
 
 import {
@@ -10,15 +10,15 @@ import {
 } from './time-entry-task-lookup';
 
 export function useTimeEntryFilters() {
-  const currentPage = shallowRef(1);
-  const pageSize = shallowRef(20);
+  const currentPage = ref(1);
+  const pageSize = ref(20);
   const selectedDateRange = shallowRef<Date[] | null>(null);
-  const selectedProjectId = shallowRef<string | null>(null);
+  const selectedProjectId = ref<string | null>(null);
   const selectedTaskFilter = shallowRef<TaskLookupValue>(null);
   const filterTaskOptions = ref<TaskLookupOption[]>([]);
   const filterTaskSuggestions = ref<TaskLookupOption[]>([]);
-  const isLoadingFilterTasks = shallowRef(false);
-  const filterTasksErrorMessage = shallowRef<string | null>(null);
+  const isLoadingFilterTasks = ref(false);
+  const filterTasksErrorMessage = ref<string | null>(null);
   let taskRequestId = 0;
 
   const selectedTaskId = computed(() =>
@@ -36,8 +36,8 @@ export function useTimeEntryFilters() {
           : '';
 
     return {
-      dateFrom: startDate ? startOfUtcDay(startDate).toISOString() : undefined,
-      dateTo: endDate ? nextUtcDay(endDate).toISOString() : undefined,
+      dateFrom: startDate ? startOfLocalDay(startDate).toISOString() : undefined,
+      dateTo: endDate ? nextLocalDay(endDate).toISOString() : undefined,
       limit: pageSize.value,
       page: currentPage.value,
       projectId: selectedProjectId.value ?? undefined,

@@ -1,11 +1,9 @@
-// @vitest-environment jsdom
-
 import { mount, type VueWrapper } from "@vue/test-utils";
-import { computed, shallowRef } from "vue";
+import { computed, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const pageState = shallowRef<"empty" | "loading" | "ready" | "request-error">("ready");
-const requestErrorMessage = shallowRef<string | null>(null);
+const pageState = ref<"empty" | "loading" | "ready" | "request-error">("ready");
+const requestErrorMessage = ref<string | null>(null);
 const retryLoadOverview = vi.fn(async () => undefined);
 const routerPush = vi.fn(async () => undefined);
 const wrappers: VueWrapper[] = [];

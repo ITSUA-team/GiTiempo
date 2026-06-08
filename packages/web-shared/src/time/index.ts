@@ -18,12 +18,24 @@ export function getUtcDateKey(isoDateTime: string): string {
   return isoDateTime.slice(0, 10);
 }
 
+export function getLocalDateKey(value: DateInput): string {
+  return format(requireValidDate(value), 'yyyy-MM-dd');
+}
+
 export function formatUtcTime(isoDateTime: string): string {
   return format(toUtcLocalDate(requireValidDate(isoDateTime)), 'HH:mm');
 }
 
+export function formatLocalTime(value: DateInput): string {
+  return format(requireValidDate(value), 'HH:mm');
+}
+
 export function formatUtcWeekday(isoDateTime: string): string {
   return format(toUtcLocalDate(requireValidDate(isoDateTime)), 'EEE');
+}
+
+export function formatLocalWeekday(value: DateInput): string {
+  return format(requireValidDate(value), 'EEE');
 }
 
 export function formatUtcDayLabel(dateKey: string, nowMs: number): string {
@@ -34,6 +46,23 @@ export function formatUtcDayLabel(dateKey: string, nowMs: number): string {
   const yesterdayKey = getUtcDateKey(
     addUtcDays(requireValidDate(new Date(nowMs)), -1).toISOString(),
   );
+  const dateLabel = format(target, 'MMM d');
+
+  if (dateKey === todayKey) {
+    return `Today, ${dateLabel}`;
+  }
+
+  if (dateKey === yesterdayKey) {
+    return `Yesterday, ${dateLabel}`;
+  }
+
+  return dateLabel;
+}
+
+export function formatLocalDayLabel(dateKey: string, nowMs: number): string {
+  const target = dateFromLocalDateKey(dateKey);
+  const todayKey = getLocalDateKey(new Date(nowMs));
+  const yesterdayKey = getLocalDateKey(addDays(new Date(nowMs), -1));
   const dateLabel = format(target, 'MMM d');
 
   if (dateKey === todayKey) {
@@ -188,8 +217,16 @@ export function startOfUtcDay(date: Date): Date {
   return utcBoundaryFromLocalDate(toUtcLocalDate(date));
 }
 
+export function startOfLocalDay(date: Date): Date {
+  return startOfDay(date);
+}
+
 export function nextUtcDay(date: Date): Date {
   return addUtcDays(date, 1);
+}
+
+export function nextLocalDay(date: Date): Date {
+  return addDays(startOfLocalDay(date), 1);
 }
 
 export function startOfUtcIsoWeek(date: Date): Date {
@@ -198,16 +235,24 @@ export function startOfUtcIsoWeek(date: Date): Date {
   );
 }
 
+export function startOfLocalIsoWeek(date: Date): Date {
+  return startOfWeek(date, { weekStartsOn: 1 });
+}
+
 export function addUtcDays(date: Date, days: number): Date {
   return utcBoundaryFromLocalDate(addDays(toUtcLocalDate(date), days));
 }
 
+export function addLocalDays(date: Date, days: number): Date {
+  return addDays(date, days);
+}
+
 export function startOfLocalDayIso(date: Date): string {
-  return startOfDay(date).toISOString();
+  return startOfLocalDay(date).toISOString();
 }
 
 export function nextLocalDayStartIso(date: Date): string {
-  return addDays(startOfDay(date), 1).toISOString();
+  return nextLocalDay(date).toISOString();
 }
 
 export function getLocalIsoWeekRange(now = new Date()): {
@@ -215,7 +260,7 @@ export function getLocalIsoWeekRange(now = new Date()): {
   dateTo: string;
 } {
   return {
-    dateFrom: startOfWeek(now, { weekStartsOn: 1 }).toISOString(),
+    dateFrom: startOfLocalIsoWeek(now).toISOString(),
     dateTo: now.toISOString(),
   };
 }
@@ -259,6 +304,12 @@ export function isWithinLocalIsoWeekToDate(
 
 function dateFromUtcDateKey(dateKey: string): Date {
   const date = parse(dateKey, 'yyyy-MM-dd', new Date(0));
+
+  return isValid(date) ? date : new Date(Number.NaN);
+}
+
+function dateFromLocalDateKey(dateKey: string): Date {
+  const date = parse(dateKey, 'yyyy-MM-dd', new Date());
 
   return isValid(date) ? date : new Date(Number.NaN);
 }

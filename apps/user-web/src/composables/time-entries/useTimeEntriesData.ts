@@ -8,12 +8,12 @@ import {
   useOwnTimeEntriesQuery,
   useVisibleProjectsQuery,
 } from "@/composables/query";
-import { computed, nextTick, shallowRef, watch, type ComputedRef, type Ref } from "vue";
+import { computed, nextTick, ref, watch, type ComputedRef, type Ref } from "vue";
 
 import {
   formatTimeEntryDuration,
   formatTimeEntryTimeRange,
-  groupTimeEntriesByUtcDay,
+  groupTimeEntriesByLocalDay,
   type TimeEntriesDayGroup,
 } from "@/lib/time-entry-display";
 import { resolveDataPageState } from "@/lib/page-state";
@@ -49,7 +49,7 @@ export function useTimeEntriesData({
   scope,
   setIntervalFn,
 }: UseTimeEntriesDataOptions) {
-  const nowMs = shallowRef(now());
+  const nowMs = ref(now());
   let tickHandle: ReturnType<typeof setInterval> | null = null;
 
   const visibleProjectsQuery = useVisibleProjectsQuery({
@@ -92,7 +92,7 @@ export function useTimeEntriesData({
   );
   const visibleProjects = computed(() => projects.value.filter((project) => project.isActive));
   const groupedEntries = computed<TimeEntriesDayGroup[]>(() =>
-    groupTimeEntriesByUtcDay(entries.value, nowMs.value),
+    groupTimeEntriesByLocalDay(entries.value, nowMs.value),
   );
   const hasRunningEntries = computed(() =>
     entries.value.some((entry) => entry.endedAt === null),

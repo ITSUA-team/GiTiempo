@@ -39,7 +39,7 @@ function createManifestPlugin(mode: string): Plugin {
             name: "GiTiempo",
             version: "0.0.0",
             description:
-              "Track GiTiempo timers directly from GitHub issue pages.",
+              "Track GiTiempo timers directly from supported GitHub issue surfaces.",
             permissions: ["identity", "storage", "tabs"],
             host_permissions: [`${apiOrigin}/*`, "https://github.com/*"],
             oauth2: {
@@ -58,6 +58,7 @@ function createManifestPlugin(mode: string): Plugin {
                 matches: [
                   "https://github.com/*/*/issues/*",
                   "https://github.com/*/*/pull/*",
+                  "https://github.com/orgs/*/projects/*",
                 ],
                 js: ["content.js"],
                 run_at: "document_idle",

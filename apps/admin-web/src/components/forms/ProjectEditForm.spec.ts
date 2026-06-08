@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import type {
@@ -42,7 +40,7 @@ const project: ProjectResponse = {
   ],
   name: 'Project Orion',
   source: 'manual',
-  totalHours: 12,
+  totalSeconds: 43200,
   updatedAt: '2026-05-01T10:00:00.000Z',
   visibility: 'public',
   workspaceId: 'workspace-1',

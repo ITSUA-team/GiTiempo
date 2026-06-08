@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { computed, shallowRef } from "vue";
+import { computed, ref } from "vue";
 import {
   createAuthProfilePresentation,
   createAuthSessionCore,
@@ -13,7 +13,7 @@ function clearAuthenticatedQueryCache(): void {
 }
 
 export const useAuthStore = defineStore("auth", () => {
-  const currentWorkspaceName = shallowRef("Workspace Admin");
+  const currentWorkspaceName = ref("Workspace Admin");
   const session = createAuthSessionCore({
     getAuthRuntime,
     onClearSession: () => {

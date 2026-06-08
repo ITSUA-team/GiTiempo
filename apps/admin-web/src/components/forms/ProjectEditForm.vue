@@ -11,25 +11,17 @@ import { zodResolver } from '@primevue/forms/resolvers/zod';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
-import { shallowRef } from 'vue';
-
-import { adminProjectsClient } from '@/services/admin-projects-client';
-import { useAuthStore } from '@/stores/auth';
-import { useToasts } from '@/composables/feedback/useToasts';
 
 const props = defineProps<{
   project: ProjectResponse;
   allMembers: WorkspaceMemberListResponse;
+  saving?: boolean;
 }>();
 
 const emit = defineEmits<{
-  saved: [updated: ProjectResponse];
   cancelled: [];
+  save: [input: ProjectEditFormInput];
 }>();
-
-const authStore = useAuthStore();
-const { successToast, errorToast } = useToasts();
-const saving = shallowRef(false);
 
 const memberOptions = props.allMembers
   .filter((m) => m.role !== WorkspaceRoles.Admin)
@@ -47,53 +39,18 @@ const initialValues: ProjectEditFormInput = {
 
 const resolver = zodResolver(projectEditFormSchema);
 
-async function handleSave({
+function handleSave({
   valid,
   values,
 }: {
   valid: boolean;
   values: Record<string, unknown>;
-}): Promise<void> {
-  if (!valid || saving.value) return;
-
-  const token = authStore.accessToken;
-  if (!token) return;
-
-  const { visibility, memberIds } = values as ProjectEditFormInput;
-
-  saving.value = true;
-
-  try {
-    const updated = await adminProjectsClient.updateProject(
-      props.project.id,
-      { visibility },
-    );
-
-    const currentMemberIds = new Set(props.project.members.map((m) => m.userId));
-    const nextMemberIds = new Set(memberIds);
-
-    const toAdd = memberIds.filter((id) => !currentMemberIds.has(id));
-    const toRemove = props.project.members
-      .map((m) => m.userId)
-      .filter((id) => !nextMemberIds.has(id));
-
-    for (const userId of toAdd) {
-      await adminProjectsClient.assignMember(props.project.id, userId);
-    }
-    for (const userId of toRemove) {
-      await adminProjectsClient.removeAssignment(props.project.id, userId);
-    }
-
-    successToast(`${props.project.name} has been updated.`);
-    emit('saved', updated);
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to save project', {
-      error: err,
-      logContext: { action: 'update-project', feature: 'projects' },
-    });
-  } finally {
-    saving.value = false;
+}): void {
+  if (!valid || props.saving) {
+    return;
   }
+
+  emit('save', values as ProjectEditFormInput);
 }
 </script>
 
@@ -152,7 +109,6 @@ async function handleSave({
             outlined
             type="button"
             class="w-full sm:w-auto"
-            :pt="{ root: { class: 'bg-white' } }"
             @click="emit('cancelled')"
           />
           <Button

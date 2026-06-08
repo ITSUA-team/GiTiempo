@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import type {
@@ -62,7 +60,7 @@ const projects: ProjectListResponse = [
     ],
     name: 'Project Orion',
     source: 'manual',
-    totalHours: 12,
+    totalSeconds: 43200,
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'public',
     workspaceId: 'workspace-1',
@@ -76,7 +74,7 @@ const projects: ProjectListResponse = [
     members: [],
     name: 'Project Atlas',
     source: 'manual',
-    totalHours: 4,
+    totalSeconds: 14400,
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'private',
     workspaceId: 'workspace-1',
@@ -90,7 +88,7 @@ const projects: ProjectListResponse = [
     members: [],
     name: 'Archived Project',
     source: 'manual',
-    totalHours: 0,
+    totalSeconds: 0,
     updatedAt: '2026-05-01T10:00:00.000Z',
     visibility: 'public',
     workspaceId: 'workspace-1',
@@ -113,7 +111,7 @@ const stubs = {
   Form: { template: '<form><slot /></form>' },
   InputText: {
     props: ['id', 'modelValue'],
-    template: '<input :id="id" :value="modelValue" />',
+    template: '<input :id="id" :value="modelValue" v-bind="$attrs" />',
   },
   Select: {
     props: ['id', 'name'],
@@ -133,6 +131,9 @@ describe('member inline forms', () => {
     });
 
     expect(wrapper.get('[data-testid="member-edit-form-layout"]').classes()).toEqual(
+      expect.arrayContaining(['flex', 'flex-col', 'gap-2.5']),
+    );
+    expect(wrapper.get('[data-testid="member-edit-form-fields"]').classes()).toEqual(
       expect.arrayContaining(['flex-col', 'sm:flex-row', 'sm:items-end']),
     );
     expect(wrapper.get('[data-testid="member-edit-form-actions"]').classes()).toEqual(
@@ -141,6 +142,17 @@ describe('member inline forms', () => {
     expect(wrapper.get('label[for="edit-member-name"]').text()).toBe('Name');
     expect(wrapper.get('label[for="edit-member-email"]').text()).toBe('Email');
     expect(wrapper.get('label[for="edit-member-role"]').text()).toBe('Role');
+    expect(wrapper.get('#edit-member-name').attributes('readonly')).toBeDefined();
+    expect(wrapper.get('#edit-member-email').attributes('readonly')).toBeDefined();
+    expect(wrapper.get('#edit-member-name').attributes('aria-describedby')).toBe(
+      'member-readonly-fields-note',
+    );
+    expect(wrapper.get('#edit-member-email').attributes('aria-describedby')).toBe(
+      'member-readonly-fields-note',
+    );
+    expect(wrapper.get('#member-readonly-fields-note').text()).toBe(
+      'Editing name and email is not yet supported.',
+    );
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save');
   });

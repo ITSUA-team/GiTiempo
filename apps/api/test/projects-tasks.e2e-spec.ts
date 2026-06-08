@@ -48,6 +48,7 @@ const TEST_TASK_TITLE_PREFIXES = [
   'Delete Completed ',
   'Delete Running ',
   'Delete Linked ',
+  'Close Running ',
   'Inactive Project Task ',
   'Visible Active ',
   'Visible Inactive ',
@@ -230,7 +231,7 @@ describe('Projects and tasks (e2e)', () => {
       visibility: 'private',
       source: 'manual',
     });
-    expect(typeof platform.totalHours).toBe('number');
+    expect(typeof platform.totalSeconds).toBe('number');
 
     const memberRes = await request(app.getHttpServer())
       .get('/projects')
@@ -255,7 +256,7 @@ describe('Projects and tasks (e2e)', () => {
     expect(createRes.status).toBe(201);
     expect(createRes.body.visibility).toBe('private');
     expect(createRes.body.source).toBe('manual');
-    expect(createRes.body.totalHours).toBe(0);
+    expect(createRes.body.totalSeconds).toBe(0);
     // PM is auto-assigned, so the create response must reflect that immediately
     expect(Array.isArray(createRes.body.members)).toBe(true);
     expect(createRes.body.members).toHaveLength(1);
@@ -570,6 +571,45 @@ describe('Projects and tasks (e2e)', () => {
       .set('Authorization', bearer(memberToken))
       .send({ name: 'Forbidden' });
     expect(projectMutation.status).toBe(403);
+  });
+
+  it('stops running timers when a task is closed', async () => {
+    const createTask = await request(app.getHttpServer())
+      .post(`/projects/${platformProjectId}/tasks`)
+      .set('Authorization', bearer(memberToken))
+      .send({ title: `Close Running ${randomUUID()}` });
+    expect(createTask.status).toBe(201);
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId: createTask.body.id });
+    expect(started.status).toBe(201);
+    expect(started.body.endedAt).toBeNull();
+
+    const closeTask = await request(app.getHttpServer())
+      .patch(`/tasks/${createTask.body.id}`)
+      .set('Authorization', bearer(memberToken))
+      .send({ status: 'closed' });
+    expect(closeTask.status).toBe(200);
+    expect(closeTask.body.status).toBe('closed');
+
+    const current = await request(app.getHttpServer())
+      .get('/time-entries/current')
+      .set('Authorization', bearer(memberToken));
+    expect(current.status).toBe(200);
+    expect(current.body.timeEntry).toBeNull();
+
+    const [entry] = await db
+      .select({
+        durationSeconds: timeEntries.durationSeconds,
+        endedAt: timeEntries.endedAt,
+      })
+      .from(timeEntries)
+      .where(eq(timeEntries.id, started.body.id))
+      .limit(1);
+    expect(entry?.endedAt).not.toBeNull();
+    expect(entry?.durationSeconds).toBeGreaterThan(0);
   });
 
   it('deletes visible unused tasks', async () => {
@@ -989,7 +1029,7 @@ describe('Projects and tasks (e2e)', () => {
       .get(`/projects/${publicProject.body.id}`)
       .set('Authorization', bearer(otherMemberToken));
     expect(projectWithHours.status).toBe(200);
-    expect(projectWithHours.body.totalHours).toBe(0.5);
+    expect(projectWithHours.body.totalSeconds).toBe(1800);
 
     const stopped = await request(app.getHttpServer())
       .post('/time-entries/timer/stop')

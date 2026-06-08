@@ -1,4 +1,4 @@
-<!-- Scope: shell layout, nav, breakpoints, page headers -->
+<!-- Scope: shell layout, nav, breakpoints, top-bar page context -->
 <!-- Read when: building app chrome, responsive behavior, or top-level screen scaffolding -->
 
 # Layout
@@ -7,24 +7,24 @@
 
 User SPA and Admin SPA share the same shell:
 
-- Top bar: `bg-surface border-b border-divider h-16`.
-- Sidebar: `bg-surface border-r border-divider` icon-only content-fit rail on non-mobile breakpoints.
+- Top bar: `bg-surface-primary border-b border-divider h-16`.
+- Sidebar: `bg-surface-primary border-r border-divider` icon-only content-fit rail on non-mobile breakpoints.
 - Main content: `bg-app-bg p-6`.
 
 ### Top Bar
 
 - Left: product logo and workspace name.
 - Center: every authenticated `user-web` page top bar shows the compact timer surface on tablet and desktop. Below `640px`, the same timer ownership moves into a full-width strip directly below the mobile top row. This requirement does not apply to `admin-web`.
-- The task information field inside the compact timer surface is always clickable and opens the centered task-picker dialog.
-- Running state: show live `HH:MM:SS`, current `Project / Task`, clickable task information, and a single stop action.
-- Not-running state: show the last tracked task context, clickable task information, and a start action that creates a new time entry for that task.
+- The full compact timer surface is clickable, opens the centered task-picker dialog, sizes to its content, and sits right-aligned against the avatar side of the top bar instead of stretching across the center slot.
+- Running state: show the current project on the first line, task on the second line, and live `HH:MM:SS` inside the same compact timer surface.
+- Not-running state: show the same two-line project/task structure inside the compact timer surface instead of a shell-level start action.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
-- If there is no eligible last tracked task context, keep the same compact surface, keep the task information field clickable, and disable the start action.
-- While the timer summary is still loading, keep the compact surface rendered with a disabled action.
-- If the timer summary fails to load, keep the compact surface rendered in a disabled fallback state and surface the failure through the standard toast flow.
-- Mobile timer strip: place the Start/Stop action and Change task action in a left-side vertical stack, and render timer status, elapsed running time, and `Project / Task` metadata on the right.
-- The mobile timer actions must remain outside the top-right profile menu area; if the profile menu overlaps any timer content, only non-critical task metadata may be covered.
-- Right: user avatar and display name wrapped by the profile dropdown trigger.
+- If there is no eligible last tracked task context, keep the same compact surface and leave the popup entry point available so the user can choose a task before starting.
+- While the timer summary is still loading, keep the compact surface rendered with the popup entry point visible.
+- If the timer summary fails to load, keep the compact surface rendered in a fallback state and surface the failure through the standard toast flow.
+- Mobile timer strip: place a single `Task & timer` opener on the left, and render a two-line project/task stack on the right with elapsed running time when applicable.
+- The mobile timer opener must remain outside the top-right profile menu area; if the profile menu overlaps any timer content, only non-critical task metadata may be covered.
+- Right: `user-web` uses an avatar-only profile dropdown trigger with no visible member-name text; `admin-web` may continue to show identity and scope text beside the avatar.
 - When both SPAs exist, include the counterpart workspace switch as the first action in the shared profile dropdown so users can move between user-web and admin-web without changing URLs manually.
 
 ### Sidebar Navigation
@@ -50,10 +50,11 @@ User SPA and Admin SPA share the same shell:
 
 MVP is desktop-first. Mobile is required but less polished.
 
-## Page Header Pattern
+## Top-Bar Breadcrumb Pattern
 
-Every page uses the same header block:
+Every authenticated content page uses the same compact page-context treatment in the top bar brand area:
 
-- Title: `text-2xl font-semibold text-text-dark`.
-- Subtitle: `text-sm font-normal text-text-muted`.
-- Primary CTA: right-aligned and vertically centered with the title.
+- Leading crumb: app name.
+- Trailing crumb: current page name.
+- Visual treatment: breadcrumb-style inline labels in the top bar instead of a large in-content title/subtitle block.
+- Page-level primary CTAs, when present, stay in their own right-aligned content action row below the top bar.

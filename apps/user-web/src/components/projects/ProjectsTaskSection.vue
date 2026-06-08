@@ -97,7 +97,10 @@ function getStatusPt(task: TaskResponse) {
         data-testid="project-task-mobile-card"
       >
         <div class="flex min-w-0 flex-col gap-2">
-          <p class="text-text-dark truncate text-sm font-medium">
+          <p
+            class="text-text-dark text-sm font-medium break-words whitespace-normal"
+            data-testid="project-task-mobile-title"
+          >
             {{ task.title }}
           </p>
 
@@ -144,7 +147,7 @@ function getStatusPt(task: TaskResponse) {
       data-key="id"
       header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
       :loading="false"
-      shell-class="border-divider overflow-hidden rounded-lg border bg-surface"
+      shell-class="border-divider overflow-hidden rounded-lg border bg-surface-primary"
       table-class="min-w-[740px] w-full table-fixed border-collapse"
       table-container-class="overflow-auto rounded-none border-none"
       :value="props.tasks"
@@ -158,7 +161,10 @@ function getStatusPt(task: TaskResponse) {
 
       <Column :pt="managementTableColumnPt">
         <template #body="slotProps">
-          <div class="text-text-dark truncate text-sm font-medium">
+          <div
+            class="text-text-dark text-sm font-medium break-words whitespace-normal"
+            data-testid="project-task-title"
+          >
             {{ slotProps.data.title }}
           </div>
         </template>

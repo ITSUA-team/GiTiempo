@@ -47,7 +47,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
 </script>
 
 <template>
-  <div class="bg-surface shadow-card w-full rounded-lg p-6">
+  <div class="bg-surface-primary shadow-card w-full rounded-lg p-6">
     <div class="flex flex-col gap-5">
       <div class="flex flex-col gap-1.5">
         <p class="text-text-dark text-[28px] font-semibold">

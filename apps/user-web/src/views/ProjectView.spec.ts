@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type {
@@ -47,7 +45,7 @@ function createProject(
     members: [],
     name,
     source: "manual",
-    totalHours: 12,
+    totalSeconds: 43200,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
     workspaceId: "workspace-1",
@@ -143,7 +141,6 @@ async function mountView(client = createClientMock()) {
           template:
             '<button type="button" :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
         },
-        ConfirmDialog: { template: "<div />" },
         ProjectTaskDialog: {
           emits: ["close", "save", "update:projectId", "update:status", "update:title"],
           props: [

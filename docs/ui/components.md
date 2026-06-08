@@ -11,15 +11,16 @@
 | -------------- | --------------------- | ------------------------- | --------- | ----------------------------------------------------------- |
 | Brand Purple   | `--color-brand`       | `bg-brand` / `text-brand` | `#5D2B85` | Primary accent, folder icons, active states, filled buttons |
 | Accent Tint    | `--color-accent-tint` | `bg-accent-tint`          | `#E8E1F5` | Active row backgrounds, tag fills, hover states             |
-| Surface        | `--color-surface`     | `bg-surface`              | `#FFFFFF` | Cards and container backgrounds                             |
+| Surface Primary | `--color-surface-primary` | `bg-surface-primary` | `#FFFFFF` | Cards and container backgrounds                             |
 | App Background | `--color-app-bg`      | `bg-app-bg`               | `#F4F4F5` | Main application canvas                                     |
 | Text Dark      | `--color-text-dark`   | `text-text-dark`          | `#1A1A1A` | Headings and primary copy                                   |
 | Text Muted     | `--color-text-muted`  | `text-text-muted`         | `#666666` | Secondary info and metadata                                 |
+| Text Inverse   | `--color-text-inverse` / `--color-text-inverse-muted` | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand, destructive, and dark surfaces |
 | Dividers       | `--color-divider`     | `border-divider`          | `#EEEEEE` | Borders and separators                                      |
 
 - Never use Brand Purple as a large background area.
 - Accent Tint is the only permitted purple-tinted background surface.
-- Text on Brand Purple must be white.
+- Text on Brand Purple must use `text-text-inverse`.
 - Text on Accent Tint must be `text-text-dark` or `text-brand`.
 - Use token utilities instead of raw hex values in markup.
 
@@ -84,13 +85,14 @@ Use PrimeVue `<Button>`. Do not recreate app buttons with raw HTML unless the su
 
 ### Form Inputs
 
-Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<Select>`, `<AutoComplete>`, `<Checkbox>`, and `<DatePicker>` as appropriate for the field type. For form payloads that are shared between apps or map to API contracts, validate with Zod before submitting.
+Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<AutoComplete>`, `<Checkbox>`, and `<DatePicker>` as appropriate for the field type. For form payloads that are shared between apps or map to API contracts, validate with Zod before submitting.
 
 - Wrap in `<div class="flex flex-col gap-1">` with a real `<label>`.
 - Single-line height: `h-[38px]`.
-- Background: `bg-surface`.
+- Background: `bg-surface-primary`.
 - Error state: `invalid` prop plus `<small class="text-xs text-destructive">`.
 - Full width: `class="w-full"`.
+- App single-select pickers default to PrimeVue `<AutoComplete dropdown forceSelection>` so users can type to narrow the option list while still choosing one valid value.
 
 ```vue
 <div class="flex flex-col gap-1">

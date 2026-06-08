@@ -107,6 +107,7 @@ function supportedContext() {
     issueTitle: "Improve reports filters",
     issueUrl: "https://github.com/octo/repo/issues/184",
     kind: "supported" as const,
+    surface: "issue-page" as const,
   };
 }
 
@@ -166,6 +167,41 @@ describe("injected issue control", () => {
     expect(main?.firstElementChild?.id).toBe("gitiempo-extension-root");
   });
 
+  it("mounts above the sticky header in GitHub Projects issue panes", async () => {
+    document.body.innerHTML = `
+      <main>
+        <section id="project-pane">
+          <div id="issue-viewer-sticky-header">Issue details</div>
+        </section>
+      </main>
+    `;
+
+    const mounted = mountInjectedIssueControl(
+      document,
+      {
+        ...supportedContext(),
+        issueUrl:
+          "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+        surface: "project-issue-pane",
+      },
+      createRuntimeClient(),
+    );
+
+    await mounted?.load();
+
+    const stickyHeader = document.getElementById("issue-viewer-sticky-header");
+    const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    const section = root.querySelector("section");
+    const container = section?.parentElement;
+
+    expect(stickyHeader?.previousElementSibling?.id).toBe("gitiempo-extension-root");
+    expect(stickyHeader?.previousElementSibling?.className).toBe("mb-2");
+    expect(container?.classList.contains("pt-2")).toBe(true);
+    expect(container?.classList.contains("px-6")).toBe(true);
+    expect(section?.classList.contains("gap-3")).toBe(true);
+    expect(section?.classList.contains("py-3")).toBe(true);
+  });
+
   it("renders the auth-missing state with an open-extension action", async () => {
     const runtimeClient = createRuntimeClient({
       snapshot: { authenticated: false, currentTimer: null, errorMessage: null },
@@ -188,7 +224,7 @@ describe("injected issue control", () => {
     expect(runtimeClient.openExtension).toHaveBeenCalledOnce();
   });
 
-  it("renders white snippet text on GitHub dark pages", async () => {
+  it("renders inverse token snippet text on GitHub dark pages", async () => {
     document.documentElement.setAttribute("data-color-mode", "dark");
 
     const mounted = mountInjectedIssueControl(
@@ -201,8 +237,8 @@ describe("injected issue control", () => {
 
     const root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
 
-    expect(root.innerHTML).toContain("text-white");
-    expect(root.innerHTML).toContain("text-white/70");
+    expect(root.innerHTML).toContain("text-text-inverse");
+    expect(root.innerHTML).toContain("text-text-inverse-muted");
   });
 
   it("starts a timer from the idle injected state", async () => {
@@ -357,6 +393,63 @@ describe("injected issue control", () => {
     app.destroy();
   });
 
+  it("mounts after the Projects issue pane sticky header becomes available", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+    );
+    document.body.innerHTML = `
+      <main>
+        <section id="project-pane"></section>
+      </main>
+    `;
+    document.title = "Improve reports filters";
+
+    const app = bootstrapInjectedIssueControl(document, window, createRuntimeClient());
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).toBeNull();
+
+    const stickyHeader = document.createElement("div");
+
+    stickyHeader.id = "issue-viewer-sticky-header";
+    stickyHeader.textContent = "Issue details";
+    document.getElementById("project-pane")!.append(stickyHeader);
+
+    await Promise.resolve();
+
+    expect(stickyHeader.previousElementSibling?.id).toBe("gitiempo-extension-root");
+
+    app.destroy();
+  });
+
+  it("remounts when GitHub rerender removes the injected host without changing the URL", async () => {
+    window.history.replaceState({}, "", "https://github.com/octo/repo/issues/184");
+    document.body.innerHTML = `
+      <main>
+        <div id="partial-discussion-header">
+          <div class="gh-header-actions"></div>
+        </div>
+      </main>
+    `;
+    document.title = "Improve reports filters";
+
+    const app = bootstrapInjectedIssueControl(document, window, createRuntimeClient());
+
+    await Promise.resolve();
+
+    document.getElementById("gitiempo-extension-root")?.remove();
+    document.body.querySelector("main")!.append(document.createElement("div"));
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).not.toBeNull();
+
+    app.destroy();
+  });
+
   it("updates snippet text classes when GitHub theme changes without reload", async () => {
     const matchMediaController = createMatchMediaController(false);
 
@@ -378,7 +471,7 @@ describe("injected issue control", () => {
     await Promise.resolve();
 
     root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
-    expect(root.innerHTML).toContain("text-white");
+    expect(root.innerHTML).toContain("text-text-inverse");
 
     mounted.destroy();
   });
@@ -412,6 +505,86 @@ describe("injected issue control", () => {
 
     expect(document.getElementById("gitiempo-extension-root")).toBeNull();
     expect(unsubscribe).toHaveBeenCalledOnce();
+
+    app.destroy();
+  });
+
+  it("updates the mounted Projects pane issue when the pane URL changes", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+    );
+    document.body.innerHTML = `
+      <main>
+        <section id="project-pane">
+          <div id="issue-viewer-sticky-header">Issue details</div>
+        </section>
+      </main>
+    `;
+    document.title = "Improve reports filters";
+
+    const app = bootstrapInjectedIssueControl(document, window, createRuntimeClient());
+
+    await Promise.resolve();
+
+    let root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+
+    expect(root.textContent).toContain("Improve reports filters");
+    expect(root.textContent).toContain("#184");
+
+    document.title = "Fix billing regression";
+    window.history.pushState(
+      {},
+      "",
+      "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|200",
+    );
+    document
+      .getElementById("project-pane")!
+      .append(document.createElement("div"));
+
+    await Promise.resolve();
+
+    root = document.getElementById("gitiempo-extension-root")!.shadowRoot!;
+    expect(root.textContent).toContain("Fix billing regression");
+    expect(root.textContent).toContain("#200");
+
+    app.destroy();
+  });
+
+  it("unmounts when a Projects pane stops exposing supported issue context", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+    );
+    document.body.innerHTML = `
+      <main>
+        <section id="project-pane">
+          <div id="issue-viewer-sticky-header">Issue details</div>
+        </section>
+      </main>
+    `;
+    document.title = "Improve reports filters";
+
+    const app = bootstrapInjectedIssueControl(document, window, createRuntimeClient());
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).not.toBeNull();
+
+    window.history.pushState(
+      {},
+      "",
+      "https://github.com/orgs/octo/projects/7/views/1?pane=details&issue=octo|repo|184",
+    );
+    document
+      .getElementById("project-pane")!
+      .append(document.createElement("div"));
+
+    await Promise.resolve();
+
+    expect(document.getElementById("gitiempo-extension-root")).toBeNull();
 
     app.destroy();
   });

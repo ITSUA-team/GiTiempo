@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import ConfirmDialog from "primevue/confirmdialog";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
@@ -126,7 +125,9 @@ async function loadFilterProjectTasks(projectId: string) {
 }
 
 async function loadDialogProjectTasks(projectId: string) {
-  return taskOptions.loadTargetProjectTaskOptions(projectId, dialog);
+  return taskOptions.loadTargetProjectTaskOptions(projectId, dialog, {
+    trackableOnly: true,
+  });
 }
 
 async function applyFilters(): Promise<void> {
@@ -272,8 +273,6 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <ConfirmDialog />
-
     <PageHeader
       subtitle="Review tracked time, add manual entries, and edit entries in a shared dialog."
       title="Time Entries"

@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
@@ -50,7 +48,7 @@ describe("AppShell", () => {
         },
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
         stubs: {
-          DashboardOverview: {
+          RouterView: {
             template: '<div data-testid="dashboard-overview" />',
           },
           TopBarTimer: {
@@ -60,16 +58,20 @@ describe("AppShell", () => {
             props: [
               "counterpartHref",
               "counterpartLabel",
+              "centerContentAlign",
               "displayName",
               "settingsIcon",
               "settingsLabel",
               "settingsTo",
+              "showDisplayName",
               "userInitials",
               "workspaceName",
             ],
             emits: ["signOut"],
             template: `
               <header>
+                <span data-testid="workspace-header-center-align">{{ centerContentAlign }}</span>
+                <span data-testid="workspace-header-show-display-name">{{ String(showDisplayName) }}</span>
                 <div data-testid="workspace-header-center-row">
                   <slot name="center" />
                 </div>
@@ -89,6 +91,8 @@ describe("AppShell", () => {
     expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
     expect(settingsLink.text()).toBe("Profile");
     expect(settingsLink.attributes("href")).toBe("/profile");
+    expect(wrapper.get('[data-testid="workspace-header-center-align"]').text()).toBe("end");
+    expect(wrapper.get('[data-testid="workspace-header-show-display-name"]').text()).toBe("false");
     expect(wrapper.find('[data-testid="dashboard-overview"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="top-bar-timer"]')).toHaveLength(1);

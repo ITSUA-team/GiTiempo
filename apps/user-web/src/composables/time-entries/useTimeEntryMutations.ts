@@ -9,7 +9,7 @@ import {
   useDeleteTimeEntryMutation,
   useUpdateTimeEntryMutation,
 } from "@/composables/query";
-import { shallowRef, type ComputedRef } from "vue";
+import { ref, type ComputedRef } from "vue";
 
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -39,9 +39,9 @@ export function useTimeEntryMutations({
   toast,
 }: UseTimeEntryMutationsOptions) {
   const appToast = createAppToast(toast);
-  const isSavingDialog = shallowRef(false);
-  const isDeletingEntry = shallowRef<string | null>(null);
-  const lastMutationErrorMessage = shallowRef<string | null>(null);
+  const isSavingDialog = ref(false);
+  const isDeletingEntry = ref<string | null>(null);
+  const lastMutationErrorMessage = ref<string | null>(null);
   const createEntryMutation = useCreateManualTimeEntryMutation({
     accessToken,
     client,

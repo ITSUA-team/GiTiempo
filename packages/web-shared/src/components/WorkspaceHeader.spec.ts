@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 /* eslint-disable vue/one-component-per-file */
 
 import { mount, type VueWrapper } from "@vue/test-utils";
@@ -19,8 +18,11 @@ const baseProps = {
 };
 
 type HeaderProps = typeof baseProps & {
+  centerContentAlign?: "center" | "end";
   settingsIcon?: Component;
   settingsLabel?: string;
+  showDisplayName?: boolean;
+  showSettings?: boolean;
 };
 
 type TestMenuItem = {
@@ -221,6 +223,9 @@ describe("WorkspaceHeader", () => {
 
   it("renders app-owned center slot content in the responsive center row", () => {
     const wrapper = mountHeader({
+      props: {
+        centerContentAlign: "end",
+      },
       slots: {
         center:
           '<div class="rounded-lg border px-3 py-1" data-testid="header-center-slot">Running timer</div>',
@@ -232,9 +237,24 @@ describe("WorkspaceHeader", () => {
 
     expect(centerRow.classes()).toContain("row-start-2");
     expect(centerRow.classes()).toContain("sm:row-start-1");
+    expect(wrapper.get('[data-testid="workspace-header-center-content"]').classes()).toContain(
+      "sm:justify-end",
+    );
     expect(centerSlot.text()).toBe("Running timer");
     expect(wrapper.findAll('[data-testid="header-center-slot"]')).toHaveLength(1);
     expect(wrapper.text()).toContain("Alexey Tsukanov");
+  });
+
+  it("supports an avatar-only profile trigger when the consuming app hides display text", () => {
+    const wrapper = mountHeader({
+      props: {
+        showDisplayName: false,
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Alexey Tsukanov");
+    expect(wrapper.get('[data-testid="profile-menu-trigger"]').text()).toContain("AT");
+    expect(wrapper.get('[data-testid="profile-avatar"]')).toBeTruthy();
   });
 
   it("keeps mobile timer actions usable beside the top-right profile menu overlay", async () => {
@@ -282,6 +302,7 @@ describe("WorkspaceHeader", () => {
 
     expect(profileMenu.attributes("class")).toContain("absolute");
     expect(profileMenu.attributes("class")).toContain("right-0");
+    expect(profileMenu.attributes("class")).toContain("z-30");
     expect(profileMenu.element.contains(primaryAction.element)).toBe(false);
     expect(profileMenu.element.contains(changeAction.element)).toBe(false);
     expect(primaryAction.isVisible()).toBe(true);
@@ -319,6 +340,9 @@ describe("WorkspaceHeader", () => {
     );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
       "right-0",
+    );
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "z-30",
     );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
       "before:right-5",
@@ -449,5 +473,19 @@ describe("WorkspaceHeader", () => {
 
     expect(profileLink.text()).toContain("Profile");
     expect(wrapper.find('[data-testid="custom-profile-icon"]').exists()).toBe(true);
+  });
+
+  it("omits the settings action when the app disables it", async () => {
+    const wrapper = mountHeader({
+      props: {
+        showSettings: false,
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-trigger"]').trigger("click");
+
+    expect(wrapper.find('[data-testid="profile-menu-settings"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="profile-menu-counterpart"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-menu-sign-out"]').exists()).toBe(true);
   });
 });

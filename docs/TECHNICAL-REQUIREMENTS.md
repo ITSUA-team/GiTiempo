@@ -252,14 +252,14 @@ The current web frontend baseline includes:
 **Architecture:**
 
 - Manifest V3 extension.
-- Content script injected on `github.com/*/issues/*` pages and pull-request pages so GitHub same-tab navigation can recover when moving from a PR back to an issue.
-- Detects issue from page URL (`org/repo/issues/123`).
+- Content script injected on supported GitHub issue surfaces, including `github.com/*/issues/*` pages and GitHub Projects issue panes, plus pull-request pages so GitHub same-tab navigation can recover when moving from a PR back to an issue.
+- Detects issue from the current GitHub issue surface, including direct issue URLs (`org/repo/issues/123`) and supported GitHub Projects issue panes.
 - Authenticates via a popup login flow (Firebase Auth), stores JWT tokens in `chrome.storage`.
 - Sends JWT access token in `Authorization` header on all API requests.
 
 **Auto-create flow (lazy creation):**
 
-When the user clicks "Start Timer" on a GitHub issue page, the extension sends a single API request. The backend handles creation automatically:
+When the user clicks "Start Timer" on a supported GitHub issue surface, the extension sends a single API request. The backend handles creation automatically:
 
 ```
 POST /api/time-entries/timer/start-from-github
@@ -272,7 +272,7 @@ Backend logic:
 4. Return the time entry
 ```
 
-This means the **first person to start a timer on any GitHub issue** automatically creates provider-neutral project and task records plus GitHub external refs. Subsequent users on the same issue will find the existing records through those refs. No manual setup required.
+This means the **first person to start a timer on any supported GitHub issue** automatically creates provider-neutral project and task records plus GitHub external refs. Subsequent users on the same issue will find the existing records through those refs. No manual setup required.
 
 ---
 

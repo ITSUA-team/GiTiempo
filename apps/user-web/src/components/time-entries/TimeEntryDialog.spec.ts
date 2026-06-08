@@ -1,9 +1,15 @@
-// @vitest-environment jsdom
-
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import TimeEntryDialog from "./TimeEntryDialog.vue";
+
+function formatLocalWallClock(value: Date | null | undefined): string {
+  if (!(value instanceof Date)) {
+    return "";
+  }
+
+  return `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
+}
 
 function mountDialog(
   overrides: Partial<InstanceType<typeof TimeEntryDialog>["$props"]> = {},
@@ -35,7 +41,7 @@ function mountDialog(
           members: [],
           name: "Project Orion",
           source: "manual",
-          totalHours: 12,
+          totalSeconds: 43200,
           updatedAt: "2026-04-20T12:00:00.000Z",
           visibility: "public",
           workspaceId: "workspace-1",
@@ -103,17 +109,15 @@ function mountDialog(
             '<input :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
         },
         DatePicker: {
-          props: ["modelValue", "disabled", "invalid"],
+          props: ["modelValue", "disabled", "inputId", "invalid"],
           emits: ["update:modelValue"],
           computed: {
             displayValue(): string {
-              return this.modelValue instanceof Date
-                ? this.modelValue.toISOString()
-                : "";
+              return formatLocalWallClock(this.modelValue);
             },
           },
           template:
-            '<input :disabled="disabled" :value="displayValue" @input="$emit(\'update:modelValue\', $event.target.value ? new Date($event.target.value) : null)" />',
+            '<input :data-testid="inputId" :disabled="disabled" :value="displayValue" @input="$emit(\'update:modelValue\', $event.target.value ? new Date($event.target.value) : null)" />',
         },
         Dialog: {
           template:
@@ -137,6 +141,14 @@ function mountDialog(
 }
 
 describe("TimeEntryDialog", () => {
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Kiev");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("renders the approved field order and edit prefill values", () => {
     const wrapper = mountDialog();
 
@@ -150,15 +162,32 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.find("textarea").element.value).toContain("Summarize PM scope changes");
   });
 
+  it("renders edit date picker values as browser-local wall-clock times", () => {
+    const startedAt = new Date(2026, 3, 21, 9, 0, 0, 0);
+    const endedAt = new Date(2026, 3, 21, 10, 30, 0, 0);
+    const wrapper = mountDialog({
+      endedAt,
+      startedAt,
+    });
+
+    expect(startedAt.toISOString()).toBe("2026-04-21T06:00:00.000Z");
+    expect(
+      (wrapper.get('[data-testid="time-entry-started-at"]').element as HTMLInputElement).value,
+    ).toBe("09:00");
+    expect(
+      (wrapper.get('[data-testid="time-entry-ended-at"]').element as HTMLInputElement).value,
+    ).toBe("10:30");
+  });
+
   it("emits project, task, date, description, and billable updates", async () => {
     const wrapper = mountDialog();
     const inputs = wrapper.findAll("input");
 
     await wrapper.find("select").setValue("project-1");
     await inputs[0]?.setValue("Improve reports filters");
-    await inputs[1]?.setValue("2026-04-21T09:15:00.000Z");
-    await inputs[2]?.setValue("2026-04-21T10:45:00.000Z");
-    await inputs[3]?.setValue(false);
+    await wrapper.get('[data-testid="time-entry-started-at"]').setValue("2026-04-21T09:15:00.000Z");
+    await wrapper.get('[data-testid="time-entry-ended-at"]').setValue("2026-04-21T10:45:00.000Z");
+    await wrapper.find('input[type="checkbox"]').setValue(false);
     await wrapper.find("textarea").setValue("Updated description");
 
     expect(wrapper.emitted("update:projectId")?.[0]).toEqual(["project-1"]);
