@@ -1,6 +1,7 @@
 export interface ParsedGitHubIssueUrl {
   githubRepo: string;
   issueNumber: number;
+  surface: "issue-page" | "project-issue-pane";
 }
 
 export interface SupportedGitHubIssueContext extends ParsedGitHubIssueUrl {
@@ -25,6 +26,8 @@ export type PageContext =
 
 const ISSUE_URL_PATTERN =
   /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)(?:$|[?#/])/;
+const PROJECT_ISSUE_PANE_PATH_PATTERN =
+  /^\/orgs\/[^/]+\/projects\/[^/]+\/views\/[^/]+(?:$|\/)/;
 const ISSUE_TITLE_SELECTORS = [
   '[data-testid="issue-title"]',
   '.js-issue-title',
@@ -35,16 +38,56 @@ const ISSUE_TITLE_SELECTORS = [
 export function parseGitHubIssueUrl(
   url: string | URL,
 ): ParsedGitHubIssueUrl | null {
-  const value = typeof url === "string" ? url : url.toString();
+  let resolvedUrl: URL;
+
+  try {
+    resolvedUrl = typeof url === "string" ? new URL(url) : url;
+  } catch {
+    return null;
+  }
+
+  const value = resolvedUrl.toString();
   const match = ISSUE_URL_PATTERN.exec(value);
 
   if (!match) {
-    return null;
+    if (
+      resolvedUrl.hostname !== "github.com" ||
+      !PROJECT_ISSUE_PANE_PATH_PATTERN.test(resolvedUrl.pathname) ||
+      resolvedUrl.searchParams.get("pane") !== "issue"
+    ) {
+      return null;
+    }
+
+    const encodedIssue = resolvedUrl.searchParams.get("issue");
+
+    if (!encodedIssue) {
+      return null;
+    }
+
+    const issueParts = encodedIssue.split("|");
+
+    if (issueParts.length !== 3) {
+      return null;
+    }
+
+    const [owner, repo, issueNumberValue] = issueParts;
+    const issueNumber = Number(issueNumberValue);
+
+    if (!owner || !repo || !Number.isInteger(issueNumber) || issueNumber <= 0) {
+      return null;
+    }
+
+    return {
+      githubRepo: `${owner}/${repo}`,
+      issueNumber,
+      surface: "project-issue-pane",
+    };
   }
 
   return {
     githubRepo: `${match[1]}/${match[2]}`,
     issueNumber: Number(match[3]),
+    surface: "issue-page",
   };
 }
 
@@ -102,6 +145,13 @@ export function resolveGitHubIssueContext(
   };
 }
 
-export function findGitHubIssueMountTarget(doc: Document): HTMLElement | null {
+export function findGitHubIssueMountTarget(
+  doc: Document,
+  pageContext: SupportedGitHubIssueContext,
+): HTMLElement | null {
+  if (pageContext.surface === "project-issue-pane") {
+    return doc.getElementById("issue-viewer-sticky-header");
+  }
+
   return doc.querySelector("main");
 }

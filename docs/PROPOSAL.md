@@ -24,7 +24,7 @@ The data model preserves `workspaceId` foreign keys on all entities so that migr
 
 - Browsing GitHub Projects and Repositories in the task selector
 - Syncing issues as tasks
-- Using the Chrome extension on GitHub issue pages
+- Using the Chrome extension on supported GitHub issue surfaces
 
 GitHub connection is optional — users can work exclusively with manual tasks and projects.
 
@@ -87,16 +87,16 @@ Admins invite new members by entering an email address. The invited user receive
 
 ### 7. Chrome Extension
 
-A Chrome extension adds **Start/Stop Timer** and other controls directly onto GitHub issue pages. The extension authenticates via a popup login flow (Firebase Auth), stores the JWT token in `chrome.storage`, and sends it in the `Authorization` header on all API requests.
+A Chrome extension adds **Start/Stop Timer** and other controls directly onto supported GitHub issue surfaces, including standard repository issue pages and GitHub Projects issue panes. The extension authenticates via a popup login flow (Firebase Auth), stores the JWT token in `chrome.storage`, and sends it in the `Authorization` header on all API requests.
 
 **Extension capabilities:**
 
-- Detect the current GitHub issue from the page URL (`org/repo/issues/123`)
+- Detect the current GitHub issue from the current GitHub issue surface, including direct issue URLs (`org/repo/issues/123`) and supported GitHub Projects issue panes
 - Start/stop a timer against that issue
 - Display running timer indicator
 - **Auto-create project and task** — if the issue or its project/repo does not yet exist in the application, the extension's API call creates them automatically before starting the timer
 
-For MVP timer start from GitHub issue pages, the extension uses issue-page metadata plus workspace auth. A connected GitHub account is not required for the start/stop timer flow itself.
+For MVP timer start from supported GitHub issue surfaces, the extension uses issue metadata plus workspace auth. A connected GitHub account is not required for the start/stop timer flow itself.
 
 ## User Roles
 
@@ -164,7 +164,7 @@ Members track time through **two independent workflows**:
 
 ### Workflow B: Chrome Extension
 
-1. Navigate to any GitHub issue page.
+1. Navigate to any supported GitHub issue surface.
 2. Click **Start Timer** on the injected button.
 3. The extension calls the API — if the project (repo or GitHub project) and task (issue) don't exist yet, they are created automatically.
 4. Click **Stop Timer** when done.
