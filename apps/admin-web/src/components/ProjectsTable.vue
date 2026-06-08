@@ -3,6 +3,7 @@ import {
   ArchiveBoxIcon,
   ArrowUturnLeftIcon,
   PencilSquareIcon,
+  FolderPlusIcon,
 } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
@@ -18,6 +19,7 @@ import {
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
+import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
@@ -53,6 +55,7 @@ const emit = defineEmits<{
   'edit-project': [project: ProjectResponse];
   archive: [project: ProjectResponse];
   unarchive: [project: ProjectResponse];
+  'new-project': [];
   'update:expandedRows': [expandedRows: ProjectsTableExpandedRows | undefined];
   'update:filters': [filters: ProjectsTableFilterUpdate];
 }>();
@@ -107,16 +110,33 @@ const columns: ManagementTableColumn[] = [
   <div class="mb-4">
     <SectionHeader title="Projects Table">
       <template #actions>
-        <IconField class="w-full sm:w-[260px]">
-          <InputIcon class="pi pi-search text-text-muted" />
-          <InputText
-            :model-value="filters.global"
-            aria-label="Search projects"
-            class="h-[38px] w-full rounded-[6px] text-[14px]"
-            placeholder="Search projects"
-            @update:model-value="updateGlobalFilter"
-          />
-        </IconField>
+        <div class="flex w-full items-center gap-3 sm:w-auto">
+          <IconField class="w-full sm:w-[260px]">
+            <InputIcon class="pi pi-search text-text-muted" />
+            <InputText
+              :model-value="filters.global"
+              aria-label="Search projects"
+              class="h-[38px] w-full rounded-[6px] text-[14px]"
+              placeholder="Search projects"
+              @update:model-value="updateGlobalFilter"
+            />
+          </IconField>
+          <Button
+            v-tooltip.bottom="'New project'"
+            aria-label="New project"
+            data-testid="projects-table-new-project"
+            type="button"
+            :pt="{
+              root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
+            }"
+            @click="emit('new-project')"
+          >
+            <FolderPlusIcon
+              aria-hidden="true"
+              class="text-text-inverse size-4"
+            />
+          </Button>
+        </div>
       </template>
     </SectionHeader>
   </div>

@@ -14,6 +14,7 @@ import {
 import { computed, onBeforeUnmount, onMounted } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
+import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import PageHeader from "@/components/layout/PageHeader.vue";
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
@@ -279,10 +280,20 @@ onBeforeUnmount(() => {
     >
       <template #actions>
         <Button
+          v-tooltip.bottom="'New time entry'"
           data-testid="time-entries-header-create"
-          label="+ New time entry"
+          aria-label="New time entry"
+          type="button"
+          :pt="{
+            root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
+          }"
           @click="void openCreateDialog()"
-        />
+        >
+          <PlusIcon
+            aria-hidden="true"
+            class="text-text-inverse size-4"
+          />
+        </Button>
       </template>
     </PageHeader>
 
@@ -409,9 +420,19 @@ onBeforeUnmount(() => {
         </p>
       </div>
       <Button
-        label="+ New time entry"
+        v-tooltip.bottom="'New time entry'"
+        aria-label="New time entry"
+        type="button"
+        :pt="{
+          root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
+        }"
         @click="void openCreateDialog()"
-      />
+      >
+        <PlusIcon
+          aria-hidden="true"
+          class="text-text-inverse size-4"
+        />
+      </Button>
     </SurfaceCard>
 
     <div

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import Button from "primevue/button";
 import Column from "primevue/column";
 
@@ -57,12 +57,20 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
         {{ props.group.heading }}
       </h2>
       <Button
+        v-tooltip.bottom="'New time entry'"
         :data-testid="`time-entries-day-create-${props.group.dateKey}`"
-        label="+ New time entry"
-        severity="secondary"
-        variant="outlined"
+        aria-label="New time entry"
+        type="button"
+        :pt="{
+          root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
+        }"
         @click="emit('createForDay', props.group.dateKey)"
-      />
+      >
+        <PlusIcon
+          aria-hidden="true"
+          class="text-text-inverse size-4"
+        />
+      </Button>
     </div>
 
     <div
