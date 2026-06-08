@@ -11,7 +11,6 @@ const {
   closeDialog,
   confirmSelectedTask,
   createTaskErrorMessage,
-  createTaskFromDialog,
   createTaskTitle,
   elapsedTimeLabel,
   handleDialogPrimaryAction,
@@ -92,12 +91,31 @@ const showsElapsedTime = computed(
     data-testid="top-bar-timer"
   >
     <Button
+      unstyled
       type="button"
-      class="z-10 h-[38px] w-[132px] shrink-0 justify-center rounded-sm text-xs font-semibold"
-      label="Task & timer"
+      class="ring-divider bg-surface-primary text-brand focus-visible:outline-brand hover:bg-app-bg z-10 flex h-[38px] w-[132px] shrink-0 items-center justify-center gap-[5px] rounded-sm px-2.5 text-xs leading-[14px] font-semibold ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2"
       data-testid="top-bar-timer-mobile-opener"
       @click="openDialog"
-    />
+    >
+      <svg
+        aria-hidden="true"
+        class="size-[13px] shrink-0"
+        data-testid="top-bar-timer-mobile-opener-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+      >
+        <path d="m18 14 4 4-4 4" />
+        <path d="m18 2 4 4-4 4" />
+        <path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6C13.5 6.6 14.7 6 16.1 6H22" />
+        <path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2" />
+        <path d="M22 18h-5.9c-1.5 0-2.9-.9-3.6-2.2l-.6-.8" />
+      </svg>
+      <span>Task &amp; timer</span>
+    </Button>
 
     <div
       class="flex min-w-0 flex-1 flex-col items-start justify-start gap-0 text-left"
@@ -145,7 +163,6 @@ const showsElapsedTime = computed(
     :tasks-error-message="tasksErrorMessage"
     @close="closeDialog"
     @confirm="confirmSelectedTask"
-    @create-task="createTaskFromDialog"
     @primary-action="handleDialogPrimaryAction"
     @update:create-task-title="setCreateTaskTitle"
     @update:selected-description="setSelectedDescription"

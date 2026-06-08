@@ -9,7 +9,10 @@ import { useToast } from 'primevue/usetoast';
 import { useUpdateTimeEntryMutation } from '@/composables/query';
 import { createDefaultTimeEntriesClient } from '@/config/clients';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
-import { isRunningTimer } from '@/lib/top-bar-timer-helpers';
+import {
+  isRunningTimer,
+  TOP_BAR_TIMER_NEW_TASK_ID,
+} from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 
@@ -129,6 +132,9 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const primaryActionLabel = computed(() =>
     isTimerRunning.value ? 'Stop' : 'Start',
   );
+  const isNewTaskSelected = computed(
+    () => picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID,
+  );
   const isPrimaryActionDisabled = computed(() => {
     if (
       timerActions.isPrimaryActionPending.value ||
@@ -147,17 +153,22 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       summary.summaryErrorMessage.value !== null
     );
   });
-  const isConfirmSelectionDisabled = computed(
-    () =>
-      picker.isConfirmSelectionDisabled.value ||
-      taskCreation.isCreatingTask.value ||
-      updateTimeEntryMutation.isPending.value,
-  );
   const isCreateTaskDisabled = computed(() => {
     return (
       !picker.selectedProjectId.value ||
       taskCreation.isCreatingTask.value ||
       picker.isCreateTaskTitleEmpty.value
+    );
+  });
+  const isConfirmSelectionDisabled = computed(() => {
+    if (isNewTaskSelected.value) {
+      return isCreateTaskDisabled.value || updateTimeEntryMutation.isPending.value;
+    }
+
+    return (
+      picker.isConfirmSelectionDisabled.value ||
+      taskCreation.isCreatingTask.value ||
+      updateTimeEntryMutation.isPending.value
     );
   });
   const isDialogPrimaryActionDisabled = computed(() => {
@@ -171,6 +182,13 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
     if (isTimerRunning.value) {
       return false;
+    }
+
+    if (isNewTaskSelected.value) {
+      return (
+        isCreateTaskDisabled.value ||
+        summary.summaryErrorMessage.value !== null
+      );
     }
 
     return (
@@ -224,6 +242,11 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   }
 
   async function confirmSelectedTask(): Promise<void> {
+    if (isNewTaskSelected.value) {
+      await taskCreation.createTaskFromDialog();
+      return;
+    }
+
     const context = picker.getSelectedTaskContext();
 
     if (!context) {
@@ -301,6 +324,11 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     selectionUpdateErrorMessage.value = null;
 
     if (!isTimerRunning.value) {
+      if (isNewTaskSelected.value) {
+        await taskCreation.createTaskFromDialog();
+        return;
+      }
+
       const context = picker.getSelectedTaskContext();
 
       if (!context) {

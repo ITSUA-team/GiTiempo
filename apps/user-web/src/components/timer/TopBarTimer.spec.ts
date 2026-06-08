@@ -257,6 +257,19 @@ describe("TopBarTimer", () => {
     expect(wrapper.get('[data-testid="top-bar-timer-mobile-opener"]').text()).toContain(
       "Task & timer",
     );
+    const mobileOpener = wrapper.get('[data-testid="top-bar-timer-mobile-opener"]');
+    const mobileOpenerIcon = wrapper.get(
+      '[data-testid="top-bar-timer-mobile-opener-icon"]',
+    );
+
+    expect(mobileOpener.classes()).toContain("h-[38px]");
+    expect(mobileOpener.classes()).toContain("w-[132px]");
+    expect(mobileOpener.classes()).toContain("gap-[5px]");
+    expect(mobileOpener.classes()).toContain("ring-inset");
+    expect(mobileOpener.classes()).toContain("text-brand");
+    expect(mobileOpenerIcon.classes()).toContain("size-[13px]");
+    expect(mobileOpenerIcon.attributes("aria-hidden")).toBe("true");
+    expect(mobileOpenerIcon.findAll("path")).toHaveLength(5);
     expect(wrapper.find('[data-testid="top-bar-timer-mobile-actions"]').exists()).toBe(false);
     const mobileContext = wrapper.get('[data-testid="top-bar-timer-mobile-context"]');
 
