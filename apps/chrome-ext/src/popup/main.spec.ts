@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PageContext } from "@/lib/github-context";
 import type { RuntimeClient, RuntimeMutationResult, RuntimeSnapshot } from "@/lib/runtime";
-import { createPopupApp } from "./main";
+import { createPopupApp, resolveActivePageContext } from "./main";
 
 function currentTimer(): RuntimeSnapshot["currentTimer"] {
   return {
@@ -80,6 +80,7 @@ function supportedContext(): PageContext {
     issueTitle: "Improve reports filters",
     issueUrl: "https://github.com/octo/repo/issues/184",
     kind: "supported",
+    surface: "issue-page",
   };
 }
 
@@ -90,12 +91,17 @@ function otherSupportedContext(): PageContext {
     issueTitle: "Different issue in the active tab",
     issueUrl: "https://github.com/octo/current-page/issues/999",
     kind: "supported",
+    surface: "issue-page",
   };
 }
 
 describe("popup app", () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="app"></div>';
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("renders the unauthenticated popup state with sign-in actions", async () => {
@@ -277,8 +283,36 @@ describe("popup app", () => {
     await app.load();
 
     expect(document.body.textContent).toContain(
-      "Open a GitHub issue page to start a timer.",
+      "Open a supported GitHub issue to start a timer.",
     );
+    expect(document.body.textContent).toContain(
+      "Supported on direct GitHub issue pages and GitHub Projects issue panes.",
+    );
+  });
+
+  it("resolves GitHub Projects issue pane tabs through the shared parser fallback", async () => {
+    vi.stubGlobal("chrome", {
+      tabs: {
+        query: vi.fn(async () => [{
+          id: 21,
+          title: "Improve reports filters · GitHub",
+          url: "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+        }]),
+        sendMessage: vi.fn(async () => {
+          throw new Error("receiver missing");
+        }),
+      },
+    });
+
+    await expect(resolveActivePageContext()).resolves.toEqual({
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+      issueTitle: "Improve reports filters",
+      issueUrl:
+        "https://github.com/orgs/octo/projects/7/views/1?pane=issue&issue=octo|repo|184",
+      kind: "supported",
+      surface: "project-issue-pane",
+    });
   });
 
   it("renders the running timer popup state", async () => {

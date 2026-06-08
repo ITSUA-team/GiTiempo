@@ -172,12 +172,12 @@ function renderPopupBody(state: PopupState, nowMs: number): string {
       ${renderBrandHeader({ showBadge: true })}
       <div class="bg-app-bg flex flex-col gap-2 rounded-lg p-4">
         <p class="m-0 text-xs font-medium text-text-muted">GitHub issue required</p>
-        <p class="m-0 text-lg font-semibold text-text-dark">Open a GitHub issue page to start a timer.</p>
+        <p class="m-0 text-lg font-semibold text-text-dark">Open a supported GitHub issue to start a timer.</p>
         <p class="m-0 text-xs text-text-muted">Timer start is unavailable on this tab.</p>
       </div>
       <div class="mt-auto flex flex-col gap-3">
         <a href="${escapeHtml(config.userSpaUrl)}" target="_blank" rel="noreferrer" class="bg-brand text-text-inverse rounded-sm px-4 py-3 text-center text-sm font-semibold no-underline transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Open GiTiempo workspace</a>
-        <p class="m-0 text-center text-[13px] font-semibold text-brand">Navigate to github.com/&lt;owner&gt;/&lt;repo&gt;/issues/&lt;number&gt;.</p>
+        <p class="m-0 text-center text-[13px] font-semibold text-brand">Supported on direct GitHub issue pages and GitHub Projects issue panes.</p>
       </div>
     </div>
   `;
@@ -223,7 +223,7 @@ export async function resolveActivePageContext(): Promise<PageContext> {
 
   return {
     kind: "error",
-    message: "Open a GitHub issue page to start a timer.",
+    message: "Open a supported GitHub issue to start a timer.",
   };
 }
 

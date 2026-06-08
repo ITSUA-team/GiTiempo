@@ -85,6 +85,7 @@ describe("background snapshot broadcast", () => {
       url: [
         "https://github.com/*/*/issues/*",
         "https://github.com/*/*/pull/*",
+        "https://github.com/orgs/*/projects/*",
       ],
     });
     expect(chromeStub.tabs.sendMessage).toHaveBeenCalledTimes(2);

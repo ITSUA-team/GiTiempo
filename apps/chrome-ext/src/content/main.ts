@@ -160,6 +160,22 @@ function renderInjectedBody(
   `;
 }
 
+function renderInjectedContainerClass(
+  pageContext: SupportedGitHubIssueContext,
+): string {
+  return pageContext.surface === "project-issue-pane"
+    ? "mx-auto w-full max-w-[1280px] pt-2 px-6"
+    : "mx-auto w-full max-w-[1280px] pt-4";
+}
+
+function renderInjectedSectionClass(
+  pageContext: SupportedGitHubIssueContext,
+): string {
+  return pageContext.surface === "project-issue-pane"
+    ? "flex w-full flex-col gap-3 py-3"
+    : "flex w-full flex-col gap-4 p-5";
+}
+
 export function createInjectedIssueApp({
   clearIntervalFn = clearInterval,
   doc,
@@ -248,8 +264,8 @@ export function createInjectedIssueApp({
   function render(): void {
     syncTheme();
     root.innerHTML = `
-      <div class="mx-auto w-full max-w-[1280px] pt-4">
-        <section class="flex w-full flex-col gap-4 p-5">
+      <div class="${renderInjectedContainerClass(pageContext)}">
+        <section class="${renderInjectedSectionClass(pageContext)}">
           ${renderInjectedBody(pageContext, state, now())}
         </section>
       </div>
@@ -330,7 +346,7 @@ export function mountInjectedIssueControl(
   pageContext: SupportedGitHubIssueContext,
   runtimeClient = createRuntimeClient(),
 ): { destroy(): void; load(): Promise<void> } | null {
-  const target = findGitHubIssueMountTarget(doc);
+  const target = findGitHubIssueMountTarget(doc, pageContext);
 
   if (!target || doc.getElementById("gitiempo-extension-root")) {
     return null;
@@ -339,8 +355,13 @@ export function mountInjectedIssueControl(
   const host = doc.createElement("div");
 
   host.id = "gitiempo-extension-root";
-  host.className = "mb-4";
-  target.prepend(host);
+  host.className = pageContext.surface === "project-issue-pane" ? "mb-2" : "mb-4";
+
+  if (pageContext.surface === "project-issue-pane") {
+    target.before(host);
+  } else {
+    target.prepend(host);
+  }
 
   const shadowRoot = host.attachShadow({ mode: "open" });
   const style = doc.createElement("style");
@@ -377,22 +398,46 @@ export function bootstrapInjectedIssueControl(
   let mountedApp: { destroy(): void; load(): Promise<void> } | null = null;
   let currentUrl = "";
 
+  function isMountedAtExpectedTarget(
+    pageContext: SupportedGitHubIssueContext,
+  ): boolean {
+    const host = doc.getElementById("gitiempo-extension-root");
+
+    if (!host?.isConnected) {
+      return false;
+    }
+
+    const target = findGitHubIssueMountTarget(doc, pageContext);
+
+    if (!target) {
+      return false;
+    }
+
+    if (pageContext.surface === "project-issue-pane") {
+      return target.previousElementSibling === host;
+    }
+
+    return target.firstElementChild === host;
+  }
+
   function syncToLocation(): void {
     const nextUrl = win.location.href;
+    const pageContext = resolveGitHubIssueContext(doc, nextUrl);
 
-    if (nextUrl === currentUrl && mountedApp) {
+    if (pageContext.kind !== "supported") {
+      currentUrl = nextUrl;
+      mountedApp?.destroy();
+      mountedApp = null;
+      return;
+    }
+
+    if (nextUrl === currentUrl && mountedApp && isMountedAtExpectedTarget(pageContext)) {
       return;
     }
 
     currentUrl = nextUrl;
     mountedApp?.destroy();
     mountedApp = null;
-
-    const pageContext = resolveGitHubIssueContext(doc, nextUrl);
-
-    if (pageContext.kind !== "supported") {
-      return;
-    }
 
     mountedApp = mountInjectedIssueControl(doc, pageContext, runtimeClient);
 
