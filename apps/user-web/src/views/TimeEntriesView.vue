@@ -9,6 +9,7 @@ import type { TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
+  EntryActionButton,
   SurfaceCard,
 } from "@gitiempo/web-shared";
 import { computed, onBeforeUnmount, onMounted } from "vue";
@@ -279,21 +280,12 @@ onBeforeUnmount(() => {
       title="Time Entries"
     >
       <template #actions>
-        <Button
-          v-tooltip.bottom="'New time entry'"
+        <EntryActionButton
           data-testid="time-entries-header-create"
-          aria-label="New time entry"
-          type="button"
-          :pt="{
-            root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
-          }"
+          :icon="PlusIcon"
+          label="New time entry"
           @click="void openCreateDialog()"
-        >
-          <PlusIcon
-            aria-hidden="true"
-            class="text-text-inverse size-4 stroke-2"
-          />
-        </Button>
+        />
       </template>
     </PageHeader>
 
@@ -419,20 +411,11 @@ onBeforeUnmount(() => {
           Add a new time entry or adjust the current filters.
         </p>
       </div>
-      <Button
-        v-tooltip.bottom="'New time entry'"
-        aria-label="New time entry"
-        type="button"
-        :pt="{
-          root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
-        }"
+      <EntryActionButton
+        :icon="PlusIcon"
+        label="New time entry"
         @click="void openCreateDialog()"
-      >
-        <PlusIcon
-          aria-hidden="true"
-          class="text-text-inverse size-4 stroke-2"
-        />
-      </Button>
+      />
     </SurfaceCard>
 
     <div

@@ -10,6 +10,7 @@ import type {
 } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
+  EntryActionButton,
   ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
@@ -21,7 +22,6 @@ import {
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
-import Button from 'primevue/button';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -115,21 +115,12 @@ const columns: ManagementTableColumn[] = [
               @update:model-value="updateGlobalFilter"
             />
           </IconField>
-          <Button
-            v-tooltip.bottom="'Invite member'"
-            aria-label="Invite member"
+          <EntryActionButton
             data-testid="members-table-invite"
-            type="button"
-            :pt="{
-              root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
-            }"
+            :icon="UserPlusIcon"
+            label="Invite member"
             @click="emit('invite-member')"
-          >
-            <UserPlusIcon
-              aria-hidden="true"
-              class="text-text-inverse size-4 stroke-2"
-            />
-          </Button>
+          />
         </div>
       </template>
     </SectionHeader>

@@ -8,6 +8,7 @@ import {
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
+  EntryActionButton,
   ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
@@ -19,7 +20,6 @@ import {
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import Column from 'primevue/column';
-import Button from 'primevue/button';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
@@ -121,21 +121,12 @@ const columns: ManagementTableColumn[] = [
               @update:model-value="updateGlobalFilter"
             />
           </IconField>
-          <Button
-            v-tooltip.bottom="'New project'"
-            aria-label="New project"
+          <EntryActionButton
             data-testid="projects-table-new-project"
-            type="button"
-            :pt="{
-              root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
-            }"
+            :icon="FolderPlusIcon"
+            label="New project"
             @click="emit('new-project')"
-          >
-            <FolderPlusIcon
-              aria-hidden="true"
-              class="text-text-inverse size-4 stroke-2"
-            />
-          </Button>
+          />
         </div>
       </template>
     </SectionHeader>
