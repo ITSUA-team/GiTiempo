@@ -107,7 +107,7 @@ export function useTimeEntryMutations({
     }
   }
 
-  async function deleteEntry(entry: TimeEntryResponse): Promise<void> {
+  async function deleteEntry(entry: TimeEntryResponse): Promise<boolean> {
     isDeletingEntry.value = entry.id;
     lastMutationErrorMessage.value = null;
 
@@ -117,6 +117,7 @@ export function useTimeEntryMutations({
         "Time entry deleted",
         "The selected entry has been removed.",
       );
+      return true;
     } catch (error) {
       lastMutationErrorMessage.value = getErrorMessage(error);
       appToast.showErrorToast({
@@ -125,6 +126,7 @@ export function useTimeEntryMutations({
         logContext: { action: "delete-entry", feature: "time-entries" },
         summary: "Could not delete time entry",
       });
+      return false;
     } finally {
       isDeletingEntry.value = null;
     }

@@ -4,10 +4,9 @@ import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
-import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { computed } from "vue";
+import { computed, shallowRef, watch } from "vue";
 
 import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
 
@@ -23,6 +22,7 @@ const props = defineProps<{
   };
   isLoadingProjects: boolean;
   isLoadingTasks: boolean;
+  isDeleting: boolean;
   isOpen: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
@@ -38,10 +38,11 @@ const props = defineProps<{
   subtitle: string;
   valueDescription: string;
   valueIsBillable: boolean;
- }>();
+}>();
 
 const emit = defineEmits<{
   close: [];
+  deleteEntry: [];
   save: [];
   taskSearch: [query: string];
   "update:description": [value: string];
@@ -52,10 +53,34 @@ const emit = defineEmits<{
   "update:taskValue": [value: string | TaskLookupOption | null];
 }>();
 
+const projectSearchValue = shallowRef<string | null>(null);
+const projectSearchQuery = shallowRef("");
+const selectedProject = computed(() =>
+  props.projects.find((project) => project.id === props.projectId) ?? null,
+);
+const projectSuggestions = computed(() => {
+  const query = projectSearchQuery.value.trim().toLowerCase();
+
+  if (!query) {
+    return props.projects;
+  }
+
+  return props.projects.filter((project) =>
+    project.name.toLowerCase().includes(query),
+  );
+});
 const projectModel = computed({
-  get: () => props.projectId,
-  set: (value: string | null | undefined) => {
-    emit("update:projectId", value ?? null);
+  get: () => projectSearchValue.value ?? selectedProject.value,
+  set: (value: ProjectResponse | string | null | undefined) => {
+    if (typeof value === "string") {
+      projectSearchValue.value = value;
+      projectSearchQuery.value = value;
+      return;
+    }
+
+    projectSearchValue.value = null;
+    projectSearchQuery.value = "";
+    emit("update:projectId", value?.id ?? null);
   },
 });
 
@@ -94,6 +119,20 @@ const billableModel = computed({
   },
 });
 
+const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
+
+watch(
+  () => props.projectId,
+  () => {
+    projectSearchValue.value = null;
+    projectSearchQuery.value = "";
+  },
+);
+
+function handleProjectComplete(event: { query: string }): void {
+  projectSearchQuery.value = event.query;
+}
+
 function handleTaskComplete(event: { query: string }): void {
   emit("taskSearch", event.query);
 }
@@ -102,7 +141,8 @@ function handleTaskComplete(event: { query: string }): void {
 <template>
   <Dialog
     modal
-    :dismissable-mask="true"
+    :closable="!isDialogMutating"
+    :dismissable-mask="!isDialogMutating"
     :draggable="false"
     :pt="{
       root: 'w-[min(560px,calc(100vw-2rem))] rounded-lg border border-divider',
@@ -156,18 +196,23 @@ function handleTaskComplete(event: { query: string }): void {
         >
           Project
         </label>
-        <Select
+        <AutoComplete
           v-model="projectModel"
-          filter
+          complete-on-focus
+          data-key="id"
+          dropdown
+          dropdown-mode="blank"
           fluid
+          force-selection
           input-id="time-entry-project"
           option-label="name"
-          option-value="id"
-          :disabled="props.isLoadingProjects || props.isSaving"
+          :disabled="props.isLoadingProjects || isDialogMutating"
           :invalid="!!props.errors.projectId"
           :loading="props.isLoadingProjects"
-          :options="props.projects"
+          :min-length="0"
           placeholder="Select a project"
+          :suggestions="projectSuggestions"
+          @complete="handleProjectComplete"
         />
         <small
           v-if="props.errors.projectId"
@@ -194,7 +239,7 @@ function handleTaskComplete(event: { query: string }): void {
           input-id="time-entry-task"
           :min-length="0"
           option-label="title"
-          :disabled="!props.projectId || props.isLoadingTasks || props.isSaving"
+          :disabled="!props.projectId || props.isLoadingTasks || isDialogMutating"
           :invalid="!!props.errors.taskId"
           :loading="props.isLoadingTasks"
           :suggestions="props.taskSuggestions"
@@ -226,9 +271,10 @@ function handleTaskComplete(event: { query: string }): void {
           <DatePicker
             v-model="startedAtModel"
             fluid
+            date-format="M d,"
             hour-format="24"
             input-id="time-entry-started-at"
-            :disabled="props.isSaving"
+            :disabled="isDialogMutating"
             :invalid="!!props.errors.startedAt"
             :manual-input="false"
             show-time
@@ -251,9 +297,10 @@ function handleTaskComplete(event: { query: string }): void {
           <DatePicker
             v-model="endedAtModel"
             fluid
+            date-format="M d,"
             hour-format="24"
             input-id="time-entry-ended-at"
-            :disabled="props.isSaving"
+            :disabled="isDialogMutating"
             :invalid="!!props.errors.endedAt"
             :manual-input="false"
             show-time
@@ -279,7 +326,7 @@ function handleTaskComplete(event: { query: string }): void {
           v-model="descriptionModel"
           auto-resize
           rows="4"
-          :disabled="props.isSaving"
+          :disabled="isDialogMutating"
           fluid
           :invalid="!!props.errors.description"
         />
@@ -299,7 +346,7 @@ function handleTaskComplete(event: { query: string }): void {
           id="time-entry-billable"
           v-model="billableModel"
           binary
-          :disabled="props.isSaving"
+          :disabled="isDialogMutating"
         />
         <span class="text-text-dark text-sm font-medium">
           Billable entry
@@ -310,8 +357,19 @@ function handleTaskComplete(event: { query: string }): void {
     <template #footer>
       <div class="flex justify-end gap-2">
         <Button
+          v-if="props.mode === 'edit'"
+          type="button"
+          label="Delete entry"
+          severity="danger"
+          variant="outlined"
+          :disabled="isDialogMutating"
+          :loading="props.isDeleting"
+          @click="emit('deleteEntry')"
+        />
+        <Button
           type="button"
           :label="props.saveLabel"
+          :disabled="props.isDeleting"
           :loading="props.isSaving"
           @click="emit('save')"
         />

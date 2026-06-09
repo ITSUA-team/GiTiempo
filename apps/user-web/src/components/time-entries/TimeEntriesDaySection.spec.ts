@@ -21,7 +21,10 @@ const group: TimeEntriesDayGroup = {
       projectId: 'project-1',
       source: 'web',
       startedAt: '2026-04-21T09:00:00.000Z',
-      githubIssue: null,
+      githubIssue: {
+        githubRepo: 'octo/repo',
+        issueNumber: 42,
+      },
       task: { id: 'task-1', title: 'Improve reports filters' },
       taskId: 'task-1',
       updatedAt: '2026-04-21T09:00:00.000Z',
@@ -45,7 +48,10 @@ const group: TimeEntriesDayGroup = {
       projectId: 'project-1',
       source: 'manual',
       startedAt: '2026-04-21T09:00:00.000Z',
-      githubIssue: null,
+      githubIssue: {
+        githubRepo: 'octo/repo',
+        issueNumber: 43,
+      },
       task: { id: 'task-1', title: 'Improve reports filters' },
       taskId: 'task-1',
       updatedAt: '2026-04-21T10:30:00.000Z',
@@ -61,75 +67,55 @@ const group: TimeEntriesDayGroup = {
   ],
 };
 
-describe('TimeEntriesDaySection', () => {
-  const formatDuration = (entry: { id: string }) =>
-    entry.id === 'entry-running' ? '00:45:00' : '1h 30m';
-  const formatTimeRange = (entry: { endedAt: string | null }) =>
-    entry.endedAt === null ? '09:00 - Running' : '09:00 - 10:30';
+function mountSection() {
+  return mount(TimeEntriesDaySection, {
+    props: {
+      formatDuration: (entry: { id: string }) =>
+        entry.id === 'entry-running' ? '00:45:00' : '1h 30m',
+      formatTimeRange: (entry: { endedAt: string | null }) =>
+        entry.endedAt === null ? '09:00 - Running' : '09:00 - 10:30',
+      group,
+      showHeader: true,
+    },
+    global: {
+      plugins: [PrimeVue],
+    },
+  });
+}
 
+describe('TimeEntriesDaySection', () => {
   beforeEach(() => {
     mockMatchMedia();
   });
 
-  it('renders icon-only completed-row actions with labels and preserves running-row behavior', () => {
-    const wrapper = mount(TimeEntriesDaySection, {
-      props: {
-        formatDuration,
-        formatTimeRange,
-        group,
-        isDeletingEntry: null,
-        showHeader: true,
-      },
-      global: {
-        directives: {
-          tooltip: {
-            mounted(el, binding) {
-              el.setAttribute('data-tooltip', String(binding.value));
-            },
-          },
-        },
-        plugins: [PrimeVue],
-      },
-    });
-
+  it('renders completed task names as popup openers and preserves running-row behavior', async () => {
+    const wrapper = mountSection();
     const editButton = wrapper.get('[data-testid="time-entry-edit-entry-completed"]');
-    const deleteButton = wrapper.get('[data-testid="time-entry-delete-entry-completed"]');
 
-    expect(editButton.attributes('aria-label')).toBe('Edit');
-    expect(editButton.attributes('data-tooltip')).toBe('Edit');
-    expect(editButton.text()).toBe('');
-    expect(deleteButton.attributes('aria-label')).toBe('Delete');
-    expect(deleteButton.attributes('data-tooltip')).toBe('Delete');
-    expect(deleteButton.text()).toBe('');
+    expect(editButton.attributes('aria-label')).toBe('Edit time entry for Improve reports filters');
+    expect(editButton.text()).toContain('Improve reports filters');
+    expect(editButton.classes()).toContain('text-brand');
+    expect(editButton.classes()).toContain('gap-2');
+    expect(editButton.find('svg').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entry-external-entry-completed"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('Stop from the top bar');
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
     expect(wrapper.find('[data-testid="time-entry-edit-entry-running"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="time-entry-delete-entry-running"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="time-entry-external-entry-running"]').attributes('href')).toBe(
+      'https://github.com/octo/repo/issues/42',
+    );
+    expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
+
+    await editButton.trigger('click');
+
+    expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
+    expect(wrapper.emitted('deleteEntry')).toBeUndefined();
   });
 
-  it('renders mobile cards and preserves running/completed behavior on small viewports', async () => {
+  it('renders mobile cards with the completed task name opener only', async () => {
     mockMatchMedia(true);
 
-    const wrapper = mount(TimeEntriesDaySection, {
-      props: {
-        formatDuration,
-        formatTimeRange,
-        group,
-        isDeletingEntry: null,
-        showHeader: true,
-      },
-      global: {
-        directives: {
-          tooltip: {
-            mounted(el, binding) {
-              el.setAttribute('data-tooltip', String(binding.value));
-            },
-          },
-        },
-        plugins: [PrimeVue],
-      },
-    });
-
+    const wrapper = mountSection();
     const mobileCards = wrapper.findAll('[data-testid="time-entry-mobile-card"]');
 
     expect(mobileCards).toHaveLength(2);
@@ -145,95 +131,26 @@ describe('TimeEntriesDaySection', () => {
     expect(mobileCards[1]?.text()).toContain('09:00 - 10:30');
     expect(mobileCards[1]?.text()).toContain('1h 30m');
     expect(wrapper.find('[data-testid="time-entry-mobile-edit-entry-running"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="time-entry-mobile-delete-entry-running"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="time-entry-mobile-external-entry-running"]').attributes('href')).toBe(
+      'https://github.com/octo/repo/issues/42',
+    );
+    expect(wrapper.find('[data-testid="time-entry-mobile-delete-entry-completed"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="time-entry-mobile-edit-entry-completed"]').trigger('click');
-    await wrapper.get('[data-testid="time-entry-mobile-delete-entry-completed"]').trigger('click');
 
     expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
-    expect(wrapper.emitted('deleteEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
+    expect(wrapper.emitted('deleteEntry')).toBeUndefined();
   });
 
-  it('preserves edit and delete emits for completed entries', async () => {
-    const wrapper = mount(TimeEntriesDaySection, {
-      props: {
-        formatDuration,
-        formatTimeRange: () => '09:00 - 10:30',
-        group,
-        isDeletingEntry: null,
-        showHeader: true,
-      },
-      global: {
-        directives: {
-          tooltip: {
-            mounted(el, binding) {
-              el.setAttribute('data-tooltip', String(binding.value));
-            },
-          },
-        },
-        plugins: [PrimeVue],
-      },
-    });
-
-    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger('click');
-    await wrapper.get('[data-testid="time-entry-delete-entry-completed"]').trigger('click');
-
-    expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
-    expect(wrapper.emitted('deleteEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
-  });
-
-  it('renders the desktop entry table branch with the expected column labels', () => {
-    const wrapper = mount(TimeEntriesDaySection, {
-      props: {
-        formatDuration,
-        formatTimeRange,
-        group,
-        isDeletingEntry: null,
-        showHeader: true,
-      },
-      global: {
-        directives: {
-          tooltip: {
-            mounted(el, binding) {
-              el.setAttribute('data-tooltip', String(binding.value));
-            },
-          },
-        },
-        plugins: [PrimeVue],
-      },
-    });
+  it('renders the desktop entry table branch without an actions column', () => {
+    const wrapper = mountSection();
 
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
     expect(wrapper.text()).toContain('Task');
     expect(wrapper.text()).toContain('Project');
     expect(wrapper.text()).toContain('Time');
     expect(wrapper.text()).toContain('Duration');
+    expect(wrapper.text()).not.toContain('Actions');
     expect(wrapper.text()).toContain('Stop from the top bar');
-  });
-
-  it('keeps the destructive action in a loading-disabled state during deletion', () => {
-    const wrapper = mount(TimeEntriesDaySection, {
-      props: {
-        formatDuration,
-        formatTimeRange: () => '09:00 - 10:30',
-        group,
-        isDeletingEntry: 'entry-completed',
-        showHeader: true,
-      },
-      global: {
-        directives: {
-          tooltip: {
-            mounted(el, binding) {
-              el.setAttribute('data-tooltip', String(binding.value));
-            },
-          },
-        },
-        plugins: [PrimeVue],
-      },
-    });
-
-    expect(
-      wrapper.get('[data-testid="time-entry-delete-entry-completed"]').attributes(),
-    ).toHaveProperty('disabled');
   });
 });

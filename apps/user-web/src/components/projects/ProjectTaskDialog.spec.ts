@@ -20,6 +20,7 @@ function mountDialog(
         status: null,
         title: null,
       },
+      isDeleting: false,
       isOpen: true,
       isSaving: false,
       mode: "create",
@@ -51,10 +52,10 @@ function mountDialog(
     global: {
       stubs: {
         Button: {
-          props: ["disabled", "label"],
+          props: ["disabled", "label", "loading", "severity", "variant"],
           emits: ["click"],
           template:
-            '<button :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
+            '<button :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Dialog: {
           props: ["closable", "dismissableMask", "visible"],
@@ -112,7 +113,16 @@ describe("ProjectTaskDialog", () => {
     expect(selects).toHaveLength(1);
     expect(projectField.attributes("aria-labelledby")).toBe("project-task-project-label");
     expect(wrapper.text()).toContain("Project Orion");
+    expect(wrapper.text()).toContain("Delete task");
     expect(wrapper.text()).toContain("Save changes");
+    expect(wrapper.text()).not.toContain("Cancel");
+  });
+
+  it("renders create mode without the edit-only delete action", () => {
+    const wrapper = mountDialog();
+
+    expect(wrapper.text()).toContain("Create task");
+    expect(wrapper.text()).not.toContain("Delete task");
     expect(wrapper.text()).not.toContain("Cancel");
   });
 
@@ -133,5 +143,23 @@ describe("ProjectTaskDialog", () => {
 
     expect(dialogShell.attributes("data-closable")).toBe("false");
     expect(dialogShell.attributes("data-dismissable-mask")).toBe("false");
+  });
+
+  it("emits delete from the edit-only destructive action", async () => {
+    const wrapper = mountDialog({
+      mode: "edit",
+      projectId: "project-1",
+      saveLabel: "Save changes",
+      title: "Edit task",
+      valueTitle: "Improve reports filters",
+    });
+    const deleteButton = findButtonByLabel(wrapper, "Delete task");
+
+    expect(deleteButton?.attributes("data-severity")).toBe("danger");
+    expect(deleteButton?.attributes("data-variant")).toBe("outlined");
+
+    await deleteButton?.trigger("click");
+
+    expect(wrapper.emitted("deleteTask")?.length).toBe(1);
   });
 });
