@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import Button from "primevue/button";
 import Column from "primevue/column";
 import Tag from "primevue/tag";
 import {
@@ -9,6 +8,7 @@ import {
 } from "@heroicons/vue/24/outline";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import {
+  EntryActionButton,
   ManagementTableEmptyState,
   ManagementTableRowAction,
   ManagementTableShell,
@@ -77,21 +77,12 @@ function getStatusPt(task: TaskResponse) {
         </p>
       </div>
 
-      <Button
-        v-tooltip.bottom="'Add task'"
+      <EntryActionButton
         data-testid="project-section-add-task"
-        aria-label="Add task"
-        type="button"
-        :pt="{
-          root: { class: 'h-[38px] w-[38px] min-w-0 rounded-[6px] p-0' },
-        }"
+        :icon="PlusIcon"
+        label="Add task"
         @click="emit('addTask', props.project.id)"
-      >
-        <PlusIcon
-          aria-hidden="true"
-          class="text-text-inverse size-4 stroke-2"
-        />
-      </Button>
+      />
     </div>
 
     <div
