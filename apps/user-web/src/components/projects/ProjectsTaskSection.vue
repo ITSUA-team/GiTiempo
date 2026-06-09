@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ArrowUpRightIcon } from "@heroicons/vue/24/outline";
 import Button from "primevue/button";
 import Column from "primevue/column";
 import Tag from "primevue/tag";
@@ -90,11 +91,20 @@ function getStatusPt(task: TaskResponse) {
         <div class="flex min-w-0 flex-col gap-2">
           <button
             type="button"
-            class="text-brand w-fit max-w-full cursor-pointer text-left text-sm font-medium break-words whitespace-normal hover:underline"
+            class="text-brand inline-flex w-fit max-w-full cursor-pointer items-center gap-1.5 text-left text-sm font-medium break-words whitespace-normal hover:underline"
             data-testid="project-task-mobile-title"
             @click="emit('editTask', task)"
           >
-            {{ task.title }}
+            <span class="min-w-0 break-words whitespace-normal">
+              {{ task.title }}
+            </span>
+            <span
+              aria-hidden="true"
+              class="size-3.5 shrink-0"
+              data-testid="project-task-mobile-title-arrow"
+            >
+              <ArrowUpRightIcon class="size-full" />
+            </span>
           </button>
 
           <div class="flex items-center justify-between gap-3">
@@ -139,11 +149,20 @@ function getStatusPt(task: TaskResponse) {
         <template #body="slotProps">
           <button
             type="button"
-            class="text-brand cursor-pointer text-left text-sm font-medium break-words whitespace-normal hover:underline"
+            class="text-brand inline-flex max-w-full cursor-pointer items-center gap-1.5 text-left text-sm font-medium break-words whitespace-normal hover:underline"
             data-testid="project-task-title"
             @click="emit('editTask', slotProps.data)"
           >
-            {{ slotProps.data.title }}
+            <span class="min-w-0 break-words whitespace-normal">
+              {{ slotProps.data.title }}
+            </span>
+            <span
+              aria-hidden="true"
+              class="size-3.5 shrink-0"
+              data-testid="project-task-title-arrow"
+            >
+              <ArrowUpRightIcon class="size-full" />
+            </span>
           </button>
         </template>
       </Column>

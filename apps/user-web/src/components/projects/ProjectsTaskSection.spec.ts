@@ -60,6 +60,14 @@ describe("ProjectsTaskSection", () => {
     expect(addButton.attributes("aria-label")).toBe("Add task");
     expect(addButton.attributes("title")).toBe("Add task");
     expect(taskTitle.classes()).toContain("text-brand");
+    expect(
+      wrapper
+        .get('[data-testid="project-task-title-arrow"]')
+        .attributes("aria-hidden"),
+    ).toBe("true");
+    expect(
+      wrapper.get('[data-testid="project-task-title-arrow"]').classes(),
+    ).toContain("size-3.5");
     expect(wrapper.text()).not.toContain("Actions");
     expect(wrapper.find('[data-testid="project-task-edit"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="project-task-delete"]').exists()).toBe(false);
@@ -139,6 +147,14 @@ describe("ProjectsTaskSection", () => {
     expect(mobileTitles[0]?.classes()).not.toContain('truncate');
     expect(mobileTitles[0]?.classes()).toContain('break-words');
     expect(mobileTitles[0]?.classes()).toContain('whitespace-normal');
+    expect(
+      wrapper
+        .get('[data-testid="project-task-mobile-title-arrow"]')
+        .attributes('aria-hidden'),
+    ).toBe('true');
+    expect(
+      wrapper.get('[data-testid="project-task-mobile-title-arrow"]').classes(),
+    ).toContain('size-3.5');
     expect(mobileCards[0]?.text()).toContain('Improve reports filters');
     expect(mobileCards[0]?.text()).toContain('Open');
     expect(mobileCards[0]?.text()).toContain('Today, 10:00');
