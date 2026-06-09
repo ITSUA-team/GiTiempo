@@ -190,7 +190,7 @@ describe("ProjectView", () => {
     primeVueMocks.toastAdd.mockClear();
   });
 
-  it("renders the header, search field, grouped sections, and page-level actions", async () => {
+  it("renders the header, search field, grouped sections, and section add action", async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValueOnce([
@@ -211,7 +211,6 @@ describe("ProjectView", () => {
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Improve reports filters");
 
-    await wrapper.get('[data-testid="projects-header-create"]').trigger("click");
     await wrapper.get('[data-testid="project-section-add"]').trigger("click");
     await wrapper.get('[data-testid="project-section-title"]').trigger("click");
 

@@ -105,13 +105,6 @@ const pageState = computed(() =>
     isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
   }),
 );
-const canCreateTasks = computed(
-  () =>
-    data.visibleProjects.value.length > 0 &&
-    !data.isLoadingProjects.value &&
-    !data.isLoadingTasks.value,
-);
-
 async function saveDialog(): Promise<void> {
   const validInput = dialog.validateDialog();
 
@@ -171,20 +164,14 @@ async function retryLoadPage(): Promise<void> {
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
     <template v-if="pageState === 'loading'">
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex flex-col gap-2">
-          <Skeleton
-            width="8rem"
-            height="1.5rem"
-          />
-          <Skeleton
-            width="18rem"
-            height="1rem"
-          />
-        </div>
+      <div class="flex flex-col gap-2">
         <Skeleton
-          width="7.5rem"
-          height="2.5rem"
+          width="8rem"
+          height="1.5rem"
+        />
+        <Skeleton
+          width="18rem"
+          height="1rem"
         />
       </div>
 
@@ -244,16 +231,7 @@ async function retryLoadPage(): Promise<void> {
       <PageHeader
         subtitle="Create, update, and organize tasks across your visible projects."
         title="Projects"
-      >
-        <template #actions>
-          <Button
-            data-testid="projects-header-create"
-            label="+ New task"
-            :disabled="!canCreateTasks"
-            @click="openCreateDialog()"
-          />
-        </template>
-      </PageHeader>
+      />
 
       <div class="flex max-w-[360px] flex-col gap-1.5">
         <label
@@ -311,14 +289,9 @@ async function retryLoadPage(): Promise<void> {
             No projects or tasks match this view
           </h2>
           <p class="text-text-muted text-sm">
-            Clear the search or create a new task in one of your visible projects.
+            Clear the search or use a project section add action when projects are visible.
           </p>
         </div>
-        <Button
-          label="+ New task"
-          :disabled="!canCreateTasks"
-          @click="openCreateDialog()"
-        />
       </SurfaceCard>
 
       <div

@@ -9,11 +9,13 @@ import type { TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
+  EntryActionButton,
   SurfaceCard,
 } from "@gitiempo/web-shared";
 import { computed, onBeforeUnmount, onMounted } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
+import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import PageHeader from "@/components/layout/PageHeader.vue";
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
@@ -306,9 +308,10 @@ onBeforeUnmount(() => {
       title="Time Entries"
     >
       <template #actions>
-        <Button
+        <EntryActionButton
           data-testid="time-entries-header-create"
-          label="+ New time entry"
+          :icon="PlusIcon"
+          label="New time entry"
           @click="void openCreateDialog()"
         />
       </template>
@@ -436,8 +439,9 @@ onBeforeUnmount(() => {
           Add a new time entry or adjust the current filters.
         </p>
       </div>
-      <Button
-        label="+ New time entry"
+      <EntryActionButton
+        :icon="PlusIcon"
+        label="New time entry"
         @click="void openCreateDialog()"
       />
     </SurfaceCard>

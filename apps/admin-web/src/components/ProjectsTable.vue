@@ -3,10 +3,12 @@ import {
   ArchiveBoxIcon,
   ArrowUturnLeftIcon,
   PencilSquareIcon,
+  FolderPlusIcon,
 } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
+  EntryActionButton,
   ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
@@ -53,6 +55,7 @@ const emit = defineEmits<{
   'edit-project': [project: ProjectResponse];
   archive: [project: ProjectResponse];
   unarchive: [project: ProjectResponse];
+  'new-project': [];
   'update:expandedRows': [expandedRows: ProjectsTableExpandedRows | undefined];
   'update:filters': [filters: ProjectsTableFilterUpdate];
 }>();
@@ -107,16 +110,24 @@ const columns: ManagementTableColumn[] = [
   <div class="mb-4">
     <SectionHeader title="Projects Table">
       <template #actions>
-        <IconField class="w-full sm:w-[260px]">
-          <InputIcon class="pi pi-search text-text-muted" />
-          <InputText
-            :model-value="filters.global"
-            aria-label="Search projects"
-            class="h-[38px] w-full rounded-[6px] text-[14px]"
-            placeholder="Search projects"
-            @update:model-value="updateGlobalFilter"
+        <div class="flex w-full items-center gap-3 sm:w-auto">
+          <IconField class="w-full sm:w-[260px]">
+            <InputIcon class="pi pi-search text-text-muted" />
+            <InputText
+              :model-value="filters.global"
+              aria-label="Search projects"
+              class="h-[38px] w-full rounded-[6px] text-[14px]"
+              placeholder="Search projects"
+              @update:model-value="updateGlobalFilter"
+            />
+          </IconField>
+          <EntryActionButton
+            data-testid="projects-table-new-project"
+            :icon="FolderPlusIcon"
+            label="New project"
+            @click="emit('new-project')"
           />
-        </IconField>
+        </div>
       </template>
     </SectionHeader>
   </div>

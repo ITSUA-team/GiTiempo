@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import Button from "primevue/button";
+import { PlusIcon } from "@heroicons/vue/24/outline";
 import Column from "primevue/column";
 
 import type { TimeEntryResponse } from "@gitiempo/shared";
 import {
+  EntryActionButton,
   ManagementTableShell,
   MobileRecordCard,
   managementTableColumnPt,
@@ -59,11 +60,10 @@ function getGitHubIssueUrl(entry: TimeEntryResponse): string | null {
       <h2 class="text-text-dark text-base font-semibold">
         {{ props.group.heading }}
       </h2>
-      <Button
+      <EntryActionButton
         :data-testid="`time-entries-day-create-${props.group.dateKey}`"
-        label="+ New time entry"
-        severity="secondary"
-        variant="outlined"
+        :icon="PlusIcon"
+        label="New time entry"
         @click="emit('createForDay', props.group.dateKey)"
       />
     </div>
