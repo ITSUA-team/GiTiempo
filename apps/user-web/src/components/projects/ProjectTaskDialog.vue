@@ -13,6 +13,7 @@ const props = defineProps<{
     title: string | null;
   };
   isOpen: boolean;
+  isDeleting: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
   projectId: string | null;
@@ -27,6 +28,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
+  delete: [];
   save: [];
   "update:projectId": [value: string | null];
   "update:status": [value: TaskStatus];
@@ -66,9 +68,9 @@ const titleModel = computed({
 
 <template>
   <Dialog
-    :closable="!props.isSaving"
+    :closable="!props.isSaving && !props.isDeleting"
     modal
-    :dismissable-mask="!props.isSaving"
+    :dismissable-mask="!props.isSaving && !props.isDeleting"
     :draggable="false"
     :pt="{
       root: 'w-[min(480px,calc(100vw-2rem))] rounded-lg border border-divider',
@@ -78,7 +80,7 @@ const titleModel = computed({
     }"
     :visible="props.isOpen"
     @update:visible="(nextVisible) => {
-      if (!nextVisible && !props.isSaving) {
+      if (!nextVisible && !props.isSaving && !props.isDeleting) {
         emit('close');
       }
     }"
@@ -133,7 +135,7 @@ const titleModel = computed({
           option-label="name"
           option-value="id"
           placeholder="Select project"
-          :disabled="props.isSaving"
+          :disabled="props.isSaving || props.isDeleting"
           :invalid="!!props.errors.projectId"
           :options="props.projects"
         />
@@ -156,7 +158,7 @@ const titleModel = computed({
           id="project-task-title"
           v-model="titleModel"
           class="h-[38px] w-full"
-          :disabled="props.isSaving"
+          :disabled="props.isSaving || props.isDeleting"
           :invalid="!!props.errors.title"
         />
         <small
@@ -183,7 +185,7 @@ const titleModel = computed({
           input-id="project-task-status"
           option-label="label"
           option-value="value"
-          :disabled="props.isSaving"
+          :disabled="props.isSaving || props.isDeleting"
           :invalid="!!props.errors.status"
           :options="statusOptions"
         />
@@ -197,21 +199,36 @@ const titleModel = computed({
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
+      <div class="flex items-center justify-between gap-3">
         <Button
+          v-if="props.mode === 'edit'"
           type="button"
-          label="Cancel"
-          severity="secondary"
+          label="Delete"
+          severity="danger"
           variant="outlined"
           :disabled="props.isSaving"
-          @click="emit('close')"
+          :loading="props.isDeleting"
+          @click="emit('delete')"
         />
-        <Button
-          type="button"
-          :label="props.saveLabel"
-          :loading="props.isSaving"
-          @click="emit('save')"
-        />
+        <span v-else />
+
+        <div class="flex justify-end gap-2">
+          <Button
+            type="button"
+            label="Cancel"
+            severity="secondary"
+            variant="outlined"
+            :disabled="props.isSaving || props.isDeleting"
+            @click="emit('close')"
+          />
+          <Button
+            type="button"
+            :label="props.saveLabel"
+            :disabled="props.isDeleting"
+            :loading="props.isSaving"
+            @click="emit('save')"
+          />
+        </div>
       </div>
     </template>
   </Dialog>

@@ -78,6 +78,7 @@ const {
   dialogTaskStatus,
   dialogTaskTitle,
   dialogTitle,
+  editingTask,
   isDialogOpen,
   openCreateDialog,
   openEditDialog,
@@ -115,6 +116,25 @@ const canCreateTasks = computed(
     !data.isLoadingProjects.value &&
     !data.isLoadingTasks.value,
 );
+const isDeletingDialogTask = computed(
+  () => editingTask.value !== null && isDeletingTaskId.value === editingTask.value.id,
+);
+const filterAutoCompletePt = {
+  dropdown: {
+    class:
+      "border-divider bg-surface-primary text-brand inline-flex h-[38px] w-[92px] shrink-0 cursor-pointer items-center justify-center rounded-r-[6px] border border-l-0 px-0 text-xs font-medium shadow-none after:content-['AutoComplete']",
+  },
+  dropdownIcon: { class: "hidden size-0", style: "display: none" },
+  option: { class: "min-w-0 border-divider border-t px-3 py-2.5 first:border-t-0" },
+  optionLabel: { class: "truncate" },
+  pcInputText: {
+    root: {
+      class:
+        "border-divider bg-surface-primary text-text-muted h-[38px] min-w-0 flex-1 rounded-l-[6px] border border-r-0 px-3 text-[14px] font-normal shadow-none placeholder:text-text-muted",
+    },
+  },
+  root: { class: "max-w-full min-w-0" },
+} as const;
 
 async function saveDialog(): Promise<void> {
   const validInput = dialog.validateDialog();
@@ -136,11 +156,23 @@ async function saveDialog(): Promise<void> {
 
 function requestDeleteTask(task: Parameters<typeof mutations.deleteTask>[0]): void {
   appConfirm.confirmDestructive({
-    accept: async () => mutations.deleteTask(task),
+    accept: async () => {
+      await mutations.deleteTask(task);
+
+      if (!mutations.lastMutationErrorMessage.value) {
+        dialog.closeDialog();
+      }
+    },
     acceptLabel: "Delete",
     header: "Delete task?",
     message: "This task will be permanently deleted.",
   });
+}
+
+function requestDeleteEditingTask(): void {
+  if (editingTask.value) {
+    requestDeleteTask(editingTask.value);
+  }
 }
 
 async function retryLoadPage(): Promise<void> {
@@ -258,6 +290,7 @@ async function retryLoadPage(): Promise<void> {
             option-label="label"
             placeholder="Search projects or tasks"
             :model-value="selectedSearchValue"
+            :pt="filterAutoCompletePt"
             :suggestions="searchSuggestions"
             complete-on-focus
             dropdown
@@ -296,6 +329,7 @@ async function retryLoadPage(): Promise<void> {
             option-label="label"
             placeholder="All statuses"
             :model-value="selectedStatusFilter"
+            :pt="filterAutoCompletePt"
             :suggestions="statusFilterSuggestions"
             complete-on-focus
             dropdown
@@ -303,7 +337,8 @@ async function retryLoadPage(): Promise<void> {
             fluid
             force-selection
             :min-length="0"
-            @complete="handleStatusFilterComplete($event.query)"
+            @click="handleStatusFilterComplete()"
+            @complete="handleStatusFilterComplete()"
             @update:model-value="setStatusFilterValue(($event ?? null) as ProjectStatusFilterOption | string | null)"
           />
         </div>
@@ -321,6 +356,7 @@ async function retryLoadPage(): Promise<void> {
             option-label="label"
             placeholder="Any time"
             :model-value="selectedUpdatedFilter"
+            :pt="filterAutoCompletePt"
             :suggestions="updatedFilterSuggestions"
             complete-on-focus
             dropdown
@@ -328,7 +364,8 @@ async function retryLoadPage(): Promise<void> {
             fluid
             force-selection
             :min-length="0"
-            @complete="handleUpdatedFilterComplete($event.query)"
+            @click="handleUpdatedFilterComplete()"
+            @complete="handleUpdatedFilterComplete()"
             @update:model-value="setUpdatedFilterValue(($event ?? null) as ProjectUpdatedFilterOption | string | null)"
           />
         </div>
@@ -386,11 +423,9 @@ async function retryLoadPage(): Promise<void> {
           v-for="group in filteredProjectGroups"
           :key="group.project.id"
           :format-updated-label="formatUpdatedLabel"
-          :is-deleting-task-id="isDeletingTaskId"
           :project="group.project"
           :tasks="group.tasks"
           @add-task="openCreateDialog"
-          @delete-task="requestDeleteTask"
           @edit-task="openEditDialog"
         />
       </div>
@@ -398,6 +433,7 @@ async function retryLoadPage(): Promise<void> {
 
     <ProjectTaskDialog
       :errors="dialogErrors"
+      :is-deleting="isDeletingDialogTask"
       :is-open="isDialogOpen"
       :is-saving="isSavingDialog"
       :mode="dialogMode"
@@ -410,6 +446,7 @@ async function retryLoadPage(): Promise<void> {
       :title="dialogTitle"
       :value-title="dialogTaskTitle"
       @close="closeDialog"
+      @delete="requestDeleteEditingTask"
       @save="void saveDialog()"
       @update:project-id="setDialogProjectId"
       @update:status="setDialogTaskStatus"

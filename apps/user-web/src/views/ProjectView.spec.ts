@@ -134,6 +134,8 @@ async function mountView(client = createClientMock()) {
           emits: ["complete", "update:modelValue"],
           props: [
             "inputId",
+            "dropdown",
+            "forceSelection",
             "modelValue",
             "optionLabel",
             "placeholder",
@@ -142,6 +144,12 @@ async function mountView(client = createClientMock()) {
           template: `
             <div v-bind="$attrs">
               <input
+                :data-dropdown="String(
+                  dropdown !== undefined && dropdown !== false,
+                )"
+                :data-force-selection="String(
+                  forceSelection !== undefined && forceSelection !== false,
+                )"
                 :id="inputId"
                 :placeholder="placeholder"
                 :value="typeof modelValue === 'string' ? modelValue : modelValue?.label ?? ''"
@@ -173,7 +181,7 @@ async function mountView(client = createClientMock()) {
             '<button type="button" :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
         },
         ProjectTaskDialog: {
-          emits: ["close", "save", "update:projectId", "update:status", "update:title"],
+          emits: ["close", "delete", "save", "update:projectId", "update:status", "update:title"],
           props: [
             "isOpen",
             "requestErrorMessage",
@@ -186,13 +194,14 @@ async function mountView(client = createClientMock()) {
               <button data-testid="dialog-title-input" type="button" @click="$emit('update:title', 'Write release checklist')">Title</button>
               <button data-testid="dialog-edit-title-input" type="button" @click="$emit('update:title', 'Updated task')">Edit title</button>
               <button data-testid="dialog-status-input" type="button" @click="$emit('update:status', 'closed')">Status</button>
+              <button data-testid="dialog-delete" type="button" @click="$emit('delete')">Delete</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
               <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
             </div>
           `,
         },
         ProjectsTaskSection: {
-          emits: ["addTask", "deleteTask", "editTask"],
+          emits: ["addTask", "editTask"],
           props: ["project", "tasks"],
           template: `
             <section>
@@ -200,7 +209,6 @@ async function mountView(client = createClientMock()) {
               <p v-for="task in tasks" :key="task.id">{{ task.title }}</p>
               <button data-testid="project-section-add" type="button" @click="$emit('addTask', project.id)">Add</button>
               <button data-testid="project-section-edit" type="button" @click="$emit('editTask', tasks[0])">Edit</button>
-              <button data-testid="project-section-delete" type="button" @click="$emit('deleteTask', tasks[0])">Delete</button>
             </section>
           `,
         },
@@ -242,11 +250,20 @@ describe("ProjectView", () => {
     );
     expect(wrapper.find('input[placeholder="All statuses"]').exists()).toBe(true);
     expect(wrapper.find('input[placeholder="Any time"]').exists()).toBe(true);
+
+    const searchInput = wrapper.get(
+      'input[placeholder="Search projects or tasks"]',
+    );
+    const statusInput = wrapper.get('input[placeholder="All statuses"]');
+    const updatedInput = wrapper.get('input[placeholder="Any time"]');
+
+    expect(searchInput.attributes("data-dropdown")).toBe("true");
+    expect(statusInput.attributes("data-dropdown")).toBe("true");
+    expect(statusInput.attributes("data-force-selection")).toBe("true");
+    expect(updatedInput.attributes("data-dropdown")).toBe("true");
+    expect(updatedInput.attributes("data-force-selection")).toBe("true");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Improve reports filters");
-
-    await wrapper.get('[data-testid="projects-status-filter-complete"]').trigger("click");
-    await wrapper.get('[data-testid="projects-updated-filter-complete"]').trigger("click");
 
     expect(wrapper.text()).toContain("All statuses");
     expect(wrapper.text()).toContain("Open");
@@ -257,8 +274,9 @@ describe("ProjectView", () => {
     expect(wrapper.text()).toContain("Older");
 
     await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-close"]').trigger("click");
     await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
 
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(true);
     expect(primeVueMocks.confirmRequire).toHaveBeenCalledTimes(1);
@@ -299,9 +317,7 @@ describe("ProjectView", () => {
     expect(client.listVisibleProjects).toHaveBeenCalledTimes(1);
     expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
 
-    await wrapper.get('[data-testid="projects-status-filter-complete"]').trigger("click");
     await wrapper.get('[data-testid="projects-status-filter-option-open"]').trigger("click");
-    await wrapper.get('[data-testid="projects-updated-filter-complete"]').trigger("click");
     await wrapper.get('[data-testid="projects-updated-filter-option-older"]').trigger("click");
     await flushPromises();
 
@@ -407,7 +423,8 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
 
     const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
 
@@ -433,7 +450,8 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
 
     const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
 

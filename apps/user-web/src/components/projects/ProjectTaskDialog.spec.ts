@@ -13,6 +13,7 @@ function mountDialog(
         status: null,
         title: null,
       },
+      isDeleting: false,
       isOpen: true,
       isSaving: false,
       mode: "create",
@@ -44,7 +45,7 @@ function mountDialog(
     global: {
       stubs: {
         Button: {
-          props: ["disabled", "label"],
+          props: ["disabled", "label", "loading"],
           emits: ["click"],
           template:
             '<button :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
@@ -104,6 +105,21 @@ describe("ProjectTaskDialog", () => {
     expect(projectField.attributes("aria-labelledby")).toBe("project-task-project-label");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Save changes");
+    expect(wrapper.text()).toContain("Delete");
+  });
+
+  it("emits delete from the edit footer", async () => {
+    const wrapper = mountDialog({
+      mode: "edit",
+      projectId: "project-1",
+      saveLabel: "Save changes",
+      title: "Edit task",
+      valueTitle: "Improve reports filters",
+    });
+
+    await wrapper.get("button").trigger("click");
+
+    expect(wrapper.emitted("delete")?.length).toBeGreaterThan(0);
   });
 
   it("emits close and save actions from the footer buttons", async () => {
@@ -119,6 +135,15 @@ describe("ProjectTaskDialog", () => {
 
   it("keeps the dialog shell non-closable while saving", () => {
     const wrapper = mountDialog({ isSaving: true });
+
+    const dialogShell = wrapper.get("div[data-closable][data-dismissable-mask]");
+
+    expect(dialogShell.attributes("data-closable")).toBe("false");
+    expect(dialogShell.attributes("data-dismissable-mask")).toBe("false");
+  });
+
+  it("keeps the dialog shell non-closable while deleting", () => {
+    const wrapper = mountDialog({ isDeleting: true });
 
     const dialogShell = wrapper.get("div[data-closable][data-dismissable-mask]");
 

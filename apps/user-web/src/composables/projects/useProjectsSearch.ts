@@ -28,8 +28,12 @@ export function useProjectsSearch(
     ANY_PROJECT_UPDATED_FILTER,
   );
   const searchSuggestions = ref<ProjectsSearchSuggestion[]>([]);
-  const statusFilterSuggestions = ref<ProjectStatusFilterOption[]>([]);
-  const updatedFilterSuggestions = ref<ProjectUpdatedFilterOption[]>([]);
+  const statusFilterSuggestions = ref<ProjectStatusFilterOption[]>([
+    ...PROJECT_STATUS_FILTER_OPTIONS,
+  ]);
+  const updatedFilterSuggestions = ref<ProjectUpdatedFilterOption[]>([
+    ...PROJECT_UPDATED_FILTER_OPTIONS,
+  ]);
   const searchText = computed(() => {
     if (typeof selectedSearchValue.value === "string") {
       return selectedSearchValue.value;
@@ -51,18 +55,12 @@ export function useProjectsSearch(
     searchSuggestions.value = buildProjectSearchSuggestions(allProjectGroups.value, query);
   }
 
-  function handleStatusFilterComplete(query: string): void {
-    statusFilterSuggestions.value = filterSelectOptions(
-      PROJECT_STATUS_FILTER_OPTIONS,
-      query,
-    );
+  function handleStatusFilterComplete(): void {
+    statusFilterSuggestions.value = [...PROJECT_STATUS_FILTER_OPTIONS];
   }
 
-  function handleUpdatedFilterComplete(query: string): void {
-    updatedFilterSuggestions.value = filterSelectOptions(
-      PROJECT_UPDATED_FILTER_OPTIONS,
-      query,
-    );
+  function handleUpdatedFilterComplete(): void {
+    updatedFilterSuggestions.value = [...PROJECT_UPDATED_FILTER_OPTIONS];
   }
 
   function setSearchValue(value: ProjectsSearchSuggestion | string | null): void {
@@ -109,21 +107,6 @@ export function useProjectsSearch(
 interface FilterOption {
   label: string;
   value: string;
-}
-
-function filterSelectOptions<Option extends FilterOption>(
-  options: Option[],
-  query: string,
-): Option[] {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (normalizedQuery.length === 0) {
-    return options;
-  }
-
-  return options.filter((option) =>
-    option.label.toLowerCase().includes(normalizedQuery),
-  );
 }
 
 function resolveSelectOption<Option extends FilterOption>(

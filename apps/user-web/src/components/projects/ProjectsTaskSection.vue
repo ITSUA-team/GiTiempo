@@ -2,14 +2,9 @@
 import Button from "primevue/button";
 import Column from "primevue/column";
 import Tag from "primevue/tag";
-import {
-  PencilSquareIcon,
-  TrashIcon,
-} from "@heroicons/vue/24/outline";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import {
   ManagementTableEmptyState,
-  ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
   managementTableColumnPt,
@@ -20,7 +15,6 @@ import {
 interface ProjectsTaskSectionProps {
   // eslint-disable-next-line no-unused-vars
   formatUpdatedLabel: (updatedAt: string) => string;
-  isDeletingTaskId: string | null;
   project: ProjectResponse;
   tasks: TaskResponse[];
 }
@@ -30,19 +24,16 @@ const isMobileViewport = useIsMobileViewport();
 
 const emit = defineEmits<{
   addTask: [projectId: string];
-  deleteTask: [task: TaskResponse];
   editTask: [task: TaskResponse];
 }>();
 
 const statusColumnWidth = "8.125rem";
 const updatedColumnWidth = "10.625rem";
-const actionsColumnWidth = "8.75rem";
 
 const columns = [
   { key: "task", label: "Task", width: "fill" },
   { key: "status", label: "Status", width: 130 },
   { key: "updated", label: "Updated", width: 170 },
-  { key: "actions", label: "Actions", width: 140, align: "end" },
 ] satisfies ManagementTableColumn[];
 
 function formatTaskCount(count: number): string {
@@ -79,10 +70,10 @@ function getStatusPt(task: TaskResponse) {
       <Button
         data-testid="project-section-add-task"
         type="button"
-        label="+ Add task"
-        severity="secondary"
-        variant="outlined"
-        size="small"
+        aria-label="Add task"
+        class="h-[38px] w-[38px] rounded-[6px] p-0"
+        icon="pi pi-plus"
+        title="Add task"
         @click="emit('addTask', props.project.id)"
       />
     </div>
@@ -97,12 +88,14 @@ function getStatusPt(task: TaskResponse) {
         data-testid="project-task-mobile-card"
       >
         <div class="flex min-w-0 flex-col gap-2">
-          <p
-            class="text-text-dark text-sm font-medium break-words whitespace-normal"
+          <button
+            type="button"
+            class="text-brand w-fit max-w-full cursor-pointer text-left text-sm font-medium break-words whitespace-normal hover:underline"
             data-testid="project-task-mobile-title"
+            @click="emit('editTask', task)"
           >
             {{ task.title }}
-          </p>
+          </button>
 
           <div class="flex items-center justify-between gap-3">
             <Tag
@@ -114,23 +107,6 @@ function getStatusPt(task: TaskResponse) {
             </span>
           </div>
         </div>
-
-        <template #actions>
-          <ManagementTableRowAction
-            :data-testid="`project-task-mobile-edit-${task.id}`"
-            :icon="PencilSquareIcon"
-            label="Edit"
-            @click="emit('editTask', task)"
-          />
-          <ManagementTableRowAction
-            :data-testid="`project-task-mobile-delete-${task.id}`"
-            :icon="TrashIcon"
-            label="Delete"
-            :loading="props.isDeletingTaskId === task.id"
-            tone="destructive"
-            @click="emit('deleteTask', task)"
-          />
-        </template>
       </MobileRecordCard>
 
       <ManagementTableEmptyState
@@ -145,10 +121,10 @@ function getStatusPt(task: TaskResponse) {
       body-row-class="h-[52px] bg-transparent hover:bg-app-bg"
       :columns="columns"
       data-key="id"
-      header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
+      header-class="border-divider bg-app-bg text-text-dark flex h-[44px] items-center border-b font-sans text-[13px] font-semibold"
       :loading="false"
       shell-class="border-divider overflow-hidden rounded-lg border bg-surface-primary"
-      table-class="min-w-[740px] w-full table-fixed border-collapse"
+      table-class="min-w-[560px] w-full table-fixed border-collapse"
       table-container-class="overflow-auto rounded-none border-none"
       :value="props.tasks"
     >
@@ -161,12 +137,14 @@ function getStatusPt(task: TaskResponse) {
 
       <Column :pt="managementTableColumnPt">
         <template #body="slotProps">
-          <div
-            class="text-text-dark text-sm font-medium break-words whitespace-normal"
+          <button
+            type="button"
+            class="text-brand cursor-pointer text-left text-sm font-medium break-words whitespace-normal hover:underline"
             data-testid="project-task-title"
+            @click="emit('editTask', slotProps.data)"
           >
             {{ slotProps.data.title }}
-          </div>
+          </button>
         </template>
       </Column>
 
@@ -191,30 +169,6 @@ function getStatusPt(task: TaskResponse) {
         <template #body="slotProps">
           <div class="text-text-muted text-[13px]">
             {{ props.formatUpdatedLabel(slotProps.data.updatedAt) }}
-          </div>
-        </template>
-      </Column>
-
-      <Column
-        :pt="managementTableColumnPt"
-        :style="{ width: actionsColumnWidth }"
-      >
-        <template #body="slotProps">
-          <div class="flex items-center justify-end gap-2">
-            <ManagementTableRowAction
-              data-testid="project-task-edit"
-              :icon="PencilSquareIcon"
-              label="Edit"
-              @click="emit('editTask', slotProps.data)"
-            />
-            <ManagementTableRowAction
-              data-testid="project-task-delete"
-              :icon="TrashIcon"
-              label="Delete"
-              :loading="props.isDeletingTaskId === slotProps.data.id"
-              tone="destructive"
-              @click="emit('deleteTask', slotProps.data)"
-            />
           </div>
         </template>
       </Column>
