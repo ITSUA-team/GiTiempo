@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import Button from "primevue/button";
 import Column from "primevue/column";
 import Tag from "primevue/tag";
 import {
   PencilSquareIcon,
+  PlusIcon,
   TrashIcon,
 } from "@heroicons/vue/24/outline";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import {
+  EntryActionButton,
   ManagementTableEmptyState,
   ManagementTableRowAction,
   ManagementTableShell,
@@ -76,13 +77,10 @@ function getStatusPt(task: TaskResponse) {
         </p>
       </div>
 
-      <Button
+      <EntryActionButton
         data-testid="project-section-add-task"
-        type="button"
-        label="+ Add task"
-        severity="secondary"
-        variant="outlined"
-        size="small"
+        :icon="PlusIcon"
+        label="Add task"
         @click="emit('addTask', props.project.id)"
       />
     </div>

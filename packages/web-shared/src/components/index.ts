@@ -1,6 +1,7 @@
 export { default as AuthSignInForm } from "./AuthSignInForm.vue";
 export { default as EditFormPanel } from "./EditFormPanel.vue";
 export { default as EmptyStateBlock } from "./EmptyStateBlock.vue";
+export { default as EntryActionButton } from "./EntryActionButton.vue";
 export { default as AuthIntroPanel } from "./AuthIntroPanel.vue";
 export { default as ManagementTableEmptyState } from "./ManagementTableEmptyState.vue";
 export { default as MobileRecordCard } from "./MobileRecordCard.vue";

@@ -14,7 +14,6 @@ import {
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ProjectEditFormInput } from '@gitiempo/web-shared';
-import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
@@ -259,14 +258,7 @@ onMounted(fetchAll);
         title="Projects"
         description="Manage project visibility, member assignments, and manual project creation."
         variant="page"
-      >
-        <template #actions>
-          <Button
-            label="New Project"
-            @click="handleNewProject"
-          />
-        </template>
-      </SectionHeader>
+      />
 
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
@@ -297,6 +289,7 @@ onMounted(fetchAll);
           :visibility-filter-options="visibilityFilterOptions"
           @archive="handleArchive"
           @edit-project="handleEditProject"
+          @new-project="handleNewProject"
           @unarchive="handleUnarchive"
           @update:expanded-rows="setProjectTableExpandedRows"
           @update:filters="updateProjectTableFilters"

@@ -15,7 +15,6 @@ import {
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
-import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
@@ -389,14 +388,7 @@ onMounted(fetchAll);
         title="Members"
         description="Manage team roles, project assignments, and member activity."
         variant="page"
-      >
-        <template #actions>
-          <Button
-            label="Invite Member"
-            @click="inviteDialogVisible = true"
-          />
-        </template>
-      </SectionHeader>
+      />
 
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
@@ -426,6 +418,7 @@ onMounted(fetchAll);
           :rows="memberTableRows"
           @assign-member="handleAssignMember"
           @edit-member="handleEditMember"
+          @invite-member="inviteDialogVisible = true"
           @remove-member="handleRemoveMember"
           @update:expanded-rows="setMemberTableExpandedRows"
           @update:filters="updateMemberTableFilters"

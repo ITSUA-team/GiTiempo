@@ -10,6 +10,7 @@ import type {
 } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
+  EntryActionButton,
   ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
@@ -54,6 +55,7 @@ defineProps<{
 const emit = defineEmits<{
   'assign-member': [member: WorkspaceMemberResponse];
   'edit-member': [member: WorkspaceMemberResponse];
+  'invite-member': [];
   'remove-member': [member: WorkspaceMemberResponse];
   'update:expandedRows': [expandedRows: MembersTableExpandedRows | undefined];
   'update:filters': [filters: MembersTableFilterUpdate];
@@ -102,16 +104,24 @@ const columns: ManagementTableColumn[] = [
   <div class="mb-4">
     <SectionHeader title="Members Table">
       <template #actions>
-        <IconField class="w-full sm:w-[280px]">
-          <InputIcon class="pi pi-search text-text-muted" />
-          <InputText
-            :model-value="filters.global"
-            aria-label="Search members"
-            class="h-[38px] w-full rounded-[6px] text-[14px]"
-            placeholder="Search members"
-            @update:model-value="updateGlobalFilter"
+        <div class="flex w-full items-center gap-3 sm:w-auto">
+          <IconField class="w-full sm:w-[280px]">
+            <InputIcon class="pi pi-search text-text-muted" />
+            <InputText
+              :model-value="filters.global"
+              aria-label="Search members"
+              class="h-[38px] w-full rounded-[6px] text-[14px]"
+              placeholder="Search members"
+              @update:model-value="updateGlobalFilter"
+            />
+          </IconField>
+          <EntryActionButton
+            data-testid="members-table-invite"
+            :icon="UserPlusIcon"
+            label="Invite member"
+            @click="emit('invite-member')"
           />
-        </IconField>
+        </div>
       </template>
     </SectionHeader>
   </div>
