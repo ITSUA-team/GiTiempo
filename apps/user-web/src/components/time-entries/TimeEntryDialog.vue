@@ -311,14 +311,6 @@ function handleTaskComplete(event: { query: string }): void {
       <div class="flex justify-end gap-2">
         <Button
           type="button"
-          label="Cancel"
-          severity="secondary"
-          variant="outlined"
-          :disabled="props.isSaving"
-          @click="emit('close')"
-        />
-        <Button
-          type="button"
           :label="props.saveLabel"
           :loading="props.isSaving"
           @click="emit('save')"

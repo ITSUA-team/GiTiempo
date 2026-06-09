@@ -3,6 +3,13 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import TimeEntryDialog from "./TimeEntryDialog.vue";
 
+function findButtonByLabel(
+  wrapper: ReturnType<typeof mountDialog>,
+  label: string,
+) {
+  return wrapper.findAll("button").find((button) => button.text() === label);
+}
+
 function formatLocalWallClock(value: Date | null | undefined): string {
   if (!(value instanceof Date)) {
     return "";
@@ -120,8 +127,10 @@ function mountDialog(
             '<input :data-testid="inputId" :disabled="disabled" :value="displayValue" @input="$emit(\'update:modelValue\', $event.target.value ? new Date($event.target.value) : null)" />',
         },
         Dialog: {
+          props: ["visible"],
+          emits: ["update:visible"],
           template:
-            '<div><slot name="header" /><slot /><slot name="footer" /></div>',
+            '<div v-if="visible"><button data-testid="dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot name="header" /><slot /><slot name="footer" /></div>',
         },
         Select: {
           props: ["modelValue", "options", "disabled"],
@@ -159,6 +168,7 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.text()).toContain("Description");
     expect(wrapper.text()).toContain("Billable entry");
     expect(wrapper.text()).toContain("Save changes");
+    expect(wrapper.text()).not.toContain("Cancel");
     expect(wrapper.find("textarea").element.value).toContain("Summarize PM scope changes");
   });
 
@@ -226,12 +236,11 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.text()).toContain("String must contain at most 2000 character(s)");
   });
 
-  it("emits save and close actions", async () => {
+  it("emits save from the primary action and close from dialog dismissal", async () => {
     const wrapper = mountDialog();
-    const buttons = wrapper.findAll("button");
 
-    await buttons[0]?.trigger("click");
-    await buttons[1]?.trigger("click");
+    await findButtonByLabel(wrapper, "Save changes")?.trigger("click");
+    await wrapper.get('[data-testid="dialog-close"]').trigger("click");
 
     expect(wrapper.emitted("close")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("save")?.length).toBeGreaterThan(0);

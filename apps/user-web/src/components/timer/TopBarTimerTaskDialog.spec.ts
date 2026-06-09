@@ -78,8 +78,9 @@ function mountDialog(overrides: DialogProps = {}) {
             blockScroll: { type: Boolean },
             pt: { type: Object, required: true },
           },
+          emits: ["update:visible"],
           template:
-            '<div v-if="$attrs.visible !== false" data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-content-class="pt.content" :data-footer-class="pt.footer" :data-root-class="pt.root"><slot name="header" /><slot /><slot name="footer" /></div>',
+            '<div v-if="$attrs.visible !== false" data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-content-class="pt.content" :data-footer-class="pt.footer" :data-root-class="pt.root"><button data-testid="dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot name="header" /><slot /><slot name="footer" /></div>',
         },
         InputText: {
           props: ["modelValue", "disabled", "invalid"],
@@ -157,6 +158,15 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.emitted("confirm")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("primary-action")?.length).toBeGreaterThan(0);
+  });
+
+  it("emits close from built-in dialog dismissal without a footer cancel action", async () => {
+    const wrapper = mountDialog();
+
+    await wrapper.get('[data-testid="dialog-close"]').trigger("click");
+
+    expect(wrapper.emitted("close")?.length).toBeGreaterThan(0);
+    expect(findButtonByLabel(wrapper, "Cancel")).toBeUndefined();
   });
 
   it("renders a distinct task-loading state for the selected project", () => {
@@ -267,7 +277,6 @@ describe("TopBarTimerTaskDialog", () => {
     expect(footer.classes()).toContain("w-full");
     expect(footerButtons.map((button) => button.text())).toEqual([
       "Start timer",
-      "Cancel",
     ]);
     expect(createTaskButton?.classes()).toContain("w-full");
     expect(primaryButton?.classes()).toContain("w-full");
@@ -283,7 +292,7 @@ describe("TopBarTimerTaskDialog", () => {
     }
   });
 
-  it("keeps the mobile running footer ordered as stop, change, then cancel", () => {
+  it("keeps the mobile running footer ordered as stop then change task", () => {
     mockMatchMedia(true);
 
     const wrapper = mountDialog({
@@ -297,7 +306,6 @@ describe("TopBarTimerTaskDialog", () => {
     expect(footerButtons.map((button) => button.text())).toEqual([
       "Stop timer",
       "Change task",
-      "Cancel",
     ]);
   });
 
@@ -308,7 +316,6 @@ describe("TopBarTimerTaskDialog", () => {
       .findAll("button");
 
     expect(idleButtons.map((button) => button.text())).toEqual([
-      "Cancel",
       "Start timer",
     ]);
     expect(idleWrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]').classes()).toContain(
@@ -325,7 +332,6 @@ describe("TopBarTimerTaskDialog", () => {
       .findAll("button");
 
     expect(runningButtons.map((button) => button.text())).toEqual([
-      "Cancel",
       "Change task",
       "Stop timer",
     ]);

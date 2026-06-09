@@ -330,15 +330,6 @@ const taskSelectPt = {
           @click="emit('confirm')"
         />
         <Button
-          type="button"
-          :class="isMobileViewport ? 'w-full' : 'w-auto'"
-          :fluid="isMobileViewport"
-          label="Cancel"
-          severity="secondary"
-          text
-          @click="emit('close')"
-        />
-        <Button
           v-if="!isMobileViewport && props.isTimerRunning"
           type="button"
           class="w-auto"

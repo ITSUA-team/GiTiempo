@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest";
 
 import ProjectTaskDialog from "./ProjectTaskDialog.vue";
 
+function findButtonByLabel(
+  wrapper: ReturnType<typeof mountDialog>,
+  label: string,
+) {
+  return wrapper.findAll("button").find((button) => button.text() === label);
+}
+
 function mountDialog(
   overrides: Partial<InstanceType<typeof ProjectTaskDialog>["$props"]> = {},
 ) {
@@ -50,9 +57,10 @@ function mountDialog(
             '<button :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Dialog: {
-          props: ["closable", "dismissableMask"],
+          props: ["closable", "dismissableMask", "visible"],
+          emits: ["update:visible"],
           template:
-            '<div :data-closable="closable" :data-dismissable-mask="dismissableMask"><slot name="header" /><slot /><slot name="footer" /></div>',
+            '<div v-if="visible" :data-closable="closable" :data-dismissable-mask="dismissableMask"><button data-testid="dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot name="header" /><slot /><slot name="footer" /></div>',
         },
         InputText: {
           props: ["modelValue"],
@@ -85,6 +93,7 @@ describe("ProjectTaskDialog", () => {
       "Write release checklist",
     ]);
     expect(wrapper.text()).toContain("Create task");
+    expect(wrapper.text()).not.toContain("Cancel");
   });
 
   it("renders edit mode with a display-only project field and status select", () => {
@@ -104,14 +113,14 @@ describe("ProjectTaskDialog", () => {
     expect(projectField.attributes("aria-labelledby")).toBe("project-task-project-label");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Save changes");
+    expect(wrapper.text()).not.toContain("Cancel");
   });
 
-  it("emits close and save actions from the footer buttons", async () => {
+  it("emits close from dialog dismissal and save from the primary footer action", async () => {
     const wrapper = mountDialog();
-    const buttons = wrapper.findAll("button");
 
-    await buttons[0]?.trigger("click");
-    await buttons[1]?.trigger("click");
+    await wrapper.get('[data-testid="dialog-close"]').trigger("click");
+    await findButtonByLabel(wrapper, "Create task")?.trigger("click");
 
     expect(wrapper.emitted("close")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("save")?.length).toBeGreaterThan(0);
