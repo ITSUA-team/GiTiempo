@@ -104,6 +104,7 @@ function mountDialog(overrides: DialogProps = {}) {
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "variant"],
+          emits: ["click"],
           template:
             '<button :class="$attrs.class" :data-fluid="String(fluid)" :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
@@ -113,8 +114,9 @@ function mountDialog(overrides: DialogProps = {}) {
             closable: { type: Boolean, default: true },
             pt: { type: Object, required: true },
           },
+          emits: ["update:visible"],
           template:
-            '<div v-if="$attrs.visible !== false" data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-closable="String(closable)" :data-content-class="pt.content" :data-root-class="pt.root"><slot name="header" /><slot /></div>',
+            '<div v-if="$attrs.visible !== false" data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-closable="String(closable)" :data-content-class="pt.content" :data-root-class="pt.root"><slot name="header" /><button v-if="closable" data-testid="timer-task-dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot /></div>',
         },
         InputText: {
           props: ["modelValue", "disabled", "invalid"],
@@ -143,7 +145,7 @@ describe("TopBarTimerTaskDialog", () => {
     mockMatchMedia(false);
   });
 
-  it("renders the approved start-timer popup design", () => {
+  it("renders the approved start-timer popup design", async () => {
     const wrapper = mountDialog({ selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID });
     const dialog = wrapper.get('[data-testid="timer-task-dialog"]');
     const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
@@ -153,7 +155,7 @@ describe("TopBarTimerTaskDialog", () => {
     }>;
     const footer = wrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]');
 
-    expect(dialog.attributes("data-closable")).toBe("false");
+    expect(dialog.attributes("data-closable")).toBe("true");
     expect(dialog.attributes("data-root-class")).toContain("sm:w-[558px]");
     expect(dialog.attributes("data-root-class")).toContain("bg-surface-primary");
     expect(dialog.attributes("data-root-class")).toContain("shadow-none");
@@ -170,12 +172,13 @@ describe("TopBarTimerTaskDialog", () => {
     expect(autoCompletes[1]?.props("minLength")).toBe(0);
     for (const autoComplete of autoCompletes) {
       expect(autoComplete.classes()).toContain("h-[38px]");
-      expect(autoComplete.attributes("data-dropdown-class")).toContain("w-0");
+      expect(autoComplete.attributes("data-dropdown-class")).toContain("w-10");
       expect(autoComplete.attributes("data-input-class")).toContain("bg-transparent");
       expect(autoComplete.attributes("data-input-class")).toContain("font-medium");
       expect(autoComplete.attributes("data-root-pt-class")).toContain("h-[38px]");
       expect(autoComplete.attributes("data-root-pt-class")).toContain("border-divider");
     }
+    expect(wrapper.text()).not.toContain("AutoComplete");
     expect(taskSuggestions.map((task) => task.title)).toEqual([
       "Improve reports filters",
       "New task",
@@ -196,6 +199,10 @@ describe("TopBarTimerTaskDialog", () => {
     expect(footer.findAll("button").map((button) => button.text())).toEqual([
       "Start timer",
     ]);
+
+    await wrapper.get('[data-testid="timer-task-dialog-close"]').trigger("click");
+
+    expect(wrapper.emitted("close")).toHaveLength(1);
   });
 
   it("emits selected project, task, and New task option ids", async () => {
@@ -383,7 +390,7 @@ describe("TopBarTimerTaskDialog", () => {
     expect(description.classes()).toContain("resize-none");
   });
 
-  it("uses mobile-friendly dialog sizing and idle footer order", () => {
+  it("uses mobile-friendly dialog sizing and idle footer order", async () => {
     mockMatchMedia(true);
 
     const wrapper = mountDialog();
@@ -394,7 +401,7 @@ describe("TopBarTimerTaskDialog", () => {
     const primaryButton = findButtonByLabel(wrapper, "Start timer");
 
     expect(dialog.attributes("data-block-scroll")).toBe("true");
-    expect(dialog.attributes("data-closable")).toBe("false");
+    expect(dialog.attributes("data-closable")).toBe("true");
     expect(dialog.attributes("data-root-class")).toContain("w-[calc(100vw-1rem)]");
     expect(dialog.attributes("data-root-class")).toContain("sm:w-[558px]");
     expect(dialog.attributes("data-content-class")).toContain("overflow-y-auto");
@@ -402,9 +409,11 @@ describe("TopBarTimerTaskDialog", () => {
     expect(footer.classes()).toContain("w-full");
     expect(footerButtons.map((button) => button.text())).toEqual([
       "Start timer",
+      "Cancel",
     ]);
     expect(primaryButton?.classes()).toContain("w-full");
     expect(primaryButton?.attributes("data-fluid")).toBe("true");
+    expect(findButtonByLabel(wrapper, "Cancel")?.attributes("data-fluid")).toBe("true");
     expect(wrapper.findAll("select")).toHaveLength(0);
     expect(predictiveFields).toHaveLength(2);
     for (const predictiveField of predictiveFields) {
@@ -418,6 +427,10 @@ describe("TopBarTimerTaskDialog", () => {
       );
       expect(predictiveField.attributes("data-option-pt-class")).toContain("truncate");
     }
+
+    await findButtonByLabel(wrapper, "Cancel")?.trigger("click");
+
+    expect(wrapper.emitted("close")).toHaveLength(1);
   });
 
   it("keeps idle popup action intrinsic and right-aligned on tablet and desktop", () => {

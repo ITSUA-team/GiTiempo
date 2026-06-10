@@ -96,7 +96,9 @@ const taskAutoCompletePt = {
   },
 } as const;
 const autoCompleteInputClass =
-  "text-text-dark h-full min-w-0 flex-1 border-0 bg-transparent py-0 pr-28 pl-3 text-sm font-medium outline-none ring-0 placeholder:text-text-muted";
+  "text-text-dark h-full min-w-0 flex-1 border-0 bg-transparent py-0 pr-3 pl-3 text-sm font-medium outline-none ring-0 placeholder:text-text-muted";
+const autoCompleteDropdownClass =
+  "text-brand flex h-full w-10 shrink-0 items-center justify-center border-0 bg-transparent p-0";
 const newTaskOption: NewTaskOption = {
   id: TOP_BAR_TIMER_NEW_TASK_ID,
   isNewTask: true,
@@ -232,7 +234,6 @@ watch(
   <Dialog
     modal
     block-scroll
-    :closable="false"
     :dismissable-mask="true"
     :draggable="false"
     :pt="{
@@ -305,8 +306,7 @@ watch(
             complete-on-focus
             data-key="id"
             dropdown
-            dropdown-class="h-full w-0 shrink-0 overflow-hidden border-0 p-0"
-            dropdown-icon="hidden"
+            :dropdown-class="autoCompleteDropdownClass"
             dropdown-mode="blank"
             fluid
             force-selection
@@ -324,9 +324,6 @@ watch(
             @complete="handleProjectComplete"
             @update:model-value="handleMobileProjectUpdate"
           />
-          <span class="text-brand pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium">
-            AutoComplete
-          </span>
         </div>
       </div>
 
@@ -344,8 +341,7 @@ watch(
             complete-on-focus
             data-key="id"
             dropdown
-            dropdown-class="h-full w-0 shrink-0 overflow-hidden border-0 p-0"
-            dropdown-icon="hidden"
+            :dropdown-class="autoCompleteDropdownClass"
             dropdown-mode="blank"
             fluid
             force-selection
@@ -363,9 +359,6 @@ watch(
             @complete="handleTaskComplete"
             @update:model-value="handleMobileTaskUpdate"
           />
-          <span class="text-brand pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium">
-            AutoComplete
-          </span>
         </div>
         <small class="text-text-muted text-xs">
           Visible tasks are listed first. New task is the last option. New time entries inherit the selected task billable default.
@@ -494,6 +487,17 @@ watch(
           :label="primaryButtonLabel"
           :loading="primaryButtonLoading"
           @click="emit('primaryAction')"
+        />
+        <Button
+          v-if="isMobileViewport"
+          unstyled
+          type="button"
+          class="border-divider bg-surface-primary text-text-dark h-[37px] w-full rounded-sm border px-4 text-sm font-semibold"
+          :fluid="true"
+          label="Cancel"
+          severity="secondary"
+          variant="outlined"
+          @click="emit('close')"
         />
       </div>
     </div>

@@ -61,6 +61,7 @@ const WorkspaceHeaderStub = {
     "settingsIcon",
     "settingsLabel",
     "showSettings",
+    "showDisplayName",
     "settingsTo",
     "userInitials",
     "workspaceName",
@@ -70,7 +71,8 @@ const WorkspaceHeaderStub = {
     <header>
       <span data-testid="workspace-header-product-name">{{ productName }}</span>
       <span data-testid="workspace-header-page-name">{{ pageName }}</span>
-      <span>{{ profileContextLabel }}</span>
+      <span data-testid="workspace-header-profile-context">{{ profileContextLabel }}</span>
+      <span v-if="showDisplayName" data-testid="workspace-header-display-name">{{ displayName }}</span>
       <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
       <RouterLink v-if="showSettings" data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
       <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
@@ -157,6 +159,9 @@ describe("AdminAppShell", () => {
     expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
       "Dashboard",
     );
+    expect(wrapper.get('[data-testid="workspace-header-display-name"]').text()).toBe(
+      "Admin User",
+    );
     expect(settingsLink.text()).toBe("Settings");
     expect(settingsLink.attributes("href")).toBe("/settings");
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(
@@ -180,6 +185,9 @@ describe("AdminAppShell", () => {
 
     expect(testMocks.getWorkspace).toHaveBeenCalledWith();
     expect(wrapper.text()).toContain("GiTiempo Studio");
+    expect(wrapper.get('[data-testid="workspace-header-profile-context"]').text()).toBe(
+      "GiTiempo Studio",
+    );
   });
 
   it("filters product navigation for project managers", async () => {
