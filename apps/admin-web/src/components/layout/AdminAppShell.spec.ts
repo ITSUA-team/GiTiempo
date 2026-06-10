@@ -55,9 +55,13 @@ const WorkspaceHeaderStub = {
     "counterpartHref",
     "counterpartLabel",
     "displayName",
+    "pageName",
+    "productName",
+    "profileContextLabel",
     "settingsIcon",
     "settingsLabel",
     "showSettings",
+    "showDisplayName",
     "settingsTo",
     "userInitials",
     "workspaceName",
@@ -65,7 +69,10 @@ const WorkspaceHeaderStub = {
   emits: ["signOut"],
   template: `
     <header>
-      <span>{{ workspaceName }}</span>
+      <span data-testid="workspace-header-product-name">{{ productName }}</span>
+      <span data-testid="workspace-header-page-name">{{ pageName }}</span>
+      <span data-testid="workspace-header-profile-context">{{ profileContextLabel }}</span>
+      <span v-if="showDisplayName" data-testid="workspace-header-display-name">{{ displayName }}</span>
       <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
       <RouterLink v-if="showSettings" data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
       <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
@@ -146,6 +153,16 @@ describe("AdminAppShell", () => {
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
 
     expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="workspace-header-product-name"]').text()).toBe(
+      "GiTiempo Admin",
+    );
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Dashboard",
+    );
+    expect(wrapper.find('[data-testid="workspace-header-display-name"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).not.toContain("Admin User");
     expect(settingsLink.text()).toBe("Settings");
     expect(settingsLink.attributes("href")).toBe("/settings");
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(
@@ -169,6 +186,9 @@ describe("AdminAppShell", () => {
 
     expect(testMocks.getWorkspace).toHaveBeenCalledWith();
     expect(wrapper.text()).toContain("GiTiempo Studio");
+    expect(wrapper.get('[data-testid="workspace-header-profile-context"]').text()).toBe(
+      "GiTiempo Studio",
+    );
   });
 
   it("filters product navigation for project managers", async () => {

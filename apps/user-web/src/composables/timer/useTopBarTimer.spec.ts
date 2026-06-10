@@ -12,6 +12,7 @@ import { defineComponent, h } from 'vue';
 
 import { useTopBarTimer } from './useTopBarTimer';
 import { timeEntriesKeys } from '@/lib/query-keys';
+import { TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 import {
@@ -545,6 +546,81 @@ describe('useTopBarTimer', () => {
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'success', summary: 'Task created' }),
     );
+  });
+
+  it('creates an inline New task before starting from the dialog', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    topBarTimer.setCreateTaskTitle('Write release checklist');
+    await flushPromises();
+
+    expect(topBarTimer.isDialogPrimaryActionDisabled.value).toBe(false);
+
+    await topBarTimer.handleDialogPrimaryAction();
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith('project-1', {
+      title: 'Write release checklist',
+    });
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+  });
+
+  it('creates an inline New task before updating a running timer task', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.getCurrentTimer.mockResolvedValue({ timeEntry: createRunningEntry() });
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    topBarTimer.setCreateTaskTitle('Write release checklist');
+    await flushPromises();
+
+    expect(topBarTimer.isConfirmSelectionDisabled.value).toBe(false);
+
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith(TEST_IDS.project, {
+      title: 'Write release checklist',
+    });
+    expect(client.updateEntry).not.toHaveBeenCalled();
+    expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
   });
 
   it('keeps create-task errors scoped to the picker', async () => {

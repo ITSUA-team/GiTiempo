@@ -7,7 +7,6 @@ import { useRouter } from "vue-router";
 import DashboardOverviewLoading from "@/components/dashboard/DashboardOverviewLoading.vue";
 import DashboardRecentEntriesCard from "@/components/dashboard/DashboardRecentEntriesCard.vue";
 import DashboardWeeklyFocusCard from "@/components/dashboard/DashboardWeeklyFocusCard.vue";
-import PageHeader from "@/components/layout/PageHeader.vue";
 import { useDashboardOverview } from "@/composables/dashboard/useDashboardOverview";
 import { routeNames } from "@/router";
 
@@ -29,11 +28,6 @@ function openTimeEntries(): void {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <PageHeader
-      subtitle="Track current work and review recent time activity. Timer actions stay in the global top bar."
-      title="Dashboard"
-    />
-
     <DashboardOverviewLoading v-if="pageState === 'loading'" />
 
     <SurfaceCard
