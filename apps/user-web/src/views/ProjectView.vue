@@ -12,7 +12,6 @@ import {
   SurfaceCard,
 } from "@gitiempo/web-shared";
 
-import PageHeader from "@/components/layout/PageHeader.vue";
 import ProjectTaskDialog from "@/components/projects/ProjectTaskDialog.vue";
 import ProjectsTaskSection from "@/components/projects/ProjectsTaskSection.vue";
 import { useProjectsData } from "@/composables/projects/useProjectsData";
@@ -145,17 +144,6 @@ async function retryLoadPage(): Promise<void> {
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
     <template v-if="pageState === 'loading'">
-      <div class="flex flex-col gap-2">
-        <Skeleton
-          width="8rem"
-          height="1.5rem"
-        />
-        <Skeleton
-          width="18rem"
-          height="1rem"
-        />
-      </div>
-
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Skeleton
           width="22.5rem"
@@ -228,11 +216,6 @@ async function retryLoadPage(): Promise<void> {
     </template>
 
     <template v-else>
-      <PageHeader
-        subtitle="Create, update, and organize tasks across your visible projects."
-        title="Projects"
-      />
-
       <div
         class="flex flex-col gap-3 sm:flex-row sm:flex-wrap"
         data-testid="projects-filters"

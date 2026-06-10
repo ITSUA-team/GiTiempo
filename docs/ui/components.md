@@ -15,6 +15,7 @@
 | App Background | `--color-app-bg`      | `bg-app-bg`               | `#F4F4F5` | Main application canvas                                     |
 | Text Dark      | `--color-text-dark`   | `text-text-dark`          | `#1A1A1A` | Headings and primary copy                                   |
 | Text Muted     | `--color-text-muted`  | `text-text-muted`         | `#666666` | Secondary info and metadata                                 |
+| Text Subtle    | `--color-text-subtle` | `text-text-subtle`        | `#999999` | Low-emphasis separators and tertiary chrome                 |
 | Text Inverse   | `--color-text-inverse` / `--color-text-inverse-muted` | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand, destructive, and dark surfaces |
 | Dividers       | `--color-divider`     | `border-divider`          | `#EEEEEE` | Borders and separators                                      |
 

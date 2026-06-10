@@ -8,6 +8,8 @@ export interface SelectedTaskContext {
   taskTitle: string;
 }
 
+export const TOP_BAR_TIMER_NEW_TASK_ID = "__top-bar-timer-new-task__";
+
 export function formatElapsedTime(
   startedAt: string | null,
   nowMs: number,

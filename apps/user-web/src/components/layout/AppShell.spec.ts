@@ -60,6 +60,7 @@ describe("AppShell", () => {
               "counterpartLabel",
               "centerContentAlign",
               "displayName",
+              "pageName",
               "settingsIcon",
               "settingsLabel",
               "settingsTo",
@@ -70,6 +71,7 @@ describe("AppShell", () => {
             emits: ["signOut"],
             template: `
               <header>
+                <span data-testid="workspace-header-page-name">{{ pageName }}</span>
                 <span data-testid="workspace-header-center-align">{{ centerContentAlign }}</span>
                 <span data-testid="workspace-header-show-display-name">{{ String(showDisplayName) }}</span>
                 <div data-testid="workspace-header-center-row">
@@ -89,6 +91,9 @@ describe("AppShell", () => {
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
 
     expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Dashboard",
+    );
     expect(settingsLink.text()).toBe("Profile");
     expect(settingsLink.attributes("href")).toBe("/profile");
     expect(wrapper.get('[data-testid="workspace-header-center-align"]').text()).toBe("end");
@@ -101,6 +106,24 @@ describe("AppShell", () => {
     expect(wrapper.findAll('a[aria-label="Profile"]')).toHaveLength(0);
     expect(profileLinks).toHaveLength(1);
     expect(timerLinks).toHaveLength(0);
+
+    await router.push({ name: routeNames.timeEntries });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Time Entries",
+    );
+
+    await router.push({ name: routeNames.project });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Projects",
+    );
+
+    await router.push({ name: routeNames.profile });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
+      "Profile",
+    );
 
     await wrapper.get('[data-testid="profile-menu-sign-out"]').trigger("click");
     await flushPromises();
