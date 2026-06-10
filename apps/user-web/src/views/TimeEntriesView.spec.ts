@@ -9,6 +9,7 @@ import type {
 } from "@gitiempo/shared";
 
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
+import { OPEN_TOP_BAR_TIMER_DIALOG_EVENT } from "@/lib/top-bar-timer-dialog-events";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -283,7 +284,7 @@ async function mountView(
         },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
-          emits: ["createForDay", "editEntry"],
+          emits: ["createForDay", "editEntry", "openActiveTimer"],
           props: ["formatDuration", "formatTimeRange", "group"],
           template: `
             <section>
@@ -298,7 +299,13 @@ async function mountView(
                     type="button"
                     @click="$emit('editEntry', entry)"
                   >Edit</button>
-                  <p v-else>Stop from the top bar</p>
+                  <button
+                    v-else
+                    :data-testid="'time-entry-open-timer-' + entry.id"
+                    type="button"
+                    @click="$emit('openActiveTimer')"
+                  >Update timer</button>
+                  <p v-if="entry.endedAt === null">Stop from the top bar</p>
                 </div>
               <button data-testid="time-entries-day-create-2026-04-21" type="button" @click="$emit('createForDay', group.dateKey)">Create day</button>
             </section>
@@ -424,6 +431,24 @@ describe("TimeEntriesView", () => {
     expect(wrapper.text()).toContain("Stop from the top bar");
     expect(primeVueMocks.confirmRequire).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
+  });
+
+  it("opens the active timer dialog instead of the time-entry edit dialog for running entries", async () => {
+    const activeTimerDialogRequest = vi.fn();
+
+    window.addEventListener(OPEN_TOP_BAR_TIMER_DIALOG_EVENT, activeTimerDialogRequest);
+
+    try {
+      const { wrapper } = await mountView();
+
+      await flushPromises();
+      await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+
+      expect(activeTimerDialogRequest).toHaveBeenCalledTimes(1);
+      expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+    } finally {
+      window.removeEventListener(OPEN_TOP_BAR_TIMER_DIALOG_EVENT, activeTimerDialogRequest);
+    }
   });
 
   it("opens edit with the same browser-local times shown in the table", async () => {

@@ -27,6 +27,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   createForDay: [day: string];
   editEntry: [entry: TimeEntryResponse];
+  openActiveTimer: [];
 }>();
 const isMobileViewport = useIsMobileViewport();
 
@@ -45,12 +46,28 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
   return entry.endedAt === null ? "bg-accent-tint" : "bg-surface-primary hover:bg-app-bg";
 }
 
-function getGitHubIssueUrl(entry: TimeEntryResponse): string | null {
-  if (!entry.githubIssue) {
-    return null;
+function getEntryTaskOpenLabel(entry: TimeEntryResponse): string {
+  return entry.endedAt === null
+    ? `Update active timer for ${entry.task.title}`
+    : `Edit time entry for ${entry.task.title}`;
+}
+
+function getEntryTaskTestId(
+  entry: TimeEntryResponse,
+  prefix: "time-entry" | "time-entry-mobile",
+): string {
+  return entry.endedAt === null
+    ? `${prefix}-open-timer-${entry.id}`
+    : `${prefix}-edit-${entry.id}`;
+}
+
+function handleEntryTaskOpen(entry: TimeEntryResponse): void {
+  if (entry.endedAt === null) {
+    emit("openActiveTimer");
+    return;
   }
 
-  return `https://github.com/${entry.githubIssue.githubRepo}/issues/${entry.githubIssue.issueNumber}`;
+  emit("editEntry", entry);
 }
 </script>
 
@@ -80,13 +97,10 @@ function getGitHubIssueUrl(entry: TimeEntryResponse): string | null {
       >
         <div class="flex min-w-0 flex-col gap-1">
           <TaskNameLink
-            :clickable="entry.endedAt !== null"
-            :external-test-id="`time-entry-mobile-external-${entry.id}`"
-            :external-url="getGitHubIssueUrl(entry)"
             :label="entry.task.title"
-            :open-label="`Edit time entry for ${entry.task.title}`"
-            :test-id="entry.endedAt !== null ? `time-entry-mobile-edit-${entry.id}` : `time-entry-mobile-task-${entry.id}`"
-            @open="emit('editEntry', entry)"
+            :open-label="getEntryTaskOpenLabel(entry)"
+            :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
+            @open="handleEntryTaskOpen(entry)"
           />
           <p
             v-if="entry.description"
@@ -146,13 +160,10 @@ function getGitHubIssueUrl(entry: TimeEntryResponse): string | null {
         <template #body="{ data: entry }">
           <div class="flex min-w-0 flex-col">
             <TaskNameLink
-              :clickable="entry.endedAt !== null"
-              :external-test-id="`time-entry-external-${entry.id}`"
-              :external-url="getGitHubIssueUrl(entry)"
               :label="entry.task.title"
-              :open-label="`Edit time entry for ${entry.task.title}`"
-              :test-id="entry.endedAt !== null ? `time-entry-edit-${entry.id}` : `time-entry-task-${entry.id}`"
-              @open="emit('editEntry', entry)"
+              :open-label="getEntryTaskOpenLabel(entry)"
+              :test-id="getEntryTaskTestId(entry, 'time-entry')"
+              @open="handleEntryTaskOpen(entry)"
             />
             <p
               v-if="entry.description"

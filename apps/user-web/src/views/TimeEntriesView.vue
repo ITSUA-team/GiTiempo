@@ -27,6 +27,7 @@ import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMu
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
+import { requestTopBarTimerDialog } from "@/lib/top-bar-timer-dialog-events";
 import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
@@ -287,6 +288,10 @@ function requestDeleteDialogEntry(): void {
   requestDeleteEntry(entry, { closeDialogOnSuccess: true });
 }
 
+function openActiveTimerDialog(): void {
+  requestTopBarTimerDialog();
+}
+
 async function retryLoadEntries(): Promise<void> {
   await data.loadEntries();
 }
@@ -445,6 +450,7 @@ onBeforeUnmount(() => {
         :show-header="groupIndex === 0"
         @create-for-day="(day) => void openCreateDialog(day)"
         @edit-entry="(entry) => void openEditDialog(entry)"
+        @open-active-timer="openActiveTimerDialog"
       />
 
       <SurfaceCard

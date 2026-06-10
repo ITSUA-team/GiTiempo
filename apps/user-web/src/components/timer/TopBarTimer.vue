@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeUnmount, onMounted } from "vue";
 import Button from "primevue/button";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
 
 import { useTopBarTimer } from "@/composables/timer/useTopBarTimer";
+import { addTopBarTimerDialogRequestListener } from "@/lib/top-bar-timer-dialog-events";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 
@@ -49,6 +50,22 @@ const isMobileViewport = useIsMobileViewport();
 const showsElapsedTime = computed(
   () => !isLoadingSummary.value && isTimerRunning.value,
 );
+let removeTopBarTimerDialogRequestListener: (() => void) | null = null;
+
+function handleTopBarTimerDialogRequest(): void {
+  void openDialog();
+}
+
+onMounted(() => {
+  removeTopBarTimerDialogRequestListener = addTopBarTimerDialogRequestListener(
+    handleTopBarTimerDialogRequest,
+  );
+});
+
+onBeforeUnmount(() => {
+  removeTopBarTimerDialogRequestListener?.();
+  removeTopBarTimerDialogRequestListener = null;
+});
 </script>
 
 <template>

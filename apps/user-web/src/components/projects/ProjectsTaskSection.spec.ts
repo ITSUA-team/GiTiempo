@@ -64,7 +64,7 @@ describe("ProjectsTaskSection", () => {
 
     expect(titleButton.attributes("aria-label")).toBe("Edit task Improve reports filters");
     expect(titleButton.text()).toContain("Improve reports filters");
-    expect(titleButton.find("svg").exists()).toBe(true);
+    expect(titleButton.find("svg").exists()).toBe(false);
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("1 active task");
     expect(wrapper.text()).not.toContain("Actions");
@@ -105,7 +105,7 @@ describe("ProjectsTaskSection", () => {
     expect(mobileCards[1]?.text()).toContain("Archive launch checklist");
     expect(mobileCards[1]?.text()).toContain("Closed");
     expect(mobileCards[1]?.text()).toContain("Yesterday, 15:30");
-    expect(mobileTitles[0]?.find("svg").exists()).toBe(true);
+    expect(mobileTitles[0]?.find("svg").exists()).toBe(false);
     expect(wrapper.find('[data-testid="project-task-mobile-delete-task-1"]').exists()).toBe(false);
 
     await mobileTitles[0]!.trigger("click");

@@ -88,26 +88,26 @@ describe('TimeEntriesDaySection', () => {
     mockMatchMedia();
   });
 
-  it('renders completed task names as popup openers and preserves running-row behavior', async () => {
+  it('routes task-name clicks to the correct popup intent', async () => {
     const wrapper = mountSection();
+    const runningTimerButton = wrapper.get('[data-testid="time-entry-open-timer-entry-running"]');
     const editButton = wrapper.get('[data-testid="time-entry-edit-entry-completed"]');
 
     expect(editButton.attributes('aria-label')).toBe('Edit time entry for Improve reports filters');
     expect(editButton.text()).toContain('Improve reports filters');
     expect(editButton.classes()).toContain('text-brand');
-    expect(editButton.classes()).toContain('gap-2');
-    expect(editButton.find('svg').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="time-entry-external-entry-completed"]').exists()).toBe(false);
+    expect(editButton.find('svg').exists()).toBe(false);
     expect(wrapper.text()).toContain('Stop from the top bar');
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.find('[data-testid="time-entry-edit-entry-running"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="time-entry-external-entry-running"]').attributes('href')).toBe(
-      'https://github.com/octo/repo/issues/42',
-    );
+    expect(runningTimerButton.element.tagName).toBe('BUTTON');
+    expect(runningTimerButton.attributes('aria-label')).toBe('Update active timer for Improve reports filters');
+    expect(wrapper.find('a[href^="https://github.com/"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
 
-    await editButton.trigger('click');
+    await runningTimerButton.trigger('click');
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger('click');
 
+    expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
     expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
     expect(wrapper.emitted('deleteEntry')).toBeUndefined();
   });
@@ -130,14 +130,14 @@ describe('TimeEntriesDaySection', () => {
     expect(mobileCards[1]?.text()).toContain('Project Orion');
     expect(mobileCards[1]?.text()).toContain('09:00 - 10:30');
     expect(mobileCards[1]?.text()).toContain('1h 30m');
-    expect(wrapper.find('[data-testid="time-entry-mobile-edit-entry-running"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="time-entry-mobile-external-entry-running"]').attributes('href')).toBe(
-      'https://github.com/octo/repo/issues/42',
-    );
+    expect(wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').element.tagName).toBe('BUTTON');
+    expect(wrapper.find('a[href^="https://github.com/"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="time-entry-mobile-delete-entry-completed"]').exists()).toBe(false);
 
+    await wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').trigger('click');
     await wrapper.get('[data-testid="time-entry-mobile-edit-entry-completed"]').trigger('click');
 
+    expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
     expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
     expect(wrapper.emitted('deleteEntry')).toBeUndefined();
   });

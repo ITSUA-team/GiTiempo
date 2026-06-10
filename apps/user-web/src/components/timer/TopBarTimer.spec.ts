@@ -5,6 +5,7 @@ import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import TopBarTimer from "./TopBarTimer.vue";
+import { OPEN_TOP_BAR_TIMER_DIALOG_EVENT } from "@/lib/top-bar-timer-dialog-events";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
 const closeDialog = vi.fn();
@@ -190,6 +191,14 @@ describe("TopBarTimer", () => {
     const wrapper = mountTopBarTimer();
 
     await wrapper.get('[data-testid="top-bar-timer"]').trigger("click");
+
+    expect(openDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens task selection from active timer row requests", () => {
+    mountTopBarTimer();
+
+    window.dispatchEvent(new Event(OPEN_TOP_BAR_TIMER_DIALOG_EVENT));
 
     expect(openDialog).toHaveBeenCalledTimes(1);
   });
