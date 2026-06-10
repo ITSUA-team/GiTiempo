@@ -17,6 +17,7 @@
 - [x] 3.2 Update `MemberInviteDialog` if still a non-destructive popup form so its footer/body renders only `Send Invite` and Dialog close/mask dismissal replaces the old footer `Cancel` path.
 - [x] 3.3 Preserve invite form reset/cleanup behavior when `MemberInviteDialog` is dismissed through the built-in Dialog close control or mask.
 - [x] 3.4 Confirm destructive admin confirmation dialogs, Settings form `Cancel`, inline member/project form `Cancel`, and pending-invite `Cancel invite` row actions remain present.
+- [x] 3.5 Remove separate admin Members and Projects table action columns project-wide: make member/project names the edit entry points, move member removal and project archive/unarchive controls into inline settings, and keep the documented pending-invite row action column exception.
 
 ## 4. Tests And Manual Checks
 
@@ -25,6 +26,7 @@
 - [x] 4.3 Update `TopBarTimerTaskDialog` tests for desktop and mobile footer behavior, including no dismissal `Cancel`, full-width mobile primary action, retained running `Change task`, close dismissal, and primary action emission.
 - [x] 4.4 Update admin dialog tests for any changed admin popup, including `MemberInviteDialog` close/reset behavior, absence of popup `Cancel`, and submit behavior.
 - [x] 4.5 Add or update regression checks that excluded actions remain: destructive confirmation safe/reject actions, non-popup Profile/Settings reset `Cancel` actions, and pending-invite `Cancel invite` row actions.
+- [x] 4.6 Update admin management-table tests so Members and Projects no longer expect row action columns, and verify inline settings still expose removal/archive/unarchive behaviors.
 
 ## 5. Verification
 

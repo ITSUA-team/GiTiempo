@@ -160,12 +160,12 @@ describe('useProjectsTableState', () => {
     expect(state.rows.value[0]).toMatchObject({
       assignedMembersLabel: '2 members',
       hoursLabel: '148h',
-      nameClass: 'text-text-dark',
+      nameClass: 'text-brand',
       sourceLabel: 'GitHub Repo',
       visibilityLabel: 'Public',
     });
     expect(state.rows.value[3]).toMatchObject({
-      nameClass: 'text-text-muted',
+      nameClass: 'text-brand',
       visibilityLabel: 'Private',
     });
     expect(state.memberFilterOptions.value).toEqual([

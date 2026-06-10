@@ -9,6 +9,8 @@ Current implementation scan found these relevant surfaces:
 - `apps/user-web/src/components/timer/TopBarTimerTaskDialog.vue` renders a task-picker popup footer with `Cancel`, primary action, and a contextual running-timer `Change task` action.
 - `apps/admin-web/src/views/InvoicesView.vue` is currently a route scaffold for the future invoice workflow, while the existing admin page spec already reserves a create-invoice dialog flow.
 - `apps/admin-web/src/components/forms/MemberInviteDialog.vue` is an existing non-destructive popup form dialog with `Cancel` plus `Send Invite`, and should follow the same shared dialog pattern if touched by the implementation pass.
+- `apps/admin-web/src/components/MembersTable.vue` and `apps/admin-web/src/components/ProjectsTable.vue` still had separate row action columns even though `docs/ui/pages-admin.md` defines the member/project names as the edit entry points and places destructive or status-specific actions inside inline settings.
+- `apps/admin-web/src/components/PendingInvitationsCard.vue` intentionally keeps its pending-invite `Actions` column because `docs/ui/pages-admin.md` and the issue acceptance criteria preserve row actions such as `Cancel invite`.
 
 The relevant app instructions are `apps/user-web/AGENTS.md` and `apps/admin-web/AGENTS.md`; both require `docs/ui/INDEX.md`, the smallest relevant `docs/ui/*` files, and the approved `.pen` frame before implementation. `GITiempo.pen` exists in the repo, but the current Pencil API session could not inspect it because the file was not open in the editor, so implementation must reopen or otherwise inspect the affected approved frames before editing.
 
@@ -49,6 +51,12 @@ Alternative considered: reduce every non-destructive popup footer to one button 
 Implementation should update the existing dialog components directly instead of introducing a new shared dialog footer abstraction. The change is small, component-local, and does not require a new dependency or shared package API.
 
 Alternative considered: extract a shared `DialogFooter` leaf. This is unnecessary unless the implementation finds duplicated footer markup that needs more than removing one button; premature extraction would add surface area for a narrow visual alignment task.
+
+### Decision: Apply Action-Column Cleanup To Admin Management Tables
+
+The PR also removes separate action columns from admin Members and Projects tables so the action-column cleanup is project-wide rather than limited to user views. Member and project names become the edit entry points, while `Remove member`, `Archive project`, and `Unarchive project` live in the inline settings sections that own those entity changes.
+
+Alternative considered: leave admin management action columns for a later PR. This would keep the project in a mixed state where user tables follow the updated row-entry pattern and admin tables still expose separate edit/destructive icons despite the admin page docs saying otherwise.
 
 ### Decision: Verification Uses Focused Component Tests Plus App Checks
 

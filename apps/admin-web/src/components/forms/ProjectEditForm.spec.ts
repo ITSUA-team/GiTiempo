@@ -131,7 +131,31 @@ describe('ProjectEditForm', () => {
     expect(wrapper.text()).toContain('Pat PM');
     expect(wrapper.text()).toContain('member@example.com');
     expect(wrapper.text()).not.toContain('Alex Admin');
+    expect(wrapper.text()).toContain('Archive project');
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save');
+  });
+
+  it('emits the status-specific action from the inline project settings panel', async () => {
+    const wrapper = mount(ProjectEditForm, {
+      props: { allMembers: members, project },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    await wrapper.get('button').trigger('click');
+
+    expect(wrapper.emitted('archive')).toHaveLength(1);
+  });
+
+  it('uses unarchive copy for archived projects', async () => {
+    const wrapper = mount(ProjectEditForm, {
+      props: { allMembers: members, project: { ...project, isActive: false } },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    await wrapper.get('button').trigger('click');
+
+    expect(wrapper.text()).toContain('Unarchive project');
+    expect(wrapper.emitted('unarchive')).toHaveLength(1);
   });
 });

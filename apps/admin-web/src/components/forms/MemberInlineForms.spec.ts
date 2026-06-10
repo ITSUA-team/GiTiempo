@@ -153,8 +153,21 @@ describe('member inline forms', () => {
     expect(wrapper.get('#member-readonly-fields-note').text()).toBe(
       'Editing name and email is not yet supported.',
     );
+    expect(wrapper.text()).not.toContain('Remove member');
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save');
+  });
+
+  it('keeps member removal inside the inline edit panel when allowed', async () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canRemove: true, member },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    await wrapper.get('button').trigger('click');
+
+    expect(wrapper.text()).toContain('Remove member');
+    expect(wrapper.emitted('remove')).toHaveLength(1);
   });
 
   it('stacks PM assignment choices and actions on mobile while keeping desktop wrapping', () => {
