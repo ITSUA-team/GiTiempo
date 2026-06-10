@@ -55,6 +55,8 @@ const WorkspaceHeaderStub = {
     "counterpartHref",
     "counterpartLabel",
     "displayName",
+    "pageName",
+    "productName",
     "settingsIcon",
     "settingsLabel",
     "showSettings",
@@ -66,6 +68,8 @@ const WorkspaceHeaderStub = {
   template: `
     <header>
       <span>{{ workspaceName }}</span>
+      <span data-testid="workspace-header-product-name">{{ productName }}</span>
+      <span data-testid="workspace-header-page-name">{{ pageName }}</span>
       <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
       <RouterLink v-if="showSettings" data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
       <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
@@ -146,6 +150,8 @@ describe("AdminAppShell", () => {
     const settingsLink = wrapper.get('[data-testid="profile-menu-settings"]');
 
     expect(wrapper.find('[data-testid="profile-menu-icon"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="workspace-header-product-name"]').text()).toBe("GiTiempo Admin");
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe("Dashboard");
     expect(settingsLink.text()).toBe("Settings");
     expect(settingsLink.attributes("href")).toBe("/settings");
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(

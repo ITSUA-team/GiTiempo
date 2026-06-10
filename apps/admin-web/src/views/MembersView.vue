@@ -9,7 +9,6 @@ import type {
   WorkspaceRole,
 } from '@gitiempo/shared';
 import {
-  SectionHeader,
   StatCard,
   SurfaceCard,
   useIsMobileViewport,
@@ -384,12 +383,6 @@ onMounted(fetchAll);
     </template>
 
     <template v-else>
-      <SectionHeader
-        title="Members"
-        description="Manage team roles, project assignments, and member activity."
-        variant="page"
-      />
-
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Active Members"

@@ -189,7 +189,7 @@ describe("ProjectView", () => {
     primeVueMocks.toastAdd.mockClear();
   });
 
-  it("renders the header, search field, grouped sections, and section add action", async () => {
+  it("renders the search field, grouped sections, and section add action", async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValueOnce([
@@ -203,7 +203,6 @@ describe("ProjectView", () => {
 
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Projects");
     expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(
       true,
     );

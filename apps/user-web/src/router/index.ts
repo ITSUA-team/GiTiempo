@@ -65,21 +65,33 @@ const protectedRoutes: RouteRecordRaw[] = [
     path: "",
     name: routeNames.dashboard,
     component: DashboardView,
+    meta: {
+      pageName: "Dashboard",
+    },
   },
   {
     path: "time-entries",
     name: routeNames.timeEntries,
     component: TimeEntriesView,
+    meta: {
+      pageName: "Time Entries",
+    },
   },
   {
     path: "projects",
     name: routeNames.project,
     component: ProjectView,
+    meta: {
+      pageName: "Projects",
+    },
   },
   {
     path: "profile",
     name: routeNames.profile,
     component: ProfileView,
+    meta: {
+      pageName: "Profile",
+    },
   },
 ];
 

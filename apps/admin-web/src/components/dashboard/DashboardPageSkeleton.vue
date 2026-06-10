@@ -10,19 +10,6 @@ import Skeleton from 'primevue/skeleton';
     role="status"
   >
     <div class="flex flex-col gap-6">
-      <div class="flex flex-col gap-1.5">
-        <Skeleton
-          width="10rem"
-          height="2rem"
-          border-radius="6px"
-        />
-        <Skeleton
-          width="min(24rem, 100%)"
-          height="1rem"
-          border-radius="6px"
-        />
-      </div>
-
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Skeleton
           v-for="index in 4"

@@ -6,7 +6,6 @@ import { updateUserSchema } from "@gitiempo/shared";
 import { createAppToast, runWithFeedback } from "@gitiempo/web-shared";
 import { computed, ref, watch } from "vue";
 
-import PageHeader from "@/components/layout/PageHeader.vue";
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
 import ProfileGithubConnectionCard from "@/components/profile/ProfileGithubConnectionCard.vue";
 import { useProfileGithubConnection } from "@/composables/profile/useProfileGithubConnection";
@@ -96,11 +95,6 @@ async function handleSaveProfile(): Promise<void> {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <PageHeader
-      subtitle="Manage your personal settings and session access."
-      title="Profile"
-    />
-
     <div class="flex max-w-[620px] flex-col gap-6">
       <SurfaceCard body-class="flex flex-col gap-4">
         <div class="flex items-center gap-4">

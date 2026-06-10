@@ -177,7 +177,6 @@ describe("ProfileView", () => {
         minute: "2-digit",
       });
 
-    expect(wrapper.text()).toContain("Profile");
     expect(wrapper.text()).toContain("GitHub Connection");
     expect(wrapper.text()).toContain(`${formatDate(connectedAt)}, ${formatTime(connectedAt)}`);
     expect(wrapper.text()).toContain(`${formatDate(updatedAt)}, ${formatTime(updatedAt)}`);

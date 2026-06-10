@@ -33,6 +33,7 @@ const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
 });
+const pageName = computed(() => route.meta.pageName ?? "");
 
 let workspaceNameRequestToken: string | null = null;
 
@@ -106,6 +107,8 @@ watch(
       :counterpart-href="userWorkspaceHref"
       counterpart-label="User workspace"
       :display-name="authStore.displayName"
+      :page-name="pageName"
+      product-name="GiTiempo Admin"
       :settings-icon="settingsIcon"
       settings-label="Settings"
       :settings-to="{ name: routeNames.settings }"

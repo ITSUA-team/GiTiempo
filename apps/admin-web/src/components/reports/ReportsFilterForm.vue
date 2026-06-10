@@ -98,7 +98,7 @@ const datePickerPt = {
     :resolver="resolver"
     :validate-on-mount="true"
     :validate-on-value-update="true"
-    class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]"
+    class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px_auto]"
   >
     <div class="flex flex-col gap-1.5">
       <label
@@ -184,6 +184,17 @@ const datePickerPt = {
         :pt="selectPt"
         @update:model-value="handleGroupByUpdate"
       />
+    </div>
+
+    <div
+      v-if="$slots.actions"
+      class="flex flex-col gap-1.5 lg:min-w-[110px]"
+    >
+      <span
+        aria-hidden="true"
+        class="hidden h-[19px] lg:block"
+      />
+      <slot name="actions" />
     </div>
   </Form>
 </template>

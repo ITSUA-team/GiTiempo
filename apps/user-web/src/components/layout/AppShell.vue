@@ -26,6 +26,7 @@ const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
+const pageName = computed(() => route.meta.pageName ?? "");
 
 const navItems = computed(() => [
   {
@@ -59,6 +60,7 @@ async function handleSignOut(): Promise<void> {
       counterpart-label="Admin workspace"
       center-content-align="end"
       :display-name="authStore.displayName"
+      :page-name="pageName"
       :settings-icon="profileIcon"
       settings-label="Profile"
       :settings-to="{ name: routeNames.profile }"

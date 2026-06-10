@@ -55,6 +55,7 @@ const props = withDefaults(
     counterpartLabel: string;
     centerContentAlign?: CenterContentAlign;
     displayName: string;
+    pageName?: string;
     productName?: string;
     settingsIcon?: Component;
     settingsLabel?: string;
@@ -67,6 +68,7 @@ const props = withDefaults(
   }>(),
   {
     centerContentAlign: "center",
+    pageName: undefined,
     productName: "GiTiempo",
     settingsIcon: undefined,
     settingsLabel: "Settings",
@@ -78,6 +80,8 @@ const props = withDefaults(
 
 const slots = useSlots();
 const hasCenterSlot = computed(() => Boolean(slots.center));
+const normalizedPageName = computed(() => props.pageName?.trim() ?? "");
+const hasPageName = computed(() => normalizedPageName.value.length > 0);
 
 const emit = defineEmits<{
   signOut: [];
@@ -256,13 +260,32 @@ onBeforeUnmount(() => {
   <header
     class="border-divider bg-surface-primary sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 border-b px-4 sm:h-16 sm:grid-rows-1 sm:px-6"
   >
-    <div class="row-start-1 flex items-center gap-3">
+    <div class="row-start-1 flex min-w-0 items-center gap-3">
       <div
         class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs font-semibold"
       >
         {{ props.workspaceShortName }}
       </div>
-      <div class="flex flex-col gap-0.5">
+      <div
+        v-if="hasPageName"
+        class="flex min-w-0 items-center gap-2"
+        data-testid="workspace-header-breadcrumb"
+      >
+        <p class="text-base font-semibold">
+          {{ props.productName }}
+        </p>
+
+        <span class="text-text-muted text-[13px] font-medium">/</span>
+
+        <p class="text-text-dark truncate text-[13px] font-semibold">
+          {{ normalizedPageName }}
+        </p>
+      </div>
+
+      <div
+        v-else
+        class="flex flex-col gap-0.5"
+      >
         <p class="text-base font-semibold">
           {{ props.productName }}
         </p>

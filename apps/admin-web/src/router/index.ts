@@ -81,6 +81,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: DashboardView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.dashboard],
+      pageName: 'Dashboard',
     },
   },
   {
@@ -89,6 +90,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: ReportsView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.reports],
+      pageName: 'Reports',
     },
   },
   {
@@ -97,6 +99,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: InvoicesView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
+      pageName: 'Invoices',
     },
   },
   {
@@ -105,6 +108,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: MembersView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.members],
+      pageName: 'Members',
     },
   },
   {
@@ -113,6 +117,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: ProjectsView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.projects],
+      pageName: 'Projects',
     },
   },
   {
@@ -121,6 +126,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: AddProjectMockView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.addProject],
+      pageName: 'New Project',
     },
   },
   {
@@ -129,6 +135,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: SettingsView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.settings],
+      pageName: 'Settings',
     },
   },
 ];

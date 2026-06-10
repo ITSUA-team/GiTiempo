@@ -412,15 +412,16 @@ describe("TimeEntriesView", () => {
     expect(wrapper.text()).toContain("02:00:08");
   });
 
-  it("wires header, day create, edit, and delete actions through the real view", async () => {
+  it("wires day create, edit, and delete actions through the real view", async () => {
     const { wrapper } = await mountView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="time-entries-header-create"]').trigger("click");
 
-    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entries-header-create"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+
     const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
     await editButtons[editButtons.length - 1]!.trigger("click");
     const deleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');
@@ -656,7 +657,7 @@ describe("TimeEntriesView", () => {
     expect(filterSuggestions.text()).toContain("Ship admin polish");
     expect(filterSuggestions.text()).toContain("Ship closed archive");
 
-    await wrapper.get('[data-testid="time-entries-header-create"]').trigger("click");
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
     await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
     await flushPromises();
 

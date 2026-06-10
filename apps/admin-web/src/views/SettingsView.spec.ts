@@ -196,10 +196,6 @@ describe('SettingsView', () => {
     await flushPromises();
 
     expect(wrapper.find('[role="status"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain('Settings');
-    expect(wrapper.text()).toContain(
-      'Configure workspace defaults, billing preferences, and organization details.',
-    );
     expect(wrapper.text()).toContain('Workspace name');
     expect(wrapper.text()).toContain('Default hourly rate');
     expect(wrapper.text()).toContain('Currency');
@@ -287,7 +283,6 @@ describe('SettingsView', () => {
     const wrapper = mountSettingsView();
     await flushPromises();
 
-    expect(wrapper.text()).toContain('Settings');
     expect(wrapper.text()).toContain('Failed to load settings');
     expect(wrapper.text()).toContain('Network unavailable');
     expect(wrapper.text()).not.toContain('Workspace name');
