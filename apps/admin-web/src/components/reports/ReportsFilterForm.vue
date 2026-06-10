@@ -4,6 +4,8 @@ import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
 import {
+  AutocompleteField,
+  type AutocompleteFieldValue,
   normalizeReportDateRangeValue,
   reportFilterFormSchema,
   type ReportDatePickerRangeValue,
@@ -11,7 +13,6 @@ import {
 } from '@gitiempo/web-shared';
 import DatePicker from 'primevue/datepicker';
 import Message from 'primevue/message';
-import Select from 'primevue/select';
 
 import type {
   ReportDateRange,
@@ -68,17 +69,23 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
   groupBy.value = value;
 }
 
-const selectPt = {
-  root: {
-    class:
-      'border-divider bg-surface-primary h-[38px] w-full rounded-[6px] border shadow-none',
-  },
-  label: {
-    class:
-      'flex items-center px-3 py-0 text-[14px] font-medium text-text-dark',
-  },
-  dropdown: { class: 'w-9 text-text-muted' },
-} as const;
+function getNullableStringValue(value: AutocompleteFieldValue): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function handleProjectAutocompleteUpdate(value: AutocompleteFieldValue): void {
+  handleProjectUpdate(getNullableStringValue(value));
+}
+
+function handleMemberAutocompleteUpdate(value: AutocompleteFieldValue): void {
+  handleMemberUpdate(getNullableStringValue(value));
+}
+
+function handleGroupByAutocompleteUpdate(value: AutocompleteFieldValue): void {
+  if (value === 'project' || value === 'user') {
+    handleGroupByUpdate(value);
+  }
+}
 
 const datePickerPt = {
   root: { class: 'w-full' },
@@ -100,43 +107,27 @@ const datePickerPt = {
     :validate-on-value-update="true"
     class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px_auto]"
   >
-    <div class="flex flex-col gap-1.5">
-      <label
-        for="reports-project"
-        class="text-text-dark text-[13px] font-medium"
-      >Project</label>
-      <Select
-        input-id="reports-project"
-        name="projectId"
-        :model-value="projectId"
-        :options="projectGenerationOptions"
-        option-label="label"
-        option-value="value"
-        placeholder="All projects"
-        :disabled="disabled"
-        :pt="selectPt"
-        @update:model-value="handleProjectUpdate"
-      />
-    </div>
+    <AutocompleteField
+      input-id="reports-project"
+      label="Project"
+      name="projectId"
+      :model-value="projectId"
+      :options="projectGenerationOptions"
+      placeholder="All projects"
+      :disabled="disabled"
+      @update:model-value="handleProjectAutocompleteUpdate"
+    />
 
-    <div class="flex flex-col gap-1.5">
-      <label
-        for="reports-member"
-        class="text-text-dark text-[13px] font-medium"
-      >Member</label>
-      <Select
-        input-id="reports-member"
-        name="memberId"
-        :model-value="memberId"
-        :options="memberGenerationOptions"
-        option-label="label"
-        option-value="value"
-        placeholder="All assigned members"
-        :disabled="disabled"
-        :pt="selectPt"
-        @update:model-value="handleMemberUpdate"
-      />
-    </div>
+    <AutocompleteField
+      input-id="reports-member"
+      label="Member"
+      name="memberId"
+      :model-value="memberId"
+      :options="memberGenerationOptions"
+      placeholder="All assigned members"
+      :disabled="disabled"
+      @update:model-value="handleMemberAutocompleteUpdate"
+    />
 
     <div class="flex flex-col gap-1.5">
       <label
@@ -168,23 +159,15 @@ const datePickerPt = {
       </Message>
     </div>
 
-    <div class="flex flex-col gap-1.5">
-      <label
-        for="reports-group-by"
-        class="text-text-dark text-[13px] font-medium"
-      >Group by</label>
-      <Select
-        input-id="reports-group-by"
-        name="groupBy"
-        :model-value="groupBy"
-        :options="groupByOptions"
-        option-label="label"
-        option-value="value"
-        :disabled="disabled"
-        :pt="selectPt"
-        @update:model-value="handleGroupByUpdate"
-      />
-    </div>
+    <AutocompleteField
+      input-id="reports-group-by"
+      label="Group by"
+      name="groupBy"
+      :model-value="groupBy"
+      :options="groupByOptions"
+      :disabled="disabled"
+      @update:model-value="handleGroupByAutocompleteUpdate"
+    />
 
     <div
       v-if="$slots.actions"
