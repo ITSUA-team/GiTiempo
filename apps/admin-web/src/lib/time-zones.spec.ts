@@ -40,11 +40,20 @@ describe('getSettingsTimeZoneOptions', () => {
 
 		expect(getSettingsTimeZoneOptions()).toEqual([
 			{ label: 'UTC', value: 'UTC' },
-			{ label: 'America/New_York', value: 'America/New_York' },
+			{ label: 'America/New York', value: 'America/New_York' },
 			{ label: 'Europe/Berlin', value: 'Europe/Berlin' },
 			{ label: 'Europe/London', value: 'Europe/London' },
 		]);
 		expect(supportedValuesOf).toHaveBeenCalledWith('timeZone');
+	});
+
+	it('formats labels with spaces while preserving IANA values', () => {
+		stubSupportedValuesOf(vi.fn().mockReturnValue(['Africa/Addis_Ababa']));
+
+		expect(getSettingsTimeZoneOptions()).toContainEqual({
+			label: 'Africa/Addis Ababa',
+			value: 'Africa/Addis_Ababa',
+		});
 	});
 
 	it('falls back to the curated IANA list when runtime support is unavailable', () => {
