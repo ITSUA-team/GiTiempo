@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
+import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 
 const props = defineProps<{
   errors: {
@@ -13,7 +13,6 @@ const props = defineProps<{
     title: string | null;
   };
   isOpen: boolean;
-  isDeleting: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
   projectId: string | null;
@@ -28,7 +27,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
-  delete: [];
   save: [];
   "update:projectId": [value: string | null];
   "update:status": [value: TaskStatus];
@@ -39,20 +37,24 @@ const statusOptions = [
   { label: "Open", value: "open" },
   { label: "Closed", value: "closed" },
 ] satisfies { label: string; value: TaskStatus }[];
-const projectSuggestions = ref<ProjectResponse[]>([]);
-const statusSuggestions = ref([...statusOptions]);
 
 const selectedProjectName = computed(() => {
   return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
 });
 
-const projectModel = computed(
-  () => props.projects.find((project) => project.id === props.projectId) ?? null,
-);
+const projectModel = computed({
+  get: () => props.projectId,
+  set: (value: string | null | undefined) => {
+    emit("update:projectId", value ?? null);
+  },
+});
 
-const statusModel = computed(
-  () => statusOptions.find((option) => option.value === props.status) ?? statusOptions[0],
-);
+const statusModel = computed({
+  get: () => props.status,
+  set: (value: TaskStatus | null | undefined) => {
+    emit("update:status", value ?? "open");
+  },
+});
 
 const titleModel = computed({
   get: () => props.valueTitle,
@@ -60,55 +62,13 @@ const titleModel = computed({
     emit("update:title", value);
   },
 });
-
-function handleProjectComplete(event: { query: string }): void {
-  const normalizedQuery = event.query.trim().toLowerCase();
-
-  projectSuggestions.value = normalizedQuery
-    ? props.projects.filter((project) =>
-        project.name.toLowerCase().includes(normalizedQuery),
-      )
-    : [...props.projects];
-}
-
-function handleProjectUpdate(value: ProjectResponse | string | null): void {
-  if (typeof value === "string") {
-    if (value.trim().length === 0) {
-      emit("update:projectId", null);
-    }
-
-    return;
-  }
-
-  emit("update:projectId", value?.id ?? null);
-}
-
-function handleStatusComplete(event: { query: string }): void {
-  const normalizedQuery = event.query.trim().toLowerCase();
-
-  statusSuggestions.value = normalizedQuery
-    ? statusOptions.filter((option) =>
-        option.label.toLowerCase().includes(normalizedQuery),
-      )
-    : [...statusOptions];
-}
-
-function handleStatusUpdate(
-  value: (typeof statusOptions)[number] | string | null,
-): void {
-  if (typeof value === "string") {
-    return;
-  }
-
-  emit("update:status", value?.value ?? "open");
-}
 </script>
 
 <template>
   <Dialog
-    :closable="!props.isSaving && !props.isDeleting"
+    :closable="!props.isSaving"
     modal
-    :dismissable-mask="!props.isSaving && !props.isDeleting"
+    :dismissable-mask="!props.isSaving"
     :draggable="false"
     :pt="{
       root: 'w-[min(480px,calc(100vw-2rem))] rounded-lg border border-divider',
@@ -118,7 +78,7 @@ function handleStatusUpdate(
     }"
     :visible="props.isOpen"
     @update:visible="(nextVisible) => {
-      if (!nextVisible && !props.isSaving && !props.isDeleting) {
+      if (!nextVisible && !props.isSaving) {
         emit('close');
       }
     }"
@@ -164,23 +124,18 @@ function handleStatusUpdate(
         >
           {{ selectedProjectName }}
         </div>
-        <AutoComplete
+        <Select
           v-else
+          v-model="projectModel"
+          filter
           fluid
-          force-selection
           input-id="project-task-project"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
           option-label="name"
+          option-value="id"
           placeholder="Select project"
-          :disabled="props.isSaving || props.isDeleting"
+          :disabled="props.isSaving"
           :invalid="!!props.errors.projectId"
-          :min-length="0"
-          :model-value="projectModel"
-          :suggestions="projectSuggestions"
-          @complete="handleProjectComplete"
-          @update:model-value="handleProjectUpdate(($event ?? null) as ProjectResponse | string | null)"
+          :options="props.projects"
         />
         <small
           v-if="props.errors.projectId"
@@ -201,7 +156,7 @@ function handleStatusUpdate(
           id="project-task-title"
           v-model="titleModel"
           class="h-[38px] w-full"
-          :disabled="props.isSaving || props.isDeleting"
+          :disabled="props.isSaving"
           :invalid="!!props.errors.title"
         />
         <small
@@ -222,21 +177,15 @@ function handleStatusUpdate(
         >
           Status
         </label>
-        <AutoComplete
+        <Select
+          v-model="statusModel"
           fluid
-          force-selection
           input-id="project-task-status"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
           option-label="label"
-          :disabled="props.isSaving || props.isDeleting"
+          option-value="value"
+          :disabled="props.isSaving"
           :invalid="!!props.errors.status"
-          :min-length="0"
-          :model-value="statusModel"
-          :suggestions="statusSuggestions"
-          @complete="handleStatusComplete"
-          @update:model-value="handleStatusUpdate(($event ?? null) as (typeof statusOptions)[number] | string | null)"
+          :options="statusOptions"
         />
         <small
           v-if="props.errors.status"
@@ -248,36 +197,21 @@ function handleStatusUpdate(
     </div>
 
     <template #footer>
-      <div class="flex items-center justify-between gap-3">
+      <div class="flex justify-end gap-2">
         <Button
-          v-if="props.mode === 'edit'"
           type="button"
-          label="Delete"
-          severity="danger"
+          label="Cancel"
+          severity="secondary"
           variant="outlined"
           :disabled="props.isSaving"
-          :loading="props.isDeleting"
-          @click="emit('delete')"
+          @click="emit('close')"
         />
-        <span v-else />
-
-        <div class="flex justify-end gap-2">
-          <Button
-            type="button"
-            label="Cancel"
-            severity="secondary"
-            variant="outlined"
-            :disabled="props.isSaving || props.isDeleting"
-            @click="emit('close')"
-          />
-          <Button
-            type="button"
-            :label="props.saveLabel"
-            :disabled="props.isDeleting"
-            :loading="props.isSaving"
-            @click="emit('save')"
-          />
-        </div>
+        <Button
+          type="button"
+          :label="props.saveLabel"
+          :loading="props.isSaving"
+          @click="emit('save')"
+        />
       </div>
     </template>
   </Dialog>

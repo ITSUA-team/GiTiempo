@@ -88,38 +88,11 @@ function mountDialog(overrides: DialogProps = {}) {
             '<input :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         ProgressSpinner: { template: '<div data-testid="spinner" />' },
-        AutoComplete: {
-          props: [
-            "disabled",
-            "inputId",
-            "modelValue",
-            "optionLabel",
-            "overlayClass",
-            "pt",
-            "suggestions",
-          ],
-          emits: ["complete", "update:modelValue"],
-          template: `
-            <div>
-              <input
-                :class="$attrs.class"
-                :data-input-pt-class="pt?.pcInputText?.root?.class"
-                :data-list-container-pt-class="pt?.listContainer?.class"
-                :data-overlay-class="overlayClass"
-                :data-root-pt-class="pt?.root?.class"
-                :data-testid="'timer-autocomplete-' + inputId"
-                :disabled="disabled"
-                :value="modelValue?.[optionLabel] ?? ''"
-                @focus="$emit('complete', { query: '' })"
-              />
-              <button
-                v-if="suggestions?.length"
-                :data-testid="inputId + '-select'"
-                type="button"
-                @click="$emit('update:modelValue', suggestions[0])"
-              >Select</button>
-            </div>
-          `,
+        Select: {
+          props: ["disabled", "modelValue", "options", "overlayClass", "pt"],
+          emits: ["update:modelValue"],
+          template:
+            '<select :class="$attrs.class" :data-label-pt-class="pt?.label?.class" :data-list-container-pt-class="pt?.listContainer?.class" :data-option-label-pt-class="pt?.optionLabel?.class" :data-overlay-class="overlayClass" :data-root-pt-class="pt?.root?.class" :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name ?? option.title }}</option></select>',
         },
         Textarea: {
           props: ["disabled", "modelValue"],
@@ -143,11 +116,10 @@ describe("TopBarTimerTaskDialog", () => {
 
   it("emits project and task selection updates", async () => {
     const wrapper = mountDialog();
+    const selects = wrapper.findAll("select");
 
-    await wrapper.get('[data-testid="timer-autocomplete-top-bar-timer-project"]').trigger("focus");
-    await wrapper.get('[data-testid="top-bar-timer-project-select"]').trigger("click");
-    await wrapper.get('[data-testid="timer-autocomplete-top-bar-timer-task"]').trigger("focus");
-    await wrapper.get('[data-testid="top-bar-timer-task-select"]').trigger("click");
+    await selects[0]?.setValue("project-1");
+    await selects[1]?.setValue("task-1");
 
     expect(wrapper.emitted("update:selectedProjectId")?.[0]).toEqual(["project-1"]);
     expect(wrapper.emitted("update:selectedTaskId")?.[0]).toEqual(["task-1"]);
@@ -280,7 +252,7 @@ describe("TopBarTimerTaskDialog", () => {
     );
     const footer = wrapper.get('[data-testid="top-bar-timer-task-dialog-footer"]');
     const footerButtons = footer.findAll("button");
-    const autoCompleteFields = wrapper.findAll('[data-testid^="timer-autocomplete-"]');
+    const selectFields = wrapper.findAll("select");
     const createTaskButton = findButtonByLabel(wrapper, "Create task");
     const primaryButton = findButtonByLabel(wrapper, "Start timer");
 
@@ -301,12 +273,13 @@ describe("TopBarTimerTaskDialog", () => {
     expect(primaryButton?.classes()).toContain("w-full");
     expect(createTaskButton?.attributes("data-fluid")).toBe("true");
     expect(primaryButton?.attributes("data-fluid")).toBe("true");
-    for (const autoCompleteField of autoCompleteFields) {
-      expect(autoCompleteField.classes()).toContain("min-w-0");
-      expect(autoCompleteField.classes()).toContain("max-w-full");
-      expect(autoCompleteField.attributes("data-root-pt-class")).toContain("min-w-0");
-      expect(autoCompleteField.attributes("data-input-pt-class")).toBe("truncate");
-      expect(autoCompleteField.attributes("data-overlay-class")).toBe("max-w-[calc(100vw-2rem)]");
+    for (const selectField of selectFields) {
+      expect(selectField.classes()).toContain("min-w-0");
+      expect(selectField.classes()).toContain("max-w-full");
+      expect(selectField.attributes("data-root-pt-class")).toContain("min-w-0");
+      expect(selectField.attributes("data-label-pt-class")).toBe("truncate");
+      expect(selectField.attributes("data-overlay-class")).toBe("max-w-[calc(100vw-2rem)]");
+      expect(selectField.attributes("data-option-label-pt-class")).toBe("truncate");
     }
   });
 

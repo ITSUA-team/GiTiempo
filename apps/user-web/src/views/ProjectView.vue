@@ -80,7 +80,6 @@ const {
   dialogTaskStatus,
   dialogTaskTitle,
   dialogTitle,
-  editingTask,
   isDialogOpen,
   openCreateDialog,
   openEditDialog,
@@ -110,10 +109,6 @@ const pageState = computed(() =>
     isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
   }),
 );
-const isDeletingDialogTask = computed(
-  () =>
-    editingTask.value !== null && isDeletingTaskId.value === editingTask.value.id,
-);
 async function saveDialog(): Promise<void> {
   const validInput = dialog.validateDialog();
 
@@ -134,23 +129,11 @@ async function saveDialog(): Promise<void> {
 
 function requestDeleteTask(task: Parameters<typeof mutations.deleteTask>[0]): void {
   appConfirm.confirmDestructive({
-    accept: async () => {
-      await mutations.deleteTask(task);
-
-      if (!mutations.lastMutationErrorMessage.value) {
-        dialog.closeDialog();
-      }
-    },
+    accept: async () => mutations.deleteTask(task),
     acceptLabel: "Delete",
     header: "Delete task?",
     message: "This task will be permanently deleted.",
   });
-}
-
-function requestDeleteEditingTask(): void {
-  if (editingTask.value) {
-    requestDeleteTask(editingTask.value);
-  }
 }
 
 async function retryLoadPage(): Promise<void> {
@@ -381,9 +364,11 @@ async function retryLoadPage(): Promise<void> {
           v-for="group in filteredProjectGroups"
           :key="group.project.id"
           :format-updated-label="formatUpdatedLabel"
+          :is-deleting-task-id="isDeletingTaskId"
           :project="group.project"
           :tasks="group.tasks"
           @add-task="openCreateDialog"
+          @delete-task="requestDeleteTask"
           @edit-task="openEditDialog"
         />
       </div>
@@ -391,7 +376,6 @@ async function retryLoadPage(): Promise<void> {
 
     <ProjectTaskDialog
       :errors="dialogErrors"
-      :is-deleting="isDeletingDialogTask"
       :is-open="isDialogOpen"
       :is-saving="isSavingDialog"
       :mode="dialogMode"
@@ -404,7 +388,6 @@ async function retryLoadPage(): Promise<void> {
       :title="dialogTitle"
       :value-title="dialogTaskTitle"
       @close="closeDialog"
-      @delete="requestDeleteEditingTask"
       @save="void saveDialog()"
       @update:project-id="setDialogProjectId"
       @update:status="setDialogTaskStatus"

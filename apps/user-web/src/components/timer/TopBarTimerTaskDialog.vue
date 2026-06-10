@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
+import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 
 const props = defineProps<{
   createTaskErrorMessage: string | null;
@@ -45,17 +45,19 @@ const emit = defineEmits<{
   "update:selectedTaskId": [value: string | null];
 }>();
 
-const projectSuggestions = ref<ProjectResponse[]>([]);
-const taskSuggestions = ref<TaskResponse[]>([]);
-const selectedProjectModel = computed(
-  () =>
-    props.projectOptions.find((project) => project.id === props.selectedProjectId) ??
-    null,
-);
+const selectedProjectModel = computed({
+  get: () => props.selectedProjectId,
+  set: (value: string | null | undefined) => {
+    emit("update:selectedProjectId", value ?? null);
+  },
+});
 
-const selectedTaskModel = computed(
-  () => props.taskOptions.find((task) => task.id === props.selectedTaskId) ?? null,
-);
+const selectedTaskModel = computed({
+  get: () => props.selectedTaskId,
+  set: (value: string | null | undefined) => {
+    emit("update:selectedTaskId", value ?? null);
+  },
+});
 
 const selectedDescriptionModel = computed({
   get: () => props.selectedDescription,
@@ -73,56 +75,13 @@ const createTaskTitleModel = computed({
 
 const isMobileViewport = useIsMobileViewport();
 const taskSelectOverlayClass = "max-w-[calc(100vw-2rem)]";
-const taskAutoCompletePt = {
+const taskSelectPt = {
+  label: { class: "truncate" },
   listContainer: { class: "max-w-full" },
   option: { class: "min-w-0" },
-  pcInputText: { root: { class: "truncate" } },
+  optionLabel: { class: "truncate" },
   root: { class: "max-w-full min-w-0" },
 } as const;
-
-function handleProjectComplete(event: { query: string }): void {
-  const normalizedQuery = event.query.trim().toLowerCase();
-
-  projectSuggestions.value = normalizedQuery
-    ? props.projectOptions.filter((project) =>
-        project.name.toLowerCase().includes(normalizedQuery),
-      )
-    : [...props.projectOptions];
-}
-
-function handleProjectUpdate(value: ProjectResponse | string | null): void {
-  if (typeof value === "string") {
-    if (value.trim().length === 0) {
-      emit("update:selectedProjectId", null);
-    }
-
-    return;
-  }
-
-  emit("update:selectedProjectId", value?.id ?? null);
-}
-
-function handleTaskComplete(event: { query: string }): void {
-  const normalizedQuery = event.query.trim().toLowerCase();
-
-  taskSuggestions.value = normalizedQuery
-    ? props.taskOptions.filter((task) =>
-        task.title.toLowerCase().includes(normalizedQuery),
-      )
-    : [...props.taskOptions];
-}
-
-function handleTaskUpdate(value: TaskResponse | string | null): void {
-  if (typeof value === "string") {
-    if (value.trim().length === 0) {
-      emit("update:selectedTaskId", null);
-    }
-
-    return;
-  }
-
-  emit("update:selectedTaskId", value?.id ?? null);
-}
 </script>
 
 <template>
@@ -195,25 +154,20 @@ function handleTaskUpdate(value: TaskResponse | string | null): void {
         >
           Project
         </label>
-        <AutoComplete
+        <Select
+          v-model="selectedProjectModel"
           class="max-w-full min-w-0"
+          filter
           fluid
-          force-selection
           input-id="top-bar-timer-project"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
           :overlay-class="taskSelectOverlayClass"
           option-label="name"
+          option-value="id"
           :disabled="props.isLoadingProjects || props.isConfirmingSelection"
           :loading="props.isLoadingProjects"
-          :min-length="0"
-          :model-value="selectedProjectModel"
+          :options="props.projectOptions"
           placeholder="Select a project"
-          :pt="taskAutoCompletePt"
-          :suggestions="projectSuggestions"
-          @complete="handleProjectComplete"
-          @update:model-value="handleProjectUpdate(($event ?? null) as ProjectResponse | string | null)"
+          :pt="taskSelectPt"
         />
       </div>
 
@@ -224,25 +178,20 @@ function handleTaskUpdate(value: TaskResponse | string | null): void {
         >
           Task
         </label>
-        <AutoComplete
+        <Select
+          v-model="selectedTaskModel"
           class="max-w-full min-w-0"
+          filter
           fluid
-          force-selection
           input-id="top-bar-timer-task"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
           :overlay-class="taskSelectOverlayClass"
           option-label="title"
+          option-value="id"
           :disabled="!props.selectedProjectId || props.isLoadingTasks || props.isConfirmingSelection"
           :loading="props.isLoadingTasks"
-          :min-length="0"
-          :model-value="selectedTaskModel"
+          :options="props.taskOptions"
           placeholder="Select a task"
-          :pt="taskAutoCompletePt"
-          :suggestions="taskSuggestions"
-          @complete="handleTaskComplete"
-          @update:model-value="handleTaskUpdate(($event ?? null) as TaskResponse | string | null)"
+          :pt="taskSelectPt"
         />
       </div>
 

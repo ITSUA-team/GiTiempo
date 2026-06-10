@@ -8,10 +8,9 @@ import { EditFormPanel, projectEditFormSchema } from '@gitiempo/web-shared';
 import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
-import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';
-import { computed, ref } from 'vue';
+import Select from 'primevue/select';
 
 const props = defineProps<{
   project: ProjectResponse;
@@ -32,13 +31,6 @@ const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
-const visibility = ref<ProjectEditFormInput['visibility']>(props.project.visibility);
-const visibilitySuggestions = ref([...visibilityOptions]);
-const selectedVisibilityOption = computed(
-  () =>
-    visibilityOptions.find((option) => option.value === visibility.value) ??
-    visibilityOptions[0],
-);
 
 const initialValues: ProjectEditFormInput = {
   visibility: props.project.visibility,
@@ -58,30 +50,7 @@ function handleSave({
     return;
   }
 
-  emit('save', {
-    ...(values as ProjectEditFormInput),
-    visibility: visibility.value,
-  });
-}
-
-function handleVisibilityComplete(event: { query: string }): void {
-  const normalizedQuery = event.query.trim().toLowerCase();
-
-  visibilitySuggestions.value = normalizedQuery
-    ? visibilityOptions.filter((option) =>
-        option.label.toLowerCase().includes(normalizedQuery),
-      )
-    : [...visibilityOptions];
-}
-
-function handleVisibilityUpdate(
-  value: (typeof visibilityOptions)[number] | string | null,
-): void {
-  if (typeof value === 'string' || value === null) {
-    return;
-  }
-
-  visibility.value = value.value;
+  emit('save', values as ProjectEditFormInput);
 }
 </script>
 
@@ -119,20 +88,14 @@ function handleVisibilityUpdate(
             for="edit-visibility"
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
           >Visibility</label>
-          <AutoComplete
-            input-id="edit-visibility"
-            :model-value="selectedVisibilityOption"
-            :suggestions="visibilitySuggestions"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
-            force-selection
-            :min-length="0"
+          <Select
+            id="edit-visibility"
+            name="visibility"
+            :options="visibilityOptions"
             option-label="label"
+            option-value="value"
             :invalid="$form.visibility?.invalid"
             fluid
-            @complete="handleVisibilityComplete"
-            @update:model-value="handleVisibilityUpdate(($event ?? null) as (typeof visibilityOptions)[number] | string | null)"
           />
         </div>
 

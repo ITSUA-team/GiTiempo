@@ -4,9 +4,10 @@ import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
+import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 
 import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
 
@@ -51,11 +52,10 @@ const emit = defineEmits<{
   "update:taskValue": [value: string | TaskLookupOption | null];
 }>();
 
-const projectSuggestions = ref<ProjectResponse[]>([]);
-const projectModel = computed<ProjectResponse | null>({
-  get: () => props.projects.find((project) => project.id === props.projectId) ?? null,
-  set: (value) => {
-    emit("update:projectId", value?.id ?? null);
+const projectModel = computed({
+  get: () => props.projectId,
+  set: (value: string | null | undefined) => {
+    emit("update:projectId", value ?? null);
   },
 });
 
@@ -96,28 +96,6 @@ const billableModel = computed({
 
 function handleTaskComplete(event: { query: string }): void {
   emit("taskSearch", event.query);
-}
-
-function handleProjectComplete(event: { query: string }): void {
-  const normalizedQuery = event.query.trim().toLowerCase();
-
-  projectSuggestions.value = normalizedQuery
-    ? props.projects.filter((project) =>
-        project.name.toLowerCase().includes(normalizedQuery),
-      )
-    : [...props.projects];
-}
-
-function handleProjectUpdate(value: ProjectResponse | string | null): void {
-  if (typeof value === "string") {
-    if (value.trim().length === 0) {
-      emit("update:projectId", null);
-    }
-
-    return;
-  }
-
-  emit("update:projectId", value?.id ?? null);
 }
 </script>
 
@@ -178,23 +156,18 @@ function handleProjectUpdate(value: ProjectResponse | string | null): void {
         >
           Project
         </label>
-        <AutoComplete
+        <Select
+          v-model="projectModel"
+          filter
           fluid
-          force-selection
           input-id="time-entry-project"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
           option-label="name"
+          option-value="id"
           :disabled="props.isLoadingProjects || props.isSaving"
           :invalid="!!props.errors.projectId"
           :loading="props.isLoadingProjects"
-          :min-length="0"
-          :model-value="projectModel"
-          :suggestions="projectSuggestions"
+          :options="props.projects"
           placeholder="Select a project"
-          @complete="handleProjectComplete"
-          @update:model-value="handleProjectUpdate(($event ?? null) as ProjectResponse | string | null)"
         />
         <small
           v-if="props.errors.projectId"

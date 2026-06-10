@@ -3,6 +3,7 @@ import type { TaskResponse } from "@gitiempo/shared";
 import PrimeVue from "primevue/config";
 import { beforeEach, describe, expect, it } from "vitest";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
+import { ManagementTableRowAction } from "@gitiempo/web-shared";
 
 import ProjectsTaskSection from "./ProjectsTaskSection.vue";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
@@ -12,7 +13,7 @@ describe("ProjectsTaskSection", () => {
     mockMatchMedia();
   });
 
-  it("renders the xnbDf desktop structure and emits add and title-edit events", async () => {
+  it("renders accessible row actions and emits add, edit, and delete events", async () => {
     const task = {
       createdAt: "2026-04-20T12:00:00.000Z",
       id: "task-1",
@@ -26,6 +27,7 @@ describe("ProjectsTaskSection", () => {
     const wrapper = mount(ProjectsTaskSection, {
       props: {
         formatUpdatedLabel: () => "Today, 10:00",
+        isDeletingTaskId: null,
         project: {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
@@ -54,35 +56,31 @@ describe("ProjectsTaskSection", () => {
       },
     });
 
-    const addButton = wrapper.get('[data-testid="project-section-add-task"]');
-    const taskTitle = wrapper.get('[data-testid="project-task-title"]');
+    const editButton = wrapper.get('[data-testid="project-task-edit"]');
+    const deleteButton = wrapper.get('[data-testid="project-task-delete"]');
 
-    expect(addButton.attributes("aria-label")).toBe("Add task");
-    expect(addButton.attributes("data-tooltip")).toBe("Add task");
-    expect(taskTitle.classes()).toContain("text-brand");
-    expect(
-      wrapper
-        .get('[data-testid="project-task-title-arrow"]')
-        .attributes("aria-hidden"),
-    ).toBe("true");
-    expect(
-      wrapper.get('[data-testid="project-task-title-arrow"]').classes(),
-    ).toContain("size-3.5");
-    expect(wrapper.text()).not.toContain("Actions");
-    expect(wrapper.find('[data-testid="project-task-edit"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="project-task-delete"]').exists()).toBe(false);
+    expect(editButton.attributes("aria-label")).toBe("Edit");
+    expect(editButton.attributes("data-tooltip")).toBe("Edit");
+    expect(editButton.text()).toBe("");
+    expect(deleteButton.attributes("aria-label")).toBe("Delete");
+    expect(deleteButton.attributes("data-tooltip")).toBe("Delete");
+    expect(deleteButton.text()).toBe("");
 
-    await taskTitle.trigger("click");
-    await addButton.trigger("click");
+    const rowActions = wrapper.findAllComponents(ManagementTableRowAction);
+
+    rowActions[0]!.vm.$emit("click", new MouseEvent("click"));
+    rowActions[1]!.vm.$emit("click", new MouseEvent("click"));
+    await wrapper.get('[data-testid="project-section-add-task"]').trigger("click");
 
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("1 active task");
     expect(wrapper.findAll('[data-testid="project-task-mobile-card"]').length).toBe(0);
     expect(wrapper.emitted("editTask")?.[0]).toEqual([task]);
+    expect(wrapper.emitted("deleteTask")?.[0]).toEqual([task]);
     expect(wrapper.emitted("addTask")?.[0]).toEqual(["project-1"]);
   });
 
-  it("renders mobile cards with clickable titles on small viewports", async () => {
+  it("renders mobile cards with accessible icon-only actions on small viewports", async () => {
     mockMatchMedia(true);
 
     const tasks: TaskResponse[] = [
@@ -112,6 +110,7 @@ describe("ProjectsTaskSection", () => {
       props: {
         formatUpdatedLabel: (updatedAt: string) =>
           updatedAt === tasks[0].updatedAt ? "Today, 10:00" : "Yesterday, 15:30",
+        isDeletingTaskId: null,
         project: {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
@@ -142,31 +141,30 @@ describe("ProjectsTaskSection", () => {
 
     const mobileCards = wrapper.findAll('[data-testid="project-task-mobile-card"]');
     const mobileTitles = wrapper.findAll('[data-testid="project-task-mobile-title"]');
+    const editButton = wrapper.get('[data-testid="project-task-mobile-edit-task-1"]');
+    const deleteButton = wrapper.get('[data-testid="project-task-mobile-delete-task-1"]');
 
     expect(mobileCards).toHaveLength(2);
     expect(mobileTitles[0]?.classes()).not.toContain('truncate');
     expect(mobileTitles[0]?.classes()).toContain('break-words');
     expect(mobileTitles[0]?.classes()).toContain('whitespace-normal');
-    expect(
-      wrapper
-        .get('[data-testid="project-task-mobile-title-arrow"]')
-        .attributes('aria-hidden'),
-    ).toBe('true');
-    expect(
-      wrapper.get('[data-testid="project-task-mobile-title-arrow"]').classes(),
-    ).toContain('size-3.5');
     expect(mobileCards[0]?.text()).toContain('Improve reports filters');
     expect(mobileCards[0]?.text()).toContain('Open');
     expect(mobileCards[0]?.text()).toContain('Today, 10:00');
     expect(mobileCards[1]?.text()).toContain('Archive launch checklist');
     expect(mobileCards[1]?.text()).toContain('Closed');
     expect(mobileCards[1]?.text()).toContain('Yesterday, 15:30');
-    expect(wrapper.find('[data-testid="project-task-mobile-edit-task-1"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="project-task-mobile-delete-task-1"]').exists()).toBe(false);
+    expect(editButton.attributes('aria-label')).toBe('Edit');
+    expect(editButton.attributes('data-tooltip')).toBe('Edit');
+    expect(editButton.text()).toBe('');
+    expect(deleteButton.attributes('aria-label')).toBe('Delete');
+    expect(deleteButton.attributes('data-tooltip')).toBe('Delete');
 
-    await mobileTitles[0]?.trigger('click');
+    await editButton.trigger('click');
+    await deleteButton.trigger('click');
 
     expect(wrapper.emitted('editTask')?.[0]).toEqual([tasks[0]]);
+    expect(wrapper.emitted('deleteTask')?.[0]).toEqual([tasks[0]]);
   });
 
   it("renders the desktop task table branch with the expected column labels", () => {
@@ -183,6 +181,7 @@ describe("ProjectsTaskSection", () => {
     const wrapper = mount(ProjectsTaskSection, {
       props: {
         formatUpdatedLabel: () => "Today, 10:00",
+        isDeletingTaskId: null,
         project: {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
@@ -215,7 +214,6 @@ describe("ProjectsTaskSection", () => {
     expect(wrapper.text()).toContain("Task");
     expect(wrapper.text()).toContain("Status");
     expect(wrapper.text()).toContain("Updated");
-    expect(wrapper.text()).not.toContain("Actions");
     expect(wrapper.text()).toContain("Improve reports filters");
     expect(wrapper.get('[data-testid="project-task-title"]').classes()).not.toContain(
       "truncate",
@@ -234,6 +232,7 @@ describe("ProjectsTaskSection", () => {
     const wrapper = mount(ProjectsTaskSection, {
       props: {
         formatUpdatedLabel: () => "Today, 10:00",
+        isDeletingTaskId: null,
         project: {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",

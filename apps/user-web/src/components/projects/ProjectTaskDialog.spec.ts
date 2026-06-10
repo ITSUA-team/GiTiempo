@@ -13,7 +13,6 @@ function mountDialog(
         status: null,
         title: null,
       },
-      isDeleting: false,
       isOpen: true,
       isSaving: false,
       mode: "create",
@@ -45,7 +44,7 @@ function mountDialog(
     global: {
       stubs: {
         Button: {
-          props: ["disabled", "label", "loading"],
+          props: ["disabled", "label"],
           emits: ["click"],
           template:
             '<button :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
@@ -61,26 +60,11 @@ function mountDialog(
           template:
             '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
-        AutoComplete: {
-          name: "AutoComplete",
-          props: ["disabled", "inputId", "modelValue", "optionLabel", "suggestions"],
-          emits: ["complete", "update:modelValue"],
-          template: `
-            <div>
-              <input
-                :data-testid="inputId"
-                :disabled="disabled"
-                :value="modelValue?.[optionLabel] ?? ''"
-                @focus="$emit('complete', { query: '' })"
-              />
-              <button
-                v-if="suggestions?.length"
-                :data-testid="inputId + '-select'"
-                type="button"
-                @click="$emit('update:modelValue', suggestions[0])"
-              >Select</button>
-            </div>
-          `,
+        Select: {
+          props: ["disabled", "modelValue", "optionLabel", "optionValue", "options"],
+          emits: ["update:modelValue"],
+          template:
+            '<select :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option[optionValue] ?? option.id" :value="option[optionValue] ?? option.id">{{ option[optionLabel] ?? option.name }}</option></select>',
         },
       },
     },
@@ -90,10 +74,10 @@ function mountDialog(
 describe("ProjectTaskDialog", () => {
   it("renders the create form and emits project and title updates", async () => {
     const wrapper = mountDialog();
-    const input = wrapper.findAll("input")[1]!;
+    const selects = wrapper.findAll("select");
+    const input = wrapper.get("input");
 
-    await wrapper.get('[data-testid="project-task-project"]').trigger("focus");
-    await wrapper.get('[data-testid="project-task-project-select"]').trigger("click");
+    await selects[0]?.setValue("project-1");
     await input.setValue("Write release checklist");
 
     expect(wrapper.emitted("update:projectId")?.[0]).toEqual(["project-1"]);
@@ -103,7 +87,7 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.text()).toContain("Create task");
   });
 
-  it("renders edit mode with a display-only project field and status autocomplete", () => {
+  it("renders edit mode with a display-only project field and status select", () => {
     const wrapper = mountDialog({
       mode: "edit",
       projectId: "project-1",
@@ -113,30 +97,13 @@ describe("ProjectTaskDialog", () => {
       valueTitle: "Improve reports filters",
     });
 
-    const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
+    const selects = wrapper.findAll("select");
     const projectField = wrapper.get('[role="textbox"][aria-readonly="true"]');
 
-    expect(autoCompletes).toHaveLength(1);
+    expect(selects).toHaveLength(1);
     expect(projectField.attributes("aria-labelledby")).toBe("project-task-project-label");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Save changes");
-    expect(wrapper.text()).toContain("Delete");
-  });
-
-  it("emits delete from the edit footer", async () => {
-    const wrapper = mountDialog({
-      mode: "edit",
-      projectId: "project-1",
-      saveLabel: "Save changes",
-      title: "Edit task",
-      valueTitle: "Improve reports filters",
-    });
-
-    const deleteButton = wrapper.findAll("button").find((button) => button.text() === "Delete");
-
-    await deleteButton?.trigger("click");
-
-    expect(wrapper.emitted("delete")?.length).toBeGreaterThan(0);
   });
 
   it("emits close and save actions from the footer buttons", async () => {
@@ -152,15 +119,6 @@ describe("ProjectTaskDialog", () => {
 
   it("keeps the dialog shell non-closable while saving", () => {
     const wrapper = mountDialog({ isSaving: true });
-
-    const dialogShell = wrapper.get("div[data-closable][data-dismissable-mask]");
-
-    expect(dialogShell.attributes("data-closable")).toBe("false");
-    expect(dialogShell.attributes("data-dismissable-mask")).toBe("false");
-  });
-
-  it("keeps the dialog shell non-closable while deleting", () => {
-    const wrapper = mountDialog({ isDeleting: true });
 
     const dialogShell = wrapper.get("div[data-closable][data-dismissable-mask]");
 

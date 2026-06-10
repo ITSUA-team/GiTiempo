@@ -103,9 +103,9 @@ const stubs = {
     template:
       '<select :id="id" :name="name"><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
   },
-  AutoComplete: {
-    props: ['inputId'],
-    template: '<input :id="inputId" />',
+  Select: {
+    props: ['id', 'name'],
+    template: '<select :id="id" :name="name" />',
   },
 };
 

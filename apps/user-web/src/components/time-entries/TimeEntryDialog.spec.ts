@@ -83,35 +83,18 @@ function mountDialog(
             "disabled",
             "completeOnFocus",
             "dropdownMode",
-            "inputId",
             "minLength",
-            "optionLabel",
           ],
           emits: ["complete", "update:modelValue"],
           computed: {
             displayValue(): string {
               return typeof this.modelValue === "string"
                 ? this.modelValue
-                : this.modelValue?.[this.optionLabel] ?? "";
+                : this.modelValue?.title ?? "";
             },
           },
-          template: `
-            <div>
-              <input
-                :data-testid="inputId"
-                :disabled="disabled"
-                :value="displayValue"
-                @focus="$emit('complete', { query: '' })"
-                @input="$emit('update:modelValue', $event.target.value)"
-              />
-              <button
-                v-if="suggestions?.length"
-                :data-testid="inputId + '-select'"
-                type="button"
-                @click="$emit('update:modelValue', suggestions[0])"
-              >Select</button>
-            </div>
-          `,
+          template:
+            '<input :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Button: {
           props: ["disabled", "label"],
@@ -139,6 +122,12 @@ function mountDialog(
         Dialog: {
           template:
             '<div><slot name="header" /><slot /><slot name="footer" /></div>',
+        },
+        Select: {
+          props: ["modelValue", "options", "disabled"],
+          emits: ["update:modelValue"],
+          template:
+            '<select :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name }}</option></select>',
         },
         Textarea: {
           props: ["modelValue", "disabled"],
@@ -192,10 +181,10 @@ describe("TimeEntryDialog", () => {
 
   it("emits project, task, date, description, and billable updates", async () => {
     const wrapper = mountDialog();
+    const inputs = wrapper.findAll("input");
 
-    await wrapper.get('[data-testid="time-entry-project"]').trigger("focus");
-    await wrapper.get('[data-testid="time-entry-project-select"]').trigger("click");
-    await wrapper.get('[data-testid="time-entry-task"]').setValue("Improve reports filters");
+    await wrapper.find("select").setValue("project-1");
+    await inputs[0]?.setValue("Improve reports filters");
     await wrapper.get('[data-testid="time-entry-started-at"]').setValue("2026-04-21T09:15:00.000Z");
     await wrapper.get('[data-testid="time-entry-ended-at"]').setValue("2026-04-21T10:45:00.000Z");
     await wrapper.find('input[type="checkbox"]').setValue(false);
@@ -211,13 +200,11 @@ describe("TimeEntryDialog", () => {
 
   it("configures task lookup to suggest all project tasks on empty input", () => {
     const wrapper = mountDialog();
-    const autoComplete = wrapper
-      .findAllComponents({ name: "AutoComplete" })
-      .find((component) => component.props("inputId") === "time-entry-task");
+    const autoComplete = wrapper.findComponent({ name: "AutoComplete" });
 
-    expect(autoComplete?.props("completeOnFocus")).toBe("");
-    expect(autoComplete?.props("dropdownMode")).toBe("blank");
-    expect(autoComplete?.props("minLength")).toBe(0);
+    expect(autoComplete.props("completeOnFocus")).toBe("");
+    expect(autoComplete.props("dropdownMode")).toBe("blank");
+    expect(autoComplete.props("minLength")).toBe(0);
   });
 
   it("renders validation helper errors and retryable api failures", () => {
@@ -242,11 +229,9 @@ describe("TimeEntryDialog", () => {
   it("emits save and close actions", async () => {
     const wrapper = mountDialog();
     const buttons = wrapper.findAll("button");
-    const cancelButton = buttons.find((button) => button.text() === "Cancel");
-    const saveButton = buttons.find((button) => button.text() === "Save changes");
 
-    await cancelButton?.trigger("click");
-    await saveButton?.trigger("click");
+    await buttons[0]?.trigger("click");
+    await buttons[1]?.trigger("click");
 
     expect(wrapper.emitted("close")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("save")?.length).toBeGreaterThan(0);
