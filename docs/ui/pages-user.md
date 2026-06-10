@@ -50,7 +50,7 @@
 ## Time Entries Page
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, filters, grouped entry cards, and pagination region.
-- Filter bar uses PrimeVue `<DatePicker showIcon>` for the date range, PrimeVue `<AutoComplete dropdown forceSelection>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. The default date range is the user's browser-local current month through today, and date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
+- Filter bar uses PrimeVue `<DatePicker showIcon>` for the date range, PrimeVue `<AutoComplete dropdown forceSelection>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. The date range is empty by default, and user-selected date ranges map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
 - The task lookup placeholder copy is `Search tasks`.
 - The task lookup filters the paginated API result set with backend task-title `search`; suggestions come from the currently loaded filtered entries so hints follow the active date/project/list filters, and a selected concrete task may also apply exact `taskId` filtering.
 - Entries are grouped by the entry started-at day in the user's current browser-local timezone.

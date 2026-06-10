@@ -439,17 +439,15 @@ describe("TimeEntriesView", () => {
 
     expect(client.listVisibleProjects).toHaveBeenCalledWith();
     expect(client.listOwnEntries.mock.calls[0]?.[0]).toEqual({
-      dateFrom: new Date(2026, 3, 1, 0, 0, 0, 0).toISOString(),
-      dateTo: new Date(2026, 3, 22, 0, 0, 0, 0).toISOString(),
+      dateFrom: undefined,
+      dateTo: undefined,
       limit: 20,
       page: 1,
       projectId: undefined,
       search: undefined,
       taskId: undefined,
     });
-    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe(
-      "2026-04-01 - 2026-04-21",
-    );
+    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
       "true",
     );
@@ -828,8 +826,8 @@ describe("TimeEntriesView", () => {
     });
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
     expect(client.listOwnEntries.mock.calls.map((call) => call[0])).toContainEqual({
-      dateFrom: new Date(2026, 3, 1, 0, 0, 0, 0).toISOString(),
-      dateTo: new Date(2026, 3, 22, 0, 0, 0, 0).toISOString(),
+      dateFrom: undefined,
+      dateTo: undefined,
       limit: 20,
       page: 2,
       projectId: undefined,
