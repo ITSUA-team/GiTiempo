@@ -32,12 +32,10 @@
 
 ## Invoices Page
 
-- Invoice list table with status tags.
-- Invoice list table is searchable with placeholder `Search invoices` and uses column filters for invoice id/name, project, amount, and status.
-- An icon-only primary action sits in the invoices table header next to the search control and opens the modal dialog. Use tooltip/accessibility copy `Create invoice`.
-- Invoice id/name is the edit entry point and opens the popup. Do not keep a separate Actions column in the table.
-- The shared invoice dialog uses title `Invoice` for existing rows and covers both create and edit/detail states with fields for project `<AutoComplete dropdown forceSelection>`, date range, hourly rate, discount, and total amount.
-- Status-specific invoice actions live inside the popup instead of the table row, and `Delete invoice` remains inside the dialog for editable invoices.
+- Invoice page UI is deferred until an invoice API/contract exists.
+- Do not expose invoices in authenticated shell navigation, dashboard metrics/activity, or page/table content while the invoice UI is deferred.
+- The protected `/invoices` route may remain as a hidden route-inventory placeholder, but it must not render a temporary invoice table, search control, create action, modal dialog, or fabricated invoice data.
+- When invoice contracts ship, restore the approved invoices page requirements from the design: searchable invoice table, status tags, table-header `Create invoice` action, invoice edit/details dialog, and status-specific invoice actions inside the dialog.
 
 ## Members Page
 

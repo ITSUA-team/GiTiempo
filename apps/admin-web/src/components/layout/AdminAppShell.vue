@@ -3,7 +3,6 @@ import { computed, markRaw, watch } from "vue";
 import {
   ChartBarSquareIcon,
   Cog6ToothIcon,
-  DocumentTextIcon,
   FolderIcon,
   Squares2X2Icon,
   UsersIcon,
@@ -25,7 +24,6 @@ const authStore = useAuthStore();
 const { errorToast } = useToasts();
 const dashboardIcon = markRaw(Squares2X2Icon);
 const reportsIcon = markRaw(ChartBarSquareIcon);
-const invoicesIcon = markRaw(DocumentTextIcon);
 const membersIcon = markRaw(UsersIcon);
 const projectsIcon = markRaw(FolderIcon);
 const settingsIcon = markRaw(Cog6ToothIcon);
@@ -40,7 +38,6 @@ let workspaceNameRequestToken: string | null = null;
 const baseNavItems = [
   { icon: dashboardIcon, label: "Dashboard", name: routeNames.dashboard },
   { icon: reportsIcon, label: "Reports", name: routeNames.reports },
-  { icon: invoicesIcon, label: "Invoices", name: routeNames.invoices },
   { icon: membersIcon, label: "Members", name: routeNames.members },
   { icon: projectsIcon, label: "Projects", name: routeNames.projects },
 ] as const;
