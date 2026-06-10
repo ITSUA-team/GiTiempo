@@ -103,7 +103,6 @@ watch(
       :settings-icon="ADMIN_SETTINGS_ICON"
       :settings-label="ADMIN_SETTINGS_LABEL"
       :settings-to="{ name: routeNames.settings }"
-      :show-display-name="true"
       :show-settings="showSettings"
       :user-initials="authStore.userInitials"
       :workspace-name="authStore.workspaceName"

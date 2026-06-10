@@ -159,9 +159,10 @@ describe("AdminAppShell", () => {
     expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe(
       "Dashboard",
     );
-    expect(wrapper.get('[data-testid="workspace-header-display-name"]').text()).toBe(
-      "Admin User",
+    expect(wrapper.find('[data-testid="workspace-header-display-name"]').exists()).toBe(
+      false,
     );
+    expect(wrapper.text()).not.toContain("Admin User");
     expect(settingsLink.text()).toBe("Settings");
     expect(settingsLink.attributes("href")).toBe("/settings");
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(
