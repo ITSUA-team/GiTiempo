@@ -92,7 +92,7 @@ Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<AutoComplete>`
 - Background: `bg-surface-primary`.
 - Error state: `invalid` prop plus `<small class="text-xs text-destructive">`.
 - Full width: `class="w-full"`.
-- App single-select pickers default to PrimeVue `<AutoComplete dropdown forceSelection>` so users can type to narrow the option list while still choosing one valid value.
+- App form, dialog, and setup-bar single-select controls use standard PrimeVue `<AutoComplete dropdown forceSelection>` predictive inputs unless a page-specific requirement explicitly calls for `<Select>`. Keep table-column filter rows on their documented controls. Do not render design annotations such as `AutoComplete` or `Select` as visible control text.
 
 ```vue
 <div class="flex flex-col gap-1">

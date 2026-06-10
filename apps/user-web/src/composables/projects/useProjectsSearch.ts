@@ -28,12 +28,8 @@ export function useProjectsSearch(
     ANY_PROJECT_UPDATED_FILTER,
   );
   const searchSuggestions = ref<ProjectsSearchSuggestion[]>([]);
-  const statusFilterSuggestions = ref<ProjectStatusFilterOption[]>([
-    ...PROJECT_STATUS_FILTER_OPTIONS,
-  ]);
-  const updatedFilterSuggestions = ref<ProjectUpdatedFilterOption[]>([
-    ...PROJECT_UPDATED_FILTER_OPTIONS,
-  ]);
+  const statusFilterOptions = PROJECT_STATUS_FILTER_OPTIONS;
+  const updatedFilterOptions = PROJECT_UPDATED_FILTER_OPTIONS;
   const searchText = computed(() => {
     if (typeof selectedSearchValue.value === "string") {
       return selectedSearchValue.value;
@@ -55,14 +51,6 @@ export function useProjectsSearch(
     searchSuggestions.value = buildProjectSearchSuggestions(allProjectGroups.value, query);
   }
 
-  function handleStatusFilterComplete(): void {
-    statusFilterSuggestions.value = [...PROJECT_STATUS_FILTER_OPTIONS];
-  }
-
-  function handleUpdatedFilterComplete(): void {
-    updatedFilterSuggestions.value = [...PROJECT_UPDATED_FILTER_OPTIONS];
-  }
-
   function setSearchValue(value: ProjectsSearchSuggestion | string | null): void {
     selectedSearchValue.value = value ?? null;
   }
@@ -70,7 +58,7 @@ export function useProjectsSearch(
   function setStatusFilterValue(
     value: ProjectStatusFilterOption | string | null,
   ): void {
-    selectedStatusFilter.value = resolveSelectOption(
+    selectedStatusFilter.value = resolveFilterOption(
       PROJECT_STATUS_FILTER_OPTIONS,
       value,
       ALL_PROJECT_STATUSES_FILTER,
@@ -80,7 +68,7 @@ export function useProjectsSearch(
   function setUpdatedFilterValue(
     value: ProjectUpdatedFilterOption | string | null,
   ): void {
-    selectedUpdatedFilter.value = resolveSelectOption(
+    selectedUpdatedFilter.value = resolveFilterOption(
       PROJECT_UPDATED_FILTER_OPTIONS,
       value,
       ANY_PROJECT_UPDATED_FILTER,
@@ -90,8 +78,6 @@ export function useProjectsSearch(
   return {
     filteredProjectGroups,
     handleSearchComplete,
-    handleStatusFilterComplete,
-    handleUpdatedFilterComplete,
     searchSuggestions,
     selectedSearchValue,
     selectedStatusFilter,
@@ -99,8 +85,8 @@ export function useProjectsSearch(
     setSearchValue,
     setStatusFilterValue,
     setUpdatedFilterValue,
-    statusFilterSuggestions,
-    updatedFilterSuggestions,
+    statusFilterOptions,
+    updatedFilterOptions,
   };
 }
 
@@ -109,7 +95,7 @@ interface FilterOption {
   value: string;
 }
 
-function resolveSelectOption<Option extends FilterOption>(
+function resolveFilterOption<Option extends FilterOption>(
   options: Option[],
   value: Option | string | null,
   fallback: Option,

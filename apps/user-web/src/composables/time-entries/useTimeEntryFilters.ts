@@ -12,7 +12,7 @@ import {
 export function useTimeEntryFilters() {
   const currentPage = ref(1);
   const pageSize = ref(20);
-  const selectedDateRange = shallowRef<Date[] | null>(null);
+  const selectedDateRange = shallowRef<Date[] | null>(getDefaultDateRange());
   const selectedProjectId = ref<string | null>(null);
   const selectedTaskFilter = shallowRef<TaskLookupValue>(null);
   const filterTaskOptions = ref<TaskLookupOption[]>([]);
@@ -125,4 +125,11 @@ export function useTimeEntryFilters() {
     setTaskValue,
     updateTaskSuggestions,
   };
+}
+
+function getDefaultDateRange(now = new Date()): Date[] {
+  return [
+    new Date(now.getFullYear(), now.getMonth(), 1),
+    new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+  ];
 }

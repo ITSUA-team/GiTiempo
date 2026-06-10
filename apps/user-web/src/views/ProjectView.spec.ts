@@ -165,11 +165,14 @@ async function mountView(client = createClientMock()) {
               <button
                 v-for="option in suggestions"
                 :key="option.value ?? option.id"
+                :data-option-kind="option.kind ?? ''"
                 :data-testid="inputId + '-option-' + (option.value ?? option.id)"
                 type="button"
                 @click="$emit('update:modelValue', option)"
               >
-                {{ option[optionLabel] }}
+                <slot name="option" :option="option">
+                  {{ option[optionLabel] }}
+                </slot>
               </button>
             </div>
           `,
@@ -197,6 +200,26 @@ async function mountView(client = createClientMock()) {
               <button data-testid="dialog-delete" type="button" @click="$emit('delete')">Delete</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
               <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
+            </div>
+          `,
+        },
+        Select: {
+          emits: ["update:modelValue"],
+          props: ["inputId", "modelValue", "optionLabel", "options", "placeholder"],
+          template: `
+            <div v-bind="$attrs">
+              <button :id="inputId" type="button">
+                {{ modelValue?.[optionLabel] ?? placeholder }}
+              </button>
+              <button
+                v-for="option in options"
+                :key="option.value"
+                :data-testid="inputId + '-option-' + option.value"
+                type="button"
+                @click="$emit('update:modelValue', option)"
+              >
+                {{ option[optionLabel] }}
+              </button>
             </div>
           `,
         },
@@ -249,20 +272,18 @@ describe("ProjectView", () => {
     expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(
       true,
     );
-    expect(wrapper.find('input[placeholder="All statuses"]').exists()).toBe(true);
-    expect(wrapper.find('input[placeholder="Any time"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="projects-status-filter"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="projects-updated-filter"]').exists()).toBe(true);
 
     const searchInput = wrapper.get(
       'input[placeholder="Search projects or tasks"]',
     );
-    const statusInput = wrapper.get('input[placeholder="All statuses"]');
-    const updatedInput = wrapper.get('input[placeholder="Any time"]');
 
     expect(searchInput.attributes("data-dropdown")).toBe("true");
-    expect(statusInput.attributes("data-dropdown")).toBe("true");
-    expect(statusInput.attributes("data-force-selection")).toBe("true");
-    expect(updatedInput.attributes("data-dropdown")).toBe("true");
-    expect(updatedInput.attributes("data-force-selection")).toBe("true");
+    expect(searchInput.attributes("data-force-selection")).toBe("false");
+    expect(wrapper.find('input[placeholder="All statuses"]').exists()).toBe(false);
+    expect(wrapper.find('input[placeholder="Any time"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("AutoComplete");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Improve reports filters");
 
@@ -273,6 +294,16 @@ describe("ProjectView", () => {
     expect(wrapper.text()).toContain("Today");
     expect(wrapper.text()).toContain("Last 7 days");
     expect(wrapper.text()).toContain("Older");
+
+    await wrapper.get('[data-testid="projects-search-complete"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-option-kind="project"] span').classes()).toContain(
+      "font-semibold",
+    );
+    expect(wrapper.get('[data-option-kind="task"] span').classes()).toContain(
+      "font-normal",
+    );
 
     await wrapper.get('[data-testid="project-section-add"]').trigger("click");
     await wrapper.get('[data-testid="dialog-close"]').trigger("click");

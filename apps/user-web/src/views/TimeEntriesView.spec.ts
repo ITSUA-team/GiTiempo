@@ -242,17 +242,28 @@ async function mountView(
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
-          props: ["inputId", "suggestions"],
+          props: ["inputId", "optionLabel", "suggestions"],
           template: `
-            <div :data-testid="inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'">
-              <p v-for="suggestion in suggestions" :key="suggestion.id">{{ suggestion.title }}</p>
-              <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
-              <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
-                id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
-                isActive: true,
-                projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
-                title: 'Ship admin polish'
-              })">Select task</button>
+            <div :data-testid="inputId === 'time-entries-project-filter' ? 'project-filter-autocomplete' : inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'">
+              <p v-for="suggestion in suggestions" :key="suggestion.id">
+                {{ suggestion[optionLabel] }}
+              </p>
+              <template v-if="inputId === 'time-entries-project-filter'">
+                <button data-testid="project-filter-search" type="button" @click="$emit('complete', { query: 'Project' })">Search project</button>
+                <button data-testid="project-filter-select" type="button" @click="$emit('update:modelValue', {
+                  id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
+                  name: 'Project Orion'
+                })">Select project</button>
+              </template>
+              <template v-else>
+                <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
+                <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
+                  id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
+                  isActive: true,
+                  projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
+                  title: 'Ship admin polish'
+                })">Select task</button>
+              </template>
             </div>
           `,
         },
@@ -263,13 +274,29 @@ async function mountView(
         },
         DatePicker: {
           emits: ["update:modelValue"],
-          props: ["inputId"],
+          props: ["inputId", "modelValue", "showIcon"],
+          methods: {
+            formatRange(value: Date[] | null | undefined): string {
+              if (!value?.length) {
+                return "";
+              }
+
+              return value
+                .map((date) => [
+                  date.getFullYear(),
+                  String(date.getMonth() + 1).padStart(2, "0"),
+                  String(date.getDate()).padStart(2, "0"),
+                ].join("-"))
+                .join(" - ");
+            },
+          },
           template: `
             <button
               :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
+              :data-show-icon="String(showIcon === true || showIcon === '')"
               type="button"
               @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
-            >Date</button>
+            >{{ formatRange(modelValue) }}</button>
           `,
         },
         Paginator: {
@@ -277,10 +304,6 @@ async function mountView(
           template: '<button data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
         },
         ProgressSpinner: { template: "<div />" },
-        Select: {
-          emits: ["update:modelValue"],
-          template: '<button data-testid="project-filter-select" type="button" @click="$emit(\'update:modelValue\', \'018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002\')">Project</button>',
-        },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
           emits: ["createForDay", "deleteEntry", "editEntry"],
@@ -395,14 +418,20 @@ describe("TimeEntriesView", () => {
 
     expect(client.listVisibleProjects).toHaveBeenCalledWith();
     expect(client.listOwnEntries.mock.calls[0]?.[0]).toEqual({
-      dateFrom: undefined,
-      dateTo: undefined,
+      dateFrom: new Date(2026, 3, 1, 0, 0, 0, 0).toISOString(),
+      dateTo: new Date(2026, 3, 22, 0, 0, 0, 0).toISOString(),
       limit: 20,
       page: 1,
       projectId: undefined,
       search: undefined,
       taskId: undefined,
     });
+    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe(
+      "2026-04-01 - 2026-04-21",
+    );
+    expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
+      "true",
+    );
     expect(wrapper.text()).toContain("Today, Apr 21");
     expect(wrapper.text()).toContain("02:00:05");
 
@@ -700,8 +729,8 @@ describe("TimeEntriesView", () => {
     });
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
     expect(client.listOwnEntries.mock.calls.map((call) => call[0])).toContainEqual({
-      dateFrom: undefined,
-      dateTo: undefined,
+      dateFrom: new Date(2026, 3, 1, 0, 0, 0, 0).toISOString(),
+      dateTo: new Date(2026, 3, 22, 0, 0, 0, 0).toISOString(),
       limit: 20,
       page: 2,
       projectId: undefined,

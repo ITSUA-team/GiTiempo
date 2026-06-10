@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
+import AutoComplete from 'primevue/autocomplete';
 import Select from 'primevue/select';
 
 import type { AdminSettingsFieldErrors } from '@/composables/settings/admin-settings-form';
@@ -44,6 +45,12 @@ const props = defineProps<{
 
 const selectCurrencyOptions = computed(() => [...props.currencyOptions]);
 const selectTimeZoneOptions = computed(() => [...props.timeZoneOptions]);
+const timeZoneSuggestions = ref<SettingsTimeZoneOption[]>([]);
+const selectedTimeZoneOption = computed(
+	() =>
+		selectTimeZoneOptions.value.find((option) => option.value === timeZone.value) ??
+		null,
+);
 
 const futureSettingsSections: FutureSettingsSection[] = [
 	{
@@ -82,6 +89,35 @@ const emit = defineEmits<{
 	cancel: [];
 	save: [];
 }>();
+
+function filterOptions<Option extends { label: string }>(
+	options: Option[],
+	query: string,
+): Option[] {
+	const normalizedQuery = query.trim().toLowerCase();
+
+	if (!normalizedQuery) {
+		return [...options];
+	}
+
+	return options.filter((option) =>
+		option.label.toLowerCase().includes(normalizedQuery),
+	);
+}
+
+function handleTimeZoneComplete(event: { query: string }): void {
+	timeZoneSuggestions.value = filterOptions(selectTimeZoneOptions.value, event.query);
+}
+
+function handleTimeZoneUpdate(value: SettingsTimeZoneOption | string | null): void {
+	if (typeof value === 'string') {
+		return;
+	}
+
+	if (value) {
+		timeZone.value = value.value;
+	}
+}
 </script>
 
 <template>
@@ -187,16 +223,21 @@ const emit = defineEmits<{
             >
               Time zone
             </label>
-            <Select
-              v-model="timeZone"
+            <AutoComplete
               input-id="settings-time-zone"
-              :options="selectTimeZoneOptions"
+              :model-value="selectedTimeZoneOption"
+              :suggestions="timeZoneSuggestions"
+              complete-on-focus
+              dropdown
+              dropdown-mode="blank"
+              force-selection
+              :min-length="0"
               option-label="label"
-              option-value="value"
-              filter
-              filter-placeholder="Search time zones"
               :invalid="!!fieldErrors.timeZone"
               class="h-[38px] w-full"
+              placeholder="Search time zones"
+              @complete="handleTimeZoneComplete"
+              @update:model-value="handleTimeZoneUpdate(($event ?? null) as SettingsTimeZoneOption | string | null)"
             />
             <Message
               v-if="fieldErrors.timeZone"

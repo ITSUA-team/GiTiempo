@@ -61,11 +61,26 @@ function mountDialog(
           template:
             '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
-        Select: {
-          props: ["disabled", "modelValue", "optionLabel", "optionValue", "options"],
-          emits: ["update:modelValue"],
-          template:
-            '<select :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option[optionValue] ?? option.id" :value="option[optionValue] ?? option.id">{{ option[optionLabel] ?? option.name }}</option></select>',
+        AutoComplete: {
+          name: "AutoComplete",
+          props: ["disabled", "inputId", "modelValue", "optionLabel", "suggestions"],
+          emits: ["complete", "update:modelValue"],
+          template: `
+            <div>
+              <input
+                :data-testid="inputId"
+                :disabled="disabled"
+                :value="modelValue?.[optionLabel] ?? ''"
+                @focus="$emit('complete', { query: '' })"
+              />
+              <button
+                v-if="suggestions?.length"
+                :data-testid="inputId + '-select'"
+                type="button"
+                @click="$emit('update:modelValue', suggestions[0])"
+              >Select</button>
+            </div>
+          `,
         },
       },
     },
@@ -75,10 +90,10 @@ function mountDialog(
 describe("ProjectTaskDialog", () => {
   it("renders the create form and emits project and title updates", async () => {
     const wrapper = mountDialog();
-    const selects = wrapper.findAll("select");
-    const input = wrapper.get("input");
+    const input = wrapper.findAll("input")[1]!;
 
-    await selects[0]?.setValue("project-1");
+    await wrapper.get('[data-testid="project-task-project"]').trigger("focus");
+    await wrapper.get('[data-testid="project-task-project-select"]').trigger("click");
     await input.setValue("Write release checklist");
 
     expect(wrapper.emitted("update:projectId")?.[0]).toEqual(["project-1"]);
@@ -88,7 +103,7 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.text()).toContain("Create task");
   });
 
-  it("renders edit mode with a display-only project field and status select", () => {
+  it("renders edit mode with a display-only project field and status autocomplete", () => {
     const wrapper = mountDialog({
       mode: "edit",
       projectId: "project-1",
@@ -98,10 +113,10 @@ describe("ProjectTaskDialog", () => {
       valueTitle: "Improve reports filters",
     });
 
-    const selects = wrapper.findAll("select");
+    const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
     const projectField = wrapper.get('[role="textbox"][aria-readonly="true"]');
 
-    expect(selects).toHaveLength(1);
+    expect(autoCompletes).toHaveLength(1);
     expect(projectField.attributes("aria-labelledby")).toBe("project-task-project-label");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Save changes");
@@ -117,7 +132,9 @@ describe("ProjectTaskDialog", () => {
       valueTitle: "Improve reports filters",
     });
 
-    await wrapper.get("button").trigger("click");
+    const deleteButton = wrapper.findAll("button").find((button) => button.text() === "Delete");
+
+    await deleteButton?.trigger("click");
 
     expect(wrapper.emitted("delete")?.length).toBeGreaterThan(0);
   });

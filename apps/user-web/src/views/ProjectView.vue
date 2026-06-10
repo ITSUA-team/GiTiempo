@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
+import Select from "primevue/select";
 import Skeleton from "primevue/skeleton";
 import { computed } from "vue";
 import { useConfirm } from "primevue/useconfirm";
@@ -90,8 +91,6 @@ const {
 const {
   filteredProjectGroups,
   handleSearchComplete,
-  handleStatusFilterComplete,
-  handleUpdatedFilterComplete,
   searchSuggestions,
   selectedSearchValue,
   selectedStatusFilter,
@@ -99,8 +98,8 @@ const {
   setSearchValue,
   setStatusFilterValue,
   setUpdatedFilterValue,
-  statusFilterSuggestions,
-  updatedFilterSuggestions,
+  statusFilterOptions,
+  updatedFilterOptions,
 } = search;
 const { isDeletingTaskId, isSavingDialog } = mutations;
 const { requestErrorMessage, visibleProjects } = data;
@@ -115,22 +114,6 @@ const isDeletingDialogTask = computed(
   () =>
     editingTask.value !== null && isDeletingTaskId.value === editingTask.value.id,
 );
-const filterAutoCompletePt = {
-  dropdown: {
-    class:
-      "border-divider bg-surface-primary text-brand inline-flex h-[38px] w-[92px] shrink-0 cursor-pointer items-center justify-center rounded-r-[6px] border border-l-0 px-0 text-xs font-medium shadow-none after:content-['AutoComplete']",
-  },
-  dropdownIcon: { class: "hidden size-0", style: "display: none" },
-  option: { class: "min-w-0 border-divider border-t px-3 py-2.5 first:border-t-0" },
-  optionLabel: { class: "truncate" },
-  pcInputText: {
-    root: {
-      class:
-        "border-divider bg-surface-primary text-text-muted h-[38px] min-w-0 flex-1 rounded-l-[6px] border border-r-0 px-3 text-[14px] font-normal shadow-none placeholder:text-text-muted",
-    },
-  },
-  root: { class: "max-w-full min-w-0" },
-} as const;
 async function saveDialog(): Promise<void> {
   const validInput = dialog.validateDialog();
 
@@ -281,10 +264,10 @@ async function retryLoadPage(): Promise<void> {
           <AutoComplete
             data-testid="projects-search-filter"
             input-id="projects-search"
+            class="w-full"
             option-label="label"
             placeholder="Search projects or tasks"
             :model-value="selectedSearchValue"
-            :pt="filterAutoCompletePt"
             :suggestions="searchSuggestions"
             complete-on-focus
             dropdown
@@ -298,7 +281,7 @@ async function retryLoadPage(): Promise<void> {
               <div class="flex flex-col gap-0.5">
                 <span
                   class="text-text-dark text-sm"
-                  :class="slotProps.option.kind === 'project' ? 'font-semibold' : 'font-medium'"
+                  :class="slotProps.option.kind === 'project' ? 'font-semibold' : 'font-normal'"
                 >
                   {{ slotProps.option.label }}
                 </span>
@@ -317,23 +300,16 @@ async function retryLoadPage(): Promise<void> {
           >
             Status
           </label>
-          <AutoComplete
+          <Select
             data-testid="projects-status-filter"
             input-id="projects-status-filter"
+            class="w-full"
             option-label="label"
             placeholder="All statuses"
             :model-value="selectedStatusFilter"
-            :pt="filterAutoCompletePt"
-            :suggestions="statusFilterSuggestions"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
             fluid
-            force-selection
-            :min-length="0"
-            @click="handleStatusFilterComplete()"
-            @complete="handleStatusFilterComplete()"
-            @update:model-value="setStatusFilterValue(($event ?? null) as ProjectStatusFilterOption | string | null)"
+            :options="statusFilterOptions"
+            @update:model-value="setStatusFilterValue(($event ?? null) as ProjectStatusFilterOption | null)"
           />
         </div>
 
@@ -344,23 +320,16 @@ async function retryLoadPage(): Promise<void> {
           >
             Updated
           </label>
-          <AutoComplete
+          <Select
             data-testid="projects-updated-filter"
             input-id="projects-updated-filter"
+            class="w-full"
             option-label="label"
             placeholder="Any time"
             :model-value="selectedUpdatedFilter"
-            :pt="filterAutoCompletePt"
-            :suggestions="updatedFilterSuggestions"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
             fluid
-            force-selection
-            :min-length="0"
-            @click="handleUpdatedFilterComplete()"
-            @complete="handleUpdatedFilterComplete()"
-            @update:model-value="setUpdatedFilterValue(($event ?? null) as ProjectUpdatedFilterOption | string | null)"
+            :options="updatedFilterOptions"
+            @update:model-value="setUpdatedFilterValue(($event ?? null) as ProjectUpdatedFilterOption | null)"
           />
         </div>
       </div>

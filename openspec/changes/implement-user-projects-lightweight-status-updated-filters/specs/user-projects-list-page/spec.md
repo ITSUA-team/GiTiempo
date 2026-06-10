@@ -9,8 +9,8 @@ The Projects list page MUST match the approved user Projects list design and ren
 - **AND** the page renders descriptive copy for managing tasks across visible projects
 - **AND** the header row renders a primary `+ New task` action
 - **AND** the filter row renders a combined PrimeVue AutoComplete search field with placeholder `Search projects or tasks`
-- **AND** the filter row renders a `Status` PrimeVue AutoComplete dropdown with `All statuses`, `Open`, and `Closed` options
-- **AND** the filter row renders an `Updated` PrimeVue AutoComplete dropdown with `Any time`, `Today`, `Last 7 days`, and `Older` options
+- **AND** the filter row renders a `Status` PrimeVue Select with `All statuses`, `Open`, and `Closed` options
+- **AND** the filter row renders an `Updated` PrimeVue Select with `Any time`, `Today`, `Last 7 days`, and `Older` options
 
 #### Scenario: Visible projects render grouped task sections
 - **GIVEN** visible projects and their active tasks load successfully

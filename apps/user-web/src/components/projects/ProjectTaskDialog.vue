@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
-import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps<{
   errors: {
@@ -39,24 +39,20 @@ const statusOptions = [
   { label: "Open", value: "open" },
   { label: "Closed", value: "closed" },
 ] satisfies { label: string; value: TaskStatus }[];
+const projectSuggestions = ref<ProjectResponse[]>([]);
+const statusSuggestions = ref([...statusOptions]);
 
 const selectedProjectName = computed(() => {
   return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
 });
 
-const projectModel = computed({
-  get: () => props.projectId,
-  set: (value: string | null | undefined) => {
-    emit("update:projectId", value ?? null);
-  },
-});
+const projectModel = computed(
+  () => props.projects.find((project) => project.id === props.projectId) ?? null,
+);
 
-const statusModel = computed({
-  get: () => props.status,
-  set: (value: TaskStatus | null | undefined) => {
-    emit("update:status", value ?? "open");
-  },
-});
+const statusModel = computed(
+  () => statusOptions.find((option) => option.value === props.status) ?? statusOptions[0],
+);
 
 const titleModel = computed({
   get: () => props.valueTitle,
@@ -64,6 +60,48 @@ const titleModel = computed({
     emit("update:title", value);
   },
 });
+
+function handleProjectComplete(event: { query: string }): void {
+  const normalizedQuery = event.query.trim().toLowerCase();
+
+  projectSuggestions.value = normalizedQuery
+    ? props.projects.filter((project) =>
+        project.name.toLowerCase().includes(normalizedQuery),
+      )
+    : [...props.projects];
+}
+
+function handleProjectUpdate(value: ProjectResponse | string | null): void {
+  if (typeof value === "string") {
+    if (value.trim().length === 0) {
+      emit("update:projectId", null);
+    }
+
+    return;
+  }
+
+  emit("update:projectId", value?.id ?? null);
+}
+
+function handleStatusComplete(event: { query: string }): void {
+  const normalizedQuery = event.query.trim().toLowerCase();
+
+  statusSuggestions.value = normalizedQuery
+    ? statusOptions.filter((option) =>
+        option.label.toLowerCase().includes(normalizedQuery),
+      )
+    : [...statusOptions];
+}
+
+function handleStatusUpdate(
+  value: (typeof statusOptions)[number] | string | null,
+): void {
+  if (typeof value === "string") {
+    return;
+  }
+
+  emit("update:status", value?.value ?? "open");
+}
 </script>
 
 <template>
@@ -126,18 +164,23 @@ const titleModel = computed({
         >
           {{ selectedProjectName }}
         </div>
-        <Select
+        <AutoComplete
           v-else
-          v-model="projectModel"
-          filter
           fluid
+          force-selection
           input-id="project-task-project"
+          complete-on-focus
+          dropdown
+          dropdown-mode="blank"
           option-label="name"
-          option-value="id"
           placeholder="Select project"
           :disabled="props.isSaving || props.isDeleting"
           :invalid="!!props.errors.projectId"
-          :options="props.projects"
+          :min-length="0"
+          :model-value="projectModel"
+          :suggestions="projectSuggestions"
+          @complete="handleProjectComplete"
+          @update:model-value="handleProjectUpdate(($event ?? null) as ProjectResponse | string | null)"
         />
         <small
           v-if="props.errors.projectId"
@@ -179,15 +222,21 @@ const titleModel = computed({
         >
           Status
         </label>
-        <Select
-          v-model="statusModel"
+        <AutoComplete
           fluid
+          force-selection
           input-id="project-task-status"
+          complete-on-focus
+          dropdown
+          dropdown-mode="blank"
           option-label="label"
-          option-value="value"
           :disabled="props.isSaving || props.isDeleting"
           :invalid="!!props.errors.status"
-          :options="statusOptions"
+          :min-length="0"
+          :model-value="statusModel"
+          :suggestions="statusSuggestions"
+          @complete="handleStatusComplete"
+          @update:model-value="handleStatusUpdate(($event ?? null) as (typeof statusOptions)[number] | string | null)"
         />
         <small
           v-if="props.errors.status"

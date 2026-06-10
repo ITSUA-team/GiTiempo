@@ -10,7 +10,7 @@ Planned file changes are app-local to `apps/user-web`: the Projects route view, 
 
 **Goals:**
 
-- Add `Status` and `Updated` PrimeVue AutoComplete filters to the user Projects page filter row.
+- Add `Status` and `Updated` PrimeVue Select filters to the user Projects page filter row.
 - Keep the combined `Search projects or tasks` filter and its current project-match and task-match semantics.
 - Apply search, status, and updated filters to already loaded visible project/task data on the frontend.
 - Preserve grouped-by-project rendering, project-level `+ Add task`, and page-level task creation entry points.
@@ -35,9 +35,11 @@ Alternative considered: add a second composable only for structured filters. Tha
 
 ### Use Typed Single-Select Option Objects
 
-Represent `Status` and `Updated` values as small typed option objects with stable internal values, labels used by the UI, and default selections for `All statuses` and `Any time`. Render them as PrimeVue `<AutoComplete dropdown forceSelection>` controls so clearing/resetting behaves like the documented predictive single-select pattern.
+Represent `Status` and `Updated` values as small typed option objects with stable internal values, labels used by the UI, and default selections for `All statuses` and `Any time`. Render them as PrimeVue `<Select>` controls because the fixed status and updated buckets are explicit exceptions to the predictive single-select rollout.
 
 Alternative considered: raw string refs. Typed option values make test cases and filter predicates less dependent on display copy while still preserving the required labels.
+
+Alternative considered: PrimeVue `<AutoComplete dropdown forceSelection>`. Rejected for `Status` and `Updated` because these fixed filter buckets should remain compact Select controls per the updated #216 follow-up direction.
 
 ### Apply Search First, Then Structured Task Filters
 
@@ -73,6 +75,6 @@ The loading skeleton should approximate the expanded filter row, and the filtere
 
 - Browser-local date boundaries can be off by one around midnight or timezone changes -> Mitigate with helper tests that stub timezone/current time and cover Today, Last 7 days, and Older.
 - Project-name matches could accidentally bypass status/updated filters -> Mitigate with tests where a project name matches but only some child tasks satisfy the structured filters.
-- PrimeVue AutoComplete can emit strings or option objects depending on input/clear behavior -> Mitigate by normalizing option values in the composable and testing reset/default behavior.
+- PrimeVue Select emits option objects for `Status` and `Updated`, while the combined AutoComplete can emit strings or option objects -> Mitigate by normalizing option values in the composable and testing reset/default behavior.
 - The filter row can become cramped on mobile -> Mitigate with responsive wrapping/stacking that keeps all labels and controls visible while preserving desktop `.pen` parity.
 - Search suggestions may show loaded items that are later hidden by active structured filters -> Accept this because suggestions are defined over loaded visible data, while final rendered rows are defined by the full active filter set.

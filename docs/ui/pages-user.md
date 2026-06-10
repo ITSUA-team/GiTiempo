@@ -50,7 +50,7 @@
 ## Time Entries Page
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, filters, grouped entry cards, and pagination region.
-- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<AutoComplete dropdown forceSelection>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. Date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
+- Filter bar uses PrimeVue `<DatePicker showIcon>` for the date range, PrimeVue `<AutoComplete dropdown forceSelection>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. The default date range is the user's browser-local current month through today, and date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
 - The task lookup placeholder copy is `Search tasks`.
 - The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
 - Entries are grouped by the entry started-at day in the user's current browser-local timezone.
@@ -75,15 +75,15 @@
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, the search row, and grouped project sections.
 - The page uses the same high-level structure as Time Entries: top-bar breadcrumb, grouped content sections, and a card/table shell for each group.
-- A lightweight filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<AutoComplete dropdown forceSelection>` controls.
-- Search suggestions include both project names and task names from the currently loaded visible data set, and project suggestions render their main label in bold so they stand apart from task suggestions.
+- A lightweight filter row above the grouped project sections uses a combined standard PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<Select>` controls.
+- Search suggestions include both project names and task names from the currently loaded visible data set; project suggestions render their main label in bold and task suggestions render regular weight.
 - The combined search and the structured filters operate on already loaded visible projects and tasks on the frontend. Do not document them as backend free-text or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
 - `Status` options are `All statuses`, `Open`, and `Closed`.
 - `Updated` options are `Any time`, `Today`, `Last 7 days`, and `Older`.
 - `Status` and `Updated` filters narrow task rows and only keep project groups that still contain at least one matching task.
-- Clearing the search and resetting the predictive single-selects restores the full grouped project list.
+- Clearing the search and resetting the status and updated selects restores the full grouped project list.
 - Content is grouped by visible project instead of by day.
 - Each project section header shows the project name on the left and a primary icon-only PrimeVue `<Button>` with a `plus` icon on the right. The action uses tooltip/accessibility copy `Add task`.
 - Tasks for that project render beneath the project header inside the same section card.

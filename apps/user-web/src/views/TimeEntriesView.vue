@@ -4,15 +4,14 @@ import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
-import Select from "primevue/select";
-import type { TimeEntryResponse } from "@gitiempo/shared";
+import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
   EntryActionButton,
   SurfaceCard,
 } from "@gitiempo/web-shared";
-import { computed, onBeforeUnmount, onMounted } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { PlusIcon } from "@heroicons/vue/24/outline";
@@ -121,6 +120,28 @@ const {
   visibleProjects,
 } = data;
 const { isDeletingEntry, isSavingDialog } = mutations;
+const projectFilterSuggestions = ref<ProjectResponse[]>([]);
+const selectedProjectFilterOption = computed(
+  () =>
+    visibleProjects.value.find((project) => project.id === selectedProjectId.value) ??
+    null,
+);
+
+function filterProjectOptions(query: string): ProjectResponse[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return [...visibleProjects.value];
+  }
+
+  return visibleProjects.value.filter((project) =>
+    project.name.toLowerCase().includes(normalizedQuery),
+  );
+}
+
+function handleProjectFilterComplete(event: { query: string }): void {
+  projectFilterSuggestions.value = filterProjectOptions(event.query);
+}
 
 async function loadFilterProjectTasks(projectId: string) {
   return taskOptions.loadTargetProjectTaskOptions(projectId, filters);
@@ -157,6 +178,20 @@ async function setSelectedProjectId(projectId: string | null): Promise<void> {
   }
 
   await applyFilters();
+}
+
+async function setSelectedProjectFilterValue(
+  value: ProjectResponse | string | null,
+): Promise<void> {
+  if (typeof value === "string") {
+    if (value.trim().length === 0) {
+      await setSelectedProjectId(null);
+    }
+
+    return;
+  }
+
+  await setSelectedProjectId(value?.id ?? null);
 }
 
 async function setSelectedTaskFilter(value: TaskLookupValue): Promise<void> {
@@ -302,11 +337,13 @@ onBeforeUnmount(() => {
             Date range
           </label>
           <DatePicker
+            date-format="M d, yy"
             input-id="time-entries-date-range"
             :manual-input="false"
             :model-value="selectedDateRange"
             selection-mode="range"
             fluid
+            show-icon
             @update:model-value="(value) => void setDateRange(value as Date[] | null)"
           />
         </div>
@@ -318,19 +355,23 @@ onBeforeUnmount(() => {
           >
             Project
           </label>
-          <Select
+          <AutoComplete
             input-id="time-entries-project-filter"
             option-label="name"
-            option-value="id"
             placeholder="All projects"
+            :suggestions="projectFilterSuggestions"
+            complete-on-focus
             :disabled="isLoadingProjects"
+            dropdown
+            dropdown-mode="blank"
+            force-selection
             :loading="isLoadingProjects"
-            :model-value="selectedProjectId"
-            :options="visibleProjects"
+            :min-length="0"
+            :model-value="selectedProjectFilterOption"
             fluid
-            filter
             show-clear
-            @update:model-value="(value) => void setSelectedProjectId(value ?? null)"
+            @complete="handleProjectFilterComplete"
+            @update:model-value="(value) => void setSelectedProjectFilterValue((value ?? null) as ProjectResponse | string | null)"
           />
         </div>
 

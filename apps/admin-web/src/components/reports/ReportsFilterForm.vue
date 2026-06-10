@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
@@ -11,6 +11,7 @@ import {
 } from '@gitiempo/web-shared';
 import DatePicker from 'primevue/datepicker';
 import Message from 'primevue/message';
+import AutoComplete from 'primevue/autocomplete';
 import Select from 'primevue/select';
 
 import type {
@@ -33,6 +34,10 @@ const groupByOptions: { label: string; value: TimeReportGroupBy }[] = [
   { label: 'Project', value: 'project' },
   { label: 'Member', value: 'user' },
 ];
+type NullableReportFilterOption = ReportFilterOption | {
+  label: string;
+  value: null;
+};
 
 const projectGenerationOptions = computed(() => [
   { label: 'All projects', value: null },
@@ -42,6 +47,18 @@ const memberGenerationOptions = computed(() => [
   { label: 'All assigned members', value: null },
   ...props.memberOptions,
 ]);
+const projectSuggestions = ref<NullableReportFilterOption[]>([]);
+const memberSuggestions = ref<NullableReportFilterOption[]>([]);
+const selectedProjectOption = computed(
+  () =>
+    projectGenerationOptions.value.find((option) => option.value === projectId.value) ??
+    projectGenerationOptions.value[0],
+);
+const selectedMemberOption = computed(
+  () =>
+    memberGenerationOptions.value.find((option) => option.value === memberId.value) ??
+    memberGenerationOptions.value[0],
+);
 
 const initialValues = computed<ReportFilterFormValues>(() => ({
   projectId: projectId.value,
@@ -52,12 +69,57 @@ const initialValues = computed<ReportFilterFormValues>(() => ({
 
 const resolver = zodResolver(reportFilterFormSchema);
 
-function handleProjectUpdate(value: string | null): void {
-  projectId.value = value;
+function filterOptions<Option extends { label: string }>(
+  options: Option[],
+  query: string,
+): Option[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return [...options];
+  }
+
+  return options.filter((option) =>
+    option.label.toLowerCase().includes(normalizedQuery),
+  );
 }
 
-function handleMemberUpdate(value: string | null): void {
-  memberId.value = value;
+function handleProjectComplete(event: { query: string }): void {
+  projectSuggestions.value = filterOptions(
+    projectGenerationOptions.value,
+    event.query,
+  );
+}
+
+function handleMemberComplete(event: { query: string }): void {
+  memberSuggestions.value = filterOptions(
+    memberGenerationOptions.value,
+    event.query,
+  );
+}
+
+function handleProjectUpdate(value: NullableReportFilterOption | string | null): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      projectId.value = null;
+    }
+
+    return;
+  }
+
+  projectId.value = value?.value ?? null;
+}
+
+function handleMemberUpdate(value: NullableReportFilterOption | string | null): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      memberId.value = null;
+    }
+
+    return;
+  }
+
+  memberId.value = value?.value ?? null;
 }
 
 function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
@@ -67,6 +129,19 @@ function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
 function handleGroupByUpdate(value: TimeReportGroupBy): void {
   groupBy.value = value;
 }
+
+const autoCompletePt = {
+  root: {
+    class: 'w-full',
+  },
+  pcInputText: {
+    root: {
+      class:
+        'border-divider bg-surface-primary h-[38px] rounded-[6px] border px-3 text-[14px] font-medium text-text-dark shadow-none',
+    },
+  },
+  dropdown: { class: 'w-9 text-text-muted' },
+} as const;
 
 const selectPt = {
   root: {
@@ -105,16 +180,21 @@ const datePickerPt = {
         for="reports-project"
         class="text-text-dark text-[13px] font-medium"
       >Project</label>
-      <Select
+      <AutoComplete
         input-id="reports-project"
         name="projectId"
-        :model-value="projectId"
-        :options="projectGenerationOptions"
+        :model-value="selectedProjectOption"
+        :suggestions="projectSuggestions"
+        complete-on-focus
+        dropdown
+        dropdown-mode="blank"
+        force-selection
+        :min-length="0"
         option-label="label"
-        option-value="value"
         placeholder="All projects"
         :disabled="disabled"
-        :pt="selectPt"
+        :pt="autoCompletePt"
+        @complete="handleProjectComplete"
         @update:model-value="handleProjectUpdate"
       />
     </div>
@@ -124,16 +204,21 @@ const datePickerPt = {
         for="reports-member"
         class="text-text-dark text-[13px] font-medium"
       >Member</label>
-      <Select
+      <AutoComplete
         input-id="reports-member"
         name="memberId"
-        :model-value="memberId"
-        :options="memberGenerationOptions"
+        :model-value="selectedMemberOption"
+        :suggestions="memberSuggestions"
+        complete-on-focus
+        dropdown
+        dropdown-mode="blank"
+        force-selection
+        :min-length="0"
         option-label="label"
-        option-value="value"
         placeholder="All assigned members"
         :disabled="disabled"
-        :pt="selectPt"
+        :pt="autoCompletePt"
+        @complete="handleMemberComplete"
         @update:model-value="handleMemberUpdate"
       />
     </div>

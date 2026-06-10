@@ -157,13 +157,13 @@ Use a lightweight filter set for the user Projects page.
 - Keep a combined PrimeVue `<AutoComplete>` search field with placeholder copy `Search projects or tasks`.
 - Suggestions include both project names and task names from the currently loaded visible data set.
 - Project suggestions render their main label in bold so they are visually distinct from task suggestions.
-- Add a `Status` PrimeVue `<AutoComplete dropdown forceSelection>` with `All statuses`, `Open`, and `Closed`.
-- Add an `Updated` PrimeVue `<AutoComplete dropdown forceSelection>` with `Any time`, `Today`, `Last 7 days`, and `Older`.
+- Add a `Status` PrimeVue `<Select>` with `All statuses`, `Open`, and `Closed`.
+- Add an `Updated` PrimeVue `<Select>` with `Any time`, `Today`, `Last 7 days`, and `Older`.
 - All filters operate on frontend-visible data only. Do not document them as backend search or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
 - `Status` and `Updated` continue narrowing task rows after the text search is applied and remove project groups that no longer have matching tasks.
-- Clearing the search and resetting the predictive single-selects restores the full grouped list.
+- Clearing the search and resetting the status and updated selects restores the full grouped list.
 
 ## Entry Action Icons
 
