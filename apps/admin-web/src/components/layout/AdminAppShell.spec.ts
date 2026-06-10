@@ -170,7 +170,7 @@ describe("AdminAppShell", () => {
     );
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(false);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
-    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
     expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Settings"]')).toHaveLength(0);
