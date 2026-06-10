@@ -86,6 +86,7 @@ const MembersTableStub = {
   emits: [
     'assign-member',
     'edit-member',
+    'invite-member',
     'remove-member',
     'update:expandedRows',
     'update:filters',
@@ -118,6 +119,10 @@ const MembersTableStub = {
         v-if="rows[0]"
         data-testid="member-remove-intent"
         @click="$emit('remove-member', rows[0].member)"
+      />
+      <button
+        data-testid="member-invite-intent"
+        @click="$emit('invite-member')"
       />
       <button
         data-testid="member-filter-intent"
@@ -163,7 +168,7 @@ const MemberInviteDialogStub = {
   props: {
     visible: { type: Boolean, default: false },
   },
-  template: '<div data-testid="member-invite-dialog" />',
+  template: '<div data-testid="member-invite-dialog">visible={{ visible }}</div>',
 };
 
 const PendingInvitationsCardStub = {
@@ -356,7 +361,6 @@ describe('MembersView', () => {
 
     expect(wrapper.findAll('[data-testid="skeleton"]')).toHaveLength(0);
     expect(wrapper.text()).toContain('Members');
-    expect(wrapper.text()).toContain('Invite Member');
     expect(wrapper.text()).toContain('Active Members');
     expect(wrapper.text()).toContain('Pending Invites');
     expect(wrapper.text()).toContain('PMs Assigned');
@@ -365,6 +369,15 @@ describe('MembersView', () => {
     );
     expect(wrapper.get('[data-testid="pending-invitations-card"]').text()).toContain(
       '1 invites | loading=false | error=none',
+    );
+    expect(wrapper.get('[data-testid="member-invite-dialog"]').text()).toContain(
+      'visible=false',
+    );
+
+    await wrapper.get('[data-testid="member-invite-intent"]').trigger('click');
+
+    expect(wrapper.get('[data-testid="member-invite-dialog"]').text()).toContain(
+      'visible=true',
     );
     expect(testMocks.errorToast).not.toHaveBeenCalled();
   });

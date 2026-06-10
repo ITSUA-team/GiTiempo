@@ -58,7 +58,7 @@ describe("ProjectsTaskSection", () => {
     const taskTitle = wrapper.get('[data-testid="project-task-title"]');
 
     expect(addButton.attributes("aria-label")).toBe("Add task");
-    expect(addButton.attributes("title")).toBe("Add task");
+    expect(addButton.attributes("data-tooltip")).toBe("Add task");
     expect(taskTitle.classes()).toContain("text-brand");
     expect(
       wrapper

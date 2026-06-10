@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ArrowUpRightIcon } from "@heroicons/vue/24/outline";
-import Button from "primevue/button";
+import { ArrowUpRightIcon, PlusIcon } from "@heroicons/vue/24/outline";
 import Column from "primevue/column";
 import Tag from "primevue/tag";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import {
+  EntryActionButton,
   ManagementTableEmptyState,
   ManagementTableShell,
   MobileRecordCard,
@@ -68,13 +68,10 @@ function getStatusPt(task: TaskResponse) {
         </p>
       </div>
 
-      <Button
+      <EntryActionButton
         data-testid="project-section-add-task"
-        type="button"
-        aria-label="Add task"
-        class="h-[38px] w-[38px] rounded-[6px] p-0"
-        icon="pi pi-plus"
-        title="Add task"
+        :icon="PlusIcon"
+        label="Add task"
         @click="emit('addTask', props.project.id)"
       />
     </div>

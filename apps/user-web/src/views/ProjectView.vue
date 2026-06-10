@@ -11,6 +11,7 @@ import {
   SurfaceCard,
 } from "@gitiempo/web-shared";
 
+import PageHeader from "@/components/layout/PageHeader.vue";
 import ProjectTaskDialog from "@/components/projects/ProjectTaskDialog.vue";
 import ProjectsTaskSection from "@/components/projects/ProjectsTaskSection.vue";
 import { useProjectsData } from "@/composables/projects/useProjectsData";
@@ -110,14 +111,9 @@ const pageState = computed(() =>
     isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
   }),
 );
-const canCreateTasks = computed(
-  () =>
-    data.visibleProjects.value.length > 0 &&
-    !data.isLoadingProjects.value &&
-    !data.isLoadingTasks.value,
-);
 const isDeletingDialogTask = computed(
-  () => editingTask.value !== null && isDeletingTaskId.value === editingTask.value.id,
+  () =>
+    editingTask.value !== null && isDeletingTaskId.value === editingTask.value.id,
 );
 const filterAutoCompletePt = {
   dropdown: {
@@ -135,7 +131,6 @@ const filterAutoCompletePt = {
   },
   root: { class: "max-w-full min-w-0" },
 } as const;
-
 async function saveDialog(): Promise<void> {
   const validInput = dialog.validateDialog();
 
@@ -184,20 +179,14 @@ async function retryLoadPage(): Promise<void> {
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
     <template v-if="pageState === 'loading'">
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex flex-col gap-2">
-          <Skeleton
-            width="8rem"
-            height="1.5rem"
-          />
-          <Skeleton
-            width="18rem"
-            height="1rem"
-          />
-        </div>
+      <div class="flex flex-col gap-2">
         <Skeleton
-          width="7.5rem"
-          height="2.5rem"
+          width="8rem"
+          height="1.5rem"
+        />
+        <Skeleton
+          width="18rem"
+          height="1rem"
         />
       </div>
 
@@ -273,6 +262,11 @@ async function retryLoadPage(): Promise<void> {
     </template>
 
     <template v-else>
+      <PageHeader
+        subtitle="Create, update, and organize tasks across your visible projects."
+        title="Projects"
+      />
+
       <div
         class="flex flex-col gap-3 sm:flex-row sm:flex-wrap"
         data-testid="projects-filters"
@@ -404,14 +398,9 @@ async function retryLoadPage(): Promise<void> {
             No projects or tasks match this view
           </h2>
           <p class="text-text-muted text-sm">
-            Clear the filters or create a new task in one of your visible projects.
+            Clear the filters to restore visible project sections.
           </p>
         </div>
-        <Button
-          label="+ New task"
-          :disabled="!canCreateTasks"
-          @click="openCreateDialog()"
-        />
       </SurfaceCard>
 
       <div

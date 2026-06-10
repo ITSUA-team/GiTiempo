@@ -228,7 +228,7 @@ describe("ProjectView", () => {
     primeVueMocks.toastAdd.mockClear();
   });
 
-  it("renders lightweight filters, grouped sections, and task actions", async () => {
+  it("renders the header, lightweight filters, grouped sections, and task actions", async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValueOnce([
@@ -242,7 +242,8 @@ describe("ProjectView", () => {
 
     await flushPromises();
 
-    expect(wrapper.text()).not.toContain(
+    expect(wrapper.text()).toContain("Projects");
+    expect(wrapper.text()).toContain(
       "Create, update, and organize tasks across your visible projects.",
     );
     expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(

@@ -2,6 +2,7 @@ export * from "./auth";
 export * from "./browser-history";
 export * from "./feedback";
 export * from "./components";
+export { default as EntryActionButton } from "./components/EntryActionButton.vue";
 export * from "./query";
 export * from "./router";
 export * from "./session-storage";

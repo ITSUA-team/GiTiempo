@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
-import Button from "primevue/button";
+import { PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import Column from "primevue/column";
 
 import type { TimeEntryResponse } from "@gitiempo/shared";
 import {
+  EntryActionButton,
   ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
@@ -56,11 +56,10 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
       <h2 class="text-text-dark text-base font-semibold">
         {{ props.group.heading }}
       </h2>
-      <Button
+      <EntryActionButton
         :data-testid="`time-entries-day-create-${props.group.dateKey}`"
-        label="+ New time entry"
-        severity="secondary"
-        variant="outlined"
+        :icon="PlusIcon"
+        label="New time entry"
         @click="emit('createForDay', props.group.dateKey)"
       />
     </div>
