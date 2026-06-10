@@ -17,7 +17,6 @@ import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { PlusIcon } from "@heroicons/vue/24/outline";
 
-import PageHeader from "@/components/layout/PageHeader.vue";
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
 import type { TaskLookupValue } from "@/composables/time-entries/time-entry-task-lookup";
@@ -275,20 +274,6 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <PageHeader
-      subtitle="Review tracked time, add manual entries, and edit entries in a shared dialog."
-      title="Time Entries"
-    >
-      <template #actions>
-        <EntryActionButton
-          data-testid="time-entries-header-create"
-          :icon="PlusIcon"
-          label="New time entry"
-          @click="void openCreateDialog()"
-        />
-      </template>
-    </PageHeader>
-
     <SurfaceCard
       body-class="flex flex-col gap-3"
       padding-class="p-4"
