@@ -34,30 +34,16 @@ const groupByOptions: { label: string; value: TimeReportGroupBy }[] = [
   { label: 'Project', value: 'project' },
   { label: 'Member', value: 'user' },
 ];
-type NullableReportFilterOption = ReportFilterOption | {
-  label: string;
-  value: null;
-};
 
-const projectGenerationOptions = computed(() => [
-  { label: 'All projects', value: null },
-  ...props.projectOptions,
-]);
-const memberGenerationOptions = computed(() => [
-  { label: 'All assigned members', value: null },
-  ...props.memberOptions,
-]);
-const projectSuggestions = ref<NullableReportFilterOption[]>([]);
-const memberSuggestions = ref<NullableReportFilterOption[]>([]);
+const projectSuggestions = ref<ReportFilterOption[]>([]);
+const memberSuggestions = ref<ReportFilterOption[]>([]);
 const selectedProjectOption = computed(
   () =>
-    projectGenerationOptions.value.find((option) => option.value === projectId.value) ??
-    projectGenerationOptions.value[0],
+    props.projectOptions.find((option) => option.value === projectId.value) ?? null,
 );
 const selectedMemberOption = computed(
   () =>
-    memberGenerationOptions.value.find((option) => option.value === memberId.value) ??
-    memberGenerationOptions.value[0],
+    props.memberOptions.find((option) => option.value === memberId.value) ?? null,
 );
 
 const initialValues = computed<ReportFilterFormValues>(() => ({
@@ -86,19 +72,19 @@ function filterOptions<Option extends { label: string }>(
 
 function handleProjectComplete(event: { query: string }): void {
   projectSuggestions.value = filterOptions(
-    projectGenerationOptions.value,
+    props.projectOptions,
     event.query,
   );
 }
 
 function handleMemberComplete(event: { query: string }): void {
   memberSuggestions.value = filterOptions(
-    memberGenerationOptions.value,
+    props.memberOptions,
     event.query,
   );
 }
 
-function handleProjectUpdate(value: NullableReportFilterOption | string | null): void {
+function handleProjectUpdate(value: ReportFilterOption | string | null): void {
   if (typeof value === 'string') {
     if (value.trim().length === 0) {
       projectId.value = null;
@@ -110,7 +96,7 @@ function handleProjectUpdate(value: NullableReportFilterOption | string | null):
   projectId.value = value?.value ?? null;
 }
 
-function handleMemberUpdate(value: NullableReportFilterOption | string | null): void {
+function handleMemberUpdate(value: ReportFilterOption | string | null): void {
   if (typeof value === 'string') {
     if (value.trim().length === 0) {
       memberId.value = null;
@@ -192,6 +178,7 @@ const datePickerPt = {
         :min-length="0"
         option-label="label"
         placeholder="All projects"
+        show-clear
         :disabled="disabled"
         :pt="autoCompletePt"
         @complete="handleProjectComplete"
@@ -216,6 +203,7 @@ const datePickerPt = {
         :min-length="0"
         option-label="label"
         placeholder="All assigned members"
+        show-clear
         :disabled="disabled"
         :pt="autoCompletePt"
         @complete="handleMemberComplete"

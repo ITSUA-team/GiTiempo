@@ -15,6 +15,7 @@ export {
   getManagementTableActionIconClass,
   getManagementTableActionRootClass,
   managementTableColumnPt,
+  managementTableFilterAutoCompletePt,
   managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,

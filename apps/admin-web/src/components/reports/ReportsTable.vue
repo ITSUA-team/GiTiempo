@@ -1,19 +1,21 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import {
   EmptyStateBlock,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
   managementTableColumnPt,
+  managementTableFilterAutoCompletePt,
   managementTableFilterSelectPt,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
+import AutoComplete from 'primevue/autocomplete';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
-import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
@@ -26,7 +28,11 @@ import {
   type ReportTableFilters,
 } from '@/lib/report-view-model';
 
-defineProps<{
+interface AutoCompleteCompleteEvent {
+  query: string;
+}
+
+const props = defineProps<{
   loading: boolean;
   memberOptions: ReportFilterOption[];
   projectOptions: ReportFilterOption[];
@@ -35,6 +41,29 @@ defineProps<{
 
 const filters = defineModel<ReportTableFilters>('filters', { required: true });
 const isMobileViewport = useIsMobileViewport();
+const globalSearchSuggestions = ref<string[]>([]);
+const projectFilterSuggestions = ref<ReportFilterOption[]>([]);
+const memberFilterSuggestions = ref<ReportFilterOption[]>([]);
+
+const globalSearchOptions = computed(() => {
+  const labels = props.rows.flatMap((row) => [row.projectName, row.memberName]);
+
+  return [...new Set(labels)].sort((a, b) => a.localeCompare(b));
+});
+
+const selectedProjectFilterOption = computed(
+  () =>
+    props.projectOptions.find(
+      (option) => option.value === filters.value.projectId,
+    ) ?? null,
+);
+
+const selectedMemberFilterOption = computed(
+  () =>
+    props.memberOptions.find(
+      (option) => option.value === filters.value.memberId,
+    ) ?? null,
+);
 
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
@@ -56,6 +85,92 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
   { label: 'Non-billable', value: 'withoutBillable' },
 ];
 
+function filterLabels(options: string[], query: string): string[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return [...options];
+  }
+
+  return options.filter((option) => option.toLowerCase().includes(normalizedQuery));
+}
+
+function filterOptions<Option extends { label: string }>(
+  options: Option[],
+  query: string,
+): Option[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return [...options];
+  }
+
+  return options.filter((option) =>
+    option.label.toLowerCase().includes(normalizedQuery),
+  );
+}
+
+function handleGlobalSearchComplete(event: AutoCompleteCompleteEvent): void {
+  globalSearchSuggestions.value = filterLabels(
+    globalSearchOptions.value,
+    event.query,
+  );
+}
+
+function handleGlobalSearchUpdate(value: string | null | undefined): void {
+  filters.value.global = value ?? '';
+}
+
+function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
+  projectFilterSuggestions.value = filterOptions(
+    props.projectOptions,
+    event.query,
+  );
+}
+
+function handleProjectFilterUpdate(
+  value: ReportFilterOption | string | null,
+): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      filters.value.projectId = null;
+    }
+
+    return;
+  }
+
+  filters.value.projectId = value?.value ?? null;
+}
+
+function handleMemberFilterComplete(event: AutoCompleteCompleteEvent): void {
+  memberFilterSuggestions.value = filterOptions(
+    props.memberOptions,
+    event.query,
+  );
+}
+
+function handleMemberFilterUpdate(
+  value: ReportFilterOption | string | null,
+): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      filters.value.memberId = null;
+    }
+
+    return;
+  }
+
+  filters.value.memberId = value?.value ?? null;
+}
+
+const searchAutoCompletePt = {
+  root: { class: 'h-[38px] w-full' },
+  pcInputText: {
+    root: { class: 'h-[38px] w-full rounded-[6px] pl-9 text-[14px]' },
+  },
+  dropdown: { class: 'h-[38px] w-9 text-text-muted' },
+  option: { class: 'text-[13px]' },
+} as const;
 </script>
 
 <template>
@@ -65,11 +180,18 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
         <template #actions>
           <IconField class="w-full sm:w-[280px]">
             <InputIcon class="pi pi-search text-text-muted" />
-            <InputText
-              v-model="filters.global"
+            <AutoComplete
+              :model-value="filters.global"
+              :suggestions="globalSearchSuggestions"
               aria-label="Search report rows"
-              class="h-[38px] w-full rounded-[6px] text-[14px]"
+              complete-on-focus
+              dropdown
+              dropdown-mode="blank"
+              :min-length="0"
               placeholder="Search report rows"
+              :pt="searchAutoCompletePt"
+              @complete="handleGlobalSearchComplete"
+              @update:model-value="handleGlobalSearchUpdate"
             />
           </IconField>
         </template>
@@ -83,15 +205,21 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
             for="mobile-report-project-filter"
             class="text-text-muted text-[12px] font-medium"
           >Project</label>
-          <Select
-            id="mobile-report-project-filter"
-            v-model="filters.projectId"
-            :options="projectOptions"
+          <AutoComplete
+            input-id="mobile-report-project-filter"
+            :model-value="selectedProjectFilterOption"
+            :suggestions="projectFilterSuggestions"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            force-selection
+            :min-length="0"
             option-label="label"
-            option-value="value"
             placeholder="All projects"
             show-clear
-            :pt="managementTableFilterSelectPt"
+            :pt="managementTableFilterAutoCompletePt"
+            @complete="handleProjectFilterComplete"
+            @update:model-value="handleProjectFilterUpdate"
           />
         </div>
 
@@ -100,15 +228,21 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
             for="mobile-report-member-filter"
             class="text-text-muted text-[12px] font-medium"
           >Member</label>
-          <Select
-            id="mobile-report-member-filter"
-            v-model="filters.memberId"
-            :options="memberOptions"
+          <AutoComplete
+            input-id="mobile-report-member-filter"
+            :model-value="selectedMemberFilterOption"
+            :suggestions="memberFilterSuggestions"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            force-selection
+            :min-length="0"
             option-label="label"
-            option-value="value"
             placeholder="All members"
             show-clear
-            :pt="managementTableFilterSelectPt"
+            :pt="managementTableFilterAutoCompletePt"
+            @complete="handleMemberFilterComplete"
+            @update:model-value="handleMemberFilterUpdate"
           />
         </div>
 
@@ -240,28 +374,40 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
       <template #filters>
         <div class="flex min-w-[720px] flex-1 items-center">
           <div class="min-w-0 flex-1 px-3">
-            <Select
-              v-model="filters.projectId"
-              :options="projectOptions"
+            <AutoComplete
+              :model-value="selectedProjectFilterOption"
+              :suggestions="projectFilterSuggestions"
               aria-label="Filter report rows by project"
+              complete-on-focus
+              dropdown
+              dropdown-mode="blank"
+              force-selection
+              :min-length="0"
               option-label="label"
-              option-value="value"
               placeholder="All projects"
               show-clear
-              :pt="managementTableFilterSelectPt"
+              :pt="managementTableFilterAutoCompletePt"
+              @complete="handleProjectFilterComplete"
+              @update:model-value="handleProjectFilterUpdate"
             />
           </div>
 
           <div class="w-[180px] px-3">
-            <Select
-              v-model="filters.memberId"
-              :options="memberOptions"
+            <AutoComplete
+              :model-value="selectedMemberFilterOption"
+              :suggestions="memberFilterSuggestions"
               aria-label="Filter report rows by member"
+              complete-on-focus
+              dropdown
+              dropdown-mode="blank"
+              force-selection
+              :min-length="0"
               option-label="label"
-              option-value="value"
               placeholder="All members"
               show-clear
-              :pt="managementTableFilterSelectPt"
+              :pt="managementTableFilterAutoCompletePt"
+              @complete="handleMemberFilterComplete"
+              @update:model-value="handleMemberFilterUpdate"
             />
           </div>
 

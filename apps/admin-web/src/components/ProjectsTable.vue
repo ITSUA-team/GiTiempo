@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
@@ -8,16 +9,15 @@ import {
   MobileRecordCard,
   SectionHeader,
   managementTableColumnPt,
-  managementTableFilterInputClass,
-  managementTableFilterMultiSelectPt,
+  managementTableFilterAutoCompletePt,
   managementTableFilterSelectPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
+import AutoComplete from 'primevue/autocomplete';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
-import MultiSelect from 'primevue/multiselect';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
@@ -32,7 +32,11 @@ import type {
   ProjectsTableRow,
 } from '@/lib/projects-table';
 
-defineProps<{
+interface AutoCompleteCompleteEvent {
+  query: string;
+}
+
+const props = defineProps<{
   emptyDescription: string;
   expandedRows: ProjectsTableExpandedRows;
   filters: ProjectsTableFilters;
@@ -44,6 +48,59 @@ defineProps<{
   sourceFilterOptions: ProjectsTableFilterOption<ProjectResponse['source']>[];
   visibilityFilterOptions: ProjectsTableFilterOption<ProjectResponse['visibility']>[];
 }>();
+
+const projectQuerySuggestions = ref<string[]>([]);
+const memberFilterSuggestions = ref<ProjectsTableFilterOption[]>([]);
+
+const projectQueryOptions = computed(() =>
+  [...new Set(props.rows.map((row) => row.name))].sort((a, b) => a.localeCompare(b)),
+);
+
+const selectedMemberFilterOption = computed(
+  () =>
+    props.memberFilterOptions.find(
+      (option) => option.value === props.filters.memberIds[0],
+    ) ?? null,
+);
+
+function filterSuggestions(options: string[], query: string): string[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return [...options];
+  }
+
+  return options.filter((option) => option.toLowerCase().includes(normalizedQuery));
+}
+
+function filterOptions<Option extends { label: string }>(
+  options: Option[],
+  query: string,
+): Option[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return [...options];
+  }
+
+  return options.filter((option) =>
+    option.label.toLowerCase().includes(normalizedQuery),
+  );
+}
+
+function handleProjectQueryComplete(event: AutoCompleteCompleteEvent): void {
+  projectQuerySuggestions.value = filterSuggestions(
+    projectQueryOptions.value,
+    event.query,
+  );
+}
+
+function handleMemberFilterComplete(event: AutoCompleteCompleteEvent): void {
+  memberFilterSuggestions.value = filterOptions(
+    props.memberFilterOptions,
+    event.query,
+  );
+}
 
 const emit = defineEmits<{
   'edit-project': [project: ProjectResponse];
@@ -60,12 +117,24 @@ function updateGlobalFilter(value: string | undefined): void {
   updateFilters({ global: value });
 }
 
-function updateProjectQueryFilter(value: string | undefined): void {
-  updateFilters({ projectQuery: value });
+function updateProjectQueryFilter(value: string | null | undefined): void {
+  updateFilters({ projectQuery: value ?? '' });
 }
 
 function updateMemberIdsFilter(value: string[] | undefined): void {
   updateFilters({ memberIds: value });
+}
+
+function updateMemberFilter(value: ProjectsTableFilterOption | string | null): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      updateMemberIdsFilter([]);
+    }
+
+    return;
+  }
+
+  updateMemberIdsFilter(value?.value ? [value.value] : []);
 }
 
 function updateSourceFilter(
@@ -132,11 +201,17 @@ const columns: ManagementTableColumn[] = [
         for="mobile-project-name-filter"
         class="text-text-muted text-[12px] font-medium"
       >Project</label>
-      <InputText
-        id="mobile-project-name-filter"
+      <AutoComplete
+        input-id="mobile-project-name-filter"
         :model-value="filters.projectQuery"
-        class="h-[38px] w-full rounded-[6px] text-[14px]"
+        :suggestions="projectQuerySuggestions"
+        complete-on-focus
+        dropdown
+        dropdown-mode="blank"
+        :min-length="0"
         placeholder="Filter project"
+        :pt="managementTableFilterAutoCompletePt"
+        @complete="handleProjectQueryComplete"
         @update:model-value="updateProjectQueryFilter"
       />
     </div>
@@ -201,20 +276,21 @@ const columns: ManagementTableColumn[] = [
           for="mobile-project-members-filter"
           class="text-text-muted text-[12px] font-medium"
         >Assigned members</label>
-        <MultiSelect
-          id="mobile-project-members-filter"
-          :model-value="filters.memberIds"
-          :options="memberFilterOptions"
-          display="chip"
-          filter
+        <AutoComplete
+          input-id="mobile-project-members-filter"
+          :model-value="selectedMemberFilterOption"
+          :suggestions="memberFilterSuggestions"
+          complete-on-focus
+          dropdown
+          dropdown-mode="blank"
+          force-selection
+          :min-length="0"
           option-label="label"
-          option-value="value"
           placeholder="All members"
           show-clear
-          :max-selected-labels="1"
-          selected-items-label="{0} members"
-          :pt="managementTableFilterMultiSelectPt"
-          @update:model-value="updateMemberIdsFilter"
+          :pt="managementTableFilterAutoCompletePt"
+          @complete="handleMemberFilterComplete"
+          @update:model-value="updateMemberFilter"
         />
       </div>
     </div>
@@ -360,11 +436,17 @@ const columns: ManagementTableColumn[] = [
     <template #filters>
       <div class="flex min-w-[860px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
-          <InputText
+          <AutoComplete
             :model-value="filters.projectQuery"
+            :suggestions="projectQuerySuggestions"
             aria-label="Filter projects by name"
-            :class="managementTableFilterInputClass"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            :min-length="0"
             placeholder="Filter project"
+            :pt="managementTableFilterAutoCompletePt"
+            @complete="handleProjectQueryComplete"
             @update:model-value="updateProjectQueryFilter"
           />
         </div>
@@ -384,20 +466,21 @@ const columns: ManagementTableColumn[] = [
         </div>
 
         <div class="w-[220px] px-3">
-          <MultiSelect
-            :model-value="filters.memberIds"
-            :options="memberFilterOptions"
+          <AutoComplete
+            :model-value="selectedMemberFilterOption"
+            :suggestions="memberFilterSuggestions"
             aria-label="Filter projects by assigned members"
-            display="chip"
-            filter
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            force-selection
+            :min-length="0"
             option-label="label"
-            option-value="value"
             placeholder="All members"
             show-clear
-            :max-selected-labels="1"
-            selected-items-label="{0} members"
-            :pt="managementTableFilterMultiSelectPt"
-            @update:model-value="updateMemberIdsFilter"
+            :pt="managementTableFilterAutoCompletePt"
+            @complete="handleMemberFilterComplete"
+            @update:model-value="updateMemberFilter"
           />
         </div>
 
