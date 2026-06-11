@@ -60,6 +60,7 @@ function createTask(
 ): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
+    githubIssue: null,
     id,
     isActive: true,
     projectId,

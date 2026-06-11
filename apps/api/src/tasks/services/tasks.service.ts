@@ -17,10 +17,15 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
+import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { tasks } from '../schemas/tasks.schema';
 
 export type TaskRow = typeof tasks.$inferSelect;
 type QueryExecutor = Pick<DrizzleDB, 'select' | 'update'>;
+
+interface TaskResponseRow extends TaskRow {
+  githubIssueExternalKey: string | null;
+}
 
 @Injectable()
 export class TasksService {
@@ -39,8 +44,18 @@ export class TasksService {
     }
 
     const rows = await this.db
-      .select()
+      .select(this.taskResponseSelection())
       .from(tasks)
+      .leftJoin(
+        taskExternalRefs,
+        and(
+          eq(taskExternalRefs.workspaceId, user.workspaceId),
+          eq(taskExternalRefs.projectId, project.id),
+          eq(taskExternalRefs.taskId, tasks.id),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+        ),
+      )
       .where(
         and(
           eq(tasks.workspaceId, user.workspaceId),
@@ -71,12 +86,16 @@ export class TasksService {
       })
       .returning();
     if (!row) throw new Error('Failed to create task');
-    return this.toResponse(row);
+    return this.toResponse(row, null);
   }
 
   async getTask(user: AuthUser, taskId: string): Promise<TaskResponse> {
     const { task } = await this.requireVisibleTask(user, taskId);
-    return this.toResponse(task);
+    const githubIssueExternalKey = await this.findGitHubIssueExternalKey(
+      user.workspaceId,
+      task.id,
+    );
+    return this.toResponse(task, githubIssueExternalKey);
   }
 
   async updateTask(
@@ -124,7 +143,11 @@ export class TasksService {
         return updated;
       });
 
-      return this.toResponse(row);
+      const githubIssueExternalKey = await this.findGitHubIssueExternalKey(
+        user.workspaceId,
+        row.id,
+      );
+      return this.toResponse(row, githubIssueExternalKey);
     }
 
     const [row] = await this.db
@@ -134,7 +157,11 @@ export class TasksService {
       .returning();
 
     if (!row) throw new NotFoundException('Task not found');
-    return this.toResponse(row);
+    const githubIssueExternalKey = await this.findGitHubIssueExternalKey(
+      user.workspaceId,
+      row.id,
+    );
+    return this.toResponse(row, githubIssueExternalKey);
   }
 
   async deleteTask(user: AuthUser, taskId: string): Promise<void> {
@@ -213,7 +240,26 @@ export class TasksService {
     return { task, project };
   }
 
-  private toResponse(row: TaskRow): TaskResponse {
+  private taskResponseSelection() {
+    return {
+      id: tasks.id,
+      workspaceId: tasks.workspaceId,
+      projectId: tasks.projectId,
+      title: tasks.title,
+      status: tasks.status,
+      isActive: tasks.isActive,
+      createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt,
+      githubIssueExternalKey: taskExternalRefs.externalKey,
+    };
+  }
+
+  private toResponse(
+    row: TaskRow | TaskResponseRow,
+    githubIssueExternalKey: string | null = 'githubIssueExternalKey' in row
+      ? row.githubIssueExternalKey
+      : null,
+  ): TaskResponse {
     return {
       id: row.id,
       workspaceId: row.workspaceId,
@@ -221,9 +267,30 @@ export class TasksService {
       title: row.title,
       status: row.status,
       isActive: row.isActive,
+      githubIssue: parseGitHubIssueExternalKey(githubIssueExternalKey),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
+  }
+
+  private async findGitHubIssueExternalKey(
+    workspaceId: string,
+    taskId: string,
+  ): Promise<string | null> {
+    const [row] = await this.db
+      .select({ externalKey: taskExternalRefs.externalKey })
+      .from(taskExternalRefs)
+      .where(
+        and(
+          eq(taskExternalRefs.workspaceId, workspaceId),
+          eq(taskExternalRefs.taskId, taskId),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+        ),
+      )
+      .limit(1);
+
+    return row?.externalKey ?? null;
   }
 
   private async stopRunningEntriesForTask(
@@ -309,4 +376,30 @@ function getPostgresError(error: unknown): {
     return candidate;
   }
   return getPostgresError(candidate.cause);
+}
+
+function parseGitHubIssueExternalKey(
+  externalKey: string | null,
+): TaskResponse['githubIssue'] {
+  if (!externalKey) {
+    return null;
+  }
+
+  const separatorIndex = externalKey.lastIndexOf('#');
+
+  if (separatorIndex <= 0 || separatorIndex === externalKey.length - 1) {
+    return null;
+  }
+
+  const githubRepo = externalKey.slice(0, separatorIndex);
+  const issueNumber = Number(externalKey.slice(separatorIndex + 1));
+
+  if (!githubRepo || !Number.isInteger(issueNumber) || issueNumber <= 0) {
+    return null;
+  }
+
+  return {
+    githubRepo,
+    issueNumber,
+  };
 }

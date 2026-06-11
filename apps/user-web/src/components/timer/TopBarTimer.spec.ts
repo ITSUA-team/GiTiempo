@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, defineComponent, ref, shallowRef } from "vue";
 import PrimeVue from "primevue/config";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
+import type { SyncedGitHubIssue } from "@gitiempo/shared";
 
 import TopBarTimer from "./TopBarTimer.vue";
 import { OPEN_TOP_BAR_TIMER_DIALOG_EVENT } from "@/lib/top-bar-timer-dialog-events";
@@ -51,6 +52,7 @@ const composableState = {
   taskOptions: shallowRef([]),
   tasksErrorMessage: ref<string | null>(null),
   timerActionErrorMessage: ref<string | null>(null),
+  timerGitHubIssue: ref<SyncedGitHubIssue | null>(null),
   timerProjectLabel: ref("Project Orion"),
   timerTaskLabel: ref("Improve reports filters"),
 };
@@ -147,6 +149,7 @@ describe("TopBarTimer", () => {
     composableState.summaryErrorMessage.value = null;
     composableState.tasksErrorMessage.value = null;
     composableState.timerActionErrorMessage.value = null;
+    composableState.timerGitHubIssue.value = null;
     composableState.timerProjectLabel.value = "Project Orion";
     composableState.timerTaskLabel.value = "Improve reports filters";
     composableState.isDialogPrimaryActionDisabled = computed(() => false);
@@ -173,12 +176,11 @@ describe("TopBarTimer", () => {
 
     expect(surface.attributes("data-layout")).toBe("desktop");
     expect(surface.attributes("aria-label")).toBe("Open task and timer");
-    expect(surface.classes()).toContain("h-[47px]");
-    expect(surface.classes()).toContain("ml-auto");
-    expect(surface.classes()).toContain("ring-inset");
+    expect(surface.classes()).toContain("h-full");
+    expect(surface.classes()).toContain("flex-1");
     expect(context.text()).toContain("Project Orion");
     expect(context.text()).toContain("Improve reports filters");
-    expect(context.classes()).not.toContain("flex-1");
+    expect(wrapper.find('[data-testid="top-bar-timer-github-link"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="top-bar-timer-mobile-opener"]').exists()).toBe(
       false,
     );
@@ -193,6 +195,24 @@ describe("TopBarTimer", () => {
     await wrapper.get('[data-testid="top-bar-timer"]').trigger("click");
 
     expect(openDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders a separate desktop github issue link without opening the timer dialog", async () => {
+    composableState.timerGitHubIssue.value = {
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+    };
+    const wrapper = mountTopBarTimer();
+    const link = wrapper.get('[data-testid="top-bar-timer-github-link"]');
+
+    expect(link.attributes()).toMatchObject({
+      href: "https://github.com/octo/repo/issues/184",
+      target: "_blank",
+    });
+
+    await link.trigger("click");
+
+    expect(openDialog).not.toHaveBeenCalled();
   });
 
   it("opens task selection from active timer row requests", () => {
@@ -287,6 +307,20 @@ describe("TopBarTimer", () => {
     await wrapper.get('[data-testid="top-bar-timer-mobile-metadata"]').trigger("click");
 
     expect(openDialog).not.toHaveBeenCalled();
+  });
+
+  it("renders a separate mobile github issue link in timer metadata", async () => {
+    mockMatchMedia(true);
+    composableState.timerGitHubIssue.value = {
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+    };
+
+    const wrapper = mountTopBarTimer();
+    const link = wrapper.get('[data-testid="top-bar-timer-mobile-github-link"]');
+
+    expect(link.attributes("href")).toBe("https://github.com/octo/repo/issues/184");
+    expect(link.attributes("target")).toBe("_blank");
   });
 
   it("shows the running elapsed label in the mobile strip metadata", () => {

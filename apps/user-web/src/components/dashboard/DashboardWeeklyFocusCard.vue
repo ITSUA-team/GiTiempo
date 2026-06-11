@@ -4,6 +4,7 @@ import Tag from "primevue/tag";
 import { SectionHeader, SurfaceCard } from "@gitiempo/web-shared";
 
 import type { DashboardWeeklyFocus } from "@/composables/dashboard/useDashboardOverview";
+import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 
 const props = defineProps<{
   focus: DashboardWeeklyFocus;
@@ -62,9 +63,16 @@ function getFallbackDescription(label: string): string {
         <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
           Top Task
         </p>
-        <p class="text-text-dark text-2xl font-semibold">
-          {{ props.focus.task?.title ?? 'No tracked task yet' }}
-        </p>
+        <div class="flex max-w-full min-w-0 items-center gap-1.5">
+          <p class="text-text-dark min-w-0 truncate text-2xl font-semibold">
+            {{ props.focus.task?.title ?? 'No tracked task yet' }}
+          </p>
+          <TaskGitHubIssueLink
+            v-if="props.focus.task?.githubIssue"
+            :issue="props.focus.task.githubIssue"
+            test-id="dashboard-weekly-focus-task-github"
+          />
+        </div>
         <p class="text-text-muted text-[13px]">
           {{ props.focus.task?.description ?? getFallbackDescription('Top Task') }}
         </p>

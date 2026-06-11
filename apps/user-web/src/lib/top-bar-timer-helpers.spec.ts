@@ -56,6 +56,7 @@ describe("top-bar-timer-helpers", () => {
     expect(isRunningTimer(completedEntry)).toBe(false);
     expect(isRunningTimer(null)).toBe(false);
     expect(toSelectedTaskContext(runningEntry)).toEqual({
+      githubIssue: null,
       projectId: "project-1",
       projectName: "Project Orion",
       taskId: "task-1",
