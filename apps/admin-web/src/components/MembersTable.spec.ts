@@ -151,21 +151,28 @@ describe('MembersTable', () => {
     mockMatchMedia();
   });
 
-  it('renders supplied rows with icon-only assign, edit, and remove actions', () => {
+  it('uses member name as the edit entry point without an actions column', async () => {
+    const row = createRows()[0]!;
     const wrapper = mountMembersTable({ rows: [createRows()[0]!] });
 
-    const assignButton = wrapper.get('[data-testid="member-assign-pm-member-1"]');
-    const editButton = wrapper.get('[data-testid="member-edit-member-1"]');
-    const removeButton = wrapper.get('[data-testid="member-remove-member-1"]');
+    expect(
+      wrapper
+        .getComponent(ManagementTableShell)
+        .props('columns')
+        .map((column) => column.label),
+    ).toEqual(['Member', 'Role', 'Projects Assigned', 'Last Active']);
 
-    expect(assignButton.attributes('aria-label')).toBe('Assign PM');
-    expect(assignButton.attributes('data-tooltip')).toBe('Assign PM');
-    expect(assignButton.text()).toBe('');
-    expect(editButton.attributes('aria-label')).toBe('Edit');
-    expect(editButton.text()).toBe('');
-    expect(removeButton.attributes('aria-label')).toBe('Remove');
-    expect(removeButton.text()).toBe('');
+    const nameButton = wrapper.get('[data-testid="member-name-member-1"]');
+
+    expect(nameButton.attributes('aria-label')).toBe('Edit member Pat PM');
+    expect(wrapper.find('[data-testid="member-assign-pm-member-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-edit-member-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-remove-member-1"]').exists()).toBe(false);
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);
+
+    await nameButton.trigger('click');
+
+    expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
   });
 
   it('emits filter updates without deriving or mutating the supplied rows', async () => {
@@ -223,7 +230,7 @@ describe('MembersTable', () => {
     expect(wrapper.findAll('[data-testid="member-edit-member-1"]')).toHaveLength(0);
   });
 
-  it('renders supplied mobile card fields, actions, and expansion slot content', async () => {
+  it('renders supplied mobile card fields, name edit entry point, and expansion slot content', async () => {
     const row = createRows([createMembers()[0]!])[0]!;
     const wrapper = mountMembersTable({
       isMobileViewport: true,
@@ -243,33 +250,31 @@ describe('MembersTable', () => {
     expect(mobileCards[0]?.text()).toContain('May 2, 2026');
     expect(wrapper.get('[data-testid="row-expansion"]').text()).toBe('Pat PM');
 
-    await wrapper.get('[data-testid="member-mobile-assign-pm-member-1"]').trigger('click');
-    await wrapper.get('[data-testid="member-mobile-edit-member-1"]').trigger('click');
-    await wrapper.get('[data-testid="member-mobile-remove-member-1"]').trigger('click');
+    expect(wrapper.find('[data-testid="member-mobile-assign-pm-member-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-mobile-edit-member-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-mobile-remove-member-1"]').exists()).toBe(false);
 
-    expect(wrapper.emitted('assign-member')).toEqual([[row.member]]);
+    await wrapper.get('[data-testid="member-mobile-name-member-1"]').trigger('click');
+
     expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
-    expect(wrapper.emitted('remove-member')).toEqual([[row.member]]);
   });
 
-  it('emits desktop row action intents without opening local panels', async () => {
+  it('emits desktop edit intent from the member name without opening local panels', async () => {
     const row = createRows()[0]!;
     const wrapper = mountMembersTable({ rows: [row] });
 
-    await wrapper.get('[data-testid="member-assign-pm-member-1"]').trigger('click');
-    await wrapper.get('[data-testid="member-edit-member-1"]').trigger('click');
-    await wrapper.get('[data-testid="member-remove-member-1"]').trigger('click');
+    await wrapper.get('[data-testid="member-name-member-1"]').trigger('click');
 
-    expect(wrapper.emitted('assign-member')).toEqual([[row.member]]);
     expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
-    expect(wrapper.emitted('remove-member')).toEqual([[row.member]]);
     expect(wrapper.find('[data-testid="assign-panel"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="edit-panel"]').exists()).toBe(false);
   });
 
-  it('hides actions when the supplied row is not manageable', () => {
+  it('renders unmanaged rows with static names and no row actions', () => {
     const wrapper = mountMembersTable({ rows: [createRows()[1]!] });
 
+    expect(wrapper.find('[data-testid="member-name-member-2"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Alex Admin');
     expect(wrapper.find('[data-testid="member-assign-pm-member-2"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-edit-member-2"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-remove-member-2"]').exists()).toBe(false);

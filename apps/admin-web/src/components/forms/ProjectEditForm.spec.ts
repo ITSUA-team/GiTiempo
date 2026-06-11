@@ -87,8 +87,8 @@ const members: WorkspaceMemberListResponse = [
 
 const stubs = {
   Button: {
-    props: ['label', 'type'],
-    template: '<button :type="type">{{ label }}</button>',
+    props: ['disabled', 'label', 'type'],
+    template: '<button :disabled="disabled" :type="type">{{ label }}</button>',
   },
   EditFormPanel: {
     props: ['title'],
@@ -131,7 +131,47 @@ describe('ProjectEditForm', () => {
     expect(wrapper.text()).toContain('Pat PM');
     expect(wrapper.text()).toContain('member@example.com');
     expect(wrapper.text()).not.toContain('Alex Admin');
+    expect(wrapper.text()).toContain('Archive project');
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save');
+  });
+
+  it('emits the status-specific action from the inline project settings panel', async () => {
+    const wrapper = mount(ProjectEditForm, {
+      props: { allMembers: members, project },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    await wrapper.get('button').trigger('click');
+
+    expect(wrapper.emitted('archive')).toHaveLength(1);
+  });
+
+  it('uses unarchive copy for archived projects', async () => {
+    const wrapper = mount(ProjectEditForm, {
+      props: { allMembers: members, project: { ...project, isActive: false } },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    await wrapper.get('button').trigger('click');
+
+    expect(wrapper.text()).toContain('Unarchive project');
+    expect(wrapper.emitted('unarchive')).toHaveLength(1);
+  });
+
+  it('disables project status actions while the inline save is pending', () => {
+    const activeWrapper = mount(ProjectEditForm, {
+      props: { allMembers: members, project, saving: true },
+      global: { plugins: [createPinia()], stubs },
+    });
+    const archivedWrapper = mount(ProjectEditForm, {
+      props: { allMembers: members, project: { ...project, isActive: false }, saving: true },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    expect(activeWrapper.get('button').text()).toBe('Archive project');
+    expect(activeWrapper.get('button').attributes('disabled')).toBeDefined();
+    expect(archivedWrapper.get('button').text()).toBe('Unarchive project');
+    expect(archivedWrapper.get('button').attributes('disabled')).toBeDefined();
   });
 });

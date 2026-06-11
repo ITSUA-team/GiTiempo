@@ -92,9 +92,8 @@ function createProject(options: { isActive?: boolean; name?: string } = {}) {
 const ProjectsTableStub = {
   name: 'ProjectsTable',
   emits: [
-    'archive',
     'edit-project',
-    'unarchive',
+    'new-project',
     'update:expandedRows',
     'update:filters',
   ],
@@ -118,16 +117,6 @@ const ProjectsTableStub = {
       @click="$emit('edit-project', rows[0].project)"
     />
     <button
-      v-if="rows[0]"
-      data-testid="project-archive-intent"
-      @click="$emit('archive', rows[0].project)"
-    />
-    <button
-      v-if="rows[0]"
-      data-testid="project-unarchive-intent"
-      @click="$emit('unarchive', rows[0].project)"
-    />
-    <button
       data-testid="project-filter-intent"
       @click="$emit('update:filters', { global: 'orion' })"
     />
@@ -148,6 +137,16 @@ const ProjectEditFormStub = {
       <button
         data-testid="project-edit-save"
         @click="$emit('save', { visibility: 'private', memberIds: ['user-3'] })"
+      />
+      <button
+        v-if="project.isActive"
+        data-testid="project-edit-archive"
+        @click="$emit('archive')"
+      />
+      <button
+        v-else
+        data-testid="project-edit-unarchive"
+        @click="$emit('unarchive')"
       />
       <button data-testid="project-edit-cancel" @click="$emit('cancelled')" />
     </div>
@@ -303,7 +302,9 @@ describe('ProjectsView', () => {
     const wrapper = mountProjectsView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-archive-intent"]').trigger('click');
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="project-edit-archive"]').trigger('click');
 
     expect(testMocks.requireConfirmation).toHaveBeenCalledWith(
       '"Project Orion" will be archived and hidden from non-admin users.',
@@ -332,7 +333,9 @@ describe('ProjectsView', () => {
     const wrapper = mountProjectsView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-archive-intent"]').trigger('click');
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="project-edit-archive"]').trigger('click');
 
     expect(testMocks.requireConfirmation).toHaveBeenCalledTimes(1);
     expect(testMocks.updateProject).not.toHaveBeenCalled();
@@ -345,7 +348,9 @@ describe('ProjectsView', () => {
     const wrapper = mountProjectsView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-archive-intent"]').trigger('click');
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="project-edit-archive"]').trigger('click');
 
     const accept = testMocks.requireConfirmation.mock.calls[0]?.[3] as
       | (() => Promise<void>)
@@ -377,7 +382,9 @@ describe('ProjectsView', () => {
     const wrapper = mountProjectsView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-unarchive-intent"]').trigger('click');
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="project-edit-unarchive"]').trigger('click');
     await flushPromises();
 
     expect(testMocks.updateProject).toHaveBeenCalledWith('project-archived', {
@@ -479,7 +486,9 @@ describe('ProjectsView', () => {
     const wrapper = mountProjectsView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-unarchive-intent"]').trigger('click');
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="project-edit-unarchive"]').trigger('click');
     await flushPromises();
 
     expect(testMocks.updateProject).toHaveBeenCalledWith('project-archived', {

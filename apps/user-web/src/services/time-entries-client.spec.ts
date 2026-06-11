@@ -153,6 +153,7 @@ describe("createTimeEntriesClient", () => {
       jsonResponse([
         {
           createdAt: "2026-04-20T12:00:00.000Z",
+          githubIssue: null,
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
           isActive: true,
           projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
@@ -186,6 +187,7 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
         createdAt: "2026-04-20T12:00:00.000Z",
+        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         isActive: true,
         projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
@@ -219,6 +221,7 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
         createdAt: "2026-04-20T12:00:00.000Z",
+        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         isActive: true,
         projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
