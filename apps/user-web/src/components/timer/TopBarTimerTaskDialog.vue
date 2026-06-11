@@ -221,9 +221,10 @@ function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
 }
 
 function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
-  taskSuggestions.value = taskPickerOptions.value.filter((task) =>
-    matchesQuery(task.title, event.query),
-  );
+  taskSuggestions.value = [
+    ...props.taskOptions.filter((task) => matchesQuery(task.title, event.query)),
+    newTaskOption,
+  ];
 }
 
 watch(

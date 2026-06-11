@@ -280,7 +280,11 @@ describe("TopBarTimerTaskDialog", () => {
     ).toEqual(["Internal Ops"]);
     expect(
       autoCompletes[1]?.props("suggestions").map((task: typeof reportsTask) => task.title),
-    ).toEqual(["Fix alert routing"]);
+    ).toEqual(["Fix alert routing", "New task"]);
+    expect(autoCompletes[1]?.props("suggestions").at(-1)).toMatchObject({
+      id: TOP_BAR_TIMER_NEW_TASK_ID,
+      title: "New task",
+    });
   });
 
   it("renders the inline New task title field from the popup design", async () => {
