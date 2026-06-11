@@ -14,6 +14,7 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
@@ -376,30 +377,4 @@ function getPostgresError(error: unknown): {
     return candidate;
   }
   return getPostgresError(candidate.cause);
-}
-
-function parseGitHubIssueExternalKey(
-  externalKey: string | null,
-): TaskResponse['githubIssue'] {
-  if (!externalKey) {
-    return null;
-  }
-
-  const separatorIndex = externalKey.lastIndexOf('#');
-
-  if (separatorIndex <= 0 || separatorIndex === externalKey.length - 1) {
-    return null;
-  }
-
-  const githubRepo = externalKey.slice(0, separatorIndex);
-  const issueNumber = Number(externalKey.slice(separatorIndex + 1));
-
-  if (!githubRepo || !Number.isInteger(issueNumber) || issueNumber <= 0) {
-    return null;
-  }
-
-  return {
-    githubRepo,
-    issueNumber,
-  };
 }
