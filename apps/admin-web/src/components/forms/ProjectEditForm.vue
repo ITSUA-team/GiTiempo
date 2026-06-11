@@ -108,6 +108,7 @@ function handleSave({
           <Button
             :label="project.isActive ? 'Archive project' : 'Unarchive project'"
             :severity="project.isActive ? 'danger' : 'secondary'"
+            :disabled="saving"
             outlined
             type="button"
             class="w-full sm:w-auto"
