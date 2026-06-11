@@ -46,7 +46,6 @@ function createTask(): TaskResponse {
     title: 'Improve reports filters',
     status: 'open',
     isActive: true,
-    githubIssue: null,
     createdAt: '2026-04-21T09:00:00.000Z',
     updatedAt: '2026-04-21T10:00:00.000Z',
   };
