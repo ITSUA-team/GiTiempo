@@ -125,6 +125,7 @@ export function useTopBarTimerSummary({
         }
 
         return {
+          githubIssue: task.githubIssue,
           projectId: project.id,
           projectName: project.name,
           taskId: task.id,

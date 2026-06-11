@@ -30,6 +30,7 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
@@ -419,32 +420,6 @@ export class TimeEntriesService {
     return result;
   }
 
-  private parseGitHubIssueExternalKey(
-    externalKey: string | null,
-  ): TimeEntryResponse['githubIssue'] {
-    if (!externalKey) {
-      return null;
-    }
-
-    const separatorIndex = externalKey.lastIndexOf('#');
-
-    if (separatorIndex <= 0 || separatorIndex === externalKey.length - 1) {
-      return null;
-    }
-
-    const githubRepo = externalKey.slice(0, separatorIndex);
-    const issueNumber = Number(externalKey.slice(separatorIndex + 1));
-
-    if (!githubRepo || !Number.isInteger(issueNumber) || issueNumber <= 0) {
-      return null;
-    }
-
-    return {
-      githubRepo,
-      issueNumber,
-    };
-  }
-
   private async createRunningEntry(
     user: AuthUser,
     taskId: string,
@@ -659,7 +634,7 @@ export class TimeEntriesService {
         displayName: row.userDisplayName,
         avatarUrl: row.userAvatarUrl,
       },
-      githubIssue: this.parseGitHubIssueExternalKey(row.githubIssueExternalKey),
+      githubIssue: parseGitHubIssueExternalKey(row.githubIssueExternalKey),
     };
   }
 

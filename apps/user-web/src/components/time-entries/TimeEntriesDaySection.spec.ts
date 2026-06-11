@@ -101,7 +101,13 @@ describe('TimeEntriesDaySection', () => {
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
     expect(runningTimerButton.element.tagName).toBe('BUTTON');
     expect(runningTimerButton.attributes('aria-label')).toBe('Update active timer for Improve reports filters');
-    expect(wrapper.find('a[href^="https://github.com/"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="time-entry-github-entry-running"]').attributes()).toMatchObject({
+      href: 'https://github.com/octo/repo/issues/42',
+      target: '_blank',
+    });
+    expect(wrapper.get('[data-testid="time-entry-github-entry-completed"]').attributes('href')).toBe(
+      'https://github.com/octo/repo/issues/43',
+    );
     expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
 
     await runningTimerButton.trigger('click');
@@ -112,7 +118,7 @@ describe('TimeEntriesDaySection', () => {
     expect(wrapper.emitted('deleteEntry')).toBeUndefined();
   });
 
-  it('renders mobile cards with the completed task name opener only', async () => {
+  it('renders mobile cards with task name openers and separate github links', async () => {
     mockMatchMedia(true);
 
     const wrapper = mountSection();
@@ -131,7 +137,12 @@ describe('TimeEntriesDaySection', () => {
     expect(mobileCards[1]?.text()).toContain('09:00 - 10:30');
     expect(mobileCards[1]?.text()).toContain('1h 30m');
     expect(wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').element.tagName).toBe('BUTTON');
-    expect(wrapper.find('a[href^="https://github.com/"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="time-entry-mobile-github-entry-running"]').attributes('href')).toBe(
+      'https://github.com/octo/repo/issues/42',
+    );
+    expect(wrapper.get('[data-testid="time-entry-mobile-github-entry-completed"]').attributes('href')).toBe(
+      'https://github.com/octo/repo/issues/43',
+    );
     expect(wrapper.find('[data-testid="time-entry-mobile-delete-entry-completed"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').trigger('click');

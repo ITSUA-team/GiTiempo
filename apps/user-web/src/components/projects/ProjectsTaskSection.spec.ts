@@ -27,6 +27,7 @@ function createProject(): ProjectResponse {
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
+    githubIssue: null,
     id: "task-1",
     isActive: true,
     projectId: "project-1",
@@ -58,13 +59,22 @@ describe("ProjectsTaskSection", () => {
   });
 
   it("opens the task popup from the desktop task title and emits add", async () => {
-    const task = createTask();
+    const task = createTask({
+      githubIssue: {
+        githubRepo: "octo/repo",
+        issueNumber: 184,
+      },
+    });
     const wrapper = mountSection([task]);
     const titleButton = wrapper.get('[data-testid="project-task-title"]');
 
     expect(titleButton.attributes("aria-label")).toBe("Edit task Improve reports filters");
     expect(titleButton.text()).toContain("Improve reports filters");
     expect(titleButton.find("svg").exists()).toBe(false);
+    expect(wrapper.get('[data-testid="project-task-github-task-1"]').attributes()).toMatchObject({
+      href: "https://github.com/octo/repo/issues/184",
+      target: "_blank",
+    });
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("1 active task");
     expect(wrapper.text()).not.toContain("Actions");
@@ -86,6 +96,10 @@ describe("ProjectsTaskSection", () => {
       createTask(),
       createTask({
         id: "task-2",
+        githubIssue: {
+          githubRepo: "octo/repo",
+          issueNumber: 185,
+        },
         isActive: false,
         status: "closed",
         title: "Archive launch checklist",
@@ -106,6 +120,10 @@ describe("ProjectsTaskSection", () => {
     expect(mobileCards[1]?.text()).toContain("Closed");
     expect(mobileCards[1]?.text()).toContain("Yesterday, 15:30");
     expect(mobileTitles[0]?.find("svg").exists()).toBe(false);
+    expect(wrapper.find('[data-testid="project-task-mobile-github-task-1"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="project-task-mobile-github-task-2"]').attributes("href")).toBe(
+      "https://github.com/octo/repo/issues/185",
+    );
     expect(wrapper.find('[data-testid="project-task-mobile-delete-task-1"]').exists()).toBe(false);
 
     await mobileTitles[0]!.trigger("click");

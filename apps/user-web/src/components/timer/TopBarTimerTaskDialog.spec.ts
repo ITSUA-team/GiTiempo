@@ -30,6 +30,7 @@ const internalOpsProject = {
 
 const reportsTask = {
   createdAt: "2026-04-20T12:00:00.000Z",
+  githubIssue: null,
   id: "task-1",
   isActive: true,
   projectId: "project-1",

@@ -115,6 +115,7 @@ export function useTopBarTaskPicker() {
     }
 
     return {
+      githubIssue: selectedTask.value.githubIssue,
       projectId: selectedProject.value.id,
       projectName: selectedProject.value.name,
       taskId: selectedTask.value.id,
