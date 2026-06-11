@@ -25,9 +25,9 @@ import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialo
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
+import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
-import { requestTopBarTimerDialog } from "@/lib/top-bar-timer-dialog-events";
 import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
@@ -36,6 +36,7 @@ const confirm = useConfirm();
 const toast = useToast();
 const appConfirm = createAppConfirm(confirm);
 const appToast = createAppToast(toast);
+const topBarTimerDialogController = useTopBarTimerDialogController();
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
@@ -289,7 +290,7 @@ function requestDeleteDialogEntry(): void {
 }
 
 function openActiveTimerDialog(): void {
-  requestTopBarTimerDialog();
+  topBarTimerDialogController.requestOpen();
 }
 
 async function retryLoadEntries(): Promise<void> {

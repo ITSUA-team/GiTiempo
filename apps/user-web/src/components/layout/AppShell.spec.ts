@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
+import { defineComponent } from "vue";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
 import AppShell from "./AppShell.vue";
+import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createAppRouter, routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -48,11 +50,19 @@ describe("AppShell", () => {
         },
         plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
         stubs: {
-          RouterView: {
-            template: '<div data-testid="dashboard-overview" />',
-          },
+          RouterView: defineComponent({
+            setup() {
+              const topBarTimerDialogController = useTopBarTimerDialogController();
+
+              return {
+                requestTimerDialog: topBarTimerDialogController.requestOpen,
+              };
+            },
+            template: '<button data-testid="dashboard-overview" type="button" @click="requestTimerDialog">Open timer</button>',
+          }),
           TopBarTimer: {
-            template: '<div data-testid="top-bar-timer">Top bar timer</div>',
+            props: ["openRequestId"],
+            template: '<div data-testid="top-bar-timer">{{ openRequestId }}</div>',
           },
           WorkspaceHeader: {
             props: [
@@ -101,6 +111,12 @@ describe("AppShell", () => {
     expect(wrapper.find('[data-testid="dashboard-overview"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="top-bar-timer"]')).toHaveLength(1);
+    expect(wrapper.get('[data-testid="top-bar-timer"]').text()).toBe("0");
+
+    await wrapper.get('[data-testid="dashboard-overview"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="top-bar-timer"]').text()).toBe("1");
     expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Time Entries"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Profile"]')).toHaveLength(0);

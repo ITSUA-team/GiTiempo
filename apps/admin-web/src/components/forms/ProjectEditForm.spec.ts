@@ -87,8 +87,8 @@ const members: WorkspaceMemberListResponse = [
 
 const stubs = {
   Button: {
-    props: ['label', 'type'],
-    template: '<button :type="type">{{ label }}</button>',
+    props: ['disabled', 'label', 'type'],
+    template: '<button :disabled="disabled" :type="type">{{ label }}</button>',
   },
   EditFormPanel: {
     props: ['title'],
@@ -157,5 +157,21 @@ describe('ProjectEditForm', () => {
 
     expect(wrapper.text()).toContain('Unarchive project');
     expect(wrapper.emitted('unarchive')).toHaveLength(1);
+  });
+
+  it('disables project status actions while the inline save is pending', () => {
+    const activeWrapper = mount(ProjectEditForm, {
+      props: { allMembers: members, project, saving: true },
+      global: { plugins: [createPinia()], stubs },
+    });
+    const archivedWrapper = mount(ProjectEditForm, {
+      props: { allMembers: members, project: { ...project, isActive: false }, saving: true },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    expect(activeWrapper.get('button').text()).toBe('Archive project');
+    expect(activeWrapper.get('button').attributes('disabled')).toBeDefined();
+    expect(archivedWrapper.get('button').text()).toBe('Unarchive project');
+    expect(archivedWrapper.get('button').attributes('disabled')).toBeDefined();
   });
 });

@@ -6,7 +6,6 @@ import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 import type { SyncedGitHubIssue } from "@gitiempo/shared";
 
 import TopBarTimer from "./TopBarTimer.vue";
-import { OPEN_TOP_BAR_TIMER_DIALOG_EVENT } from "@/lib/top-bar-timer-dialog-events";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
 const closeDialog = vi.fn();
@@ -100,9 +99,12 @@ vi.mock("@/composables/timer/useTopBarTimer", () => ({
   useTopBarTimer: () => composableState,
 }));
 
-function mountTopBarTimer(options: { attachTo?: HTMLElement } = {}) {
+function mountTopBarTimer(options: { attachTo?: HTMLElement; openRequestId?: number } = {}) {
   const wrapper = mount(TopBarTimer, {
     attachTo: options.attachTo,
+    props: {
+      openRequestId: options.openRequestId ?? 0,
+    },
     global: {
       plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
@@ -215,12 +217,16 @@ describe("TopBarTimer", () => {
     expect(openDialog).not.toHaveBeenCalled();
   });
 
-  it("opens task selection from active timer row requests", () => {
-    mountTopBarTimer();
+  it("opens task selection from app-shell dialog requests", async () => {
+    const wrapper = mountTopBarTimer();
 
-    window.dispatchEvent(new Event(OPEN_TOP_BAR_TIMER_DIALOG_EVENT));
+    await wrapper.setProps({ openRequestId: 1 });
 
     expect(openDialog).toHaveBeenCalledTimes(1);
+
+    await wrapper.setProps({ openRequestId: 2 });
+
+    expect(openDialog).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the compact surface visible while loading", () => {

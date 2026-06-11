@@ -113,6 +113,7 @@ function handleSave({
               v-if="props.canRemove"
               label="Remove member"
               severity="danger"
+              :disabled="saving"
               outlined
               type="button"
               class="w-full sm:w-auto"

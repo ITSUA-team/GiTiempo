@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { readonly, shallowRef } from "vue";
 import type {
   ProjectResponse,
   TaskResponse,
@@ -9,7 +10,7 @@ import type {
 } from "@gitiempo/shared";
 
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
-import { OPEN_TOP_BAR_TIMER_DIALOG_EVENT } from "@/lib/top-bar-timer-dialog-events";
+import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -53,6 +54,17 @@ const TEST_IDS = {
 } as const;
 
 const mountedWrappers: VueWrapper[] = [];
+
+function createTopBarTimerDialogControllerMock() {
+  const openRequestId = shallowRef(0);
+
+  return {
+    openRequestId: readonly(openRequestId),
+    requestOpen: vi.fn(() => {
+      openRequestId.value += 1;
+    }),
+  };
+}
 
 beforeAll(() => {
   vi.stubEnv("TZ", "Europe/Kiev");
@@ -229,10 +241,13 @@ async function mountView(
   options: {
     pinia?: ReturnType<typeof createPinia>;
     queryClient?: ReturnType<typeof createTestQueryClient>;
+    topBarTimerDialogController?: ReturnType<typeof createTopBarTimerDialogControllerMock>;
   } = {},
 ) {
   const pinia = options.pinia ?? createPinia();
   const queryClient = options.queryClient ?? createTestQueryClient();
+  const topBarTimerDialogController =
+    options.topBarTimerDialogController ?? createTopBarTimerDialogControllerMock();
 
   setActivePinia(pinia);
   useAuthStore().accessToken = "access-token";
@@ -241,6 +256,9 @@ async function mountView(
   const wrapper = mount(TimeEntriesView, {
     global: {
       plugins: [pinia, createTestQueryPlugin(queryClient)],
+      provide: {
+        [topBarTimerDialogControllerKey]: topBarTimerDialogController,
+      },
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
@@ -370,7 +388,7 @@ async function mountView(
 
   mountedWrappers.push(wrapper);
 
-  return { client, pinia, queryClient, wrapper };
+  return { client, pinia, queryClient, topBarTimerDialogController, wrapper };
 }
 
 describe("TimeEntriesView", () => {
@@ -435,21 +453,13 @@ describe("TimeEntriesView", () => {
   });
 
   it("opens the active timer dialog instead of the time-entry edit dialog for running entries", async () => {
-    const activeTimerDialogRequest = vi.fn();
+    const { topBarTimerDialogController, wrapper } = await mountView();
 
-    window.addEventListener(OPEN_TOP_BAR_TIMER_DIALOG_EVENT, activeTimerDialogRequest);
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
 
-    try {
-      const { wrapper } = await mountView();
-
-      await flushPromises();
-      await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
-
-      expect(activeTimerDialogRequest).toHaveBeenCalledTimes(1);
-      expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
-    } finally {
-      window.removeEventListener(OPEN_TOP_BAR_TIMER_DIALOG_EVENT, activeTimerDialogRequest);
-    }
+    expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
   });
 
   it("opens edit with the same browser-local times shown in the table", async () => {
