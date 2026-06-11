@@ -217,35 +217,32 @@ describe('useMembersTableState', () => {
     const { state } = createState();
     const member = state.rows.value[0]!.member;
 
-    state.toggleExpansion(member, 'assign');
+    state.toggleExpansion(member);
     expect(state.expandedRows.value).toEqual({ 'member-1': true });
-    expect(state.expansionMode.value).toEqual({ 'member-1': 'assign' });
 
-    state.toggleExpansion(member, 'edit');
-    expect(state.expandedRows.value).toEqual({ 'member-1': true });
-    expect(state.expansionMode.value).toEqual({ 'member-1': 'edit' });
+    state.toggleExpansion(member);
+    expect(state.expandedRows.value).toEqual({});
+
+    state.toggleExpansion(member);
 
     state.updateFilters({ memberQuery: 'nina' });
     await nextTick();
 
     expect(state.expandedRows.value).toEqual({});
-    expect(state.expansionMode.value).toEqual({});
   });
 
-  it('collapses rows and drops expansion mode after parent expanded-row updates', () => {
+  it('collapses rows after parent expanded-row updates', () => {
     const { state } = createState();
     const member = state.rows.value[0]!.member;
 
-    state.toggleExpansion(member, 'assign');
+    state.toggleExpansion(member);
     state.setExpandedRows({});
 
     expect(state.expandedRows.value).toEqual({});
-    expect(state.expansionMode.value).toEqual({});
 
-    state.toggleExpansion(member, 'assign');
+    state.toggleExpansion(member);
     state.collapseRow(member);
 
     expect(state.expandedRows.value).toEqual({});
-    expect(state.expansionMode.value).toEqual({});
   });
 });

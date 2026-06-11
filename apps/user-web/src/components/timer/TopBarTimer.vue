@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import Button from "primevue/button";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
 
 import { useTopBarTimer } from "@/composables/timer/useTopBarTimer";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
+
+interface Props {
+  openRequestId?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  openRequestId: 0,
+});
 
 const {
   closeDialog,
@@ -48,6 +56,17 @@ const {
 const isMobileViewport = useIsMobileViewport();
 const showsElapsedTime = computed(
   () => !isLoadingSummary.value && isTimerRunning.value,
+);
+
+watch(
+  () => props.openRequestId,
+  (openRequestId, previousOpenRequestId) => {
+    if (openRequestId === previousOpenRequestId) {
+      return;
+    }
+
+    void openDialog();
+  },
 );
 </script>
 

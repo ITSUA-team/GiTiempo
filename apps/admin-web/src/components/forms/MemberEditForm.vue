@@ -9,12 +9,14 @@ import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 
 const props = defineProps<{
+  canRemove?: boolean;
   member: WorkspaceMemberResponse;
   saving?: boolean;
 }>();
 
 const emit = defineEmits<{
   cancelled: [];
+  remove: [];
   save: [role: WorkspaceRole];
 }>();
 
@@ -107,6 +109,16 @@ function handleSave({
             data-testid="member-edit-form-actions"
             class="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-2.5"
           >
+            <Button
+              v-if="props.canRemove"
+              label="Remove member"
+              severity="danger"
+              :disabled="saving"
+              outlined
+              type="button"
+              class="w-full sm:w-auto"
+              @click="emit('remove')"
+            />
             <Button
               label="Cancel"
               severity="secondary"

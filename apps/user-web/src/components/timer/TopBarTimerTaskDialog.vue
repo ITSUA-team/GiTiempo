@@ -460,6 +460,17 @@ watch(
         data-testid="top-bar-timer-task-dialog-footer"
       >
         <Button
+          v-if="isMobileViewport && props.primaryActionLabel === 'Stop'"
+          unstyled
+          type="button"
+          class="bg-brand text-text-inverse border-brand h-[37px] w-full rounded-sm border px-4 text-sm font-semibold"
+          :disabled="props.isPrimaryActionDisabled"
+          :fluid="true"
+          :label="primaryButtonLabel"
+          :loading="primaryButtonLoading"
+          @click="emit('primaryAction')"
+        />
+        <Button
           v-if="props.primaryActionLabel === 'Stop'"
           unstyled
           type="button"
@@ -476,6 +487,7 @@ watch(
           @click="emit('confirm')"
         />
         <Button
+          v-if="!isMobileViewport || props.primaryActionLabel !== 'Stop'"
           unstyled
           type="button"
           :class="[
@@ -487,17 +499,6 @@ watch(
           :label="primaryButtonLabel"
           :loading="primaryButtonLoading"
           @click="emit('primaryAction')"
-        />
-        <Button
-          v-if="isMobileViewport"
-          unstyled
-          type="button"
-          class="border-divider bg-surface-primary text-text-dark h-[37px] w-full rounded-sm border px-4 text-sm font-semibold"
-          :fluid="true"
-          label="Cancel"
-          severity="secondary"
-          variant="outlined"
-          @click="emit('close')"
         />
       </div>
     </div>

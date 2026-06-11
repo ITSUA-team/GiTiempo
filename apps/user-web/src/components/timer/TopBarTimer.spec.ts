@@ -97,9 +97,12 @@ vi.mock("@/composables/timer/useTopBarTimer", () => ({
   useTopBarTimer: () => composableState,
 }));
 
-function mountTopBarTimer(options: { attachTo?: HTMLElement } = {}) {
+function mountTopBarTimer(options: { attachTo?: HTMLElement; openRequestId?: number } = {}) {
   const wrapper = mount(TopBarTimer, {
     attachTo: options.attachTo,
+    props: {
+      openRequestId: options.openRequestId ?? 0,
+    },
     global: {
       plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
@@ -192,6 +195,18 @@ describe("TopBarTimer", () => {
     await wrapper.get('[data-testid="top-bar-timer"]').trigger("click");
 
     expect(openDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens task selection from app-shell dialog requests", async () => {
+    const wrapper = mountTopBarTimer();
+
+    await wrapper.setProps({ openRequestId: 1 });
+
+    expect(openDialog).toHaveBeenCalledTimes(1);
+
+    await wrapper.setProps({ openRequestId: 2 });
+
+    expect(openDialog).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the compact surface visible while loading", () => {
