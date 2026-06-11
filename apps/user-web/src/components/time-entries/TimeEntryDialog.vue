@@ -353,9 +353,6 @@ function handleTaskComplete(event: { query: string }): void {
             Billable entry
           </span>
         </label>
-        <small class="text-text-muted text-xs">
-          Create mode starts from the selected task default. You can override it per entry.
-        </small>
       </div>
     </div>
 
