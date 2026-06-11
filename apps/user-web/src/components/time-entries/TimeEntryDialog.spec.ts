@@ -182,6 +182,9 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.text()).toContain("End");
     expect(wrapper.text()).toContain("Description");
     expect(wrapper.text()).toContain("Billable entry");
+    expect(wrapper.text()).toContain(
+      "Create mode starts from the selected task default. You can override it per entry.",
+    );
     expect(wrapper.text()).toContain("Delete entry");
     expect(wrapper.text()).toContain("Save changes");
     expect(wrapper.text()).not.toContain("Cancel");

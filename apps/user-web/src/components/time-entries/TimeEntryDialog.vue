@@ -338,20 +338,25 @@ function handleTaskComplete(event: { query: string }): void {
         </small>
       </div>
 
-      <label
-        for="time-entry-billable"
-        class="border-divider bg-surface-primary flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
-      >
-        <Checkbox
-          id="time-entry-billable"
-          v-model="billableModel"
-          binary
-          :disabled="isDialogMutating"
-        />
-        <span class="text-text-dark text-sm font-medium">
-          Billable entry
-        </span>
-      </label>
+      <div class="flex flex-col gap-1">
+        <label
+          for="time-entry-billable"
+          class="border-divider bg-surface-primary flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
+        >
+          <Checkbox
+            id="time-entry-billable"
+            v-model="billableModel"
+            binary
+            :disabled="isDialogMutating"
+          />
+          <span class="text-text-dark text-sm font-medium">
+            Billable entry
+          </span>
+        </label>
+        <small class="text-text-muted text-xs">
+          Create mode starts from the selected task default. You can override it per entry.
+        </small>
+      </div>
     </div>
 
     <template #footer>
