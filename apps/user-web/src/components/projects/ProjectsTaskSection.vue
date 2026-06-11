@@ -14,6 +14,7 @@ import {
 } from "@gitiempo/web-shared";
 
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
+import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 
 interface ProjectsTaskSectionProps {
   // eslint-disable-next-line no-unused-vars
@@ -88,12 +89,19 @@ function getStatusPt(task: TaskResponse) {
         data-testid="project-task-mobile-card"
       >
         <div class="flex min-w-0 flex-col gap-2">
-          <TaskNameLink
-            :label="task.title"
-            :open-label="`Edit task ${task.title}`"
-            test-id="project-task-mobile-title"
-            @open="emit('editTask', task)"
-          />
+          <div class="flex max-w-full min-w-0 items-center gap-1">
+            <TaskNameLink
+              :label="task.title"
+              :open-label="`Edit task ${task.title}`"
+              test-id="project-task-mobile-title"
+              @open="emit('editTask', task)"
+            />
+            <TaskGitHubIssueLink
+              v-if="task.githubIssue"
+              :issue="task.githubIssue"
+              :test-id="`project-task-mobile-github-${task.id}`"
+            />
+          </div>
 
           <div class="flex items-center justify-between gap-3">
             <Tag
@@ -135,12 +143,19 @@ function getStatusPt(task: TaskResponse) {
 
       <Column :pt="managementTableColumnPt">
         <template #body="slotProps">
-          <TaskNameLink
-            :label="slotProps.data.title"
-            :open-label="`Edit task ${slotProps.data.title}`"
-            test-id="project-task-title"
-            @open="emit('editTask', slotProps.data)"
-          />
+          <div class="flex max-w-full min-w-0 items-center gap-1">
+            <TaskNameLink
+              :label="slotProps.data.title"
+              :open-label="`Edit task ${slotProps.data.title}`"
+              test-id="project-task-title"
+              @open="emit('editTask', slotProps.data)"
+            />
+            <TaskGitHubIssueLink
+              v-if="slotProps.data.githubIssue"
+              :issue="slotProps.data.githubIssue"
+              :test-id="`project-task-github-${slotProps.data.id}`"
+            />
+          </div>
         </template>
       </Column>
 

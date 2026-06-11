@@ -129,6 +129,13 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
     return 'Choose a visible project and task.';
   });
+  const timerGitHubIssue = computed(() => {
+    if (summary.currentTimer.value) {
+      return summary.currentTimer.value.githubIssue;
+    }
+
+    return summary.selectedContext.value?.githubIssue ?? null;
+  });
   const primaryActionLabel = computed(() =>
     isTimerRunning.value ? 'Stop' : 'Start',
   );
@@ -427,6 +434,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     taskOptions: picker.activeTasks,
     tasksErrorMessage: picker.tasksErrorMessage,
     timerActionErrorMessage: timerActions.timerActionErrorMessage,
+    timerGitHubIssue,
     timerContextLabel,
     timerProjectLabel,
     timerStatusLabel,

@@ -40,6 +40,7 @@ function createProject(): ProjectResponse {
 function createTask(): TaskResponse {
   return {
     id: 'task-1',
+    githubIssue: null,
     workspaceId: 'workspace-1',
     projectId: 'project-1',
     title: 'Improve reports filters',

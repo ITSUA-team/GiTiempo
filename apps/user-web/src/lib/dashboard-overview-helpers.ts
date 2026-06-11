@@ -1,4 +1,4 @@
-import type { TimeEntryResponse } from '@gitiempo/shared';
+import type { SyncedGitHubIssue, TimeEntryResponse } from '@gitiempo/shared';
 import {
   addLocalDays,
   formatCompactDuration,
@@ -24,6 +24,7 @@ export interface DashboardStat {
 export interface DashboardFocusItem {
   description: string;
   entryCount: number;
+  githubIssue: SyncedGitHubIssue | null;
   label: string;
   shareLabel: string;
   sharePercent: number;
@@ -37,6 +38,7 @@ export interface DashboardWeeklyFocus {
 
 export interface DashboardRecentEntryRow {
   durationLabel: string;
+  githubIssue: SyncedGitHubIssue | null;
   id: string;
   isHighlighted: boolean;
   projectName: string;
@@ -47,6 +49,7 @@ export interface DashboardRecentEntryRow {
 interface FocusAccumulator {
   descriptionLabel?: string;
   entryCount: number;
+  githubIssue: SyncedGitHubIssue | null;
   label: string;
   seconds: number;
   title: string;
@@ -159,6 +162,7 @@ export function buildDashboardWeeklyFocus(
 
     const projectStats = projectMap.get(entry.project.id) ?? {
       entryCount: 0,
+      githubIssue: null,
       label: 'Top Project',
       seconds: 0,
       title: entry.project.name,
@@ -170,6 +174,7 @@ export function buildDashboardWeeklyFocus(
     const taskStats = taskMap.get(entry.task.id) ?? {
       descriptionLabel: entry.project.name,
       entryCount: 0,
+      githubIssue: entry.githubIssue,
       label: 'Top Task',
       seconds: 0,
       title: entry.task.title,
@@ -187,6 +192,7 @@ export function buildDashboardWeeklyFocus(
       ? {
           description: `${formatCompactDuration(topProject.seconds)} tracked across ${toEntryLabel(topProject.entryCount)}`,
           entryCount: topProject.entryCount,
+          githubIssue: topProject.githubIssue,
           label: topProject.label,
           shareLabel: `${toSharePercent(topProject.seconds, totalTrackedSeconds)}% of your tracked time this week`,
           sharePercent: toSharePercent(topProject.seconds, totalTrackedSeconds),
@@ -197,6 +203,7 @@ export function buildDashboardWeeklyFocus(
       ? {
           description: `${topTask.descriptionLabel} • ${formatCompactDuration(topTask.seconds)} tracked`,
           entryCount: topTask.entryCount,
+          githubIssue: topTask.githubIssue,
           label: topTask.label,
           shareLabel: `${toEntryLabel(topTask.entryCount)} contributed to this focus`,
           sharePercent: toSharePercent(topTask.seconds, totalTrackedSeconds),
@@ -212,6 +219,7 @@ export function mapDashboardRecentEntryRows(
 ): DashboardRecentEntryRow[] {
   return entries.map((entry) => ({
     durationLabel: formatTimeEntryDuration(entry, nowMs),
+    githubIssue: entry.githubIssue,
     id: entry.id,
     isHighlighted: entry.endedAt === null,
     projectName: entry.project.name,

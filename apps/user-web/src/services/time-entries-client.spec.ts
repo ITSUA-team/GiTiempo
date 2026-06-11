@@ -153,7 +153,10 @@ describe("createTimeEntriesClient", () => {
       jsonResponse([
         {
           createdAt: "2026-04-20T12:00:00.000Z",
-          githubIssue: null,
+          githubIssue: {
+            githubRepo: "octo/repo",
+            issueNumber: 184,
+          },
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
           isActive: true,
           projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
@@ -170,7 +173,14 @@ describe("createTimeEntriesClient", () => {
       client.listProjectTasks(
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       ),
-    ).resolves.toHaveLength(1);
+    ).resolves.toEqual([
+      expect.objectContaining({
+        githubIssue: {
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+        },
+      }),
+    ]);
     expect(fetchFn).toHaveBeenCalledWith(
       "/projects/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f/tasks",
       {

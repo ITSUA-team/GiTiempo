@@ -13,6 +13,7 @@ import {
 } from "@gitiempo/web-shared";
 
 import type { TimeEntriesDayGroup } from "@/lib/time-entry-display";
+import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 
 const props = defineProps<{
@@ -96,12 +97,19 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
         :tone="entry.endedAt === null ? 'highlighted' : 'default'"
       >
         <div class="flex min-w-0 flex-col gap-1">
-          <TaskNameLink
-            :label="entry.task.title"
-            :open-label="getEntryTaskOpenLabel(entry)"
-            :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
-            @open="handleEntryTaskOpen(entry)"
-          />
+          <div class="flex max-w-full min-w-0 items-center gap-1">
+            <TaskNameLink
+              :label="entry.task.title"
+              :open-label="getEntryTaskOpenLabel(entry)"
+              :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
+              @open="handleEntryTaskOpen(entry)"
+            />
+            <TaskGitHubIssueLink
+              v-if="entry.githubIssue"
+              :issue="entry.githubIssue"
+              :test-id="`time-entry-mobile-github-${entry.id}`"
+            />
+          </div>
           <p
             v-if="entry.description"
             class="text-text-muted truncate text-xs"
@@ -159,12 +167,19 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
       <Column :pt="managementTableColumnPt">
         <template #body="{ data: entry }">
           <div class="flex min-w-0 flex-col">
-            <TaskNameLink
-              :label="entry.task.title"
-              :open-label="getEntryTaskOpenLabel(entry)"
-              :test-id="getEntryTaskTestId(entry, 'time-entry')"
-              @open="handleEntryTaskOpen(entry)"
-            />
+            <div class="flex max-w-full min-w-0 items-center gap-1">
+              <TaskNameLink
+                :label="entry.task.title"
+                :open-label="getEntryTaskOpenLabel(entry)"
+                :test-id="getEntryTaskTestId(entry, 'time-entry')"
+                @open="handleEntryTaskOpen(entry)"
+              />
+              <TaskGitHubIssueLink
+                v-if="entry.githubIssue"
+                :issue="entry.githubIssue"
+                :test-id="`time-entry-github-${entry.id}`"
+              />
+            </div>
             <p
               v-if="entry.description"
               class="text-text-muted truncate text-xs"

@@ -1,7 +1,8 @@
-import type { TimeEntryResponse } from '@gitiempo/shared';
+import type { SyncedGitHubIssue, TimeEntryResponse } from '@gitiempo/shared';
 import { formatRunningDuration } from '@gitiempo/web-shared/time';
 
 export interface SelectedTaskContext {
+  githubIssue: SyncedGitHubIssue | null;
   projectId: string;
   projectName: string;
   taskId: string;
@@ -39,6 +40,7 @@ export function toSelectedTaskContext(
   timer: TimeEntryResponse,
 ): SelectedTaskContext {
   return {
+    githubIssue: timer.githubIssue,
     projectId: timer.project.id,
     projectName: timer.project.name,
     taskId: timer.task.id,
