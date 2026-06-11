@@ -39,10 +39,13 @@ function createProject(): ProjectResponse {
 
 function createTask(): TaskResponse {
   return {
+    assignee: null,
     id: 'task-1',
     workspaceId: 'workspace-1',
     projectId: 'project-1',
     title: 'Improve reports filters',
+    description: null,
+    priority: 'medium',
     status: 'open',
     isActive: true,
     createdAt: '2026-04-21T09:00:00.000Z',

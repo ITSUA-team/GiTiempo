@@ -66,9 +66,12 @@ function createTask(
   status: TaskResponse['status'] = 'open',
 ): TaskResponse {
   return {
+    assignee: null,
     createdAt: '2026-04-20T12:00:00.000Z',
+    description: null,
     id,
     isActive,
+    priority: 'medium',
     projectId,
     status,
     title,

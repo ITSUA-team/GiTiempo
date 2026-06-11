@@ -9,13 +9,25 @@ function mountDialog(
   return mount(ProjectTaskDialog, {
     props: {
       errors: {
+        assigneeId: null,
+        description: null,
+        priority: null,
         projectId: null,
         status: null,
         title: null,
       },
+      assigneeId: null,
+      assigneeOptions: [
+        {
+          label: "Alexey Tsukanov",
+          value: "user-1",
+        },
+      ],
+      description: "",
       isOpen: true,
       isSaving: false,
       mode: "create",
+      priority: "medium",
       projectId: null,
       projects: [
         {
@@ -66,23 +78,40 @@ function mountDialog(
           template:
             '<select :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option[optionValue] ?? option.id" :value="option[optionValue] ?? option.id">{{ option[optionLabel] ?? option.name }}</option></select>',
         },
+        Textarea: {
+          props: ["modelValue"],
+          emits: ["update:modelValue"],
+          template:
+            '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+        },
       },
     },
   });
 }
 
 describe("ProjectTaskDialog", () => {
-  it("renders the create form and emits project and title updates", async () => {
-    const wrapper = mountDialog();
+  it("renders the create form and emits metadata updates", async () => {
+    const wrapper = mountDialog({ projectId: "project-1" });
     const selects = wrapper.findAll("select");
     const input = wrapper.get("input");
+    const textarea = wrapper.get("textarea");
 
     await selects[0]?.setValue("project-1");
+    await selects[1]?.setValue("high");
+    await selects[2]?.setValue("closed");
+    await selects[3]?.setValue("user-1");
     await input.setValue("Write release checklist");
+    await textarea.setValue("Coordinate release validation.");
 
     expect(wrapper.emitted("update:projectId")?.[0]).toEqual(["project-1"]);
+    expect(wrapper.emitted("update:priority")?.[0]).toEqual(["high"]);
+    expect(wrapper.emitted("update:status")?.[0]).toEqual(["closed"]);
+    expect(wrapper.emitted("update:assigneeId")?.[0]).toEqual(["user-1"]);
     expect(wrapper.emitted("update:title")?.[0]).toEqual([
       "Write release checklist",
+    ]);
+    expect(wrapper.emitted("update:description")?.[0]).toEqual([
+      "Coordinate release validation.",
     ]);
     expect(wrapper.text()).toContain("Create task");
   });
@@ -100,10 +129,27 @@ describe("ProjectTaskDialog", () => {
     const selects = wrapper.findAll("select");
     const projectField = wrapper.get('[role="textbox"][aria-readonly="true"]');
 
-    expect(selects).toHaveLength(1);
+    expect(selects).toHaveLength(3);
     expect(projectField.attributes("aria-labelledby")).toBe("project-task-project-label");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Save changes");
+  });
+
+  it("renders field-level errors for metadata fields", () => {
+    const wrapper = mountDialog({
+      errors: {
+        assigneeId: "Choose an assigned project member.",
+        description: "Description must be at most 2000 characters.",
+        priority: "Choose a valid priority.",
+        projectId: null,
+        status: null,
+        title: null,
+      },
+    });
+
+    expect(wrapper.text()).toContain("Description must be at most 2000 characters.");
+    expect(wrapper.text()).toContain("Choose a valid priority.");
+    expect(wrapper.text()).toContain("Choose an assigned project member.");
   });
 
   it("emits close and save actions from the footer buttons", async () => {

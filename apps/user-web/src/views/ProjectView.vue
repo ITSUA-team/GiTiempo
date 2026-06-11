@@ -2,7 +2,8 @@
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Skeleton from "primevue/skeleton";
-import { computed } from "vue";
+import type { ProjectMember } from "@gitiempo/shared";
+import { computed, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import {
@@ -73,12 +74,18 @@ const {
   dialogRequestErrorMessage,
   dialogSaveLabel,
   dialogSubtitle,
+  dialogTaskAssigneeId,
+  dialogTaskDescription,
+  dialogTaskPriority,
   dialogTaskStatus,
   dialogTaskTitle,
   dialogTitle,
   isDialogOpen,
   openCreateDialog,
   openEditDialog,
+  setDialogTaskAssigneeId,
+  setDialogTaskDescription,
+  setDialogTaskPriority,
   setDialogProjectId,
   setDialogTaskStatus,
   setDialogTaskTitle,
@@ -92,6 +99,18 @@ const {
 } = search;
 const { isDeletingTaskId, isSavingDialog } = mutations;
 const { requestErrorMessage, visibleProjects } = data;
+const dialogAssigneeOptions = computed(() => {
+  const selectedProject = visibleProjects.value.find(
+    (project) => project.id === dialogProjectId.value,
+  );
+
+  return (selectedProject?.members ?? [])
+    .map((member) => ({
+      label: getProjectMemberLabel(member),
+      value: member.userId,
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+});
 const pageState = computed(() =>
   resolveDataPageState({
     hasRequestError: data.requestErrorMessage.value !== null,
@@ -99,6 +118,20 @@ const pageState = computed(() =>
     isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
   }),
 );
+
+watch(dialogAssigneeOptions, (options) => {
+  if (
+    dialogTaskAssigneeId.value &&
+    !options.some((option) => option.value === dialogTaskAssigneeId.value)
+  ) {
+    setDialogTaskAssigneeId(null);
+  }
+});
+
+function getProjectMemberLabel(member: ProjectMember): string {
+  return member.displayName ?? member.email;
+}
+
 async function saveDialog(): Promise<void> {
   const validInput = dialog.validateDialog();
 
@@ -269,10 +302,14 @@ async function retryLoadPage(): Promise<void> {
     </template>
 
     <ProjectTaskDialog
+      :assignee-id="dialogTaskAssigneeId"
+      :assignee-options="dialogAssigneeOptions"
+      :description="dialogTaskDescription"
       :errors="dialogErrors"
       :is-open="isDialogOpen"
       :is-saving="isSavingDialog"
       :mode="dialogMode"
+      :priority="dialogTaskPriority"
       :project-id="dialogProjectId"
       :projects="visibleProjects"
       :request-error-message="dialogRequestErrorMessage"
@@ -283,6 +320,9 @@ async function retryLoadPage(): Promise<void> {
       :value-title="dialogTaskTitle"
       @close="closeDialog"
       @save="void saveDialog()"
+      @update:assignee-id="setDialogTaskAssigneeId"
+      @update:description="setDialogTaskDescription"
+      @update:priority="setDialogTaskPriority"
       @update:project-id="setDialogProjectId"
       @update:status="setDialogTaskStatus"
       @update:title="setDialogTaskTitle"

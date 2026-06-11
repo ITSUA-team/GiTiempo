@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   pgTable,
   text,
@@ -7,8 +9,9 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import type { TaskStatus } from '@gitiempo/shared';
+import type { TaskPriority, TaskStatus } from '@gitiempo/shared';
 import { projects } from '../../projects/schemas/projects.schema';
+import { users } from '../../users/schemas/users.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 
 export const tasks = pgTable(
@@ -22,10 +25,18 @@ export const tasks = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    description: text('description'),
+    priority: varchar('priority', { length: 20 })
+      .$type<TaskPriority>()
+      .default('medium')
+      .notNull(),
     status: varchar('status', { length: 20 })
       .$type<TaskStatus>()
       .default('open')
       .notNull(),
+    assigneeUserId: uuid('assignee_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -41,6 +52,11 @@ export const tasks = pgTable(
       table.workspaceId,
       table.projectId,
       table.isActive,
+    ),
+    index('tasks_assignee_user_id_idx').on(table.assigneeUserId),
+    check(
+      'tasks_priority_check',
+      sql`${table.priority} IN ('low', 'medium', 'high')`,
     ),
   ],
 );

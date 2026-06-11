@@ -29,9 +29,12 @@ const internalOpsProject = {
 } satisfies ProjectResponse;
 
 const reportsTask = {
+  assignee: null,
   createdAt: "2026-04-20T12:00:00.000Z",
+  description: null,
   id: "task-1",
   isActive: true,
+  priority: "medium",
   projectId: "project-1",
   status: "open",
   title: "Improve reports filters",

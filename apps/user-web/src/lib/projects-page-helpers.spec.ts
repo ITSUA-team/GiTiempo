@@ -29,9 +29,12 @@ function createProject(id: string, name: string): ProjectResponse {
 
 function createTask(id: string, projectId: string, title: string, updatedAt: string): TaskResponse {
   return {
+    assignee: null,
     createdAt: "2026-04-20T12:00:00.000Z",
+    description: null,
     id,
     isActive: true,
+    priority: "medium",
     projectId,
     status: "open",
     title,

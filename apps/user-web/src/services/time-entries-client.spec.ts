@@ -152,9 +152,12 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse([
         {
+          assignee: null,
           createdAt: "2026-04-20T12:00:00.000Z",
+          description: null,
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
           isActive: true,
+          priority: "medium",
           projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
           status: "open",
           title: "Improve reports filters",
@@ -182,14 +185,23 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
-  it("creates a new task in the selected project", async () => {
+  it("creates a new task in the selected project with metadata", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
+        assignee: {
+          avatarUrl: null,
+          displayName: "Alexey Tsukanov",
+          email: "alexey@example.com",
+          role: "member",
+          userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        },
         createdAt: "2026-04-20T12:00:00.000Z",
+        description: "Coordinate release validation.",
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         isActive: true,
+        priority: "high",
         projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-        status: "open",
+        status: "closed",
         title: "Write release checklist",
         updatedAt: "2026-04-20T12:00:00.000Z",
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
@@ -199,28 +211,51 @@ describe("createTimeEntriesClient", () => {
 
     await client.createTask(
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-      { title: "Write release checklist" },
+      {
+        assigneeId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        description: "Coordinate release validation.",
+        priority: "high",
+        status: "closed",
+        title: "Write release checklist",
+      },
     );
 
-    expect(fetchFn).toHaveBeenCalledWith(
+    const { path, requestInit } = getRecordedFetchRequest(fetchFn);
+
+    expect(path).toBe(
       "/projects/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f/tasks",
-      {
-        body: JSON.stringify({ title: "Write release checklist" }),
+    );
+    expect(requestInit).toMatchObject({
         headers: {
           Authorization: "Bearer access-token",
           "Content-Type": "application/json",
         },
         method: "POST",
-      },
-    );
+    });
+    expect(JSON.parse(String(requestInit.body))).toEqual({
+      assigneeId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+      description: "Coordinate release validation.",
+      priority: "high",
+      status: "closed",
+      title: "Write release checklist",
+    });
   });
 
-  it("updates an existing task and parses the response", async () => {
+  it("updates an existing task with metadata and parses the response", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
+        assignee: {
+          avatarUrl: null,
+          displayName: "Alexey Tsukanov",
+          email: "alexey@example.com",
+          role: "member",
+          userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        },
         createdAt: "2026-04-20T12:00:00.000Z",
+        description: "Updated details",
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         isActive: true,
+        priority: "high",
         projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
         status: "closed",
         title: "Review PM scope rules",
@@ -233,26 +268,36 @@ describe("createTimeEntriesClient", () => {
     const task = await client.updateTask(
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       {
+        assigneeId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        description: "Updated details",
+        priority: "high",
         status: "closed",
         title: "Review PM scope rules",
       },
     );
 
     expect(task.status).toBe("closed");
-    expect(fetchFn).toHaveBeenCalledWith(
-      "/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-      {
-        body: JSON.stringify({
-          title: "Review PM scope rules",
-          status: "closed",
-        }),
+    expect(task.assignee?.userId).toBe(
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+    );
+
+    const { path, requestInit } = getRecordedFetchRequest(fetchFn);
+
+    expect(path).toBe("/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001");
+    expect(requestInit).toMatchObject({
         headers: {
           Authorization: "Bearer access-token",
           "Content-Type": "application/json",
         },
         method: "PATCH",
-      },
-    );
+    });
+    expect(JSON.parse(String(requestInit.body))).toEqual({
+      assigneeId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+      description: "Updated details",
+      priority: "high",
+      status: "closed",
+      title: "Review PM scope rules",
+    });
   });
 
   it("handles task deletion with the no-content contract", async () => {

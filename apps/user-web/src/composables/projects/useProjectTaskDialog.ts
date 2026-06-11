@@ -1,6 +1,7 @@
 import {
   createTaskSchema,
   type TaskResponse,
+  type TaskPriority,
   type TaskStatus,
   updateTaskSchema,
 } from "@gitiempo/shared";
@@ -9,6 +10,9 @@ import { computed, ref, shallowRef } from "vue";
 type DialogMode = "create" | "edit" | null;
 
 interface ProjectsDialogErrors {
+  assigneeId: string | null;
+  description: string | null;
+  priority: string | null;
   projectId: string | null;
   status: string | null;
   title: string | null;
@@ -28,6 +32,9 @@ export type ValidProjectTaskDialogInput =
 
 function defaultDialogErrors(): ProjectsDialogErrors {
   return {
+    assigneeId: null,
+    description: null,
+    priority: null,
     projectId: null,
     status: null,
     title: null,
@@ -38,6 +45,9 @@ export function useProjectTaskDialog() {
   const dialogMode = ref<DialogMode>(null);
   const editingTask = shallowRef<TaskResponse | null>(null);
   const dialogProjectId = ref<string | null>(null);
+  const dialogTaskAssigneeId = ref<string | null>(null);
+  const dialogTaskDescription = ref("");
+  const dialogTaskPriority = ref<TaskPriority>("medium");
   const dialogTaskTitle = ref("");
   const dialogTaskStatus = ref<TaskStatus>("open");
   const dialogErrors = ref<ProjectsDialogErrors>(defaultDialogErrors());
@@ -70,6 +80,9 @@ export function useProjectTaskDialog() {
     dialogMode.value = null;
     editingTask.value = null;
     dialogProjectId.value = null;
+    dialogTaskAssigneeId.value = null;
+    dialogTaskDescription.value = "";
+    dialogTaskPriority.value = "medium";
     dialogTaskTitle.value = "";
     dialogTaskStatus.value = "open";
     clearDialogErrors();
@@ -86,6 +99,9 @@ export function useProjectTaskDialog() {
     dialogMode.value = "edit";
     editingTask.value = task;
     dialogProjectId.value = task.projectId;
+    dialogTaskAssigneeId.value = task.assignee?.userId ?? null;
+    dialogTaskDescription.value = task.description ?? "";
+    dialogTaskPriority.value = task.priority;
     dialogTaskTitle.value = task.title;
     dialogTaskStatus.value = task.status;
   }
@@ -95,8 +111,30 @@ export function useProjectTaskDialog() {
   }
 
   function setDialogProjectId(value: string | null): void {
+    if (value !== dialogProjectId.value) {
+      dialogTaskAssigneeId.value = null;
+    }
+
     dialogProjectId.value = value;
     dialogErrors.value.projectId = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogTaskAssigneeId(value: string | null): void {
+    dialogTaskAssigneeId.value = value;
+    dialogErrors.value.assigneeId = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogTaskDescription(value: string): void {
+    dialogTaskDescription.value = value;
+    dialogErrors.value.description = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogTaskPriority(value: TaskPriority): void {
+    dialogTaskPriority.value = value;
+    dialogErrors.value.priority = null;
     dialogRequestErrorMessage.value = null;
   }
 
@@ -124,6 +162,8 @@ export function useProjectTaskDialog() {
     }
 
     const trimmedTitle = dialogTaskTitle.value.trim();
+    const trimmedDescription = dialogTaskDescription.value.trim();
+    const description = trimmedDescription.length > 0 ? trimmedDescription : null;
     if (!dialogProjectId.value) {
       dialogErrors.value = nextErrors;
       return null;
@@ -131,6 +171,9 @@ export function useProjectTaskDialog() {
 
     if (dialogMode.value === "edit") {
       const parsed = updateTaskSchema.safeParse({
+        assigneeId: dialogTaskAssigneeId.value,
+        description,
+        priority: dialogTaskPriority.value,
         status: dialogTaskStatus.value,
         title: trimmedTitle,
       });
@@ -139,6 +182,9 @@ export function useProjectTaskDialog() {
         const fieldErrors = parsed.error.flatten().fieldErrors;
 
         dialogErrors.value = {
+          assigneeId: fieldErrors.assigneeId?.[0] ?? null,
+          description: fieldErrors.description?.[0] ?? null,
+          priority: fieldErrors.priority?.[0] ?? null,
           projectId: nextErrors.projectId,
           status: fieldErrors.status?.[0] ?? null,
           title: fieldErrors.title?.[0] ?? null,
@@ -155,14 +201,23 @@ export function useProjectTaskDialog() {
       };
     }
 
-    const parsed = createTaskSchema.safeParse({ title: trimmedTitle });
+    const parsed = createTaskSchema.safeParse({
+      assigneeId: dialogTaskAssigneeId.value,
+      description,
+      priority: dialogTaskPriority.value,
+      status: dialogTaskStatus.value,
+      title: trimmedTitle,
+    });
 
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
 
       dialogErrors.value = {
+        assigneeId: fieldErrors.assigneeId?.[0] ?? null,
+        description: fieldErrors.description?.[0] ?? null,
+        priority: fieldErrors.priority?.[0] ?? null,
         projectId: nextErrors.projectId,
-        status: null,
+        status: fieldErrors.status?.[0] ?? null,
         title: fieldErrors.title?.[0] ?? null,
       };
       return null;
@@ -185,6 +240,9 @@ export function useProjectTaskDialog() {
     dialogRequestErrorMessage,
     dialogSaveLabel,
     dialogSubtitle,
+    dialogTaskAssigneeId,
+    dialogTaskDescription,
+    dialogTaskPriority,
     dialogTaskStatus,
     dialogTaskTitle,
     dialogTitle,
@@ -192,6 +250,9 @@ export function useProjectTaskDialog() {
     isDialogOpen,
     openCreateDialog,
     openEditDialog,
+    setDialogTaskAssigneeId,
+    setDialogTaskDescription,
+    setDialogTaskPriority,
     setDialogProjectId,
     setDialogRequestError,
     setDialogTaskStatus,

@@ -18,6 +18,7 @@ const primeVueMocks = vi.hoisted(() => ({
   confirmRequire: vi.fn(),
   toastAdd: vi.fn(),
 }));
+const ASSIGNEE_ID = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003";
 
 vi.mock("@/config/clients", () => ({
   createDefaultTimeEntriesClient: () => clientRef.current,
@@ -35,6 +36,7 @@ function createProject(
   id: string,
   name: string,
   isActive = true,
+  overrides: Partial<ProjectResponse> = {},
 ): ProjectResponse {
   return {
     color: null,
@@ -42,13 +44,22 @@ function createProject(
     description: null,
     id,
     isActive,
-    members: [],
+    members: [
+      {
+        avatarUrl: null,
+        displayName: "Alexey Tsukanov",
+        email: "alexey@example.com",
+        role: "member",
+        userId: ASSIGNEE_ID,
+      },
+    ],
     name,
     source: "manual",
     totalSeconds: 43200,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
     workspaceId: "workspace-1",
+    ...overrides,
   };
 }
 
@@ -59,9 +70,12 @@ function createTask(
   overrides: Partial<TaskResponse> = {},
 ): TaskResponse {
   return {
+    assignee: null,
     createdAt: "2026-04-20T12:00:00.000Z",
+    description: null,
     id,
     isActive: true,
+    priority: "medium",
     projectId,
     status: "open",
     title,
@@ -90,7 +104,20 @@ function createClientMock(): TimeEntriesClient & {
       throw new Error("unused");
     }),
     createTask: vi.fn(async (projectId, input) =>
-      createTask("task-new", projectId, input.title),
+      createTask("task-new", projectId, input.title, {
+        assignee: input.assigneeId
+          ? {
+              avatarUrl: null,
+              displayName: "Alexey Tsukanov",
+              email: "alexey@example.com",
+              role: "member",
+              userId: input.assigneeId,
+            }
+          : null,
+        description: input.description ?? null,
+        priority: input.priority ?? "medium",
+        status: input.status ?? "open",
+      }),
     ),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
@@ -112,6 +139,17 @@ function createClientMock(): TimeEntriesClient & {
     }),
     updateTask: vi.fn(async (taskId, input) =>
       createTask(taskId, "project-1", input.title ?? "Updated task", {
+        assignee: input.assigneeId
+          ? {
+              avatarUrl: null,
+              displayName: "Alexey Tsukanov",
+              email: "alexey@example.com",
+              role: "member",
+              userId: input.assigneeId,
+            }
+          : null,
+        description: input.description ?? null,
+        priority: input.priority ?? "medium",
         status: input.status ?? "open",
       }),
     ),
@@ -142,19 +180,42 @@ async function mountView(client = createClientMock()) {
             '<button type="button" :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
         },
         ProjectTaskDialog: {
-          emits: ["close", "save", "update:projectId", "update:status", "update:title"],
+          emits: [
+            "close",
+            "save",
+            "update:assigneeId",
+            "update:description",
+            "update:priority",
+            "update:projectId",
+            "update:status",
+            "update:title",
+          ],
           props: [
+            "assigneeId",
+            "assigneeOptions",
+            "description",
             "isOpen",
+            "priority",
+            "projectId",
             "requestErrorMessage",
             "valueTitle",
           ],
           template: `
             <div v-if="isOpen" data-testid="project-task-dialog">
               <p data-testid="dialog-title-value">{{ valueTitle }}</p>
+              <p data-testid="dialog-description-value">{{ description }}</p>
+              <p data-testid="dialog-priority-value">{{ priority }}</p>
+              <p data-testid="dialog-assignee-value">{{ assigneeId }}</p>
               <p data-testid="dialog-request-error">{{ requestErrorMessage }}</p>
+              <button data-testid="dialog-project-input" type="button" @click="$emit('update:projectId', 'project-2')">Project</button>
               <button data-testid="dialog-title-input" type="button" @click="$emit('update:title', 'Write release checklist')">Title</button>
               <button data-testid="dialog-edit-title-input" type="button" @click="$emit('update:title', 'Updated task')">Edit title</button>
+              <button data-testid="dialog-description-input" type="button" @click="$emit('update:description', 'Coordinate release validation.')">Description</button>
+              <button data-testid="dialog-clear-description-input" type="button" @click="$emit('update:description', '')">Clear description</button>
+              <button data-testid="dialog-priority-input" type="button" @click="$emit('update:priority', 'high')">Priority</button>
               <button data-testid="dialog-status-input" type="button" @click="$emit('update:status', 'closed')">Status</button>
+              <button data-testid="dialog-assignee-input" type="button" @click="$emit('update:assigneeId', assigneeOptions[0]?.value ?? null)">Assignee</button>
+              <button data-testid="dialog-clear-assignee-input" type="button" @click="$emit('update:assigneeId', null)">Clear assignee</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
               <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
             </div>
@@ -265,14 +326,101 @@ describe("ProjectView", () => {
     await flushPromises();
     await wrapper.get('[data-testid="project-section-add"]').trigger("click");
     await wrapper.get('[data-testid="dialog-title-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-description-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-priority-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-status-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-assignee-input"]').trigger("click");
     await wrapper.get('[data-testid="dialog-save"]').trigger("click");
     await flushPromises();
 
     expect(client.createTask).toHaveBeenCalledWith("project-1", {
+      assigneeId: ASSIGNEE_ID,
+      description: "Coordinate release validation.",
+      priority: "high",
+      status: "closed",
       title: "Write release checklist",
     });
     expect(wrapper.text()).toContain("Write release checklist");
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
+  });
+
+  it("prefills and updates task metadata from the edit dialog", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters", {
+        assignee: {
+          avatarUrl: null,
+          displayName: "Alexey Tsukanov",
+          email: "alexey@example.com",
+          role: "member",
+          userId: ASSIGNEE_ID,
+        },
+        description: "Existing details",
+        priority: "low",
+      }),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+
+    expect(wrapper.get('[data-testid="dialog-title-value"]').text()).toBe(
+      "Improve reports filters",
+    );
+    expect(wrapper.get('[data-testid="dialog-description-value"]').text()).toBe(
+      "Existing details",
+    );
+    expect(wrapper.get('[data-testid="dialog-priority-value"]').text()).toBe("low");
+    expect(wrapper.get('[data-testid="dialog-assignee-value"]').text()).toBe(ASSIGNEE_ID);
+
+    await wrapper.get('[data-testid="dialog-edit-title-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-clear-description-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-priority-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-status-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-clear-assignee-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.updateTask).toHaveBeenCalledWith("task-1", {
+      assigneeId: null,
+      description: null,
+      priority: "high",
+      status: "closed",
+      title: "Updated task",
+    });
+  });
+
+  it("clears a selected assignee when the create project changes", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+      createProject("project-2", "Project Apollo", true, { members: [] }),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-title-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-assignee-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith("project-2", {
+      assigneeId: null,
+      description: null,
+      priority: "medium",
+      status: "open",
+      title: "Write release checklist",
+    });
   });
 
   it("keeps the dialog open when task mutations fail and exposes the request error", async () => {

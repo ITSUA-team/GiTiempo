@@ -15,9 +15,12 @@ describe("ProjectsTaskSection", () => {
 
   it("renders accessible row actions and emits add, edit, and delete events", async () => {
     const task = {
+      assignee: null,
       createdAt: "2026-04-20T12:00:00.000Z",
+      description: null,
       id: "task-1",
       isActive: true,
+      priority: "medium",
       projectId: "project-1",
       status: "open",
       title: "Improve reports filters",
@@ -85,9 +88,12 @@ describe("ProjectsTaskSection", () => {
 
     const tasks: TaskResponse[] = [
       {
+        assignee: null,
         createdAt: "2026-04-20T12:00:00.000Z",
+        description: null,
         id: "task-1",
         isActive: true,
+        priority: "medium",
         projectId: "project-1",
         status: "open",
         title: "Improve reports filters",
@@ -95,9 +101,12 @@ describe("ProjectsTaskSection", () => {
         workspaceId: "workspace-1",
       },
       {
+        assignee: null,
         createdAt: "2026-04-20T12:30:00.000Z",
+        description: null,
         id: "task-2",
         isActive: false,
+        priority: "medium",
         projectId: "project-1",
         status: "closed",
         title: "Archive launch checklist",
@@ -169,9 +178,12 @@ describe("ProjectsTaskSection", () => {
 
   it("renders the desktop task table branch with the expected column labels", () => {
     const task = {
+      assignee: null,
       createdAt: "2026-04-20T12:00:00.000Z",
+      description: null,
       id: "task-1",
       isActive: true,
+      priority: "medium",
       projectId: "project-1",
       status: "open",
       title: "Improve reports filters",

@@ -3,11 +3,23 @@ import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
-import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
+import Textarea from "primevue/textarea";
+import type { ProjectResponse, TaskPriority, TaskStatus } from "@gitiempo/shared";
 import { computed } from "vue";
 
+interface TaskAssigneeOption {
+  label: string;
+  value: string;
+}
+
 const props = defineProps<{
+  assigneeId: string | null;
+  assigneeOptions: TaskAssigneeOption[];
+  description: string;
   errors: {
+    assigneeId: string | null;
+    description: string | null;
+    priority: string | null;
     projectId: string | null;
     status: string | null;
     title: string | null;
@@ -15,6 +27,7 @@ const props = defineProps<{
   isOpen: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
+  priority: TaskPriority;
   projectId: string | null;
   projects: ProjectResponse[];
   requestErrorMessage: string | null;
@@ -28,6 +41,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: [];
   save: [];
+  "update:assigneeId": [value: string | null];
+  "update:description": [value: string];
+  "update:priority": [value: TaskPriority];
   "update:projectId": [value: string | null];
   "update:status": [value: TaskStatus];
   "update:title": [value: string];
@@ -37,6 +53,12 @@ const statusOptions = [
   { label: "Open", value: "open" },
   { label: "Closed", value: "closed" },
 ] satisfies { label: string; value: TaskStatus }[];
+
+const priorityOptions = [
+  { label: "Low", value: "low" },
+  { label: "Medium", value: "medium" },
+  { label: "High", value: "high" },
+] satisfies { label: string; value: TaskPriority }[];
 
 const selectedProjectName = computed(() => {
   return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
@@ -53,6 +75,27 @@ const statusModel = computed({
   get: () => props.status,
   set: (value: TaskStatus | null | undefined) => {
     emit("update:status", value ?? "open");
+  },
+});
+
+const assigneeModel = computed({
+  get: () => props.assigneeId,
+  set: (value: string | null | undefined) => {
+    emit("update:assigneeId", value ?? null);
+  },
+});
+
+const descriptionModel = computed({
+  get: () => props.description,
+  set: (value: string) => {
+    emit("update:description", value);
+  },
+});
+
+const priorityModel = computed({
+  get: () => props.priority,
+  set: (value: TaskPriority | null | undefined) => {
+    emit("update:priority", value ?? "medium");
   },
 });
 
@@ -167,31 +210,110 @@ const titleModel = computed({
         </small>
       </div>
 
-      <div
-        v-if="props.mode === 'edit'"
-        class="flex flex-col gap-1"
-      >
+      <div class="flex flex-col gap-1">
         <label
-          for="project-task-status"
+          for="project-task-description"
           class="text-text-dark text-[13px] font-medium"
         >
-          Status
+          Description
         </label>
-        <Select
-          v-model="statusModel"
-          fluid
-          input-id="project-task-status"
-          option-label="label"
-          option-value="value"
+        <Textarea
+          id="project-task-description"
+          v-model="descriptionModel"
+          auto-resize
+          class="w-full"
           :disabled="props.isSaving"
-          :invalid="!!props.errors.status"
-          :options="statusOptions"
+          :invalid="!!props.errors.description"
+          :maxlength="2000"
+          placeholder="Add context, acceptance notes, or links"
+          rows="4"
         />
         <small
-          v-if="props.errors.status"
+          v-if="props.errors.description"
           class="text-destructive text-xs"
         >
-          {{ props.errors.status }}
+          {{ props.errors.description }}
+        </small>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-1">
+          <label
+            for="project-task-priority"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Priority
+          </label>
+          <Select
+            v-model="priorityModel"
+            fluid
+            input-id="project-task-priority"
+            option-label="label"
+            option-value="value"
+            :disabled="props.isSaving"
+            :invalid="!!props.errors.priority"
+            :options="priorityOptions"
+          />
+          <small
+            v-if="props.errors.priority"
+            class="text-destructive text-xs"
+          >
+            {{ props.errors.priority }}
+          </small>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label
+            for="project-task-status"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Status
+          </label>
+          <Select
+            v-model="statusModel"
+            fluid
+            input-id="project-task-status"
+            option-label="label"
+            option-value="value"
+            :disabled="props.isSaving"
+            :invalid="!!props.errors.status"
+            :options="statusOptions"
+          />
+          <small
+            v-if="props.errors.status"
+            class="text-destructive text-xs"
+          >
+            {{ props.errors.status }}
+          </small>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label
+          for="project-task-assignee"
+          class="text-text-dark text-[13px] font-medium"
+        >
+          Assignee
+        </label>
+        <Select
+          v-model="assigneeModel"
+          empty-message="No assigned project members"
+          filter
+          fluid
+          input-id="project-task-assignee"
+          option-label="label"
+          option-value="value"
+          placeholder="Unassigned"
+          show-clear
+          :disabled="props.isSaving || !props.projectId || props.assigneeOptions.length === 0"
+          :invalid="!!props.errors.assigneeId"
+          :options="props.assigneeOptions"
+        />
+        <small
+          v-if="props.errors.assigneeId"
+          class="text-destructive text-xs"
+        >
+          {{ props.errors.assigneeId }}
         </small>
       </div>
     </div>
