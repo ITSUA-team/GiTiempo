@@ -5,6 +5,7 @@ import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import TopBarTimer from "@/components/timer/TopBarTimer.vue";
+import { provideTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { appEnv } from "@/config/env";
 import { routeNames } from "@/constants/routes";
 import { useAuthStore } from "@/stores/auth";
@@ -19,10 +20,14 @@ import {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const topBarTimerDialogController = provideTopBarTimerDialogController();
 const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
+const topBarTimerDialogOpenRequestId = computed(
+  () => topBarTimerDialogController.openRequestId.value,
+);
 const pageName = computed(
   () =>
     USER_PAGE_NAMES_BY_ROUTE_NAME[route.name?.toString() ?? ""] ??
@@ -52,7 +57,7 @@ async function handleSignOut(): Promise<void> {
       @sign-out="handleSignOut"
     >
       <template #center>
-        <TopBarTimer />
+        <TopBarTimer :open-request-id="topBarTimerDialogOpenRequestId" />
       </template>
     </WorkspaceHeader>
 
