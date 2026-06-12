@@ -72,6 +72,25 @@ function mountDialog(
           template:
             '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
+        AutoComplete: {
+          props: ["disabled", "inputId", "modelValue", "optionLabel", "suggestions"],
+          emits: ["complete", "update:modelValue"],
+          template: `
+            <div class="autocomplete" :data-disabled="disabled" :data-input-id="inputId">
+              <button :data-testid="inputId + '-complete'" type="button" @click="$emit('complete', { query: '' })">Complete</button>
+              <button
+                v-for="option in suggestions"
+                :key="option.id ?? option.value"
+                :data-testid="inputId + '-option-' + (option.id ?? option.value)"
+                type="button"
+                @click="$emit('update:modelValue', option)"
+              >
+                {{ option[optionLabel] }}
+              </button>
+              <button :data-testid="inputId + '-clear'" type="button" @click="$emit('update:modelValue', null)">Clear</button>
+            </div>
+          `,
+        },
         Select: {
           props: ["disabled", "modelValue", "optionLabel", "optionValue", "options"],
           emits: ["update:modelValue"],
@@ -96,10 +115,12 @@ describe("ProjectTaskDialog", () => {
     const input = wrapper.get("input");
     const textarea = wrapper.get("textarea");
 
-    await selects[0]?.setValue("project-1");
-    await selects[1]?.setValue("high");
-    await selects[2]?.setValue("closed");
-    await selects[3]?.setValue("user-1");
+    await wrapper.get('[data-testid="project-task-project-complete"]').trigger("click");
+    await wrapper.get('[data-testid="project-task-project-option-project-1"]').trigger("click");
+    await selects[0]?.setValue("high");
+    await selects[1]?.setValue("closed");
+    await wrapper.get('[data-testid="project-task-assignee-complete"]').trigger("click");
+    await wrapper.get('[data-testid="project-task-assignee-option-user-1"]').trigger("click");
     await input.setValue("Write release checklist");
     await textarea.setValue("Coordinate release validation.");
 
@@ -127,9 +148,11 @@ describe("ProjectTaskDialog", () => {
     });
 
     const selects = wrapper.findAll("select");
+    const autocompleteControls = wrapper.findAll(".autocomplete");
     const projectField = wrapper.get('[role="textbox"][aria-readonly="true"]');
 
-    expect(selects).toHaveLength(3);
+    expect(selects).toHaveLength(2);
+    expect(autocompleteControls).toHaveLength(1);
     expect(projectField.attributes("aria-labelledby")).toBe("project-task-project-label");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Save changes");
@@ -154,7 +177,9 @@ describe("ProjectTaskDialog", () => {
 
   it("emits close and save actions from the footer buttons", async () => {
     const wrapper = mountDialog();
-    const buttons = wrapper.findAll("button");
+    const buttons = wrapper
+      .findAll("button")
+      .filter((button) => ["Cancel", "Create task"].includes(button.text()));
 
     await buttons[0]?.trigger("click");
     await buttons[1]?.trigger("click");

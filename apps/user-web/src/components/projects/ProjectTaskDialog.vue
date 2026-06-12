@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import AutoComplete, { type AutoCompleteCompleteEvent } from "primevue/autocomplete";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskPriority, TaskStatus } from "@gitiempo/shared";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 interface TaskAssigneeOption {
   label: string;
@@ -63,11 +64,15 @@ const priorityOptions = [
 const selectedProjectName = computed(() => {
   return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
 });
+const projectSuggestions = ref<ProjectResponse[]>([]);
+const assigneeSuggestions = ref<TaskAssigneeOption[]>([]);
 
 const projectModel = computed({
-  get: () => props.projectId,
-  set: (value: string | null | undefined) => {
-    emit("update:projectId", value ?? null);
+  get: () => {
+    return props.projects.find((project) => project.id === props.projectId) ?? null;
+  },
+  set: (value: ProjectResponse | string | null | undefined) => {
+    emit("update:projectId", resolveProjectId(value));
   },
 });
 
@@ -79,9 +84,11 @@ const statusModel = computed({
 });
 
 const assigneeModel = computed({
-  get: () => props.assigneeId,
-  set: (value: string | null | undefined) => {
-    emit("update:assigneeId", value ?? null);
+  get: () => {
+    return props.assigneeOptions.find((option) => option.value === props.assigneeId) ?? null;
+  },
+  set: (value: TaskAssigneeOption | string | null | undefined) => {
+    emit("update:assigneeId", resolveAssigneeId(value));
   },
 });
 
@@ -105,6 +112,45 @@ const titleModel = computed({
     emit("update:title", value);
   },
 });
+
+function completeProjects(event: AutoCompleteCompleteEvent): void {
+  projectSuggestions.value = filterOptions(props.projects, event.query, "name");
+}
+
+function completeAssignees(event: AutoCompleteCompleteEvent): void {
+  assigneeSuggestions.value = filterOptions(props.assigneeOptions, event.query, "label");
+}
+
+function filterOptions<T extends object>(
+  options: T[],
+  query: string,
+  labelKey: keyof T,
+): T[] {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return [...options];
+
+  return options.filter((option) =>
+    String(option[labelKey] ?? "").toLocaleLowerCase().includes(normalizedQuery),
+  );
+}
+
+function resolveProjectId(
+  value: ProjectResponse | string | null | undefined,
+): string | null {
+  if (typeof value === "string") {
+    return props.projects.find((project) => project.name === value)?.id ?? null;
+  }
+  return value?.id ?? null;
+}
+
+function resolveAssigneeId(
+  value: TaskAssigneeOption | string | null | undefined,
+): string | null {
+  if (typeof value === "string") {
+    return props.assigneeOptions.find((option) => option.label === value)?.value ?? null;
+  }
+  return value?.value ?? null;
+}
 </script>
 
 <template>
@@ -167,18 +213,22 @@ const titleModel = computed({
         >
           {{ selectedProjectName }}
         </div>
-        <Select
+        <AutoComplete
           v-else
           v-model="projectModel"
-          filter
+          dropdown
+          dropdown-mode="blank"
+          force-selection
           fluid
           input-id="project-task-project"
           option-label="name"
-          option-value="id"
           placeholder="Select project"
+          :complete-on-focus="true"
           :disabled="props.isSaving"
           :invalid="!!props.errors.projectId"
-          :options="props.projects"
+          :min-length="0"
+          :suggestions="projectSuggestions"
+          @complete="completeProjects"
         />
         <small
           v-if="props.errors.projectId"
@@ -295,19 +345,23 @@ const titleModel = computed({
         >
           Assignee
         </label>
-        <Select
+        <AutoComplete
           v-model="assigneeModel"
+          complete-on-focus
+          dropdown
+          dropdown-mode="blank"
           empty-message="No assigned project members"
-          filter
+          force-selection
           fluid
           input-id="project-task-assignee"
           option-label="label"
-          option-value="value"
           placeholder="Unassigned"
           show-clear
           :disabled="props.isSaving || !props.projectId || props.assigneeOptions.length === 0"
           :invalid="!!props.errors.assigneeId"
-          :options="props.assigneeOptions"
+          :min-length="0"
+          :suggestions="assigneeSuggestions"
+          @complete="completeAssignees"
         />
         <small
           v-if="props.errors.assigneeId"
