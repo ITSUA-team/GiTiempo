@@ -7,6 +7,7 @@ import {
   AuthSignInForm,
   type EmailPasswordSignInInput,
 } from "@gitiempo/web-shared";
+import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { appEnv } from "@/config/env";
@@ -37,11 +38,7 @@ const introFeatureCards = [
 ];
 
 const redirectTarget = computed(() => {
-  const redirect = route.query.redirect;
-
-  return typeof redirect === "string" && redirect.startsWith("/")
-    ? redirect
-    : null;
+  return normalizeRedirectTargetValue(route.query.redirect);
 });
 
 async function navigateAfterLogin(): Promise<void> {

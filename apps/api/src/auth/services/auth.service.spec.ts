@@ -312,6 +312,33 @@ describe('AuthService', () => {
       expect(firebase.deleteUser).toHaveBeenCalledWith('firebase-register-1');
     });
 
+    it.each([
+      ['users_email_lookup_unique', 'duplicate_email'],
+      ['workspaces_name_lookup_unique', 'workspace_name_unavailable'],
+    ] as const)(
+      'maps database unique violations for %s back to the shared registration conflict',
+      async (constraint, code) => {
+        db.select = createSelectMock([[]]);
+        db.transaction.mockRejectedValueOnce({
+          code: '23505',
+          constraint,
+        });
+        firebase.createEmailPasswordUser.mockResolvedValueOnce({
+          uid: 'firebase-register-1',
+          email: 'owner@example.com',
+          displayName: 'Owner Person',
+        });
+
+        const error = await service
+          .register(registerInput)
+          .catch((caught) => caught);
+
+        expect(error).toBeInstanceOf(ConflictException);
+        expect(error.getResponse()).toMatchObject({ code });
+        expect(firebase.deleteUser).toHaveBeenCalledWith('firebase-register-1');
+      },
+    );
+
     it('returns service unavailable when Firebase provisioning fails unexpectedly', async () => {
       db.select = createSelectMock([[]]);
       firebase.createEmailPasswordUser.mockRejectedValueOnce(

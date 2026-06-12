@@ -71,6 +71,13 @@
       "when": 1778772191896,
       "tag": "0009_motionless_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781260341414,
+      "tag": "0010_register_lookup_uniqueness",
+      "breakpoints": true
     }
   ]
 }

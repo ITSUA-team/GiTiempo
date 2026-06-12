@@ -1,6 +1,7 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBody,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -13,7 +14,9 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { RegisterRequest } from '@gitiempo/shared';
 import { ZodSerializerDto } from 'nestjs-zod';
+import { ThrottleErrorCode } from '../../commons/decorators/throttle-error-code.decorator';
 import { AuthService } from '../services/auth.service';
 import { SkipAuth } from '../decorators/skip-auth.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
@@ -22,6 +25,7 @@ import { RefreshDto } from '../dto/refresh.dto';
 import { LogoutDto } from '../dto/logout.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
+import { RegisterBodyPipe } from '../pipes/register-body.pipe';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -43,10 +47,12 @@ export class AuthController {
   @Post('register')
   @SkipAuth()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ThrottleErrorCode('rate_limited')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Register the first workspace owner and issue API tokens',
   })
+  @ApiBody({ type: RegisterDto })
   @ApiCreatedResponse({ type: TokenPairResponseDto })
   @ApiBadRequestResponse({
     description: 'Invalid registration input or weak password',
@@ -59,7 +65,9 @@ export class AuthController {
     description: 'Registration could not complete safely',
   })
   @ZodSerializerDto(TokenPairResponseDto)
-  register(@Body() body: RegisterDto): Promise<TokenPairResponseDto> {
+  register(
+    @Body(new RegisterBodyPipe()) body: RegisterRequest,
+  ): Promise<TokenPairResponseDto> {
     return this.auth.register(body);
   }
 

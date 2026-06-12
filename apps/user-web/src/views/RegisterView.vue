@@ -16,6 +16,7 @@ import {
   createAppToast,
   getErrorMessage,
 } from "@gitiempo/web-shared";
+import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
 import { z } from "zod";
 
 import { routeNames } from "@/router";
@@ -80,11 +81,7 @@ const desktopSteps = [
 ] as const;
 
 const redirectTarget = computed(() => {
-  const redirect = route.query.redirect;
-
-  return typeof redirect === "string" && redirect.startsWith("/")
-    ? redirect
-    : null;
+  return normalizeRedirectTargetValue(route.query.redirect);
 });
 
 const registerFormSchema = z
@@ -259,7 +256,7 @@ async function handleRegister(): Promise<void> {
   <div class="bg-app-bg text-text-dark min-h-screen">
     <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
       <section
-        class="hidden h-auto w-full flex-1 flex-col justify-between bg-[#5D2B85] px-[52px] py-[56px] text-white lg:flex"
+        class="bg-brand hidden h-auto w-full flex-1 flex-col justify-between px-[52px] py-[56px] text-white lg:flex"
         data-testid="register-desktop-intro"
       >
         <div class="flex flex-col gap-8">
@@ -316,11 +313,11 @@ async function handleRegister(): Promise<void> {
 
       <section class="bg-app-bg flex w-full flex-1 flex-col">
         <div
-          class="flex flex-col gap-[18px] bg-[#5D2B85] px-6 py-7 text-white lg:hidden"
+          class="bg-brand flex flex-col gap-[18px] px-6 py-7 text-white lg:hidden"
           data-testid="register-mobile-hero"
         >
           <div class="flex items-center gap-2.5">
-            <div class="flex size-[34px] items-center justify-center rounded-[9px] bg-white text-sm font-semibold text-[#5D2B85]">
+            <div class="text-brand flex size-[34px] items-center justify-center rounded-[9px] bg-white text-sm font-semibold">
               GT
             </div>
             <p class="text-[15px] font-semibold">
@@ -339,7 +336,7 @@ async function handleRegister(): Promise<void> {
 
         <div class="flex w-full flex-1 items-start justify-center px-5 py-6 sm:px-8 sm:py-8 lg:items-center lg:px-12 lg:py-12">
           <div
-            class="bg-surface-primary shadow-card flex w-full max-w-[500px] flex-col gap-6 rounded-lg border border-[#EEEEEE] p-5 sm:p-6 lg:p-8"
+            class="bg-surface-primary border-divider shadow-card flex w-full max-w-[500px] flex-col gap-6 rounded-lg border p-5 sm:p-6 lg:p-8"
             data-testid="register-panel"
           >
             <div class="flex flex-col gap-2">

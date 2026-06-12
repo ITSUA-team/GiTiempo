@@ -11,13 +11,19 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | Method | Path            | Auth | Role | Description                                              |
 | ------ | --------------- | ---- | ---- | -------------------------------------------------------- |
 | POST   | `/auth/login`   | None | —    | Exchange Firebase ID token for JWT access/refresh tokens |
+| POST   | `/auth/register`| None | —    | Register the first workspace owner and issue API tokens  |
 | POST   | `/auth/refresh` | None | —    | Exchange refresh token for new access/refresh pair       |
 | POST   | `/auth/logout`  | JWT  | Any  | Invalidate current refresh token                         |
 
 **POST /auth/login** body: `{ firebaseIdToken: string }`
+**POST /auth/register** body: `{ email: string, fullName: string, workspaceName: string, password: string, ownerAcknowledgement: true }`
 **POST /auth/refresh** body: `{ refreshToken: string }`
 
-There is no public workspace registration endpoint in the current API contract. The User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation; implementation requires a separately approved backend/API registration contract, shared request/response schemas, and an OpenAPI update before the route is exposed.
+`POST /auth/register` is the only public first-workspace-owner registration path. It creates the Firebase identity, local user, workspace, owner membership, and returns the normal token pair. Existing-workspace member onboarding remains invite-only; the User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation.
+
+Successful registration returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`.
+
+Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`.
 
 ---
 

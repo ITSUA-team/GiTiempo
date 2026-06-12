@@ -114,6 +114,24 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
+  it("falls back to the dashboard when the login redirect query is unsafe", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { router, wrapper } = await mountLoginView(
+      "/login?redirect=%2F%2Fevil.example.test%2Fescape",
+    );
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
+    await wrapper.get("form").trigger("submit");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
   it("shows sign-in errors without navigating away from login", async () => {
     setAuthRuntimeForTesting(
       createRuntimeMock({

@@ -234,6 +234,24 @@ describe("RegisterView", () => {
     expect(router.currentRoute.value.fullPath).toBe("/time-entries");
   });
 
+  it("falls back to the dashboard when the register redirect query is unsafe", async () => {
+    const registerClient = createRegistrationClientMock();
+    setWorkspaceRegistrationClientForTesting(registerClient);
+    const { router, wrapper } = await mountRegisterView(
+      "/register?redirect=%2F%2Fevil.example.test%2Fescape",
+    );
+
+    await fillValidRegistrationForm(wrapper);
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
+    await wrapper.get("form").trigger("submit");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
   it("routes existing users back to login from the inline sign-in link", async () => {
     setWorkspaceRegistrationClientForTesting(createRegistrationClientMock());
     const { router, wrapper } = await mountRegisterView();

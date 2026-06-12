@@ -47,6 +47,9 @@ const REGISTRATION_ERROR_MESSAGES: Record<RegistrationErrorCode, string> = {
   weak_password: 'Choose a stronger password and try again.',
   workspace_name_unavailable: 'That workspace name is already in use.',
 };
+const POSTGRES_UNIQUE_VIOLATION = '23505';
+const USERS_EMAIL_LOOKUP_UNIQUE_INDEX = 'users_email_lookup_unique';
+const WORKSPACES_NAME_LOOKUP_UNIQUE_INDEX = 'workspaces_name_lookup_unique';
 
 function normalizeWorkspaceName(name: string): string {
   return name.trim().replace(/\s+/g, ' ');
@@ -90,6 +93,38 @@ function isRegistrationHttpException(error: unknown): boolean {
     error instanceof ConflictException ||
     error instanceof ServiceUnavailableException
   );
+}
+
+function getRegistrationConstraintCode(
+  error: unknown,
+): 'duplicate_email' | 'workspace_name_unavailable' | null {
+  if (
+    typeof error !== 'object' ||
+    error === null ||
+    !('code' in error) ||
+    !('constraint' in error)
+  ) {
+    return null;
+  }
+
+  const postgresCode = (error as { code?: unknown }).code;
+  const constraint = (error as { constraint?: unknown }).constraint;
+  if (
+    postgresCode !== POSTGRES_UNIQUE_VIOLATION ||
+    typeof constraint !== 'string'
+  ) {
+    return null;
+  }
+
+  if (constraint === USERS_EMAIL_LOOKUP_UNIQUE_INDEX) {
+    return 'duplicate_email';
+  }
+
+  if (constraint === WORKSPACES_NAME_LOOKUP_UNIQUE_INDEX) {
+    return 'workspace_name_unavailable';
+  }
+
+  return null;
 }
 
 /**
@@ -242,6 +277,13 @@ export class AuthService {
       }
       if (isRegistrationHttpException(error)) {
         throw error;
+      }
+      const registrationConstraintCode = getRegistrationConstraintCode(error);
+      if (registrationConstraintCode === 'duplicate_email') {
+        throw createRegistrationConflict('duplicate_email');
+      }
+      if (registrationConstraintCode === 'workspace_name_unavailable') {
+        throw createRegistrationConflict('workspace_name_unavailable');
       }
       throw createRegistrationUnavailable();
     }
@@ -461,7 +503,7 @@ export class AuthService {
     const [row] = await db
       .select()
       .from(users)
-      .where(sql`lower(${users.email}) = ${email}`)
+      .where(sql`lower(btrim(${users.email})) = ${email}`)
       .limit(1);
 
     return row ?? null;
@@ -475,7 +517,9 @@ export class AuthService {
     const [row] = await db
       .select({ id: workspaces.id })
       .from(workspaces)
-      .where(sql`lower(${workspaces.name}) = ${normalizedName}`)
+      .where(
+        sql`lower(regexp_replace(btrim(${workspaces.name}), '[[:space:]]+', ' ', 'g')) = ${normalizedName}`,
+      )
       .limit(1);
 
     return row ?? null;
