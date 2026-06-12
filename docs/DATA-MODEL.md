@@ -2,7 +2,7 @@
 
 Entity definitions and relationships for GI Tiempo.
 
-**MVP scope:** Single-tenant. A default workspace is seeded on deployment. All entities reference `workspace_id` to simplify future multi-tenant migration.
+**Workspace model:** The application keeps a seeded default workspace for bootstrap and local development, and now also supports creating additional workspaces through first-owner registration. All workspace-owned entities reference `workspace_id`.
 
 ---
 
@@ -95,7 +95,7 @@ Stores the user's GitHub App connection. Optional — users can work with manual
 
 ### Workspace (`workspaces`)
 
-A grouping container. In MVP, a single default workspace is seeded on deployment. All data belongs to it. Future SaaS will allow multiple workspaces per deployment.
+A grouping container for workspace-owned operational data. A default workspace may still be seeded for bootstrap environments, and additional workspaces may be created through the public first-owner registration flow.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -138,7 +138,7 @@ Per-workspace configuration. One settings record per workspace, created automati
 
 ### WorkspaceMember (`workspace_members`)
 
-Joins users to workspaces with a role. In single-tenant MVP, each user has exactly one membership (in the default workspace).
+Joins users to workspaces with a role. A user may hold memberships in different workspaces over time; the authenticated API session resolves one active workspace context at a time.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|

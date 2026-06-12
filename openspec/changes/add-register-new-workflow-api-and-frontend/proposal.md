@@ -19,10 +19,13 @@ GiTiempo now has approved UI/docs for a `/register` workflow that lets a new cus
 - `auth`: Clarify that membership-gated login remains unchanged while registration is the only public owner-creation path that can issue an initial session.
 - `frontend-auth`: Add the unauthenticated `/register` route, login entry point, register page behavior, session adoption, redirect, and error-state requirements.
 - `contracts`: Add shared registration request and response schemas for backend validation, frontend clients, and OpenAPI export.
+- `api-conventions`: Clarify that contract-defined mapped failures may carry a machine-readable `code` alongside the standard error envelope.
+- `data-model`: Replace the seeded-workspace-only MVP assumption with a workspace model that still supports bootstrap seed data but also allows public creation of additional workspaces.
+- `workspace-management`: Clarify that current-workspace behavior resolves from the authenticated membership context instead of assuming one seeded workspace.
 
 ## Impact
 
 - Backend: `apps/api` auth/registration controller/service flow, Firebase Admin integration, workspace/user/membership persistence, throttling, error mapping, and OpenAPI export.
 - Shared contracts: `packages/shared/src/contracts/*` schemas and exported TypeScript types for registration payloads and responses.
 - User SPA: `apps/user-web` route map, login page link, register page/view/composable or client, form validation, session state handoff, and route/view tests.
-- Docs/design: existing `docs/ui/pages-user.md`, `docs/TECHNICAL-REQUIREMENTS.md`, `docs/API-ENDPOINTS.md`, and approved `GITiempo.pen` screens are treated as source inputs and must stay aligned.
+- Docs/design: existing `docs/ui/pages-user.md`, `docs/TECHNICAL-REQUIREMENTS.md`, `docs/API-ENDPOINTS.md`, `docs/DATA-MODEL.md`, and approved `GITiempo.pen` screens are treated as source inputs and must stay aligned.

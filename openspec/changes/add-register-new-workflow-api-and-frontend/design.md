@@ -17,6 +17,7 @@ Affected guidance:
 - Add shared Zod schemas and OpenAPI coverage for registration request, token-pair response, and mapped errors.
 - Add User SPA `/register` behavior matching `docs/ui/pages-user.md` and the approved desktop/mobile `.pen` screens.
 - Keep `/auth/login` membership-gated and keep invite acceptance as the only path for joining an existing workspace.
+- Replace the seeded-workspace-only MVP assumption with a multi-workspace creation model while leaving workspace switching out of scope for this change.
 
 **Non-Goals:**
 - No public Google sign-up flow for first-owner registration in this change.
@@ -57,6 +58,18 @@ The route page and route registration belong in `apps/user-web`; the request/res
 
 Alternative considered: extend invite client behavior for registration. Rejected because invite acceptance and first-owner registration are separate product flows with different payloads, endpoint semantics, and error mapping.
 
+### D6. Use the standard API error envelope with `code` for mapped registration failures
+
+Expected registration failures should continue to use the repo-standard error body with `statusCode`, `error`, and `message`, and add a machine-readable `code` field for frontend-visible registration identifiers. `error` remains the HTTP/NestJS category (`BadRequest`, `Conflict`, `TooManyRequests`, `ServiceUnavailable`), while `code` carries the stable contract value such as `duplicate_email`.
+
+Alternative considered: overload `error` with registration-specific identifiers. Rejected because it mixes HTTP category semantics with product-level error mapping and would make existing API error handling less consistent.
+
+### D7. Officially move the product model to workspace creation beyond the seeded default
+
+This change promotes workspaces from a seeded bootstrap artifact to a first-class created resource. Seed data still creates a practical default workspace and admin membership for local or bootstrap environments, but authenticated workspace behavior now resolves from membership context rather than from a single seeded-workspace assumption.
+
+Alternative considered: leave the single-workspace MVP language in current specs and treat public registration as a special-case exception. Rejected because it would keep core docs inconsistent with the implemented data and auth model.
+
 ## Risks / Trade-offs
 
 - [Risk] Raw registration password reaches the API process. -> Mitigation: validate only at the boundary, pass to Firebase Admin SDK, never persist it, and extend sensitive-data redaction to registration payload fields.
@@ -64,6 +77,7 @@ Alternative considered: extend invite client behavior for registration. Rejected
 - [Risk] A public endpoint can be abused. -> Mitigation: add strict payload validation, per-route throttling, duplicate detection, and generic service-failure responses where detail would leak account state.
 - [Risk] Login behavior could accidentally start creating users again. -> Mitigation: keep `/auth/login` specs and tests membership-gated; registration is the only owner-creation path.
 - [Risk] Frontend route could ship before backend support. -> Mitigation: implementation tasks must add the shared contract and backend endpoint before exposing the route in the router.
+- [Risk] Failed Firebase cleanup can strand the email in the identity provider even though workspace creation failed. -> Mitigation: surface `registration_service_unavailable`, emit an operational log, and keep frontend mapping on the stable `code` field instead of provider messages.
 
 ## Migration Plan
 

@@ -23,7 +23,7 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 
 Successful registration returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`.
 
-Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`.
+Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`. These are returned in the standard error response `code` field; `error` remains the HTTP-category label.
 
 ---
 
@@ -254,8 +254,12 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 ```json
 {
-  "statusCode": 401,
-  "error": "Unauthorized",
-  "message": "Access token expired"
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "An account already exists for that email.",
+  "code": "duplicate_email",
+  "requestId": "req_123"
 }
 ```
+
+`code` is optional unless an endpoint defines stable machine-readable error identifiers. When present, clients should branch on `code` and treat `message` as display text rather than as the parsing contract.

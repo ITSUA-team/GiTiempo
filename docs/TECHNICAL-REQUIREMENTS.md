@@ -166,7 +166,7 @@ Three roles: `admin`, `pm`, `member`.
 - RESTful endpoints, JSON request/response.
 - All validation uses Zod schemas from `packages/shared`.
 - Role-based access control via NestJS guards.
-- Standard error response format: `{ error: string, message: string, statusCode: number }`.
+- Standard error response format: `{ error: string, message: string, statusCode: number, code?: string, requestId?: string, details?: unknown }`.
 - Full endpoint contract: see [API-ENDPOINTS.md](./API-ENDPOINTS.md).
 
 ### 2.6 Migration & Seed Rules

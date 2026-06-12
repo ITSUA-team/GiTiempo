@@ -4,15 +4,16 @@
 - [x] 1.2 Extend the shared token-pair contract usage so registration responses are validated with the existing token-pair response schema.
 - [x] 1.3 Add focused shared-contract tests for valid registration payloads, missing/invalid fields, required owner acknowledgement, unknown-key rejection, and registration error identifiers.
 - [x] 1.4 Export registration contracts through the shared package barrel without exposing low-level transport helpers.
+- [x] 1.5 Document that mapped registration failures use the standard API error envelope and carry the stable registration identifier in `code`.
 
 ## 2. Backend Registration API
 
 - [x] 2.1 Add a public throttled `POST /auth/register` endpoint using the shared registration request DTO and existing token-pair response DTO.
 - [x] 2.2 Implement backend registration orchestration that creates the Firebase email/password identity, local user, workspace, owner membership, and normal token pair.
 - [x] 2.3 Wrap local user/workspace/membership writes in one transaction and attempt Firebase identity cleanup if persistence fails after identity creation.
-- [x] 2.4 Map expected failures to stable registration errors: duplicate email, weak password, invalid workspace name, workspace name unavailable, rate limited, and registration service unavailable.
+- [x] 2.4 Map expected failures to stable registration errors in the standard API error envelope `code` field: duplicate email, weak password, invalid workspace name, workspace name unavailable, rate limited, and registration service unavailable.
 - [x] 2.5 Extend sensitive-data redaction so registration passwords and session credentials are not logged in request, validation, or provider-failure paths.
-- [x] 2.6 Add backend unit tests for registration success, validation rejection, duplicate email, unavailable workspace name, Firebase failure, persistence failure cleanup, token claims, and redaction.
+- [x] 2.6 Add backend unit tests for registration success, validation rejection, duplicate email, unavailable workspace name, Firebase failure, persistence failure cleanup, cleanup-failure fallback, token claims, and redaction.
 - [x] 2.7 Add API e2e coverage for public registration success, expected error responses, rate limiting, and confirmation that `/auth/login` remains membership-gated.
 - [x] 2.8 Export and commit the updated OpenAPI snapshot showing `POST /auth/register`.
 

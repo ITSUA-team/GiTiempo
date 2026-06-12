@@ -8,11 +8,11 @@ For GitHub: users link tracked time directly to issues and projects pulled from 
 
 **Inspiration and reference:** [Clockify](https://docs.clockify.me/) — feature set and approach are modeled after Clockify, adapted for deep GitHub integration.
 
-## MVP Scope: Single-Tenant
+## MVP Scope: Workspace-Scoped Deployment
 
-The MVP is a **single-tenant** deployment: one instance serves one team. A default workspace is seeded on deployment. All data (users, projects, tasks, time entries) belongs to this single workspace.
+The MVP now supports creating additional workspaces through the first-owner registration flow. A default workspace may still be seeded on deployment for bootstrap or local environments, but operational data is scoped by the authenticated workspace context rather than by a single seeded workspace assumption.
 
-The data model preserves `workspaceId` foreign keys on all entities so that migrating to multi-tenant SaaS later requires only enabling workspace creation and adding workspace-scoped auth — no schema redesign.
+The data model preserves `workspaceId` foreign keys on all workspace-owned entities, and the current auth/session model already carries workspace context for those scoped records.
 
 ---
 
@@ -195,7 +195,7 @@ The following are explicitly **out of scope for the MVP**:
 - Budgeting and cost limits per project
 - Scheduling and capacity planning
 - API rate-limit handling beyond basic caching
-- Multi-tenant SaaS (single-tenant only, but workspace-ready schema)
+- Multi-tenant SaaS account switching, tenant isolation controls, and cross-organization administration
 
 **Architectural requirement:** The codebase must support an adapter pattern for task synchronization so that adding future integrations (Jira, Trello, etc.) requires only a new adapter module without modifying core time-tracking logic.
 

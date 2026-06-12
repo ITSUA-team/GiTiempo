@@ -70,6 +70,16 @@ The system MUST prevent user-visible partial registration when one step of first
 - **AND** does not leave a workspace or owner membership available to the failed registration
 - **AND** rejects the request as registration service unavailable
 
+#### Scenario: Firebase cleanup fails after application persistence failure
+- **GIVEN** Firebase identity creation succeeds
+- **AND** application database registration cannot complete
+- **AND** cleanup of the newly created Firebase identity also fails
+- **WHEN** the registration workflow handles the failure
+- **THEN** the system rejects the request as registration service unavailable
+- **AND** the response keeps the stable `registration_service_unavailable` identifier in `code`
+- **AND** the response does not expose raw provider failure details
+- **AND** the backend emits an operational log for cleanup follow-up without logging the raw password
+
 #### Scenario: Registration payload is redacted from logs
 - **WHEN** the backend logs registration requests, validation failures, or provider failures
 - **THEN** raw passwords and session credentials are redacted

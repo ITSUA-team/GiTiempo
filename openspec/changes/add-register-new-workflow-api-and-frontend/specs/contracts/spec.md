@@ -66,3 +66,9 @@ The shared contracts SHALL define stable registration error identifiers for fron
 - **WHEN** registration fails for an expected user-correctable or retryable reason
 - **THEN** the frontend can map the failure to one of `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, or `registration_service_unavailable`
 - **AND** the API response does not require the frontend to parse provider-specific error messages
+
+#### Scenario: Registration errors use the standard API envelope
+- **WHEN** the backend returns a mapped registration failure
+- **THEN** the response body includes the standard API error fields `statusCode`, `error`, and `message`
+- **AND** the stable frontend-visible registration identifier is carried in `code`
+- **AND** `error` remains the HTTP-category label rather than the registration-specific identifier
