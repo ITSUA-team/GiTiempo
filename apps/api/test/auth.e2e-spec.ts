@@ -190,8 +190,9 @@ describe('Auth (e2e)', () => {
         .limit(1);
       expect(refreshRow?.revokedAt).toBeNull();
 
-      const refreshed = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: res.body.refreshToken });
+      const refreshed = await postAuth(app, '/auth/refresh').send({
+        refreshToken: res.body.refreshToken,
+      });
       expect(refreshed.status).toBe(200);
 
       const refreshedClaims = tokens.verifyAccess(
@@ -279,40 +280,46 @@ describe('Auth (e2e)', () => {
     it('rotates the refresh token; the old one is no longer usable', async () => {
       const first = await login(app);
 
-      const rotated = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: first.refreshToken });
+      const rotated = await postAuth(app, '/auth/refresh').send({
+        refreshToken: first.refreshToken,
+      });
 
       expect(rotated.status).toBe(200);
       expect(rotated.body.refreshToken).not.toBe(first.refreshToken);
 
       // Using the new one again must succeed.
-      const rotated2 = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: rotated.body.refreshToken });
+      const rotated2 = await postAuth(app, '/auth/refresh').send({
+        refreshToken: rotated.body.refreshToken,
+      });
       expect(rotated2.status).toBe(200);
 
       // Replaying the very first (now-revoked) refresh token → reuse
       // detection → family destroyed → 401, and the latest rotated
       // token from that family must also be invalidated.
-      const replay = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: first.refreshToken });
+      const replay = await postAuth(app, '/auth/refresh').send({
+        refreshToken: first.refreshToken,
+      });
       expect(replay.status).toBe(401);
 
-      const afterReuse = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: rotated2.body.refreshToken });
+      const afterReuse = await postAuth(app, '/auth/refresh').send({
+        refreshToken: rotated2.body.refreshToken,
+      });
       expect(afterReuse.status).toBe(401);
     });
 
     it('rejects an unknown refresh token with 401', async () => {
-      const res = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: 'not-a-real-token' });
+      const res = await postAuth(app, '/auth/refresh').send({
+        refreshToken: 'not-a-real-token',
+      });
       expect(res.status).toBe(401);
     });
   });
 
   describe('POST /auth/logout', () => {
     it('requires a bearer token', async () => {
-      const res = await postAuth(app, '/auth/logout')
-        .send({ refreshToken: 'whatever' });
+      const res = await postAuth(app, '/auth/logout').send({
+        refreshToken: 'whatever',
+      });
       expect(res.status).toBe(401);
     });
 
@@ -323,17 +330,21 @@ describe('Auth (e2e)', () => {
 
       const out = await postAuth(app, '/auth/logout')
         .set('Authorization', bearer(sessionA.accessToken))
-        .send({ refreshToken: sessionA.refreshToken });
+        .send({
+          refreshToken: sessionA.refreshToken,
+        });
       expect(out.status).toBe(204);
 
       // Session A's refresh token no longer works.
-      const refreshA = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: sessionA.refreshToken });
+      const refreshA = await postAuth(app, '/auth/refresh').send({
+        refreshToken: sessionA.refreshToken,
+      });
       expect(refreshA.status).toBe(401);
 
       // Session B is unaffected.
-      const refreshB = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: sessionB.refreshToken });
+      const refreshB = await postAuth(app, '/auth/refresh').send({
+        refreshToken: sessionB.refreshToken,
+      });
       expect(refreshB.status).toBe(200);
     });
   });
@@ -343,10 +354,12 @@ describe('Auth (e2e)', () => {
       const session = await login(app);
 
       const [res1, res2] = await Promise.all([
-        postAuth(app, '/auth/refresh')
-          .send({ refreshToken: session.refreshToken }),
-        postAuth(app, '/auth/refresh')
-          .send({ refreshToken: session.refreshToken }),
+        postAuth(app, '/auth/refresh').send({
+          refreshToken: session.refreshToken,
+        }),
+        postAuth(app, '/auth/refresh').send({
+          refreshToken: session.refreshToken,
+        }),
       ]);
 
       const statuses = [res1.status, res2.status].sort();
@@ -355,8 +368,9 @@ describe('Auth (e2e)', () => {
       const winningRefreshToken =
         res1.status === 200 ? res1.body.refreshToken : res2.body.refreshToken;
 
-      const winnerStillWorks = await postAuth(app, '/auth/refresh')
-        .send({ refreshToken: winningRefreshToken });
+      const winnerStillWorks = await postAuth(app, '/auth/refresh').send({
+        refreshToken: winningRefreshToken,
+      });
       expect(winnerStillWorks.status).toBe(200);
     });
   });
