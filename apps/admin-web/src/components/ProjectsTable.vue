@@ -8,10 +8,10 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
-  filterAutocompleteOptions,
   filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
+  managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -20,6 +20,7 @@ import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import MultiSelect from 'primevue/multiselect';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
@@ -52,31 +53,15 @@ const props = defineProps<{
 }>();
 
 const projectQuerySuggestions = ref<string[]>([]);
-const memberFilterSuggestions = ref<ProjectsTableFilterOption[]>([]);
 
 const projectQueryOptions = computed(() =>
   [...new Set(props.rows.map((row) => row.name))].sort((a, b) => a.localeCompare(b)),
-);
-
-const selectedMemberFilterOption = computed(
-  () =>
-    props.memberFilterOptions.find(
-      (option) => option.value === props.filters.memberIds[0],
-    ) ?? null,
 );
 
 function handleProjectQueryComplete(event: AutoCompleteCompleteEvent): void {
   projectQuerySuggestions.value = filterAutocompleteStrings(
     projectQueryOptions.value,
     event.query,
-  );
-}
-
-function handleMemberFilterComplete(event: AutoCompleteCompleteEvent): void {
-  memberFilterSuggestions.value = filterAutocompleteOptions(
-    props.memberFilterOptions,
-    event.query,
-    (option) => option.label,
   );
 }
 
@@ -99,20 +84,8 @@ function updateProjectQueryFilter(value: string | null | undefined): void {
   updateFilters({ projectQuery: value ?? '' });
 }
 
-function updateMemberIdsFilter(value: string[] | undefined): void {
-  updateFilters({ memberIds: value });
-}
-
-function updateMemberFilter(value: ProjectsTableFilterOption | string | null): void {
-  if (typeof value === 'string') {
-    if (value.trim().length === 0) {
-      updateMemberIdsFilter([]);
-    }
-
-    return;
-  }
-
-  updateMemberIdsFilter(value?.value ? [value.value] : []);
+function updateMemberIdsFilter(value: string[] | null | undefined): void {
+  updateFilters({ memberIds: value ?? [] });
 }
 
 function updateSourceFilter(
@@ -254,21 +227,18 @@ const columns: ManagementTableColumn[] = [
           for="mobile-project-members-filter"
           class="text-text-muted text-[12px] font-medium"
         >Assigned members</label>
-        <AutoComplete
+        <MultiSelect
           input-id="mobile-project-members-filter"
-          :model-value="selectedMemberFilterOption"
-          :suggestions="memberFilterSuggestions"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
-          force-selection
-          :min-length="0"
+          :model-value="filters.memberIds"
+          :options="memberFilterOptions"
+          display="chip"
+          filter
           option-label="label"
+          option-value="value"
           placeholder="All members"
           show-clear
-          :pt="managementTableFilterAutoCompletePt"
-          @complete="handleMemberFilterComplete"
-          @update:model-value="updateMemberFilter"
+          :pt="managementTableFilterMultiSelectPt"
+          @update:model-value="updateMemberIdsFilter"
         />
       </div>
     </div>
@@ -444,21 +414,18 @@ const columns: ManagementTableColumn[] = [
         </div>
 
         <div class="w-[220px] px-3">
-          <AutoComplete
-            :model-value="selectedMemberFilterOption"
-            :suggestions="memberFilterSuggestions"
+          <MultiSelect
+            :model-value="filters.memberIds"
+            :options="memberFilterOptions"
             aria-label="Filter projects by assigned members"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
-            force-selection
-            :min-length="0"
+            display="chip"
+            filter
             option-label="label"
+            option-value="value"
             placeholder="All members"
             show-clear
-            :pt="managementTableFilterAutoCompletePt"
-            @complete="handleMemberFilterComplete"
-            @update:model-value="updateMemberFilter"
+            :pt="managementTableFilterMultiSelectPt"
+            @update:model-value="updateMemberIdsFilter"
           />
         </div>
 

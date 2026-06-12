@@ -9,6 +9,7 @@ import type {
 import { ManagementTableShell } from '@gitiempo/web-shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import AutoComplete from 'primevue/autocomplete';
+import MultiSelect from 'primevue/multiselect';
 import PrimeVue from 'primevue/config';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -190,13 +191,14 @@ describe('MembersTable', () => {
 
     const autoCompleteFilters = wrapper.findAllComponents(AutoComplete);
     const memberQueryFilter = autoCompleteFilters[0]!;
-    const projectFilter = autoCompleteFilters[1]!;
+    const projectFilter = wrapper.getComponent(MultiSelect);
 
-    expect(autoCompleteFilters).toHaveLength(2);
+    expect(autoCompleteFilters).toHaveLength(1);
     expect(memberQueryFilter.props('dropdown')).toBe(true);
     expect(memberQueryFilter.props('completeOnFocus')).toBe(true);
-    expect(projectFilter.props('forceSelection')).toBe(true);
-    expect(projectFilter.props('modelValue')).toBeNull();
+    expect(projectFilter.props('display')).toBe('chip');
+    expect(projectFilter.props('filter')).toBe(true);
+    expect(projectFilter.props('modelValue')).toEqual([]);
     expect(projectFilter.props('placeholder')).toBe('All projects');
 
     memberQueryFilter.vm.$emit('complete', { query: 'pat' });
@@ -206,30 +208,20 @@ describe('MembersTable', () => {
       expect.arrayContaining(['Pat PM', 'pat@example.com']),
     );
 
-    projectFilter.vm.$emit('complete', { query: 'orion' });
-    await nextTick();
-
-    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
-      { label: 'Project Orion', value: 'project-1' },
-    ]);
-
     await wrapper.get('input[aria-label="Search members"]').setValue('orion');
     memberQueryFilter.vm.$emit('update:modelValue', 'pat');
 
     const selectFilters = wrapper.findAllComponents(Select);
     await selectFilters[0]!.vm.$emit('update:modelValue', 'admin');
     await selectFilters[1]!.vm.$emit('update:modelValue', 'inactive');
-    await projectFilter.vm.$emit('update:modelValue', {
-      label: 'Project Orion',
-      value: 'project-1',
-    });
+    await projectFilter.vm.$emit('update:modelValue', ['project-1', 'project-2']);
 
     expect(wrapper.emitted('update:filters')).toEqual([
       [{ global: 'orion' }],
       [{ memberQuery: 'pat' }],
       [{ role: 'admin' }],
       [{ lastActive: 'inactive' }],
-      [{ projectIds: ['project-1'] }],
+      [{ projectIds: ['project-1', 'project-2'] }],
     ]);
     expect(
       wrapper.getComponent(ManagementTableShell).props('value'),
@@ -255,20 +247,17 @@ describe('MembersTable', () => {
 
     const autoCompleteFilters = wrapper.findAllComponents(AutoComplete);
     const memberQueryFilter = autoCompleteFilters[0]!;
-    const projectFilter = autoCompleteFilters[1]!;
+    const projectFilter = wrapper.getComponent(MultiSelect);
 
     expect(memberQueryFilter.props('placeholder')).toBe('Filter name or email');
     expect(projectFilter.props('placeholder')).toBe('All projects');
 
     await memberQueryFilter.vm.$emit('update:modelValue', 'alex');
-    await projectFilter.vm.$emit('update:modelValue', {
-      label: 'Billing API',
-      value: 'project-2',
-    });
+    await projectFilter.vm.$emit('update:modelValue', ['project-2', 'project-1']);
 
     expect(wrapper.emitted('update:filters')).toEqual([
       [{ memberQuery: 'alex' }],
-      [{ projectIds: ['project-2'] }],
+      [{ projectIds: ['project-2', 'project-1'] }],
     ]);
     expect(wrapper.findAll('[data-testid="members-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);

@@ -11,10 +11,10 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
-  filterAutocompleteOptions,
   filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
+  managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
@@ -24,6 +24,7 @@ import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
 
@@ -54,7 +55,6 @@ const props = defineProps<{
 }>();
 
 const memberQuerySuggestions = ref<string[]>([]);
-const projectFilterSuggestions = ref<MembersTableFilterOption[]>([]);
 
 const memberQueryOptions = computed(() => {
   const options = props.rows.flatMap((row) => [
@@ -65,25 +65,10 @@ const memberQueryOptions = computed(() => {
   return [...new Set(options)].sort((a, b) => a.localeCompare(b));
 });
 
-const selectedProjectFilterOption = computed(
-  () =>
-    props.projectFilterOptions.find(
-      (option) => option.value === props.filters.projectIds[0],
-    ) ?? null,
-);
-
 function handleMemberQueryComplete(event: AutoCompleteCompleteEvent): void {
   memberQuerySuggestions.value = filterAutocompleteStrings(
     memberQueryOptions.value,
     event.query,
-  );
-}
-
-function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
-  projectFilterSuggestions.value = filterAutocompleteOptions(
-    props.projectFilterOptions,
-    event.query,
-    (option) => option.label,
   );
 }
 
@@ -106,22 +91,8 @@ function updateMemberQueryFilter(value: string | null | undefined): void {
   updateFilters({ memberQuery: value ?? '' });
 }
 
-function updateProjectIdsFilter(value: string[] | undefined): void {
-  updateFilters({ projectIds: value });
-}
-
-function updateProjectFilter(
-  value: MembersTableFilterOption | string | null,
-): void {
-  if (typeof value === 'string') {
-    if (value.trim().length === 0) {
-      updateProjectIdsFilter([]);
-    }
-
-    return;
-  }
-
-  updateProjectIdsFilter(value?.value ? [value.value] : []);
+function updateProjectIdsFilter(value: string[] | null | undefined): void {
+  updateFilters({ projectIds: value ?? [] });
 }
 
 function updateRoleFilter(value: WorkspaceRole | null | undefined): void {
@@ -237,21 +208,18 @@ const columns: ManagementTableColumn[] = [
         for="mobile-member-projects-filter"
         class="text-text-muted text-[12px] font-medium"
       >Projects assigned</label>
-      <AutoComplete
+      <MultiSelect
         input-id="mobile-member-projects-filter"
-        :model-value="selectedProjectFilterOption"
-        :suggestions="projectFilterSuggestions"
-        complete-on-focus
-        dropdown
-        dropdown-mode="blank"
-        force-selection
-        :min-length="0"
+        :model-value="filters.projectIds"
+        :options="projectFilterOptions"
+        display="chip"
+        filter
         option-label="label"
+        option-value="value"
         placeholder="All projects"
         show-clear
-        :pt="managementTableFilterAutoCompletePt"
-        @complete="handleProjectFilterComplete"
-        @update:model-value="updateProjectFilter"
+        :pt="managementTableFilterMultiSelectPt"
+        @update:model-value="updateProjectIdsFilter"
       />
     </div>
   </div>
@@ -434,21 +402,18 @@ const columns: ManagementTableColumn[] = [
         </div>
 
         <div class="w-[220px] px-3">
-          <AutoComplete
-            :model-value="selectedProjectFilterOption"
-            :suggestions="projectFilterSuggestions"
+          <MultiSelect
+            :model-value="filters.projectIds"
+            :options="projectFilterOptions"
             aria-label="Filter members by assigned projects"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
-            force-selection
-            :min-length="0"
+            display="chip"
+            filter
             option-label="label"
+            option-value="value"
             placeholder="All projects"
             show-clear
-            :pt="managementTableFilterAutoCompletePt"
-            @complete="handleProjectFilterComplete"
-            @update:model-value="updateProjectFilter"
+            :pt="managementTableFilterMultiSelectPt"
+            @update:model-value="updateProjectIdsFilter"
           />
         </div>
 

@@ -50,6 +50,7 @@ describe('ProjectsTable', () => {
             template: '<input :value="modelValue" />',
           },
           MobileRecordMetadataList: true,
+          MultiSelect: true,
           SectionHeader: {
             props: ['title'],
             template: '<header><h2>{{ title }}</h2><slot name="actions" /></header>',
