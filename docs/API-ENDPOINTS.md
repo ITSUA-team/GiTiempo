@@ -17,6 +17,8 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 **POST /auth/login** body: `{ firebaseIdToken: string }`
 **POST /auth/refresh** body: `{ refreshToken: string }`
 
+There is no public workspace registration endpoint in the current API contract. The User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation; implementation requires a separately approved backend/API registration contract, shared request/response schemas, and an OpenAPI update before the route is exposed.
+
 ---
 
 ## 2. User Profile
