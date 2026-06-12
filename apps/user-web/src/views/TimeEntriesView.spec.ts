@@ -411,6 +411,8 @@ async function mountView(
                 <p v-for="suggestion in taskSuggestions" :key="suggestion.id">{{ suggestion.title }}</p>
               </div>
               <button data-testid="dialog-project-admin" type="button" @click="$emit('update:projectId', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002')">Project</button>
+              <button data-testid="dialog-task-search-empty" type="button" @click="$emit('taskSearch', '')">Search all tasks</button>
+              <button data-testid="dialog-task-search-polish" type="button" @click="$emit('taskSearch', 'polish')">Search polish tasks</button>
               <button data-testid="dialog-task-admin" type="button" @click="$emit('update:taskValue', {
                 id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
                 isActive: true,
@@ -850,6 +852,92 @@ describe("TimeEntriesView", () => {
 
     expect(dialogSuggestions.text()).toContain("Ship admin polish");
     expect(dialogSuggestions.text()).not.toContain("Ship closed archive");
+  });
+
+  it("shows all open project tasks in the create dialog after an empty task dropdown query", async () => {
+    const secondOpenTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2998",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Write release checklist",
+    });
+    const closedTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2999",
+      projectId: TEST_IDS.projectAdmin,
+      status: "closed",
+      title: "Closed historical cleanup",
+    });
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+      tasksByProject: {
+        [TEST_IDS.projectAdmin]: [
+          createTask({
+            id: TEST_IDS.taskAdmin,
+            projectId: TEST_IDS.projectAdmin,
+            title: "Ship admin polish",
+          }),
+          secondOpenTask,
+          closedTask,
+        ],
+      },
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.projectAdmin);
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
+
+    await wrapper.get('[data-testid="dialog-task-search-polish"]').trigger("click");
+
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).not.toContain("Write release checklist");
+
+    await wrapper.get('[data-testid="dialog-task-search-empty"]').trigger("click");
+
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
+  });
+
+  it("shows all open project tasks in the edit dialog for an empty task dropdown query", async () => {
+    const secondOpenTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2998",
+      title: "Write release checklist",
+    });
+    const closedTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2999",
+      status: "closed",
+      title: "Closed historical cleanup",
+    });
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+      tasksByProject: {
+        [TEST_IDS.projectOrion]: [
+          createTask(),
+          secondOpenTask,
+          closedTask,
+        ],
+      },
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.projectOrion);
+    expect(dialogSuggestions.text()).toContain("Improve reports filters");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
   });
 
   it("creates a manual entry and refreshes the current list page", async () => {
