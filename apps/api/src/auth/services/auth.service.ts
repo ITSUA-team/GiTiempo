@@ -1,18 +1,32 @@
 import { randomUUID } from 'node:crypto';
 import {
+  BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { sql } from 'drizzle-orm';
+import type { RegisterRequest, RegistrationErrorCode } from '@gitiempo/shared';
 import type { Env } from '../../config/env.validation';
+import { normalizeEmail } from '../../commons/utils/normalize-email';
+import { DRIZZLE } from '../../db/db.constants';
+import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
+import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { UsersService } from '../../users/services/users.service';
+import { users } from '../../users/schemas/users.schema';
+import { refreshTokens } from '../schemas/refresh-tokens.schema';
+import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
+import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
 import {
   FIREBASE_ADMIN,
   type DecodedFirebaseToken,
+  FirebaseAdminAuthError,
   type FirebaseAdminService,
 } from './firebase-admin.interface';
 import { TokenService } from './token.service';
@@ -22,6 +36,60 @@ export interface TokenPair {
   accessToken: string;
   refreshToken: string;
   accessTokenExpiresIn: number;
+}
+
+const REGISTRATION_ERROR_MESSAGES: Record<RegistrationErrorCode, string> = {
+  duplicate_email: 'An account already exists for that email.',
+  invalid_workspace_name: 'Enter a valid workspace name.',
+  rate_limited: 'Too many registration attempts. Please try again later.',
+  registration_service_unavailable:
+    'Registration is temporarily unavailable. Please try again later.',
+  weak_password: 'Choose a stronger password and try again.',
+  workspace_name_unavailable: 'That workspace name is already in use.',
+};
+
+function normalizeWorkspaceName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ');
+}
+
+function normalizeWorkspaceLookupKey(name: string): string {
+  return normalizeWorkspaceName(name).toLowerCase();
+}
+
+function createRegistrationBadRequest(
+  code: 'invalid_workspace_name' | 'weak_password',
+): BadRequestException {
+  return new BadRequestException({
+    code,
+    error: 'BadRequest',
+    message: REGISTRATION_ERROR_MESSAGES[code],
+  });
+}
+
+function createRegistrationConflict(
+  code: 'duplicate_email' | 'workspace_name_unavailable',
+): ConflictException {
+  return new ConflictException({
+    code,
+    error: 'Conflict',
+    message: REGISTRATION_ERROR_MESSAGES[code],
+  });
+}
+
+function createRegistrationUnavailable(): ServiceUnavailableException {
+  return new ServiceUnavailableException({
+    code: 'registration_service_unavailable',
+    error: 'ServiceUnavailable',
+    message: REGISTRATION_ERROR_MESSAGES.registration_service_unavailable,
+  });
+}
+
+function isRegistrationHttpException(error: unknown): boolean {
+  return (
+    error instanceof BadRequestException ||
+    error instanceof ConflictException ||
+    error instanceof ServiceUnavailableException
+  );
 }
 
 /**
@@ -58,6 +126,7 @@ export class AuthService {
 
   constructor(
     config: ConfigService<Env, true>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
     @Inject(FIREBASE_ADMIN)
     private readonly firebase: FirebaseAdminService,
     private readonly tokens: TokenService,
@@ -123,6 +192,59 @@ export class AuthService {
       userId: row.id,
     });
     return pair;
+  }
+
+  async register(input: RegisterRequest): Promise<TokenPair> {
+    const email = normalizeEmail(input.email);
+    const displayName = input.fullName.trim();
+    const workspaceName = normalizeWorkspaceName(input.workspaceName);
+
+    if (workspaceName.length === 0) {
+      throw createRegistrationBadRequest('invalid_workspace_name');
+    }
+
+    const existingUser = await this.findUserByEmail(email);
+    if (existingUser) {
+      throw createRegistrationConflict('duplicate_email');
+    }
+
+    let firebaseUser;
+    try {
+      firebaseUser = await this.firebase.createEmailPasswordUser({
+        displayName,
+        email,
+        password: input.password,
+      });
+    } catch (error) {
+      this.throwRegistrationFirebaseError(error);
+    }
+
+    try {
+      const pair = await this.createRegisteredSession({
+        displayName,
+        email,
+        firebaseUid: firebaseUser.uid,
+        workspaceName,
+      });
+      this.logger.log({
+        event: 'auth.register.success',
+        email,
+        firebaseUid: firebaseUser.uid,
+      });
+      return pair;
+    } catch (error) {
+      const cleanupSucceeded = await this.cleanupFailedRegistration(
+        firebaseUser.uid,
+        error,
+      );
+      if (!cleanupSucceeded) {
+        throw createRegistrationUnavailable();
+      }
+      if (isRegistrationHttpException(error)) {
+        throw error;
+      }
+      throw createRegistrationUnavailable();
+    }
   }
 
   async refresh(refreshToken: string): Promise<TokenPair> {
@@ -230,5 +352,174 @@ export class AuthService {
       refreshToken: token,
       accessTokenExpiresIn: Math.floor(this.accessTtlMs / 1_000),
     };
+  }
+
+  private async createRegisteredSession(input: {
+    displayName: string;
+    email: string;
+    firebaseUid: string;
+    workspaceName: string;
+  }): Promise<TokenPair> {
+    const { token, hash } = this.tokens.generateRefreshToken();
+    const familyId = randomUUID();
+    const expiresAt = new Date(Date.now() + this.refreshTtlMs);
+    const accessTokenExpiresIn = Math.floor(this.accessTtlMs / 1_000);
+
+    const session = await this.db.transaction(async (tx) => {
+      await this.lockRegistrationKeys(tx, input.email, input.workspaceName);
+
+      const existingUser = await this.findUserByEmail(input.email, tx);
+      if (existingUser) {
+        throw createRegistrationConflict('duplicate_email');
+      }
+
+      const existingWorkspace = await this.findWorkspaceByName(
+        input.workspaceName,
+        tx,
+      );
+      if (existingWorkspace) {
+        throw createRegistrationConflict('workspace_name_unavailable');
+      }
+
+      const [userRow] = await tx
+        .insert(users)
+        .values({
+          avatarUrl: null,
+          displayName: input.displayName,
+          email: input.email,
+          firebaseUid: input.firebaseUid,
+        })
+        .returning();
+      if (!userRow) {
+        throw new Error('Failed to create registration user');
+      }
+
+      const [workspaceRow] = await tx
+        .insert(workspaces)
+        .values({
+          name: input.workspaceName,
+        })
+        .returning();
+      if (!workspaceRow) {
+        throw new Error('Failed to create workspace');
+      }
+
+      await tx.insert(workspaceSettings).values({
+        workspaceId: workspaceRow.id,
+      });
+
+      await tx.insert(workspaceMembers).values({
+        role: 'admin',
+        userId: userRow.id,
+        workspaceId: workspaceRow.id,
+      });
+
+      await tx.insert(refreshTokens).values({
+        expiresAt,
+        familyId,
+        tokenHash: hash,
+        userId: userRow.id,
+      });
+
+      return {
+        email: userRow.email,
+        firebaseUid: userRow.firebaseUid,
+        sub: userRow.id,
+        workspaceId: workspaceRow.id,
+      };
+    });
+
+    return {
+      accessToken: this.tokens.signAccess({
+        ...session,
+        role: 'admin',
+      }),
+      accessTokenExpiresIn,
+      refreshToken: token,
+    };
+  }
+
+  private async lockRegistrationKeys(
+    tx: Pick<DrizzleDB, 'execute'>,
+    email: string,
+    workspaceName: string,
+  ): Promise<void> {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`register-email:${email}`}))`,
+    );
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`register-workspace:${normalizeWorkspaceLookupKey(
+        workspaceName,
+      )}`}))`,
+    );
+  }
+
+  private async findUserByEmail(
+    email: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
+  ) {
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email}`)
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  private async findWorkspaceByName(
+    workspaceName: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
+  ) {
+    const normalizedName = normalizeWorkspaceLookupKey(workspaceName);
+    const [row] = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(sql`lower(${workspaces.name}) = ${normalizedName}`)
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  private async cleanupFailedRegistration(
+    firebaseUid: string,
+    error: unknown,
+  ): Promise<boolean> {
+    try {
+      await this.firebase.deleteUser(firebaseUid);
+      return true;
+    } catch (cleanupError) {
+      this.logger.error({
+        event: 'auth.register.cleanup_failed',
+        firebaseUid,
+        reason:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : 'unknown_cleanup_error',
+        sourceReason:
+          error instanceof Error ? error.message : 'unknown_registration_error',
+      });
+      return false;
+    }
+  }
+
+  private throwRegistrationFirebaseError(error: unknown): never {
+    if (error instanceof FirebaseAdminAuthError) {
+      if (error.code === 'auth/email-already-exists') {
+        throw createRegistrationConflict('duplicate_email');
+      }
+      if (
+        error.code === 'auth/invalid-password' ||
+        error.code === 'auth/password-does-not-meet-requirements'
+      ) {
+        throw createRegistrationBadRequest('weak_password');
+      }
+    }
+
+    this.logger.error({
+      event: 'auth.register.firebase_failed',
+      reason: error instanceof Error ? error.message : 'unknown_error',
+    });
+    throw createRegistrationUnavailable();
   }
 }

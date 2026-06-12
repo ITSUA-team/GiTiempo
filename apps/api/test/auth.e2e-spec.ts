@@ -5,6 +5,19 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { ADMIN_FAKE_TOKEN, bearer, login } from './helpers/auth';
 
+function uniqueRegisterPayload() {
+  const suffix =
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  return {
+    email: `owner.${suffix}@example.com`,
+    fullName: 'Owner Person',
+    ownerAcknowledgement: true,
+    password: 'password123',
+    workspaceName: `Acme Studio ${suffix}`,
+  };
+}
+
 /**
  * End-to-end coverage for `/auth/*`. All flows use the fake Firebase
  * provider wired in `AuthModule` when `NODE_ENV=test`, so no real
@@ -47,6 +60,63 @@ describe('Auth (e2e)', () => {
         .send({ firebaseIdToken: 'not-a-test-token' });
 
       expect(res.status).toBe(401);
+    });
+
+    it('remains membership-gated for valid Firebase identities without a workspace member row', async () => {
+      const res = await request(app.getHttpServer()).post('/auth/login').send({
+        firebaseIdToken: 'test:outside-uid:outside@example.com:Outside',
+      });
+
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('POST /auth/register', () => {
+    it('registers the first owner and returns the normal token pair', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(uniqueRegisterPayload());
+
+      expect(res.status).toBe(201);
+      expect(typeof res.body.accessToken).toBe('string');
+      expect(typeof res.body.refreshToken).toBe('string');
+      expect(typeof res.body.accessTokenExpiresIn).toBe('number');
+    });
+
+    it('maps duplicate email failures to the shared registration code', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          ...uniqueRegisterPayload(),
+          email: 'admin@example.com',
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('duplicate_email');
+    });
+
+    it('maps blank workspace names to invalid_workspace_name', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          ...uniqueRegisterPayload(),
+          workspaceName: '   ',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('invalid_workspace_name');
+    });
+
+    it('maps weak passwords to weak_password', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          ...uniqueRegisterPayload(),
+          password: 'short',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('weak_password');
     });
   });
 

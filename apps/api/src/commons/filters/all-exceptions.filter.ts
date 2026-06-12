@@ -19,6 +19,7 @@ import type { Env } from '../../config/env.validation';
  */
 export interface ApiErrorResponse {
   statusCode: number;
+  code?: string;
   error: string;
   message: string | string[];
   requestId?: string;
@@ -49,7 +50,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.config.get('NODE_ENV', { infer: true }) === 'production';
     const requestId = request.id;
 
-    const payload = this.buildPayload(exception, requestId, isProduction);
+    const payload = this.buildPayload(
+      exception,
+      request.url,
+      requestId,
+      isProduction,
+    );
 
     // Log server errors (5xx) at error level, client errors at debug.
     if (payload.statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
@@ -79,6 +85,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   private buildPayload(
     exception: unknown,
+    requestUrl: string | undefined,
     requestId: string | undefined,
     isProduction: boolean,
   ): ApiErrorResponse {
@@ -86,10 +93,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof ZodValidationException) {
       const zodError = exception.getZodError() as { issues: ZodIssueLike[] };
       const issues: ZodIssueLike[] = zodError.issues;
+      const registrationErrorCode = this.getRegistrationValidationErrorCode(
+        requestUrl,
+        issues,
+      );
+
       return {
         statusCode: HttpStatus.BAD_REQUEST,
+        ...(registrationErrorCode ? { code: registrationErrorCode } : {}),
         error: 'BadRequest',
-        message: 'Validation failed',
+        message:
+          registrationErrorCode === 'weak_password'
+            ? 'Choose a stronger password and try again.'
+            : registrationErrorCode === 'invalid_workspace_name'
+              ? 'Enter a valid workspace name.'
+              : 'Validation failed',
         details: issues.map((issue) => ({
           path: issue.path,
           message: issue.message,
@@ -131,8 +149,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
             ? ((res as { message: string | string[] }).message ??
               httpEx.message)
             : httpEx.message;
+      const code =
+        typeof res === 'object' && res !== null && 'code' in res
+          ? String((res as { code: unknown }).code)
+          : status === HttpStatus.TOO_MANY_REQUESTS &&
+              requestUrl === '/auth/register'
+            ? 'rate_limited'
+            : undefined;
       return {
         statusCode: status,
+        ...(code ? { code } : {}),
         error: errorName,
         message,
         requestId,
@@ -154,5 +180,30 @@ export class AllExceptionsFilter implements ExceptionFilter {
       payload.stack = exception.stack;
     }
     return payload;
+  }
+
+  private getRegistrationValidationErrorCode(
+    requestUrl: string | undefined,
+    issues: ZodIssueLike[],
+  ): 'weak_password' | 'invalid_workspace_name' | null {
+    if (requestUrl !== '/auth/register') {
+      return null;
+    }
+
+    const issuePaths = issues.map((issue) => issue.path[0]);
+    if (
+      issuePaths.length > 0 &&
+      issuePaths.every((path) => path === 'password')
+    ) {
+      return 'weak_password';
+    }
+    if (
+      issuePaths.length > 0 &&
+      issuePaths.every((path) => path === 'workspaceName')
+    ) {
+      return 'invalid_workspace_name';
+    }
+
+    return null;
   }
 }

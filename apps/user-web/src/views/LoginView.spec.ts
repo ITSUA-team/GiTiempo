@@ -171,4 +171,30 @@ describe("LoginView", () => {
       "https://admin.example.test/login",
     );
   });
+
+  it("navigates to register from the create workspace action without reusing login errors", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithEmailPassword: async () => {
+          throw new Error("Invalid user credentials");
+        },
+      }),
+    );
+    const { router, wrapper } = await mountLoginView();
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("bad-password");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(wrapper.text()).toContain("Invalid user credentials");
+
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.register,
+    );
+    await wrapper.get('[data-testid="sign-in-create-workspace"]').trigger("click");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.register);
+  });
 });

@@ -55,4 +55,30 @@ describe('Auth throttling (e2e)', () => {
     // At least one must be 429 — that's the whole point of per-route throttling.
     expect(statuses.some((s) => s === 429)).toBe(true);
   });
+
+  it('rejects rapid-fire /auth/register bursts with 429 and the shared rate-limited code', async () => {
+    const server = app.getHttpServer();
+    const statuses: number[] = [];
+    const codes: Array<string | undefined> = [];
+
+    for (let i = 0; i < 12; i++) {
+      const res = await request(server)
+        .post('/auth/register')
+        .send({
+          email: `throttle.${i}@example.com`,
+          fullName: 'Owner Person',
+          ownerAcknowledgement: true,
+          password: 'password123',
+          workspaceName: '',
+        });
+      statuses.push(res.status);
+      codes.push(res.body.code);
+    }
+
+    for (const status of statuses) {
+      expect([400, 429]).toContain(status);
+    }
+    expect(statuses.some((status) => status === 429)).toBe(true);
+    expect(codes).toContain('rate_limited');
+  });
 });

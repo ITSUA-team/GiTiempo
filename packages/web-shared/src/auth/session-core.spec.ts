@@ -111,6 +111,31 @@ describe("createAuthSessionCore", () => {
     expect(session.accessToken.value).toBe("access-token");
   });
 
+  it("establishes a session directly from an approved token pair", async () => {
+    let cleanupCalls = 0;
+    const runtime = createRuntimeMock();
+    const session = createAuthSessionCore({
+      getAuthRuntime: () => runtime,
+      onLoginSuccess: () => {
+        cleanupCalls += 1;
+      },
+    });
+
+    await session.establishSessionFromTokenPair({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    });
+
+    expect(cleanupCalls).toBe(1);
+    expect(session.isAuthenticated.value).toBe(true);
+    expect(session.accessToken.value).toBe("registered-access-token");
+    expect(getRefreshToken()).toBe("registered-refresh-token");
+    expect(session.profile.value?.email).toBe("alexey@example.com");
+    expect(session.bootstrapComplete.value).toBe(true);
+    expect(session.isSubmitting.value).toBe(false);
+  });
+
   it("clears API and identity sessions on logout", async () => {
     let logoutCalls = 0;
     let identitySignOutCalls = 0;

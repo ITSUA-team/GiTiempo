@@ -1,14 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RegisterRequest } from '@gitiempo/shared';
 import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
-import { FakeFirebaseAdminService } from './firebase-admin.fake';
-import { FIREBASE_ADMIN } from './firebase-admin.interface';
-import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
-import { MembersService } from '../../members/services/members.service';
-import { UsersService } from '../../users/services/users.service';
+import { FirebaseAdminAuthError } from './firebase-admin.interface';
 
 const envMap: Record<string, string> = {
   JWT_ACCESS_SECRET: 'x'.repeat(40),
@@ -40,14 +40,50 @@ const seedMembership = {
   role: 'admin' as const,
 };
 
+const registerInput: RegisterRequest = {
+  email: 'owner@example.com',
+  fullName: 'Owner Person',
+  ownerAcknowledgement: true,
+  password: 'password123',
+  workspaceName: 'Acme Studio',
+};
+
+function createSelectMock(queue: unknown[][]) {
+  return vi.fn(() => ({
+    from: vi.fn(() => ({
+      where: vi.fn(() => ({
+        limit: vi.fn().mockImplementation(async () => queue.shift() ?? []),
+      })),
+    })),
+  }));
+}
+
+function createTransactionInsertMock(returningQueue: unknown[][] = []) {
+  return vi.fn(() => ({
+    values: vi.fn(() => ({
+      returning: vi
+        .fn()
+        .mockImplementation(async () => returningQueue.shift() ?? []),
+    })),
+  }));
+}
+
 describe('AuthService', () => {
   let service: AuthService;
   let tokens: TokenService;
+  let db: {
+    select: ReturnType<typeof createSelectMock>;
+    transaction: ReturnType<typeof vi.fn>;
+  };
+  let firebase: {
+    verifyIdToken: ReturnType<typeof vi.fn>;
+    createEmailPasswordUser: ReturnType<typeof vi.fn>;
+    deleteUser: ReturnType<typeof vi.fn>;
+  };
   let repo: {
     create: ReturnType<typeof vi.fn>;
     findById: ReturnType<typeof vi.fn>;
     findByHashIncludingRevoked: ReturnType<typeof vi.fn>;
-    markRevoked: ReturnType<typeof vi.fn>;
     rotateIfActive: ReturnType<typeof vi.fn>;
     deleteFamily: ReturnType<typeof vi.fn>;
     deleteById: ReturnType<typeof vi.fn>;
@@ -61,7 +97,17 @@ describe('AuthService', () => {
     requireActiveMembershipForUser: ReturnType<typeof vi.fn>;
   };
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    tokens = new TokenService(fakeConfig as never);
+    db = {
+      select: createSelectMock([]),
+      transaction: vi.fn(),
+    };
+    firebase = {
+      verifyIdToken: vi.fn(),
+      createEmailPasswordUser: vi.fn(),
+      deleteUser: vi.fn().mockResolvedValue(undefined),
+    };
     repo = {
       create: vi.fn(async (input) => ({
         id: 'rt-' + Math.random().toString(16).slice(2, 10),
@@ -75,7 +121,6 @@ describe('AuthService', () => {
       })),
       findById: vi.fn(),
       findByHashIncludingRevoked: vi.fn(),
-      markRevoked: vi.fn().mockResolvedValue(undefined),
       rotateIfActive: vi.fn(
         async (_oldId: string, input: Record<string, unknown>) => ({
           newRow: {
@@ -102,23 +147,24 @@ describe('AuthService', () => {
       requireActiveMembershipForUser: vi.fn().mockResolvedValue(seedMembership),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        TokenService,
-        { provide: ConfigService, useValue: fakeConfig },
-        { provide: FIREBASE_ADMIN, useClass: FakeFirebaseAdminService },
-        { provide: RefreshTokenRepository, useValue: repo },
-        { provide: UsersService, useValue: users },
-        { provide: MembersService, useValue: members },
-      ],
-    }).compile();
-    service = module.get(AuthService);
-    tokens = module.get(TokenService);
+    service = new AuthService(
+      fakeConfig as never,
+      db as never,
+      firebase as never,
+      tokens,
+      repo as never,
+      users as never,
+      members as never,
+    );
   });
 
   describe('login', () => {
     it('verifies Firebase, resolves membership, and issues a token pair', async () => {
+      firebase.verifyIdToken.mockResolvedValueOnce({
+        uid: 'admin-uid',
+        email: 'admin@example.com',
+      });
+
       const pair = await service.login('test:admin-uid:admin@example.com');
 
       expect(users.findRowByFirebaseUid).toHaveBeenCalledWith('admin-uid');
@@ -144,6 +190,10 @@ describe('AuthService', () => {
     });
 
     it('rejects Firebase users without local membership', async () => {
+      firebase.verifyIdToken.mockResolvedValueOnce({
+        uid: 'outside',
+        email: 'outside@example.com',
+      });
       users.findRowByFirebaseUid.mockResolvedValueOnce(null);
 
       await expect(
@@ -153,6 +203,10 @@ describe('AuthService', () => {
     });
 
     it('rejects invalid Firebase tokens with 401', async () => {
+      firebase.verifyIdToken.mockRejectedValueOnce(
+        new UnauthorizedException('Unauthorized'),
+      );
+
       await expect(service.login('not-a-test-token')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
@@ -161,8 +215,152 @@ describe('AuthService', () => {
     });
   });
 
+  describe('register', () => {
+    it('creates the Firebase identity, workspace owner session, and token pair', async () => {
+      db.select = createSelectMock([[]]);
+      const txSelect = createSelectMock([[], []]);
+      const txInsert = createTransactionInsertMock([
+        [
+          {
+            id: 'user-register-1',
+            firebaseUid: 'firebase-register-1',
+            email: 'owner@example.com',
+          },
+        ],
+        [
+          {
+            id: 'workspace-register-1',
+            name: 'Acme Studio',
+          },
+        ],
+      ]);
+      const tx = {
+        execute: vi.fn().mockResolvedValue(undefined),
+        insert: txInsert,
+        select: txSelect,
+      };
+      db.transaction.mockImplementation(async (callback) => callback(tx));
+      firebase.createEmailPasswordUser.mockResolvedValueOnce({
+        uid: 'firebase-register-1',
+        email: 'owner@example.com',
+        displayName: 'Owner Person',
+      });
+
+      const pair = await service.register(registerInput);
+
+      expect(firebase.createEmailPasswordUser).toHaveBeenCalledWith({
+        displayName: 'Owner Person',
+        email: 'owner@example.com',
+        password: 'password123',
+      });
+      expect(db.transaction).toHaveBeenCalledOnce();
+      expect(tx.execute).toHaveBeenCalledTimes(2);
+      expect(txInsert).toHaveBeenCalledTimes(5);
+      expect(firebase.deleteUser).not.toHaveBeenCalled();
+      expect(pair.refreshToken.length).toBeGreaterThan(20);
+
+      const payload = tokens.verifyAccess(pair.accessToken);
+      expect(payload.sub).toBe('user-register-1');
+      expect(payload.workspaceId).toBe('workspace-register-1');
+      expect(payload.role).toBe('admin');
+      expect(payload.firebaseUid).toBe('firebase-register-1');
+      expect(payload.email).toBe('owner@example.com');
+    });
+
+    it('rejects duplicate local emails before Firebase provisioning', async () => {
+      db.select = createSelectMock([[seedUserRow]]);
+
+      await expect(service.register(registerInput)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(firebase.createEmailPasswordUser).not.toHaveBeenCalled();
+      expect(db.transaction).not.toHaveBeenCalled();
+    });
+
+    it('maps Firebase duplicate-email failures to a stable conflict', async () => {
+      db.select = createSelectMock([[]]);
+      firebase.createEmailPasswordUser.mockRejectedValueOnce(
+        new FirebaseAdminAuthError(
+          'auth/email-already-exists',
+          'duplicate email',
+        ),
+      );
+
+      await expect(service.register(registerInput)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(db.transaction).not.toHaveBeenCalled();
+    });
+
+    it('maps workspace-name conflicts and cleans up the Firebase user', async () => {
+      db.select = createSelectMock([[]]);
+      const tx = {
+        execute: vi.fn().mockResolvedValue(undefined),
+        insert: createTransactionInsertMock([]),
+        select: createSelectMock([[], [{ id: 'workspace-existing-1' }]]),
+      };
+      db.transaction.mockImplementation(async (callback) => callback(tx));
+      firebase.createEmailPasswordUser.mockResolvedValueOnce({
+        uid: 'firebase-register-1',
+        email: 'owner@example.com',
+        displayName: 'Owner Person',
+      });
+
+      await expect(service.register(registerInput)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(firebase.deleteUser).toHaveBeenCalledWith('firebase-register-1');
+    });
+
+    it('returns service unavailable when Firebase provisioning fails unexpectedly', async () => {
+      db.select = createSelectMock([[]]);
+      firebase.createEmailPasswordUser.mockRejectedValueOnce(
+        new Error('firebase unavailable'),
+      );
+
+      await expect(service.register(registerInput)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(db.transaction).not.toHaveBeenCalled();
+    });
+
+    it('cleans up Firebase users after persistence failures', async () => {
+      db.select = createSelectMock([[]]);
+      db.transaction.mockRejectedValueOnce(new Error('db failed'));
+      firebase.createEmailPasswordUser.mockResolvedValueOnce({
+        uid: 'firebase-register-1',
+        email: 'owner@example.com',
+        displayName: 'Owner Person',
+      });
+
+      await expect(service.register(registerInput)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(firebase.deleteUser).toHaveBeenCalledWith('firebase-register-1');
+    });
+
+    it('returns service unavailable when cleanup after persistence failure also fails', async () => {
+      db.select = createSelectMock([[]]);
+      db.transaction.mockRejectedValueOnce(new Error('db failed'));
+      firebase.createEmailPasswordUser.mockResolvedValueOnce({
+        uid: 'firebase-register-1',
+        email: 'owner@example.com',
+        displayName: 'Owner Person',
+      });
+      firebase.deleteUser.mockRejectedValueOnce(new Error('cleanup failed'));
+
+      await expect(service.register(registerInput)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+    });
+  });
+
   describe('refresh', () => {
     it('rotates the refresh token and returns a new pair', async () => {
+      firebase.verifyIdToken.mockResolvedValueOnce({
+        uid: 'admin-uid',
+        email: 'admin@example.com',
+      });
       const first = await service.login('test:admin-uid:admin@example.com');
       const firstCreateCall = repo.create.mock.calls[0]![0] as {
         tokenHash: string;
@@ -200,6 +398,10 @@ describe('AuthService', () => {
     });
 
     it('reflects current role after role change', async () => {
+      firebase.verifyIdToken.mockResolvedValueOnce({
+        uid: 'admin-uid',
+        email: 'admin@example.com',
+      });
       const first = await service.login('test:admin-uid:admin@example.com');
       const firstCreateCall = repo.create.mock.calls[0]![0] as {
         tokenHash: string;

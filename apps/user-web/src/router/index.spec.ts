@@ -18,6 +18,7 @@ import ForbiddenView from "@/views/ForbiddenView.vue";
 import InviteAcceptView from "@/views/InviteAcceptView.vue";
 import InvitePasswordSetupView from "@/views/InvitePasswordSetupView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
+import RegisterView from "@/views/RegisterView.vue";
 
 type LazyRouteComponent = () => Promise<{ default: unknown }>;
 
@@ -149,6 +150,20 @@ describe("app router auth guards", () => {
     );
   });
 
+  it("defines the standalone register route outside the app shell", () => {
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia: createPinia(),
+    });
+
+    const registerRoute = router.resolve("/register");
+
+    expect(registerRoute.name).toBe(routeNames.register);
+    expect(registerRoute.meta.guestOnly).toBe(true);
+    expect(registerRoute.matched).toHaveLength(1);
+    expect(registerRoute.matched[0]?.components?.default).toBe(RegisterView);
+  });
+
   it("keeps login and shell eager while lazy-loading authenticated child views", () => {
     const router = createAppRouter({
       history: createMemoryHistory(),
@@ -192,6 +207,25 @@ describe("app router auth guards", () => {
 
     expect(router.currentRoute.value.name).toBe(routeNames.inviteAccept);
     expect(router.currentRoute.value.query.token).toBe("invite-token");
+  });
+
+  it("redirects authenticated users away from the register route", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "access-token";
+    authStore.bootstrapComplete = true;
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+
+    await router.push("/register?redirect=%2Ftime-entries");
+    await router.isReady();
+
+    expect(router.currentRoute.value.fullPath).toBe("/time-entries");
   });
 
   it("redirects anonymous users from unknown routes to login", async () => {

@@ -142,6 +142,12 @@ export function createAuthSessionCore({
       firebaseIdToken,
     );
 
+    await establishSessionFromTokenPair(tokenPair);
+  }
+
+  async function establishSessionFromTokenPair(
+    tokenPair: TokenPairResponse,
+  ): Promise<void> {
     onLoginSuccess?.();
     applyTokenPair(tokenPair);
     await loadCurrentUser(tokenPair.accessToken);
@@ -240,6 +246,7 @@ export function createAuthSessionCore({
     accessToken,
     bootstrapComplete,
     bootstrapSession,
+    establishSessionFromTokenPair,
     isAuthenticated,
     isBootstrapping,
     isSubmitting,

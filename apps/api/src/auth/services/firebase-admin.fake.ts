@@ -1,9 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
-import type {
+import {
   DecodedFirebaseToken,
+  FirebaseAdminAuthError,
   FirebaseAdminService,
   InvitedFirebaseUser,
+  RegisteredFirebaseUser,
 } from './firebase-admin.interface';
 
 /**
@@ -21,6 +23,8 @@ import type {
 @Injectable()
 export class FakeFirebaseAdminService implements FirebaseAdminService {
   private readonly invitedUsers = new Map<string, InvitedFirebaseUser>();
+  private readonly registeredUsers = new Map<string, RegisteredFirebaseUser>();
+  private readonly registeredUserEmailsByUid = new Map<string, string>();
 
   async verifyIdToken(idToken: string): Promise<DecodedFirebaseToken> {
     if (typeof idToken !== 'string' || !idToken.startsWith('test:')) {
@@ -54,6 +58,51 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     } satisfies InvitedFirebaseUser;
     this.invitedUsers.set(normalizedEmail, createdUser);
     return createdUser;
+  }
+
+  async createEmailPasswordUser(input: {
+    email: string;
+    password: string;
+    displayName: string;
+  }): Promise<RegisteredFirebaseUser> {
+    const normalizedEmail = normalizeEmail(input.email);
+
+    if (input.password.length < 8) {
+      throw new FirebaseAdminAuthError(
+        'auth/invalid-password',
+        'Weak password',
+      );
+    }
+
+    const existingUser =
+      this.registeredUsers.get(normalizedEmail) ??
+      this.invitedUsers.get(normalizedEmail);
+    if (existingUser) {
+      throw new FirebaseAdminAuthError(
+        'auth/email-already-exists',
+        'Duplicate email',
+      );
+    }
+
+    const createdUser = {
+      uid: `fake-firebase-user-${this.registeredUsers.size + 1}`,
+      email: normalizedEmail,
+      displayName: input.displayName,
+    } satisfies RegisteredFirebaseUser;
+    this.registeredUsers.set(normalizedEmail, createdUser);
+    this.registeredUserEmailsByUid.set(createdUser.uid, normalizedEmail);
+
+    return createdUser;
+  }
+
+  async deleteUser(uid: string): Promise<void> {
+    const email = this.registeredUserEmailsByUid.get(uid);
+    if (!email) {
+      throw new Error('Failed to delete Firebase registration user');
+    }
+
+    this.registeredUserEmailsByUid.delete(uid);
+    this.registeredUsers.delete(email);
   }
 
   async generatePasswordSetupLink(

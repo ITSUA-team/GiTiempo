@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import Button from "primevue/button";
 import {
   AuthIntroPanel,
   AuthSignInForm,
@@ -77,6 +78,10 @@ async function handleGoogleSignIn(): Promise<void> {
     errorMessage.value = getErrorMessage(error);
   }
 }
+
+function goToRegister(): void {
+  void router.push({ name: routeNames.register });
+}
 </script>
 
 <template>
@@ -105,7 +110,19 @@ async function handleGoogleSignIn(): Promise<void> {
           :is-submitting="authStore.isSubmitting"
           @submit-credentials="handleEmailSignIn"
           @submit-google="handleGoogleSignIn"
-        />
+        >
+          <template #secondary-actions>
+            <Button
+              type="button"
+              label="Create workspace"
+              severity="secondary"
+              variant="outlined"
+              class="h-11"
+              data-testid="sign-in-create-workspace"
+              @click="goToRegister"
+            />
+          </template>
+        </AuthSignInForm>
       </section>
     </div>
   </div>

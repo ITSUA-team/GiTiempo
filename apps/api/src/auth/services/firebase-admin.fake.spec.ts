@@ -68,6 +68,52 @@ describe('FakeFirebaseAdminService', () => {
     });
   });
 
+  it('creates and deletes a registered Firebase email/password user', async () => {
+    const created = await fake.createEmailPasswordUser({
+      email: 'Owner@Example.com',
+      password: 'password123',
+      displayName: 'Owner Person',
+    });
+
+    expect(created).toEqual({
+      uid: 'fake-firebase-user-1',
+      email: 'owner@example.com',
+      displayName: 'Owner Person',
+    });
+
+    await expect(fake.deleteUser(created.uid)).resolves.toBeUndefined();
+  });
+
+  it('rejects duplicate registration emails', async () => {
+    await fake.createEmailPasswordUser({
+      email: 'Owner@Example.com',
+      password: 'password123',
+      displayName: 'Owner Person',
+    });
+
+    await expect(
+      fake.createEmailPasswordUser({
+        email: 'owner@example.com',
+        password: 'password123',
+        displayName: 'Owner Person',
+      }),
+    ).rejects.toMatchObject({
+      code: 'auth/email-already-exists',
+    });
+  });
+
+  it('rejects weak registration passwords', async () => {
+    await expect(
+      fake.createEmailPasswordUser({
+        email: 'owner@example.com',
+        password: 'short',
+        displayName: 'Owner Person',
+      }),
+    ).rejects.toMatchObject({
+      code: 'auth/invalid-password',
+    });
+  });
+
   it('generates a deterministic password setup link', async () => {
     await expect(
       fake.generatePasswordSetupLink(

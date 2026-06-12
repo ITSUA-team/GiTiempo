@@ -1,10 +1,15 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -15,6 +20,7 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 import { LoginDto } from '../dto/login.dto';
 import { RefreshDto } from '../dto/refresh.dto';
 import { LogoutDto } from '../dto/logout.dto';
+import { RegisterDto } from '../dto/register.dto';
 import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
 
 @ApiTags('auth')
@@ -32,6 +38,29 @@ export class AuthController {
   @ZodSerializerDto(TokenPairResponseDto)
   login(@Body() body: LoginDto): Promise<TokenPairResponseDto> {
     return this.auth.login(body.firebaseIdToken);
+  }
+
+  @Post('register')
+  @SkipAuth()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Register the first workspace owner and issue API tokens',
+  })
+  @ApiCreatedResponse({ type: TokenPairResponseDto })
+  @ApiBadRequestResponse({
+    description: 'Invalid registration input or weak password',
+  })
+  @ApiConflictResponse({
+    description: 'Duplicate email or workspace name unavailable',
+  })
+  @ApiTooManyRequestsResponse({ description: 'Too many registration attempts' })
+  @ApiServiceUnavailableResponse({
+    description: 'Registration could not complete safely',
+  })
+  @ZodSerializerDto(TokenPairResponseDto)
+  register(@Body() body: RegisterDto): Promise<TokenPairResponseDto> {
+    return this.auth.register(body);
   }
 
   @Post('refresh')

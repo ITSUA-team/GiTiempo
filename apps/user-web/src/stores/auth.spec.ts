@@ -241,6 +241,26 @@ describe("useAuthStore", () => {
     expect(authStore.bootstrapComplete).toBe(true);
   });
 
+  it("establishes a session directly from an approved token pair", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+
+    const authStore = useAuthStore();
+    seedAuthenticatedQueryCache();
+
+    await authStore.establishSessionFromTokenPair({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    });
+
+    expect(authStore.isAuthenticated).toBe(true);
+    expect(authStore.accessToken).toBe("registered-access-token");
+    expect(getRefreshToken()).toBe("registered-refresh-token");
+    expect(authStore.profile?.email).toBe("alexey@example.com");
+    expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
+  });
+
   it("clears stale local session state when login exchange fails", async () => {
     setRefreshToken("stale-refresh-token");
     setAuthRuntimeForTesting(

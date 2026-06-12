@@ -3,10 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAuth, type UserRecord } from 'firebase-admin/auth';
 import type { Env } from '../../config/env.validation';
-import type {
+import {
   DecodedFirebaseToken,
+  FirebaseAdminAuthError,
   FirebaseAdminService,
   InvitedFirebaseUser,
+  RegisteredFirebaseUser,
 } from './firebase-admin.interface';
 
 const APP_NAME = 'gitiempo-api';
@@ -38,6 +40,40 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
       };
     } catch {
       throw new UnauthorizedException('Unauthorized');
+    }
+  }
+
+  async createEmailPasswordUser(input: {
+    email: string;
+    password: string;
+    displayName: string;
+  }): Promise<RegisteredFirebaseUser> {
+    try {
+      const user = await getAuth(this.getApp()).createUser({
+        displayName: input.displayName,
+        email: input.email,
+        emailVerified: false,
+        password: input.password,
+      });
+
+      return {
+        uid: user.uid,
+        email: user.email ?? input.email,
+        displayName: user.displayName ?? input.displayName,
+      };
+    } catch (error) {
+      throw this.toFirebaseAdminAuthError(
+        error,
+        'Failed to provision Firebase registration user',
+      );
+    }
+  }
+
+  async deleteUser(uid: string): Promise<void> {
+    try {
+      await getAuth(this.getApp()).deleteUser(uid);
+    } catch {
+      throw new Error('Failed to delete Firebase registration user');
     }
   }
 
@@ -156,6 +192,21 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
       email: user.email ?? '',
       isExistingUser,
     };
+  }
+
+  private toFirebaseAdminAuthError(
+    error: unknown,
+    fallbackMessage: string,
+  ): FirebaseAdminAuthError {
+    const code =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof error.code === 'string'
+        ? error.code
+        : 'auth/internal-error';
+
+    return new FirebaseAdminAuthError(code, fallbackMessage);
   }
 }
 

@@ -6,11 +6,13 @@ import type { Env } from '../../config/env.validation';
 const verifyIdToken = vi.fn();
 const getUserByEmail = vi.fn();
 const createUser = vi.fn();
+const deleteUser = vi.fn();
 const generatePasswordResetLink = vi.fn();
 const getAuth = vi.fn(() => ({
   verifyIdToken,
   getUserByEmail,
   createUser,
+  deleteUser,
   generatePasswordResetLink,
 }));
 const initializeApp = vi.fn(() => ({ name: 'gitiempo-api' }));
@@ -208,6 +210,91 @@ describe('RealFirebaseAdminService', () => {
     await expect(
       svc.getOrCreateInvitedUserByEmail('invitee@example.com'),
     ).rejects.toThrow('Failed to provision invited Firebase user');
+  });
+
+  it('creates a Firebase email/password registration user', async () => {
+    createUser.mockResolvedValueOnce({
+      uid: 'registered-user',
+      email: 'owner@example.com',
+      displayName: 'Owner Person',
+    });
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      svc.createEmailPasswordUser({
+        email: 'owner@example.com',
+        password: 'password123',
+        displayName: 'Owner Person',
+      }),
+    ).resolves.toEqual({
+      uid: 'registered-user',
+      email: 'owner@example.com',
+      displayName: 'Owner Person',
+    });
+    expect(createUser).toHaveBeenCalledWith({
+      displayName: 'Owner Person',
+      email: 'owner@example.com',
+      emailVerified: false,
+      password: 'password123',
+    });
+  });
+
+  it('surfaces Firebase registration errors with the provider code', async () => {
+    createUser.mockRejectedValueOnce({
+      code: 'auth/email-already-exists',
+    });
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(
+      svc.createEmailPasswordUser({
+        email: 'owner@example.com',
+        password: 'password123',
+        displayName: 'Owner Person',
+      }),
+    ).rejects.toMatchObject({
+      code: 'auth/email-already-exists',
+    });
+  });
+
+  it('deletes a Firebase registration user', async () => {
+    deleteUser.mockResolvedValueOnce(undefined);
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(svc.deleteUser('registered-user')).resolves.toBeUndefined();
+    expect(deleteUser).toHaveBeenCalledWith('registered-user');
+  });
+
+  it('maps Firebase registration cleanup failures to a generic error', async () => {
+    deleteUser.mockRejectedValueOnce(new Error('boom'));
+    const svc = new RealFirebaseAdminService(
+      makeConfig({
+        FIREBASE_PROJECT_ID: 'p',
+        FIREBASE_CLIENT_EMAIL: 'x@y.z',
+        FIREBASE_PRIVATE_KEY: 'KEY',
+      }),
+    );
+
+    await expect(svc.deleteUser('registered-user')).rejects.toThrow(
+      'Failed to delete Firebase registration user',
+    );
   });
 
   it('generates a Firebase password setup link', async () => {

@@ -17,6 +17,22 @@ export interface InvitedFirebaseUser {
   isExistingUser: boolean;
 }
 
+export interface RegisteredFirebaseUser {
+  uid: string;
+  email: string;
+  displayName?: string | null;
+}
+
+export class FirebaseAdminAuthError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'FirebaseAdminAuthError';
+  }
+}
+
 /**
  * DI contract for verifying Firebase ID tokens. A real implementation
  * wraps `firebase-admin`; a fake implementation accepts deterministic
@@ -24,6 +40,12 @@ export interface InvitedFirebaseUser {
  */
 export interface FirebaseAdminService {
   verifyIdToken(idToken: string): Promise<DecodedFirebaseToken>;
+  createEmailPasswordUser(input: {
+    email: string;
+    password: string;
+    displayName: string;
+  }): Promise<RegisteredFirebaseUser>;
+  deleteUser(uid: string): Promise<void>;
   getOrCreateInvitedUserByEmail(email: string): Promise<InvitedFirebaseUser>;
   generatePasswordSetupLink(
     email: string,

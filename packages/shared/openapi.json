@@ -212,6 +212,50 @@
         ]
       }
     },
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPairResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid registration input or weak password"
+          },
+          "409": {
+            "description": "Duplicate email or workspace name unavailable"
+          },
+          "429": {
+            "description": "Too many registration attempts"
+          },
+          "503": {
+            "description": "Registration could not complete safely"
+          }
+        },
+        "summary": "Register the first workspace owner and issue API tokens",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
@@ -2696,6 +2740,41 @@
           "refreshToken",
           "accessTokenExpiresIn"
         ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workspaceName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "ownerAcknowledgement": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "fullName",
+          "workspaceName",
+          "password",
+          "ownerAcknowledgement"
+        ],
+        "additionalProperties": false
       },
       "RefreshDto": {
         "type": "object",

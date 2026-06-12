@@ -7,6 +7,7 @@ describe('AuthController', () => {
   let controller: AuthController;
   const authService = {
     login: vi.fn(),
+    register: vi.fn(),
     refresh: vi.fn(),
     logout: vi.fn(),
   };
@@ -44,6 +45,31 @@ describe('AuthController', () => {
       controller.refresh({ refreshToken: 'raw' } as never),
     ).resolves.toBe(pair);
     expect(authService.refresh).toHaveBeenCalledWith('raw');
+  });
+
+  it('POST /auth/register delegates to AuthService.register', async () => {
+    const pair = {
+      accessToken: 'a',
+      refreshToken: 'r1',
+      accessTokenExpiresIn: 900,
+    };
+    authService.register.mockResolvedValue(pair);
+    await expect(
+      controller.register({
+        email: 'owner@example.com',
+        fullName: 'Owner Person',
+        ownerAcknowledgement: true,
+        password: 'password123',
+        workspaceName: 'Acme Studio',
+      } as never),
+    ).resolves.toBe(pair);
+    expect(authService.register).toHaveBeenCalledWith({
+      email: 'owner@example.com',
+      fullName: 'Owner Person',
+      ownerAcknowledgement: true,
+      password: 'password123',
+      workspaceName: 'Acme Studio',
+    });
   });
 
   it('POST /auth/logout passes subject + token to AuthService.logout', async () => {

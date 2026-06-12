@@ -26,6 +26,7 @@ export const useAuthStore = defineStore("auth", () => {
   return {
     ...session.baseSession,
     ...profilePresentation,
+    establishSessionFromTokenPair: session.establishSessionFromTokenPair,
     loginWithFirebaseToken: session.loginWithFirebaseToken,
     updateProfile: session.updateProfile,
     workspaceName,
