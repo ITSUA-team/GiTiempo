@@ -29,7 +29,7 @@ const desktopSteps = [
 <template>
   <section
     v-if="showDesktop"
-    class="bg-brand hidden h-auto w-full flex-1 flex-col justify-between px-[52px] py-[56px] text-white lg:flex"
+    class="hidden h-auto w-full flex-1 flex-col justify-between px-[52px] py-[56px] text-white lg:flex"
     data-testid="register-desktop-intro"
   >
     <div class="flex flex-col gap-8">

@@ -14,7 +14,7 @@ const {
 </script>
 
 <template>
-  <StandaloneSplitPage>
+  <StandaloneSplitPage left-panel-class="bg-brand">
     <template #left>
       <RegisterIntroPanel :show-mobile="false" />
     </template>

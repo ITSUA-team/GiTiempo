@@ -20,7 +20,7 @@ defineProps<{
   <StandaloneSplitPage>
     <template #left>
       <section
-        class="bg-surface-primary flex flex-1 flex-col justify-between px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
+        class="flex flex-1 flex-col justify-between px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
       >
         <div class="flex items-center gap-3">
           <div
