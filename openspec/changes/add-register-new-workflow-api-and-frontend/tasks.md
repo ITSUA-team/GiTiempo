@@ -30,7 +30,7 @@
 ## 4. Verification
 
 - [x] 4.1 Run shared package tests for the new registration contracts.
-- [ ] 4.2 Run API unit/e2e tests that cover registration and existing auth/login behavior.
-- [ ] 4.3 Run `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
+- [x] 4.2 Run API unit/e2e tests that cover registration and existing auth/login behavior.
+- [x] 4.3 Run `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
 - [x] 4.4 Run root or affected-package OpenAPI export verification and confirm the committed OpenAPI snapshot matches the backend decorators.
 - [x] 4.5 Perform a final design parity review against the approved login/register `.pen` screens and document any PrimeVue-only compromises.
