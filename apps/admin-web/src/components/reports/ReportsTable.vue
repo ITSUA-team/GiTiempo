@@ -166,7 +166,7 @@ function handleMemberFilterUpdate(
 const searchAutoCompletePt = {
   root: { class: 'h-[38px] w-full' },
   pcInputText: {
-    root: { class: 'h-[38px] w-full rounded-[6px] pl-9 text-[14px]' },
+    root: { class: 'h-[38px] w-full rounded-l-[6px] rounded-r-none pl-9 text-[14px]' },
   },
   dropdown: { class: 'h-[38px] w-9 text-text-muted' },
   option: { class: 'text-[13px]' },

@@ -61,8 +61,18 @@ describe('ReportsFilterForm', () => {
     expect(autoCompleteControls).toHaveLength(2);
     expect(projectFilter.props('modelValue')).toBeNull();
     expect(projectFilter.props('placeholder')).toBe('All projects');
+    expect(projectFilter.props('pt')).toMatchObject({
+      pcInputText: {
+        root: { class: expect.stringContaining('rounded-r-none') },
+      },
+    });
     expect(memberFilter.props('modelValue')).toBeNull();
     expect(memberFilter.props('placeholder')).toBe('All assigned members');
+    expect(memberFilter.props('pt')).toMatchObject({
+      pcInputText: {
+        root: { class: expect.stringContaining('rounded-r-none') },
+      },
+    });
 
     projectFilter.vm.$emit('complete', { query: 'orion' });
     memberFilter.vm.$emit('complete', { query: 'alex' });

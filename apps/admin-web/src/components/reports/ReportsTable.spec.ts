@@ -119,6 +119,11 @@ describe('ReportsTable', () => {
 
     expect(autoCompleteControls).toHaveLength(3);
     expect(search.props('dropdown')).toBe(true);
+    expect(search.props('pt')).toMatchObject({
+      pcInputText: {
+        root: { class: expect.stringContaining('rounded-r-none') },
+      },
+    });
     expect(projectFilter.props('forceSelection')).toBe(true);
     expect(memberFilter.props('forceSelection')).toBe(true);
     expect(projectFilter.props('modelValue')).toBeNull();

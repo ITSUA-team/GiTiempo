@@ -123,7 +123,7 @@ const autoCompletePt = {
   pcInputText: {
     root: {
       class:
-        'border-divider bg-surface-primary h-[38px] rounded-[6px] border px-3 text-[14px] font-medium text-text-dark shadow-none',
+        'border-divider bg-surface-primary h-[38px] rounded-l-[6px] rounded-r-none border px-3 text-[14px] font-medium text-text-dark shadow-none',
     },
   },
   dropdown: { class: 'w-9 text-text-muted' },
