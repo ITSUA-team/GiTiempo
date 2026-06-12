@@ -5,13 +5,13 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type {
   CreateTaskInput,
-  ProjectMember,
   TaskResponse,
   UpdateTaskInput,
 } from '@gitiempo/shared';
+import { projectMemberSchema } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
@@ -20,17 +20,18 @@ import { projectAssignments } from '../../projects/schemas/project-assignments.s
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
-import { users } from '../../users/schemas/users.schema';
+import { taskAssignees } from '../schemas/task-assignees.schema';
 import { tasks } from '../schemas/tasks.schema';
 
 export type TaskRow = typeof tasks.$inferSelect;
 type QueryExecutor = Pick<DrizzleDB, 'select' | 'update'>;
 type SelectExecutor = Pick<DrizzleDB, 'select'>;
+type TaskAssignmentMutationExecutor = Pick<
+  DrizzleDB,
+  'delete' | 'insert' | 'select'
+>;
 type TaskResponseRow = TaskRow & {
-  assigneeEmail: string | null;
-  assigneeDisplayName: string | null;
-  assigneeAvatarUrl: string | null;
-  assigneeRole: ProjectMember['role'] | null;
+  assignees: unknown;
 };
 
 @Injectable()
@@ -52,22 +53,6 @@ export class TasksService {
     const rows = await this.db
       .select(this.taskResponseSelection())
       .from(tasks)
-      .leftJoin(
-        projectAssignments,
-        and(
-          eq(projectAssignments.workspaceId, tasks.workspaceId),
-          eq(projectAssignments.projectId, tasks.projectId),
-          eq(projectAssignments.userId, tasks.assigneeUserId),
-        ),
-      )
-      .leftJoin(
-        workspaceMembers,
-        and(
-          eq(workspaceMembers.workspaceId, projectAssignments.workspaceId),
-          eq(workspaceMembers.userId, projectAssignments.userId),
-        ),
-      )
-      .leftJoin(users, eq(users.id, projectAssignments.userId))
       .where(
         and(
           eq(tasks.workspaceId, user.workspaceId),
@@ -90,12 +75,14 @@ export class TasksService {
     }
 
     const row = await this.db.transaction(async (tx) => {
-      if (input.assigneeId !== undefined && input.assigneeId !== null) {
-        await this.requireProjectAssignee(
+      const assigneeIds = input.assigneeIds ?? [];
+
+      if (assigneeIds.length > 0) {
+        await this.requireProjectAssignees(
           tx,
           user.workspaceId,
           project.id,
-          input.assigneeId,
+          assigneeIds,
         );
       }
 
@@ -108,10 +95,17 @@ export class TasksService {
           description: input.description ?? null,
           priority: input.priority ?? 'medium',
           status: input.status ?? 'open',
-          assigneeUserId: input.assigneeId ?? null,
         })
         .returning({ id: tasks.id });
       if (!created) throw new Error('Failed to create task');
+
+      await this.insertTaskAssignees(
+        tx,
+        user.workspaceId,
+        project.id,
+        created.id,
+        assigneeIds,
+      );
 
       const response = await this.findTaskResponse(
         tx,
@@ -149,21 +143,18 @@ export class TasksService {
         : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
-      ...(input.assigneeId !== undefined
-        ? { assigneeUserId: input.assigneeId }
-        : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       updatedAt,
     };
     const shouldHandleTaskClose = input.status === 'closed';
 
     const row = await this.db.transaction(async (tx) => {
-      if (input.assigneeId !== undefined && input.assigneeId !== null) {
-        await this.requireProjectAssignee(
+      if (input.assigneeIds !== undefined && input.assigneeIds.length > 0) {
+        await this.requireProjectAssignees(
           tx,
           user.workspaceId,
           project.id,
-          input.assigneeId,
+          input.assigneeIds,
         );
       }
 
@@ -179,6 +170,16 @@ export class TasksService {
         .returning({ id: tasks.id });
 
       if (!updated) throw new NotFoundException('Task not found');
+
+      if (input.assigneeIds !== undefined) {
+        await this.replaceTaskAssignees(
+          tx,
+          user.workspaceId,
+          project.id,
+          lockedTask.id,
+          input.assigneeIds,
+        );
+      }
 
       if (shouldHandleTaskClose && lockedTask.status !== 'closed') {
         await this.stopRunningEntriesForTask(
@@ -286,11 +287,26 @@ export class TasksService {
       description: tasks.description,
       priority: tasks.priority,
       status: tasks.status,
-      assigneeUserId: tasks.assigneeUserId,
-      assigneeEmail: users.email,
-      assigneeDisplayName: users.displayName,
-      assigneeAvatarUrl: users.avatarUrl,
-      assigneeRole: workspaceMembers.role,
+      assignees: sql<unknown>`COALESCE((
+        SELECT json_agg(json_build_object(
+          'userId', "task_assignees"."user_id",
+          'displayName', "users"."display_name",
+          'email', "users"."email",
+          'avatarUrl', "users"."avatar_url",
+          'role', "workspace_members"."role"
+        ) ORDER BY COALESCE("users"."display_name", "users"."email"), "task_assignees"."user_id")
+        FROM "task_assignees"
+        INNER JOIN "project_assignments"
+          ON "project_assignments"."workspace_id" = "task_assignees"."workspace_id"
+          AND "project_assignments"."project_id" = "task_assignees"."project_id"
+          AND "project_assignments"."user_id" = "task_assignees"."user_id"
+        INNER JOIN "workspace_members"
+          ON "workspace_members"."workspace_id" = "task_assignees"."workspace_id"
+          AND "workspace_members"."user_id" = "task_assignees"."user_id"
+        INNER JOIN "users"
+          ON "users"."id" = "task_assignees"."user_id"
+        WHERE "task_assignees"."task_id" = "tasks"."id"
+      ), '[]'::json)`,
       isActive: tasks.isActive,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
@@ -305,35 +321,22 @@ export class TasksService {
     const [row] = await db
       .select(this.taskResponseSelection())
       .from(tasks)
-      .leftJoin(
-        projectAssignments,
-        and(
-          eq(projectAssignments.workspaceId, tasks.workspaceId),
-          eq(projectAssignments.projectId, tasks.projectId),
-          eq(projectAssignments.userId, tasks.assigneeUserId),
-        ),
-      )
-      .leftJoin(
-        workspaceMembers,
-        and(
-          eq(workspaceMembers.workspaceId, projectAssignments.workspaceId),
-          eq(workspaceMembers.userId, projectAssignments.userId),
-        ),
-      )
-      .leftJoin(users, eq(users.id, projectAssignments.userId))
       .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
       .limit(1);
     return row ?? null;
   }
 
-  private async requireProjectAssignee(
+  private async requireProjectAssignees(
     db: SelectExecutor,
     workspaceId: string,
     projectId: string,
-    userId: string,
+    userIds: string[],
   ): Promise<void> {
-    const [row] = await db
-      .select({ id: projectAssignments.id })
+    const uniqueUserIds = [...new Set(userIds)];
+    if (uniqueUserIds.length === 0) return;
+
+    const rows = await db
+      .select({ userId: projectAssignments.userId })
       .from(projectAssignments)
       .innerJoin(
         workspaceMembers,
@@ -346,32 +349,57 @@ export class TasksService {
         and(
           eq(projectAssignments.workspaceId, workspaceId),
           eq(projectAssignments.projectId, projectId),
-          eq(projectAssignments.userId, userId),
+          inArray(projectAssignments.userId, uniqueUserIds),
         ),
-      )
-      .limit(1);
+      );
 
-    if (!row) {
+    if (new Set(rows.map((row) => row.userId)).size !== uniqueUserIds.length) {
       throw new UnprocessableEntityException(
-        'Assignee must be assigned to project',
+        'Assignees must be assigned to project',
       );
     }
   }
 
-  private toResponse(row: TaskResponseRow): TaskResponse {
-    const assignee =
-      row.assigneeUserId !== null &&
-      row.assigneeEmail !== null &&
-      row.assigneeRole !== null
-        ? {
-            userId: row.assigneeUserId,
-            displayName: row.assigneeDisplayName,
-            email: row.assigneeEmail,
-            avatarUrl: row.assigneeAvatarUrl,
-            role: row.assigneeRole,
-          }
-        : null;
+  private async replaceTaskAssignees(
+    db: TaskAssignmentMutationExecutor,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+    userIds: string[],
+  ): Promise<void> {
+    await db
+      .delete(taskAssignees)
+      .where(
+        and(
+          eq(taskAssignees.workspaceId, workspaceId),
+          eq(taskAssignees.taskId, taskId),
+        ),
+      );
 
+    await this.insertTaskAssignees(db, workspaceId, projectId, taskId, userIds);
+  }
+
+  private async insertTaskAssignees(
+    db: Pick<DrizzleDB, 'insert'>,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+    userIds: string[],
+  ): Promise<void> {
+    const uniqueUserIds = [...new Set(userIds)];
+    if (uniqueUserIds.length === 0) return;
+
+    await db.insert(taskAssignees).values(
+      uniqueUserIds.map((userId) => ({
+        workspaceId,
+        projectId,
+        taskId,
+        userId,
+      })),
+    );
+  }
+
+  private toResponse(row: TaskResponseRow): TaskResponse {
     return {
       id: row.id,
       workspaceId: row.workspaceId,
@@ -380,11 +408,17 @@ export class TasksService {
       description: row.description,
       priority: row.priority,
       status: row.status,
-      assignee,
+      assignees: this.parseTaskAssignees(row.assignees),
       isActive: row.isActive,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
+  }
+
+  private parseTaskAssignees(assignees: unknown) {
+    return projectMemberSchema
+      .array()
+      .parse(Array.isArray(assignees) ? assignees : []);
   }
 
   private async stopRunningEntriesForTask(

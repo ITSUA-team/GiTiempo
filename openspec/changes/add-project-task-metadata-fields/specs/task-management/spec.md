@@ -2,11 +2,11 @@
 
 ### Requirement: Task Metadata Can Be Created And Updated
 
-The system MUST support editable provider-neutral task metadata for description, priority, status, and assignee while preserving existing task visibility and project access rules.
+The system MUST support editable provider-neutral task metadata for description, priority, status, and assignees while preserving existing task visibility and project access rules.
 
 #### Scenario: Visible member creates task with metadata
 - **GIVEN** the requester has visibility to an active project
-- **WHEN** the requester creates a task with title, description, priority, status, and assignee
+- **WHEN** the requester creates a task with title, description, priority, status, and one or more assignees
 - **THEN** the system creates the task in the requester's workspace and target project
 - **AND** the task stores the supplied description, priority, status, and assignee metadata
 
@@ -16,7 +16,7 @@ The system MUST support editable provider-neutral task metadata for description,
 - **THEN** the system creates the task with a `null` description
 - **AND** the task priority defaults to `medium`
 - **AND** the task status defaults to `open`
-- **AND** the task assignee is `null`
+- **AND** the task assignee list is empty
 
 #### Scenario: Visible member updates task metadata
 - **GIVEN** the requester has visibility to a task's active project
@@ -24,15 +24,15 @@ The system MUST support editable provider-neutral task metadata for description,
 - **THEN** the system applies the supplied metadata changes
 - **AND** omitted mutable fields remain unchanged
 
-#### Scenario: Task assignee must belong to the task project
+#### Scenario: Task assignees must belong to the task project
 - **GIVEN** the requester has visibility to a task's active project
 - **WHEN** the requester creates or updates the task with an assignee who is not an active member assigned to that project
 - **THEN** the system rejects the request without changing the task
 
 #### Scenario: Task metadata can be cleared
 - **GIVEN** the requester has visibility to a task's active project
-- **WHEN** the requester updates the task description or assignee to `null`
-- **THEN** the system clears that metadata field
+- **WHEN** the requester updates the task description to `null` or assignee ids to an empty array
+- **THEN** the system clears that metadata
 - **AND** the task remains otherwise unchanged
 
 ### Requirement: Task Responses Expose Metadata Needed By Projects Modals

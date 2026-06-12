@@ -14,8 +14,16 @@ const taskAssignee = {
   userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
 };
 
+const secondTaskAssignee = {
+  avatarUrl: null,
+  displayName: "Maria Ivanenko",
+  email: "maria@example.com",
+  role: "pm",
+  userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004",
+};
+
 const baseTask = {
-  assignee: taskAssignee,
+  assignees: [taskAssignee, secondTaskAssignee],
   createdAt: "2026-05-01T10:00:00.000Z",
   description: "Ship the requested Projects task metadata fields.",
   id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
@@ -29,16 +37,16 @@ const baseTask = {
 };
 
 describe("taskResponseSchema", () => {
-  it("accepts task metadata including nullable description and assignee", () => {
+  it("accepts task metadata including nullable description and assignees", () => {
     const result = taskResponseSchema.parse({
       ...baseTask,
-      assignee: null,
+      assignees: [],
       description: null,
       priority: "medium",
     });
 
     expect(result.description).toBeNull();
-    expect(result.assignee).toBeNull();
+    expect(result.assignees).toEqual([]);
     expect(result.priority).toBe("medium");
   });
 
@@ -56,7 +64,7 @@ describe("taskResponseSchema", () => {
 describe("createTaskSchema", () => {
   it("accepts task metadata on create", () => {
     const result = createTaskSchema.parse({
-      assigneeId: taskAssignee.userId,
+      assigneeIds: [taskAssignee.userId, secondTaskAssignee.userId],
       description: "Clarify remaining modal fields.",
       priority: "low",
       status: "closed",
@@ -64,7 +72,7 @@ describe("createTaskSchema", () => {
     });
 
     expect(result).toEqual({
-      assigneeId: taskAssignee.userId,
+      assigneeIds: [taskAssignee.userId, secondTaskAssignee.userId],
       description: "Clarify remaining modal fields.",
       priority: "low",
       status: "closed",
@@ -78,15 +86,25 @@ describe("createTaskSchema", () => {
     expect(result).toEqual({ title: "Project task metadata" });
   });
 
-  it("accepts nullable description and assignee on create", () => {
+  it("accepts nullable description and an empty assignee list on create", () => {
     const result = createTaskSchema.parse({
-      assigneeId: null,
+      assigneeIds: [],
       description: null,
       title: "Project task metadata",
     });
 
-    expect(result.assigneeId).toBeNull();
+    expect(result.assigneeIds).toEqual([]);
     expect(result.description).toBeNull();
+  });
+
+  it("rejects duplicate create assignee ids", () => {
+    const result = createTaskSchema.safeParse({
+      assigneeIds: [taskAssignee.userId, taskAssignee.userId],
+      title: "Project task metadata",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["assigneeIds"]);
   });
 
   it("rejects create descriptions over the contract limit", () => {
@@ -112,7 +130,7 @@ describe("createTaskSchema", () => {
 describe("updateTaskSchema", () => {
   it("accepts task metadata on update", () => {
     const result = updateTaskSchema.parse({
-      assigneeId: taskAssignee.userId,
+      assigneeIds: [taskAssignee.userId, secondTaskAssignee.userId],
       description: "Updated scope notes.",
       isActive: true,
       priority: "high",
@@ -121,16 +139,19 @@ describe("updateTaskSchema", () => {
     });
 
     expect(result.priority).toBe("high");
-    expect(result.assigneeId).toBe(taskAssignee.userId);
+    expect(result.assigneeIds).toEqual([
+      taskAssignee.userId,
+      secondTaskAssignee.userId,
+    ]);
   });
 
-  it("accepts nullable description and assignee on update", () => {
+  it("accepts nullable description and an empty assignee list on update", () => {
     const result = updateTaskSchema.parse({
-      assigneeId: null,
+      assigneeIds: [],
       description: null,
     });
 
-    expect(result.assigneeId).toBeNull();
+    expect(result.assigneeIds).toEqual([]);
     expect(result.description).toBeNull();
   });
 

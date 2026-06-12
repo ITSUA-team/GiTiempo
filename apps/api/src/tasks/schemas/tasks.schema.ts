@@ -11,7 +11,6 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { TaskPriority, TaskStatus } from '@gitiempo/shared';
 import { projects } from '../../projects/schemas/projects.schema';
-import { users } from '../../users/schemas/users.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 
 export const tasks = pgTable(
@@ -34,9 +33,6 @@ export const tasks = pgTable(
       .$type<TaskStatus>()
       .default('open')
       .notNull(),
-    assigneeUserId: uuid('assignee_user_id').references(() => users.id, {
-      onDelete: 'set null',
-    }),
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -53,7 +49,6 @@ export const tasks = pgTable(
       table.projectId,
       table.isActive,
     ),
-    index('tasks_assignee_user_id_idx').on(table.assigneeUserId),
     check(
       'tasks_priority_check',
       sql`${table.priority} IN ('low', 'medium', 'high')`,

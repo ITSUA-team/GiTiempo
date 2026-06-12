@@ -29,7 +29,7 @@ function createProject(id: string, name: string): ProjectResponse {
 
 function createTask(id: string, projectId: string, title: string, updatedAt: string): TaskResponse {
   return {
-    assignee: null,
+    assignees: [],
     createdAt: "2026-04-20T12:00:00.000Z",
     description: null,
     id,

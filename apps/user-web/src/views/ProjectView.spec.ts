@@ -19,6 +19,7 @@ const primeVueMocks = vi.hoisted(() => ({
   toastAdd: vi.fn(),
 }));
 const ASSIGNEE_ID = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003";
+const SECOND_ASSIGNEE_ID = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004";
 
 vi.mock("@/config/clients", () => ({
   createDefaultTimeEntriesClient: () => clientRef.current,
@@ -52,6 +53,13 @@ function createProject(
         role: "member",
         userId: ASSIGNEE_ID,
       },
+      {
+        avatarUrl: null,
+        displayName: "Maria Ivanenko",
+        email: "maria@example.com",
+        role: "pm",
+        userId: SECOND_ASSIGNEE_ID,
+      },
     ],
     name,
     source: "manual",
@@ -70,7 +78,7 @@ function createTask(
   overrides: Partial<TaskResponse> = {},
 ): TaskResponse {
   return {
-    assignee: null,
+    assignees: [],
     createdAt: "2026-04-20T12:00:00.000Z",
     description: null,
     id,
@@ -105,15 +113,7 @@ function createClientMock(): TimeEntriesClient & {
     }),
     createTask: vi.fn(async (projectId, input) =>
       createTask("task-new", projectId, input.title, {
-        assignee: input.assigneeId
-          ? {
-              avatarUrl: null,
-              displayName: "Alexey Tsukanov",
-              email: "alexey@example.com",
-              role: "member",
-              userId: input.assigneeId,
-            }
-          : null,
+        assignees: (input.assigneeIds ?? []).map(createAssignee),
         description: input.description ?? null,
         priority: input.priority ?? "medium",
         status: input.status ?? "open",
@@ -139,21 +139,31 @@ function createClientMock(): TimeEntriesClient & {
     }),
     updateTask: vi.fn(async (taskId, input) =>
       createTask(taskId, "project-1", input.title ?? "Updated task", {
-        assignee: input.assigneeId
-          ? {
-              avatarUrl: null,
-              displayName: "Alexey Tsukanov",
-              email: "alexey@example.com",
-              role: "member",
-              userId: input.assigneeId,
-            }
-          : null,
+        assignees: (input.assigneeIds ?? []).map(createAssignee),
         description: input.description ?? null,
         priority: input.priority ?? "medium",
         status: input.status ?? "open",
       }),
     ),
   };
+}
+
+function createAssignee(userId: string) {
+  return userId === SECOND_ASSIGNEE_ID
+    ? {
+        avatarUrl: null,
+        displayName: "Maria Ivanenko",
+        email: "maria@example.com",
+        role: "pm" as const,
+        userId,
+      }
+    : {
+        avatarUrl: null,
+        displayName: "Alexey Tsukanov",
+        email: "alexey@example.com",
+        role: "member" as const,
+        userId,
+      };
 }
 
 async function mountView(client = createClientMock()) {
@@ -183,7 +193,7 @@ async function mountView(client = createClientMock()) {
           emits: [
             "close",
             "save",
-            "update:assigneeId",
+            "update:assigneeIds",
             "update:description",
             "update:priority",
             "update:projectId",
@@ -191,7 +201,7 @@ async function mountView(client = createClientMock()) {
             "update:title",
           ],
           props: [
-            "assigneeId",
+            "assigneeIds",
             "assigneeOptions",
             "description",
             "isOpen",
@@ -205,7 +215,7 @@ async function mountView(client = createClientMock()) {
               <p data-testid="dialog-title-value">{{ valueTitle }}</p>
               <p data-testid="dialog-description-value">{{ description }}</p>
               <p data-testid="dialog-priority-value">{{ priority }}</p>
-              <p data-testid="dialog-assignee-value">{{ assigneeId }}</p>
+              <p data-testid="dialog-assignee-value">{{ assigneeIds.join(',') }}</p>
               <p data-testid="dialog-request-error">{{ requestErrorMessage }}</p>
               <button data-testid="dialog-project-input" type="button" @click="$emit('update:projectId', 'project-2')">Project</button>
               <button data-testid="dialog-title-input" type="button" @click="$emit('update:title', 'Write release checklist')">Title</button>
@@ -214,8 +224,8 @@ async function mountView(client = createClientMock()) {
               <button data-testid="dialog-clear-description-input" type="button" @click="$emit('update:description', '')">Clear description</button>
               <button data-testid="dialog-priority-input" type="button" @click="$emit('update:priority', 'high')">Priority</button>
               <button data-testid="dialog-status-input" type="button" @click="$emit('update:status', 'closed')">Status</button>
-              <button data-testid="dialog-assignee-input" type="button" @click="$emit('update:assigneeId', assigneeOptions[0]?.value ?? null)">Assignee</button>
-              <button data-testid="dialog-clear-assignee-input" type="button" @click="$emit('update:assigneeId', null)">Clear assignee</button>
+              <button data-testid="dialog-assignee-input" type="button" @click="$emit('update:assigneeIds', assigneeOptions.map((option) => option.value))">Assignees</button>
+              <button data-testid="dialog-clear-assignee-input" type="button" @click="$emit('update:assigneeIds', [])">Clear assignees</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
               <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
             </div>
@@ -334,7 +344,7 @@ describe("ProjectView", () => {
     await flushPromises();
 
     expect(client.createTask).toHaveBeenCalledWith("project-1", {
-      assigneeId: ASSIGNEE_ID,
+      assigneeIds: [ASSIGNEE_ID, SECOND_ASSIGNEE_ID],
       description: "Coordinate release validation.",
       priority: "high",
       status: "closed",
@@ -352,13 +362,7 @@ describe("ProjectView", () => {
     ]);
     client.listProjectTasks.mockResolvedValueOnce([
       createTask("task-1", "project-1", "Improve reports filters", {
-        assignee: {
-          avatarUrl: null,
-          displayName: "Alexey Tsukanov",
-          email: "alexey@example.com",
-          role: "member",
-          userId: ASSIGNEE_ID,
-        },
+        assignees: [createAssignee(ASSIGNEE_ID), createAssignee(SECOND_ASSIGNEE_ID)],
         description: "Existing details",
         priority: "low",
       }),
@@ -376,7 +380,9 @@ describe("ProjectView", () => {
       "Existing details",
     );
     expect(wrapper.get('[data-testid="dialog-priority-value"]').text()).toBe("low");
-    expect(wrapper.get('[data-testid="dialog-assignee-value"]').text()).toBe(ASSIGNEE_ID);
+    expect(wrapper.get('[data-testid="dialog-assignee-value"]').text()).toBe(
+      `${ASSIGNEE_ID},${SECOND_ASSIGNEE_ID}`,
+    );
 
     await wrapper.get('[data-testid="dialog-edit-title-input"]').trigger("click");
     await wrapper.get('[data-testid="dialog-clear-description-input"]').trigger("click");
@@ -387,7 +393,7 @@ describe("ProjectView", () => {
     await flushPromises();
 
     expect(client.updateTask).toHaveBeenCalledWith("task-1", {
-      assigneeId: null,
+      assigneeIds: [],
       description: null,
       priority: "high",
       status: "closed",
@@ -415,7 +421,7 @@ describe("ProjectView", () => {
     await flushPromises();
 
     expect(client.createTask).toHaveBeenCalledWith("project-2", {
-      assigneeId: null,
+      assigneeIds: [],
       description: null,
       priority: "medium",
       status: "open",

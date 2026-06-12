@@ -81,7 +81,7 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
 
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
-    assignee: null,
+    assignees: [],
     createdAt: "2026-04-20T12:00:00.000Z",
     description: null,
     id: TEST_IDS.taskReports,

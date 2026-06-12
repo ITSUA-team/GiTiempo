@@ -9,7 +9,7 @@ The shared task contracts MUST define the request and response shapes for editab
 - **THEN** the shared task response schema includes nullable `description`
 - **AND** it includes `priority` with values `low`, `medium`, or `high`
 - **AND** it includes `status` with existing task status values
-- **AND** it includes nullable `assignee` member summary data containing the assigned user's id and display fields
+- **AND** it includes `assignees` member summary data containing each assigned user's id and display fields
 
 #### Scenario: Task create contract accepts metadata
 - **GIVEN** a client constructs a task create request
@@ -17,13 +17,13 @@ The shared task contracts MUST define the request and response shapes for editab
 - **THEN** the payload accepts `description` as an optional nullable string limited to 2000 characters
 - **AND** the payload accepts `priority` as an optional value of `low`, `medium`, or `high`
 - **AND** the payload accepts `status` as an optional task status value
-- **AND** the payload accepts `assigneeId` as an optional nullable user id
+- **AND** the payload accepts `assigneeIds` as an optional array of unique user ids
 - **AND** the payload rejects unknown additional fields
 
 #### Scenario: Task update contract accepts metadata
 - **GIVEN** a client constructs a task update request
 - **WHEN** the request payload is validated against the shared update task schema
-- **THEN** the payload accepts description, priority, status, assigneeId, title, and isActive as mutable task fields
+- **THEN** the payload accepts description, priority, status, assigneeIds, title, and isActive as mutable task fields
 - **AND** the payload is valid when at least one mutable field is supplied
 - **AND** the payload rejects unknown additional fields
 

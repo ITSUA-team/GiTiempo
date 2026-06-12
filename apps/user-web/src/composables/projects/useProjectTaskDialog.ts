@@ -10,7 +10,7 @@ import { computed, ref, shallowRef } from "vue";
 type DialogMode = "create" | "edit" | null;
 
 interface ProjectsDialogErrors {
-  assigneeId: string | null;
+  assigneeIds: string | null;
   description: string | null;
   priority: string | null;
   projectId: string | null;
@@ -32,7 +32,7 @@ export type ValidProjectTaskDialogInput =
 
 function defaultDialogErrors(): ProjectsDialogErrors {
   return {
-    assigneeId: null,
+    assigneeIds: null,
     description: null,
     priority: null,
     projectId: null,
@@ -45,7 +45,7 @@ export function useProjectTaskDialog() {
   const dialogMode = ref<DialogMode>(null);
   const editingTask = shallowRef<TaskResponse | null>(null);
   const dialogProjectId = ref<string | null>(null);
-  const dialogTaskAssigneeId = ref<string | null>(null);
+  const dialogTaskAssigneeIds = ref<string[]>([]);
   const dialogTaskDescription = ref("");
   const dialogTaskPriority = ref<TaskPriority>("medium");
   const dialogTaskTitle = ref("");
@@ -80,7 +80,7 @@ export function useProjectTaskDialog() {
     dialogMode.value = null;
     editingTask.value = null;
     dialogProjectId.value = null;
-    dialogTaskAssigneeId.value = null;
+    dialogTaskAssigneeIds.value = [];
     dialogTaskDescription.value = "";
     dialogTaskPriority.value = "medium";
     dialogTaskTitle.value = "";
@@ -99,7 +99,7 @@ export function useProjectTaskDialog() {
     dialogMode.value = "edit";
     editingTask.value = task;
     dialogProjectId.value = task.projectId;
-    dialogTaskAssigneeId.value = task.assignee?.userId ?? null;
+    dialogTaskAssigneeIds.value = task.assignees.map((assignee) => assignee.userId);
     dialogTaskDescription.value = task.description ?? "";
     dialogTaskPriority.value = task.priority;
     dialogTaskTitle.value = task.title;
@@ -112,7 +112,7 @@ export function useProjectTaskDialog() {
 
   function setDialogProjectId(value: string | null): void {
     if (value !== dialogProjectId.value) {
-      dialogTaskAssigneeId.value = null;
+      dialogTaskAssigneeIds.value = [];
     }
 
     dialogProjectId.value = value;
@@ -120,9 +120,9 @@ export function useProjectTaskDialog() {
     dialogRequestErrorMessage.value = null;
   }
 
-  function setDialogTaskAssigneeId(value: string | null): void {
-    dialogTaskAssigneeId.value = value;
-    dialogErrors.value.assigneeId = null;
+  function setDialogTaskAssigneeIds(value: string[]): void {
+    dialogTaskAssigneeIds.value = value;
+    dialogErrors.value.assigneeIds = null;
     dialogRequestErrorMessage.value = null;
   }
 
@@ -171,7 +171,7 @@ export function useProjectTaskDialog() {
 
     if (dialogMode.value === "edit") {
       const parsed = updateTaskSchema.safeParse({
-        assigneeId: dialogTaskAssigneeId.value,
+        assigneeIds: dialogTaskAssigneeIds.value,
         description,
         priority: dialogTaskPriority.value,
         status: dialogTaskStatus.value,
@@ -182,7 +182,7 @@ export function useProjectTaskDialog() {
         const fieldErrors = parsed.error.flatten().fieldErrors;
 
         dialogErrors.value = {
-          assigneeId: fieldErrors.assigneeId?.[0] ?? null,
+          assigneeIds: fieldErrors.assigneeIds?.[0] ?? null,
           description: fieldErrors.description?.[0] ?? null,
           priority: fieldErrors.priority?.[0] ?? null,
           projectId: nextErrors.projectId,
@@ -202,7 +202,7 @@ export function useProjectTaskDialog() {
     }
 
     const parsed = createTaskSchema.safeParse({
-      assigneeId: dialogTaskAssigneeId.value,
+      assigneeIds: dialogTaskAssigneeIds.value,
       description,
       priority: dialogTaskPriority.value,
       status: dialogTaskStatus.value,
@@ -213,7 +213,7 @@ export function useProjectTaskDialog() {
       const fieldErrors = parsed.error.flatten().fieldErrors;
 
       dialogErrors.value = {
-        assigneeId: fieldErrors.assigneeId?.[0] ?? null,
+        assigneeIds: fieldErrors.assigneeIds?.[0] ?? null,
         description: fieldErrors.description?.[0] ?? null,
         priority: fieldErrors.priority?.[0] ?? null,
         projectId: nextErrors.projectId,
@@ -240,7 +240,7 @@ export function useProjectTaskDialog() {
     dialogRequestErrorMessage,
     dialogSaveLabel,
     dialogSubtitle,
-    dialogTaskAssigneeId,
+    dialogTaskAssigneeIds,
     dialogTaskDescription,
     dialogTaskPriority,
     dialogTaskStatus,
@@ -250,7 +250,7 @@ export function useProjectTaskDialog() {
     isDialogOpen,
     openCreateDialog,
     openEditDialog,
-    setDialogTaskAssigneeId,
+    setDialogTaskAssigneeIds,
     setDialogTaskDescription,
     setDialogTaskPriority,
     setDialogProjectId,

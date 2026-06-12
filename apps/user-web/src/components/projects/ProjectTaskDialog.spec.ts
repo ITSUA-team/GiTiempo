@@ -9,14 +9,14 @@ function mountDialog(
   return mount(ProjectTaskDialog, {
     props: {
       errors: {
-        assigneeId: null,
+        assigneeIds: null,
         description: null,
         priority: null,
         projectId: null,
         status: null,
         title: null,
       },
-      assigneeId: null,
+      assigneeIds: [],
       assigneeOptions: [
         {
           label: "Alexey Tsukanov",
@@ -73,7 +73,14 @@ function mountDialog(
             '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         AutoComplete: {
-          props: ["disabled", "inputId", "modelValue", "optionLabel", "suggestions"],
+          props: {
+            disabled: Boolean,
+            inputId: String,
+            modelValue: null,
+            multiple: Boolean,
+            optionLabel: String,
+            suggestions: Array,
+          },
           emits: ["complete", "update:modelValue"],
           template: `
             <div class="autocomplete" :data-disabled="disabled" :data-input-id="inputId">
@@ -83,11 +90,11 @@ function mountDialog(
                 :key="option.id ?? option.value"
                 :data-testid="inputId + '-option-' + (option.id ?? option.value)"
                 type="button"
-                @click="$emit('update:modelValue', option)"
+                @click="$emit('update:modelValue', multiple ? [...(modelValue ?? []), option] : option)"
               >
                 {{ option[optionLabel] }}
               </button>
-              <button :data-testid="inputId + '-clear'" type="button" @click="$emit('update:modelValue', null)">Clear</button>
+              <button :data-testid="inputId + '-clear'" type="button" @click="$emit('update:modelValue', multiple ? [] : null)">Clear</button>
             </div>
           `,
         },
@@ -127,7 +134,7 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.emitted("update:projectId")?.[0]).toEqual(["project-1"]);
     expect(wrapper.emitted("update:priority")?.[0]).toEqual(["high"]);
     expect(wrapper.emitted("update:status")?.[0]).toEqual(["closed"]);
-    expect(wrapper.emitted("update:assigneeId")?.[0]).toEqual(["user-1"]);
+    expect(wrapper.emitted("update:assigneeIds")?.[0]).toEqual([["user-1"]]);
     expect(wrapper.emitted("update:title")?.[0]).toEqual([
       "Write release checklist",
     ]);
@@ -161,7 +168,7 @@ describe("ProjectTaskDialog", () => {
   it("renders field-level errors for metadata fields", () => {
     const wrapper = mountDialog({
       errors: {
-        assigneeId: "Choose an assigned project member.",
+        assigneeIds: "Choose assigned project members.",
         description: "Description must be at most 2000 characters.",
         priority: "Choose a valid priority.",
         projectId: null,
@@ -172,7 +179,7 @@ describe("ProjectTaskDialog", () => {
 
     expect(wrapper.text()).toContain("Description must be at most 2000 characters.");
     expect(wrapper.text()).toContain("Choose a valid priority.");
-    expect(wrapper.text()).toContain("Choose an assigned project member.");
+    expect(wrapper.text()).toContain("Choose assigned project members.");
   });
 
   it("emits close and save actions from the footer buttons", async () => {

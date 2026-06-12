@@ -5,7 +5,12 @@ export const taskStatusSchema = z.enum(["open", "closed"]);
 export const taskPrioritySchema = z.enum(["low", "medium", "high"]);
 
 const taskDescriptionSchema = z.string().max(2000).nullable();
-export const taskAssigneeSchema = projectMemberSchema.nullable();
+const taskAssigneeIdsSchema = z
+  .array(z.uuid())
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: "Assignee ids must be unique",
+  });
+export const taskAssigneesSchema = z.array(projectMemberSchema);
 
 export const taskResponseSchema = z.object({
   id: z.uuid(),
@@ -15,7 +20,7 @@ export const taskResponseSchema = z.object({
   description: taskDescriptionSchema,
   priority: taskPrioritySchema,
   status: taskStatusSchema,
-  assignee: taskAssigneeSchema,
+  assignees: taskAssigneesSchema,
   isActive: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -29,7 +34,7 @@ export const createTaskSchema = z
     description: taskDescriptionSchema.optional(),
     priority: taskPrioritySchema.optional(),
     status: taskStatusSchema.optional(),
-    assigneeId: z.uuid().nullable().optional(),
+    assigneeIds: taskAssigneeIdsSchema.optional(),
   })
   .strict();
 
@@ -39,7 +44,7 @@ export const updateTaskSchema = z
     description: taskDescriptionSchema.optional(),
     priority: taskPrioritySchema.optional(),
     status: taskStatusSchema.optional(),
-    assigneeId: z.uuid().nullable().optional(),
+    assigneeIds: taskAssigneeIdsSchema.optional(),
     isActive: z.boolean().optional(),
   })
   .strict()
@@ -49,7 +54,7 @@ export const updateTaskSchema = z
       data.description !== undefined ||
       data.priority !== undefined ||
       data.status !== undefined ||
-      data.assigneeId !== undefined ||
+      data.assigneeIds !== undefined ||
       data.isActive !== undefined,
     {
       message: "At least one field must be provided",
@@ -59,7 +64,7 @@ export const updateTaskSchema = z
 
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 export type TaskPriority = z.infer<typeof taskPrioritySchema>;
-export type TaskAssignee = z.infer<typeof taskAssigneeSchema>;
+export type TaskAssignees = z.infer<typeof taskAssigneesSchema>;
 export type TaskResponse = z.infer<typeof taskResponseSchema>;
 export type TaskListResponse = z.infer<typeof taskListResponseSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;

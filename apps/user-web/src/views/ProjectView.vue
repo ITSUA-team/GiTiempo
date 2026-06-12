@@ -74,7 +74,7 @@ const {
   dialogRequestErrorMessage,
   dialogSaveLabel,
   dialogSubtitle,
-  dialogTaskAssigneeId,
+  dialogTaskAssigneeIds,
   dialogTaskDescription,
   dialogTaskPriority,
   dialogTaskStatus,
@@ -83,7 +83,7 @@ const {
   isDialogOpen,
   openCreateDialog,
   openEditDialog,
-  setDialogTaskAssigneeId,
+  setDialogTaskAssigneeIds,
   setDialogTaskDescription,
   setDialogTaskPriority,
   setDialogProjectId,
@@ -120,11 +120,11 @@ const pageState = computed(() =>
 );
 
 watch(dialogAssigneeOptions, (options) => {
-  if (
-    dialogTaskAssigneeId.value &&
-    !options.some((option) => option.value === dialogTaskAssigneeId.value)
-  ) {
-    setDialogTaskAssigneeId(null);
+  const availableIds = new Set(options.map((option) => option.value));
+  const validAssigneeIds = dialogTaskAssigneeIds.value.filter((id) => availableIds.has(id));
+
+  if (validAssigneeIds.length !== dialogTaskAssigneeIds.value.length) {
+    setDialogTaskAssigneeIds(validAssigneeIds);
   }
 });
 
@@ -302,7 +302,7 @@ async function retryLoadPage(): Promise<void> {
     </template>
 
     <ProjectTaskDialog
-      :assignee-id="dialogTaskAssigneeId"
+      :assignee-ids="dialogTaskAssigneeIds"
       :assignee-options="dialogAssigneeOptions"
       :description="dialogTaskDescription"
       :errors="dialogErrors"
@@ -320,7 +320,7 @@ async function retryLoadPage(): Promise<void> {
       :value-title="dialogTaskTitle"
       @close="closeDialog"
       @save="void saveDialog()"
-      @update:assignee-id="setDialogTaskAssigneeId"
+      @update:assignee-ids="setDialogTaskAssigneeIds"
       @update:description="setDialogTaskDescription"
       @update:priority="setDialogTaskPriority"
       @update:project-id="setDialogProjectId"

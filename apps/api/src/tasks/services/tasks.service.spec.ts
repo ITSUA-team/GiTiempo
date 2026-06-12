@@ -2,6 +2,7 @@ import { UnprocessableEntityException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
+import { taskAssignees } from '../schemas/task-assignees.schema';
 import { tasks } from '../schemas/tasks.schema';
 import { TasksService } from './tasks.service';
 
@@ -25,17 +26,21 @@ type TaskRowFixture = {
   description: string | null;
   priority: TaskPriorityFixture;
   status: TaskStatusFixture;
-  assigneeUserId: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
 
 type TaskResponseRowFixture = TaskRowFixture & {
-  assigneeEmail: string | null;
-  assigneeDisplayName: string | null;
-  assigneeAvatarUrl: string | null;
-  assigneeRole: WorkspaceRoleFixture | null;
+  assignees: unknown;
+};
+
+type TaskAssigneeFixture = {
+  avatarUrl: string | null;
+  displayName: string | null;
+  email: string;
+  role: WorkspaceRoleFixture;
+  userId: string;
 };
 
 const projectRow = {
@@ -58,18 +63,30 @@ const taskRow: TaskRowFixture = {
   description: null,
   priority: 'medium',
   status: 'open',
-  assigneeUserId: null,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
 
+const taskAssignee: TaskAssigneeFixture = {
+  avatarUrl: null,
+  displayName: 'Assigned User',
+  email: 'assignee@example.com',
+  role: 'member',
+  userId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003',
+};
+
+const secondTaskAssignee: TaskAssigneeFixture = {
+  avatarUrl: null,
+  displayName: 'Second User',
+  email: 'second@example.com',
+  role: 'pm',
+  userId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9004',
+};
+
 const unassignedTaskResponseRow: TaskResponseRowFixture = {
   ...taskRow,
-  assigneeEmail: null,
-  assigneeDisplayName: null,
-  assigneeAvatarUrl: null,
-  assigneeRole: null,
+  assignees: [],
 };
 
 function selectRows(rows: unknown[]) {
@@ -107,6 +124,11 @@ function updateRows(rows: unknown[]) {
   return { set, where, returning };
 }
 
+function deleteRows() {
+  const where = vi.fn().mockResolvedValue(undefined);
+  return { where };
+}
+
 function taskResponseRow(overrides: Partial<TaskResponseRowFixture> = {}) {
   return { ...unassignedTaskResponseRow, ...overrides };
 }
@@ -128,22 +150,24 @@ describe('TasksService', () => {
     expect(db.transaction).not.toHaveBeenCalled();
   });
 
-  it('creates a task with metadata and assignee summary', async () => {
+  it('creates a task with metadata and assignee summaries', async () => {
     const insert = insertRows([{ id: taskRow.id }]);
     const tx = {
       select: vi
         .fn()
-        .mockReturnValueOnce(selectRows([{ id: 'assignment-1' }]))
+        .mockReturnValueOnce(
+          selectRows([
+            { userId: taskAssignee.userId },
+            { userId: secondTaskAssignee.userId },
+          ]),
+        )
         .mockReturnValueOnce(
           selectRows([
             taskResponseRow({
               description: 'Plan the release',
               priority: 'high',
               status: 'closed',
-              assigneeUserId: 'assignee-1',
-              assigneeEmail: 'assignee@example.com',
-              assigneeDisplayName: 'Assigned User',
-              assigneeRole: 'member',
+              assignees: [taskAssignee, secondTaskAssignee],
             }),
           ]),
         ),
@@ -160,7 +184,7 @@ describe('TasksService', () => {
       description: 'Plan the release',
       priority: 'high',
       status: 'closed',
-      assigneeId: 'assignee-1',
+      assigneeIds: [taskAssignee.userId, secondTaskAssignee.userId],
     });
 
     expect(insert.values).toHaveBeenCalledWith({
@@ -170,19 +194,26 @@ describe('TasksService', () => {
       description: 'Plan the release',
       priority: 'high',
       status: 'closed',
-      assigneeUserId: 'assignee-1',
     });
+    expect(insert.values).toHaveBeenCalledWith([
+      {
+        workspaceId: user.workspaceId,
+        projectId: projectRow.id,
+        taskId: taskRow.id,
+        userId: taskAssignee.userId,
+      },
+      {
+        workspaceId: user.workspaceId,
+        projectId: projectRow.id,
+        taskId: taskRow.id,
+        userId: secondTaskAssignee.userId,
+      },
+    ]);
     expect(result).toMatchObject({
       description: 'Plan the release',
       priority: 'high',
       status: 'closed',
-      assignee: {
-        userId: 'assignee-1',
-        email: 'assignee@example.com',
-        displayName: 'Assigned User',
-        avatarUrl: null,
-        role: 'member',
-      },
+      assignees: [taskAssignee, secondTaskAssignee],
     });
   });
 
@@ -209,17 +240,16 @@ describe('TasksService', () => {
       description: null,
       priority: 'medium',
       status: 'open',
-      assigneeUserId: null,
     });
     expect(result).toMatchObject({
       description: null,
       priority: 'medium',
       status: 'open',
-      assignee: null,
+      assignees: [],
     });
   });
 
-  it('rejects task creation with an invalid assignee', async () => {
+  it('rejects task creation with invalid assignees', async () => {
     const tx = {
       select: vi.fn().mockReturnValue(selectRows([])),
       insert: vi.fn(),
@@ -233,9 +263,9 @@ describe('TasksService', () => {
     await expect(
       service.createTask(user, projectRow.id, {
         title: 'Task',
-        assigneeId: 'assignee-1',
+        assigneeIds: [taskAssignee.userId],
       }),
-    ).rejects.toThrow('Assignee must be assigned to project');
+    ).rejects.toThrow('Assignees must be assigned to project');
     expect(tx.insert).not.toHaveBeenCalled();
   });
 
@@ -299,26 +329,32 @@ describe('TasksService', () => {
     expect(db.transaction).not.toHaveBeenCalled();
   });
 
-  it('updates task metadata and hydrates the assignee', async () => {
+  it('updates task metadata and hydrates the assignees', async () => {
     const update = updateRows([{ id: taskRow.id }]);
+    const assignmentDelete = deleteRows();
+    const assignmentInsert = { values: vi.fn().mockResolvedValue(undefined) };
     const tx = {
       select: vi
         .fn()
-        .mockReturnValueOnce(selectRows([{ id: 'assignment-1' }]))
+        .mockReturnValueOnce(
+          selectRows([
+            { userId: taskAssignee.userId },
+            { userId: secondTaskAssignee.userId },
+          ]),
+        )
         .mockReturnValueOnce(selectRows([taskRow]))
         .mockReturnValueOnce(
           selectRows([
             taskResponseRow({
               description: 'Updated description',
               priority: 'low',
-              assigneeUserId: 'assignee-1',
-              assigneeEmail: 'assignee@example.com',
-              assigneeDisplayName: 'Assigned User',
-              assigneeRole: 'member',
+              assignees: [taskAssignee, secondTaskAssignee],
             }),
           ]),
         ),
       update: vi.fn().mockReturnValue({ set: update.set }),
+      delete: vi.fn().mockReturnValue({ where: assignmentDelete.where }),
+      insert: vi.fn().mockReturnValue(assignmentInsert),
     };
     const db = {
       select: vi.fn().mockReturnValue(selectRows([taskRow])),
@@ -332,35 +368,38 @@ describe('TasksService', () => {
     const result = await service.updateTask(user, taskRow.id, {
       description: 'Updated description',
       priority: 'low',
-      assigneeId: 'assignee-1',
+      assigneeIds: [taskAssignee.userId, secondTaskAssignee.userId],
     });
 
     expect(update.set).toHaveBeenCalledWith(
       expect.objectContaining({
         description: 'Updated description',
         priority: 'low',
-        assigneeUserId: 'assignee-1',
       }),
     );
-    expect(result.assignee).toMatchObject({
-      userId: 'assignee-1',
-      email: 'assignee@example.com',
-    });
+    expect(tx.delete).toHaveBeenCalledWith(taskAssignees);
+    expect(assignmentInsert.values).toHaveBeenCalledWith([
+      expect.objectContaining({ userId: taskAssignee.userId }),
+      expect.objectContaining({ userId: secondTaskAssignee.userId }),
+    ]);
+    expect(result.assignees).toEqual([taskAssignee, secondTaskAssignee]);
   });
 
   it('clears nullable task metadata', async () => {
     const assignedTaskRow = {
       ...taskRow,
       description: 'Existing description',
-      assigneeUserId: 'assignee-1',
     };
     const update = updateRows([{ id: taskRow.id }]);
+    const assignmentDelete = deleteRows();
     const tx = {
       select: vi
         .fn()
         .mockReturnValueOnce(selectRows([assignedTaskRow]))
         .mockReturnValueOnce(selectRows([unassignedTaskResponseRow])),
       update: vi.fn().mockReturnValue({ set: update.set }),
+      delete: vi.fn().mockReturnValue({ where: assignmentDelete.where }),
+      insert: vi.fn(),
     };
     const db = {
       select: vi.fn().mockReturnValue(selectRows([assignedTaskRow])),
@@ -373,18 +412,19 @@ describe('TasksService', () => {
 
     const result = await service.updateTask(user, taskRow.id, {
       description: null,
-      assigneeId: null,
+      assigneeIds: [],
     });
 
     expect(tx.select).toHaveBeenCalledTimes(2);
     expect(update.set).toHaveBeenCalledWith(
       expect.objectContaining({
         description: null,
-        assigneeUserId: null,
       }),
     );
+    expect(tx.delete).toHaveBeenCalledWith(taskAssignees);
+    expect(tx.insert).not.toHaveBeenCalled();
     expect(result.description).toBeNull();
-    expect(result.assignee).toBeNull();
+    expect(result.assignees).toEqual([]);
   });
 
   it('stops running time entries when closing a task', async () => {

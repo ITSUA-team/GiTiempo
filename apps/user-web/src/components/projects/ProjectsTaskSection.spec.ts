@@ -15,7 +15,7 @@ describe("ProjectsTaskSection", () => {
 
   it("renders accessible row actions and emits add, edit, and delete events", async () => {
     const task = {
-      assignee: null,
+      assignees: [],
       createdAt: "2026-04-20T12:00:00.000Z",
       description: null,
       id: "task-1",
@@ -26,7 +26,7 @@ describe("ProjectsTaskSection", () => {
       title: "Improve reports filters",
       updatedAt: "2026-04-21T10:00:00.000Z",
       workspaceId: "workspace-1",
-    } as const;
+    } satisfies TaskResponse;
     const wrapper = mount(ProjectsTaskSection, {
       props: {
         formatUpdatedLabel: () => "Today, 10:00",
@@ -88,7 +88,7 @@ describe("ProjectsTaskSection", () => {
 
     const tasks: TaskResponse[] = [
       {
-        assignee: null,
+        assignees: [],
         createdAt: "2026-04-20T12:00:00.000Z",
         description: null,
         id: "task-1",
@@ -101,7 +101,7 @@ describe("ProjectsTaskSection", () => {
         workspaceId: "workspace-1",
       },
       {
-        assignee: null,
+        assignees: [],
         createdAt: "2026-04-20T12:30:00.000Z",
         description: null,
         id: "task-2",
@@ -178,7 +178,7 @@ describe("ProjectsTaskSection", () => {
 
   it("renders the desktop task table branch with the expected column labels", () => {
     const task = {
-      assignee: null,
+      assignees: [],
       createdAt: "2026-04-20T12:00:00.000Z",
       description: null,
       id: "task-1",
@@ -189,7 +189,7 @@ describe("ProjectsTaskSection", () => {
       title: "Improve reports filters",
       updatedAt: "2026-04-21T10:00:00.000Z",
       workspaceId: "workspace-1",
-    } as const;
+    } satisfies TaskResponse;
     const wrapper = mount(ProjectsTaskSection, {
       props: {
         formatUpdatedLabel: () => "Today, 10:00",

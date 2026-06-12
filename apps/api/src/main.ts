@@ -5,7 +5,14 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import { json, urlencoded } from 'express';
+import {
+  json,
+  urlencoded,
+  type Express,
+  type NextFunction,
+  type Request,
+  type Response,
+} from 'express';
 import { AppModule } from './app.module';
 import type { Env } from './config/env.validation';
 
@@ -45,6 +52,13 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: '1mb' }));
 
   app.use(cookieParser());
+
+  const expressApp = app.getHttpAdapter().getInstance() as Express;
+  expressApp.disable('etag');
+  app.use((_request: Request, response: Response, next: NextFunction) => {
+    response.setHeader('Cache-Control', 'no-store');
+    next();
+  });
 
   app.enableShutdownHooks();
 

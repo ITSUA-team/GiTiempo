@@ -39,7 +39,7 @@ function createProject(): ProjectResponse {
 
 function createTask(): TaskResponse {
   return {
-    assignee: null,
+    assignees: [],
     id: 'task-1',
     workspaceId: 'workspace-1',
     projectId: 'project-1',

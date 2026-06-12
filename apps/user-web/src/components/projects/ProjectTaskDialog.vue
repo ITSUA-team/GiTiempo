@@ -14,11 +14,11 @@ interface TaskAssigneeOption {
 }
 
 const props = defineProps<{
-  assigneeId: string | null;
+  assigneeIds: string[];
   assigneeOptions: TaskAssigneeOption[];
   description: string;
   errors: {
-    assigneeId: string | null;
+    assigneeIds: string | null;
     description: string | null;
     priority: string | null;
     projectId: string | null;
@@ -42,7 +42,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: [];
   save: [];
-  "update:assigneeId": [value: string | null];
+  "update:assigneeIds": [value: string[]];
   "update:description": [value: string];
   "update:priority": [value: TaskPriority];
   "update:projectId": [value: string | null];
@@ -64,6 +64,7 @@ const priorityOptions = [
 const selectedProjectName = computed(() => {
   return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
 });
+const selectedAssigneeIdSet = computed(() => new Set(props.assigneeIds));
 const projectSuggestions = ref<ProjectResponse[]>([]);
 const assigneeSuggestions = ref<TaskAssigneeOption[]>([]);
 
@@ -85,10 +86,12 @@ const statusModel = computed({
 
 const assigneeModel = computed({
   get: () => {
-    return props.assigneeOptions.find((option) => option.value === props.assigneeId) ?? null;
+    return props.assigneeIds
+      .map((id) => props.assigneeOptions.find((option) => option.value === id))
+      .filter((option): option is TaskAssigneeOption => option !== undefined);
   },
-  set: (value: TaskAssigneeOption | string | null | undefined) => {
-    emit("update:assigneeId", resolveAssigneeId(value));
+  set: (value: (TaskAssigneeOption | string)[] | null | undefined) => {
+    emit("update:assigneeIds", resolveAssigneeIds(value));
   },
 });
 
@@ -118,7 +121,11 @@ function completeProjects(event: AutoCompleteCompleteEvent): void {
 }
 
 function completeAssignees(event: AutoCompleteCompleteEvent): void {
-  assigneeSuggestions.value = filterOptions(props.assigneeOptions, event.query, "label");
+  const unselectedOptions = props.assigneeOptions.filter(
+    (option) => !selectedAssigneeIdSet.value.has(option.value),
+  );
+
+  assigneeSuggestions.value = filterOptions(unselectedOptions, event.query, "label");
 }
 
 function filterOptions<T extends object>(
@@ -143,13 +150,19 @@ function resolveProjectId(
   return value?.id ?? null;
 }
 
-function resolveAssigneeId(
-  value: TaskAssigneeOption | string | null | undefined,
-): string | null {
-  if (typeof value === "string") {
-    return props.assigneeOptions.find((option) => option.label === value)?.value ?? null;
-  }
-  return value?.value ?? null;
+function resolveAssigneeIds(
+  value: (TaskAssigneeOption | string)[] | null | undefined,
+): string[] {
+  const ids = (value ?? [])
+    .map((option) => {
+      if (typeof option === "string") {
+        return props.assigneeOptions.find((candidate) => candidate.label === option)?.value;
+      }
+      return option.value;
+    })
+    .filter((id): id is string => id !== undefined);
+
+  return [...new Set(ids)];
 }
 </script>
 
@@ -343,7 +356,7 @@ function resolveAssigneeId(
           for="project-task-assignee"
           class="text-text-dark text-[13px] font-medium"
         >
-          Assignee
+          Assignees
         </label>
         <AutoComplete
           v-model="assigneeModel"
@@ -354,20 +367,21 @@ function resolveAssigneeId(
           force-selection
           fluid
           input-id="project-task-assignee"
+          multiple
           option-label="label"
           placeholder="Unassigned"
           show-clear
           :disabled="props.isSaving || !props.projectId || props.assigneeOptions.length === 0"
-          :invalid="!!props.errors.assigneeId"
+          :invalid="!!props.errors.assigneeIds"
           :min-length="0"
           :suggestions="assigneeSuggestions"
           @complete="completeAssignees"
         />
         <small
-          v-if="props.errors.assigneeId"
+          v-if="props.errors.assigneeIds"
           class="text-destructive text-xs"
         >
-          {{ props.errors.assigneeId }}
+          {{ props.errors.assigneeIds }}
         </small>
       </div>
     </div>

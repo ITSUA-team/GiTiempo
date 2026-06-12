@@ -152,7 +152,7 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse([
         {
-          assignee: null,
+          assignees: [],
           createdAt: "2026-04-20T12:00:00.000Z",
           description: null,
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
@@ -188,13 +188,15 @@ describe("createTimeEntriesClient", () => {
   it("creates a new task in the selected project with metadata", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
-        assignee: {
-          avatarUrl: null,
-          displayName: "Alexey Tsukanov",
-          email: "alexey@example.com",
-          role: "member",
-          userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-        },
+        assignees: [
+          {
+            avatarUrl: null,
+            displayName: "Alexey Tsukanov",
+            email: "alexey@example.com",
+            role: "member",
+            userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+          },
+        ],
         createdAt: "2026-04-20T12:00:00.000Z",
         description: "Coordinate release validation.",
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
@@ -212,7 +214,7 @@ describe("createTimeEntriesClient", () => {
     await client.createTask(
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       {
-        assigneeId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        assigneeIds: ["018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003"],
         description: "Coordinate release validation.",
         priority: "high",
         status: "closed",
@@ -226,14 +228,14 @@ describe("createTimeEntriesClient", () => {
       "/projects/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f/tasks",
     );
     expect(requestInit).toMatchObject({
-        headers: {
-          Authorization: "Bearer access-token",
-          "Content-Type": "application/json",
-        },
-        method: "POST",
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
     });
     expect(JSON.parse(String(requestInit.body))).toEqual({
-      assigneeId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+      assigneeIds: ["018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003"],
       description: "Coordinate release validation.",
       priority: "high",
       status: "closed",
@@ -244,13 +246,15 @@ describe("createTimeEntriesClient", () => {
   it("updates an existing task with metadata and parses the response", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
-        assignee: {
-          avatarUrl: null,
-          displayName: "Alexey Tsukanov",
-          email: "alexey@example.com",
-          role: "member",
-          userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
-        },
+        assignees: [
+          {
+            avatarUrl: null,
+            displayName: "Alexey Tsukanov",
+            email: "alexey@example.com",
+            role: "member",
+            userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+          },
+        ],
         createdAt: "2026-04-20T12:00:00.000Z",
         description: "Updated details",
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
@@ -268,7 +272,7 @@ describe("createTimeEntriesClient", () => {
     const task = await client.updateTask(
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       {
-        assigneeId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        assigneeIds: ["018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003"],
         description: "Updated details",
         priority: "high",
         status: "closed",
@@ -277,7 +281,7 @@ describe("createTimeEntriesClient", () => {
     );
 
     expect(task.status).toBe("closed");
-    expect(task.assignee?.userId).toBe(
+    expect(task.assignees[0]?.userId).toBe(
       "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
     );
 
@@ -285,14 +289,14 @@ describe("createTimeEntriesClient", () => {
 
     expect(path).toBe("/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001");
     expect(requestInit).toMatchObject({
-        headers: {
-          Authorization: "Bearer access-token",
-          "Content-Type": "application/json",
-        },
-        method: "PATCH",
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
     });
     expect(JSON.parse(String(requestInit.body))).toEqual({
-      assigneeId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+      assigneeIds: ["018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003"],
       description: "Updated details",
       priority: "high",
       status: "closed",
