@@ -15,7 +15,7 @@
 
 - [x] 3.1 Update `ProjectView.vue` to render the combined search as PrimeVue AutoComplete and `Status`/`Updated` as PrimeVue Select controls in the documented lightweight filter row.
 - [x] 3.2 Update the Projects loading skeleton and filtered empty-state copy so they account for all three filters without collapsing request-error state into empty state.
-- [x] 3.3 Preserve grouped project sections, page-level `+ New task`, project-level `+ Add task`, existing task mutation/dialog behavior, and frontend-only data loading.
+- [x] 3.3 Preserve grouped project sections, project-level `Add task`, existing task mutation/dialog behavior, no separate page-content `+ New task` opener, and frontend-only data loading.
 - [x] 3.4 Verify the page does not render source, members, visibility, billable-default, or other admin-style filters.
 
 ## 4. Tests

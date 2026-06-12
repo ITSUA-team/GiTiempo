@@ -1,6 +1,6 @@
 ## Why
 
-GitHub issue #212 and the approved user Projects page design require the lightweight filter row to include structured task filters in addition to the existing combined search. The UI docs already define this behavior, so the app implementation needs a focused change that brings the shipped Projects page into alignment without expanding backend filtering scope.
+GitHub issue #212 and the approved user Projects page design require the lightweight filter row to include structured task filters in addition to the existing combined search. The UI docs already define this behavior, so the app implementation needs a focused change that brings the shipped Projects page into alignment without expanding backend filtering scope or claiming full #216 selector-rollout coverage.
 
 ## What Changes
 
@@ -9,7 +9,7 @@ GitHub issue #212 and the approved user Projects page design require the lightwe
 - Use `Status` options `All statuses`, `Open`, and `Closed`, matching the current user task status labels.
 - Use `Updated` options `Any time`, `Today`, `Last 7 days`, and `Older`.
 - Apply all filters to the already loaded visible projects and tasks only; do not add backend search/filter parameters or admin-style filters.
-- Preserve grouped-by-project results, project-level `+ Add task` entry points, and page-level task creation behavior.
+- Preserve grouped-by-project results and project-level `Add task` entry points without reintroducing a separate page-content `+ New task` opener.
 - Keep project-name matches showing the full matching project group, while task-name, status, and updated filters narrow task rows and remove groups with no remaining matching tasks.
 
 ## Capabilities
@@ -28,3 +28,4 @@ GitHub issue #212 and the approved user Projects page design require the lightwe
 - Affected source of truth: OpenSpec `user-projects-list-page` capability, with implementation aligned to existing `docs/ui/pages-user.md`, `docs/ui/patterns.md`, and the approved `GITiempo.pen` Projects screen.
 - UI components: PrimeVue AutoComplete for combined search, and PrimeVue Select for status and updated filters.
 - API/contracts: no backend, database, OpenAPI, or shared contract changes are expected; filtering remains frontend-only over loaded visible data.
+- Out of scope: remaining #216 selector migrations outside this Projects filter row, including unrelated dialogs, admin project settings, and the future invoice surface.

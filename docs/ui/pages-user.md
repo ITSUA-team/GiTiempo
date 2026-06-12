@@ -95,6 +95,7 @@
 - The project-level add-task icon action opens the same dialog in create mode with that project already selected.
 - Create mode includes `Default billable for time entries` and initializes it from the selected project's default billable value.
 - Update mode pre-fills the selected project, task title, and editable task fields, including the task-level default billable value.
+- Update mode uses PrimeVue `<Select>` for the fixed task status choice `Open`/`Closed`; this is a page-specific fixed-choice exception to the predictive single-select default.
 - If a task default billable value changes after time entries already exist for that task, save the new default immediately for future entries, then show a follow-up popup that asks only whether existing time entries for that task should also be updated.
 - The task dialog must ship as a true popup dialog overlay. Do not render create or update forms inline inside the Projects page layout.
 - Delete is triggered from inside the task edit dialog and uses the shared confirmation dialog pattern before permanently removing the task.

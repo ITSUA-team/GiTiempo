@@ -3,22 +3,21 @@
 ### Requirement: User Projects List Layout
 The Projects list page MUST match the approved user Projects list design and render visible projects grouped with their active tasks.
 
-#### Scenario: Projects page renders approved header and lightweight filters
+#### Scenario: Projects page renders approved breadcrumb and lightweight filters
 - **WHEN** an authenticated user opens the Projects list page
-- **THEN** the page renders the title `Projects`
-- **AND** the page renders descriptive copy for managing tasks across visible projects
-- **AND** the header row renders a primary `+ New task` action
+- **THEN** the authenticated shell top-bar breadcrumb identifies the `Projects` page
 - **AND** the filter row renders a combined PrimeVue AutoComplete search field with placeholder `Search projects or tasks`
 - **AND** the filter row renders a `Status` PrimeVue Select with `All statuses`, `Open`, and `Closed` options
 - **AND** the filter row renders an `Updated` PrimeVue Select with `Any time`, `Today`, `Last 7 days`, and `Older` options
+- **AND** the page does not render a separate page-content text `+ New task` opener when task creation is provided through contextual project sections
 
 #### Scenario: Visible projects render grouped task sections
 - **GIVEN** visible projects and their active tasks load successfully
 - **WHEN** the Projects list page renders the results
 - **THEN** the content is grouped by visible project
 - **AND** each project section header shows the project name and active task count
-- **AND** each project section header renders a secondary `+ Add task` action
-- **AND** each task row shows task title, status, updated metadata, and icon-only `Edit` and `Delete` row actions
+- **AND** each project section header renders a primary icon-only `Add task` action with tooltip and accessible label copy `Add task`
+- **AND** each task row shows a clickable task title, status, and updated metadata without separate `Edit` or `Delete` row-action cells
 
 #### Scenario: Inactive tasks are excluded from grouped list
 - **GIVEN** a visible project has inactive tasks

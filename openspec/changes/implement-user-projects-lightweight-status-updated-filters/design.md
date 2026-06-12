@@ -2,7 +2,7 @@
 
 The user Projects page currently loads visible active projects, fetches active tasks for each project, builds grouped project/task sections, and applies a single frontend-only combined search through `apps/user-web/src/composables/projects/useProjectsSearch.ts` and `apps/user-web/src/lib/projects-page-helpers.ts`. `ProjectView.vue` renders that search as a PrimeVue AutoComplete above grouped `ProjectsTaskSection` cards/tables.
 
-GitHub issue #212, `docs/ui/pages-user.md`, and `docs/ui/patterns.md` now require the same lightweight filter row to include `Status` and `Updated` filters while keeping filtering frontend-only over already loaded visible data. The nearest app guidance is `apps/user-web/AGENTS.md`; implementation should use PrimeVue controls, preserve the grouped Projects page structure, and treat `GITiempo.pen` as the approved visual parity source. The Pencil MCP could not inspect the `.pen` file in this session because no design file is open in the editor, so implementation should perform a direct design parity pass when the file is available.
+GitHub issue #212, `docs/ui/pages-user.md`, and `docs/ui/patterns.md` now require the same lightweight filter row to include `Status` and `Updated` filters while keeping filtering frontend-only over already loaded visible data. The nearest app guidance is `apps/user-web/AGENTS.md`; implementation should use PrimeVue controls, preserve the grouped Projects page structure, avoid reintroducing a separate page-content `+ New task` opener, and treat `GITiempo.pen` as the approved visual parity source. The Pencil MCP could not inspect the `.pen` file in this session because no design file is open in the editor, so implementation should perform a direct design parity pass when the file is available.
 
 Planned file changes are app-local to `apps/user-web`: the Projects route view, the existing Projects search/filter composable, Projects page helper functions, and focused tests. No shared package, backend, API contract, database, or OpenAPI changes are planned.
 
@@ -13,7 +13,7 @@ Planned file changes are app-local to `apps/user-web`: the Projects route view, 
 - Add `Status` and `Updated` PrimeVue Select filters to the user Projects page filter row.
 - Keep the combined `Search projects or tasks` filter and its current project-match and task-match semantics.
 - Apply search, status, and updated filters to already loaded visible project/task data on the frontend.
-- Preserve grouped-by-project rendering, project-level `+ Add task`, and page-level task creation entry points.
+- Preserve grouped-by-project rendering and project-level `Add task` entry points.
 - Keep task status labels aligned to the user task UI: `Open` and `Closed`.
 - Cover filter helper behavior and route-level wiring with focused tests.
 
@@ -23,6 +23,7 @@ Planned file changes are app-local to `apps/user-web`: the Projects route view, 
 - No admin-style filters such as source, members, visibility, or billable-default.
 - No broad Projects page rewrite, task dialog rewrite, or task mutation behavior change.
 - No change to which tasks are loaded by default; inactive tasks remain excluded from the default grouped list.
+- No claim that this completes every #216 selector migration outside the user Projects filter row.
 - No `.pen` design edits.
 
 ## Decisions
