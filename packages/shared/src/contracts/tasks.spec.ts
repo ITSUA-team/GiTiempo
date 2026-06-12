@@ -26,6 +26,7 @@ const baseTask = {
   assignees: [taskAssignee, secondTaskAssignee],
   createdAt: "2026-05-01T10:00:00.000Z",
   description: "Ship the requested Projects task metadata fields.",
+  githubIssue: null,
   id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
   isActive: true,
   priority: "high",
@@ -48,6 +49,30 @@ describe("taskResponseSchema", () => {
     expect(result.description).toBeNull();
     expect(result.assignees).toEqual([]);
     expect(result.priority).toBe("medium");
+  });
+
+  it("accepts synced github issue linkage on task responses", () => {
+    const result = taskResponseSchema.parse({
+      ...baseTask,
+      githubIssue: {
+        githubRepo: "octo/repo",
+        issueNumber: 184,
+      },
+    });
+
+    expect(result.githubIssue).toEqual({
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+    });
+  });
+
+  it("allows github issue linkage to be null", () => {
+    const result = taskResponseSchema.parse({
+      ...baseTask,
+      githubIssue: null,
+    });
+
+    expect(result.githubIssue).toBeNull();
   });
 
   it("rejects invalid priority values", () => {

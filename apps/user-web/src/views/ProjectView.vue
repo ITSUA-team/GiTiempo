@@ -111,6 +111,11 @@ const dialogAssigneeOptions = computed(() => {
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
 });
+const isDeletingDialogTask = computed(() => {
+  const task = dialog.editingTask.value;
+
+  return !!task && isDeletingTaskId.value === task.id;
+});
 const pageState = computed(() =>
   resolveDataPageState({
     hasRequestError: data.requestErrorMessage.value !== null,
@@ -121,7 +126,9 @@ const pageState = computed(() =>
 
 watch(dialogAssigneeOptions, (options) => {
   const availableIds = new Set(options.map((option) => option.value));
-  const validAssigneeIds = dialogTaskAssigneeIds.value.filter((id) => availableIds.has(id));
+  const validAssigneeIds = dialogTaskAssigneeIds.value.filter((id) =>
+    availableIds.has(id),
+  );
 
   if (validAssigneeIds.length !== dialogTaskAssigneeIds.value.length) {
     setDialogTaskAssigneeIds(validAssigneeIds);
@@ -140,7 +147,10 @@ async function saveDialog(): Promise<void> {
   }
 
   dialog.setDialogRequestError(null);
-  const errorMessage = await mutations.saveTask(validInput, dialog.editingTask.value);
+  const errorMessage = await mutations.saveTask(
+    validInput,
+    dialog.editingTask.value,
+  );
 
   if (errorMessage) {
     dialog.setDialogRequestError(errorMessage);
@@ -150,13 +160,36 @@ async function saveDialog(): Promise<void> {
   dialog.closeDialog();
 }
 
-function requestDeleteTask(task: Parameters<typeof mutations.deleteTask>[0]): void {
+function requestDeleteTask(
+  task: Parameters<typeof mutations.deleteTask>[0],
+  options: { closeDialogOnSuccess?: boolean } = {},
+): void {
   appConfirm.confirmDestructive({
-    accept: async () => mutations.deleteTask(task),
+    accept: async () => {
+      const wasDeleted = await mutations.deleteTask(task);
+
+      if (
+        wasDeleted &&
+        options.closeDialogOnSuccess === true &&
+        dialog.editingTask.value?.id === task.id
+      ) {
+        dialog.closeDialog();
+      }
+    },
     acceptLabel: "Delete",
     header: "Delete task?",
     message: "This task will be permanently deleted.",
   });
+}
+
+function requestDeleteDialogTask(): void {
+  const task = dialog.editingTask.value;
+
+  if (!task || dialog.dialogMode.value !== "edit") {
+    return;
+  }
+
+  requestDeleteTask(task, { closeDialogOnSuccess: true });
 }
 
 async function retryLoadPage(): Promise<void> {
@@ -291,11 +324,9 @@ async function retryLoadPage(): Promise<void> {
           v-for="group in filteredProjectGroups"
           :key="group.project.id"
           :format-updated-label="formatUpdatedLabel"
-          :is-deleting-task-id="isDeletingTaskId"
           :project="group.project"
           :tasks="group.tasks"
           @add-task="openCreateDialog"
-          @delete-task="requestDeleteTask"
           @edit-task="openEditDialog"
         />
       </div>
@@ -306,6 +337,7 @@ async function retryLoadPage(): Promise<void> {
       :assignee-options="dialogAssigneeOptions"
       :description="dialogTaskDescription"
       :errors="dialogErrors"
+      :is-deleting="isDeletingDialogTask"
       :is-open="isDialogOpen"
       :is-saving="isSavingDialog"
       :mode="dialogMode"
@@ -319,6 +351,7 @@ async function retryLoadPage(): Promise<void> {
       :title="dialogTitle"
       :value-title="dialogTaskTitle"
       @close="closeDialog"
+      @delete-task="requestDeleteDialogTask"
       @save="void saveDialog()"
       @update:assignee-ids="setDialogTaskAssigneeIds"
       @update:description="setDialogTaskDescription"

@@ -32,6 +32,7 @@ const reportsTask = {
   assignees: [],
   createdAt: "2026-04-20T12:00:00.000Z",
   description: null,
+  githubIssue: null,
   id: "task-1",
   isActive: true,
   priority: "medium",
@@ -294,6 +295,15 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.emitted("primaryAction")?.length).toBeGreaterThan(0);
   });
 
+  it("emits close from built-in dialog dismissal without a footer cancel action", async () => {
+    const wrapper = mountDialog();
+
+    await wrapper.get('[data-testid="timer-task-dialog-close"]').trigger("click");
+
+    expect(wrapper.emitted("close")?.length).toBeGreaterThan(0);
+    expect(findButtonByLabel(wrapper, "Cancel")).toBeUndefined();
+  });
+
   it("renders a distinct task-loading state for the selected project", () => {
     const wrapper = mountDialog({ isLoadingTasks: true, taskOptions: [] });
 
@@ -412,11 +422,10 @@ describe("TopBarTimerTaskDialog", () => {
     expect(footer.classes()).toContain("w-full");
     expect(footerButtons.map((button) => button.text())).toEqual([
       "Start timer",
-      "Cancel",
     ]);
     expect(primaryButton?.classes()).toContain("w-full");
     expect(primaryButton?.attributes("data-fluid")).toBe("true");
-    expect(findButtonByLabel(wrapper, "Cancel")?.attributes("data-fluid")).toBe("true");
+    expect(findButtonByLabel(wrapper, "Cancel")).toBeUndefined();
     expect(wrapper.findAll("select")).toHaveLength(0);
     expect(predictiveFields).toHaveLength(2);
     for (const predictiveField of predictiveFields) {
@@ -430,10 +439,22 @@ describe("TopBarTimerTaskDialog", () => {
       );
       expect(predictiveField.attributes("data-option-pt-class")).toContain("truncate");
     }
+  });
 
-    await findButtonByLabel(wrapper, "Cancel")?.trigger("click");
+  it("keeps the mobile running footer ordered as stop then change task", () => {
+    mockMatchMedia(true);
 
-    expect(wrapper.emitted("close")).toHaveLength(1);
+    const wrapper = mountDialog({
+      primaryActionLabel: "Stop",
+    });
+    const footerButtons = wrapper
+      .get('[data-testid="top-bar-timer-task-dialog-footer"]')
+      .findAll("button");
+
+    expect(footerButtons.map((button) => button.text())).toEqual([
+      "Stop timer",
+      "Change task",
+    ]);
   });
 
   it("keeps idle popup action intrinsic and right-aligned on tablet and desktop", () => {

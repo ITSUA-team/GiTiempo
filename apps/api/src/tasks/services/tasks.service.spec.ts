@@ -134,6 +134,50 @@ function taskResponseRow(overrides: Partial<TaskResponseRowFixture> = {}) {
 }
 
 describe('TasksService', () => {
+  it('includes synced github issue linkage in project task lists', async () => {
+    const listRows = [
+      {
+        ...taskRow,
+        githubIssueExternalKey: 'octo/repo#184',
+      },
+      {
+        ...taskRow,
+        id: 'task-2',
+        githubIssueExternalKey: null,
+      },
+    ];
+    const where = vi.fn().mockResolvedValue(listRows);
+    const leftJoin = vi.fn().mockReturnValue({ where });
+    const from = vi.fn().mockReturnValue({ leftJoin });
+    const db = {
+      select: vi.fn().mockReturnValue({ from }),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.listProjectTasks(user, projectRow.id);
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: taskRow.id,
+        githubIssue: {
+          githubRepo: 'octo/repo',
+          issueNumber: 184,
+        },
+      }),
+      expect.objectContaining({
+        id: 'task-2',
+        githubIssue: null,
+      }),
+    ]);
+    expect(projects.requireVisibleProject).toHaveBeenCalledWith(
+      user,
+      projectRow.id,
+    );
+  });
+
   it('rejects task creation in an inactive project', async () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue({

@@ -63,6 +63,10 @@ describe("dashboard-overview-helpers", () => {
       createEntry({
         durationSeconds: 5400,
         endedAt: "2026-04-21T11:30:00.000Z",
+        githubIssue: {
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+        },
         id: "entry-2",
         project: { id: "project-2", name: "Billing API" },
         projectId: "project-2",
@@ -98,6 +102,10 @@ describe("dashboard-overview-helpers", () => {
       }),
       task: expect.objectContaining({
         description: "Billing API • 1h 30m tracked",
+        githubIssue: {
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+        },
         shareLabel: "1 entry contributed to this focus",
         sharePercent: 60,
         title: "Fix export column order",
@@ -139,6 +147,10 @@ describe("dashboard-overview-helpers", () => {
         createEntry({
           durationSeconds: null,
           endedAt: null,
+          githubIssue: {
+            githubRepo: "octo/repo",
+            issueNumber: 185,
+          },
           id: "entry-running",
           startedAt: "2026-04-21T11:00:00.000Z",
         }),
@@ -150,6 +162,10 @@ describe("dashboard-overview-helpers", () => {
     expect(rows).toEqual([
       {
         durationLabel: "01:00:00",
+        githubIssue: {
+          githubRepo: "octo/repo",
+          issueNumber: 185,
+        },
         id: "entry-running",
         isHighlighted: true,
         projectName: "Project Orion",
@@ -158,6 +174,7 @@ describe("dashboard-overview-helpers", () => {
       },
       {
         durationLabel: "1h",
+        githubIssue: null,
         id: "entry-completed",
         isHighlighted: false,
         projectName: "Project Orion",

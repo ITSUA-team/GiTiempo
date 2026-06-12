@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { projectMemberSchema } from "./projects.js";
 
+import { syncedGitHubIssueSchema } from "./github.js";
+
 export const taskStatusSchema = z.enum(["open", "closed"]);
 export const taskPrioritySchema = z.enum(["low", "medium", "high"]);
 
@@ -22,6 +24,7 @@ export const taskResponseSchema = z.object({
   status: taskStatusSchema,
   assignees: taskAssigneesSchema,
   isActive: z.boolean(),
+  githubIssue: syncedGitHubIssueSchema.nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

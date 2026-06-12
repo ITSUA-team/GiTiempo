@@ -25,6 +25,7 @@ import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialo
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
+import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
@@ -35,6 +36,7 @@ const confirm = useConfirm();
 const toast = useToast();
 const appConfirm = createAppConfirm(confirm);
 const appToast = createAppToast(toast);
+const topBarTimerDialogController = useTopBarTimerDialogController();
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
@@ -120,6 +122,11 @@ const {
   visibleProjects,
 } = data;
 const { isDeletingEntry, isSavingDialog } = mutations;
+const isDeletingDialogEntry = computed(() => {
+  const entry = dialog.editingEntry.value;
+
+  return !!entry && isDeletingEntry.value === entry.id;
+});
 
 async function loadFilterProjectTasks(projectId: string) {
   return taskOptions.loadTargetProjectTaskOptions(projectId, filters);
@@ -250,13 +257,40 @@ async function saveDialog(): Promise<void> {
   dialog.closeDialog();
 }
 
-function requestDeleteEntry(entry: TimeEntryResponse): void {
+function requestDeleteEntry(
+  entry: TimeEntryResponse,
+  options: { closeDialogOnSuccess?: boolean } = {},
+): void {
   appConfirm.confirmDestructive({
-    accept: async () => mutations.deleteEntry(entry),
+    accept: async () => {
+      const wasDeleted = await mutations.deleteEntry(entry);
+
+      if (
+        wasDeleted &&
+        options.closeDialogOnSuccess === true &&
+        dialog.editingEntry.value?.id === entry.id
+      ) {
+        dialog.closeDialog();
+      }
+    },
     acceptLabel: "Delete",
     header: "Delete entry?",
     message: "This time entry will be permanently deleted.",
   });
+}
+
+function requestDeleteDialogEntry(): void {
+  const entry = dialog.editingEntry.value;
+
+  if (!entry || dialog.dialogMode.value !== "edit") {
+    return;
+  }
+
+  requestDeleteEntry(entry, { closeDialogOnSuccess: true });
+}
+
+function openActiveTimerDialog(): void {
+  topBarTimerDialogController.requestOpen();
 }
 
 async function retryLoadEntries(): Promise<void> {
@@ -414,11 +448,10 @@ onBeforeUnmount(() => {
         :format-duration="formatDuration"
         :format-time-range="formatTimeRange"
         :group="group"
-        :is-deleting-entry="isDeletingEntry"
         :show-header="groupIndex === 0"
         @create-for-day="(day) => void openCreateDialog(day)"
-        @delete-entry="requestDeleteEntry"
         @edit-entry="(entry) => void openEditDialog(entry)"
+        @open-active-timer="openActiveTimerDialog"
       />
 
       <SurfaceCard
@@ -445,6 +478,7 @@ onBeforeUnmount(() => {
       :dialog-error-message="dialogRequestErrorMessage"
       :ended-at="dialogEndedAt"
       :errors="dialogErrors"
+      :is-deleting="isDeletingDialogEntry"
       :is-loading-projects="isLoadingProjects"
       :is-loading-tasks="isLoadingDialogTasks"
       :is-open="isDialogOpen"
@@ -463,6 +497,7 @@ onBeforeUnmount(() => {
       :value-description="dialogDescription"
       :value-is-billable="dialogIsBillable"
       @close="closeDialog"
+      @delete-entry="requestDeleteDialogEntry"
       @save="void saveDialog()"
       @task-search="handleDialogTaskSearch"
       @update:description="setDialogDescription"

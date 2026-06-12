@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { readonly, shallowRef } from "vue";
 import type {
   ProjectResponse,
   TaskResponse,
@@ -9,6 +10,7 @@ import type {
 } from "@gitiempo/shared";
 
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
+import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -53,6 +55,17 @@ const TEST_IDS = {
 
 const mountedWrappers: VueWrapper[] = [];
 
+function createTopBarTimerDialogControllerMock() {
+  const openRequestId = shallowRef(0);
+
+  return {
+    openRequestId: readonly(openRequestId),
+    requestOpen: vi.fn(() => {
+      openRequestId.value += 1;
+    }),
+  };
+}
+
 beforeAll(() => {
   vi.stubEnv("TZ", "Europe/Kiev");
 });
@@ -84,6 +97,7 @@ function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
     assignees: [],
     createdAt: "2026-04-20T12:00:00.000Z",
     description: null,
+    githubIssue: null,
     id: TEST_IDS.taskReports,
     isActive: true,
     priority: "medium",
@@ -230,10 +244,13 @@ async function mountView(
   options: {
     pinia?: ReturnType<typeof createPinia>;
     queryClient?: ReturnType<typeof createTestQueryClient>;
+    topBarTimerDialogController?: ReturnType<typeof createTopBarTimerDialogControllerMock>;
   } = {},
 ) {
   const pinia = options.pinia ?? createPinia();
   const queryClient = options.queryClient ?? createTestQueryClient();
+  const topBarTimerDialogController =
+    options.topBarTimerDialogController ?? createTopBarTimerDialogControllerMock();
 
   setActivePinia(pinia);
   useAuthStore().accessToken = "access-token";
@@ -242,6 +259,9 @@ async function mountView(
   const wrapper = mount(TimeEntriesView, {
     global: {
       plugins: [pinia, createTestQueryPlugin(queryClient)],
+      provide: {
+        [topBarTimerDialogControllerKey]: topBarTimerDialogController,
+      },
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
@@ -286,7 +306,7 @@ async function mountView(
         },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
-          emits: ["createForDay", "deleteEntry", "editEntry"],
+          emits: ["createForDay", "editEntry", "openActiveTimer"],
           props: ["formatDuration", "formatTimeRange", "group"],
           template: `
             <section>
@@ -302,12 +322,12 @@ async function mountView(
                     @click="$emit('editEntry', entry)"
                   >Edit</button>
                   <button
-                    v-if="entry.endedAt !== null"
-                    data-testid="time-entry-delete-entry-completed"
+                    v-else
+                    :data-testid="'time-entry-open-timer-' + entry.id"
                     type="button"
-                    @click="$emit('deleteEntry', entry)"
-                  >Delete</button>
-                  <p v-else>Stop from the top bar</p>
+                    @click="$emit('openActiveTimer')"
+                  >Update timer</button>
+                  <p v-if="entry.endedAt === null">Stop from the top bar</p>
                 </div>
               <button data-testid="time-entries-day-create-2026-04-21" type="button" @click="$emit('createForDay', group.dateKey)">Create day</button>
             </section>
@@ -316,6 +336,7 @@ async function mountView(
         TimeEntryDialog: {
           emits: [
             "close",
+            "deleteEntry",
             "save",
             "taskSearch",
             "update:description",
@@ -328,6 +349,7 @@ async function mountView(
           props: [
             "dialogErrorMessage",
             "endedAt",
+            "isDeleting",
             "isOpen",
             "startedAt",
             "taskSuggestions",
@@ -358,6 +380,7 @@ async function mountView(
               <button data-testid="dialog-started" type="button" @click="$emit('update:startedAt', new Date('2026-04-21T09:15:00.000Z'))">Started</button>
               <button data-testid="dialog-ended" type="button" @click="$emit('update:endedAt', new Date('2026-04-21T10:45:00.000Z'))">Ended</button>
               <button data-testid="dialog-billable" type="button" @click="$emit('update:isBillable', true)">Billable</button>
+              <button data-testid="dialog-delete" type="button" @click="$emit('deleteEntry')">Delete entry</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
             </div>
           `,
@@ -368,7 +391,7 @@ async function mountView(
 
   mountedWrappers.push(wrapper);
 
-  return { client, pinia, queryClient, wrapper };
+  return { client, pinia, queryClient, topBarTimerDialogController, wrapper };
 }
 
 describe("TimeEntriesView", () => {
@@ -415,7 +438,7 @@ describe("TimeEntriesView", () => {
     expect(wrapper.text()).toContain("02:00:08");
   });
 
-  it("wires day create, edit, and delete actions through the real view", async () => {
+  it("wires day create and task-name edit actions through the real view", async () => {
     const { wrapper } = await mountView();
 
     await flushPromises();
@@ -426,11 +449,20 @@ describe("TimeEntriesView", () => {
     await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
     const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
     await editButtons[editButtons.length - 1]!.trigger("click");
-    const deleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');
-    await deleteButtons[deleteButtons.length - 1]!.trigger("click");
 
     expect(wrapper.text()).toContain("Stop from the top bar");
-    expect(primeVueMocks.confirmRequire).toHaveBeenCalledTimes(1);
+    expect(primeVueMocks.confirmRequire).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
+  });
+
+  it("opens the active timer dialog instead of the time-entry edit dialog for running entries", async () => {
+    const { topBarTimerDialogController, wrapper } = await mountView();
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+
+    expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
   });
 
   it("opens edit with the same browser-local times shown in the table", async () => {
@@ -518,6 +550,34 @@ describe("TimeEntriesView", () => {
     );
   });
 
+  it("deletes the editing entry from inside the dialog and closes after success", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
+    await editButtons[editButtons.length - 1]!.trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
+
+    const confirmOptions = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
+
+    expect(confirmOptions).toMatchObject({
+      acceptLabel: "Delete",
+      header: "Delete entry?",
+      message: "This time entry will be permanently deleted.",
+      rejectLabel: "Cancel",
+    });
+
+    await confirmOptions!.accept();
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.deleteEntry).toHaveBeenCalledWith(TEST_IDS.completedEntry);
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
   it("updates grouped entry state after a top-bar stop reconciliation", async () => {
     const initialRunningResponse = createEntryListResponse([
       createEntry({
@@ -556,7 +616,7 @@ describe("TimeEntriesView", () => {
     expect(wrapper.text()).not.toContain("Running");
     expect(wrapper.text()).toContain("1h 30m");
     expect(wrapper.find('[data-testid="time-entry-edit-entry-completed"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
 
     vi.advanceTimersByTime(3000);
     await flushPromises();
@@ -749,7 +809,7 @@ describe("TimeEntriesView", () => {
     );
   });
 
-  it("confirms deletes, refreshes on success, and keeps failures visible on error", async () => {
+  it("confirms dialog deletes, refreshes on success, and keeps failures visible on error", async () => {
     const client = createClientMock();
 
     client.deleteEntry.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("Delete failed"));
@@ -757,16 +817,21 @@ describe("TimeEntriesView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    const retryDeleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');
-    await retryDeleteButtons[retryDeleteButtons.length - 1]!.trigger("click");
+    const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
+    await editButtons[editButtons.length - 1]!.trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
     await primeVueMocks.confirmRequire.mock.calls[0]?.[0].accept();
+    await flushPromises();
     await flushPromises();
 
     expect(client.deleteEntry).toHaveBeenCalledWith(TEST_IDS.completedEntry);
     expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
 
-    const deleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');
-    await deleteButtons[deleteButtons.length - 1]!.trigger("click");
+    const nextEditButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
+    await nextEditButtons[nextEditButtons.length - 1]!.trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
     await primeVueMocks.confirmRequire.mock.calls[1]?.[0].accept();
     await flushPromises();
 

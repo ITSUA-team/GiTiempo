@@ -15,12 +15,14 @@ import { projectMemberSchema } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { taskAssignees } from '../schemas/task-assignees.schema';
+import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { tasks } from '../schemas/tasks.schema';
 
 export type TaskRow = typeof tasks.$inferSelect;
@@ -30,9 +32,10 @@ type TaskAssignmentMutationExecutor = Pick<
   DrizzleDB,
   'delete' | 'insert' | 'select'
 >;
-type TaskResponseRow = TaskRow & {
+interface TaskResponseRow extends TaskRow {
   assignees: unknown;
-};
+  githubIssueExternalKey: string | null;
+}
 
 @Injectable()
 export class TasksService {
@@ -53,6 +56,16 @@ export class TasksService {
     const rows = await this.db
       .select(this.taskResponseSelection())
       .from(tasks)
+      .leftJoin(
+        taskExternalRefs,
+        and(
+          eq(taskExternalRefs.workspaceId, user.workspaceId),
+          eq(taskExternalRefs.projectId, project.id),
+          eq(taskExternalRefs.taskId, tasks.id),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+        ),
+      )
       .where(
         and(
           eq(tasks.workspaceId, user.workspaceId),
@@ -310,6 +323,7 @@ export class TasksService {
       isActive: tasks.isActive,
       createdAt: tasks.createdAt,
       updatedAt: tasks.updatedAt,
+      githubIssueExternalKey: taskExternalRefs.externalKey,
     };
   }
 
@@ -321,6 +335,16 @@ export class TasksService {
     const [row] = await db
       .select(this.taskResponseSelection())
       .from(tasks)
+      .leftJoin(
+        taskExternalRefs,
+        and(
+          eq(taskExternalRefs.workspaceId, workspaceId),
+          eq(taskExternalRefs.projectId, tasks.projectId),
+          eq(taskExternalRefs.taskId, tasks.id),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+        ),
+      )
       .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
       .limit(1);
     return row ?? null;
@@ -410,6 +434,7 @@ export class TasksService {
       status: row.status,
       assignees: this.parseTaskAssignees(row.assignees),
       isActive: row.isActive,
+      githubIssue: parseGitHubIssueExternalKey(row.githubIssueExternalKey),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

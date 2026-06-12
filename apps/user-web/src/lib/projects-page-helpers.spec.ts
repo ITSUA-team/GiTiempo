@@ -32,6 +32,7 @@ function createTask(id: string, projectId: string, title: string, updatedAt: str
     assignees: [],
     createdAt: "2026-04-20T12:00:00.000Z",
     description: null,
+    githubIssue: null,
     id,
     isActive: true,
     priority: "medium",

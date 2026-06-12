@@ -81,6 +81,7 @@ function createTask(
     assignees: [],
     createdAt: "2026-04-20T12:00:00.000Z",
     description: null,
+    githubIssue: null,
     id,
     isActive: true,
     priority: "medium",
@@ -192,6 +193,7 @@ async function mountView(client = createClientMock()) {
         ProjectTaskDialog: {
           emits: [
             "close",
+            "deleteTask",
             "save",
             "update:assigneeIds",
             "update:description",
@@ -204,6 +206,7 @@ async function mountView(client = createClientMock()) {
             "assigneeIds",
             "assigneeOptions",
             "description",
+            "isDeleting",
             "isOpen",
             "priority",
             "projectId",
@@ -226,21 +229,21 @@ async function mountView(client = createClientMock()) {
               <button data-testid="dialog-status-input" type="button" @click="$emit('update:status', 'closed')">Status</button>
               <button data-testid="dialog-assignee-input" type="button" @click="$emit('update:assigneeIds', assigneeOptions.map((option) => option.value))">Assignees</button>
               <button data-testid="dialog-clear-assignee-input" type="button" @click="$emit('update:assigneeIds', [])">Clear assignees</button>
+              <button data-testid="dialog-delete" type="button" @click="$emit('deleteTask')">Delete task</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
               <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
             </div>
           `,
         },
         ProjectsTaskSection: {
-          emits: ["addTask", "deleteTask", "editTask"],
+          emits: ["addTask", "editTask"],
           props: ["project", "tasks"],
           template: `
             <section>
               <p>{{ project.name }}</p>
               <p v-for="task in tasks" :key="task.id">{{ task.title }}</p>
               <button data-testid="project-section-add" type="button" @click="$emit('addTask', project.id)">Add</button>
-              <button data-testid="project-section-edit" type="button" @click="$emit('editTask', tasks[0])">Edit</button>
-              <button data-testid="project-section-delete" type="button" @click="$emit('deleteTask', tasks[0])">Delete</button>
+              <button data-testid="project-section-title" type="button" @click="$emit('editTask', tasks[0])">{{ tasks[0]?.title }}</button>
             </section>
           `,
         },
@@ -284,11 +287,10 @@ describe("ProjectView", () => {
     expect(wrapper.text()).toContain("Improve reports filters");
 
     await wrapper.get('[data-testid="project-section-add"]').trigger("click");
-    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
 
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(true);
-    expect(primeVueMocks.confirmRequire).toHaveBeenCalledTimes(1);
+    expect(primeVueMocks.confirmRequire).not.toHaveBeenCalled();
   });
 
   it("renders distinct loading, request-error, and empty states", async () => {
@@ -371,7 +373,7 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
 
     expect(wrapper.get('[data-testid="dialog-title-value"]').text()).toBe(
       "Improve reports filters",
@@ -443,7 +445,7 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
     await wrapper.get('[data-testid="dialog-edit-title-input"]').trigger("click");
     await wrapper.get('[data-testid="dialog-save"]').trigger("click");
     await flushPromises();
@@ -465,7 +467,8 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
 
     const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
 
@@ -491,7 +494,8 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
 
     const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
 

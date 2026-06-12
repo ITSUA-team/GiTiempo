@@ -24,6 +24,7 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
 
+const formKey = ref(0);
 const submitting = ref(false);
 
 const initialValues: { email: string; role: WorkspaceRole | '' } = {
@@ -65,21 +66,32 @@ async function handleSubmit({
   }
 }
 
-function handleCancel(reset: () => void): void {
-  reset();
-  visible.value = false;
+function handleVisibleChange(nextVisible: boolean): void {
+  if (nextVisible) {
+    visible.value = true;
+    return;
+  }
+
+  if (!submitting.value) {
+    formKey.value += 1;
+    visible.value = false;
+  }
 }
 </script>
 
 <template>
   <Dialog
-    v-model:visible="visible"
     modal
     header="Invite Member"
+    :closable="!submitting"
+    :dismissable-mask="!submitting"
     :style="{ width: '480px' }"
+    :visible="visible"
+    @update:visible="handleVisibleChange"
   >
     <Form
-      v-slot="{ email, role, reset }"
+      :key="formKey"
+      v-slot="{ email, role }"
       :resolver="resolver"
       :initial-values="initialValues"
       @submit="handleSubmit"
@@ -132,14 +144,7 @@ function handleCancel(reset: () => void): void {
           </Message>
         </div>
 
-        <div class="flex justify-end gap-2 pt-2">
-          <Button
-            label="Cancel"
-            severity="secondary"
-            outlined
-            type="button"
-            @click="handleCancel(reset)"
-          />
+        <div class="flex justify-end pt-2">
           <Button
             label="Send Invite"
             :loading="submitting"

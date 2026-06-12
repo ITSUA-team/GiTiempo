@@ -3,6 +3,13 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import TimeEntryDialog from "./TimeEntryDialog.vue";
 
+function findButtonByLabel(
+  wrapper: ReturnType<typeof mountDialog>,
+  label: string,
+) {
+  return wrapper.findAll("button").find((button) => button.text() === label);
+}
+
 function formatLocalWallClock(value: Date | null | undefined): string {
   if (!(value instanceof Date)) {
     return "";
@@ -27,6 +34,7 @@ function mountDialog(
       },
       isLoadingProjects: false,
       isLoadingTasks: false,
+      isDeleting: false,
       isOpen: true,
       isSaving: false,
       mode: "edit",
@@ -82,6 +90,10 @@ function mountDialog(
             "invalid",
             "disabled",
             "completeOnFocus",
+            "dataKey",
+            "forceSelection",
+            "inputId",
+            "optionLabel",
             "dropdownMode",
             "minLength",
           ],
@@ -90,17 +102,33 @@ function mountDialog(
             displayValue(): string {
               return typeof this.modelValue === "string"
                 ? this.modelValue
-                : this.modelValue?.title ?? "";
+                : this.modelValue?.[this.optionLabel] ?? "";
             },
           },
-          template:
-            '<input :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+          template: `
+            <div :data-testid="inputId">
+              <input
+                :data-testid="inputId + '-input'"
+                :disabled="disabled"
+                :value="displayValue"
+                @focus="$emit('complete', { query: displayValue })"
+                @input="$emit('update:modelValue', $event.target.value)"
+              />
+              <button
+                v-for="suggestion in suggestions"
+                :key="suggestion[dataKey] ?? suggestion.id"
+                :data-testid="inputId + '-option-' + (suggestion[dataKey] ?? suggestion.id)"
+                type="button"
+                @click="$emit('update:modelValue', suggestion)"
+              >{{ suggestion[optionLabel] }}</button>
+            </div>
+          `,
         },
         Button: {
-          props: ["disabled", "label"],
+          props: ["disabled", "label", "loading", "severity", "variant"],
           emits: ["click"],
           template:
-            '<button :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
+            '<button :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Checkbox: {
           props: ["modelValue", "disabled"],
@@ -109,7 +137,7 @@ function mountDialog(
             '<input :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
         },
         DatePicker: {
-          props: ["modelValue", "disabled", "inputId", "invalid"],
+          props: ["modelValue", "dateFormat", "disabled", "inputId", "invalid"],
           emits: ["update:modelValue"],
           computed: {
             displayValue(): string {
@@ -117,17 +145,13 @@ function mountDialog(
             },
           },
           template:
-            '<input :data-testid="inputId" :disabled="disabled" :value="displayValue" @input="$emit(\'update:modelValue\', $event.target.value ? new Date($event.target.value) : null)" />',
+            '<input :data-date-format="dateFormat" :data-testid="inputId" :disabled="disabled" :value="displayValue" @input="$emit(\'update:modelValue\', $event.target.value ? new Date($event.target.value) : null)" />',
         },
         Dialog: {
+          props: ["visible"],
+          emits: ["update:visible"],
           template:
-            '<div><slot name="header" /><slot /><slot name="footer" /></div>',
-        },
-        Select: {
-          props: ["modelValue", "options", "disabled"],
-          emits: ["update:modelValue"],
-          template:
-            '<select :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.id" :value="option.id">{{ option.name }}</option></select>',
+            '<div v-if="visible"><button data-testid="dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot name="header" /><slot /><slot name="footer" /></div>',
         },
         Textarea: {
           props: ["modelValue", "disabled"],
@@ -158,8 +182,25 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.text()).toContain("End");
     expect(wrapper.text()).toContain("Description");
     expect(wrapper.text()).toContain("Billable entry");
+    expect(wrapper.text()).not.toContain("Create mode starts");
+    expect(wrapper.text()).toContain("Delete entry");
     expect(wrapper.text()).toContain("Save changes");
+    expect(wrapper.text()).not.toContain("Cancel");
+    expect(wrapper.find('[data-testid="time-entry-project"]').exists()).toBe(true);
+    expect(wrapper.find("select").exists()).toBe(false);
     expect(wrapper.find("textarea").element.value).toContain("Summarize PM scope changes");
+  });
+
+  it("renders create mode without the edit-only delete action", () => {
+    const wrapper = mountDialog({
+      mode: "create",
+      saveLabel: "Save entry",
+      title: "New time entry",
+    });
+
+    expect(wrapper.text()).toContain("Save entry");
+    expect(wrapper.text()).not.toContain("Delete entry");
+    expect(wrapper.text()).not.toContain("Cancel");
   });
 
   it("renders edit date picker values as browser-local wall-clock times", () => {
@@ -174,17 +215,22 @@ describe("TimeEntryDialog", () => {
     expect(
       (wrapper.get('[data-testid="time-entry-started-at"]').element as HTMLInputElement).value,
     ).toBe("09:00");
+    expect(wrapper.get('[data-testid="time-entry-started-at"]').attributes("data-date-format")).toBe(
+      "M d,",
+    );
     expect(
       (wrapper.get('[data-testid="time-entry-ended-at"]').element as HTMLInputElement).value,
     ).toBe("10:30");
+    expect(wrapper.get('[data-testid="time-entry-ended-at"]').attributes("data-date-format")).toBe(
+      "M d,",
+    );
   });
 
   it("emits project, task, date, description, and billable updates", async () => {
     const wrapper = mountDialog();
-    const inputs = wrapper.findAll("input");
 
-    await wrapper.find("select").setValue("project-1");
-    await inputs[0]?.setValue("Improve reports filters");
+    await wrapper.get('[data-testid="time-entry-project-option-project-1"]').trigger("click");
+    await wrapper.get('[data-testid="time-entry-task-input"]').setValue("Improve reports filters");
     await wrapper.get('[data-testid="time-entry-started-at"]').setValue("2026-04-21T09:15:00.000Z");
     await wrapper.get('[data-testid="time-entry-ended-at"]').setValue("2026-04-21T10:45:00.000Z");
     await wrapper.find('input[type="checkbox"]').setValue(false);
@@ -226,14 +272,25 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.text()).toContain("String must contain at most 2000 character(s)");
   });
 
-  it("emits save and close actions", async () => {
+  it("emits save from the primary action and close from dialog dismissal", async () => {
     const wrapper = mountDialog();
-    const buttons = wrapper.findAll("button");
 
-    await buttons[0]?.trigger("click");
-    await buttons[1]?.trigger("click");
+    await findButtonByLabel(wrapper, "Save changes")?.trigger("click");
+    await wrapper.get('[data-testid="dialog-close"]').trigger("click");
 
     expect(wrapper.emitted("close")?.length).toBeGreaterThan(0);
     expect(wrapper.emitted("save")?.length).toBeGreaterThan(0);
+  });
+
+  it("emits delete from the edit-only destructive action", async () => {
+    const wrapper = mountDialog();
+    const deleteButton = findButtonByLabel(wrapper, "Delete entry");
+
+    expect(deleteButton?.attributes("data-severity")).toBe("danger");
+    expect(deleteButton?.attributes("data-variant")).toBe("outlined");
+
+    await deleteButton?.trigger("click");
+
+    expect(wrapper.emitted("deleteEntry")?.length).toBe(1);
   });
 });

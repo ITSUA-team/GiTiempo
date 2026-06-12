@@ -69,6 +69,7 @@ function createTask(
     assignees: [],
     createdAt: '2026-04-20T12:00:00.000Z',
     description: null,
+    githubIssue: null,
     id,
     isActive,
     priority: 'medium',
@@ -250,7 +251,12 @@ describe('useTopBarTimer', () => {
     const client = createClientMock();
 
     client.getCurrentTimer.mockResolvedValueOnce({
-      timeEntry: createRunningEntry(),
+      timeEntry: createRunningEntry({
+        githubIssue: {
+          githubRepo: 'octo/repo',
+          issueNumber: 184,
+        },
+      }),
     });
 
     const mounted = mountTopBarTimer({ client });
@@ -266,6 +272,10 @@ describe('useTopBarTimer', () => {
       'Improve reports filters',
     );
     expect(topBarTimer.selectedContext.value?.taskId).toBe(TEST_IDS.task);
+    expect(topBarTimer.timerGitHubIssue.value).toEqual({
+      githubRepo: 'octo/repo',
+      issueNumber: 184,
+    });
   });
 
   it('resolves the last eligible tracked task when idle', async () => {
@@ -291,6 +301,7 @@ describe('useTopBarTimer', () => {
 
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
       taskId: TEST_IDS.task,
@@ -385,6 +396,7 @@ describe('useTopBarTimer', () => {
 
     expect(topBarTimer.isDialogOpen.value).toBe(false);
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: 'project-1',
       projectName: 'Project Orion',
       taskId: 'task-1',
@@ -500,6 +512,7 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: 'project-2',
       projectName: 'Project Atlas',
       taskId: 'task-2',
@@ -980,6 +993,7 @@ describe('useTopBarTimer', () => {
     await topBarTimer.confirmSelectedTask();
 
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
       taskId: TEST_IDS.task,
@@ -1056,6 +1070,7 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.currentTimer.value).toBeNull();
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
       taskId: TEST_IDS.task,

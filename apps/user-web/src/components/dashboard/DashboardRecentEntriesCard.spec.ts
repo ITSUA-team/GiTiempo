@@ -17,6 +17,10 @@ describe("DashboardRecentEntriesCard", () => {
         entries: [
           {
             durationLabel: "1h 10m",
+            githubIssue: {
+              githubRepo: "octo/repo",
+              issueNumber: 184,
+            },
             id: "entry-1",
             isHighlighted: true,
             projectName: "Billing API",
@@ -25,6 +29,7 @@ describe("DashboardRecentEntriesCard", () => {
           },
           {
             durationLabel: "00:40:00",
+            githubIssue: null,
             id: "entry-2",
             isHighlighted: false,
             projectName: "Project Orion",
@@ -54,6 +59,11 @@ describe("DashboardRecentEntriesCard", () => {
     expect(wrapper.text()).toContain("00:40:00");
     expect(wrapper.findAll('[data-testid="dashboard-recent-entry-mobile-card"]')).toHaveLength(0);
     expect(wrapper.find('[data-testid="dashboard-recent-entries-table"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="dashboard-recent-entry-github-entry-1"]').attributes()).toMatchObject({
+      href: "https://github.com/octo/repo/issues/184",
+      target: "_blank",
+    });
+    expect(wrapper.find('[data-testid="dashboard-recent-entry-github-entry-2"]').exists()).toBe(false);
 
     await wrapper.get("button").trigger("click");
 
@@ -68,6 +78,10 @@ describe("DashboardRecentEntriesCard", () => {
         entries: [
           {
             durationLabel: "1h 10m",
+            githubIssue: {
+              githubRepo: "octo/repo",
+              issueNumber: 184,
+            },
             id: "entry-1",
             isHighlighted: true,
             projectName: "Billing API",
@@ -76,6 +90,7 @@ describe("DashboardRecentEntriesCard", () => {
           },
           {
             durationLabel: "00:40:00",
+            githubIssue: null,
             id: "entry-2",
             isHighlighted: false,
             projectName: "Project Orion",
@@ -104,11 +119,15 @@ describe("DashboardRecentEntriesCard", () => {
     expect(mobileCards[0]?.classes()).toContain('bg-accent-tint');
     expect(mobileCards[0]?.text()).toContain('Fix export column order');
     expect(mobileCards[0]?.text()).toContain('Billing API');
+    expect(wrapper.get('[data-testid="dashboard-recent-entry-mobile-github-entry-1"]').attributes("href")).toBe(
+      "https://github.com/octo/repo/issues/184",
+    );
     expect(mobileCards[0]?.text()).toContain('09:00 - 10:10');
     expect(mobileCards[0]?.text()).toContain('1h 10m');
     expect(mobileCards[1]?.text()).toContain('Improve reports filters');
     expect(mobileCards[1]?.text()).toContain('Project Orion');
     expect(mobileCards[1]?.text()).toContain('10:20 - Running');
     expect(mobileCards[1]?.text()).toContain('00:40:00');
+    expect(wrapper.find('[data-testid="dashboard-recent-entry-mobile-github-entry-2"]').exists()).toBe(false);
   });
 });

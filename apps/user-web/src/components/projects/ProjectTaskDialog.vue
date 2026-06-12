@@ -25,6 +25,7 @@ const props = defineProps<{
     status: string | null;
     title: string | null;
   };
+  isDeleting: boolean;
   isOpen: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
@@ -41,6 +42,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
+  deleteTask: [];
   save: [];
   "update:assigneeIds": [value: string[]];
   "update:description": [value: string];
@@ -116,6 +118,8 @@ const titleModel = computed({
   },
 });
 
+const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
+
 function completeProjects(event: AutoCompleteCompleteEvent): void {
   projectSuggestions.value = filterOptions(props.projects, event.query, "name");
 }
@@ -125,7 +129,11 @@ function completeAssignees(event: AutoCompleteCompleteEvent): void {
     (option) => !selectedAssigneeIdSet.value.has(option.value),
   );
 
-  assigneeSuggestions.value = filterOptions(unselectedOptions, event.query, "label");
+  assigneeSuggestions.value = filterOptions(
+    unselectedOptions,
+    event.query,
+    "label",
+  );
 }
 
 function filterOptions<T extends object>(
@@ -156,7 +164,8 @@ function resolveAssigneeIds(
   const ids = (value ?? [])
     .map((option) => {
       if (typeof option === "string") {
-        return props.assigneeOptions.find((candidate) => candidate.label === option)?.value;
+        return props.assigneeOptions.find((candidate) => candidate.label === option)
+          ?.value;
       }
       return option.value;
     })
@@ -168,9 +177,9 @@ function resolveAssigneeIds(
 
 <template>
   <Dialog
-    :closable="!props.isSaving"
+    :closable="!isDialogMutating"
     modal
-    :dismissable-mask="!props.isSaving"
+    :dismissable-mask="!isDialogMutating"
     :draggable="false"
     :pt="{
       root: 'w-[min(480px,calc(100vw-2rem))] rounded-lg border border-divider',
@@ -180,7 +189,7 @@ function resolveAssigneeIds(
     }"
     :visible="props.isOpen"
     @update:visible="(nextVisible) => {
-      if (!nextVisible && !props.isSaving) {
+      if (!nextVisible && !isDialogMutating) {
         emit('close');
       }
     }"
@@ -202,7 +211,9 @@ function resolveAssigneeIds(
         class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
       >
         <p class="text-destructive text-sm font-medium">
-          {{ props.mode === 'edit' ? 'Could not update this task.' : 'Could not create this task.' }}
+          {{ props.mode === 'edit'
+            ? 'Could not update this task.'
+            : 'Could not create this task.' }}
         </p>
         <p class="text-destructive mt-1 text-xs">
           {{ props.requestErrorMessage }}
@@ -236,8 +247,8 @@ function resolveAssigneeIds(
           input-id="project-task-project"
           option-label="name"
           placeholder="Select project"
-          :complete-on-focus="true"
-          :disabled="props.isSaving"
+          complete-on-focus
+          :disabled="isDialogMutating"
           :invalid="!!props.errors.projectId"
           :min-length="0"
           :suggestions="projectSuggestions"
@@ -262,7 +273,7 @@ function resolveAssigneeIds(
           id="project-task-title"
           v-model="titleModel"
           class="h-[38px] w-full"
-          :disabled="props.isSaving"
+          :disabled="isDialogMutating"
           :invalid="!!props.errors.title"
         />
         <small
@@ -285,7 +296,7 @@ function resolveAssigneeIds(
           v-model="descriptionModel"
           auto-resize
           class="w-full"
-          :disabled="props.isSaving"
+          :disabled="isDialogMutating"
           :invalid="!!props.errors.description"
           :maxlength="2000"
           placeholder="Add context, acceptance notes, or links"
@@ -313,7 +324,7 @@ function resolveAssigneeIds(
             input-id="project-task-priority"
             option-label="label"
             option-value="value"
-            :disabled="props.isSaving"
+            :disabled="isDialogMutating"
             :invalid="!!props.errors.priority"
             :options="priorityOptions"
           />
@@ -338,7 +349,7 @@ function resolveAssigneeIds(
             input-id="project-task-status"
             option-label="label"
             option-value="value"
-            :disabled="props.isSaving"
+            :disabled="isDialogMutating"
             :invalid="!!props.errors.status"
             :options="statusOptions"
           />
@@ -371,7 +382,9 @@ function resolveAssigneeIds(
           option-label="label"
           placeholder="Unassigned"
           show-clear
-          :disabled="props.isSaving || !props.projectId || props.assigneeOptions.length === 0"
+          :disabled="
+            isDialogMutating || !props.projectId || props.assigneeOptions.length === 0
+          "
           :invalid="!!props.errors.assigneeIds"
           :min-length="0"
           :suggestions="assigneeSuggestions"
@@ -389,16 +402,19 @@ function resolveAssigneeIds(
     <template #footer>
       <div class="flex justify-end gap-2">
         <Button
+          v-if="props.mode === 'edit'"
           type="button"
-          label="Cancel"
-          severity="secondary"
+          label="Delete task"
+          severity="danger"
           variant="outlined"
-          :disabled="props.isSaving"
-          @click="emit('close')"
+          :disabled="isDialogMutating"
+          :loading="props.isDeleting"
+          @click="emit('deleteTask')"
         />
         <Button
           type="button"
           :label="props.saveLabel"
+          :disabled="isDialogMutating"
           :loading="props.isSaving"
           @click="emit('save')"
         />

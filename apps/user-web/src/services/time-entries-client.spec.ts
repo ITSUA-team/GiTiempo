@@ -155,6 +155,10 @@ describe("createTimeEntriesClient", () => {
           assignees: [],
           createdAt: "2026-04-20T12:00:00.000Z",
           description: null,
+          githubIssue: {
+            githubRepo: "octo/repo",
+            issueNumber: 184,
+          },
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
           isActive: true,
           priority: "medium",
@@ -172,7 +176,14 @@ describe("createTimeEntriesClient", () => {
       client.listProjectTasks(
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       ),
-    ).resolves.toHaveLength(1);
+    ).resolves.toEqual([
+      expect.objectContaining({
+        githubIssue: {
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+        },
+      }),
+    ]);
     expect(fetchFn).toHaveBeenCalledWith(
       "/projects/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f/tasks",
       {
@@ -199,6 +210,7 @@ describe("createTimeEntriesClient", () => {
         ],
         createdAt: "2026-04-20T12:00:00.000Z",
         description: "Coordinate release validation.",
+        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         isActive: true,
         priority: "high",
@@ -257,6 +269,7 @@ describe("createTimeEntriesClient", () => {
         ],
         createdAt: "2026-04-20T12:00:00.000Z",
         description: "Updated details",
+        githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         isActive: true,
         priority: "high",

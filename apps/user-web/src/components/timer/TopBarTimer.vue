@@ -1,11 +1,20 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import Button from "primevue/button";
 import { useIsMobileViewport } from "@gitiempo/web-shared";
 
 import { useTopBarTimer } from "@/composables/timer/useTopBarTimer";
+import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
+
+interface Props {
+  openRequestId?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  openRequestId: 0,
+});
 
 const {
   closeDialog,
@@ -41,6 +50,7 @@ const {
   taskOptions,
   tasksErrorMessage,
   timerActionErrorMessage,
+  timerGitHubIssue,
   timerProjectLabel,
   timerTaskLabel,
 } = useTopBarTimer();
@@ -49,40 +59,62 @@ const isMobileViewport = useIsMobileViewport();
 const showsElapsedTime = computed(
   () => !isLoadingSummary.value && isTimerRunning.value,
 );
+
+watch(
+  () => props.openRequestId,
+  (openRequestId, previousOpenRequestId) => {
+    if (openRequestId === previousOpenRequestId) {
+      return;
+    }
+
+    void openDialog();
+  },
+);
 </script>
 
 <template>
-  <Button
+  <div
     v-if="!isMobileViewport"
-    unstyled
-    type="button"
-    aria-label="Open task and timer"
-    class="ring-divider bg-app-bg text-text-dark hover:bg-app-bg focus-visible:outline-brand ml-auto flex h-[47px] max-w-[min(360px,100%)] min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-left ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2"
-    data-layout="desktop"
-    data-testid="top-bar-timer"
-    @click="openDialog"
+    class="ring-divider bg-app-bg text-text-dark hover:bg-app-bg ml-auto flex h-[47px] max-w-[min(380px,100%)] min-w-0 items-center gap-2 rounded-lg px-3 py-2 text-left ring-1 transition ring-inset"
   >
-    <span
-      class="flex min-w-0 flex-col gap-0.5"
-      data-testid="top-bar-timer-context"
+    <Button
+      unstyled
+      type="button"
+      aria-label="Open task and timer"
+      class="focus-visible:outline-brand flex h-full min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+      data-layout="desktop"
+      data-testid="top-bar-timer"
+      @click="openDialog"
     >
-      <span class="text-text-muted truncate text-[11px] leading-[13px] font-medium">
-        {{ timerProjectLabel }}
+      <span
+        class="flex min-w-0 flex-1 flex-col gap-0.5"
+        data-testid="top-bar-timer-context"
+      >
+        <span class="text-text-muted truncate text-[11px] leading-[13px] font-medium">
+          {{ timerProjectLabel }}
+        </span>
+        <span class="text-text-dark truncate text-[13px] leading-4 font-semibold">
+          {{ timerTaskLabel }}
+        </span>
       </span>
-      <span class="text-text-dark truncate text-[13px] leading-4 font-semibold">
-        {{ timerTaskLabel }}
-      </span>
-    </span>
 
-    <span
-      v-if="showsElapsedTime"
-      aria-live="off"
-      class="text-brand shrink-0 text-xl leading-6 font-semibold tabular-nums"
-      data-testid="top-bar-timer-elapsed"
-    >
-      {{ elapsedTimeLabel }}
-    </span>
-  </Button>
+      <span
+        v-if="showsElapsedTime"
+        aria-live="off"
+        class="text-brand shrink-0 text-xl leading-6 font-semibold tabular-nums"
+        data-testid="top-bar-timer-elapsed"
+      >
+        {{ elapsedTimeLabel }}
+      </span>
+    </Button>
+
+    <TaskGitHubIssueLink
+      v-if="timerGitHubIssue"
+      :issue="timerGitHubIssue"
+      class="relative z-10"
+      test-id="top-bar-timer-github-link"
+    />
+  </div>
 
   <section
     v-else
@@ -133,8 +165,16 @@ const showsElapsedTime = computed(
           {{ elapsedTimeLabel }}
         </span>
       </span>
-      <span class="text-text-dark mt-1 line-clamp-2 w-full text-[13px] leading-snug font-semibold whitespace-normal">
-        {{ timerTaskLabel }}
+      <span class="mt-1 flex w-full min-w-0 items-start gap-1">
+        <span class="text-text-dark line-clamp-2 min-w-0 text-[13px] leading-snug font-semibold whitespace-normal">
+          {{ timerTaskLabel }}
+        </span>
+        <TaskGitHubIssueLink
+          v-if="timerGitHubIssue"
+          :issue="timerGitHubIssue"
+          class="mt-0.5"
+          test-id="top-bar-timer-mobile-github-link"
+        />
       </span>
     </div>
   </section>

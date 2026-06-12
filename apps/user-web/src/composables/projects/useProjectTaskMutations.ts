@@ -115,7 +115,7 @@ export function useProjectTaskMutations({
     }
   }
 
-  async function deleteTask(task: TaskResponse): Promise<void> {
+  async function deleteTask(task: TaskResponse): Promise<boolean> {
     isDeletingTaskId.value = task.id;
     lastMutationErrorMessage.value = null;
 
@@ -129,6 +129,7 @@ export function useProjectTaskMutations({
         "Task deleted",
         "The selected task has been removed.",
       );
+      return true;
     } catch (error) {
       const message = getErrorMessage(error);
 
@@ -139,6 +140,7 @@ export function useProjectTaskMutations({
         logContext: { action: "delete-task", feature: "projects-page" },
         summary: "Could not delete task",
       });
+      return false;
     } finally {
       isDeletingTaskId.value = null;
     }
