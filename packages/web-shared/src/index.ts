@@ -7,5 +7,6 @@ export * from "./router";
 export * from "./session-storage";
 export * from "./validation";
 export * from "./viewport";
+export * from "./workspace-client";
 export * from "./workspace-link";
 export * from "./workspace-roles";

@@ -2,7 +2,6 @@ import { computed, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "primevue/usetoast";
 import {
-  registerRequestSchema,
   type RegisterRequest,
   type RegistrationErrorCode,
 } from "@gitiempo/shared";
@@ -94,20 +93,13 @@ export function useRegisterForm() {
       return null;
     }
 
-    const contractResult = registerRequestSchema.safeParse({
+    return {
       email: formResult.data.email,
       fullName: formResult.data.fullName,
-      ownerAcknowledgement: formResult.data.ownerAcknowledgement,
+      ownerAcknowledgement: true,
       password: formResult.data.password,
       workspaceName: formResult.data.workspaceName,
-    });
-
-    if (!contractResult.success) {
-      inlineErrorMessage.value = "Check the registration details and try again.";
-      return null;
-    }
-
-    return contractResult.data;
+    };
   }
 
   function focusErrorField(code: RegistrationErrorCode | null): void {

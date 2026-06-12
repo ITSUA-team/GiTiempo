@@ -407,7 +407,7 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + this.refreshTtlMs);
     const accessTokenExpiresIn = Math.floor(this.accessTtlMs / 1_000);
 
-    const session = await this.db.transaction(async (tx) => {
+    return this.db.transaction(async (tx) => {
       await this.lockRegistrationKeys(tx, input.email, input.workspaceName);
 
       const existingUser = await this.findUserByEmail(input.email, tx);
@@ -464,21 +464,17 @@ export class AuthService {
       });
 
       return {
-        email: userRow.email,
-        firebaseUid: userRow.firebaseUid,
-        sub: userRow.id,
-        workspaceId: workspaceRow.id,
+        accessToken: this.tokens.signAccess({
+          email: userRow.email,
+          firebaseUid: userRow.firebaseUid,
+          role: 'admin',
+          sub: userRow.id,
+          workspaceId: workspaceRow.id,
+        }),
+        accessTokenExpiresIn,
+        refreshToken: token,
       };
     });
-
-    return {
-      accessToken: this.tokens.signAccess({
-        ...session,
-        role: 'admin',
-      }),
-      accessTokenExpiresIn,
-      refreshToken: token,
-    };
   }
 
   private async lockRegistrationKeys(

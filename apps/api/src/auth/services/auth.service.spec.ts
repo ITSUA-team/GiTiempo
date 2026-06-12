@@ -417,6 +417,51 @@ describe('AuthService', () => {
       expect(firebase.deleteUser).toHaveBeenCalledWith('firebase-register-1');
     });
 
+    it('treats access-token signing failures as transactional registration failures', async () => {
+      db.select = createSelectMock([[]]);
+      const txSelect = createSelectMock([[], []]);
+      const txInsert = createTransactionInsertMock([
+        [
+          {
+            id: 'user-register-1',
+            firebaseUid: 'firebase-register-1',
+            email: 'owner@example.com',
+          },
+        ],
+        [
+          {
+            id: 'workspace-register-1',
+            name: 'Acme Studio',
+          },
+        ],
+      ]);
+      const tx = {
+        execute: vi.fn().mockResolvedValue(undefined),
+        insert: txInsert,
+        select: txSelect,
+      };
+      let committed = false;
+      db.transaction.mockImplementation(async (callback) => {
+        const result = await callback(tx);
+        committed = true;
+        return result;
+      });
+      firebase.createEmailPasswordUser.mockResolvedValueOnce({
+        uid: 'firebase-register-1',
+        email: 'owner@example.com',
+        displayName: 'Owner Person',
+      });
+      vi.spyOn(tokens, 'signAccess').mockImplementation(() => {
+        throw new Error('signing failed');
+      });
+
+      await expect(service.register(registerInput)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(committed).toBe(false);
+      expect(firebase.deleteUser).toHaveBeenCalledWith('firebase-register-1');
+    });
+
     it('returns service unavailable when cleanup after persistence failure also fails', async () => {
       db.select = createSelectMock([[]]);
       db.transaction.mockRejectedValueOnce(new Error('db failed'));

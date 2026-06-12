@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
+import { useToast } from "primevue/usetoast";
 import { RouterView, useRoute, useRouter } from "vue-router";
-import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
+import {
+  createAppToast,
+  getErrorMessage,
+  WorkspaceHeader,
+  WorkspaceNavigation,
+} from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import TopBarTimer from "@/components/timer/TopBarTimer.vue";
 import { provideTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { appEnv } from "@/config/env";
 import { routeNames } from "@/constants/routes";
+import { workspaceClient } from "@/services/workspace-client";
 import { useAuthStore } from "@/stores/auth";
 import {
   USER_COUNTERPART_LABEL,
@@ -20,11 +27,14 @@ import {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const toast = useToast();
+const appToast = createAppToast(toast);
 const topBarTimerDialogController = provideTopBarTimerDialogController();
 const adminWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.adminAppUrl,
   fallbackPath: "/login",
 });
+let workspaceNameRequestToken: string | null = null;
 const topBarTimerDialogOpenRequestId = computed(
   () => topBarTimerDialogController.openRequestId.value,
 );
@@ -38,6 +48,32 @@ async function handleSignOut(): Promise<void> {
   await authStore.logout();
   await router.push({ name: routeNames.login });
 }
+
+watch(
+  () => authStore.accessToken,
+  async (accessToken) => {
+    if (!accessToken || workspaceNameRequestToken === accessToken) return;
+
+    workspaceNameRequestToken = accessToken;
+
+    try {
+      const workspace = await workspaceClient.getWorkspace();
+      authStore.setWorkspaceName(workspace.name);
+    } catch (error) {
+      workspaceNameRequestToken = null;
+      appToast.showErrorToast({
+        detail: getErrorMessage(error, "Could not load workspace name."),
+        error,
+        logContext: {
+          action: "load-workspace-name",
+          feature: "user-shell",
+        },
+        summary: "Could not load workspace",
+      });
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

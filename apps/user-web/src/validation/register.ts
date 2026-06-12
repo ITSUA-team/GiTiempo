@@ -1,7 +1,8 @@
+import { registerRequestSchema } from "@gitiempo/shared";
 import { z } from "zod";
 
-export const registerFormSchema = z
-  .object({
+export const registerFormSchema = registerRequestSchema
+  .extend({
     confirmPassword: z.string().min(1, "Confirm your password."),
     email: z.string().trim().min(1, "Enter your work email.").email(
       "Enter a valid work email address.",

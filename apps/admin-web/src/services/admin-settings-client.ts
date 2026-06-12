@@ -1,13 +1,12 @@
 import {
-	updateWorkspaceSchema,
 	updateWorkspaceSettingsSchema,
-	workspaceResponseSchema,
 	workspaceSettingsResponseSchema,
 	type UpdateWorkspaceInput,
 	type UpdateWorkspaceSettingsInput,
 	type WorkspaceResponse,
 	type WorkspaceSettingsResponse,
 } from '@gitiempo/shared';
+import { createWorkspaceClient } from '@gitiempo/web-shared';
 import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { getAuthenticatedAppApiClient } from '@/services/api-client';
@@ -32,12 +31,11 @@ export interface AdminSettingsClient {
 export function createAdminSettingsClient({
 	apiClient,
 }: AdminSettingsClientOptions): AdminSettingsClient {
+	const workspaceClient = createWorkspaceClient({ apiClient });
+
 	return {
 		getWorkspace() {
-			return apiClient.requestJson({
-				path: '/workspace',
-				responseSchema: workspaceResponseSchema,
-			});
+			return workspaceClient.getWorkspace();
 		},
 
 		getWorkspaceSettings() {
@@ -48,12 +46,7 @@ export function createAdminSettingsClient({
 		},
 
 		async updateWorkspace(input) {
-			return apiClient.requestJson({
-				body: updateWorkspaceSchema.parse(input),
-				method: 'PATCH',
-				path: '/workspace',
-				responseSchema: workspaceResponseSchema,
-			});
+			return workspaceClient.updateWorkspace(input);
 		},
 
 		async updateWorkspaceSettings(input) {
