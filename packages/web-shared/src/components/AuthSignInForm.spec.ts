@@ -97,4 +97,11 @@ describe("AuthSignInForm", () => {
       "Create workspace",
     );
   });
+
+  it("associates the email label with the rendered input", () => {
+    const wrapper = mountForm();
+
+    expect(wrapper.get('label[for="sign-in-email"]').text()).toBe("Email");
+    expect(wrapper.get("input#sign-in-email").attributes("name")).toBe("email");
+  });
 });

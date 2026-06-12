@@ -5,6 +5,7 @@ import Button from "primevue/button";
 import {
   AuthIntroPanel,
   AuthSignInForm,
+  StandaloneSplitPage,
   type EmailPasswordSignInInput,
 } from "@gitiempo/web-shared";
 import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
@@ -82,8 +83,8 @@ function goToRegister(): void {
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
-    <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
+  <StandaloneSplitPage>
+    <template #left>
       <AuthIntroPanel
         workspace-label="Time tracking for modern product teams"
         hero-title="Track work where your tasks already live."
@@ -95,7 +96,9 @@ function goToRegister(): void {
         counterpart-prompt="Need admin tools? Open"
         product-tagline="GiTiempo"
       />
+    </template>
 
+    <template #right>
       <section
         class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
       >
@@ -121,6 +124,6 @@ function goToRegister(): void {
           </template>
         </AuthSignInForm>
       </section>
-    </div>
-  </div>
+    </template>
+  </StandaloneSplitPage>
 </template>

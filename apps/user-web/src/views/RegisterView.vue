@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { StandaloneSplitPage, SurfaceCard } from "@gitiempo/web-shared";
+
 import RegisterFormPanel from "@/components/auth/RegisterFormPanel.vue";
 import RegisterIntroPanel from "@/components/auth/RegisterIntroPanel.vue";
 import { useRegisterForm } from "@/composables/auth/useRegisterForm";
 
 const {
   fieldErrors,
-  form,
   handleRegister,
   inlineErrorMessage,
   isSubmitting,
@@ -13,28 +14,30 @@ const {
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
-    <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
+  <StandaloneSplitPage>
+    <template #left>
       <RegisterIntroPanel :show-mobile="false" />
+    </template>
 
+    <template #right>
       <section class="bg-app-bg flex w-full flex-1 flex-col">
         <RegisterIntroPanel :show-desktop="false" />
 
         <div class="flex w-full flex-1 items-start justify-center px-5 py-6 sm:px-8 sm:py-8 lg:items-center lg:px-12 lg:py-12">
-          <RegisterFormPanel
-            v-model:confirm-password="form.confirmPassword"
-            v-model:email="form.email"
-            v-model:full-name="form.fullName"
-            v-model:owner-acknowledgement="form.ownerAcknowledgement"
-            v-model:password="form.password"
-            v-model:workspace-name="form.workspaceName"
-            :field-errors="fieldErrors"
-            :inline-error-message="inlineErrorMessage"
-            :is-submitting="isSubmitting"
-            @submit="handleRegister"
-          />
+          <SurfaceCard
+            border
+            padding-class="p-5 sm:p-6 lg:p-8"
+            class="w-full max-w-[500px]"
+          >
+            <RegisterFormPanel
+              :field-errors="fieldErrors"
+              :inline-error-message="inlineErrorMessage"
+              :is-submitting="isSubmitting"
+              @submit="handleRegister"
+            />
+          </SurfaceCard>
         </div>
       </section>
-    </div>
-  </div>
+    </template>
+  </StandaloneSplitPage>
 </template>

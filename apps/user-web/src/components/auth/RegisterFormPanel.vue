@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Form } from "@primevue/forms";
+import { zodResolver } from "@primevue/forms/resolvers/zod";
 import { RouterLink } from "vue-router";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
@@ -10,6 +12,11 @@ import { routeNames } from "@/router";
 import type {
   RegisterFieldErrors,
 } from "@/composables/auth/useRegisterForm";
+import {
+  registerFormInitialValues,
+  registerFormSchema,
+  type RegisterFormValues,
+} from "@/validation/register";
 
 defineProps<{
   fieldErrors: RegisterFieldErrors;
@@ -17,18 +24,9 @@ defineProps<{
   isSubmitting: boolean;
 }>();
 
-defineEmits<{
-  submit: [];
+const emit = defineEmits<{
+  submit: [payload: RegisterFormValues];
 }>();
-
-const email = defineModel<string>("email", { required: true });
-const fullName = defineModel<string>("fullName", { required: true });
-const workspaceName = defineModel<string>("workspaceName", { required: true });
-const password = defineModel<string>("password", { required: true });
-const confirmPassword = defineModel<string>("confirmPassword", { required: true });
-const ownerAcknowledgement = defineModel<boolean>("ownerAcknowledgement", {
-  required: true,
-});
 
 const passwordInputProps: Record<string, string> = {
   "data-testid": "register-password",
@@ -36,11 +34,34 @@ const passwordInputProps: Record<string, string> = {
 const confirmPasswordInputProps: Record<string, string> = {
   "data-testid": "register-confirm-password",
 };
+const resolver = zodResolver(registerFormSchema);
+
+function getFieldMessage(
+  formMessage: string | undefined,
+  apiMessage: string | null | undefined,
+): string | null {
+  return formMessage ?? apiMessage ?? null;
+}
+
+function handleSubmit(event: {
+  valid: boolean;
+  values: Record<string, unknown>;
+}): void {
+  if (!event.valid) {
+    return;
+  }
+
+  const result = registerFormSchema.safeParse(event.values);
+
+  if (result.success) {
+    emit("submit", result.data);
+  }
+}
 </script>
 
 <template>
   <div
-    class="bg-surface-primary border-divider shadow-card flex w-full max-w-[500px] flex-col gap-6 rounded-lg border p-5 sm:p-6 lg:p-8"
+    class="flex flex-col gap-6"
     data-testid="register-panel"
   >
     <div class="flex flex-col gap-2">
@@ -52,9 +73,12 @@ const confirmPasswordInputProps: Record<string, string> = {
       </p>
     </div>
 
-    <form
+    <Form
+      v-slot="$form"
       class="flex flex-col gap-4"
-      @submit.prevent="$emit('submit')"
+      :initial-values="registerFormInitialValues"
+      :resolver="resolver"
+      @submit="handleSubmit"
     >
       <div class="flex flex-col gap-1">
         <label
@@ -65,23 +89,23 @@ const confirmPasswordInputProps: Record<string, string> = {
         </label>
         <InputText
           id="register-email"
-          v-model="email"
+          name="email"
           type="email"
           autocomplete="email"
           placeholder="you@workspace.com"
           class="h-[42px] w-full"
-          :invalid="!!fieldErrors.email"
+          :invalid="$form.email?.invalid || !!fieldErrors.email"
           data-testid="register-email"
           fluid
         />
         <Message
-          v-if="fieldErrors.email"
+          v-if="getFieldMessage($form.email?.error?.message, fieldErrors.email)"
           severity="error"
           size="small"
           variant="simple"
           class="text-xs"
         >
-          {{ fieldErrors.email }}
+          {{ getFieldMessage($form.email?.error?.message, fieldErrors.email) }}
         </Message>
       </div>
 
@@ -94,22 +118,22 @@ const confirmPasswordInputProps: Record<string, string> = {
         </label>
         <InputText
           id="register-full-name"
-          v-model="fullName"
+          name="fullName"
           autocomplete="name"
           placeholder="Alexey Tsukanov"
           class="h-[42px] w-full"
-          :invalid="!!fieldErrors.fullName"
+          :invalid="$form.fullName?.invalid || !!fieldErrors.fullName"
           data-testid="register-full-name"
           fluid
         />
         <Message
-          v-if="fieldErrors.fullName"
+          v-if="getFieldMessage($form.fullName?.error?.message, fieldErrors.fullName)"
           severity="error"
           size="small"
           variant="simple"
           class="text-xs"
         >
-          {{ fieldErrors.fullName }}
+          {{ getFieldMessage($form.fullName?.error?.message, fieldErrors.fullName) }}
         </Message>
       </div>
 
@@ -122,22 +146,22 @@ const confirmPasswordInputProps: Record<string, string> = {
         </label>
         <InputText
           id="register-workspace-name"
-          v-model="workspaceName"
+          name="workspaceName"
           autocomplete="organization"
           placeholder="Workspace Alpha"
           class="h-[42px] w-full"
-          :invalid="!!fieldErrors.workspaceName"
+          :invalid="$form.workspaceName?.invalid || !!fieldErrors.workspaceName"
           data-testid="register-workspace-name"
           fluid
         />
         <Message
-          v-if="fieldErrors.workspaceName"
+          v-if="getFieldMessage($form.workspaceName?.error?.message, fieldErrors.workspaceName)"
           severity="error"
           size="small"
           variant="simple"
           class="text-xs"
         >
-          {{ fieldErrors.workspaceName }}
+          {{ getFieldMessage($form.workspaceName?.error?.message, fieldErrors.workspaceName) }}
         </Message>
       </div>
 
@@ -149,25 +173,25 @@ const confirmPasswordInputProps: Record<string, string> = {
           Password
         </label>
         <Password
-          v-model="password"
+          name="password"
           input-id="register-password"
           autocomplete="new-password"
           placeholder="••••••••••"
           :feedback="false"
           :toggle-mask="false"
-          :invalid="!!fieldErrors.password"
+          :invalid="$form.password?.invalid || !!fieldErrors.password"
           fluid
           input-class="h-[42px] w-full"
           :input-props="passwordInputProps"
         />
         <Message
-          v-if="fieldErrors.password"
+          v-if="getFieldMessage($form.password?.error?.message, fieldErrors.password)"
           severity="error"
           size="small"
           variant="simple"
           class="text-xs"
         >
-          {{ fieldErrors.password }}
+          {{ getFieldMessage($form.password?.error?.message, fieldErrors.password) }}
         </Message>
       </div>
 
@@ -179,25 +203,25 @@ const confirmPasswordInputProps: Record<string, string> = {
           Confirm password
         </label>
         <Password
-          v-model="confirmPassword"
+          name="confirmPassword"
           input-id="register-confirm-password"
           autocomplete="new-password"
           placeholder="••••••••••"
           :feedback="false"
           :toggle-mask="false"
-          :invalid="!!fieldErrors.confirmPassword"
+          :invalid="$form.confirmPassword?.invalid || !!fieldErrors.confirmPassword"
           fluid
           input-class="h-[42px] w-full"
           :input-props="confirmPasswordInputProps"
         />
         <Message
-          v-if="fieldErrors.confirmPassword"
+          v-if="getFieldMessage($form.confirmPassword?.error?.message, fieldErrors.confirmPassword)"
           severity="error"
           size="small"
           variant="simple"
           class="text-xs"
         >
-          {{ fieldErrors.confirmPassword }}
+          {{ getFieldMessage($form.confirmPassword?.error?.message, fieldErrors.confirmPassword) }}
         </Message>
       </div>
 
@@ -208,10 +232,10 @@ const confirmPasswordInputProps: Record<string, string> = {
         >
           <Checkbox
             id="register-owner-acknowledgement"
-            v-model="ownerAcknowledgement"
+            name="ownerAcknowledgement"
             binary
             input-id="register-owner-acknowledgement"
-            :invalid="!!fieldErrors.ownerAcknowledgement"
+            :invalid="$form.ownerAcknowledgement?.invalid || !!fieldErrors.ownerAcknowledgement"
             data-testid="register-owner-acknowledgement"
           />
           <span class="text-text-muted text-[13px] leading-5">
@@ -219,13 +243,13 @@ const confirmPasswordInputProps: Record<string, string> = {
           </span>
         </label>
         <Message
-          v-if="fieldErrors.ownerAcknowledgement"
+          v-if="getFieldMessage($form.ownerAcknowledgement?.error?.message, fieldErrors.ownerAcknowledgement)"
           severity="error"
           size="small"
           variant="simple"
           class="text-xs"
         >
-          {{ fieldErrors.ownerAcknowledgement }}
+          {{ getFieldMessage($form.ownerAcknowledgement?.error?.message, fieldErrors.ownerAcknowledgement) }}
         </Message>
       </div>
 
@@ -260,6 +284,6 @@ const confirmPasswordInputProps: Record<string, string> = {
           </RouterLink>
         </div>
       </div>
-    </form>
+    </Form>
   </div>
 </template>

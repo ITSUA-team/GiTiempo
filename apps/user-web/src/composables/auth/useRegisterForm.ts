@@ -11,60 +11,18 @@ import {
   getErrorMessage,
 } from "@gitiempo/web-shared";
 import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
-import { z } from "zod";
 
 import { routeNames } from "@/router";
 import { getAuthRuntime } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
-
-export interface RegisterFormValues {
-  confirmPassword: string;
-  email: string;
-  fullName: string;
-  ownerAcknowledgement: boolean;
-  password: string;
-  workspaceName: string;
-}
+import {
+  registerFormSchema,
+  type RegisterFormValues,
+} from "@/validation/register";
 
 export type RegisterFieldName = keyof RegisterFormValues;
 
 export type RegisterFieldErrors = Record<RegisterFieldName, string | null>;
-
-const registerFormSchema = z
-  .object({
-    confirmPassword: z.string().min(1, "Confirm your password."),
-    email: z.string().trim().min(1, "Enter your work email.").email(
-      "Enter a valid work email address.",
-    ),
-    fullName: z.string().trim().min(1, "Enter your full name."),
-    ownerAcknowledgement: z.boolean(),
-    password: z.string().min(1, "Enter a password.").min(
-      8,
-      "Choose a password with at least 8 characters.",
-    ),
-    workspaceName: z
-      .string()
-      .trim()
-      .min(1, "Enter your workspace name.")
-      .max(255, "Workspace name must be 255 characters or fewer."),
-  })
-  .superRefine((values, ctx) => {
-    if (values.password !== values.confirmPassword) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Passwords do not match.",
-        path: ["confirmPassword"],
-      });
-    }
-
-    if (!values.ownerAcknowledgement) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Accept the workspace owner responsibility to continue.",
-        path: ["ownerAcknowledgement"],
-      });
-    }
-  });
 
 function createEmptyFieldErrors(): RegisterFieldErrors {
   return {
@@ -109,14 +67,6 @@ export function useRegisterForm() {
   const toast = useToast();
   const appToast = createAppToast(toast);
 
-  const form = reactive<RegisterFormValues>({
-    confirmPassword: "",
-    email: "",
-    fullName: "",
-    ownerAcknowledgement: false,
-    password: "",
-    workspaceName: "",
-  });
   const fieldErrors = reactive<RegisterFieldErrors>(createEmptyFieldErrors());
   const inlineErrorMessage = ref<string | null>(null);
   const isSubmitting = ref(false);
@@ -134,22 +84,13 @@ export function useRegisterForm() {
     clearFieldErrors();
   }
 
-  function getRegisterRequest(): RegisterRequest | null {
+  function getRegisterRequest(values: RegisterFormValues): RegisterRequest | null {
     clearSubmissionErrors();
 
-    const formResult = registerFormSchema.safeParse(form);
+    const formResult = registerFormSchema.safeParse(values);
 
     if (!formResult.success) {
-      const flattened = formResult.error.flatten().fieldErrors;
-
-      fieldErrors.confirmPassword = flattened.confirmPassword?.[0] ?? null;
-      fieldErrors.email = flattened.email?.[0] ?? null;
-      fieldErrors.fullName = flattened.fullName?.[0] ?? null;
-      fieldErrors.ownerAcknowledgement =
-        flattened.ownerAcknowledgement?.[0] ?? null;
-      fieldErrors.password = flattened.password?.[0] ?? null;
-      fieldErrors.workspaceName = flattened.workspaceName?.[0] ?? null;
-
+      inlineErrorMessage.value = "Check the registration details and try again.";
       return null;
     }
 
@@ -190,12 +131,12 @@ export function useRegisterForm() {
     await router.replace(redirectTarget.value ?? { name: routeNames.dashboard });
   }
 
-  async function handleRegister(): Promise<void> {
+  async function handleRegister(values: RegisterFormValues): Promise<void> {
     if (isSubmitting.value) {
       return;
     }
 
-    const request = getRegisterRequest();
+    const request = getRegisterRequest(values);
 
     if (!request) {
       return;
@@ -229,7 +170,6 @@ export function useRegisterForm() {
 
   return {
     fieldErrors,
-    form,
     handleRegister,
     inlineErrorMessage,
     isSubmitting,

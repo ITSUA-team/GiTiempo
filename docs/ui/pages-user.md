@@ -142,9 +142,8 @@
 - Use the approved `Register New Workflow` `.pen` screen as the desktop parity source and `Register New Workflow Mobile` as the mobile parity source.
 - The page creates the first workspace owner account for a new workspace only after an approved backend/API registration contract exists. It does not replace invite acceptance for members joining an existing workspace.
 - The left desktop brand panel explains the new-workspace flow: create owner account, name the workspace, continue to dashboard.
-- The mobile layout keeps the same content hierarchy while stacking the brand header, contract notice, fields, owner acknowledgement, and actions in one column.
+- The mobile layout keeps the same content hierarchy while stacking the brand header, fields, owner acknowledgement, and actions in one column.
 - The main panel title is `Create workspace` with helper copy explaining that the account becomes the initial workspace owner after registration succeeds.
-- Until backend/API support is approved, show the warning notice `Registration requires the approved backend contract before implementation.` on desktop and equivalent short copy on mobile.
 - The default form fields are ordered `Work email`, `Full name`, `Workspace name`, `Password`, then `Confirm password`.
 - Password fields use PrimeVue `<Password>` controls with feedback disabled unless a later approved password-strength requirement adds explicit feedback behavior.
 - The owner acknowledgement checkbox follows the password fields and must be checked before submission. Desktop copy is `I agree to receive workspace email and accept the workspace owner responsibility.`

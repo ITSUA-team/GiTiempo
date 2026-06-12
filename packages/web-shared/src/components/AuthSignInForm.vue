@@ -73,7 +73,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
             Email
           </label>
           <InputText
-            input-id="sign-in-email"
+            id="sign-in-email"
             name="email"
             type="email"
             autocomplete="email"

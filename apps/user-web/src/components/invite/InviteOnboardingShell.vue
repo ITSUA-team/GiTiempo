@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SurfaceCard } from "@gitiempo/web-shared";
+import { StandaloneSplitPage, SurfaceCard } from "@gitiempo/web-shared";
 
 export interface InviteOnboardingStep {
   description: string;
@@ -17,8 +17,8 @@ defineProps<{
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
-    <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
+  <StandaloneSplitPage>
+    <template #left>
       <section
         class="bg-surface-primary flex flex-1 flex-col justify-between px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-12"
       >
@@ -82,7 +82,9 @@ defineProps<{
           </span>
         </div>
       </section>
+    </template>
 
+    <template #right>
       <section
         class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-10 lg:py-10"
       >
@@ -93,6 +95,6 @@ defineProps<{
           <slot />
         </SurfaceCard>
       </section>
-    </div>
-  </div>
+    </template>
+  </StandaloneSplitPage>
 </template>
