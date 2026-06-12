@@ -1,8 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { DRIZZLE } from '../src/db/db.constants';
+import type { DrizzleDB } from '../src/db/db.types';
+import { users } from '../src/db/schema';
 
 /**
  * Proves the per-route throttle on `POST /auth/login` trips at 10/min
@@ -17,6 +21,7 @@ import { AppModule } from '../src/app.module';
  */
 describe('Auth throttling (e2e)', () => {
   let app: INestApplication;
+  let db: DrizzleDB;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -24,6 +29,7 @@ describe('Auth throttling (e2e)', () => {
     }).compile();
     app = moduleFixture.createNestApplication();
     await app.init();
+    db = app.get<DrizzleDB>(DRIZZLE);
   });
 
   afterAll(async () => {
@@ -58,27 +64,44 @@ describe('Auth throttling (e2e)', () => {
 
   it('rejects rapid-fire /auth/register bursts with 429 and the shared rate-limited code', async () => {
     const server = app.getHttpServer();
-    const statuses: number[] = [];
-    const codes: Array<string | undefined> = [];
+    const suffix =
+      Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const responses: Array<{ email: string; status: number; code?: string }> =
+      [];
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 7; i++) {
+      const email = `throttle.${suffix}.${i}@example.com`;
       const res = await request(server)
         .post('/auth/register')
         .send({
-          email: `throttle.${i}@example.com`,
+          email,
           fullName: 'Owner Person',
           ownerAcknowledgement: true,
           password: 'password123',
-          workspaceName: '',
+          workspaceName: `Throttle Workspace ${suffix} ${i}`,
         });
-      statuses.push(res.status);
-      codes.push(res.body.code);
+      responses.push({ code: res.body.code, email, status: res.status });
     }
 
-    for (const status of statuses) {
-      expect([400, 429]).toContain(status);
+    for (const response of responses) {
+      expect([201, 429]).toContain(response.status);
     }
-    expect(statuses.some((status) => status === 429)).toBe(true);
-    expect(codes).toContain('rate_limited');
+    expect(
+      responses.filter((response) => response.status === 201),
+    ).toHaveLength(5);
+
+    const throttled = responses.find((response) => response.status === 429);
+    expect(throttled).toBeDefined();
+    if (!throttled) {
+      throw new Error('Expected the register throttle to reject one request');
+    }
+    expect(throttled.code).toBe('rate_limited');
+
+    const [throttledUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, throttled.email))
+      .limit(1);
+    expect(throttledUser).toBeUndefined();
   });
 });

@@ -75,8 +75,8 @@ describe('FakeFirebaseAdminService', () => {
       displayName: 'Owner Person',
     });
 
-    expect(created).toEqual({
-      uid: 'fake-firebase-user-1',
+    expect(created).toMatchObject({
+      uid: expect.stringMatching(/^fake-firebase-user-[a-f0-9]{16}$/),
       email: 'owner@example.com',
       displayName: 'Owner Person',
     });

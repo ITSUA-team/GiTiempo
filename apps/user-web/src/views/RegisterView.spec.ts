@@ -15,6 +15,13 @@ import {
   setAuthRuntimeForTesting,
   type AuthRuntime,
 } from "@/services/auth-runtime";
+
+const toastAddSpy = vi.fn();
+
+vi.mock("primevue/usetoast", () => ({
+  useToast: () => ({ add: toastAddSpy }),
+}));
+
 type TokenPairResolver = Parameters<
   ConstructorParameters<typeof Promise<TokenPairResponse>>[0]
 >[0];
@@ -116,6 +123,7 @@ describe("RegisterView", () => {
     clearRefreshToken();
     resetAuthRuntimeForTesting();
     setAuthRuntimeForTesting(createRuntimeMock());
+    toastAddSpy.mockClear();
   });
 
   afterEach(() => {
@@ -279,6 +287,14 @@ describe("RegisterView", () => {
 
     expect(wrapper.get('[data-testid="register-inline-error"]').text()).toContain(
       "This work email is already registered.",
+    );
+    expect(toastAddSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail:
+          "This work email is already registered. Sign in instead or use another email.",
+        severity: "error",
+        summary: "Could not create workspace",
+      }),
     );
     expect(router.currentRoute.value.name).toBe(routeNames.register);
   });

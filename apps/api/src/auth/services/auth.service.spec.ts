@@ -9,6 +9,13 @@ import type { RegisterRequest } from '@gitiempo/shared';
 import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
 import { FirebaseAdminAuthError } from './firebase-admin.interface';
+import {
+  refreshTokens,
+  users as usersTable,
+  workspaceMembers,
+  workspaceSettings,
+  workspaces,
+} from '../../db/schema';
 
 const envMap: Record<string, string> = {
   JWT_ACCESS_SECRET: 'x'.repeat(40),
@@ -58,13 +65,24 @@ function createSelectMock(queue: unknown[][]) {
   }));
 }
 
-function createTransactionInsertMock(returningQueue: unknown[][] = []) {
-  return vi.fn(() => ({
-    values: vi.fn(() => ({
-      returning: vi
-        .fn()
-        .mockImplementation(async () => returningQueue.shift() ?? []),
-    })),
+interface RecordedInsert {
+  table: unknown;
+  values: unknown;
+}
+
+function createTransactionInsertMock(
+  returningQueue: unknown[][] = [],
+  recordedInserts: RecordedInsert[] = [],
+) {
+  return vi.fn((table: unknown) => ({
+    values: vi.fn((values: unknown) => {
+      recordedInserts.push({ table, values });
+      return {
+        returning: vi
+          .fn()
+          .mockImplementation(async () => returningQueue.shift() ?? []),
+      };
+    }),
   }));
 }
 
@@ -219,21 +237,25 @@ describe('AuthService', () => {
     it('creates the Firebase identity, workspace owner session, and token pair', async () => {
       db.select = createSelectMock([[]]);
       const txSelect = createSelectMock([[], []]);
-      const txInsert = createTransactionInsertMock([
+      const recordedInserts: RecordedInsert[] = [];
+      const txInsert = createTransactionInsertMock(
         [
-          {
-            id: 'user-register-1',
-            firebaseUid: 'firebase-register-1',
-            email: 'owner@example.com',
-          },
+          [
+            {
+              id: 'user-register-1',
+              firebaseUid: 'firebase-register-1',
+              email: 'owner@example.com',
+            },
+          ],
+          [
+            {
+              id: 'workspace-register-1',
+              name: 'Acme Studio',
+            },
+          ],
         ],
-        [
-          {
-            id: 'workspace-register-1',
-            name: 'Acme Studio',
-          },
-        ],
-      ]);
+        recordedInserts,
+      );
       const tx = {
         execute: vi.fn().mockResolvedValue(undefined),
         insert: txInsert,
@@ -255,7 +277,36 @@ describe('AuthService', () => {
       });
       expect(db.transaction).toHaveBeenCalledOnce();
       expect(tx.execute).toHaveBeenCalledTimes(2);
-      expect(txInsert).toHaveBeenCalledTimes(5);
+      expect(recordedInserts.map(({ table }) => table)).toEqual([
+        usersTable,
+        workspaces,
+        workspaceSettings,
+        workspaceMembers,
+        refreshTokens,
+      ]);
+      expect(recordedInserts[0]?.values).toMatchObject({
+        avatarUrl: null,
+        displayName: 'Owner Person',
+        email: 'owner@example.com',
+        firebaseUid: 'firebase-register-1',
+      });
+      expect(recordedInserts[1]?.values).toMatchObject({
+        name: 'Acme Studio',
+      });
+      expect(recordedInserts[2]?.values).toMatchObject({
+        workspaceId: 'workspace-register-1',
+      });
+      expect(recordedInserts[3]?.values).toMatchObject({
+        role: 'admin',
+        userId: 'user-register-1',
+        workspaceId: 'workspace-register-1',
+      });
+      expect(recordedInserts[4]?.values).toMatchObject({
+        expiresAt: expect.any(Date),
+        familyId: expect.any(String),
+        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        userId: 'user-register-1',
+      });
       expect(firebase.deleteUser).not.toHaveBeenCalled();
       expect(pair.refreshToken.length).toBeGreaterThan(20);
 

@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
 import {
   DecodedFirebaseToken,
@@ -85,7 +86,10 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
     }
 
     const createdUser = {
-      uid: `fake-firebase-user-${this.registeredUsers.size + 1}`,
+      uid: `fake-firebase-user-${createHash('sha256')
+        .update(normalizedEmail)
+        .digest('hex')
+        .slice(0, 16)}`,
       email: normalizedEmail,
       displayName: input.displayName,
     } satisfies RegisteredFirebaseUser;
