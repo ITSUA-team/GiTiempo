@@ -5,6 +5,7 @@ import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
 import {
   normalizeReportDateRangeValue,
+  filterAutocompleteOptions,
   reportFilterFormSchema,
   type ReportDatePickerRangeValue,
   type ReportFilterFormValues,
@@ -55,32 +56,19 @@ const initialValues = computed<ReportFilterFormValues>(() => ({
 
 const resolver = zodResolver(reportFilterFormSchema);
 
-function filterOptions<Option extends { label: string }>(
-  options: Option[],
-  query: string,
-): Option[] {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (!normalizedQuery) {
-    return [...options];
-  }
-
-  return options.filter((option) =>
-    option.label.toLowerCase().includes(normalizedQuery),
-  );
-}
-
 function handleProjectComplete(event: { query: string }): void {
-  projectSuggestions.value = filterOptions(
+  projectSuggestions.value = filterAutocompleteOptions(
     props.projectOptions,
     event.query,
+    (option) => option.label,
   );
 }
 
 function handleMemberComplete(event: { query: string }): void {
-  memberSuggestions.value = filterOptions(
+  memberSuggestions.value = filterAutocompleteOptions(
     props.memberOptions,
     event.query,
+    (option) => option.label,
   );
 }
 

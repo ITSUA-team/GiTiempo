@@ -5,6 +5,8 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
+  filterAutocompleteOptions,
+  filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
   managementTableFilterSelectPt,
@@ -85,33 +87,8 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
   { label: 'Non-billable', value: 'withoutBillable' },
 ];
 
-function filterLabels(options: string[], query: string): string[] {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (!normalizedQuery) {
-    return [...options];
-  }
-
-  return options.filter((option) => option.toLowerCase().includes(normalizedQuery));
-}
-
-function filterOptions<Option extends { label: string }>(
-  options: Option[],
-  query: string,
-): Option[] {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (!normalizedQuery) {
-    return [...options];
-  }
-
-  return options.filter((option) =>
-    option.label.toLowerCase().includes(normalizedQuery),
-  );
-}
-
 function handleGlobalSearchComplete(event: AutoCompleteCompleteEvent): void {
-  globalSearchSuggestions.value = filterLabels(
+  globalSearchSuggestions.value = filterAutocompleteStrings(
     globalSearchOptions.value,
     event.query,
   );
@@ -122,9 +99,10 @@ function handleGlobalSearchUpdate(value: string | null | undefined): void {
 }
 
 function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
-  projectFilterSuggestions.value = filterOptions(
+  projectFilterSuggestions.value = filterAutocompleteOptions(
     props.projectOptions,
     event.query,
+    (option) => option.label,
   );
 }
 
@@ -143,9 +121,10 @@ function handleProjectFilterUpdate(
 }
 
 function handleMemberFilterComplete(event: AutoCompleteCompleteEvent): void {
-  memberFilterSuggestions.value = filterOptions(
+  memberFilterSuggestions.value = filterAutocompleteOptions(
     props.memberOptions,
     event.query,
+    (option) => option.label,
   );
 }
 

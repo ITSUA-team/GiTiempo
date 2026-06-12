@@ -8,6 +8,8 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
+  filterAutocompleteOptions,
+  filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
   managementTableFilterSelectPt,
@@ -63,42 +65,18 @@ const selectedMemberFilterOption = computed(
     ) ?? null,
 );
 
-function filterSuggestions(options: string[], query: string): string[] {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (!normalizedQuery) {
-    return [...options];
-  }
-
-  return options.filter((option) => option.toLowerCase().includes(normalizedQuery));
-}
-
-function filterOptions<Option extends { label: string }>(
-  options: Option[],
-  query: string,
-): Option[] {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (!normalizedQuery) {
-    return [...options];
-  }
-
-  return options.filter((option) =>
-    option.label.toLowerCase().includes(normalizedQuery),
-  );
-}
-
 function handleProjectQueryComplete(event: AutoCompleteCompleteEvent): void {
-  projectQuerySuggestions.value = filterSuggestions(
+  projectQuerySuggestions.value = filterAutocompleteStrings(
     projectQueryOptions.value,
     event.query,
   );
 }
 
 function handleMemberFilterComplete(event: AutoCompleteCompleteEvent): void {
-  memberFilterSuggestions.value = filterOptions(
+  memberFilterSuggestions.value = filterAutocompleteOptions(
     props.memberFilterOptions,
     event.query,
+    (option) => option.label,
   );
 }
 

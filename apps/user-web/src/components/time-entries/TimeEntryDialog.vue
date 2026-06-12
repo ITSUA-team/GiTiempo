@@ -6,6 +6,7 @@ import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
+import { filterAutocompleteOptions } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
@@ -117,14 +118,10 @@ watch(
 );
 
 function buildProjectSuggestions(queryValue: string): ProjectResponse[] {
-  const query = queryValue.trim().toLowerCase();
-
-  if (!query) {
-    return [...props.projects];
-  }
-
-  return props.projects.filter((project) =>
-    project.name.toLowerCase().includes(query),
+  return filterAutocompleteOptions(
+    props.projects,
+    queryValue,
+    (project) => project.name,
   );
 }
 

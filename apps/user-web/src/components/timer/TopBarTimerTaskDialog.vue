@@ -6,7 +6,7 @@ import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { useIsMobileViewport } from "@gitiempo/web-shared";
+import { filterAutocompleteOptions, useIsMobileViewport } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
@@ -168,12 +168,6 @@ function findTaskOption(taskId: string | null): TaskPickerOption | null {
   return props.taskOptions.find((task) => task.id === taskId) ?? null;
 }
 
-function matchesQuery(label: string, query: string): boolean {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  return normalizedQuery === "" || label.toLowerCase().includes(normalizedQuery);
-}
-
 function isProjectOption(
   value: ProjectAutoCompleteValue | undefined,
 ): value is ProjectResponse {
@@ -215,14 +209,20 @@ function handleMobileTaskUpdate(value: TaskAutoCompleteValue | undefined): void 
 }
 
 function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
-  projectSuggestions.value = props.projectOptions.filter((project) =>
-    matchesQuery(project.name, event.query),
+  projectSuggestions.value = filterAutocompleteOptions(
+    props.projectOptions,
+    event.query,
+    (project) => project.name,
   );
 }
 
 function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
   taskSuggestions.value = [
-    ...props.taskOptions.filter((task) => matchesQuery(task.title, event.query)),
+    ...filterAutocompleteOptions(
+      props.taskOptions,
+      event.query,
+      (task) => task.title,
+    ),
     newTaskOption,
   ];
 }

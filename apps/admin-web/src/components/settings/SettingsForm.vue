@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { SurfaceCard } from '@gitiempo/web-shared';
+import { SurfaceCard, filterAutocompleteOptions } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
@@ -90,23 +90,12 @@ const emit = defineEmits<{
 	save: [];
 }>();
 
-function filterOptions<Option extends { label: string }>(
-	options: Option[],
-	query: string,
-): Option[] {
-	const normalizedQuery = query.trim().toLowerCase();
-
-	if (!normalizedQuery) {
-		return [...options];
-	}
-
-	return options.filter((option) =>
-		option.label.toLowerCase().includes(normalizedQuery),
-	);
-}
-
 function handleTimeZoneComplete(event: { query: string }): void {
-	timeZoneSuggestions.value = filterOptions(selectTimeZoneOptions.value, event.query);
+  timeZoneSuggestions.value = filterAutocompleteOptions(
+    selectTimeZoneOptions.value,
+    event.query,
+    (option) => option.label,
+  );
 }
 
 function handleTimeZoneUpdate(value: SettingsTimeZoneOption | string | null): void {

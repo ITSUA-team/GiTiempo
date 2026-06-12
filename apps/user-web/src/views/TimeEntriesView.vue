@@ -10,6 +10,7 @@ import {
   createAppToast,
   EntryActionButton,
   SurfaceCard,
+  filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
@@ -154,20 +155,12 @@ const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
   return [...optionsByTaskId.values()];
 });
 
-function filterProjectOptions(query: string): ProjectResponse[] {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (!normalizedQuery) {
-    return [...visibleProjects.value];
-  }
-
-  return visibleProjects.value.filter((project) =>
-    project.name.toLowerCase().includes(normalizedQuery),
-  );
-}
-
 function handleProjectFilterComplete(event: { query: string }): void {
-  projectFilterSuggestions.value = filterProjectOptions(event.query);
+  projectFilterSuggestions.value = filterAutocompleteOptions(
+    visibleProjects.value,
+    event.query,
+    (project) => project.name,
+  );
 }
 
 async function loadDialogProjectTasks(projectId: string) {
