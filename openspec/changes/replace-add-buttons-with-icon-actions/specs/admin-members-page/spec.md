@@ -20,7 +20,7 @@ The Members page MUST render report-style table discovery controls that filter l
 - **THEN** the table card header exposes a global search control with placeholder `Search members`
 - **AND** the table card header exposes a primary icon-only `Invite member` action next to the search control with explicit tooltip and accessible label copy `Invite member`
 - **AND** the desktop table renders a filter row directly below the column header with controls for member name/email, role, assigned projects, and last active
-- **AND** the Actions column does not render a filter control
+- **AND** no row-actions column or row-action filter control is rendered
 - **AND** the mobile card list renders equivalent search and filter controls above the cards.
 
 #### Scenario: Members project filters require loaded project membership data
@@ -45,8 +45,8 @@ The Members page MUST render report-style table discovery controls that filter l
 - **AND** clearing active filters restores all loaded members allowed by the page's role scope
 - **AND** no member-list API request is required solely for table filtering.
 
-#### Scenario: Members filtering preserves management actions
+#### Scenario: Members filtering preserves management entry points
 
 - **WHEN** a filtered member row is visible
-- **THEN** existing Assign PM, Edit, and Remove actions keep their accessibility labels, confirmation behavior, inline expansion behavior, and refresh events
+- **THEN** the member-name edit entry point keeps its accessibility label, inline expansion behavior, confirmation behavior, and refresh events
 - **AND** if an expanded row becomes excluded by filters, the expanded state does not remain visible for a hidden row.

@@ -15,7 +15,7 @@ The Projects list page MUST match the approved user Projects list design and ren
 - **THEN** the content is grouped by visible project
 - **AND** each project section header shows the project name and active task count
 - **AND** each project section header renders a primary icon-only `Add task` action with explicit tooltip and accessible label copy `Add task`
-- **AND** each task row shows task title, status, updated metadata, and icon-only `Edit` and `Delete` row actions.
+- **AND** each task row shows a clickable task title, status, and updated metadata without separate `Edit` or `Delete` row-action cells.
 
 #### Scenario: Inactive tasks are excluded from grouped list
 - **GIVEN** a visible project has inactive tasks
@@ -38,9 +38,9 @@ The Projects list page MUST use a true PrimeVue Dialog for task creation and upd
 - **AND** submitting valid input creates the task in that project
 - **AND** the dialog submit action copy remains unchanged.
 
-#### Scenario: Edit action opens update dialog
+#### Scenario: Task title opens update dialog
 - **GIVEN** a task row is rendered
-- **WHEN** the user activates the row `Edit` action
+- **WHEN** the user activates the task title
 - **THEN** a task update dialog opens
 - **AND** the dialog pre-fills the task's project, title, and status
 - **AND** the project field is display-only in update mode
@@ -59,11 +59,11 @@ User-web Projects task sections SHALL preserve desktop table rendering on tablet
 - **GIVEN** the Projects page has a visible project section with active tasks
 - **WHEN** the project section renders below the mobile breakpoint
 - **THEN** the section renders one stacked card per task instead of the fixed-width desktop task table
-- **AND** each task card shows the task title, status, updated metadata, and icon-only `Edit` and `Delete` actions with accessible labels
+- **AND** each task card shows a clickable task title, status, and updated metadata without separate `Edit` or `Delete` actions
 - **AND** the project-level primary icon-only `Add task` action remains available in the section header with explicit tooltip and accessible label copy `Add task`.
 
 #### Scenario: Projects task sections preserve desktop table
 - **GIVEN** the Projects page has a visible project section with active tasks
 - **WHEN** the project section renders at or above the mobile breakpoint
-- **THEN** the section continues to render the existing desktop task table with task, status, updated, and actions columns
+- **THEN** the section continues to render the existing desktop task table with task, status, and updated columns
 - **AND** the project-level primary icon-only `Add task` action remains available in the section header with explicit tooltip and accessible label copy `Add task`.

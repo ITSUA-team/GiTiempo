@@ -4,22 +4,26 @@ import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
-import Select from "primevue/select";
-import type { TimeEntryResponse } from "@gitiempo/shared";
+import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
   EntryActionButton,
   SurfaceCard,
+  filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
-import { computed, onBeforeUnmount, onMounted } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
-import type { TaskLookupValue } from "@/composables/time-entries/time-entry-task-lookup";
+import {
+  toEntryTaskOption,
+  type TaskLookupOption,
+  type TaskLookupValue,
+} from "@/composables/time-entries/time-entry-task-lookup";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
@@ -102,8 +106,6 @@ const {
 const {
   currentPage,
   filterTaskSuggestions,
-  filterTasksErrorMessage,
-  isLoadingFilterTasks,
   pageSize,
   selectedDateRange,
   selectedProjectId,
@@ -127,9 +129,38 @@ const isDeletingDialogEntry = computed(() => {
 
   return !!entry && isDeletingEntry.value === entry.id;
 });
+const filterAutoCompleteOverlayClass = "max-w-[calc(100vw-2rem)]";
+const filterAutoCompletePt = {
+  listContainer: { class: "max-w-full overflow-x-hidden" },
+  option: { class: "max-w-full min-w-0 truncate" },
+  overlay: { class: "max-w-[calc(100vw-2rem)] overflow-hidden" },
+  pcInputText: { root: { class: "truncate" } },
+  root: { class: "max-w-full min-w-0" },
+} as const;
+const projectFilterSuggestions = ref<ProjectResponse[]>([]);
+const selectedProjectFilterOption = computed(
+  () =>
+    visibleProjects.value.find((project) => project.id === selectedProjectId.value) ??
+    null,
+);
+const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
+  const optionsByTaskId = new Map<string, TaskLookupOption>();
 
-async function loadFilterProjectTasks(projectId: string) {
-  return taskOptions.loadTargetProjectTaskOptions(projectId, filters);
+  for (const entry of entries.value) {
+    if (!optionsByTaskId.has(entry.task.id)) {
+      optionsByTaskId.set(entry.task.id, toEntryTaskOption(entry));
+    }
+  }
+
+  return [...optionsByTaskId.values()];
+});
+
+function handleProjectFilterComplete(event: { query: string }): void {
+  projectFilterSuggestions.value = filterAutocompleteOptions(
+    visibleProjects.value,
+    event.query,
+    (project) => project.name,
+  );
 }
 
 async function loadDialogProjectTasks(projectId: string) {
@@ -150,19 +181,21 @@ async function setDateRange(range: Date[] | null): Promise<void> {
 
 async function setSelectedProjectId(projectId: string | null): Promise<void> {
   filters.setProjectId(projectId);
+  await applyFilters();
+}
 
-  if (!projectId) {
-    await applyFilters();
+async function setSelectedProjectFilterValue(
+  value: ProjectResponse | string | null,
+): Promise<void> {
+  if (typeof value === "string") {
+    if (value.trim().length === 0) {
+      await setSelectedProjectId(null);
+    }
+
     return;
   }
 
-  try {
-    await loadFilterProjectTasks(projectId);
-  } catch {
-    // Filter task request error remains visible in the filter helper copy.
-  }
-
-  await applyFilters();
+  await setSelectedProjectId(value?.id ?? null);
 }
 
 async function setSelectedTaskFilter(value: TaskLookupValue): Promise<void> {
@@ -171,11 +204,7 @@ async function setSelectedTaskFilter(value: TaskLookupValue): Promise<void> {
 }
 
 function handleFilterTaskSearch(query: string): void {
-  const source = filters.selectedProjectId.value
-    ? filters.filterTaskOptions.value
-    : taskOptions.cachedTaskOptions.value;
-
-  filters.updateTaskSuggestions(query, source);
+  filters.updateTaskSuggestions(query, filteredEntryTaskOptions.value);
 }
 
 async function setPage(page: number): Promise<void> {
@@ -321,11 +350,13 @@ onBeforeUnmount(() => {
             Date range
           </label>
           <DatePicker
+            date-format="M d, yy"
             input-id="time-entries-date-range"
             :manual-input="false"
             :model-value="selectedDateRange"
             selection-mode="range"
             fluid
+            show-icon
             @update:model-value="(value) => void setDateRange(value as Date[] | null)"
           />
         </div>
@@ -337,19 +368,25 @@ onBeforeUnmount(() => {
           >
             Project
           </label>
-          <Select
+          <AutoComplete
             input-id="time-entries-project-filter"
             option-label="name"
-            option-value="id"
             placeholder="All projects"
+            :suggestions="projectFilterSuggestions"
+            complete-on-focus
             :disabled="isLoadingProjects"
+            dropdown
+            dropdown-mode="blank"
+            force-selection
             :loading="isLoadingProjects"
-            :model-value="selectedProjectId"
-            :options="visibleProjects"
+            :min-length="0"
+            :model-value="selectedProjectFilterOption"
+            :overlay-class="filterAutoCompleteOverlayClass"
+            :pt="filterAutoCompletePt"
             fluid
-            filter
             show-clear
-            @update:model-value="(value) => void setSelectedProjectId(value ?? null)"
+            @complete="handleProjectFilterComplete"
+            @update:model-value="(value) => void setSelectedProjectFilterValue((value ?? null) as ProjectResponse | string | null)"
           />
         </div>
 
@@ -364,22 +401,26 @@ onBeforeUnmount(() => {
             input-id="time-entries-task-filter"
             option-label="title"
             placeholder="Search tasks"
-            :loading="isLoadingFilterTasks"
             :model-value="selectedTaskFilter"
             :suggestions="filterTaskSuggestions"
+            complete-on-focus
             dropdown
+            dropdown-mode="blank"
             fluid
-            @complete="handleFilterTaskSearch($event.query)"
+            :min-length="0"
+            :overlay-class="filterAutoCompleteOverlayClass"
+            :pt="filterAutoCompletePt"
+            @complete="(event) => void handleFilterTaskSearch(event.query)"
             @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
           />
         </div>
       </div>
 
       <p
-        v-if="projectsErrorMessage || filterTasksErrorMessage"
+        v-if="projectsErrorMessage"
         class="text-destructive text-xs"
       >
-        {{ projectsErrorMessage ?? filterTasksErrorMessage }}
+        {{ projectsErrorMessage }}
       </p>
     </SurfaceCard>
 

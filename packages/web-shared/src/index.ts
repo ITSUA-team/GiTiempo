@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./autocomplete";
 export * from "./browser-history";
 export * from "./feedback";
 export * from "./components";

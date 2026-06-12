@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
-import { defineComponent } from 'vue';
+import { defineComponent, nextTick } from 'vue';
+import AutoComplete from 'primevue/autocomplete';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
@@ -104,19 +105,68 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('Billable');
     expect(wrapper.text()).toContain('Project Orion');
     expect(wrapper.text()).toContain('Alex Admin');
-    expect(wrapper.text()).toContain('All projects');
-    expect(wrapper.text()).toContain('All members');
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
     const filterControls = wrapper.findAll('[data-testid="select-stub"]');
-    expect(filterControls).toHaveLength(4);
+    expect(filterControls).toHaveLength(2);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
 
-    const search = wrapper.get('input[aria-label="Search report rows"]');
-    await search.setValue('orion');
+    const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
+    const search = autoCompleteControls[0]!;
+    const projectFilter = autoCompleteControls[1]!;
+    const memberFilter = autoCompleteControls[2]!;
+
+    expect(autoCompleteControls).toHaveLength(3);
+    expect(search.props('dropdown')).toBe(true);
+    expect(search.props('pt')).toMatchObject({
+      pcInputText: {
+        root: { class: expect.stringContaining('rounded-r-none') },
+      },
+    });
+    expect(projectFilter.props('forceSelection')).toBe(true);
+    expect(memberFilter.props('forceSelection')).toBe(true);
+    expect(projectFilter.props('modelValue')).toBeNull();
+    expect(projectFilter.props('placeholder')).toBe('All projects');
+    expect(memberFilter.props('modelValue')).toBeNull();
+    expect(memberFilter.props('placeholder')).toBe('All members');
+
+    search.vm.$emit('complete', { query: 'orion' });
+    await nextTick();
+
+    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('suggestions')).toEqual([
+      'Project Orion',
+    ]);
+
+    await search.vm.$emit('update:modelValue', 'orion');
+
+    projectFilter.vm.$emit('complete', { query: 'orion' });
+    await nextTick();
+
+    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
+      { label: 'Project Orion', value: 'project-1' },
+    ]);
+
+    await projectFilter.vm.$emit('update:modelValue', {
+      label: 'Project Orion',
+      value: 'project-1',
+    });
+
+    memberFilter.vm.$emit('complete', { query: 'alex' });
+    await nextTick();
+
+    expect(wrapper.findAllComponents(AutoComplete)[2]?.props('suggestions')).toEqual([
+      { label: 'Alex Admin', value: 'member-1' },
+    ]);
+
+    await memberFilter.vm.$emit('update:modelValue', {
+      label: 'Alex Admin',
+      value: 'member-1',
+    });
 
     expect(filters.global).toBe('orion');
+    expect(filters.projectId).toBe('project-1');
+    expect(filters.memberId).toBe('member-1');
   });
 
   it('renders mobile filters and loading cards without desktop table controls', () => {
@@ -151,7 +201,8 @@ describe('ReportsTable', () => {
       },
     });
 
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
+    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
     expect(wrapper.text()).not.toContain('2h 00m');
@@ -196,7 +247,8 @@ describe('ReportsTable', () => {
     expect(mobileCards[0]?.text()).toContain('Alex Admin');
     expect(mobileCards[0]?.text()).toContain('2h 00m');
     expect(mobileCards[0]?.text()).toContain('1h 00m');
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(4);
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
+    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(3);
   });
 
   it('shows selected filter labels in the table filter row', () => {
@@ -222,12 +274,16 @@ describe('ReportsTable', () => {
       },
     });
 
-    expect(wrapper.text()).toContain('Selected Project');
-    expect(wrapper.text()).toContain('Selected Member');
     expect(wrapper.text()).toContain('Tracked');
     expect(wrapper.text()).toContain('Billable');
-    expect(wrapper.text()).not.toContain('All projects');
-    expect(wrapper.text()).not.toContain('All members');
+    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('modelValue')).toEqual({
+      label: 'Selected Project',
+      value: 'project-1',
+    });
+    expect(wrapper.findAllComponents(AutoComplete)[2]?.props('modelValue')).toEqual({
+      label: 'Selected Member',
+      value: 'member-1',
+    });
   });
 
   it('keeps billable hours stable when the non-billable filter is selected', () => {

@@ -54,6 +54,20 @@ function mountDialog(
           visibility: "public",
           workspaceId: "workspace-1",
         },
+        {
+          color: null,
+          createdAt: "2026-04-20T12:00:00.000Z",
+          description: null,
+          id: "project-2",
+          isActive: true,
+          members: [],
+          name: "Admin Web",
+          source: "manual",
+          totalSeconds: 3600,
+          updatedAt: "2026-04-20T12:00:00.000Z",
+          visibility: "private",
+          workspaceId: "workspace-1",
+        },
       ],
       projectsErrorMessage: null,
       saveLabel: "Save changes",
@@ -66,6 +80,12 @@ function mountDialog(
           isActive: true,
           projectId: "project-1",
           title: "Improve reports filters",
+        },
+        {
+          id: "task-2",
+          isActive: true,
+          projectId: "project-1",
+          title: "Write release checklist",
         },
       ],
       taskValue: {
@@ -96,6 +116,7 @@ function mountDialog(
             "optionLabel",
             "dropdownMode",
             "minLength",
+            "pt",
           ],
           emits: ["complete", "update:modelValue"],
           computed: {
@@ -111,9 +132,26 @@ function mountDialog(
                 :data-testid="inputId + '-input'"
                 :disabled="disabled"
                 :value="displayValue"
+                @click="$emit('complete', { query: displayValue })"
                 @focus="$emit('complete', { query: displayValue })"
                 @input="$emit('update:modelValue', $event.target.value)"
               />
+              <button
+                :data-testid="inputId + '-complete-empty'"
+                type="button"
+                @click="$emit('complete', { query: '' })"
+              >Complete empty</button>
+              <button
+                :data-testid="inputId + '-complete-admin'"
+                type="button"
+                @click="$emit('complete', { query: 'admin' })"
+              >Complete admin</button>
+              <button
+                :data-testid="inputId + '-dropdown'"
+                type="button"
+                @click="$emit('complete', { query: dropdownMode === 'current' ? displayValue : '' })"
+                @mousedown="pt?.dropdown?.onMousedown?.($event)"
+              >Dropdown</button>
               <button
                 v-for="suggestion in suggestions"
                 :key="suggestion[dataKey] ?? suggestion.id"
@@ -123,6 +161,11 @@ function mountDialog(
               >{{ suggestion[optionLabel] }}</button>
             </div>
           `,
+          methods: {
+            search(event: Event, query: string): void {
+              this.$emit("complete", { originalEvent: event, query });
+            },
+          },
         },
         Button: {
           props: ["disabled", "label", "loading", "severity", "variant"],
@@ -246,11 +289,156 @@ describe("TimeEntryDialog", () => {
 
   it("configures task lookup to suggest all project tasks on empty input", () => {
     const wrapper = mountDialog();
-    const autoComplete = wrapper.findComponent({ name: "AutoComplete" });
+    const autoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1]!;
 
     expect(autoComplete.props("completeOnFocus")).toBe("");
     expect(autoComplete.props("dropdownMode")).toBe("blank");
     expect(autoComplete.props("minLength")).toBe(0);
+  });
+
+  it("shows all project suggestions again when the project query is empty", async () => {
+    const wrapper = mountDialog();
+    const projectAutoComplete = wrapper.get('[data-testid="time-entry-project"]');
+
+    await wrapper.get('[data-testid="time-entry-project-complete-admin"]').trigger("click");
+
+    expect(projectAutoComplete.text()).toContain("Admin Web");
+    expect(projectAutoComplete.text()).not.toContain("Project Orion");
+
+    await wrapper.get('[data-testid="time-entry-project-complete-empty"]').trigger("click");
+
+    expect(projectAutoComplete.text()).toContain("Admin Web");
+    expect(projectAutoComplete.text()).toContain("Project Orion");
+  });
+
+  it("shows all project suggestions for an empty create-mode project autocomplete", async () => {
+    const wrapper = mountDialog({
+      mode: "create",
+      projectId: null,
+      saveLabel: "Save entry",
+      taskValue: null,
+      title: "New time entry",
+    });
+    const projectComponent = wrapper.findAllComponents({ name: "AutoComplete" })[0]!;
+    const projectAutoComplete = wrapper.get('[data-testid="time-entry-project"]');
+    const initialSuggestions = projectComponent.props("suggestions");
+
+    await wrapper.get('[data-testid="time-entry-project-input"]').trigger("click");
+
+    expect(projectAutoComplete.text()).toContain("Admin Web");
+    expect(projectAutoComplete.text()).toContain("Project Orion");
+    expect(projectComponent.props("suggestions")).not.toBe(initialSuggestions);
+
+    await wrapper.get('[data-testid="time-entry-project-complete-admin"]').trigger("click");
+
+    expect(projectAutoComplete.text()).toContain("Admin Web");
+    expect(projectAutoComplete.text()).not.toContain("Project Orion");
+
+    await wrapper.get('[data-testid="time-entry-project-input"]').setValue("");
+
+    expect(projectAutoComplete.text()).toContain("Admin Web");
+    expect(projectAutoComplete.text()).toContain("Project Orion");
+    expect(wrapper.emitted("update:projectId")?.at(-1)).toEqual([null]);
+  });
+
+  it("keeps typed project text when opening the create-mode dropdown", async () => {
+    const wrapper = mountDialog({
+      mode: "create",
+      projectId: null,
+      saveLabel: "Save entry",
+      taskValue: null,
+      title: "New time entry",
+    });
+    const projectComponent = wrapper.findAllComponents({ name: "AutoComplete" })[0]!;
+    const projectAutoComplete = wrapper.get('[data-testid="time-entry-project"]');
+    const projectInput = wrapper.get('[data-testid="time-entry-project-input"]');
+    const projectDropdown = wrapper.get('[data-testid="time-entry-project-dropdown"]');
+
+    expect(projectComponent.props("dropdownMode")).toBe("blank");
+
+    await projectInput.setValue("admin");
+    const mouseDown = new MouseEvent("mousedown", {
+      bubbles: true,
+      cancelable: true,
+    });
+
+    projectDropdown.element.dispatchEvent(mouseDown);
+    await projectDropdown.trigger("click");
+
+    expect(mouseDown.defaultPrevented).toBe(true);
+    expect((projectInput.element as HTMLInputElement).value).toBe("admin");
+    expect(projectAutoComplete.text()).toContain("Admin Web");
+    expect(projectAutoComplete.text()).toContain("Project Orion");
+    expect(wrapper.emitted("update:projectId")).toBeUndefined();
+  });
+
+  it("keeps the selected project visible after choosing a create-mode suggestion", async () => {
+    const wrapper = mountDialog({
+      mode: "create",
+      projectId: null,
+      saveLabel: "Save entry",
+      taskValue: null,
+      title: "New time entry",
+    });
+    const projectInput = wrapper.get('[data-testid="time-entry-project-input"]');
+
+    await projectInput.setValue("admin");
+    await wrapper.get('[data-testid="time-entry-project-option-project-2"]').trigger("click");
+
+    expect((projectInput.element as HTMLInputElement).value).toBe("Admin Web");
+    expect(wrapper.emitted("update:projectId")?.at(-1)).toEqual(["project-2"]);
+  });
+
+  it("keeps the selected task visible after choosing a suggestion", async () => {
+    const wrapper = mountDialog({
+      mode: "create",
+      saveLabel: "Save entry",
+      taskValue: null,
+      title: "New time entry",
+    });
+    const taskInput = wrapper.get('[data-testid="time-entry-task-input"]');
+
+    await taskInput.setValue("release");
+    await wrapper.get('[data-testid="time-entry-task-option-task-2"]').trigger("click");
+
+    expect((taskInput.element as HTMLInputElement).value).toBe("Write release checklist");
+    expect(wrapper.emitted("update:taskValue")?.at(-1)).toEqual([
+      {
+        id: "task-2",
+        isActive: true,
+        projectId: "project-1",
+        title: "Write release checklist",
+      },
+    ]);
+  });
+
+  it("requests all task suggestions when the task dropdown query is empty", async () => {
+    const wrapper = mountDialog();
+    const taskAutoComplete = wrapper.get('[data-testid="time-entry-task"]');
+
+    expect(taskAutoComplete.text()).toContain("Improve reports filters");
+    expect(taskAutoComplete.text()).toContain("Write release checklist");
+
+    await wrapper.get('[data-testid="time-entry-task-complete-empty"]').trigger("click");
+
+    expect(wrapper.emitted("taskSearch")?.at(-1)).toEqual([""]);
+  });
+
+  it("refreshes create-mode task suggestions when the task input is cleared", async () => {
+    const wrapper = mountDialog({
+      mode: "create",
+      saveLabel: "Save entry",
+      taskValue: null,
+      title: "New time entry",
+    });
+    const taskInput = wrapper.get('[data-testid="time-entry-task-input"]');
+
+    await taskInput.setValue("reports");
+    await taskInput.setValue("");
+
+    expect(wrapper.emitted("taskSearch")?.at(-2)).toEqual(["reports"]);
+    expect(wrapper.emitted("taskSearch")?.at(-1)).toEqual([""]);
+    expect(wrapper.emitted("update:taskValue")?.at(-1)).toEqual([""]);
   });
 
   it("renders validation helper errors and retryable api failures", () => {

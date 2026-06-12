@@ -20,7 +20,7 @@
 
 - Initial report load uses a skeleton matching the reports header, setup controls, summary cards, and results table.
 - Report setup bar: project, member, date range, group-by, and `Export CSV` in the same row.
-- Project, member, and group-by use PrimeVue `<AutoComplete dropdown forceSelection>` single-select inputs in that setup row; date range keeps the existing `<DatePicker>` treatment.
+- Project and member use PrimeVue `<AutoComplete dropdown forceSelection>` single-select inputs in that setup row; group-by uses PrimeVue `<Select>` for the fixed Project/Member choice. Date range keeps the existing `<DatePicker>` treatment.
 - Report setup controls define the backend CSV export scope and do not change the loaded table rows or summary cards by themselves.
 - Invalid date ranges show validation feedback and cannot generate CSV or call report data endpoints.
 - Summary totals row above the results table reflects the loaded backend-generated project-member report data.
@@ -69,7 +69,7 @@
 - Settings uses the shared top-bar breadcrumb pattern instead of a large in-content title/subtitle block.
 - Desktop card target is `max-width: 620px` with token-backed surface, `rounded-lg`, `shadow-card`, 20px padding, 12px field gaps, and a right-aligned bottom action row.
 - Current editable settings fields are `Workspace name`, `Default hourly rate`, `Currency`, and `Time zone`.
-- `Currency` and `Time zone` use PrimeVue `<AutoComplete dropdown forceSelection>` single-select inputs. `Time zone` stays full width below the Default hourly rate + Currency row, enables filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source.
+- `Currency` uses PrimeVue `<Select>` and `Time zone` uses PrimeVue `<AutoComplete dropdown forceSelection>`. `Time zone` stays full width below the Default hourly rate + Currency row, enables predictive filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source. Time-zone option values remain exact IANA identifiers, while visible labels replace underscores with spaces, for example `Africa/Addis_Ababa` displays as `Africa/Addis Ababa`.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
 - Initial load reads workspace identity from `/workspace` and workspace settings from `/workspace/settings`.
