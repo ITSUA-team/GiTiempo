@@ -105,7 +105,7 @@ const registerFormSchema = z
   .superRefine((values, ctx) => {
     if (values.password !== values.confirmPassword) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Passwords do not match.",
         path: ["confirmPassword"],
       });
@@ -113,7 +113,7 @@ const registerFormSchema = z
 
     if (!values.ownerAcknowledgement) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Accept the workspace owner responsibility to continue.",
         path: ["ownerAcknowledgement"],
       });

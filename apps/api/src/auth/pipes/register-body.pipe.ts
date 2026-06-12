@@ -4,7 +4,7 @@ import {
   type PipeTransform,
 } from '@nestjs/common';
 import { registerRequestSchema, type RegisterRequest } from '@gitiempo/shared';
-import { ZodError, type ZodIssue } from 'zod';
+import * as z from 'zod';
 
 const REGISTER_VALIDATION_MESSAGES = {
   invalid_workspace_name: 'Enter a valid workspace name.',
@@ -14,7 +14,7 @@ const REGISTER_VALIDATION_MESSAGES = {
 type RegisterValidationCode = keyof typeof REGISTER_VALIDATION_MESSAGES;
 
 function getRegisterValidationCode(
-  issues: ZodIssue[],
+  issues: z.core.$ZodIssue[],
 ): RegisterValidationCode | null {
   const issuePaths = issues.map((issue) => issue.path[0]);
 
@@ -44,7 +44,7 @@ export class RegisterBodyPipe implements PipeTransform<
     try {
       return registerRequestSchema.parse(value);
     } catch (error) {
-      if (!(error instanceof ZodError)) {
+      if (!(error instanceof z.ZodError)) {
         throw error;
       }
 
