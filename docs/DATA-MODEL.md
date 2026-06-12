@@ -63,7 +63,9 @@ A person authenticated via Firebase Auth (Google SSO or email/password). GitHub 
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 
-**Indexes:** `users_firebase_uid_unique` on `firebase_uid`
+**Indexes:**
+- `users_firebase_uid_unique` UNIQUE on `firebase_uid`
+- `users_email_lookup_unique` UNIQUE on `lower(btrim(email))`
 
 ---
 
@@ -101,6 +103,12 @@ A grouping container. In MVP, a single default workspace is seeded on deployment
 | `name` | VARCHAR(255) | NOT NULL | Workspace display name |
 | `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
+
+**Indexes:**
+- `workspaces_name_lookup_unique` UNIQUE on `lower(regexp_replace(btrim(name), '[[:space:]]+', ' ', 'g'))`
+
+**Notes:**
+- Workspace-name availability is global for MVP and is checked against the normalized lookup value above, not the raw display string.
 
 ---
 

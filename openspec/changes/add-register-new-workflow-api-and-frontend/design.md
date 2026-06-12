@@ -74,6 +74,6 @@ Alternative considered: extend invite client behavior for registration. Rejected
 
 Rollback: remove or hide the `/register` route and login entry point first, then disable the public registration endpoint if backend rollout fails. Existing login and invite acceptance flows remain unchanged.
 
-## Open Questions
+## Decision Record
 
-- Should workspace-name uniqueness be global for MVP, or should unavailable-name detection use a normalized slug reserved from display name? The specs require workspace-name-unavailable behavior; implementation must choose the concrete persistence key before coding.
+- MVP workspace-name availability uses a global normalized uniqueness key derived from the display name. The lookup key trims outer whitespace, collapses internal whitespace runs to a single space, and lowercases before comparison. This keeps `/auth/register` and future workspace creation flows aligned on one persistence rule without introducing a second slug contract.

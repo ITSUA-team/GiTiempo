@@ -62,6 +62,11 @@ function createRuntimeMock(
       refreshToken: "refresh-token-next",
     }),
     logoutSession: async () => undefined,
+    registerWorkspaceOwner: async () => ({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    }),
     refreshSession: async () => {
       throw new Error("no refresh token");
     },
