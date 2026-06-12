@@ -13,12 +13,14 @@ import type { ProjectListResponse, ProjectResponse } from '@gitiempo/shared';
 import {
   useAdminProjectsQuery,
   useExportTimeReportMutation,
+  useWorkspaceMembersQuery,
 } from '@/composables/query';
 
 import {
   deriveReportSummaryView,
   deriveMemberOptions,
   deriveProjectOptions,
+  deriveWorkspaceMemberOptions,
   getDefaultReportDateRange,
   isReportDateRangeValid,
   toReportTableRows,
@@ -37,10 +39,15 @@ import {
   type AdminReportsClient,
   type ReportsCsvExport,
 } from '@/services/admin-reports-client';
+import {
+  adminMembersClient,
+  type AdminMembersClient,
+} from '@/services/admin-members-client';
 import { reportsKeys, type AdminServerStateScope } from '@/lib/query-keys';
 
 interface UseReportsDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
+  membersClient?: Pick<AdminMembersClient, 'listMembers'>;
   projectsClient?: Pick<AdminProjectsClient, 'listProjects'>;
   reportsClient?: AdminReportsClient;
   /* eslint-disable no-unused-vars */
@@ -80,6 +87,7 @@ function getReportErrorMessage(error: unknown): string {
 
 export function useReportsData({
   accessToken,
+  membersClient = adminMembersClient,
   projectsClient = adminProjectsClient,
   reportsClient = adminReportsClient,
   onError,
@@ -101,6 +109,13 @@ export function useReportsData({
     client: projectsClient,
     scope,
   });
+  const isAdminScope = computed(() => scope.value.role === 'admin');
+  const membersQuery = useWorkspaceMembersQuery({
+    accessToken,
+    client: membersClient,
+    enabled: isAdminScope,
+    scope,
+  });
   const exportReportMutation = useExportTimeReportMutation({
     accessToken,
     client: reportsClient,
@@ -111,7 +126,16 @@ export function useReportsData({
 
   const projects = computed(() => sortProjects(projectsQuery.data.value ?? []));
   const projectOptions = computed(() => deriveProjectOptions(projects.value));
-  const memberOptions = computed(() => deriveMemberOptions(projects.value));
+  const projectMemberOptions = computed(() => deriveMemberOptions(projects.value));
+  const workspaceMemberOptions = computed(() =>
+    deriveWorkspaceMemberOptions(membersQuery.data.value ?? []),
+  );
+  const memberOptions = computed(() =>
+    isAdminScope.value ? workspaceMemberOptions.value : projectMemberOptions.value,
+  );
+  const membersLoaded = computed(
+    () => !isAdminScope.value || membersQuery.isSuccess.value,
+  );
 
   function getCurrentSetupFilters(): ReportSetupFilters {
     return {
@@ -200,13 +224,21 @@ export function useReportsData({
   const rows = computed(() => reportRowsQuery.data.value ?? []);
   const summary = computed(() => deriveReportSummaryView(rows.value));
   const loading = computed(
-    () => projectsQuery.isFetching.value || reportRowsQuery.isFetching.value,
+    () =>
+      projectsQuery.isFetching.value ||
+      reportRowsQuery.isFetching.value ||
+      (isAdminScope.value && membersQuery.isFetching.value),
   );
   const initialLoaded = computed(
-    () => projectsQuery.isSuccess.value && reportRowsQuery.isSuccess.value,
+    () =>
+      projectsQuery.isSuccess.value &&
+      reportRowsQuery.isSuccess.value &&
+      membersLoaded.value,
   );
   const loadError = computed(() => {
-    const error = projectsQuery.error.value ?? reportRowsQuery.error.value;
+    const error = projectsQuery.error.value ??
+      (isAdminScope.value ? membersQuery.error.value : null) ??
+      reportRowsQuery.error.value;
 
     return error ? getReportErrorMessage(error) : null;
   });
@@ -251,7 +283,10 @@ export function useReportsData({
 
     currentAction.value = initialLoaded.value ? 'refresh-reports' : 'load-reports';
     clearDebounceTimer();
-    await projectsQuery.refetch();
+    await Promise.all([
+      projectsQuery.refetch(),
+      isAdminScope.value ? membersQuery.refetch() : Promise.resolve(),
+    ]);
     syncSelectedFiltersWithOptions();
     applyCurrentFilters();
     await nextTick();
@@ -281,13 +316,18 @@ export function useReportsData({
 
   watch([projectOptions, memberOptions], syncSelectedFiltersWithOptions);
 
-  watch([projectsQuery.error, reportRowsQuery.error], ([projectsError, rowsError]) => {
-    const error = projectsError ?? rowsError;
+  watch(
+    [projectsQuery.error, membersQuery.error, reportRowsQuery.error],
+    ([projectsError, membersError, rowsError]) => {
+      const error = projectsError ??
+        (isAdminScope.value ? membersError : null) ??
+        rowsError;
 
-    if (error) {
-      onError?.(getReportErrorMessage(error), error, currentAction.value);
-    }
-  });
+      if (error) {
+        onError?.(getReportErrorMessage(error), error, currentAction.value);
+      }
+    },
+  );
 
   onUnmounted(clearDebounceTimer);
 

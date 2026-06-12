@@ -39,6 +39,7 @@ describe('MembersTable', () => {
           tooltip: tooltipDirective,
         },
         stubs: {
+          AutoComplete: true,
           Avatar: true,
           EmptyStateBlock: true,
           IconField: passthroughStub,

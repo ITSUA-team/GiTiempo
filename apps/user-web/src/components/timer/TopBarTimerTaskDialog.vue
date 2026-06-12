@@ -6,7 +6,7 @@ import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { useIsMobileViewport } from "@gitiempo/web-shared";
+import { filterAutocompleteOptions, useIsMobileViewport } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
@@ -87,18 +87,6 @@ const primaryButtonLabel = computed(() =>
   props.primaryActionLabel === "Stop" ? "Stop timer" : "Start timer",
 );
 const taskSelectOverlayClass = "max-w-[calc(100vw-2rem)]";
-const taskAutoCompletePt = {
-  listContainer: { class: "max-w-full" },
-  option: { class: "min-w-0 truncate" },
-  root: {
-    class:
-      "border-divider bg-surface-primary flex h-[38px] w-full max-w-full min-w-0 items-center rounded-sm border",
-  },
-} as const;
-const autoCompleteInputClass =
-  "text-text-dark h-full min-w-0 flex-1 border-0 bg-transparent py-0 pr-3 pl-3 text-sm font-medium outline-none ring-0 placeholder:text-text-muted";
-const autoCompleteDropdownClass =
-  "text-brand flex h-full w-10 shrink-0 items-center justify-center border-0 bg-transparent p-0";
 const newTaskOption: NewTaskOption = {
   id: TOP_BAR_TIMER_NEW_TASK_ID,
   isNewTask: true,
@@ -114,6 +102,33 @@ const projectSuggestions = shallowRef<ProjectResponse[]>([]);
 const taskSuggestions = shallowRef<TaskPickerOption[]>([]);
 const isNewTaskSelected = computed(
   () => props.selectedTaskId === TOP_BAR_TIMER_NEW_TASK_ID,
+);
+const hasSelectedProjectOption = computed(() =>
+  isProjectOption(mobileProjectModel.value),
+);
+const hasSelectedTaskOption = computed(() => isTaskOption(mobileTaskModel.value));
+const isSelectionModelIncomplete = computed(
+  () => !hasSelectedProjectOption.value || !hasSelectedTaskOption.value,
+);
+const isTaskAutoCompleteDisabled = computed(
+  () =>
+    !hasSelectedProjectOption.value ||
+    props.isLoadingTasks ||
+    props.isConfirmingSelection,
+);
+const isNewTaskTitleInputDisabled = computed(
+  () =>
+    !hasSelectedProjectOption.value ||
+    props.isCreatingTask ||
+    props.isConfirmingSelection,
+);
+const isPrimaryButtonDisabled = computed(
+  () =>
+    props.isPrimaryActionDisabled ||
+    (props.primaryActionLabel !== "Stop" && isSelectionModelIncomplete.value),
+);
+const isConfirmButtonDisabled = computed(
+  () => props.isConfirmSelectionDisabled || isSelectionModelIncomplete.value,
 );
 const selectedProjectName = computed(
   () => findProjectOption(props.selectedProjectId)?.name ?? null,
@@ -151,12 +166,6 @@ function findTaskOption(taskId: string | null): TaskPickerOption | null {
   }
 
   return props.taskOptions.find((task) => task.id === taskId) ?? null;
-}
-
-function matchesQuery(label: string, query: string): boolean {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  return normalizedQuery === "" || label.toLowerCase().includes(normalizedQuery);
 }
 
 function isProjectOption(
@@ -200,15 +209,22 @@ function handleMobileTaskUpdate(value: TaskAutoCompleteValue | undefined): void 
 }
 
 function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
-  projectSuggestions.value = props.projectOptions.filter((project) =>
-    matchesQuery(project.name, event.query),
+  projectSuggestions.value = filterAutocompleteOptions(
+    props.projectOptions,
+    event.query,
+    (project) => project.name,
   );
 }
 
 function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
-  taskSuggestions.value = taskPickerOptions.value.filter((task) =>
-    matchesQuery(task.title, event.query),
-  );
+  taskSuggestions.value = [
+    ...filterAutocompleteOptions(
+      props.taskOptions,
+      event.query,
+      (task) => task.title,
+    ),
+    newTaskOption,
+  ];
 }
 
 watch(
@@ -301,16 +317,13 @@ watch(
         </label>
         <div class="relative">
           <AutoComplete
-            unstyled
-            class="h-[38px] w-full max-w-full min-w-0"
+            class="w-full max-w-full min-w-0"
             complete-on-focus
             data-key="id"
             dropdown
-            :dropdown-class="autoCompleteDropdownClass"
             dropdown-mode="blank"
             fluid
             force-selection
-            :input-class="autoCompleteInputClass"
             input-id="top-bar-timer-project"
             :min-length="0"
             option-label="name"
@@ -319,7 +332,6 @@ watch(
             :model-value="mobileProjectModel"
             :overlay-class="taskSelectOverlayClass"
             placeholder="Search projects"
-            :pt="taskAutoCompletePt"
             :suggestions="projectSuggestions"
             @complete="handleProjectComplete"
             @update:model-value="handleMobileProjectUpdate"
@@ -336,25 +348,21 @@ watch(
         </label>
         <div class="relative">
           <AutoComplete
-            unstyled
-            class="h-[38px] w-full max-w-full min-w-0"
+            class="w-full max-w-full min-w-0"
             complete-on-focus
             data-key="id"
             dropdown
-            :dropdown-class="autoCompleteDropdownClass"
             dropdown-mode="blank"
             fluid
             force-selection
-            :input-class="autoCompleteInputClass"
             input-id="top-bar-timer-task"
             :min-length="0"
             option-label="title"
-            :disabled="!props.selectedProjectId || props.isLoadingTasks || props.isConfirmingSelection"
+            :disabled="isTaskAutoCompleteDisabled"
             :loading="props.isLoadingTasks"
             :model-value="mobileTaskModel"
             :overlay-class="taskSelectOverlayClass"
             placeholder="Search tasks"
-            :pt="taskAutoCompletePt"
             :suggestions="taskSuggestions"
             @complete="handleTaskComplete"
             @update:model-value="handleMobileTaskUpdate"
@@ -379,7 +387,7 @@ watch(
               id="top-bar-timer-new-task-title"
               v-model="createTaskTitleModel"
               class="text-text-muted h-[38px] w-full pr-20 text-sm font-medium"
-              :disabled="!props.selectedProjectId || props.isCreatingTask || props.isConfirmingSelection"
+              :disabled="isNewTaskTitleInputDisabled"
               :invalid="!!props.createTaskErrorMessage"
             />
             <span class="text-text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium">
@@ -464,7 +472,7 @@ watch(
           unstyled
           type="button"
           class="bg-brand text-text-inverse border-brand h-[37px] w-full rounded-sm border px-4 text-sm font-semibold"
-          :disabled="props.isPrimaryActionDisabled"
+          :disabled="isPrimaryButtonDisabled"
           :fluid="true"
           :label="primaryButtonLabel"
           :loading="primaryButtonLoading"
@@ -478,7 +486,7 @@ watch(
             'border-divider bg-surface-primary text-text-dark h-[37px] rounded-sm border px-4 text-sm font-semibold',
             isMobileViewport ? 'w-full' : 'w-auto',
           ]"
-          :disabled="props.isConfirmSelectionDisabled"
+          :disabled="isConfirmButtonDisabled"
           :fluid="isMobileViewport"
           label="Change task"
           :loading="confirmButtonLoading"
@@ -494,7 +502,7 @@ watch(
             'bg-brand text-text-inverse border-brand h-[37px] rounded-sm border px-4 text-sm font-semibold',
             isMobileViewport ? 'w-full' : 'w-auto',
           ]"
-          :disabled="props.isPrimaryActionDisabled"
+          :disabled="isPrimaryButtonDisabled"
           :fluid="isMobileViewport"
           :label="primaryButtonLabel"
           :loading="primaryButtonLoading"
