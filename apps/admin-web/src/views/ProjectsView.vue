@@ -116,13 +116,15 @@ async function refresh(): Promise<void> {
   loading.value = true;
 
   try {
-    const [projectsData, summaryData] = await Promise.all([
+    const [projectsData, summaryData, membersData] = await Promise.all([
       adminProjectsClient.listProjects(),
       adminProjectsClient.getManagementSummary(),
+      adminMembersClient.listMembers(),
     ]);
 
     projects.value = sortProjects(projectsData);
     summary.value = summaryData;
+    members.value = membersData;
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
       error: err,

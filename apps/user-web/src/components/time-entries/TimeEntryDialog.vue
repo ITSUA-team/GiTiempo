@@ -6,9 +6,13 @@ import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
+import { filterAutocompleteOptions } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
+
+type ProjectAutoCompleteValue = ProjectResponse | string | null;
+type TaskAutoCompleteValue = string | TaskLookupOption | null;
 
 const props = defineProps<{
   dialogErrorMessage: string | null;
@@ -53,43 +57,13 @@ const emit = defineEmits<{
   "update:taskValue": [value: string | TaskLookupOption | null];
 }>();
 
-const projectSearchValue = shallowRef<string | null>(null);
+const projectModel = shallowRef<ProjectAutoCompleteValue>(null);
 const projectSearchQuery = shallowRef("");
+const projectSuggestions = shallowRef<ProjectResponse[]>([]);
+const taskModel = shallowRef<TaskAutoCompleteValue>(null);
 const selectedProject = computed(() =>
   props.projects.find((project) => project.id === props.projectId) ?? null,
 );
-const projectSuggestions = computed(() => {
-  const query = projectSearchQuery.value.trim().toLowerCase();
-
-  if (!query) {
-    return props.projects;
-  }
-
-  return props.projects.filter((project) =>
-    project.name.toLowerCase().includes(query),
-  );
-});
-const projectModel = computed({
-  get: () => projectSearchValue.value ?? selectedProject.value,
-  set: (value: ProjectResponse | string | null | undefined) => {
-    if (typeof value === "string") {
-      projectSearchValue.value = value;
-      projectSearchQuery.value = value;
-      return;
-    }
-
-    projectSearchValue.value = null;
-    projectSearchQuery.value = "";
-    emit("update:projectId", value?.id ?? null);
-  },
-});
-
-const taskModel = computed({
-  get: () => props.taskValue,
-  set: (value: string | TaskLookupOption | null | undefined) => {
-    emit("update:taskValue", value ?? null);
-  },
-});
 
 const startedAtModel = computed({
   get: () => props.startedAt,
@@ -120,21 +94,91 @@ const billableModel = computed({
 });
 
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
+const projectAutoCompletePt = {
+  dropdown: {
+    onMousedown: handleProjectDropdownMouseDown,
+  },
+};
 
 watch(
-  () => props.projectId,
+  [() => props.isOpen, () => props.mode, () => props.projectId, () => props.projects],
   () => {
-    projectSearchValue.value = null;
-    projectSearchQuery.value = "";
+    projectModel.value = selectedProject.value;
+    refreshProjectSuggestions("");
   },
+  { immediate: true },
 );
 
+watch(
+  [() => props.isOpen, () => props.mode, () => props.taskValue],
+  () => {
+    taskModel.value = props.taskValue ?? null;
+  },
+  { immediate: true },
+);
+
+function buildProjectSuggestions(queryValue: string): ProjectResponse[] {
+  return filterAutocompleteOptions(
+    props.projects,
+    queryValue,
+    (project) => project.name,
+  );
+}
+
+function refreshProjectSuggestions(query: string): void {
+  projectSearchQuery.value = query;
+  projectSuggestions.value = buildProjectSuggestions(query);
+}
+
+function handleProjectDropdownMouseDown(event: MouseEvent): void {
+  event.preventDefault();
+}
+
 function handleProjectComplete(event: { query: string }): void {
-  projectSearchQuery.value = event.query;
+  refreshProjectSuggestions(event.query);
+}
+
+function isProjectOption(
+  value: ProjectAutoCompleteValue | undefined,
+): value is ProjectResponse {
+  return typeof value === "object" && value !== null && "name" in value;
+}
+
+function handleProjectUpdate(value: ProjectAutoCompleteValue | undefined): void {
+  projectModel.value = value ?? null;
+
+  if (typeof value === "string") {
+    refreshProjectSuggestions(value);
+
+    if (value.trim().length === 0) {
+      emit("update:projectId", null);
+    }
+
+    return;
+  }
+
+  refreshProjectSuggestions("");
+
+  if (isProjectOption(value)) {
+    emit("update:projectId", value.id);
+    return;
+  }
+
+  emit("update:projectId", null);
 }
 
 function handleTaskComplete(event: { query: string }): void {
   emit("taskSearch", event.query);
+}
+
+function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
+  taskModel.value = value ?? null;
+
+  if (typeof value === "string") {
+    emit("taskSearch", value);
+  }
+
+  emit("update:taskValue", value ?? null);
 }
 </script>
 
@@ -197,7 +241,6 @@ function handleTaskComplete(event: { query: string }): void {
           Project
         </label>
         <AutoComplete
-          v-model="projectModel"
           complete-on-focus
           data-key="id"
           dropdown
@@ -205,14 +248,17 @@ function handleTaskComplete(event: { query: string }): void {
           fluid
           force-selection
           input-id="time-entry-project"
+          :model-value="projectModel"
           option-label="name"
           :disabled="props.isLoadingProjects || isDialogMutating"
           :invalid="!!props.errors.projectId"
           :loading="props.isLoadingProjects"
           :min-length="0"
           placeholder="Select a project"
+          :pt="projectAutoCompletePt"
           :suggestions="projectSuggestions"
           @complete="handleProjectComplete"
+          @update:model-value="handleProjectUpdate"
         />
         <small
           v-if="props.errors.projectId"
@@ -230,13 +276,13 @@ function handleTaskComplete(event: { query: string }): void {
           Task
         </label>
         <AutoComplete
-          v-model="taskModel"
           complete-on-focus
           dropdown
           dropdown-mode="blank"
           fluid
           force-selection
           input-id="time-entry-task"
+          :model-value="taskModel"
           :min-length="0"
           option-label="title"
           :disabled="!props.projectId || props.isLoadingTasks || isDialogMutating"
@@ -245,6 +291,7 @@ function handleTaskComplete(event: { query: string }): void {
           :suggestions="props.taskSuggestions"
           placeholder="Search tasks"
           @complete="handleTaskComplete"
+          @update:model-value="handleTaskUpdate"
         />
         <small
           v-if="props.errors.taskId"

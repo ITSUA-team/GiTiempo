@@ -134,7 +134,8 @@ Use PrimeVue `<AutoComplete>` when the UI helps the user find or filter tasks by
 
 - Time Entries task filter uses `<AutoComplete>` instead of a raw text input.
 - Manual time-entry create forms should also use `<AutoComplete>` for task selection once the project context is known.
-- Suggestions should be visible tasks for the current user and may be narrowed by the selected project.
+- Time Entries filter suggestions should come from currently loaded filtered entries so hints match the active date/project/list filters. Create/edit task suggestions should be visible tasks for the current user and may be narrowed by the selected project.
+- Suggestion overlays must stay within the mobile viewport and truncate long task/project labels instead of expanding off-page.
 - Time Entries list filtering may send backend `search` so task-title filtering applies across the paginated result set.
 - Create, edit, and timer payloads still submit a selected task's `taskId`; use `forceSelection` when the submitted value must map to a real task option.
 
@@ -157,13 +158,13 @@ Use a lightweight filter set for the user Projects page.
 - Keep a combined PrimeVue `<AutoComplete>` search field with placeholder copy `Search projects or tasks`.
 - Suggestions include both project names and task names from the currently loaded visible data set.
 - Project suggestions render their main label in bold so they are visually distinct from task suggestions.
-- Add a `Status` PrimeVue `<AutoComplete dropdown forceSelection>` with `All statuses`, `Open`, and `Closed`.
-- Add an `Updated` PrimeVue `<AutoComplete dropdown forceSelection>` with `Any time`, `Today`, `Last 7 days`, and `Older`.
+- Add a `Status` PrimeVue `<Select>` with `All statuses`, `Open`, and `Closed`.
+- Add an `Updated` PrimeVue `<Select>` with `Any time`, `Today`, `Last 7 days`, and `Older`.
 - All filters operate on frontend-visible data only. Do not document them as backend search or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
 - `Status` and `Updated` continue narrowing task rows after the text search is applied and remove project groups that no longer have matching tasks.
-- Clearing the search and resetting the predictive single-selects restores the full grouped list.
+- Clearing the search and resetting the status and updated selects restores the full grouped list.
 
 ## Entry Action Icons
 

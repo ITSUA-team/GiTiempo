@@ -8,7 +8,7 @@ The admin Projects page MUST display all workspace projects in a searchable, col
 - **WHEN** the admin opens the Projects page
 - **THEN** the page fetches `GET /projects`
 - **AND** it fetches `GET /workspace-members` for assigned-member filter options
-- **AND** the table shows Project, Source, Assigned members, Hours, Visibility, and Actions columns
+- **AND** the table shows Project, Source, Assigned members, Hours, and Visibility columns without a separate row-actions column
 - **AND** active projects appear before archived projects
 - **AND** the table card header exposes a global search control with placeholder `Search projects`
 - **AND** the table card header exposes a primary icon-only `New project` action next to the search control with explicit tooltip and accessible label copy `New project`.
@@ -40,7 +40,7 @@ The admin Projects page MUST display all workspace projects in a searchable, col
 
 - **WHEN** the Projects table renders on desktop
 - **THEN** it shows a filter row directly below the column header with controls for Project, Source, Assigned members, Hours, and Visibility
-- **AND** the Actions column does not render a filter control
+- **AND** no row-actions column or row-action filter control is rendered
 - **AND** the mobile card list exposes equivalent search and filter controls above the cards.
 
 ### Requirement: New Project Button Navigates To Add Project Route

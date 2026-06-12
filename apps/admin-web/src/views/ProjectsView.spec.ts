@@ -412,7 +412,7 @@ describe('ProjectsView', () => {
     testMocks.listProjects
       .mockResolvedValueOnce([project])
       .mockResolvedValueOnce([]);
-    testMocks.listMembers.mockResolvedValue([
+    const initialMembers = [
       {
         avatarUrl: null,
         displayName: 'Pat PM',
@@ -437,7 +437,25 @@ describe('ProjectsView', () => {
         userId: 'user-3',
         workspaceId: '33333333-3333-4333-8333-333333333333',
       },
-    ]);
+    ];
+
+    testMocks.listMembers
+      .mockResolvedValueOnce(initialMembers)
+      .mockResolvedValueOnce([
+        ...initialMembers,
+        {
+          avatarUrl: null,
+          displayName: 'Zoe Analyst',
+          email: 'zoe@example.com',
+          id: 'member-4',
+          joinedAt: '2026-05-01T10:00:00.000Z',
+          lastActiveAt: null,
+          projectsAssignedCount: 0,
+          role: 'member',
+          userId: 'user-4',
+          workspaceId: '33333333-3333-4333-8333-333333333333',
+        },
+      ]);
 
     const wrapper = mountProjectsView();
 
@@ -458,8 +476,12 @@ describe('ProjectsView', () => {
     expect(testMocks.assignMember).toHaveBeenCalledWith('project-active', 'user-3');
     expect(testMocks.removeAssignment).toHaveBeenCalledWith('project-active', 'user-2');
     expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
     expect(testMocks.getManagementSummary).toHaveBeenCalledTimes(2);
     expect(testMocks.successToast).toHaveBeenCalledWith('Project Orion has been updated.');
+    expect(wrapper.get('[data-testid="projects-table"]').text()).toContain(
+      '3 member filters',
+    );
     expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(false);
   });
 
