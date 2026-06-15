@@ -91,7 +91,8 @@ const projects: ProjectListResponse = [
 const stubs = {
   Button: {
     props: ['disabled', 'label', 'loading', 'type'],
-    template: '<button v-bind="$attrs" :disabled="disabled" :type="type">{{ label }}</button>',
+    template:
+      '<button v-bind="$attrs" :disabled="disabled" :type="type"><slot>{{ label }}</slot></button>',
   },
   Checkbox: {
     props: ['inputId', 'name', 'value'],
@@ -149,9 +150,49 @@ describe('member inline forms', () => {
       expect.arrayContaining([
         'bg-surface-primary',
         'border-destructive',
-        'rounded-[6px]',
+        'cursor-pointer',
+        'h-8',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
         'text-[13px]',
         'text-destructive',
+        'font-semibold',
+      ]),
+    );
+
+    const cancelButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Cancel',
+    );
+    const saveButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Save changes',
+    );
+
+    expect(cancelButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-surface-primary',
+        'border-divider',
+        'cursor-pointer',
+        'h-8',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
+        'text-[13px]',
+        'text-text-dark',
+        'font-medium',
+      ]),
+    );
+    expect(saveButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-brand',
+        'border-0',
+        'cursor-pointer',
+        'h-8',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
+        'text-[13px]',
+        'text-text-inverse',
         'font-semibold',
       ]),
     );
