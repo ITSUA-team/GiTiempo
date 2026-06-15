@@ -36,12 +36,7 @@ export class UsersService {
 
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
 
-  /**
-   * Looks up a user by local id. Returns the public response shape.
-   * Throws `UnauthorizedException` if the subject resolved from the
-   * access token no longer exists (account was deleted) — this is a
-   * re-auth signal, not a "not found" situation.
-   */
+  /** Returns the public user view; missing subjects are treated as unauthorized. */
   async findById(id: string, workspaceId: string): Promise<UserResponse> {
     const [row] = await this.db
       .select({
@@ -58,7 +53,7 @@ export class UsersService {
     return this.toResponse(row.user, row.role);
   }
 
-  /** Same as `findById` but returns the raw row (internal use). */
+  /** Internal row lookup by local id. */
   async findRowById(id: string): Promise<UserRow | null> {
     const [row] = await this.db
       .select()
@@ -118,15 +113,7 @@ export class UsersService {
     return updated;
   }
 
-  /**
-   * Upserts a local user keyed by `firebase_uid`. Called during login
-   * after Firebase verification succeeds.
-   *
-   * On conflict we refresh `email` and `updated_at` from the Firebase identity.
-   * Display name is locally editable, so Firebase only seeds it while the local
-   * value is still empty. Avatar URL is also locally editable and nullable, so
-   * Firebase only seeds it on insert. `id` and `created_at` are immutable.
-   */
+  /** Upserts the local user keyed by `firebase_uid` while preserving local profile edits. */
   async upsertFromFirebase(input: UpsertFromFirebaseInput): Promise<UserRow> {
     const now = new Date();
     const row = (
@@ -151,7 +138,7 @@ export class UsersService {
     return row;
   }
 
-  /** Maps a DB row to the public response shape (drops `firebaseUid`). */
+  /** Maps a DB row to the public response shape. */
   private async findRole(
     userId: string,
     workspaceId: string,

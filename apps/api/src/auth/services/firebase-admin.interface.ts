@@ -1,8 +1,4 @@
-/**
- * Minimal subset of Firebase's `DecodedIdToken` that `AuthService`
- * actually reads. Kept narrow so the test fake can match exactly and
- * so we stay insulated from upstream type changes.
- */
+/** Narrow subset of Firebase token fields used by the app. */
 export interface DecodedFirebaseToken {
   uid: string;
   email?: string;
@@ -33,11 +29,7 @@ export class FirebaseAdminAuthError extends Error {
   }
 }
 
-/**
- * DI contract for verifying Firebase ID tokens. A real implementation
- * wraps `firebase-admin`; a fake implementation accepts deterministic
- * `test:<uid>:<email>[:<name>]` tokens for `NODE_ENV=test`.
- */
+/** Shared contract for the real and test Firebase adapters. */
 export interface FirebaseAdminService {
   verifyIdToken(idToken: string): Promise<DecodedFirebaseToken>;
   createEmailPasswordUser(input: {
@@ -53,5 +45,4 @@ export interface FirebaseAdminService {
   ): Promise<string>;
 }
 
-/** Nest DI token. */
 export const FIREBASE_ADMIN = Symbol('FIREBASE_ADMIN');

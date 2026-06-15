@@ -48,15 +48,7 @@ function postAuth(app: INestApplication, path: string) {
     .set('X-Forwarded-For', `10.42.0.${authTrackerCounter++}`);
 }
 
-/**
- * End-to-end coverage for `/auth/*`. All flows use the fake Firebase
- * provider wired in `AuthModule` when `NODE_ENV=test`, so no real
- * Firebase credentials are required.
- *
- * Pre-requisites:
- *   - pnpm --filter @gitiempo/api db:migrate
- *   - pnpm --filter @gitiempo/api db:seed
- */
+/** End-to-end coverage for `/auth/*` using the fake Firebase provider. */
 describe('Auth (e2e)', () => {
   let app: INestApplication;
   let db: DrizzleDB;

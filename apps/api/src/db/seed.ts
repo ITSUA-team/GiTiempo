@@ -1,16 +1,6 @@
 /**
- * Seed CLI for the API database.
- *
- * Run with:
- *   pnpm --filter @gitiempo/api db:seed
- *
- * Idempotent: re-running updates the same deterministic workspace,
- * settings, users, memberships, and dev invite in place. Safe to run
- * repeatedly during dev.
- *
- * NOTE: this is a thin standalone script; it does NOT bootstrap Nest.
- * It reads `DATABASE_URL` from process env (the npm script loads .env
- * via Node's native `--env-file` flag) and writes via Drizzle directly.
+ * Idempotent API dev seed script.
+ * Run with `pnpm --filter @gitiempo/api db:seed`.
  */
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -49,8 +39,7 @@ const DEV_INVITE_TOKEN = 'dev-invite-token';
 
 const DEV_SEED_USERS: SeedUser[] = [
   {
-    // Matches the test fake's default token `test:admin-uid:admin@example.com`
-    // used by e2e suites and bruno's local environment.
+    // Matches the fake Firebase admin token used by e2e and Bruno.
     firebaseUid: 'admin-uid',
     email: 'admin@example.com',
     displayName: 'Admin (seed)',
@@ -153,8 +142,7 @@ async function main(): Promise<void> {
   });
 
   try {
-    // Sanity check — fail fast with a clear message if migrations
-    // haven't been applied yet.
+    // Fail fast if migrations have not been applied yet.
     await db.execute(sql`SELECT 1 FROM "users" LIMIT 1`).catch(() => {
       throw new Error(
         'Could not query "users" table. Did you run `pnpm --filter @gitiempo/api db:migrate`?',

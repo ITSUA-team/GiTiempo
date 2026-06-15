@@ -9,18 +9,7 @@ import {
   RegisteredFirebaseUser,
 } from './firebase-admin.interface';
 
-/**
- * Test-only fake that accepts tokens of the form:
- *
- *   `test:<uid>:<email>[:<name>]`
- *
- * Anything else is rejected with `UnauthorizedException`. Bound in place
- * of the real provider when `NODE_ENV === 'test'` so e2e runs do not
- * need real Firebase credentials.
- *
- * The returned object shape matches the subset of `DecodedIdToken` that
- * `AuthService` and `UsersService.upsertFromFirebase` consume.
- */
+/** Test-only Firebase adapter for deterministic `test:<uid>:<email>[:<name>]` tokens. */
 @Injectable()
 export class FakeFirebaseAdminService implements FirebaseAdminService {
   private readonly invitedUsers = new Map<string, InvitedFirebaseUser>();

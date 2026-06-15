@@ -14,13 +14,7 @@ import {
 const APP_NAME = 'gitiempo-api';
 const PASSWORD_SETUP_QUERY_KEYS = ['mode', 'oobCode'] as const;
 
-/**
- * Production Firebase Admin provider. Lazily initializes a single app
- * instance and verifies ID tokens with `checkRevoked = true`.
- *
- * Any verification failure is translated to `UnauthorizedException`
- * with a generic message so callers cannot leak internal details.
- */
+/** Firebase Admin adapter for non-test environments. */
 @Injectable()
 export class RealFirebaseAdminService implements FirebaseAdminService {
   private app: App | null = null;
@@ -167,8 +161,6 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
       infer: true,
     });
     if (!projectId || !clientEmail || !privateKey) {
-      // Env validation guarantees these in non-test envs, but guard just
-      // in case this provider is accidentally instantiated in test mode.
       throw new Error(
         'Firebase Admin credentials are not configured. ' +
           'Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.',
