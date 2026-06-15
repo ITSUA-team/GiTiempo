@@ -64,7 +64,6 @@ const {
   collapseRow: collapseMemberRow,
   emptyDescription: memberTableEmptyDescription,
   expandedRows: memberTableExpandedRows,
-  expansionMode: memberTableExpansionMode,
   filters: memberTableFilters,
   lastActiveFilterOptions,
   projectFilterOptions,
@@ -225,12 +224,8 @@ function handleRemoveMember(member: WorkspaceMemberResponse): void {
   );
 }
 
-function handleAssignMember(member: WorkspaceMemberResponse): void {
-  toggleMemberExpansion(member, 'assign');
-}
-
 function handleEditMember(member: WorkspaceMemberResponse): void {
-  toggleMemberExpansion(member, 'edit');
+  toggleMemberExpansion(member);
 }
 
 async function handleAssignmentsSubmitted(
@@ -409,35 +404,33 @@ onMounted(fetchAll);
           :project-filter-options="projectFilterOptions"
           :role-filter-options="roleFilterOptions"
           :rows="memberTableRows"
-          @assign-member="handleAssignMember"
           @edit-member="handleEditMember"
           @invite-member="inviteDialogVisible = true"
-          @remove-member="handleRemoveMember"
           @update:expanded-rows="setMemberTableExpandedRows"
           @update:filters="updateMemberTableFilters"
         >
           <template #row-expansion="{ row }">
-            <MemberAssignPmPanel
-              v-if="
-                memberTableExpansionMode[row.id] === 'assign' &&
-                  memberTableExpandedRows[row.id]
-              "
-              :member="row.member"
-              :projects="projects"
-              :saving="savingMemberAssignmentId === row.id"
-              @save="handleAssignmentsSubmitted(row.member, $event)"
-              @cancelled="collapseMemberRow(row.member)"
-            />
-            <MemberEditForm
-              v-else-if="
-                memberTableExpansionMode[row.id] === 'edit' &&
-                  memberTableExpandedRows[row.id]
-              "
-              :member="row.member"
-              :saving="savingMemberRoleId === row.id"
-              @save="handleRoleSubmitted(row.member, $event)"
-              @cancelled="collapseMemberRow(row.member)"
-            />
+            <div
+              v-if="memberTableExpandedRows[row.id]"
+              class="flex flex-col gap-3"
+            >
+              <MemberEditForm
+                :can-remove="row.canManage"
+                :member="row.member"
+                :saving="savingMemberRoleId === row.id"
+                @remove="handleRemoveMember(row.member)"
+                @save="handleRoleSubmitted(row.member, $event)"
+                @cancelled="collapseMemberRow(row.member)"
+              />
+              <MemberAssignPmPanel
+                v-if="row.canAssignPm"
+                :member="row.member"
+                :projects="projects"
+                :saving="savingMemberAssignmentId === row.id"
+                @save="handleAssignmentsSubmitted(row.member, $event)"
+                @cancelled="collapseMemberRow(row.member)"
+              />
+            </div>
           </template>
         </MembersTable>
       </SurfaceCard>

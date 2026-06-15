@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type { ProjectListResponse, ProjectResponse } from '@gitiempo/shared';
 import { ManagementTableShell } from '@gitiempo/web-shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
-import PrimeVue from 'primevue/config';
+import AutoComplete from 'primevue/autocomplete';
 import MultiSelect from 'primevue/multiselect';
+import PrimeVue from 'primevue/config';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -105,7 +107,7 @@ function createRows(projects = createProjects()): ProjectsTableRow[] {
     id: project.id,
     isActive: project.isActive,
     name: project.name,
-    nameClass: project.isActive ? 'text-text-dark' : 'text-text-muted',
+    nameClass: 'text-brand',
     project,
     sourceLabel: project.source === 'github' ? 'GitHub Repo' : 'Manual',
     visibility: project.visibility,
@@ -153,21 +155,31 @@ describe('ProjectsTable', () => {
     mockMatchMedia();
   });
 
-  it('renders supplied rows with icon-only edit, archive, and unarchive actions', () => {
+  it('uses project names as edit entry points without an actions column', async () => {
+    const activeProject = createProjects()[0]!;
+    const archivedProject = createProjects()[1]!;
     const wrapper = mountProjectsTable();
 
-    const editButton = wrapper.get('[data-testid="project-edit-project-active"]');
-    const archiveButton = wrapper.get('[data-testid="project-archive-project-active"]');
-    const unarchiveButton = wrapper.get('[data-testid="project-unarchive-project-inactive"]');
+    expect(
+      wrapper
+        .getComponent(ManagementTableShell)
+        .props('columns')
+        .map((column) => column.label),
+    ).toEqual(['Project', 'Source', 'Assigned members', 'Hours', 'Visibility']);
 
-    expect(editButton.attributes('aria-label')).toBe('Edit');
-    expect(editButton.text()).toBe('');
-    expect(archiveButton.attributes('aria-label')).toBe('Archive');
-    expect(archiveButton.attributes('data-tooltip')).toBe('Archive');
-    expect(archiveButton.text()).toBe('');
-    expect(unarchiveButton.attributes('aria-label')).toBe('Unarchive');
-    expect(unarchiveButton.text()).toBe('');
+    const activeName = wrapper.get('[data-testid="project-name-project-active"]');
+    const archivedName = wrapper.get('[data-testid="project-name-project-inactive"]');
+
+    expect(activeName.attributes('aria-label')).toBe('Edit project Project Orion');
+    expect(archivedName.attributes('aria-label')).toBe('Edit project Legacy Project');
+    expect(wrapper.find('[data-testid="project-archive-project-active"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="project-unarchive-project-inactive"]').exists()).toBe(false);
     expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
+
+    await activeName.trigger('click');
+    await archivedName.trigger('click');
+
+    expect(wrapper.emitted('edit-project')).toEqual([[activeProject], [archivedProject]]);
   });
 
   it('renders supplied readable duration labels without deriving decimal hours', () => {
@@ -196,16 +208,34 @@ describe('ProjectsTable', () => {
       'Filter project',
     );
     expect(wrapper.text()).toContain('All sources');
-    expect(wrapper.text()).toContain('All members');
     expect(wrapper.text()).toContain('Any');
     expect(wrapper.text()).toContain('All');
 
+    const autoCompleteFilters = wrapper.findAllComponents(AutoComplete);
+    const projectQueryFilter = autoCompleteFilters[0]!;
+    const memberFilter = wrapper.getComponent(MultiSelect);
+
+    expect(autoCompleteFilters).toHaveLength(1);
+    expect(projectQueryFilter.props('dropdown')).toBe(true);
+    expect(projectQueryFilter.props('completeOnFocus')).toBe(true);
+    expect(memberFilter.props('display')).toBe('chip');
+    expect(memberFilter.props('filter')).toBe(true);
+    expect(memberFilter.props('modelValue')).toEqual([]);
+    expect(memberFilter.props('placeholder')).toBe('All members');
+
+    projectQueryFilter.vm.$emit('complete', { query: 'orion' });
+    await nextTick();
+
+    expect(wrapper.getComponent(AutoComplete).props('suggestions')).toEqual([
+      'Project Orion',
+    ]);
+
     await wrapper.get('input[aria-label="Search projects"]').setValue('archived');
-    await wrapper.get('input[aria-label="Filter projects by name"]').setValue('billing');
+    projectQueryFilter.vm.$emit('update:modelValue', 'billing');
 
     const selectFilters = wrapper.findAllComponents(Select);
     await selectFilters[0]!.vm.$emit('update:modelValue', 'manual');
-    await wrapper.findComponent(MultiSelect).vm.$emit('update:modelValue', ['user-2']);
+    await memberFilter.vm.$emit('update:modelValue', ['user-2', 'user-1']);
     await selectFilters[1]!.vm.$emit('update:modelValue', 'zero');
     await selectFilters[2]!.vm.$emit('update:modelValue', 'private');
 
@@ -213,7 +243,7 @@ describe('ProjectsTable', () => {
       [{ global: 'archived' }],
       [{ projectQuery: 'billing' }],
       [{ source: 'manual' }],
-      [{ memberIds: ['user-2'] }],
+      [{ memberIds: ['user-2', 'user-1'] }],
       [{ hours: 'zero' }],
       [{ visibility: 'private' }],
     ]);
@@ -247,19 +277,33 @@ describe('ProjectsTable', () => {
     ]]);
   });
 
-  it('renders mobile loading cards only on mobile viewports', () => {
+  it('renders mobile loading cards only on mobile viewports', async () => {
     const wrapper = mountProjectsTable({
       isMobileViewport: true,
       loading: true,
       rows: [createRows()[0]!],
     });
 
+    const autoCompleteFilters = wrapper.findAllComponents(AutoComplete);
+    const projectQueryFilter = autoCompleteFilters[0]!;
+    const memberFilter = wrapper.getComponent(MultiSelect);
+
+    expect(projectQueryFilter.props('placeholder')).toBe('Filter project');
+    expect(memberFilter.props('placeholder')).toBe('All members');
+
+    await projectQueryFilter.vm.$emit('update:modelValue', 'legacy');
+    await memberFilter.vm.$emit('update:modelValue', ['user-1', 'user-2']);
+
+    expect(wrapper.emitted('update:filters')).toEqual([
+      [{ projectQuery: 'legacy' }],
+      [{ memberIds: ['user-1', 'user-2'] }],
+    ]);
     expect(wrapper.findAll('[data-testid="projects-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-testid="project-edit-project-active"]')).toHaveLength(0);
   });
 
-  it('renders supplied mobile card fields, actions, and expansion slot content', async () => {
+  it('renders supplied mobile card fields, name edit entry points, and expansion slot content', async () => {
     const activeProject = createProjects()[0]!;
     const archivedProject = createProjects()[1]!;
     const rows = [
@@ -288,27 +332,25 @@ describe('ProjectsTable', () => {
     expect(mobileCards[1]?.text()).toContain('Private');
     expect(wrapper.get('[data-testid="row-expansion"]').text()).toBe('Project Orion');
 
-    await wrapper.get('[data-testid="project-mobile-edit-project-active"]').trigger('click');
-    await wrapper.get('[data-testid="project-mobile-archive-project-active"]').trigger('click');
-    await wrapper.get('[data-testid="project-mobile-unarchive-project-inactive"]').trigger('click');
+    expect(wrapper.find('[data-testid="project-mobile-edit-project-active"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="project-mobile-archive-project-active"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="project-mobile-unarchive-project-inactive"]').exists()).toBe(false);
 
-    expect(wrapper.emitted('edit-project')).toEqual([[activeProject]]);
-    expect(wrapper.emitted('archive')).toEqual([[activeProject]]);
-    expect(wrapper.emitted('unarchive')).toEqual([[archivedProject]]);
+    await wrapper.get('[data-testid="project-mobile-name-project-active"]').trigger('click');
+    await wrapper.get('[data-testid="project-mobile-name-project-inactive"]').trigger('click');
+
+    expect(wrapper.emitted('edit-project')).toEqual([[activeProject], [archivedProject]]);
   });
 
-  it('emits desktop row action intents without opening local edit forms', async () => {
+  it('emits desktop edit intents from project names without opening local edit forms', async () => {
     const activeProject = createProjects()[0]!;
     const archivedProject = createProjects()[1]!;
     const wrapper = mountProjectsTable({ rows: createRows([activeProject, archivedProject]) });
 
-    await wrapper.get('[data-testid="project-edit-project-active"]').trigger('click');
-    await wrapper.get('[data-testid="project-archive-project-active"]').trigger('click');
-    await wrapper.get('[data-testid="project-unarchive-project-inactive"]').trigger('click');
+    await wrapper.get('[data-testid="project-name-project-active"]').trigger('click');
+    await wrapper.get('[data-testid="project-name-project-inactive"]').trigger('click');
 
-    expect(wrapper.emitted('edit-project')).toEqual([[activeProject]]);
-    expect(wrapper.emitted('archive')).toEqual([[activeProject]]);
-    expect(wrapper.emitted('unarchive')).toEqual([[archivedProject]]);
+    expect(wrapper.emitted('edit-project')).toEqual([[activeProject], [archivedProject]]);
     expect(wrapper.find('[data-testid="project-edit-form"]').exists()).toBe(false);
   });
 });

@@ -15,6 +15,7 @@
 | App Background | `--color-app-bg`      | `bg-app-bg`               | `#F4F4F5` | Main application canvas                                     |
 | Text Dark      | `--color-text-dark`   | `text-text-dark`          | `#1A1A1A` | Headings and primary copy                                   |
 | Text Muted     | `--color-text-muted`  | `text-text-muted`         | `#666666` | Secondary info and metadata                                 |
+| Text Subtle    | `--color-text-subtle` | `text-text-subtle`        | `#999999` | Low-emphasis separators and tertiary chrome                 |
 | Text Inverse   | `--color-text-inverse` / `--color-text-inverse-muted` | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand, destructive, and dark surfaces |
 | Dividers       | `--color-divider`     | `border-divider`          | `#EEEEEE` | Borders and separators                                      |
 
@@ -92,7 +93,7 @@ Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<AutoComplete>`
 - Background: `bg-surface-primary`.
 - Error state: `invalid` prop plus `<small class="text-xs text-destructive">`.
 - Full width: `class="w-full"`.
-- App single-select pickers default to PrimeVue `<AutoComplete dropdown forceSelection>` so users can type to narrow the option list while still choosing one valid value.
+- App form, dialog, and setup-bar single-select controls use PrimeVue `<Select>` by default when the possible option set is 5 items or fewer. Use `<AutoComplete dropdown forceSelection>` when the option set can exceed 5 items or needs predictive lookup. Keep table-column filter rows on their documented controls. Do not render design annotations such as `AutoComplete` or `Select` as visible control text.
 
 ```vue
 <div class="flex flex-col gap-1">
@@ -129,7 +130,7 @@ Use `<DataTable>` and `<Column>`.
 - Admin table search placeholder copy follows `Search <table label>`, for example `Search members`, `Search projects`, and `Search report rows`. Deferred pages such as invoices must not render temporary search controls before their API contract exists.
 - Admin table search filters the visible table rows using DataTable `globalFilterFields` where native PrimeVue headers are used. When a table uses the shared `ManagementTableShell` with custom headers and hidden native DataTable headers, local computed filtering over the loaded rows is the accepted equivalent. Do not document either pattern as a new backend free-text endpoint unless the API contract is updated separately.
 - Admin tables with filterable columns use a compact filter row directly below the header row, with one filter control per filterable column and no filter control in the actions column. Use PrimeVue `filterDisplay="row"` when native headers are active; use the `ManagementTableShell` filters slot when the shared management chrome owns the header row.
-- Use column-appropriate PrimeVue filter controls: `InputText` for text/id/name/email/source filters, `Select` for single status/role/visibility filters, `MultiSelect filter display="chip"` for member/project assignment filters, and numeric/date controls only when the column data type requires them.
+- Use column-appropriate PrimeVue filter controls: `InputText` for text/id/name/email/source filters; `Select` for single-choice filters when the possible option set is 5 items or fewer; `AutoComplete dropdown forceSelection` for single-choice filters when the option set can exceed 5 items; `MultiSelect filter display="chip"` for member/project assignment filters; and numeric/date controls only when the column data type requires them.
 - Clearing global search or a column filter restores the full result set allowed by page-level filters and role scope.
 - Selected row: `bg-accent-tint text-text-dark`.
 - Right align numeric columns.

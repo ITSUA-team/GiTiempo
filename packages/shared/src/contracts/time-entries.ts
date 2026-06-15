@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { syncedGitHubIssueSchema } from "./github.js";
+
 export const timeEntrySourceSchema = z.enum(["web", "extension", "manual"]);
 
 const dateTimeSchema = z.iso.datetime();
@@ -28,15 +30,6 @@ const timeEntryUserSummarySchema = z.object({
   avatarUrl: z.string().nullable(),
 });
 
-const timeEntryGitHubIssueSchema = z.object({
-  githubRepo: z
-    .string()
-    .min(3)
-    .max(200)
-    .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
-  issueNumber: z.number().int().positive(),
-});
-
 export const timeEntryResponseSchema = z.object({
   id: z.uuid(),
   workspaceId: z.uuid(),
@@ -54,7 +47,7 @@ export const timeEntryResponseSchema = z.object({
   project: timeEntryProjectSummarySchema,
   task: timeEntryTaskSummarySchema,
   user: timeEntryUserSummarySchema,
-  githubIssue: timeEntryGitHubIssueSchema.nullable(),
+  githubIssue: syncedGitHubIssueSchema.nullable(),
 });
 
 export const timeEntryListMetaSchema = z.object({

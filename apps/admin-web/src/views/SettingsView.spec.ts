@@ -80,10 +80,43 @@ const SettingsPageSkeletonStub = {
   `,
 };
 
+const AutoCompleteStub = {
+  emits: ['complete', 'update:modelValue'],
+  props: [
+    'completeOnFocus',
+    'dropdown',
+    'forceSelection',
+    'inputId',
+    'invalid',
+    'minLength',
+    'modelValue',
+    'optionLabel',
+    'suggestions',
+  ],
+  template: `
+    <div>
+      <input
+        :id="inputId"
+        :aria-invalid="invalid ? 'true' : undefined"
+        :value="modelValue?.[optionLabel] ?? ''"
+        @focus="$emit('complete', { query: '' })"
+      />
+      <button
+        v-for="option in suggestions"
+        :key="option.value"
+        :data-testid="inputId + '-option-' + option.value"
+        type="button"
+        @click="$emit('update:modelValue', option)"
+      >
+        {{ option[optionLabel] }}
+      </button>
+    </div>
+  `,
+};
+
 const SelectStub = {
   emits: ['update:modelValue'],
   props: [
-    'filter',
     'inputId',
     'invalid',
     'modelValue',
@@ -95,7 +128,6 @@ const SelectStub = {
     <select
       :id="inputId"
       :aria-invalid="invalid ? 'true' : undefined"
-      :data-filter="filter === false || filter === undefined ? 'false' : 'true'"
       :value="modelValue"
       @change="$emit('update:modelValue', $event.target.value)"
     >
@@ -121,6 +153,7 @@ function mountSettingsView() {
     global: {
       plugins: [pinia, createTestQueryPlugin(), [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
+        AutoComplete: AutoCompleteStub,
         Select: SelectStub,
         Skeleton: SkeletonStub,
         SettingsPageSkeleton: SettingsPageSkeletonStub,
@@ -210,7 +243,7 @@ describe('SettingsView', () => {
       wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
     ).toBe('GiTiempo Studio');
     expect(
-      wrapper.get<HTMLSelectElement>('#settings-time-zone').element.value,
+      wrapper.get<HTMLInputElement>('#settings-time-zone').element.value,
     ).toBe('UTC');
     expect(
       wrapper.get<HTMLInputElement>('#settings-invoice-prefix').element
@@ -259,7 +292,10 @@ describe('SettingsView', () => {
     const wrapper = mountSettingsView();
     await flushPromises();
 
-    await wrapper.get('#settings-time-zone').setValue('Europe/Kyiv');
+    await wrapper.get('#settings-time-zone').trigger('focus');
+    await wrapper
+      .get('[data-testid="settings-time-zone-option-Europe/Kyiv"]')
+      .trigger('click');
     await wrapper
       .findAll('button')
       .find((button) => button.text() === 'Save Settings')
@@ -311,7 +347,10 @@ describe('SettingsView', () => {
     await flushPromises();
 
     await wrapper.get('#settings-workspace-name').setValue('Draft Workspace');
-    await wrapper.get('#settings-time-zone').setValue('Europe/Kyiv');
+    await wrapper.get('#settings-time-zone').trigger('focus');
+    await wrapper
+      .get('[data-testid="settings-time-zone-option-Europe/Kyiv"]')
+      .trigger('click');
     await wrapper
       .findAll('button')
       .find((button) => button.text() === 'Cancel')
@@ -321,7 +360,7 @@ describe('SettingsView', () => {
       wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
     ).toBe('GiTiempo Studio');
     expect(
-      wrapper.get<HTMLSelectElement>('#settings-time-zone').element.value,
+      wrapper.get<HTMLInputElement>('#settings-time-zone').element.value,
     ).toBe('UTC');
     expect(testMocks.updateWorkspace).not.toHaveBeenCalled();
     expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();

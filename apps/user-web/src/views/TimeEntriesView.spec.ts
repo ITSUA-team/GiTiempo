@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { readonly, shallowRef } from "vue";
 import type {
   ProjectResponse,
   TaskResponse,
@@ -9,6 +10,7 @@ import type {
 } from "@gitiempo/shared";
 
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
+import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -53,6 +55,17 @@ const TEST_IDS = {
 
 const mountedWrappers: VueWrapper[] = [];
 
+function createTopBarTimerDialogControllerMock() {
+  const openRequestId = shallowRef(0);
+
+  return {
+    openRequestId: readonly(openRequestId),
+    requestOpen: vi.fn(() => {
+      openRequestId.value += 1;
+    }),
+  };
+}
+
 beforeAll(() => {
   vi.stubEnv("TZ", "Europe/Kiev");
 });
@@ -82,6 +95,7 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
+    githubIssue: null,
     id: TEST_IDS.taskReports,
     isActive: true,
     projectId: TEST_IDS.projectOrion,
@@ -227,10 +241,13 @@ async function mountView(
   options: {
     pinia?: ReturnType<typeof createPinia>;
     queryClient?: ReturnType<typeof createTestQueryClient>;
+    topBarTimerDialogController?: ReturnType<typeof createTopBarTimerDialogControllerMock>;
   } = {},
 ) {
   const pinia = options.pinia ?? createPinia();
   const queryClient = options.queryClient ?? createTestQueryClient();
+  const topBarTimerDialogController =
+    options.topBarTimerDialogController ?? createTopBarTimerDialogControllerMock();
 
   setActivePinia(pinia);
   useAuthStore().accessToken = "access-token";
@@ -239,20 +256,55 @@ async function mountView(
   const wrapper = mount(TimeEntriesView, {
     global: {
       plugins: [pinia, createTestQueryPlugin(queryClient)],
+      provide: {
+        [topBarTimerDialogControllerKey]: topBarTimerDialogController,
+      },
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
-          props: ["inputId", "suggestions"],
+          props: [
+            "completeOnFocus",
+            "dropdownMode",
+            "inputId",
+            "minLength",
+            "optionLabel",
+            "overlayClass",
+            "pt",
+            "suggestions",
+          ],
           template: `
-            <div :data-testid="inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'">
-              <p v-for="suggestion in suggestions" :key="suggestion.id">{{ suggestion.title }}</p>
-              <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
-              <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
-                id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
-                isActive: true,
-                projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
-                title: 'Ship admin polish'
-              })">Select task</button>
+            <div
+              :data-complete-on-focus="String(completeOnFocus === true || completeOnFocus === '')"
+              :data-dropdown-mode="dropdownMode ?? ''"
+              :data-input-pt-class="pt?.pcInputText?.root?.class ?? ''"
+              :data-list-container-pt-class="pt?.listContainer?.class ?? ''"
+              :data-min-length="String(minLength)"
+              :data-option-pt-class="pt?.option?.class ?? ''"
+              :data-overlay-class="overlayClass ?? ''"
+              :data-overlay-pt-class="pt?.overlay?.class ?? ''"
+              :data-root-pt-class="pt?.root?.class ?? ''"
+              :data-testid="inputId === 'time-entries-project-filter' ? 'project-filter-autocomplete' : inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'"
+            >
+              <p v-for="suggestion in suggestions" :key="suggestion.id">
+                {{ suggestion[optionLabel] }}
+              </p>
+              <template v-if="inputId === 'time-entries-project-filter'">
+                <button data-testid="project-filter-search" type="button" @click="$emit('complete', { query: 'Project' })">Search project</button>
+                <button data-testid="project-filter-select" type="button" @click="$emit('update:modelValue', {
+                  id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
+                  name: 'Project Orion'
+                })">Select project</button>
+              </template>
+              <template v-else>
+                <button data-testid="filter-task-focus" type="button" @click="$emit('complete', { query: '' })">Focus task</button>
+                <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
+                <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
+                  id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
+                  isActive: true,
+                  projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
+                  title: 'Ship admin polish'
+                })">Select task</button>
+              </template>
             </div>
           `,
         },
@@ -263,13 +315,29 @@ async function mountView(
         },
         DatePicker: {
           emits: ["update:modelValue"],
-          props: ["inputId"],
+          props: ["inputId", "modelValue", "showIcon"],
+          methods: {
+            formatRange(value: Date[] | null | undefined): string {
+              if (!value?.length) {
+                return "";
+              }
+
+              return value
+                .map((date) => [
+                  date.getFullYear(),
+                  String(date.getMonth() + 1).padStart(2, "0"),
+                  String(date.getDate()).padStart(2, "0"),
+                ].join("-"))
+                .join(" - ");
+            },
+          },
           template: `
             <button
               :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
+              :data-show-icon="String(showIcon === true || showIcon === '')"
               type="button"
               @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
-            >Date</button>
+            >{{ formatRange(modelValue) }}</button>
           `,
         },
         Paginator: {
@@ -277,13 +345,9 @@ async function mountView(
           template: '<button data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
         },
         ProgressSpinner: { template: "<div />" },
-        Select: {
-          emits: ["update:modelValue"],
-          template: '<button data-testid="project-filter-select" type="button" @click="$emit(\'update:modelValue\', \'018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002\')">Project</button>',
-        },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
-          emits: ["createForDay", "deleteEntry", "editEntry"],
+          emits: ["createForDay", "editEntry", "openActiveTimer"],
           props: ["formatDuration", "formatTimeRange", "group"],
           template: `
             <section>
@@ -299,12 +363,12 @@ async function mountView(
                     @click="$emit('editEntry', entry)"
                   >Edit</button>
                   <button
-                    v-if="entry.endedAt !== null"
-                    data-testid="time-entry-delete-entry-completed"
+                    v-else
+                    :data-testid="'time-entry-open-timer-' + entry.id"
                     type="button"
-                    @click="$emit('deleteEntry', entry)"
-                  >Delete</button>
-                  <p v-else>Stop from the top bar</p>
+                    @click="$emit('openActiveTimer')"
+                  >Update timer</button>
+                  <p v-if="entry.endedAt === null">Stop from the top bar</p>
                 </div>
               <button data-testid="time-entries-day-create-2026-04-21" type="button" @click="$emit('createForDay', group.dateKey)">Create day</button>
             </section>
@@ -313,6 +377,7 @@ async function mountView(
         TimeEntryDialog: {
           emits: [
             "close",
+            "deleteEntry",
             "save",
             "taskSearch",
             "update:description",
@@ -325,6 +390,7 @@ async function mountView(
           props: [
             "dialogErrorMessage",
             "endedAt",
+            "isDeleting",
             "isOpen",
             "startedAt",
             "taskSuggestions",
@@ -345,6 +411,8 @@ async function mountView(
                 <p v-for="suggestion in taskSuggestions" :key="suggestion.id">{{ suggestion.title }}</p>
               </div>
               <button data-testid="dialog-project-admin" type="button" @click="$emit('update:projectId', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002')">Project</button>
+              <button data-testid="dialog-task-search-empty" type="button" @click="$emit('taskSearch', '')">Search all tasks</button>
+              <button data-testid="dialog-task-search-polish" type="button" @click="$emit('taskSearch', 'polish')">Search polish tasks</button>
               <button data-testid="dialog-task-admin" type="button" @click="$emit('update:taskValue', {
                 id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
                 isActive: true,
@@ -355,6 +423,7 @@ async function mountView(
               <button data-testid="dialog-started" type="button" @click="$emit('update:startedAt', new Date('2026-04-21T09:15:00.000Z'))">Started</button>
               <button data-testid="dialog-ended" type="button" @click="$emit('update:endedAt', new Date('2026-04-21T10:45:00.000Z'))">Ended</button>
               <button data-testid="dialog-billable" type="button" @click="$emit('update:isBillable', true)">Billable</button>
+              <button data-testid="dialog-delete" type="button" @click="$emit('deleteEntry')">Delete entry</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
             </div>
           `,
@@ -365,7 +434,7 @@ async function mountView(
 
   mountedWrappers.push(wrapper);
 
-  return { client, pinia, queryClient, wrapper };
+  return { client, pinia, queryClient, topBarTimerDialogController, wrapper };
 }
 
 describe("TimeEntriesView", () => {
@@ -403,6 +472,10 @@ describe("TimeEntriesView", () => {
       search: undefined,
       taskId: undefined,
     });
+    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
+    expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
+      "true",
+    );
     expect(wrapper.text()).toContain("Today, Apr 21");
     expect(wrapper.text()).toContain("02:00:05");
 
@@ -412,7 +485,7 @@ describe("TimeEntriesView", () => {
     expect(wrapper.text()).toContain("02:00:08");
   });
 
-  it("wires day create, edit, and delete actions through the real view", async () => {
+  it("wires day create and task-name edit actions through the real view", async () => {
     const { wrapper } = await mountView();
 
     await flushPromises();
@@ -424,11 +497,20 @@ describe("TimeEntriesView", () => {
 
     const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
     await editButtons[editButtons.length - 1]!.trigger("click");
-    const deleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');
-    await deleteButtons[deleteButtons.length - 1]!.trigger("click");
 
     expect(wrapper.text()).toContain("Stop from the top bar");
-    expect(primeVueMocks.confirmRequire).toHaveBeenCalledTimes(1);
+    expect(primeVueMocks.confirmRequire).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
+  });
+
+  it("opens the active timer dialog instead of the time-entry edit dialog for running entries", async () => {
+    const { topBarTimerDialogController, wrapper } = await mountView();
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+
+    expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
   });
 
   it("opens edit with the same browser-local times shown in the table", async () => {
@@ -516,6 +598,34 @@ describe("TimeEntriesView", () => {
     );
   });
 
+  it("deletes the editing entry from inside the dialog and closes after success", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
+    await editButtons[editButtons.length - 1]!.trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
+
+    const confirmOptions = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
+
+    expect(confirmOptions).toMatchObject({
+      acceptLabel: "Delete",
+      header: "Delete entry?",
+      message: "This time entry will be permanently deleted.",
+      rejectLabel: "Cancel",
+    });
+
+    await confirmOptions!.accept();
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.deleteEntry).toHaveBeenCalledWith(TEST_IDS.completedEntry);
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
   it("updates grouped entry state after a top-bar stop reconciliation", async () => {
     const initialRunningResponse = createEntryListResponse([
       createEntry({
@@ -554,7 +664,7 @@ describe("TimeEntriesView", () => {
     expect(wrapper.text()).not.toContain("Running");
     expect(wrapper.text()).toContain("1h 30m");
     expect(wrapper.find('[data-testid="time-entry-edit-entry-completed"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
 
     vi.advanceTimersByTime(3000);
     await flushPromises();
@@ -612,9 +722,6 @@ describe("TimeEntriesView", () => {
     await wrapper.get('[data-testid="paginator-page-2"]').trigger("click");
     await flushPromises();
 
-    expect(client.listProjectTasks).toHaveBeenCalledWith(
-      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-    );
     expect(client.listOwnEntries.mock.calls.map((call) => call[0])).toContainEqual({
       dateFrom: new Date(2026, 3, 1, 0, 0, 0, 0).toISOString(),
       dateTo: new Date(2026, 3, 22, 0, 0, 0, 0).toISOString(),
@@ -626,6 +733,59 @@ describe("TimeEntriesView", () => {
     });
   });
 
+  it("shows task suggestions from the current filtered entries", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([
+        createEntry({
+          id: TEST_IDS.completedEntry,
+          project: {
+            id: TEST_IDS.projectAdmin,
+            name: "Admin Web",
+          },
+          projectId: TEST_IDS.projectAdmin,
+          task: {
+            id: TEST_IDS.taskAdmin,
+            title: "Ship admin polish",
+          },
+          taskId: TEST_IDS.taskAdmin,
+        }),
+        createEntry({
+          id: TEST_IDS.runningEntry,
+        }),
+      ]),
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-search"]').trigger("click");
+    await flushPromises();
+
+    const filterSuggestions = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    expect(filterSuggestions.attributes("data-complete-on-focus")).toBe("true");
+    expect(filterSuggestions.attributes("data-dropdown-mode")).toBe("blank");
+    expect(filterSuggestions.attributes("data-input-pt-class")).toBe("truncate");
+    expect(filterSuggestions.attributes("data-list-container-pt-class")).toBe(
+      "max-w-full overflow-x-hidden",
+    );
+    expect(filterSuggestions.attributes("data-min-length")).toBe("0");
+    expect(filterSuggestions.attributes("data-option-pt-class")).toBe(
+      "max-w-full min-w-0 truncate",
+    );
+    expect(filterSuggestions.attributes("data-overlay-class")).toBe(
+      "max-w-[calc(100vw-2rem)]",
+    );
+    expect(filterSuggestions.attributes("data-overlay-pt-class")).toBe(
+      "max-w-[calc(100vw-2rem)] overflow-hidden",
+    );
+    expect(filterSuggestions.attributes("data-root-pt-class")).toBe(
+      "max-w-full min-w-0",
+    );
+    expect(client.listProjectTasks).not.toHaveBeenCalled();
+    expect(filterSuggestions.text()).toContain("Ship admin polish");
+    expect(filterSuggestions.text()).not.toContain("Improve reports filters");
+  });
+
   it("filters closed tasks from manual entry selection without hiding historical filters", async () => {
     const closedTask = createTask({
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2999",
@@ -634,6 +794,34 @@ describe("TimeEntriesView", () => {
       title: "Ship closed archive",
     });
     const client = createClientMock({
+      entriesResponse: createEntryListResponse([
+        createEntry({
+          id: TEST_IDS.completedEntry,
+          project: {
+            id: TEST_IDS.projectAdmin,
+            name: "Admin Web",
+          },
+          projectId: TEST_IDS.projectAdmin,
+          task: {
+            id: TEST_IDS.taskAdmin,
+            title: "Ship admin polish",
+          },
+          taskId: TEST_IDS.taskAdmin,
+        }),
+        createEntry({
+          id: TEST_IDS.runningEntry,
+          project: {
+            id: TEST_IDS.projectAdmin,
+            name: "Admin Web",
+          },
+          projectId: TEST_IDS.projectAdmin,
+          task: {
+            id: closedTask.id,
+            title: closedTask.title,
+          },
+          taskId: closedTask.id,
+        }),
+      ]),
       tasksByProject: {
         [TEST_IDS.projectAdmin]: [
           createTask({
@@ -665,6 +853,92 @@ describe("TimeEntriesView", () => {
 
     expect(dialogSuggestions.text()).toContain("Ship admin polish");
     expect(dialogSuggestions.text()).not.toContain("Ship closed archive");
+  });
+
+  it("shows all open project tasks in the create dialog after an empty task dropdown query", async () => {
+    const secondOpenTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2998",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Write release checklist",
+    });
+    const closedTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2999",
+      projectId: TEST_IDS.projectAdmin,
+      status: "closed",
+      title: "Closed historical cleanup",
+    });
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+      tasksByProject: {
+        [TEST_IDS.projectAdmin]: [
+          createTask({
+            id: TEST_IDS.taskAdmin,
+            projectId: TEST_IDS.projectAdmin,
+            title: "Ship admin polish",
+          }),
+          secondOpenTask,
+          closedTask,
+        ],
+      },
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.projectAdmin);
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
+
+    await wrapper.get('[data-testid="dialog-task-search-polish"]').trigger("click");
+
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).not.toContain("Write release checklist");
+
+    await wrapper.get('[data-testid="dialog-task-search-empty"]').trigger("click");
+
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
+  });
+
+  it("shows all open project tasks in the edit dialog for an empty task dropdown query", async () => {
+    const secondOpenTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2998",
+      title: "Write release checklist",
+    });
+    const closedTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2999",
+      status: "closed",
+      title: "Closed historical cleanup",
+    });
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+      tasksByProject: {
+        [TEST_IDS.projectOrion]: [
+          createTask(),
+          secondOpenTask,
+          closedTask,
+        ],
+      },
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.projectOrion);
+    expect(dialogSuggestions.text()).toContain("Improve reports filters");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
   });
 
   it("creates a manual entry and refreshes the current list page", async () => {
@@ -747,7 +1021,7 @@ describe("TimeEntriesView", () => {
     );
   });
 
-  it("confirms deletes, refreshes on success, and keeps failures visible on error", async () => {
+  it("confirms dialog deletes, refreshes on success, and keeps failures visible on error", async () => {
     const client = createClientMock();
 
     client.deleteEntry.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("Delete failed"));
@@ -755,16 +1029,21 @@ describe("TimeEntriesView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    const retryDeleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');
-    await retryDeleteButtons[retryDeleteButtons.length - 1]!.trigger("click");
+    const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
+    await editButtons[editButtons.length - 1]!.trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
     await primeVueMocks.confirmRequire.mock.calls[0]?.[0].accept();
+    await flushPromises();
     await flushPromises();
 
     expect(client.deleteEntry).toHaveBeenCalledWith(TEST_IDS.completedEntry);
     expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
 
-    const deleteButtons = wrapper.findAll('[data-testid="time-entry-delete-entry-completed"]');
-    await deleteButtons[deleteButtons.length - 1]!.trigger("click");
+    const nextEditButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
+    await nextEditButtons[nextEditButtons.length - 1]!.trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
     await primeVueMocks.confirmRequire.mock.calls[1]?.[0].accept();
     await flushPromises();
 

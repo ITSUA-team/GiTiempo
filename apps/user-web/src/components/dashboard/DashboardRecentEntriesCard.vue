@@ -10,6 +10,7 @@ import {
 } from "@gitiempo/web-shared";
 
 import type { DashboardRecentEntryRow } from "@/composables/dashboard/useDashboardOverview";
+import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 
 const props = defineProps<{
   entries: DashboardRecentEntryRow[];
@@ -60,9 +61,16 @@ function getRowClass(entry: DashboardRecentEntryRow): string {
         :tone="entry.isHighlighted ? 'highlighted' : 'default'"
       >
         <div class="flex min-w-0 flex-col gap-1">
-          <p class="text-text-dark truncate text-sm font-medium">
-            {{ entry.taskTitle }}
-          </p>
+          <div class="flex max-w-full min-w-0 items-center gap-1">
+            <p class="text-text-dark truncate text-sm font-medium">
+              {{ entry.taskTitle }}
+            </p>
+            <TaskGitHubIssueLink
+              v-if="entry.githubIssue"
+              :issue="entry.githubIssue"
+              :test-id="`dashboard-recent-entry-mobile-github-${entry.id}`"
+            />
+          </div>
           <p class="text-text-muted truncate text-[13px]">
             {{ entry.projectName }}
           </p>
@@ -107,9 +115,16 @@ function getRowClass(entry: DashboardRecentEntryRow): string {
       >
         <Column header="Task">
           <template #body="{ data: entry }">
-            <p class="text-text-dark truncate text-sm font-medium">
-              {{ entry.taskTitle }}
-            </p>
+            <div class="flex max-w-full min-w-0 items-center gap-1">
+              <p class="text-text-dark truncate text-sm font-medium">
+                {{ entry.taskTitle }}
+              </p>
+              <TaskGitHubIssueLink
+                v-if="entry.githubIssue"
+                :issue="entry.githubIssue"
+                :test-id="`dashboard-recent-entry-github-${entry.id}`"
+              />
+            </div>
           </template>
         </Column>
 

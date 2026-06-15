@@ -19,8 +19,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  archive: [];
   cancelled: [];
   save: [input: ProjectEditFormInput];
+  unarchive: [];
 }>();
 
 const memberOptions = props.allMembers
@@ -103,6 +105,15 @@ function handleSave({
           data-testid="project-edit-form-actions"
           class="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-2.5"
         >
+          <Button
+            :label="project.isActive ? 'Archive project' : 'Unarchive project'"
+            :severity="project.isActive ? 'danger' : 'secondary'"
+            :disabled="saving"
+            outlined
+            type="button"
+            class="w-full sm:w-auto"
+            @click="project.isActive ? emit('archive') : emit('unarchive')"
+          />
           <Button
             label="Cancel"
             severity="secondary"

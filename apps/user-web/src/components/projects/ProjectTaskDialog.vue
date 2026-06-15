@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { computed } from "vue";
+import { filterAutocompleteOptions } from "@gitiempo/web-shared";
+import { computed, shallowRef, watch } from "vue";
 
 const props = defineProps<{
   errors: {
@@ -12,6 +14,7 @@ const props = defineProps<{
     status: string | null;
     title: string | null;
   };
+  isDeleting: boolean;
   isOpen: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
@@ -27,6 +30,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
+  deleteTask: [];
   save: [];
   "update:projectId": [value: string | null];
   "update:status": [value: TaskStatus];
@@ -41,11 +45,31 @@ const statusOptions = [
 const selectedProjectName = computed(() => {
   return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
 });
+const selectedProject = computed(() =>
+  props.projects.find((project) => project.id === props.projectId) ?? null,
+);
+const projectSearchValue = shallowRef<string | null>(null);
+const projectSearchQuery = shallowRef("");
+const projectSuggestions = computed(() => {
+  return filterAutocompleteOptions(
+    props.projects,
+    projectSearchQuery.value,
+    (project) => project.name,
+  );
+});
 
 const projectModel = computed({
-  get: () => props.projectId,
-  set: (value: string | null | undefined) => {
-    emit("update:projectId", value ?? null);
+  get: () => projectSearchValue.value ?? selectedProject.value,
+  set: (value: ProjectResponse | string | null | undefined) => {
+    if (typeof value === "string") {
+      projectSearchValue.value = value;
+      projectSearchQuery.value = value;
+      return;
+    }
+
+    projectSearchValue.value = null;
+    projectSearchQuery.value = "";
+    emit("update:projectId", value?.id ?? null);
   },
 });
 
@@ -62,13 +86,27 @@ const titleModel = computed({
     emit("update:title", value);
   },
 });
+
+const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
+
+watch(
+  [() => props.isOpen, () => props.mode, () => props.projectId],
+  () => {
+    projectSearchValue.value = null;
+    projectSearchQuery.value = "";
+  },
+);
+
+function handleProjectComplete(event: { query: string }): void {
+  projectSearchQuery.value = event.query;
+}
 </script>
 
 <template>
   <Dialog
-    :closable="!props.isSaving"
+    :closable="!isDialogMutating"
     modal
-    :dismissable-mask="!props.isSaving"
+    :dismissable-mask="!isDialogMutating"
     :draggable="false"
     :pt="{
       root: 'w-[min(480px,calc(100vw-2rem))] rounded-lg border border-divider',
@@ -78,7 +116,7 @@ const titleModel = computed({
     }"
     :visible="props.isOpen"
     @update:visible="(nextVisible) => {
-      if (!nextVisible && !props.isSaving) {
+      if (!nextVisible && !isDialogMutating) {
         emit('close');
       }
     }"
@@ -124,18 +162,23 @@ const titleModel = computed({
         >
           {{ selectedProjectName }}
         </div>
-        <Select
+        <AutoComplete
           v-else
           v-model="projectModel"
-          filter
+          complete-on-focus
+          data-key="id"
+          dropdown
+          dropdown-mode="blank"
           fluid
+          force-selection
           input-id="project-task-project"
+          :min-length="0"
           option-label="name"
-          option-value="id"
           placeholder="Select project"
-          :disabled="props.isSaving"
+          :disabled="isDialogMutating"
           :invalid="!!props.errors.projectId"
-          :options="props.projects"
+          :suggestions="projectSuggestions"
+          @complete="handleProjectComplete"
         />
         <small
           v-if="props.errors.projectId"
@@ -156,7 +199,7 @@ const titleModel = computed({
           id="project-task-title"
           v-model="titleModel"
           class="h-[38px] w-full"
-          :disabled="props.isSaving"
+          :disabled="isDialogMutating"
           :invalid="!!props.errors.title"
         />
         <small
@@ -183,7 +226,7 @@ const titleModel = computed({
           input-id="project-task-status"
           option-label="label"
           option-value="value"
-          :disabled="props.isSaving"
+          :disabled="isDialogMutating"
           :invalid="!!props.errors.status"
           :options="statusOptions"
         />
@@ -199,16 +242,19 @@ const titleModel = computed({
     <template #footer>
       <div class="flex justify-end gap-2">
         <Button
+          v-if="props.mode === 'edit'"
           type="button"
-          label="Cancel"
-          severity="secondary"
+          label="Delete task"
+          severity="danger"
           variant="outlined"
-          :disabled="props.isSaving"
-          @click="emit('close')"
+          :disabled="isDialogMutating"
+          :loading="props.isDeleting"
+          @click="emit('deleteTask')"
         />
         <Button
           type="button"
           :label="props.saveLabel"
+          :disabled="props.isDeleting"
           :loading="props.isSaving"
           @click="emit('save')"
         />

@@ -57,6 +57,7 @@ const props = withDefaults(
     displayName: string;
     pageName?: string;
     productName?: string;
+    profileContextLabel?: string;
     settingsIcon?: Component;
     settingsLabel?: string;
     showDisplayName?: boolean;
@@ -70,9 +71,10 @@ const props = withDefaults(
     centerContentAlign: "center",
     pageName: undefined,
     productName: "GiTiempo",
+    profileContextLabel: undefined,
     settingsIcon: undefined,
     settingsLabel: "Settings",
-    showDisplayName: true,
+    showDisplayName: false,
     showSettings: true,
     workspaceShortName: "GT",
   },
@@ -89,20 +91,25 @@ const emit = defineEmits<{
 
 const profileMenuRegion = useTemplateRef<HTMLElement>("profileMenuRegion");
 const isProfileMenuOpen = ref(false);
+const profileTriggerLabel = computed(
+  () => `Open profile menu for ${props.displayName}`,
+);
+const openProfileTriggerClass =
+  "ring-divider bg-surface-primary h-10 gap-3 rounded-lg px-1.5 py-1 ring-1 ring-inset";
 
 const profileTriggerRootClass = computed(() =>
   [
-    "focus-visible:outline-brand flex h-10 items-center gap-3 rounded-lg border px-1.5 py-1 transition focus-visible:outline-2 focus-visible:outline-offset-2",
+    "focus-visible:outline-brand flex items-center justify-center transition focus-visible:outline-2 focus-visible:outline-offset-2",
     isProfileMenuOpen.value
-      ? "border-divider bg-surface-primary"
-      : "border-transparent bg-transparent hover:bg-app-bg",
+      ? openProfileTriggerClass
+      : "size-8 rounded-full border-0 bg-transparent p-0 hover:bg-app-bg",
   ].join(" "),
 );
 
 const profileAvatarRootClass = computed(() =>
   [
-    "bg-accent-tint text-xs font-semibold text-brand",
-    isProfileMenuOpen.value ? "ring-2 ring-brand" : "",
+    "bg-accent-tint text-brand flex items-center justify-center rounded-full text-xs font-semibold leading-[14px]",
+    isProfileMenuOpen.value ? "border-2 border-brand" : "border-0",
   ]
     .filter(Boolean)
     .join(" "),
@@ -197,7 +204,7 @@ function handleSettingsClick(
 
 function getMenuActionClass(item: ProfileMenuSlotItem): string {
   const baseClass =
-    "hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2";
+    "hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm leading-[17px] transition focus-visible:outline-2 focus-visible:outline-offset-2";
 
   switch (item.key) {
     case "workspace":
@@ -258,11 +265,11 @@ onBeforeUnmount(() => {
 
 <template>
   <header
-    class="border-divider bg-surface-primary sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 border-b px-4 sm:h-16 sm:grid-rows-1 sm:px-6"
+    class="bg-surface-primary after:bg-divider sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 px-4 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:content-[''] sm:h-16 sm:grid-rows-1 sm:px-6"
   >
     <div class="row-start-1 flex min-w-0 items-center gap-3">
       <div
-        class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs font-semibold"
+        class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs leading-[14px] font-semibold"
       >
         {{ props.workspaceShortName }}
       </div>
@@ -289,15 +296,12 @@ onBeforeUnmount(() => {
         <p class="text-base font-semibold">
           {{ props.productName }}
         </p>
-        <p class="text-text-muted text-xs">
-          {{ props.workspaceName }}
-        </p>
       </div>
     </div>
 
     <div
       v-if="hasCenterSlot"
-      class="col-span-3 row-start-2 -mx-4 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:mx-0 sm:px-2"
+      class="col-span-3 row-start-2 -mx-4 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:mx-0"
       data-testid="workspace-header-center-row"
     >
       <div
@@ -313,28 +317,38 @@ onBeforeUnmount(() => {
       class="relative col-start-3 row-start-1 flex items-center gap-3"
       data-testid="profile-menu-region"
     >
+      <span
+        v-if="props.profileContextLabel && !isProfileMenuOpen"
+        class="text-text-muted hidden text-right text-[13px] leading-4 font-medium sm:block"
+      >
+        {{ props.profileContextLabel }}
+      </span>
+
       <Button
+        unstyled
         type="button"
         aria-controls="profile_menu"
         :aria-expanded="isProfileMenuOpen"
         aria-haspopup="menu"
-        aria-label="Open profile menu"
+        :aria-label="profileTriggerLabel"
+        :class="profileTriggerRootClass"
         data-testid="profile-menu-trigger"
-        variant="text"
-        :pt="{
-          root: {
-            class: profileTriggerRootClass,
-          },
-        }"
         @click="toggleProfileMenu"
       >
         <span
-          v-if="props.showDisplayName"
+          v-if="props.profileContextLabel && isProfileMenuOpen"
+          class="text-text-muted hidden text-right text-[13px] leading-4 font-medium sm:block"
+        >
+          {{ props.profileContextLabel }}
+        </span>
+        <span
+          v-else-if="props.showDisplayName"
           class="text-text-dark hidden text-right text-[13px] font-medium sm:block"
         >
           {{ props.displayName }}
         </span>
         <Avatar
+          unstyled
           :label="props.userInitials"
           shape="circle"
           class="size-8"
@@ -344,6 +358,9 @@ onBeforeUnmount(() => {
             root: {
               class: profileAvatarRootClass,
             },
+            label: {
+              class: 'leading-[14px]',
+            },
           }"
         />
       </Button>
@@ -351,10 +368,16 @@ onBeforeUnmount(() => {
       <Menu
         v-if="isProfileMenuOpen"
         id="profile_menu"
+        unstyled
         :model="profileMenuItems"
         aria-label="Profile actions"
-        class="border-divider bg-surface-primary shadow-popover before:border-divider before:bg-surface-primary absolute top-full right-0 z-30 mt-3 w-[264px] rounded-lg border p-1.5 before:absolute before:-top-1.5 before:right-5 before:size-3 before:rotate-45 before:border-t before:border-l before:content-['']"
+        class="ring-divider bg-surface-primary shadow-popover before:ring-divider before:bg-surface-primary absolute top-full right-0 z-30 mt-5 h-40 w-[264px] rounded-lg p-1.5 ring-1 ring-inset before:absolute before:top-0 before:right-4 before:size-3 before:rotate-45 before:ring-1 before:content-[''] before:ring-inset"
         data-testid="profile-menu"
+        :pt="{
+          list: 'm-0 flex list-none flex-col gap-1 p-0',
+          item: 'm-0 p-0',
+          separator: 'bg-divider my-0 h-px border-0',
+        }"
       >
         <template #item="{ item, props: itemProps }">
           <a

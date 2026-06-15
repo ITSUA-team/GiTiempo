@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import {
-  PencilSquareIcon,
-  TrashIcon,
-  UserPlusIcon,
-} from '@heroicons/vue/24/outline';
+import { computed, ref } from 'vue';
+import { UserPlusIcon } from '@heroicons/vue/24/outline';
 import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
@@ -11,16 +8,17 @@ import type {
 import {
   EmptyStateBlock,
   EntryActionButton,
-  ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
+  filterAutocompleteStrings,
   managementTableColumnPt,
-  managementTableFilterInputClass,
+  managementTableFilterAutoCompletePt,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
+import AutoComplete from 'primevue/autocomplete';
 import Avatar from 'primevue/avatar';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
@@ -40,7 +38,11 @@ import type {
   MembersTableRow,
 } from '@/lib/members-table';
 
-defineProps<{
+interface AutoCompleteCompleteEvent {
+  query: string;
+}
+
+const props = defineProps<{
   emptyDescription: string;
   expandedRows: MembersTableExpandedRows;
   filters: MembersTableFilters;
@@ -52,11 +54,27 @@ defineProps<{
   rows: MembersTableRow[];
 }>();
 
+const memberQuerySuggestions = ref<string[]>([]);
+
+const memberQueryOptions = computed(() => {
+  const options = props.rows.flatMap((row) => [
+    row.primaryLabel,
+    row.secondaryLabel,
+  ]).filter((label): label is string => !!label);
+
+  return [...new Set(options)].sort((a, b) => a.localeCompare(b));
+});
+
+function handleMemberQueryComplete(event: AutoCompleteCompleteEvent): void {
+  memberQuerySuggestions.value = filterAutocompleteStrings(
+    memberQueryOptions.value,
+    event.query,
+  );
+}
+
 const emit = defineEmits<{
-  'assign-member': [member: WorkspaceMemberResponse];
   'edit-member': [member: WorkspaceMemberResponse];
   'invite-member': [];
-  'remove-member': [member: WorkspaceMemberResponse];
   'update:expandedRows': [expandedRows: MembersTableExpandedRows | undefined];
   'update:filters': [filters: MembersTableFilterUpdate];
 }>();
@@ -69,12 +87,12 @@ function updateGlobalFilter(value: string | undefined): void {
   updateFilters({ global: value });
 }
 
-function updateMemberQueryFilter(value: string | undefined): void {
-  updateFilters({ memberQuery: value });
+function updateMemberQueryFilter(value: string | null | undefined): void {
+  updateFilters({ memberQuery: value ?? '' });
 }
 
-function updateProjectIdsFilter(value: string[] | undefined): void {
-  updateFilters({ projectIds: value });
+function updateProjectIdsFilter(value: string[] | null | undefined): void {
+  updateFilters({ projectIds: value ?? [] });
 }
 
 function updateRoleFilter(value: WorkspaceRole | null | undefined): void {
@@ -96,7 +114,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'role', label: 'Role', width: 120 },
   { key: 'projects', label: 'Projects Assigned', width: 220 },
   { key: 'lastActive', label: 'Last Active', width: 140 },
-  { key: 'actions', label: 'Actions', width: 150, align: 'end' },
 ];
 </script>
 
@@ -135,11 +152,17 @@ const columns: ManagementTableColumn[] = [
         for="mobile-member-name-filter"
         class="text-text-muted text-[12px] font-medium"
       >Member</label>
-      <InputText
-        id="mobile-member-name-filter"
+      <AutoComplete
+        input-id="mobile-member-name-filter"
         :model-value="filters.memberQuery"
-        class="h-[38px] w-full rounded-[6px] text-[14px]"
+        :suggestions="memberQuerySuggestions"
+        complete-on-focus
+        dropdown
+        dropdown-mode="blank"
+        :min-length="0"
         placeholder="Filter name or email"
+        :pt="managementTableFilterAutoCompletePt"
+        @complete="handleMemberQueryComplete"
         @update:model-value="updateMemberQueryFilter"
       />
     </div>
@@ -186,7 +209,7 @@ const columns: ManagementTableColumn[] = [
         class="text-text-muted text-[12px] font-medium"
       >Projects assigned</label>
       <MultiSelect
-        id="mobile-member-projects-filter"
+        input-id="mobile-member-projects-filter"
         :model-value="filters.projectIds"
         :options="projectFilterOptions"
         display="chip"
@@ -195,8 +218,6 @@ const columns: ManagementTableColumn[] = [
         option-value="value"
         placeholder="All projects"
         show-clear
-        :max-selected-labels="1"
-        selected-items-label="{0} projects"
         :pt="managementTableFilterMultiSelectPt"
         @update:model-value="updateProjectIdsFilter"
       />
@@ -281,8 +302,23 @@ const columns: ManagementTableColumn[] = [
             }"
           />
           <div class="min-w-0 flex-1">
-            <h3 class="text-text-dark truncate text-[15px] font-semibold">
-              {{ row.primaryLabel }}
+            <h3>
+              <button
+                v-if="row.canManage"
+                type="button"
+                class="text-brand focus-visible:outline-brand max-w-full truncate text-left text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                :aria-label="`Edit member ${row.primaryLabel}`"
+                :data-testid="`member-mobile-name-${row.id}`"
+                @click="emit('edit-member', row.member)"
+              >
+                {{ row.primaryLabel }}
+              </button>
+              <span
+                v-else
+                class="text-brand block truncate text-[15px] font-semibold"
+              >
+                {{ row.primaryLabel }}
+              </span>
             </h3>
             <p
               v-if="row.secondaryLabel"
@@ -305,32 +341,6 @@ const columns: ManagementTableColumn[] = [
           ]"
         />
 
-        <template
-          v-if="row.canManage"
-          #actions
-        >
-          <ManagementTableRowAction
-            v-if="row.canAssignPm"
-            :data-testid="`member-mobile-assign-pm-${row.id}`"
-            :icon="UserPlusIcon"
-            label="Assign PM"
-            @click="emit('assign-member', row.member)"
-          />
-          <ManagementTableRowAction
-            :data-testid="`member-mobile-edit-${row.id}`"
-            :icon="PencilSquareIcon"
-            label="Edit"
-            @click="emit('edit-member', row.member)"
-          />
-          <ManagementTableRowAction
-            :data-testid="`member-mobile-remove-${row.id}`"
-            :icon="TrashIcon"
-            label="Remove"
-            tone="destructive"
-            @click="emit('remove-member', row.member)"
-          />
-        </template>
-
         <slot
           name="row-expansion"
           :row="row"
@@ -352,21 +362,27 @@ const columns: ManagementTableColumn[] = [
     :value="rows"
     :loading="loading"
     data-key="id"
-    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[930px] items-center border-b font-sans text-[13px] font-semibold"
+    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[780px] items-center border-b font-sans text-[13px] font-semibold"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll
-    table-class="min-w-[930px] w-full table-fixed border-collapse"
+    table-class="min-w-[780px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
     @update:expanded-rows="updateExpandedRows"
   >
     <template #filters>
-      <div class="flex min-w-[930px] flex-1 items-center">
+      <div class="flex min-w-[780px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
-          <InputText
+          <AutoComplete
             :model-value="filters.memberQuery"
+            :suggestions="memberQuerySuggestions"
             aria-label="Filter members by name or email"
-            :class="managementTableFilterInputClass"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            :min-length="0"
             placeholder="Filter name or email"
+            :pt="managementTableFilterAutoCompletePt"
+            @complete="handleMemberQueryComplete"
             @update:model-value="updateMemberQueryFilter"
           />
         </div>
@@ -396,8 +412,6 @@ const columns: ManagementTableColumn[] = [
             option-value="value"
             placeholder="All projects"
             show-clear
-            :max-selected-labels="1"
-            selected-items-label="{0} projects"
             :pt="managementTableFilterMultiSelectPt"
             @update:model-value="updateProjectIdsFilter"
           />
@@ -414,8 +428,6 @@ const columns: ManagementTableColumn[] = [
             @update:model-value="updateLastActiveFilter"
           />
         </div>
-
-        <div class="w-[150px] px-3" />
       </div>
     </template>
 
@@ -432,8 +444,21 @@ const columns: ManagementTableColumn[] = [
               root: 'bg-accent-tint text-brand text-[13px] font-semibold',
             }"
           />
-          <div class="flex flex-col">
-            <span class="text-text-dark text-[14px] font-semibold">
+          <div class="flex min-w-0 flex-col">
+            <button
+              v-if="data.canManage"
+              type="button"
+              class="text-brand focus-visible:outline-brand max-w-full truncate text-left text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              :aria-label="`Edit member ${data.primaryLabel}`"
+              :data-testid="`member-name-${data.id}`"
+              @click="emit('edit-member', data.member)"
+            >
+              {{ data.primaryLabel }}
+            </button>
+            <span
+              v-else
+              class="text-brand truncate text-[14px] font-semibold"
+            >
               {{ data.primaryLabel }}
             </span>
             <span
@@ -478,39 +503,6 @@ const columns: ManagementTableColumn[] = [
         <span class="text-text-muted text-[13px] font-normal">{{
           data.lastActiveLabel
         }}</span>
-      </template>
-    </Column>
-
-    <!-- Actions -->
-    <Column
-      style="width: 150px"
-      :pt="managementTableColumnPt"
-    >
-      <template #body="{ data }">
-        <div class="flex items-center justify-end gap-2">
-          <template v-if="data.canManage">
-            <ManagementTableRowAction
-              v-if="data.canAssignPm"
-              :data-testid="`member-assign-pm-${data.id}`"
-              :icon="UserPlusIcon"
-              label="Assign PM"
-              @click="emit('assign-member', data.member)"
-            />
-            <ManagementTableRowAction
-              :data-testid="`member-edit-${data.id}`"
-              :icon="PencilSquareIcon"
-              label="Edit"
-              @click="emit('edit-member', data.member)"
-            />
-            <ManagementTableRowAction
-              :data-testid="`member-remove-${data.id}`"
-              :icon="TrashIcon"
-              label="Remove"
-              tone="destructive"
-              @click="emit('remove-member', data.member)"
-            />
-          </template>
-        </div>
       </template>
     </Column>
 

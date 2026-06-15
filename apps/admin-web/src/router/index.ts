@@ -11,6 +11,7 @@ import {
 import { createProtectedRouter } from '@gitiempo/web-shared/router';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
+import { routeNames } from '@/constants/routes';
 import LoginView from '@/views/LoginView.vue';
 import { pinia } from '@/stores';
 import { useAuthStore } from '@/stores/auth';
@@ -24,19 +25,6 @@ const NotFoundView = () => import('@/views/NotFoundView.vue');
 const ProjectsView = () => import('@/views/ProjectsView.vue');
 const ReportsView = () => import('@/views/ReportsView.vue');
 const SettingsView = () => import('@/views/SettingsView.vue');
-
-export const routeNames = {
-  addProject: 'admin-add-project',
-  dashboard: 'admin-dashboard',
-  forbidden: 'admin-forbidden',
-  invoices: 'admin-invoices',
-  login: 'admin-login',
-  members: 'admin-members',
-  notFound: 'admin-not-found',
-  projects: 'admin-projects',
-  reports: 'admin-reports',
-  settings: 'admin-settings',
-} as const;
 
 type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
 type AdminNonProductRouteName =
@@ -187,3 +175,5 @@ export function createAppRouter(options?: {
 }
 
 export const router = createAppRouter();
+
+export { routeNames };

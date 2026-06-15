@@ -97,8 +97,8 @@ const projects: ProjectListResponse = [
 
 const stubs = {
   Button: {
-    props: ['label', 'type'],
-    template: '<button :type="type">{{ label }}</button>',
+    props: ['disabled', 'label', 'type'],
+    template: '<button :disabled="disabled" :type="type">{{ label }}</button>',
   },
   Checkbox: {
     props: ['inputId', 'name', 'value'],
@@ -153,8 +153,30 @@ describe('member inline forms', () => {
     expect(wrapper.get('#member-readonly-fields-note').text()).toBe(
       'Editing name and email is not yet supported.',
     );
+    expect(wrapper.text()).not.toContain('Remove member');
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save');
+  });
+
+  it('keeps member removal inside the inline edit panel when allowed', async () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canRemove: true, member },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    await wrapper.get('button').trigger('click');
+
+    expect(wrapper.text()).toContain('Remove member');
+    expect(wrapper.emitted('remove')).toHaveLength(1);
+  });
+
+  it('disables member removal while the inline role save is pending', () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canRemove: true, member, saving: true },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    expect(wrapper.get('button').attributes('disabled')).toBeDefined();
   });
 
   it('stacks PM assignment choices and actions on mobile while keeping desktop wrapping', () => {

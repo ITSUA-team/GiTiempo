@@ -4,12 +4,15 @@ import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
-import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { computed } from "vue";
+import { filterAutocompleteOptions } from "@gitiempo/web-shared";
+import { computed, shallowRef, watch } from "vue";
 
 import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
+
+type ProjectAutoCompleteValue = ProjectResponse | string | null;
+type TaskAutoCompleteValue = string | TaskLookupOption | null;
 
 const props = defineProps<{
   dialogErrorMessage: string | null;
@@ -23,6 +26,7 @@ const props = defineProps<{
   };
   isLoadingProjects: boolean;
   isLoadingTasks: boolean;
+  isDeleting: boolean;
   isOpen: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
@@ -38,10 +42,11 @@ const props = defineProps<{
   subtitle: string;
   valueDescription: string;
   valueIsBillable: boolean;
- }>();
+}>();
 
 const emit = defineEmits<{
   close: [];
+  deleteEntry: [];
   save: [];
   taskSearch: [query: string];
   "update:description": [value: string];
@@ -52,19 +57,13 @@ const emit = defineEmits<{
   "update:taskValue": [value: string | TaskLookupOption | null];
 }>();
 
-const projectModel = computed({
-  get: () => props.projectId,
-  set: (value: string | null | undefined) => {
-    emit("update:projectId", value ?? null);
-  },
-});
-
-const taskModel = computed({
-  get: () => props.taskValue,
-  set: (value: string | TaskLookupOption | null | undefined) => {
-    emit("update:taskValue", value ?? null);
-  },
-});
+const projectModel = shallowRef<ProjectAutoCompleteValue>(null);
+const projectSearchQuery = shallowRef("");
+const projectSuggestions = shallowRef<ProjectResponse[]>([]);
+const taskModel = shallowRef<TaskAutoCompleteValue>(null);
+const selectedProject = computed(() =>
+  props.projects.find((project) => project.id === props.projectId) ?? null,
+);
 
 const startedAtModel = computed({
   get: () => props.startedAt,
@@ -94,15 +93,100 @@ const billableModel = computed({
   },
 });
 
+const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
+const projectAutoCompletePt = {
+  dropdown: {
+    onMousedown: handleProjectDropdownMouseDown,
+  },
+};
+
+watch(
+  [() => props.isOpen, () => props.mode, () => props.projectId, () => props.projects],
+  () => {
+    projectModel.value = selectedProject.value;
+    refreshProjectSuggestions("");
+  },
+  { immediate: true },
+);
+
+watch(
+  [() => props.isOpen, () => props.mode, () => props.taskValue],
+  () => {
+    taskModel.value = props.taskValue ?? null;
+  },
+  { immediate: true },
+);
+
+function buildProjectSuggestions(queryValue: string): ProjectResponse[] {
+  return filterAutocompleteOptions(
+    props.projects,
+    queryValue,
+    (project) => project.name,
+  );
+}
+
+function refreshProjectSuggestions(query: string): void {
+  projectSearchQuery.value = query;
+  projectSuggestions.value = buildProjectSuggestions(query);
+}
+
+function handleProjectDropdownMouseDown(event: MouseEvent): void {
+  event.preventDefault();
+}
+
+function handleProjectComplete(event: { query: string }): void {
+  refreshProjectSuggestions(event.query);
+}
+
+function isProjectOption(
+  value: ProjectAutoCompleteValue | undefined,
+): value is ProjectResponse {
+  return typeof value === "object" && value !== null && "name" in value;
+}
+
+function handleProjectUpdate(value: ProjectAutoCompleteValue | undefined): void {
+  projectModel.value = value ?? null;
+
+  if (typeof value === "string") {
+    refreshProjectSuggestions(value);
+
+    if (value.trim().length === 0) {
+      emit("update:projectId", null);
+    }
+
+    return;
+  }
+
+  refreshProjectSuggestions("");
+
+  if (isProjectOption(value)) {
+    emit("update:projectId", value.id);
+    return;
+  }
+
+  emit("update:projectId", null);
+}
+
 function handleTaskComplete(event: { query: string }): void {
   emit("taskSearch", event.query);
+}
+
+function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
+  taskModel.value = value ?? null;
+
+  if (typeof value === "string") {
+    emit("taskSearch", value);
+  }
+
+  emit("update:taskValue", value ?? null);
 }
 </script>
 
 <template>
   <Dialog
     modal
-    :dismissable-mask="true"
+    :closable="!isDialogMutating"
+    :dismissable-mask="!isDialogMutating"
     :draggable="false"
     :pt="{
       root: 'w-[min(560px,calc(100vw-2rem))] rounded-lg border border-divider',
@@ -156,18 +240,25 @@ function handleTaskComplete(event: { query: string }): void {
         >
           Project
         </label>
-        <Select
-          v-model="projectModel"
-          filter
+        <AutoComplete
+          complete-on-focus
+          data-key="id"
+          dropdown
+          dropdown-mode="blank"
           fluid
+          force-selection
           input-id="time-entry-project"
+          :model-value="projectModel"
           option-label="name"
-          option-value="id"
-          :disabled="props.isLoadingProjects || props.isSaving"
+          :disabled="props.isLoadingProjects || isDialogMutating"
           :invalid="!!props.errors.projectId"
           :loading="props.isLoadingProjects"
-          :options="props.projects"
+          :min-length="0"
           placeholder="Select a project"
+          :pt="projectAutoCompletePt"
+          :suggestions="projectSuggestions"
+          @complete="handleProjectComplete"
+          @update:model-value="handleProjectUpdate"
         />
         <small
           v-if="props.errors.projectId"
@@ -185,21 +276,22 @@ function handleTaskComplete(event: { query: string }): void {
           Task
         </label>
         <AutoComplete
-          v-model="taskModel"
           complete-on-focus
           dropdown
           dropdown-mode="blank"
           fluid
           force-selection
           input-id="time-entry-task"
+          :model-value="taskModel"
           :min-length="0"
           option-label="title"
-          :disabled="!props.projectId || props.isLoadingTasks || props.isSaving"
+          :disabled="!props.projectId || props.isLoadingTasks || isDialogMutating"
           :invalid="!!props.errors.taskId"
           :loading="props.isLoadingTasks"
           :suggestions="props.taskSuggestions"
           placeholder="Search tasks"
           @complete="handleTaskComplete"
+          @update:model-value="handleTaskUpdate"
         />
         <small
           v-if="props.errors.taskId"
@@ -226,9 +318,10 @@ function handleTaskComplete(event: { query: string }): void {
           <DatePicker
             v-model="startedAtModel"
             fluid
+            date-format="M d,"
             hour-format="24"
             input-id="time-entry-started-at"
-            :disabled="props.isSaving"
+            :disabled="isDialogMutating"
             :invalid="!!props.errors.startedAt"
             :manual-input="false"
             show-time
@@ -251,9 +344,10 @@ function handleTaskComplete(event: { query: string }): void {
           <DatePicker
             v-model="endedAtModel"
             fluid
+            date-format="M d,"
             hour-format="24"
             input-id="time-entry-ended-at"
-            :disabled="props.isSaving"
+            :disabled="isDialogMutating"
             :invalid="!!props.errors.endedAt"
             :manual-input="false"
             show-time
@@ -279,7 +373,7 @@ function handleTaskComplete(event: { query: string }): void {
           v-model="descriptionModel"
           auto-resize
           rows="4"
-          :disabled="props.isSaving"
+          :disabled="isDialogMutating"
           fluid
           :invalid="!!props.errors.description"
         />
@@ -291,35 +385,40 @@ function handleTaskComplete(event: { query: string }): void {
         </small>
       </div>
 
-      <label
-        for="time-entry-billable"
-        class="border-divider bg-surface-primary flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
-      >
-        <Checkbox
-          id="time-entry-billable"
-          v-model="billableModel"
-          binary
-          :disabled="props.isSaving"
-        />
-        <span class="text-text-dark text-sm font-medium">
-          Billable entry
-        </span>
-      </label>
+      <div class="flex flex-col gap-1">
+        <label
+          for="time-entry-billable"
+          class="border-divider bg-surface-primary flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
+        >
+          <Checkbox
+            id="time-entry-billable"
+            v-model="billableModel"
+            binary
+            :disabled="isDialogMutating"
+          />
+          <span class="text-text-dark text-sm font-medium">
+            Billable entry
+          </span>
+        </label>
+      </div>
     </div>
 
     <template #footer>
       <div class="flex justify-end gap-2">
         <Button
+          v-if="props.mode === 'edit'"
           type="button"
-          label="Cancel"
-          severity="secondary"
+          label="Delete entry"
+          severity="danger"
           variant="outlined"
-          :disabled="props.isSaving"
-          @click="emit('close')"
+          :disabled="isDialogMutating"
+          :loading="props.isDeleting"
+          @click="emit('deleteEntry')"
         />
         <Button
           type="button"
           :label="props.saveLabel"
+          :disabled="props.isDeleting"
           :loading="props.isSaving"
           @click="emit('save')"
         />

@@ -1,3 +1,4 @@
+import type { AutoCompletePassThroughOptions } from 'primevue/autocomplete';
 import type { MultiSelectPassThroughOptions } from 'primevue/multiselect';
 import type { SelectPassThroughOptions } from 'primevue/select';
 
@@ -38,6 +39,18 @@ export const managementTableColumnPt = {
 } as const;
 
 export const managementTableFilterInputClass = 'h-[34px] w-full rounded-[6px] text-[12px]';
+
+const managementTableFilterAutoCompleteInputClass =
+  'h-[34px] w-full rounded-l-[6px] rounded-r-none text-[12px]';
+
+export const managementTableFilterAutoCompletePt = {
+  root: { class: 'h-[34px] w-full' },
+  pcInputText: {
+    root: { class: managementTableFilterAutoCompleteInputClass },
+  },
+  dropdown: { class: 'h-[34px] w-8 text-text-muted' },
+  option: { class: 'text-[12px]' },
+} satisfies AutoCompletePassThroughOptions;
 
 const managementTableFilterDropdownRootClass =
   'h-[34px] w-full items-center rounded-[6px] font-sans text-[12px]';

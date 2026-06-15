@@ -84,10 +84,8 @@ function createMember() {
 const MembersTableStub = {
   name: 'MembersTable',
   emits: [
-    'assign-member',
     'edit-member',
     'invite-member',
-    'remove-member',
     'update:expandedRows',
     'update:filters',
   ],
@@ -107,18 +105,8 @@ const MembersTableStub = {
       {{ rows.length }} rows | {{ projectFilterOptions.length }} project filters | loading={{ loading }} | search={{ filters.global }} | empty={{ emptyDescription }}
       <button
         v-if="rows[0]"
-        data-testid="member-assign-intent"
-        @click="$emit('assign-member', rows[0].member)"
-      />
-      <button
-        v-if="rows[0]"
         data-testid="member-edit-intent"
         @click="$emit('edit-member', rows[0].member)"
-      />
-      <button
-        v-if="rows[0]"
-        data-testid="member-remove-intent"
-        @click="$emit('remove-member', rows[0].member)"
       />
       <button
         data-testid="member-invite-intent"
@@ -151,12 +139,14 @@ const MemberAssignPmPanelStub = {
 const MemberEditFormStub = {
   name: 'MemberEditForm',
   props: {
+    canRemove: { type: Boolean, default: false },
     member: { type: Object, required: true },
     saving: { type: Boolean, default: false },
   },
   template: `
     <div data-testid="member-edit-panel">
       Edit {{ member.email }} | saving={{ saving }}
+      <button v-if="canRemove" data-testid="member-edit-remove" @click="$emit('remove')" />
       <button data-testid="member-edit-save" @click="$emit('save', 'member')" />
       <button data-testid="member-edit-cancel" @click="$emit('cancelled')" />
     </div>
@@ -495,7 +485,9 @@ describe('MembersView', () => {
     const wrapper = mountMembersView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="member-remove-intent"]').trigger('click');
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="member-edit-remove"]').trigger('click');
 
     expect(testMocks.requireConfirmation).toHaveBeenCalledWith(
       'Pat PM will be removed from this workspace. This action cannot be undone.',
@@ -523,7 +515,9 @@ describe('MembersView', () => {
     const wrapper = mountMembersView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="member-remove-intent"]').trigger('click');
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="member-edit-remove"]').trigger('click');
 
     expect(testMocks.requireConfirmation).toHaveBeenCalledTimes(1);
     expect(testMocks.removeMember).not.toHaveBeenCalled();
@@ -538,7 +532,9 @@ describe('MembersView', () => {
     const wrapper = mountMembersView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="member-remove-intent"]').trigger('click');
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="member-edit-remove"]').trigger('click');
 
     const accept = testMocks.requireConfirmation.mock.calls[0]?.[3] as
       | (() => Promise<void>)
@@ -558,7 +554,7 @@ describe('MembersView', () => {
     expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
-  it('opens assignment expansion from a table intent, saves, refreshes, and collapses', async () => {
+  it('opens member settings from the table edit intent, saves assignments, refreshes, and collapses', async () => {
     const member = createMember();
     const project = {
       color: null,
@@ -592,7 +588,7 @@ describe('MembersView', () => {
     const wrapper = mountMembersView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="member-assign-intent"]').trigger('click');
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
     await wrapper.vm.$nextTick();
 
     expect(wrapper.get('[data-testid="member-assign-panel"]').text()).toContain(

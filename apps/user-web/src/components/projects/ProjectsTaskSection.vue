@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import Column from "primevue/column";
 import Tag from "primevue/tag";
-import {
-  PencilSquareIcon,
-  PlusIcon,
-  TrashIcon,
-} from "@heroicons/vue/24/outline";
+import { PlusIcon } from "@heroicons/vue/24/outline";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import {
   EntryActionButton,
   ManagementTableEmptyState,
-  ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
   managementTableColumnPt,
@@ -18,10 +13,12 @@ import {
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
 
+import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
+import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
+
 interface ProjectsTaskSectionProps {
   // eslint-disable-next-line no-unused-vars
   formatUpdatedLabel: (updatedAt: string) => string;
-  isDeletingTaskId: string | null;
   project: ProjectResponse;
   tasks: TaskResponse[];
 }
@@ -31,19 +28,16 @@ const isMobileViewport = useIsMobileViewport();
 
 const emit = defineEmits<{
   addTask: [projectId: string];
-  deleteTask: [task: TaskResponse];
   editTask: [task: TaskResponse];
 }>();
 
 const statusColumnWidth = "8.125rem";
 const updatedColumnWidth = "10.625rem";
-const actionsColumnWidth = "8.75rem";
 
 const columns = [
   { key: "task", label: "Task", width: "fill" },
   { key: "status", label: "Status", width: 130 },
   { key: "updated", label: "Updated", width: 170 },
-  { key: "actions", label: "Actions", width: 140, align: "end" },
 ] satisfies ManagementTableColumn[];
 
 function formatTaskCount(count: number): string {
@@ -95,12 +89,19 @@ function getStatusPt(task: TaskResponse) {
         data-testid="project-task-mobile-card"
       >
         <div class="flex min-w-0 flex-col gap-2">
-          <p
-            class="text-text-dark text-sm font-medium break-words whitespace-normal"
-            data-testid="project-task-mobile-title"
-          >
-            {{ task.title }}
-          </p>
+          <div class="flex max-w-full min-w-0 items-center gap-1">
+            <TaskNameLink
+              :label="task.title"
+              :open-label="`Edit task ${task.title}`"
+              test-id="project-task-mobile-title"
+              @open="emit('editTask', task)"
+            />
+            <TaskGitHubIssueLink
+              v-if="task.githubIssue"
+              :issue="task.githubIssue"
+              :test-id="`project-task-mobile-github-${task.id}`"
+            />
+          </div>
 
           <div class="flex items-center justify-between gap-3">
             <Tag
@@ -112,23 +113,6 @@ function getStatusPt(task: TaskResponse) {
             </span>
           </div>
         </div>
-
-        <template #actions>
-          <ManagementTableRowAction
-            :data-testid="`project-task-mobile-edit-${task.id}`"
-            :icon="PencilSquareIcon"
-            label="Edit"
-            @click="emit('editTask', task)"
-          />
-          <ManagementTableRowAction
-            :data-testid="`project-task-mobile-delete-${task.id}`"
-            :icon="TrashIcon"
-            label="Delete"
-            :loading="props.isDeletingTaskId === task.id"
-            tone="destructive"
-            @click="emit('deleteTask', task)"
-          />
-        </template>
       </MobileRecordCard>
 
       <ManagementTableEmptyState
@@ -159,11 +143,18 @@ function getStatusPt(task: TaskResponse) {
 
       <Column :pt="managementTableColumnPt">
         <template #body="slotProps">
-          <div
-            class="text-text-dark text-sm font-medium break-words whitespace-normal"
-            data-testid="project-task-title"
-          >
-            {{ slotProps.data.title }}
+          <div class="flex max-w-full min-w-0 items-center gap-1">
+            <TaskNameLink
+              :label="slotProps.data.title"
+              :open-label="`Edit task ${slotProps.data.title}`"
+              test-id="project-task-title"
+              @open="emit('editTask', slotProps.data)"
+            />
+            <TaskGitHubIssueLink
+              v-if="slotProps.data.githubIssue"
+              :issue="slotProps.data.githubIssue"
+              :test-id="`project-task-github-${slotProps.data.id}`"
+            />
           </div>
         </template>
       </Column>
@@ -189,30 +180,6 @@ function getStatusPt(task: TaskResponse) {
         <template #body="slotProps">
           <div class="text-text-muted text-[13px]">
             {{ props.formatUpdatedLabel(slotProps.data.updatedAt) }}
-          </div>
-        </template>
-      </Column>
-
-      <Column
-        :pt="managementTableColumnPt"
-        :style="{ width: actionsColumnWidth }"
-      >
-        <template #body="slotProps">
-          <div class="flex items-center justify-end gap-2">
-            <ManagementTableRowAction
-              data-testid="project-task-edit"
-              :icon="PencilSquareIcon"
-              label="Edit"
-              @click="emit('editTask', slotProps.data)"
-            />
-            <ManagementTableRowAction
-              data-testid="project-task-delete"
-              :icon="TrashIcon"
-              label="Delete"
-              :loading="props.isDeletingTaskId === slotProps.data.id"
-              tone="destructive"
-              @click="emit('deleteTask', slotProps.data)"
-            />
           </div>
         </template>
       </Column>

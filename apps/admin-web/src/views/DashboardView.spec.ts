@@ -176,10 +176,12 @@ describe('DashboardView', () => {
     expect(dashboardMocks.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('renders four stat cards and the activity table without a page header', () => {
+  it('renders four stat cards and the activity table without a duplicated content header', () => {
     const wrapper = mountDashboardView();
 
-    expect(wrapper.text()).not.toContain('Workspace overview with key metrics');
+    expect(wrapper.text()).not.toContain(
+      'Workspace overview with key metrics and recent activity.',
+    );
     expect(wrapper.text()).toContain('Active Members');
     expect(wrapper.text()).toContain('Hours This Week');
     expect(wrapper.text()).toContain('Pending Invites');

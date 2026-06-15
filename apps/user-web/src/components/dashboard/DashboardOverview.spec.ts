@@ -166,9 +166,10 @@ describe("DashboardOverview", () => {
     return wrapper;
   }
 
-  it("renders the populated dashboard overview without page-level timer controls", async () => {
+  it("renders the populated dashboard overview without page-level timer controls or duplicated header", async () => {
     const wrapper = await mountOverview();
 
+    expect(wrapper.text()).not.toContain("Timer actions stay in the global top bar.");
     expect(wrapper.text()).toContain("6h 40m");
     expect(wrapper.text()).toContain("Admin Web");
     expect(wrapper.text()).toContain("Improve reports filters");

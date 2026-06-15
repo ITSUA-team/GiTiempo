@@ -12,6 +12,7 @@ const baseProps = {
   counterpartHref: "https://admin.example.test/login",
   counterpartLabel: "Admin workspace",
   displayName: "Alexey Tsukanov",
+  pageName: "Dashboard",
   settingsTo: "/profile",
   userInitials: "AT",
   workspaceName: "Workspace Alpha",
@@ -20,6 +21,7 @@ const baseProps = {
 type HeaderProps = typeof baseProps & {
   centerContentAlign?: "center" | "end";
   pageName?: string;
+  profileContextLabel?: string;
   settingsIcon?: Component;
   settingsLabel?: string;
   showDisplayName?: boolean;
@@ -204,16 +206,20 @@ describe("WorkspaceHeader", () => {
     document.body.innerHTML = "";
   });
 
-  it("renders workspace identity without standalone counterpart link", () => {
+  it("renders breadcrumb identity without standalone counterpart link", () => {
     const wrapper = mountHeader();
 
     expect(wrapper.text()).toContain("GiTiempo");
-    expect(wrapper.text()).toContain("Workspace Alpha");
-    expect(wrapper.text()).toContain("Alexey Tsukanov");
+    expect(wrapper.text()).toContain("Dashboard");
+    expect(wrapper.text()).not.toContain("Workspace Alpha");
+    expect(wrapper.text()).not.toContain("Alexey Tsukanov");
     expect(wrapper.text()).toContain("AT");
     expect(wrapper.find(`a[href="${baseProps.counterpartHref}"]`).exists()).toBe(false);
-    expect(wrapper.get('[aria-label="Open profile menu"]').text()).toContain(
+    expect(wrapper.get('[data-testid="profile-menu-trigger"]').text()).toContain(
       "AT",
+    );
+    expect(wrapper.get('[data-testid="profile-menu-trigger"]').attributes("aria-label")).toBe(
+      "Open profile menu for Alexey Tsukanov",
     );
     expect(wrapper.findAll("[aria-label]")).toHaveLength(1);
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(
@@ -253,12 +259,13 @@ describe("WorkspaceHeader", () => {
 
     expect(centerRow.classes()).toContain("row-start-2");
     expect(centerRow.classes()).toContain("sm:row-start-1");
+    expect(centerRow.classes()).not.toContain("sm:px-2");
     expect(wrapper.get('[data-testid="workspace-header-center-content"]').classes()).toContain(
       "sm:justify-end",
     );
     expect(centerSlot.text()).toBe("Running timer");
     expect(wrapper.findAll('[data-testid="header-center-slot"]')).toHaveLength(1);
-    expect(wrapper.text()).toContain("Alexey Tsukanov");
+    expect(wrapper.text()).not.toContain("Alexey Tsukanov");
   });
 
   it("supports an avatar-only profile trigger when the consuming app hides display text", () => {
@@ -336,8 +343,11 @@ describe("WorkspaceHeader", () => {
     expect(document.activeElement).toBe(trigger.element);
     expect(trigger.attributes("aria-expanded")).toBe("false");
     expect(trigger.attributes("aria-haspopup")).toBe("menu");
-    expect(trigger.classes()).toContain("border-transparent");
-    expect(avatar.classes()).not.toContain("ring-brand");
+    expect(trigger.classes()).toContain("size-8");
+    expect(trigger.classes()).toContain("rounded-full");
+    expect(trigger.classes()).toContain("border-0");
+    expect(avatar.classes()).toContain("border-0");
+    expect(avatar.classes()).not.toContain("border-brand");
 
     await trigger.trigger("click");
 
@@ -346,8 +356,15 @@ describe("WorkspaceHeader", () => {
     const counterpartAction = wrapper.get('[data-testid="profile-menu-counterpart"]');
 
     expect(trigger.attributes("aria-expanded")).toBe("true");
-    expect(trigger.classes()).toContain("border-divider");
-    expect(avatar.classes()).toContain("ring-brand");
+    expect(trigger.classes()).toContain("ring-divider");
+    expect(trigger.classes()).toContain("h-10");
+    expect(trigger.classes()).toContain("px-1.5");
+    expect(trigger.classes()).toContain("py-1");
+    expect(trigger.classes()).toContain("ring-1");
+    expect(trigger.classes()).toContain("ring-inset");
+    expect(trigger.classes()).toContain("rounded-lg");
+    expect(avatar.classes()).toContain("border-2");
+    expect(avatar.classes()).toContain("border-brand");
     expect(wrapper.find('[data-testid="profile-menu"] [role="menu"]').exists()).toBe(
       true,
     );
@@ -361,7 +378,13 @@ describe("WorkspaceHeader", () => {
       "z-30",
     );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
-      "before:right-5",
+      "mt-5",
+    );
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "h-40",
+    );
+    expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
+      "before:right-4",
     );
     expect(wrapper.findAll('[data-testid="profile-menu"] [role="menuitem"]')).toHaveLength(
       3,
@@ -378,8 +401,34 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.emitted("signOut")).toHaveLength(1);
     expect(document.activeElement).toBe(trigger.element);
     expect(trigger.attributes("aria-expanded")).toBe("false");
-    expect(trigger.classes()).toContain("border-transparent");
-    expect(avatar.classes()).not.toContain("ring-brand");
+    expect(trigger.classes()).toContain("size-8");
+    expect(trigger.classes()).toContain("border-0");
+    expect(avatar.classes()).toContain("border-0");
+    expect(avatar.classes()).not.toContain("border-brand");
+  });
+
+  it("keeps admin profile context outside the trigger until the menu opens", async () => {
+    const wrapper = mountHeader({
+      props: {
+        profileContextLabel: "GiTiempo Studio",
+      },
+    });
+    const profileRegion = wrapper.get('[data-testid="profile-menu-region"]');
+    const trigger = wrapper.get('[data-testid="profile-menu-trigger"]');
+
+    expect(profileRegion.text()).toContain("GiTiempo Studio");
+    expect(trigger.text()).not.toContain("GiTiempo Studio");
+    expect(trigger.classes()).toContain("size-8");
+
+    await trigger.trigger("click");
+
+    expect(trigger.text()).toContain("GiTiempo Studio");
+    expect(trigger.classes()).toContain("h-10");
+    expect(trigger.classes()).toContain("gap-3");
+    expect(trigger.classes()).toContain("px-1.5");
+    expect(trigger.classes()).toContain("py-1");
+    expect(trigger.classes()).toContain("ring-inset");
+    expect(trigger.classes()).not.toContain("w-11");
   });
 
   it("activates sign out through the real PrimeVue menu keyboard handler", async () => {

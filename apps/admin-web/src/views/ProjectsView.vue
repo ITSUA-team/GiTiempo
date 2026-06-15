@@ -115,13 +115,15 @@ async function refresh(): Promise<void> {
   loading.value = true;
 
   try {
-    const [projectsData, summaryData] = await Promise.all([
+    const [projectsData, summaryData, membersData] = await Promise.all([
       adminProjectsClient.listProjects(),
       adminProjectsClient.getManagementSummary(),
+      adminMembersClient.listMembers(),
     ]);
 
     projects.value = sortProjects(projectsData);
     summary.value = summaryData;
+    members.value = membersData;
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
       error: err,
@@ -196,6 +198,7 @@ async function archiveProject(project: ProjectResponse): Promise<void> {
       isActive: false,
     });
     successToast(`${project.name} has been archived.`);
+    collapseProjectRow(project);
     await refresh();
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to archive project', {
@@ -226,6 +229,7 @@ async function handleUnarchive(project: ProjectResponse): Promise<void> {
       isActive: true,
     });
     successToast(`${project.name} is now active.`);
+    collapseProjectRow(project);
     await refresh();
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to unarchive project', {
@@ -280,10 +284,8 @@ onMounted(fetchAll);
           :rows="projectTableRows"
           :source-filter-options="sourceFilterOptions"
           :visibility-filter-options="visibilityFilterOptions"
-          @archive="handleArchive"
           @edit-project="handleEditProject"
           @new-project="handleNewProject"
-          @unarchive="handleUnarchive"
           @update:expanded-rows="setProjectTableExpandedRows"
           @update:filters="updateProjectTableFilters"
         >
@@ -293,7 +295,9 @@ onMounted(fetchAll);
               :project="row.project"
               :all-members="members"
               :saving="savingProjectEditId === row.id"
+              @archive="handleArchive(row.project)"
               @save="handleProjectEditSubmitted(row.project, $event)"
+              @unarchive="handleUnarchive(row.project)"
               @cancelled="collapseProjectRow(row.project)"
             />
           </template>

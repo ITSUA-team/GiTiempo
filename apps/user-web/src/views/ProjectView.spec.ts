@@ -60,6 +60,7 @@ function createTask(
 ): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
+    githubIssue: null,
     id,
     isActive: true,
     projectId,
@@ -132,8 +133,50 @@ async function mountView(client = createClientMock()) {
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
-          props: ["placeholder"],
-          template: '<input :placeholder="placeholder" />',
+          props: [
+            "inputId",
+            "dropdown",
+            "forceSelection",
+            "modelValue",
+            "optionLabel",
+            "placeholder",
+            "suggestions",
+          ],
+          template: `
+            <div v-bind="$attrs">
+              <input
+                :data-dropdown="String(
+                  dropdown !== undefined && dropdown !== false,
+                )"
+                :data-force-selection="String(
+                  forceSelection !== undefined && forceSelection !== false,
+                )"
+                :id="inputId"
+                :placeholder="placeholder"
+                :value="typeof modelValue === 'string' ? modelValue : modelValue?.label ?? ''"
+                @input="$emit('update:modelValue', $event.target.value)"
+              />
+              <button
+                :data-testid="inputId + '-complete'"
+                type="button"
+                @click="$emit('complete', { query: '' })"
+              >
+                Complete
+              </button>
+              <button
+                v-for="option in suggestions"
+                :key="option.value ?? option.id"
+                :data-option-kind="option.kind ?? ''"
+                :data-testid="inputId + '-option-' + (option.value ?? option.id)"
+                type="button"
+                @click="$emit('update:modelValue', option)"
+              >
+                <slot name="option" :option="option">
+                  {{ option[optionLabel] }}
+                </slot>
+              </button>
+            </div>
+          `,
         },
         Button: {
           emits: ["click"],
@@ -142,8 +185,9 @@ async function mountView(client = createClientMock()) {
             '<button type="button" :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
         },
         ProjectTaskDialog: {
-          emits: ["close", "save", "update:projectId", "update:status", "update:title"],
+          emits: ["close", "deleteTask", "save", "update:projectId", "update:status", "update:title"],
           props: [
+            "isDeleting",
             "isOpen",
             "requestErrorMessage",
             "valueTitle",
@@ -155,21 +199,41 @@ async function mountView(client = createClientMock()) {
               <button data-testid="dialog-title-input" type="button" @click="$emit('update:title', 'Write release checklist')">Title</button>
               <button data-testid="dialog-edit-title-input" type="button" @click="$emit('update:title', 'Updated task')">Edit title</button>
               <button data-testid="dialog-status-input" type="button" @click="$emit('update:status', 'closed')">Status</button>
+              <button data-testid="dialog-delete" type="button" @click="$emit('deleteTask')">Delete task</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
               <button data-testid="dialog-close" type="button" @click="$emit('close')">Close</button>
             </div>
           `,
         },
+        Select: {
+          emits: ["update:modelValue"],
+          props: ["inputId", "modelValue", "optionLabel", "options", "placeholder"],
+          template: `
+            <div v-bind="$attrs">
+              <button :id="inputId" type="button">
+                {{ modelValue?.[optionLabel] ?? placeholder }}
+              </button>
+              <button
+                v-for="option in options"
+                :key="option.value"
+                :data-testid="inputId + '-option-' + option.value"
+                type="button"
+                @click="$emit('update:modelValue', option)"
+              >
+                {{ option[optionLabel] }}
+              </button>
+            </div>
+          `,
+        },
         ProjectsTaskSection: {
-          emits: ["addTask", "deleteTask", "editTask"],
+          emits: ["addTask", "editTask"],
           props: ["project", "tasks"],
           template: `
             <section>
               <p>{{ project.name }}</p>
               <p v-for="task in tasks" :key="task.id">{{ task.title }}</p>
               <button data-testid="project-section-add" type="button" @click="$emit('addTask', project.id)">Add</button>
-              <button data-testid="project-section-edit" type="button" @click="$emit('editTask', tasks[0])">Edit</button>
-              <button data-testid="project-section-delete" type="button" @click="$emit('deleteTask', tasks[0])">Delete</button>
+              <button data-testid="project-section-title" type="button" @click="$emit('editTask', tasks[0])">{{ tasks[0]?.title }}</button>
             </section>
           `,
         },
@@ -189,7 +253,7 @@ describe("ProjectView", () => {
     primeVueMocks.toastAdd.mockClear();
   });
 
-  it("renders the search field, grouped sections, and section add action", async () => {
+  it("renders the lightweight filters, grouped sections, and task actions", async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValueOnce([
@@ -203,18 +267,102 @@ describe("ProjectView", () => {
 
     await flushPromises();
 
+    expect(wrapper.text()).not.toContain(
+      "Create, update, and organize tasks across your visible projects.",
+    );
     expect(wrapper.find('input[placeholder="Search projects or tasks"]').exists()).toBe(
       true,
     );
+    expect(wrapper.find('[data-testid="projects-status-filter"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="projects-updated-filter"]').exists()).toBe(true);
+
+    const searchInput = wrapper.get(
+      'input[placeholder="Search projects or tasks"]',
+    );
+
+    expect(searchInput.attributes("data-dropdown")).toBe("true");
+    expect(searchInput.attributes("data-force-selection")).toBe("false");
+    expect(wrapper.find('input[placeholder="All statuses"]').exists()).toBe(false);
+    expect(wrapper.find('input[placeholder="Any time"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("AutoComplete");
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Improve reports filters");
 
+    expect(wrapper.text()).toContain("All statuses");
+    expect(wrapper.text()).toContain("Open");
+    expect(wrapper.text()).toContain("Closed");
+    expect(wrapper.text()).toContain("Any time");
+    expect(wrapper.text()).toContain("Today");
+    expect(wrapper.text()).toContain("Last 7 days");
+    expect(wrapper.text()).toContain("Older");
+
+    await wrapper.get('[data-testid="projects-search-complete"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-option-kind="project"] span').classes()).toContain(
+      "font-semibold",
+    );
+    expect(wrapper.get('[data-option-kind="task"] span').classes()).toContain(
+      "font-normal",
+    );
+
     await wrapper.get('[data-testid="project-section-add"]').trigger("click");
-    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="dialog-close"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
 
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(true);
-    expect(primeVueMocks.confirmRequire).toHaveBeenCalledTimes(1);
+    expect(primeVueMocks.confirmRequire).not.toHaveBeenCalled();
+  });
+
+  it("filters loaded task groups without issuing new list requests", async () => {
+    const client = createClientMock();
+    const today = new Date().toISOString();
+    const older = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+      createProject("project-2", "Billing API"),
+    ]);
+    client.listProjectTasks
+      .mockResolvedValueOnce([
+        createTask("task-1", "project-1", "Open current task", {
+          updatedAt: today,
+        }),
+        createTask("task-2", "project-1", "Closed current task", {
+          status: "closed",
+          updatedAt: today,
+        }),
+      ])
+      .mockResolvedValueOnce([
+        createTask("task-3", "project-2", "Open old task", {
+          updatedAt: older,
+        }),
+      ]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Open current task");
+    expect(wrapper.text()).toContain("Closed current task");
+    expect(wrapper.text()).toContain("Open old task");
+    expect(client.listVisibleProjects).toHaveBeenCalledTimes(1);
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
+
+    await wrapper.get('[data-testid="projects-status-filter-option-open"]').trigger("click");
+    await wrapper.get('[data-testid="projects-updated-filter-option-older"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain("Open current task");
+    expect(wrapper.text()).not.toContain("Closed current task");
+    expect(wrapper.text()).toContain("Open old task");
+    expect(client.listVisibleProjects).toHaveBeenCalledTimes(1);
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).not.toContain("Source");
+    expect(wrapper.text()).not.toContain("Members");
+    expect(wrapper.text()).not.toContain("Visibility");
+    expect(wrapper.text()).not.toContain("Billable default");
   });
 
   it("renders distinct loading, request-error, and empty states", async () => {
@@ -286,7 +434,7 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-edit"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
     await wrapper.get('[data-testid="dialog-edit-title-input"]').trigger("click");
     await wrapper.get('[data-testid="dialog-save"]').trigger("click");
     await flushPromises();
@@ -308,7 +456,8 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
 
     const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
 
@@ -334,7 +483,8 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
-    await wrapper.get('[data-testid="project-section-delete"]').trigger("click");
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-delete"]').trigger("click");
 
     const options = primeVueMocks.confirmRequire.mock.calls[0]?.[0];
 

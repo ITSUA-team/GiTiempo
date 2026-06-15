@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { syncedGitHubIssueSchema } from "./github.js";
+
 export const taskStatusSchema = z.enum(["open", "closed"]);
 
 export const taskResponseSchema = z.object({
@@ -9,6 +11,7 @@ export const taskResponseSchema = z.object({
   title: z.string(),
   status: taskStatusSchema,
   isActive: z.boolean(),
+  githubIssue: syncedGitHubIssueSchema.nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

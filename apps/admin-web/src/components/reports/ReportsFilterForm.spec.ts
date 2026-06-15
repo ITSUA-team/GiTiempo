@@ -1,5 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
+import AutoComplete from 'primevue/autocomplete';
 import PrimeVue from 'primevue/config';
+import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
@@ -7,7 +10,6 @@ import ReportsFilterForm from './ReportsFilterForm.vue';
 
 function mountReportsFilterForm(
   dateRange: [Date | null, Date | null] | null,
-  options: { stubAutocomplete?: boolean } = {},
 ) {
   return mount(ReportsFilterForm, {
     props: {
@@ -20,40 +22,6 @@ function mountReportsFilterForm(
     },
     global: {
       plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-      stubs: options.stubAutocomplete
-        ? {
-            AutocompleteField: {
-              emits: ['update:modelValue'],
-              props: [
-                'disabled',
-                'inputId',
-                'label',
-                'modelValue',
-                'name',
-                'options',
-                'placeholder',
-              ],
-              template: `
-                <label>
-                  <span>{{ label }}</span>
-                  <select
-                    :data-testid="inputId"
-                    :disabled="disabled"
-                    :name="name"
-                    :value="modelValue"
-                    @change="$emit('update:modelValue', $event.target.value || null)"
-                  >
-                    <option
-                      v-for="option in options"
-                      :key="String(option.value)"
-                      :value="option.value ?? ''"
-                    >{{ option.label }}</option>
-                  </select>
-                </label>
-              `,
-            },
-          }
-        : {},
     },
   });
 }
@@ -87,24 +55,57 @@ describe('ReportsFilterForm', () => {
     expect(wrapper.getComponent({ name: 'DatePicker' }).props('invalid')).toBe(true);
   });
 
-  it('renders report setup controls with autocomplete fields', async () => {
-    const wrapper = mountReportsFilterForm([
-      new Date('2026-05-01T12:00:00.000Z'),
-      new Date('2026-05-02T12:00:00.000Z'),
-    ], { stubAutocomplete: true });
+  it('renders report setup filters without predefined all-scope values', async () => {
+    const wrapper = mountReportsFilterForm(null);
+    const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
+    const projectFilter = autoCompleteControls[0]!;
+    const memberFilter = autoCompleteControls[1]!;
+    const groupBySelect = wrapper.getComponent(Select);
 
-    await flushPromises();
-
-    expect(wrapper.get('[data-testid="reports-project"]').attributes('name')).toBe('projectId');
-    expect(wrapper.get('[data-testid="reports-member"]').attributes('name')).toBe('memberId');
-    expect(wrapper.get('[data-testid="reports-group-by"]').attributes('name')).toBe('groupBy');
+    expect(autoCompleteControls).toHaveLength(2);
     expect(wrapper.text()).toContain('Project');
     expect(wrapper.text()).toContain('Member');
     expect(wrapper.text()).toContain('Group by');
+    expect(projectFilter.props('modelValue')).toBeNull();
+    expect(projectFilter.props('placeholder')).toBe('All projects');
+    expect(projectFilter.props('pt')).toMatchObject({
+      pcInputText: {
+        root: { class: expect.stringContaining('rounded-r-none') },
+      },
+    });
+    expect(memberFilter.props('modelValue')).toBeNull();
+    expect(memberFilter.props('placeholder')).toBe('All assigned members');
+    expect(memberFilter.props('pt')).toMatchObject({
+      pcInputText: {
+        root: { class: expect.stringContaining('rounded-r-none') },
+      },
+    });
+    expect(groupBySelect.props('modelValue')).toBe('project');
+    expect(groupBySelect.props('options')).toEqual([
+      { label: 'Project', value: 'project' },
+      { label: 'Member', value: 'user' },
+    ]);
 
-    await wrapper.get('[data-testid="reports-project"]').setValue('11111111-1111-4111-8111-111111111111');
-    await wrapper.get('[data-testid="reports-member"]').setValue('33333333-3333-4333-8333-333333333333');
-    await wrapper.get('[data-testid="reports-group-by"]').setValue('user');
+    projectFilter.vm.$emit('complete', { query: 'orion' });
+    memberFilter.vm.$emit('complete', { query: 'alex' });
+    await nextTick();
+
+    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('suggestions')).toEqual([
+      { label: 'Project Orion', value: '11111111-1111-4111-8111-111111111111' },
+    ]);
+    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
+      { label: 'Alex Admin', value: '33333333-3333-4333-8333-333333333333' },
+    ]);
+
+    await projectFilter.vm.$emit('update:modelValue', {
+      label: 'Project Orion',
+      value: '11111111-1111-4111-8111-111111111111',
+    });
+    await memberFilter.vm.$emit('update:modelValue', {
+      label: 'Alex Admin',
+      value: '33333333-3333-4333-8333-333333333333',
+    });
+    await groupBySelect.vm.$emit('update:modelValue', 'user');
 
     expect(wrapper.emitted('update:projectId')).toEqual([
       ['11111111-1111-4111-8111-111111111111'],

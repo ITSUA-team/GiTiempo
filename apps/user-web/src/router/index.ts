@@ -7,6 +7,7 @@ import type { Pinia } from "pinia";
 import { createProtectedRouter } from "@gitiempo/web-shared/router";
 
 import AppShell from "@/components/layout/AppShell.vue";
+import { routeNames } from "@/constants/routes";
 import LoginView from "@/views/LoginView.vue";
 import { pinia } from "@/stores";
 import { useAuthStore } from "@/stores/auth";
@@ -20,18 +21,6 @@ const NotFoundView = () => import("@/views/NotFoundView.vue");
 const ProfileView = () => import("@/views/ProfileView.vue");
 const ProjectView = () => import("@/views/ProjectView.vue");
 const TimeEntriesView = () => import("@/views/TimeEntriesView.vue");
-
-export const routeNames = {
-  dashboard: "dashboard",
-  forbidden: "forbidden",
-  inviteAccept: "invite-accept",
-  invitePasswordSetup: "invite-password-setup",
-  login: "login",
-  notFound: "not-found",
-  profile: "profile",
-  project: "project",
-  timeEntries: "time-entries",
-} as const;
 
 const publicRoutes: RouteRecordRaw[] = [
   {
@@ -139,3 +128,5 @@ export function createAppRouter(options?: {
 }
 
 export const router = createAppRouter();
+
+export { routeNames };

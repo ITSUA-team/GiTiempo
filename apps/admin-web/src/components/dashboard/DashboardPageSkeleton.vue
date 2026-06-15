@@ -9,15 +9,13 @@ import Skeleton from 'primevue/skeleton';
     class="flex flex-col gap-6"
     role="status"
   >
-    <div class="flex flex-col gap-6">
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Skeleton
-          v-for="index in 4"
-          :key="index"
-          height="6rem"
-          border-radius="8px"
-        />
-      </div>
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <Skeleton
+        v-for="index in 4"
+        :key="index"
+        height="6rem"
+        border-radius="8px"
+      />
     </div>
 
     <SurfaceCard padding-class="p-5">
