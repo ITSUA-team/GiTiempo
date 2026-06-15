@@ -52,6 +52,20 @@ function mountDialog(
           visibility: "public",
           workspaceId: "workspace-1",
         },
+        {
+          color: null,
+          createdAt: "2026-04-20T12:00:00.000Z",
+          description: null,
+          id: "project-2",
+          isActive: true,
+          members: [],
+          name: "Admin Web",
+          source: "manual",
+          totalSeconds: 3600,
+          updatedAt: "2026-04-20T12:00:00.000Z",
+          visibility: "private",
+          workspaceId: "workspace-1",
+        },
       ],
       requestErrorMessage: null,
       saveLabel: "Create task",
@@ -63,6 +77,65 @@ function mountDialog(
     },
     global: {
       stubs: {
+        AutoComplete: {
+          name: "AutoComplete",
+          props: [
+            "completeOnFocus",
+            "dataKey",
+            "disabled",
+            "dropdown",
+            "dropdownMode",
+            "forceSelection",
+            "inputId",
+            "minLength",
+            "modelValue",
+            "multiple",
+            "optionLabel",
+            "suggestions",
+          ],
+          emits: ["complete", "update:modelValue"],
+          computed: {
+            displayValue(): string {
+              if (Array.isArray(this.modelValue)) {
+                return this.modelValue
+                  .map((value) => value?.[this.optionLabel] ?? String(value))
+                  .join(", ");
+              }
+
+              return typeof this.modelValue === "string"
+                ? this.modelValue
+                : this.modelValue?.[this.optionLabel] ?? "";
+            },
+            isMultiple(): boolean {
+              return this.multiple !== undefined && this.multiple !== false;
+            },
+          },
+          template: `
+            <div class="autocomplete" :data-testid="inputId">
+              <input
+                :data-complete-on-focus="String(completeOnFocus === true || completeOnFocus === '')"
+                :data-dropdown="String(dropdown !== undefined && dropdown !== false)"
+                :data-dropdown-mode="dropdownMode ?? ''"
+                :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)"
+                :data-min-length="String(minLength)"
+                :disabled="disabled"
+                :value="displayValue"
+                @input="$emit('update:modelValue', $event.target.value)"
+              />
+              <button :data-testid="inputId + '-complete'" type="button" @click="$emit('complete', { query: '' })">Complete</button>
+              <button :data-testid="inputId + '-complete-empty'" type="button" @click="$emit('complete', { query: '' })">Complete empty</button>
+              <button :data-testid="inputId + '-complete-admin'" type="button" @click="$emit('complete', { query: 'admin' })">Complete admin</button>
+              <button
+                v-for="suggestion in suggestions"
+                :key="suggestion[dataKey] ?? suggestion.value"
+                :data-testid="inputId + '-option-' + (suggestion[dataKey] ?? suggestion.value)"
+                type="button"
+                @click="$emit('update:modelValue', isMultiple ? [...(modelValue ?? []), suggestion] : suggestion)"
+              >{{ suggestion[optionLabel] }}</button>
+              <button :data-testid="inputId + '-clear'" type="button" @click="$emit('update:modelValue', isMultiple ? [] : null)">Clear</button>
+            </div>
+          `,
+        },
         Button: {
           props: ["disabled", "label", "loading", "severity", "variant"],
           emits: ["click"],
@@ -80,32 +153,6 @@ function mountDialog(
           emits: ["update:modelValue"],
           template:
             '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
-        },
-        AutoComplete: {
-          props: {
-            disabled: Boolean,
-            inputId: String,
-            modelValue: null,
-            multiple: Boolean,
-            optionLabel: String,
-            suggestions: Array,
-          },
-          emits: ["complete", "update:modelValue"],
-          template: `
-            <div class="autocomplete" :data-disabled="disabled" :data-input-id="inputId">
-              <button :data-testid="inputId + '-complete'" type="button" @click="$emit('complete', { query: '' })">Complete</button>
-              <button
-                v-for="option in suggestions"
-                :key="option.id ?? option.value"
-                :data-testid="inputId + '-option-' + (option.id ?? option.value)"
-                type="button"
-                @click="$emit('update:modelValue', multiple ? [...(modelValue ?? []), option] : option)"
-              >
-                {{ option[optionLabel] }}
-              </button>
-              <button :data-testid="inputId + '-clear'" type="button" @click="$emit('update:modelValue', multiple ? [] : null)">Clear</button>
-            </div>
-          `,
         },
         Select: {
           props: ["disabled", "modelValue", "optionLabel", "optionValue", "options"],
@@ -128,7 +175,7 @@ describe("ProjectTaskDialog", () => {
   it("renders the create form and emits metadata updates", async () => {
     const wrapper = mountDialog({ projectId: "project-1" });
     const selects = wrapper.findAll("select");
-    const input = wrapper.get("input");
+    const titleInput = wrapper.findAll("input")[1]!;
     const textarea = wrapper.get("textarea");
 
     await wrapper.get('[data-testid="project-task-project-complete"]').trigger("click");
@@ -137,7 +184,7 @@ describe("ProjectTaskDialog", () => {
     await selects[1]?.setValue("closed");
     await wrapper.get('[data-testid="project-task-assignee-complete"]').trigger("click");
     await wrapper.get('[data-testid="project-task-assignee-option-user-1"]').trigger("click");
-    await input.setValue("Write release checklist");
+    await titleInput.setValue("Write release checklist");
     await textarea.setValue("Coordinate release validation.");
 
     expect(wrapper.emitted("update:projectId")?.[0]).toEqual(["project-1"]);
@@ -152,6 +199,27 @@ describe("ProjectTaskDialog", () => {
     ]);
     expect(wrapper.text()).toContain("Create task");
     expect(wrapper.text()).not.toContain("Cancel");
+  });
+
+  it("uses project autocomplete and shows all projects on empty dropdown query", async () => {
+    const wrapper = mountDialog();
+    const projectAutoComplete = wrapper.get('[data-testid="project-task-project"]');
+    const projectInput = projectAutoComplete.get("input");
+
+    expect(projectInput.attributes("data-complete-on-focus")).toBe("true");
+    expect(projectInput.attributes("data-dropdown")).toBe("true");
+    expect(projectInput.attributes("data-dropdown-mode")).toBe("blank");
+    expect(projectInput.attributes("data-force-selection")).toBe("true");
+    expect(projectInput.attributes("data-min-length")).toBe("0");
+    expect(projectAutoComplete.find("select").exists()).toBe(false);
+
+    await wrapper.get('[data-testid="project-task-project-complete-admin"]').trigger("click");
+    expect(projectAutoComplete.text()).toContain("Admin Web");
+    expect(projectAutoComplete.text()).not.toContain("Project Orion");
+
+    await wrapper.get('[data-testid="project-task-project-complete-empty"]').trigger("click");
+    expect(projectAutoComplete.text()).toContain("Admin Web");
+    expect(projectAutoComplete.text()).toContain("Project Orion");
   });
 
   it("renders edit mode with a display-only project field and status select", () => {

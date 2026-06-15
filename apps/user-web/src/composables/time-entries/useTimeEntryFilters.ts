@@ -15,11 +15,7 @@ export function useTimeEntryFilters() {
   const selectedDateRange = shallowRef<Date[] | null>(null);
   const selectedProjectId = ref<string | null>(null);
   const selectedTaskFilter = shallowRef<TaskLookupValue>(null);
-  const filterTaskOptions = ref<TaskLookupOption[]>([]);
   const filterTaskSuggestions = ref<TaskLookupOption[]>([]);
-  const isLoadingFilterTasks = ref(false);
-  const filterTasksErrorMessage = ref<string | null>(null);
-  let taskRequestId = 0;
 
   const selectedTaskId = computed(() =>
     isTaskLookupOption(selectedTaskFilter.value)
@@ -46,15 +42,6 @@ export function useTimeEntryFilters() {
     };
   });
 
-  function beginTaskRequest(): number {
-    taskRequestId += 1;
-    return taskRequestId;
-  }
-
-  function isCurrentTaskRequest(requestId: number): boolean {
-    return requestId === taskRequestId;
-  }
-
   function resetPagination(): void {
     currentPage.value = 1;
   }
@@ -71,27 +58,10 @@ export function useTimeEntryFilters() {
     selectedProjectId.value = projectId;
     selectedTaskFilter.value = null;
     filterTaskSuggestions.value = [];
-    filterTasksErrorMessage.value = null;
-
-    if (!projectId) {
-      filterTaskOptions.value = [];
-    }
   }
 
   function setTaskValue(value: TaskLookupValue): void {
     selectedTaskFilter.value = value;
-  }
-
-  function setTaskOptions(options: TaskLookupOption[]): void {
-    filterTaskOptions.value = options;
-  }
-
-  function setTasksLoading(isLoading: boolean): void {
-    isLoadingFilterTasks.value = isLoading;
-  }
-
-  function setTasksError(message: string | null): void {
-    filterTasksErrorMessage.value = message;
   }
 
   function updateTaskSuggestions(
@@ -102,14 +72,9 @@ export function useTimeEntryFilters() {
   }
 
   return {
-    beginTaskRequest,
     currentPage,
     entryListQuery,
-    filterTaskOptions,
     filterTaskSuggestions,
-    filterTasksErrorMessage,
-    isCurrentTaskRequest,
-    isLoadingFilterTasks,
     pageSize,
     resetPagination,
     selectedDateRange,
@@ -119,9 +84,6 @@ export function useTimeEntryFilters() {
     setDateRange,
     setPage,
     setProjectId,
-    setTaskOptions,
-    setTasksError,
-    setTasksLoading,
     setTaskValue,
     updateTaskSuggestions,
   };

@@ -7,6 +7,7 @@ import {
   type TimeReportQuery,
   type TimeReportResponse,
   type TimeReportRow,
+  type WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import {
   formatPaddedHoursMinutesDuration,
@@ -165,6 +166,19 @@ export function deriveMemberOptions(
   return reportFilterOptionSchema
     .array()
     .parse(sortByLabel([...options.values()]));
+}
+
+export function deriveWorkspaceMemberOptions(
+  members: WorkspaceMemberListResponse,
+): ReportFilterOption[] {
+  return reportFilterOptionSchema.array().parse(
+    sortByLabel(
+      members.map((member) => ({
+        label: member.displayName?.trim() || member.email,
+        value: member.userId,
+      })),
+    ),
+  );
 }
 
 function toReportDateQuery(

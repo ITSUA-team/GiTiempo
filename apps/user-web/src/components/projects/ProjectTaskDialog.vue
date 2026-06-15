@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import AutoComplete, { type AutoCompleteCompleteEvent } from "primevue/autocomplete";
+import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskPriority, TaskStatus } from "@gitiempo/shared";
-import { computed, ref } from "vue";
+import { filterAutocompleteOptions } from "@gitiempo/web-shared";
+import { computed, shallowRef, watch } from "vue";
 
 interface TaskAssigneeOption {
   label: string;
@@ -67,15 +68,43 @@ const selectedProjectName = computed(() => {
   return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
 });
 const selectedAssigneeIdSet = computed(() => new Set(props.assigneeIds));
-const projectSuggestions = ref<ProjectResponse[]>([]);
-const assigneeSuggestions = ref<TaskAssigneeOption[]>([]);
+const selectedProject = computed(() =>
+  props.projects.find((project) => project.id === props.projectId) ?? null,
+);
+const projectSearchValue = shallowRef<string | null>(null);
+const projectSearchQuery = shallowRef("");
+const assigneeSearchQuery = shallowRef("");
+const projectSuggestions = computed(() => {
+  return filterAutocompleteOptions(
+    props.projects,
+    projectSearchQuery.value,
+    (project) => project.name,
+  );
+});
+const assigneeSuggestions = computed(() => {
+  const unselectedOptions = props.assigneeOptions.filter(
+    (option) => !selectedAssigneeIdSet.value.has(option.value),
+  );
+
+  return filterAutocompleteOptions(
+    unselectedOptions,
+    assigneeSearchQuery.value,
+    (option) => option.label,
+  );
+});
 
 const projectModel = computed({
-  get: () => {
-    return props.projects.find((project) => project.id === props.projectId) ?? null;
-  },
+  get: () => projectSearchValue.value ?? selectedProject.value,
   set: (value: ProjectResponse | string | null | undefined) => {
-    emit("update:projectId", resolveProjectId(value));
+    if (typeof value === "string") {
+      projectSearchValue.value = value;
+      projectSearchQuery.value = value;
+      return;
+    }
+
+    projectSearchValue.value = null;
+    projectSearchQuery.value = "";
+    emit("update:projectId", value?.id ?? null);
   },
 });
 
@@ -120,44 +149,6 @@ const titleModel = computed({
 
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
 
-function completeProjects(event: AutoCompleteCompleteEvent): void {
-  projectSuggestions.value = filterOptions(props.projects, event.query, "name");
-}
-
-function completeAssignees(event: AutoCompleteCompleteEvent): void {
-  const unselectedOptions = props.assigneeOptions.filter(
-    (option) => !selectedAssigneeIdSet.value.has(option.value),
-  );
-
-  assigneeSuggestions.value = filterOptions(
-    unselectedOptions,
-    event.query,
-    "label",
-  );
-}
-
-function filterOptions<T extends object>(
-  options: T[],
-  query: string,
-  labelKey: keyof T,
-): T[] {
-  const normalizedQuery = query.trim().toLocaleLowerCase();
-  if (!normalizedQuery) return [...options];
-
-  return options.filter((option) =>
-    String(option[labelKey] ?? "").toLocaleLowerCase().includes(normalizedQuery),
-  );
-}
-
-function resolveProjectId(
-  value: ProjectResponse | string | null | undefined,
-): string | null {
-  if (typeof value === "string") {
-    return props.projects.find((project) => project.name === value)?.id ?? null;
-  }
-  return value?.id ?? null;
-}
-
 function resolveAssigneeIds(
   value: (TaskAssigneeOption | string)[] | null | undefined,
 ): string[] {
@@ -172,6 +163,23 @@ function resolveAssigneeIds(
     .filter((id): id is string => id !== undefined);
 
   return [...new Set(ids)];
+}
+
+watch(
+  [() => props.isOpen, () => props.mode, () => props.projectId],
+  () => {
+    projectSearchValue.value = null;
+    projectSearchQuery.value = "";
+    assigneeSearchQuery.value = "";
+  },
+);
+
+function handleProjectComplete(event: { query: string }): void {
+  projectSearchQuery.value = event.query;
+}
+
+function handleAssigneeComplete(event: { query: string }): void {
+  assigneeSearchQuery.value = event.query;
 }
 </script>
 
@@ -240,19 +248,20 @@ function resolveAssigneeIds(
         <AutoComplete
           v-else
           v-model="projectModel"
+          complete-on-focus
+          data-key="id"
           dropdown
           dropdown-mode="blank"
-          force-selection
           fluid
+          force-selection
           input-id="project-task-project"
+          :min-length="0"
           option-label="name"
           placeholder="Select project"
-          complete-on-focus
           :disabled="isDialogMutating"
           :invalid="!!props.errors.projectId"
-          :min-length="0"
           :suggestions="projectSuggestions"
-          @complete="completeProjects"
+          @complete="handleProjectComplete"
         />
         <small
           v-if="props.errors.projectId"
@@ -375,6 +384,7 @@ function resolveAssigneeIds(
           dropdown
           dropdown-mode="blank"
           empty-message="No assigned project members"
+          data-key="value"
           force-selection
           fluid
           input-id="project-task-assignee"
@@ -388,7 +398,7 @@ function resolveAssigneeIds(
           :invalid="!!props.errors.assigneeIds"
           :min-length="0"
           :suggestions="assigneeSuggestions"
-          @complete="completeAssignees"
+          @complete="handleAssigneeComplete"
         />
         <small
           v-if="props.errors.assigneeIds"

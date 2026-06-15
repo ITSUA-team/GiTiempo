@@ -265,17 +265,49 @@ async function mountView(
       stubs: {
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
-          props: ["inputId", "suggestions"],
+          props: [
+            "completeOnFocus",
+            "dropdownMode",
+            "inputId",
+            "minLength",
+            "optionLabel",
+            "overlayClass",
+            "pt",
+            "suggestions",
+          ],
           template: `
-            <div :data-testid="inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'">
-              <p v-for="suggestion in suggestions" :key="suggestion.id">{{ suggestion.title }}</p>
-              <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
-              <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
-                id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
-                isActive: true,
-                projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
-                title: 'Ship admin polish'
-              })">Select task</button>
+            <div
+              :data-complete-on-focus="String(completeOnFocus === true || completeOnFocus === '')"
+              :data-dropdown-mode="dropdownMode ?? ''"
+              :data-input-pt-class="pt?.pcInputText?.root?.class ?? ''"
+              :data-list-container-pt-class="pt?.listContainer?.class ?? ''"
+              :data-min-length="String(minLength)"
+              :data-option-pt-class="pt?.option?.class ?? ''"
+              :data-overlay-class="overlayClass ?? ''"
+              :data-overlay-pt-class="pt?.overlay?.class ?? ''"
+              :data-root-pt-class="pt?.root?.class ?? ''"
+              :data-testid="inputId === 'time-entries-project-filter' ? 'project-filter-autocomplete' : inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'"
+            >
+              <p v-for="suggestion in suggestions" :key="suggestion.id">
+                {{ suggestion[optionLabel] }}
+              </p>
+              <template v-if="inputId === 'time-entries-project-filter'">
+                <button data-testid="project-filter-search" type="button" @click="$emit('complete', { query: 'Project' })">Search project</button>
+                <button data-testid="project-filter-select" type="button" @click="$emit('update:modelValue', {
+                  id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
+                  name: 'Project Orion'
+                })">Select project</button>
+              </template>
+              <template v-else>
+                <button data-testid="filter-task-focus" type="button" @click="$emit('complete', { query: '' })">Focus task</button>
+                <button data-testid="filter-task-search" type="button" @click="$emit('complete', { query: 'ship' })">Search task</button>
+                <button data-testid="filter-task-select" type="button" @click="$emit('update:modelValue', {
+                  id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
+                  isActive: true,
+                  projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
+                  title: 'Ship admin polish'
+                })">Select task</button>
+              </template>
             </div>
           `,
         },
@@ -286,13 +318,29 @@ async function mountView(
         },
         DatePicker: {
           emits: ["update:modelValue"],
-          props: ["inputId"],
+          props: ["inputId", "modelValue", "showIcon"],
+          methods: {
+            formatRange(value: Date[] | null | undefined): string {
+              if (!value?.length) {
+                return "";
+              }
+
+              return value
+                .map((date) => [
+                  date.getFullYear(),
+                  String(date.getMonth() + 1).padStart(2, "0"),
+                  String(date.getDate()).padStart(2, "0"),
+                ].join("-"))
+                .join(" - ");
+            },
+          },
           template: `
             <button
               :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
+              :data-show-icon="String(showIcon === true || showIcon === '')"
               type="button"
               @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
-            >Date</button>
+            >{{ formatRange(modelValue) }}</button>
           `,
         },
         Paginator: {
@@ -300,10 +348,6 @@ async function mountView(
           template: '<button data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
         },
         ProgressSpinner: { template: "<div />" },
-        Select: {
-          emits: ["update:modelValue"],
-          template: '<button data-testid="project-filter-select" type="button" @click="$emit(\'update:modelValue\', \'018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002\')">Project</button>',
-        },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
           emits: ["createForDay", "editEntry", "openActiveTimer"],
@@ -370,6 +414,8 @@ async function mountView(
                 <p v-for="suggestion in taskSuggestions" :key="suggestion.id">{{ suggestion.title }}</p>
               </div>
               <button data-testid="dialog-project-admin" type="button" @click="$emit('update:projectId', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002')">Project</button>
+              <button data-testid="dialog-task-search-empty" type="button" @click="$emit('taskSearch', '')">Search all tasks</button>
+              <button data-testid="dialog-task-search-polish" type="button" @click="$emit('taskSearch', 'polish')">Search polish tasks</button>
               <button data-testid="dialog-task-admin" type="button" @click="$emit('update:taskValue', {
                 id: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002',
                 isActive: true,
@@ -429,6 +475,10 @@ describe("TimeEntriesView", () => {
       search: undefined,
       taskId: undefined,
     });
+    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
+    expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
+      "true",
+    );
     expect(wrapper.text()).toContain("Today, Apr 21");
     expect(wrapper.text()).toContain("02:00:05");
 
@@ -674,9 +724,6 @@ describe("TimeEntriesView", () => {
     await wrapper.get('[data-testid="paginator-page-2"]').trigger("click");
     await flushPromises();
 
-    expect(client.listProjectTasks).toHaveBeenCalledWith(
-      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
-    );
     expect(client.listOwnEntries.mock.calls.map((call) => call[0])).toContainEqual({
       dateFrom: new Date(2026, 3, 1, 0, 0, 0, 0).toISOString(),
       dateTo: new Date(2026, 3, 22, 0, 0, 0, 0).toISOString(),
@@ -688,6 +735,59 @@ describe("TimeEntriesView", () => {
     });
   });
 
+  it("shows task suggestions from the current filtered entries", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([
+        createEntry({
+          id: TEST_IDS.completedEntry,
+          project: {
+            id: TEST_IDS.projectAdmin,
+            name: "Admin Web",
+          },
+          projectId: TEST_IDS.projectAdmin,
+          task: {
+            id: TEST_IDS.taskAdmin,
+            title: "Ship admin polish",
+          },
+          taskId: TEST_IDS.taskAdmin,
+        }),
+        createEntry({
+          id: TEST_IDS.runningEntry,
+        }),
+      ]),
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-search"]').trigger("click");
+    await flushPromises();
+
+    const filterSuggestions = wrapper.get('[data-testid="filter-task-autocomplete"]');
+
+    expect(filterSuggestions.attributes("data-complete-on-focus")).toBe("true");
+    expect(filterSuggestions.attributes("data-dropdown-mode")).toBe("blank");
+    expect(filterSuggestions.attributes("data-input-pt-class")).toBe("truncate");
+    expect(filterSuggestions.attributes("data-list-container-pt-class")).toBe(
+      "max-w-full overflow-x-hidden",
+    );
+    expect(filterSuggestions.attributes("data-min-length")).toBe("0");
+    expect(filterSuggestions.attributes("data-option-pt-class")).toBe(
+      "max-w-full min-w-0 truncate",
+    );
+    expect(filterSuggestions.attributes("data-overlay-class")).toBe(
+      "max-w-[calc(100vw-2rem)]",
+    );
+    expect(filterSuggestions.attributes("data-overlay-pt-class")).toBe(
+      "max-w-[calc(100vw-2rem)] overflow-hidden",
+    );
+    expect(filterSuggestions.attributes("data-root-pt-class")).toBe(
+      "max-w-full min-w-0",
+    );
+    expect(client.listProjectTasks).not.toHaveBeenCalled();
+    expect(filterSuggestions.text()).toContain("Ship admin polish");
+    expect(filterSuggestions.text()).not.toContain("Improve reports filters");
+  });
+
   it("filters closed tasks from manual entry selection without hiding historical filters", async () => {
     const closedTask = createTask({
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2999",
@@ -696,6 +796,34 @@ describe("TimeEntriesView", () => {
       title: "Ship closed archive",
     });
     const client = createClientMock({
+      entriesResponse: createEntryListResponse([
+        createEntry({
+          id: TEST_IDS.completedEntry,
+          project: {
+            id: TEST_IDS.projectAdmin,
+            name: "Admin Web",
+          },
+          projectId: TEST_IDS.projectAdmin,
+          task: {
+            id: TEST_IDS.taskAdmin,
+            title: "Ship admin polish",
+          },
+          taskId: TEST_IDS.taskAdmin,
+        }),
+        createEntry({
+          id: TEST_IDS.runningEntry,
+          project: {
+            id: TEST_IDS.projectAdmin,
+            name: "Admin Web",
+          },
+          projectId: TEST_IDS.projectAdmin,
+          task: {
+            id: closedTask.id,
+            title: closedTask.title,
+          },
+          taskId: closedTask.id,
+        }),
+      ]),
       tasksByProject: {
         [TEST_IDS.projectAdmin]: [
           createTask({
@@ -727,6 +855,92 @@ describe("TimeEntriesView", () => {
 
     expect(dialogSuggestions.text()).toContain("Ship admin polish");
     expect(dialogSuggestions.text()).not.toContain("Ship closed archive");
+  });
+
+  it("shows all open project tasks in the create dialog after an empty task dropdown query", async () => {
+    const secondOpenTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2998",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Write release checklist",
+    });
+    const closedTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2999",
+      projectId: TEST_IDS.projectAdmin,
+      status: "closed",
+      title: "Closed historical cleanup",
+    });
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+      tasksByProject: {
+        [TEST_IDS.projectAdmin]: [
+          createTask({
+            id: TEST_IDS.taskAdmin,
+            projectId: TEST_IDS.projectAdmin,
+            title: "Ship admin polish",
+          }),
+          secondOpenTask,
+          closedTask,
+        ],
+      },
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.projectAdmin);
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
+
+    await wrapper.get('[data-testid="dialog-task-search-polish"]').trigger("click");
+
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).not.toContain("Write release checklist");
+
+    await wrapper.get('[data-testid="dialog-task-search-empty"]').trigger("click");
+
+    expect(dialogSuggestions.text()).toContain("Ship admin polish");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
+  });
+
+  it("shows all open project tasks in the edit dialog for an empty task dropdown query", async () => {
+    const secondOpenTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2998",
+      title: "Write release checklist",
+    });
+    const closedTask = createTask({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f2999",
+      status: "closed",
+      title: "Closed historical cleanup",
+    });
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+      tasksByProject: {
+        [TEST_IDS.projectOrion]: [
+          createTask(),
+          secondOpenTask,
+          closedTask,
+        ],
+      },
+    });
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.projectOrion);
+    expect(dialogSuggestions.text()).toContain("Improve reports filters");
+    expect(dialogSuggestions.text()).toContain("Write release checklist");
+    expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
   });
 
   it("creates a manual entry and refreshes the current list page", async () => {
