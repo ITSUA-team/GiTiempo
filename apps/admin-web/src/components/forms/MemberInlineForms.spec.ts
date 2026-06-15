@@ -6,7 +6,6 @@ import type {
 } from '@gitiempo/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import MemberAssignPmPanel from './MemberAssignPmPanel.vue';
 import MemberEditForm from './MemberEditForm.vue';
 
 vi.mock('@/composables/feedback/useToasts', () => ({
@@ -14,12 +13,6 @@ vi.mock('@/composables/feedback/useToasts', () => ({
     errorToast: vi.fn(),
     successToast: vi.fn(),
   }),
-}));
-
-vi.mock('@/services/admin-members-client', () => ({
-  adminMembersClient: {
-    updateMemberRole: vi.fn(),
-  },
 }));
 
 vi.mock('@/services/admin-projects-client', () => ({
@@ -97,8 +90,8 @@ const projects: ProjectListResponse = [
 
 const stubs = {
   Button: {
-    props: ['disabled', 'label', 'type'],
-    template: '<button :disabled="disabled" :type="type">{{ label }}</button>',
+    props: ['disabled', 'label', 'loading', 'type'],
+    template: '<button v-bind="$attrs" :disabled="disabled" :type="type">{{ label }}</button>',
   },
   Checkbox: {
     props: ['inputId', 'name', 'value'],
@@ -108,14 +101,11 @@ const stubs = {
     props: ['title'],
     template: '<section><h2>{{ title }}</h2><slot /></section>',
   },
-  Form: { template: '<form><slot /></form>' },
-  InputText: {
-    props: ['id', 'modelValue'],
-    template: '<input :id="id" :value="modelValue" v-bind="$attrs" />',
-  },
-  Select: {
-    props: ['id', 'name'],
-    template: '<select :id="id" :name="name" />',
+  Form: {
+    emits: ['submit'],
+    props: ['initialValues', 'resolver'],
+    template:
+      '<form @submit.prevent="$emit(\'submit\', { valid: true, values: initialValues })"><slot /></form>',
   },
 };
 
@@ -124,82 +114,70 @@ describe('member inline forms', () => {
     setActivePinia(createPinia());
   });
 
-  it('keeps the member edit controls in a desktop row with a mobile stack', () => {
+  it('renders member settings as project checkboxes with the design action row', async () => {
     const wrapper = mount(MemberEditForm, {
-      props: { member },
+      props: { canRemove: true, member, projects },
       global: { plugins: [createPinia()], stubs },
     });
 
+    expect(wrapper.text()).toContain('Member settings');
     expect(wrapper.get('[data-testid="member-edit-form-layout"]').classes()).toEqual(
-      expect.arrayContaining(['flex', 'flex-col', 'gap-2.5']),
+      expect.arrayContaining(['flex', 'flex-col', 'gap-3']),
     );
-    expect(wrapper.get('[data-testid="member-edit-form-fields"]').classes()).toEqual(
-      expect.arrayContaining(['flex-col', 'sm:flex-row', 'sm:items-end']),
+    expect(wrapper.get('[data-testid="member-edit-project-list"]').classes()).toEqual(
+      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:flex-wrap']),
     );
     expect(wrapper.get('[data-testid="member-edit-form-actions"]').classes()).toEqual(
-      expect.arrayContaining(['grid', 'w-full', 'sm:flex', 'sm:w-auto']),
+      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:justify-end']),
     );
-    expect(wrapper.get('label[for="edit-member-name"]').text()).toBe('Name');
-    expect(wrapper.get('label[for="edit-member-email"]').text()).toBe('Email');
-    expect(wrapper.get('label[for="edit-member-role"]').text()).toBe('Role');
-    expect(wrapper.get('#edit-member-name').attributes('readonly')).toBeDefined();
-    expect(wrapper.get('#edit-member-email').attributes('readonly')).toBeDefined();
-    expect(wrapper.get('#edit-member-name').attributes('aria-describedby')).toBe(
-      'member-readonly-fields-note',
-    );
-    expect(wrapper.get('#edit-member-email').attributes('aria-describedby')).toBe(
-      'member-readonly-fields-note',
-    );
-    expect(wrapper.get('#member-readonly-fields-note').text()).toBe(
-      'Editing name and email is not yet supported.',
-    );
-    expect(wrapper.text()).not.toContain('Remove member');
+    expect(wrapper.findAll('[name="projectIds"]')).toHaveLength(2);
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.text()).toContain('Project Atlas');
+    expect(wrapper.text()).not.toContain('Archived Project');
+    expect(wrapper.text()).not.toContain('Name');
+    expect(wrapper.text()).not.toContain('Email');
+    expect(wrapper.text()).not.toContain('Role');
+    expect(wrapper.text()).toContain('Remove member');
     expect(wrapper.text()).toContain('Cancel');
-    expect(wrapper.text()).toContain('Save');
-  });
+    expect(wrapper.text()).toContain('Save changes');
 
-  it('keeps member removal inside the inline edit panel when allowed', async () => {
-    const wrapper = mount(MemberEditForm, {
-      props: { canRemove: true, member },
-      global: { plugins: [createPinia()], stubs },
-    });
+    const removeButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Remove member',
+    );
+
+    expect(removeButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-surface-primary',
+        'border-destructive',
+        'rounded-[6px]',
+        'text-[13px]',
+        'text-destructive',
+        'font-semibold',
+      ]),
+    );
 
     await wrapper.get('button').trigger('click');
 
-    expect(wrapper.text()).toContain('Remove member');
     expect(wrapper.emitted('remove')).toHaveLength(1);
   });
 
-  it('disables member removal while the inline role save is pending', () => {
+  it('submits selected project assignments from the single settings panel', async () => {
     const wrapper = mount(MemberEditForm, {
-      props: { canRemove: true, member, saving: true },
-      global: { plugins: [createPinia()], stubs },
-    });
-
-    expect(wrapper.get('button').attributes('disabled')).toBeDefined();
-  });
-
-  it('stacks PM assignment choices and actions on mobile while keeping desktop wrapping', () => {
-    const wrapper = mount(MemberAssignPmPanel, {
       props: { member, projects },
       global: { plugins: [createPinia()], stubs },
     });
 
-    const projectList = wrapper.get('[data-testid="member-assign-project-list"]');
-    const activeProjectLabels = projectList.findAll('label');
+    await wrapper.get('form').trigger('submit');
 
-    expect(projectList.classes()).toEqual(
-      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:flex-wrap']),
-    );
-    expect(activeProjectLabels).toHaveLength(2);
-    expect(activeProjectLabels[0].classes()).toEqual(
-      expect.arrayContaining(['min-h-11', 'w-full', 'sm:w-auto']),
-    );
-    expect(wrapper.text()).toContain('Project Orion');
-    expect(wrapper.text()).toContain('Project Atlas');
-    expect(wrapper.text()).not.toContain('Archived Project');
-    expect(wrapper.get('[data-testid="member-assign-actions"]').classes()).toEqual(
-      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:justify-end']),
-    );
+    expect(wrapper.emitted('save')).toEqual([[{ projectIds: ['project-1'] }]]);
+  });
+
+  it('disables member settings actions while the assignment save is pending', () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canRemove: true, member, projects, saving: true },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    expect(wrapper.get('button').attributes('disabled')).toBeDefined();
   });
 });

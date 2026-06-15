@@ -18,7 +18,6 @@ const testMocks = vi.hoisted(() => ({
   listInvites: vi.fn(),
   listMembers: vi.fn(),
   listProjects: vi.fn(),
-  updateMemberRole: vi.fn(),
 }));
 
 vi.mock('@/services/admin-members-client', () => ({
@@ -28,7 +27,6 @@ vi.mock('@/services/admin-members-client', () => ({
     listMembers: testMocks.listMembers,
     removeMember: testMocks.removeMember,
     resendInvite: testMocks.resendInvite,
-    updateMemberRole: testMocks.updateMemberRole,
   },
 }));
 
@@ -120,34 +118,19 @@ const MembersTableStub = {
     </div>`,
 };
 
-const MemberAssignPmPanelStub = {
-  name: 'MemberAssignPmPanel',
-  props: {
-    member: { type: Object, required: true },
-    projects: { type: Array, required: true },
-    saving: { type: Boolean, default: false },
-  },
-  template: `
-    <div data-testid="member-assign-panel">
-      Assign {{ member.email }} across {{ projects.length }} projects | saving={{ saving }}
-      <button data-testid="member-assign-save" @click="$emit('save', { projectIds: [] })" />
-      <button data-testid="member-assign-cancel" @click="$emit('cancelled')" />
-    </div>
-  `,
-};
-
 const MemberEditFormStub = {
   name: 'MemberEditForm',
   props: {
     canRemove: { type: Boolean, default: false },
     member: { type: Object, required: true },
+    projects: { type: Array, required: true },
     saving: { type: Boolean, default: false },
   },
   template: `
     <div data-testid="member-edit-panel">
-      Edit {{ member.email }} | saving={{ saving }}
+      Member settings for {{ member.email }} across {{ projects.length }} projects | saving={{ saving }}
       <button v-if="canRemove" data-testid="member-edit-remove" @click="$emit('remove')" />
-      <button data-testid="member-edit-save" @click="$emit('save', 'member')" />
+      <button data-testid="member-edit-save" @click="$emit('save', { projectIds: [] })" />
       <button data-testid="member-edit-cancel" @click="$emit('cancelled')" />
     </div>
   `,
@@ -197,7 +180,6 @@ const SkeletonStub = {
 };
 
 const membersViewStubs = {
-  MemberAssignPmPanel: MemberAssignPmPanelStub,
   MemberEditForm: MemberEditFormStub,
   MemberInviteDialog: MemberInviteDialogStub,
   MembersTable: MembersTableStub,
@@ -242,11 +224,9 @@ describe('MembersView', () => {
     testMocks.requireConfirmation.mockReset();
     testMocks.resendInvite.mockReset();
     testMocks.successToast.mockReset();
-    testMocks.updateMemberRole.mockReset();
 
     testMocks.assignMember.mockResolvedValue(undefined);
     testMocks.removeAssignment.mockResolvedValue(undefined);
-    testMocks.updateMemberRole.mockResolvedValue(undefined);
   });
 
   it('shows the dedicated skeleton state before the first members load resolves, then renders loaded stats', async () => {
@@ -591,43 +571,17 @@ describe('MembersView', () => {
     await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.get('[data-testid="member-assign-panel"]').text()).toContain(
-      'Assign pat@example.com across 1 projects',
+    expect(wrapper.get('[data-testid="member-edit-panel"]').text()).toContain(
+      'Member settings for pat@example.com across 1 projects',
     );
 
-    await wrapper.get('[data-testid="member-assign-save"]').trigger('click');
+    await wrapper.get('[data-testid="member-edit-save"]').trigger('click');
     await flushPromises();
 
     expect(testMocks.removeAssignment).toHaveBeenCalledWith('project-1', 'user-2');
     expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
     expect(testMocks.successToast).toHaveBeenCalledWith(
       'Project assignments for Pat PM saved.',
-    );
-    expect(wrapper.find('[data-testid="member-assign-panel"]').exists()).toBe(false);
-  });
-
-  it('opens edit expansion from a table intent, saves role, refreshes, and collapses', async () => {
-    testMocks.listMembers
-      .mockResolvedValueOnce([createMember()])
-      .mockResolvedValueOnce([createMember()]);
-    testMocks.listProjects.mockResolvedValue([]);
-    testMocks.listInvites.mockResolvedValue([]);
-
-    const wrapper = mountMembersView();
-
-    await flushPromises();
-    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
-    await wrapper.vm.$nextTick();
-
-    await wrapper.get('[data-testid="member-edit-save"]').trigger('click');
-    await flushPromises();
-
-    expect(testMocks.updateMemberRole).toHaveBeenCalledWith('member-remove', {
-      role: 'member',
-    });
-    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
-    expect(testMocks.successToast).toHaveBeenCalledWith(
-      'Role for Pat PM changed to member.',
     );
     expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
   });
@@ -644,7 +598,7 @@ describe('MembersView', () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.get('[data-testid="member-edit-panel"]').text()).toContain(
-      'Edit pat@example.com',
+      'Member settings for pat@example.com',
     );
 
     await wrapper.get('[data-testid="member-edit-cancel"]').trigger('click');

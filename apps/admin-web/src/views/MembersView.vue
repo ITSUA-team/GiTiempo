@@ -6,7 +6,6 @@ import type {
   WorkspaceInviteResponse,
   WorkspaceMemberListResponse,
   WorkspaceMemberResponse,
-  WorkspaceRole,
 } from '@gitiempo/shared';
 import {
   StatCard,
@@ -16,7 +15,6 @@ import {
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
-import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
@@ -46,7 +44,6 @@ const inviteDialogVisible = ref(false);
 const resendingInviteId = ref<string | null>(null);
 const cancelingInviteId = ref<string | null>(null);
 const savingMemberAssignmentId = ref<string | null>(null);
-const savingMemberRoleId = ref<string | null>(null);
 
 interface LoadDataOptions {
   errorAction: string;
@@ -275,38 +272,6 @@ async function handleAssignmentsSubmitted(
   }
 }
 
-async function handleRoleSubmitted(
-  member: WorkspaceMemberResponse,
-  role: WorkspaceRole,
-): Promise<void> {
-  if (role === member.role) {
-    collapseMemberRow(member);
-    return;
-  }
-
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  savingMemberRoleId.value = member.id;
-
-  try {
-    await adminMembersClient.updateMemberRole(member.id, { role });
-    successToast(`Role for ${getMemberDisplayName(member)} changed to ${role}.`);
-    collapseMemberRow(member);
-    await refreshMembers();
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to update role', {
-      error: err,
-      logContext: { action: 'update-member-role', feature: 'members' },
-    });
-  } finally {
-    savingMemberRoleId.value = null;
-  }
-}
-
 async function handleResendInvite(invite: WorkspaceInviteResponse): Promise<void> {
   const token = authStore.accessToken;
 
@@ -417,16 +382,9 @@ onMounted(fetchAll);
               <MemberEditForm
                 :can-remove="row.canManage"
                 :member="row.member"
-                :saving="savingMemberRoleId === row.id"
-                @remove="handleRemoveMember(row.member)"
-                @save="handleRoleSubmitted(row.member, $event)"
-                @cancelled="collapseMemberRow(row.member)"
-              />
-              <MemberAssignPmPanel
-                v-if="row.canAssignPm"
-                :member="row.member"
                 :projects="projects"
                 :saving="savingMemberAssignmentId === row.id"
+                @remove="handleRemoveMember(row.member)"
                 @save="handleAssignmentsSubmitted(row.member, $event)"
                 @cancelled="collapseMemberRow(row.member)"
               />

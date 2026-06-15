@@ -1,29 +1,36 @@
 <script setup lang="ts">
-import type { WorkspaceMemberResponse, WorkspaceRole } from '@gitiempo/shared';
-import { EditFormPanel, WORKSPACE_ROLE_OPTIONS } from '@gitiempo/web-shared';
+import { computed } from 'vue';
+import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
+import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
+import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
-import { z } from 'zod';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import Select from 'primevue/select';
+import Checkbox from 'primevue/checkbox';
 
 const props = defineProps<{
   canRemove?: boolean;
   member: WorkspaceMemberResponse;
+  projects: ProjectListResponse;
   saving?: boolean;
 }>();
 
 const emit = defineEmits<{
   cancelled: [];
   remove: [];
-  save: [role: WorkspaceRole];
+  save: [input: MemberAssignFormInput];
 }>();
 
-const editRoleSchema = z.object({ role: z.enum(['admin', 'pm', 'member']) });
-const resolver = zodResolver(editRoleSchema);
+const resolver = zodResolver(memberAssignFormSchema);
 
-const initialValues = { role: props.member.role };
+const activeProjects = computed(() => props.projects.filter((project) => project.isActive));
+const initialValues = computed<MemberAssignFormInput>(() => ({
+  projectIds: activeProjects.value
+    .filter((project) =>
+      project.members.some((projectMember) => projectMember.userId === props.member.userId),
+    )
+    .map((project) => project.id),
+}));
 
 function handleSave({
   valid,
@@ -36,14 +43,12 @@ function handleSave({
     return;
   }
 
-  const role = values.role as WorkspaceRole;
-
-  emit('save', role);
+  emit('save', values as MemberAssignFormInput);
 }
 </script>
 
 <template>
-  <EditFormPanel title="Edit member">
+  <EditFormPanel title="Member settings">
     <Form
       :resolver="resolver"
       :initial-values="initialValues"
@@ -51,96 +56,63 @@ function handleSave({
     >
       <div
         data-testid="member-edit-form-layout"
-        class="flex flex-col gap-2.5"
+        class="flex flex-col gap-3"
       >
         <div
-          data-testid="member-edit-form-fields"
-          class="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2.5"
+          data-testid="member-edit-project-list"
+          class="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:gap-3"
         >
-          <!-- Name (read-only) -->
-          <div class="flex min-w-0 flex-col gap-1.5 sm:flex-1">
-            <label
-              for="edit-member-name"
-              class="text-text-dark font-sans text-[12px] leading-none font-medium"
-            >Name</label>
-            <InputText
-              id="edit-member-name"
-              :model-value="member.displayName ?? '—'"
-              aria-describedby="member-readonly-fields-note"
-              disabled
-              fluid
-              readonly
-            />
-          </div>
-
-          <!-- Email (read-only) -->
-          <div class="flex min-w-0 flex-col gap-1.5 sm:flex-1">
-            <label
-              for="edit-member-email"
-              class="text-text-dark font-sans text-[12px] leading-none font-medium"
-            >Email</label>
-            <InputText
-              id="edit-member-email"
-              :model-value="member.email"
-              aria-describedby="member-readonly-fields-note"
-              disabled
-              fluid
-              readonly
-            />
-          </div>
-
-          <!-- Role (editable) -->
-          <div class="flex min-w-0 flex-col gap-1.5 sm:w-[180px] sm:shrink-0">
-            <label
-              for="edit-member-role"
-              class="text-text-dark font-sans text-[12px] leading-none font-medium"
-            >Role</label>
-            <Select
-              id="edit-member-role"
-              name="role"
-              :options="WORKSPACE_ROLE_OPTIONS"
-              option-label="label"
-              option-value="value"
-              fluid
-            />
-          </div>
-
-          <div
-            data-testid="member-edit-form-actions"
-            class="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-2.5"
+          <label
+            v-for="project in activeProjects"
+            :key="project.id"
+            :for="`member-settings-${member.id}-${project.id}`"
+            class="bg-surface-primary flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-[6px] px-3 py-2 sm:w-auto"
           >
-            <Button
-              v-if="props.canRemove"
-              label="Remove member"
-              severity="danger"
-              :disabled="saving"
-              outlined
-              type="button"
-              class="w-full sm:w-auto"
-              @click="emit('remove')"
+            <Checkbox
+              name="projectIds"
+              :input-id="`member-settings-${member.id}-${project.id}`"
+              :value="project.id"
             />
-            <Button
-              label="Cancel"
-              severity="secondary"
-              outlined
-              type="button"
-              class="w-full sm:w-auto"
-              @click="emit('cancelled')"
-            />
-            <Button
-              label="Save"
-              :disabled="saving"
-              :loading="saving"
-              type="submit"
-              class="w-full sm:w-auto"
-            />
-          </div>
+            <span class="text-text-dark text-[13px] font-medium">{{ project.name }}</span>
+          </label>
         </div>
 
-        <small
-          id="member-readonly-fields-note"
-          class="text-text-muted text-xs"
-        >Editing name and email is not yet supported.</small>
+        <div
+          v-if="activeProjects.length === 0"
+          class="text-text-muted text-[13px]"
+        >
+          No active projects available.
+        </div>
+
+        <div
+          data-testid="member-edit-form-actions"
+          class="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:justify-end sm:gap-2.5"
+        >
+          <Button
+            v-if="props.canRemove"
+            unstyled
+            label="Remove member"
+            :disabled="saving"
+            type="button"
+            class="border-destructive bg-surface-primary text-destructive hover:bg-status-error-bg focus-visible:outline-destructive flex min-h-8 w-full items-center justify-center rounded-[6px] border px-3.5 py-2 font-sans text-[13px] leading-none font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            @click="emit('remove')"
+          />
+          <Button
+            label="Cancel"
+            severity="secondary"
+            outlined
+            type="button"
+            class="w-full sm:w-auto"
+            @click="emit('cancelled')"
+          />
+          <Button
+            label="Save changes"
+            :disabled="saving"
+            :loading="saving"
+            type="submit"
+            class="w-full sm:w-auto"
+          />
+        </div>
       </div>
     </Form>
   </EditFormPanel>
