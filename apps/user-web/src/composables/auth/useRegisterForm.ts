@@ -111,7 +111,7 @@ export function useRegisterForm() {
     const request: RegisterRequest = {
       email: values.email,
       fullName: values.fullName,
-      ownerAcknowledgement: true,
+      ownerAcknowledgement: values.ownerAcknowledgement,
       password: values.password,
       workspaceName: values.workspaceName,
     };

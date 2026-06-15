@@ -8,7 +8,9 @@ export const registerFormSchema = registerRequestSchema
       "Enter a valid work email address.",
     ),
     fullName: z.string().trim().min(1, "Enter your full name."),
-    ownerAcknowledgement: z.boolean(),
+    ownerAcknowledgement: z.boolean().pipe(
+      z.literal(true, "Accept the workspace owner responsibility to continue."),
+    ),
     password: z.string().min(1, "Enter a password.").min(
       8,
       "Choose a password with at least 8 characters.",
@@ -27,19 +29,12 @@ export const registerFormSchema = registerRequestSchema
         path: ["confirmPassword"],
       });
     }
-
-    if (!values.ownerAcknowledgement) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Accept the workspace owner responsibility to continue.",
-        path: ["ownerAcknowledgement"],
-      });
-    }
   });
 
-export type RegisterFormValues = z.infer<typeof registerFormSchema>;
+export type RegisterFormValues = z.output<typeof registerFormSchema>;
+export type RegisterFormInputValues = z.input<typeof registerFormSchema>;
 
-export const registerFormInitialValues: RegisterFormValues = {
+export const registerFormInitialValues: RegisterFormInputValues = {
   confirmPassword: "",
   email: "",
   fullName: "",

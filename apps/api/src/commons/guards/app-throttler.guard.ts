@@ -1,22 +1,8 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import {
-  ThrottlerGuard,
-  type ThrottlerLimitDetail,
-  type ThrottlerModuleOptions,
-  type ThrottlerStorage,
-} from '@nestjs/throttler';
+import { ThrottlerGuard, type ThrottlerLimitDetail } from '@nestjs/throttler';
 import { THROTTLE_ERROR_CODE_METADATA } from '../decorators/throttle-error-code.decorator';
 
 export class AppThrottlerGuard extends ThrottlerGuard {
-  constructor(
-    options: ThrottlerModuleOptions,
-    storageService: ThrottlerStorage,
-    reflector: Reflector,
-  ) {
-    super(options, storageService, reflector);
-  }
-
   protected override async throwThrottlingException(
     context: Parameters<ThrottlerGuard['throwThrottlingException']>[0],
     throttlerLimitDetail: ThrottlerLimitDetail,
