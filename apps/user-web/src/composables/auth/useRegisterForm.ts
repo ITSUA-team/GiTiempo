@@ -14,10 +14,7 @@ import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
 import { routeNames } from "@/router";
 import { getAuthRuntime } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
-import {
-  registerFormSchema,
-  type RegisterFormValues,
-} from "@/validation/register";
+import { type RegisterFormValues } from "@/validation/register";
 
 export type RegisterFieldName = keyof RegisterFormValues;
 
@@ -83,25 +80,6 @@ export function useRegisterForm() {
     clearFieldErrors();
   }
 
-  function getRegisterRequest(values: RegisterFormValues): RegisterRequest | null {
-    clearSubmissionErrors();
-
-    const formResult = registerFormSchema.safeParse(values);
-
-    if (!formResult.success) {
-      inlineErrorMessage.value = "Check the registration details and try again.";
-      return null;
-    }
-
-    return {
-      email: formResult.data.email,
-      fullName: formResult.data.fullName,
-      ownerAcknowledgement: true,
-      password: formResult.data.password,
-      workspaceName: formResult.data.workspaceName,
-    };
-  }
-
   function focusErrorField(code: RegistrationErrorCode | null): void {
     if (code === "duplicate_email") {
       fieldErrors.email = inlineErrorMessage.value;
@@ -128,11 +106,15 @@ export function useRegisterForm() {
       return;
     }
 
-    const request = getRegisterRequest(values);
+    clearSubmissionErrors();
 
-    if (!request) {
-      return;
-    }
+    const request: RegisterRequest = {
+      email: values.email,
+      fullName: values.fullName,
+      ownerAcknowledgement: true,
+      password: values.password,
+      workspaceName: values.workspaceName,
+    };
 
     isSubmitting.value = true;
 

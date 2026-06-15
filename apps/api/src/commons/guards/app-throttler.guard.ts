@@ -26,16 +26,11 @@ export class AppThrottlerGuard extends ThrottlerGuard {
       [context.getHandler(), context.getClass()],
     );
 
-    if (!code) {
-      await super.throwThrottlingException(context, throttlerLimitDetail);
-      return;
-    }
-
     throw new HttpException(
       {
-        code,
         error: 'TooManyRequests',
         message: await this.getErrorMessage(context, throttlerLimitDetail),
+        ...(code ? { code } : {}),
       },
       HttpStatus.TOO_MANY_REQUESTS,
     );

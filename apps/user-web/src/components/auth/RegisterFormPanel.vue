@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form } from "@primevue/forms";
+import { Form, type FormSubmitEvent } from "@primevue/forms";
 import { zodResolver } from "@primevue/forms/resolvers/zod";
 import { RouterLink } from "vue-router";
 import Button from "primevue/button";
@@ -43,19 +43,12 @@ function getFieldMessage(
   return formMessage ?? apiMessage ?? null;
 }
 
-function handleSubmit(event: {
-  valid: boolean;
-  values: Record<string, unknown>;
-}): void {
+function handleSubmit(event: FormSubmitEvent): void {
   if (!event.valid) {
     return;
   }
 
-  const result = registerFormSchema.safeParse(event.values);
-
-  if (result.success) {
-    emit("submit", result.data);
-  }
+  emit("submit", event.values as RegisterFormValues);
 }
 </script>
 
