@@ -72,23 +72,27 @@ const selectedProject = computed(() =>
   props.projects.find((project) => project.id === props.projectId) ?? null,
 );
 const projectSearchValue = shallowRef<string | null>(null);
-const projectSearchQuery = shallowRef("");
-const assigneeSearchQuery = shallowRef("");
+const projectSearchState = shallowRef({ query: "" });
+const assigneeSearchState = shallowRef({ query: "" });
 const projectSuggestions = computed(() => {
+  const { query } = projectSearchState.value;
+
   return filterAutocompleteOptions(
     props.projects,
-    projectSearchQuery.value,
+    query,
     (project) => project.name,
   );
 });
 const assigneeSuggestions = computed(() => {
+  const { query } = assigneeSearchState.value;
+
   const unselectedOptions = props.assigneeOptions.filter(
     (option) => !selectedAssigneeIdSet.value.has(option.value),
   );
 
   return filterAutocompleteOptions(
     unselectedOptions,
-    assigneeSearchQuery.value,
+    query,
     (option) => option.label,
   );
 });
@@ -98,12 +102,12 @@ const projectModel = computed({
   set: (value: ProjectResponse | string | null | undefined) => {
     if (typeof value === "string") {
       projectSearchValue.value = value;
-      projectSearchQuery.value = value;
+      projectSearchState.value = { query: value };
       return;
     }
 
     projectSearchValue.value = null;
-    projectSearchQuery.value = "";
+    projectSearchState.value = { query: "" };
     emit("update:projectId", value?.id ?? null);
   },
 });
@@ -169,17 +173,17 @@ watch(
   [() => props.isOpen, () => props.mode, () => props.projectId],
   () => {
     projectSearchValue.value = null;
-    projectSearchQuery.value = "";
-    assigneeSearchQuery.value = "";
+    projectSearchState.value = { query: "" };
+    assigneeSearchState.value = { query: "" };
   },
 );
 
-function handleProjectComplete(event: { query: string }): void {
-  projectSearchQuery.value = event.query;
+function handleProjectComplete(event: { query?: string }): void {
+  projectSearchState.value = { query: event.query ?? "" };
 }
 
-function handleAssigneeComplete(event: { query: string }): void {
-  assigneeSearchQuery.value = event.query;
+function handleAssigneeComplete(event: { query?: string }): void {
+  assigneeSearchState.value = { query: event.query ?? "" };
 }
 </script>
 

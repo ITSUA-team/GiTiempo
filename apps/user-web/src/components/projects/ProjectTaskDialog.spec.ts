@@ -94,11 +94,27 @@ function mountDialog(
             "suggestions",
           ],
           emits: ["complete", "update:modelValue"],
+          data() {
+            return {
+              isOpen: false,
+              isSearching: false,
+            };
+          },
+          watch: {
+            suggestions() {
+              if (this.isSearching) {
+                this.isOpen = true;
+                this.isSearching = false;
+              }
+            },
+          },
           computed: {
             displayValue(): string {
               if (Array.isArray(this.modelValue)) {
                 return this.modelValue
-                  .map((value) => value?.[this.optionLabel] ?? String(value))
+                  .map((value: Record<string, string>) =>
+                    value[this.optionLabel] ?? String(value),
+                  )
                   .join(", ");
               }
 
@@ -108,6 +124,12 @@ function mountDialog(
             },
             isMultiple(): boolean {
               return this.multiple !== undefined && this.multiple !== false;
+            },
+          },
+          methods: {
+            complete(payload: { query?: string }) {
+              this.isSearching = true;
+              this.$emit("complete", payload);
             },
           },
           template: `
@@ -122,16 +144,19 @@ function mountDialog(
                 :value="displayValue"
                 @input="$emit('update:modelValue', $event.target.value)"
               />
-              <button :data-testid="inputId + '-complete'" type="button" @click="$emit('complete', { query: '' })">Complete</button>
-              <button :data-testid="inputId + '-complete-empty'" type="button" @click="$emit('complete', { query: '' })">Complete empty</button>
-              <button :data-testid="inputId + '-complete-admin'" type="button" @click="$emit('complete', { query: 'admin' })">Complete admin</button>
-              <button
-                v-for="suggestion in suggestions"
-                :key="suggestion[dataKey] ?? suggestion.value"
-                :data-testid="inputId + '-option-' + (suggestion[dataKey] ?? suggestion.value)"
-                type="button"
-                @click="$emit('update:modelValue', isMultiple ? [...(modelValue ?? []), suggestion] : suggestion)"
-              >{{ suggestion[optionLabel] }}</button>
+              <button :data-testid="inputId + '-complete'" type="button" @click="complete({ query: '' })">Complete</button>
+              <button :data-testid="inputId + '-complete-missing-query'" type="button" @click="complete({})">Complete missing query</button>
+              <button :data-testid="inputId + '-complete-empty'" type="button" @click="complete({ query: '' })">Complete empty</button>
+              <button :data-testid="inputId + '-complete-admin'" type="button" @click="complete({ query: 'admin' })">Complete admin</button>
+              <template v-if="isOpen">
+                <button
+                  v-for="suggestion in suggestions"
+                  :key="suggestion[dataKey] ?? suggestion.value"
+                  :data-testid="inputId + '-option-' + (suggestion[dataKey] ?? suggestion.value)"
+                  type="button"
+                  @click="$emit('update:modelValue', isMultiple ? [...(modelValue ?? []), suggestion] : suggestion)"
+                >{{ suggestion[optionLabel] }}</button>
+              </template>
               <button :data-testid="inputId + '-clear'" type="button" @click="$emit('update:modelValue', isMultiple ? [] : null)">Clear</button>
             </div>
           `,
@@ -220,6 +245,24 @@ describe("ProjectTaskDialog", () => {
     await wrapper.get('[data-testid="project-task-project-complete-empty"]').trigger("click");
     expect(projectAutoComplete.text()).toContain("Admin Web");
     expect(projectAutoComplete.text()).toContain("Project Orion");
+  });
+
+  it("shows all available assignees for an empty autocomplete query", async () => {
+    const wrapper = mountDialog({
+      assigneeOptions: [
+        { label: "Alexey Tsukanov", value: "user-1" },
+        { label: "Maria Ivanenko", value: "user-2" },
+      ],
+      projectId: "project-1",
+    });
+    const assigneeAutoComplete = wrapper.get('[data-testid="project-task-assignee"]');
+
+    await wrapper
+      .get('[data-testid="project-task-assignee-complete-missing-query"]')
+      .trigger("click");
+
+    expect(assigneeAutoComplete.text()).toContain("Alexey Tsukanov");
+    expect(assigneeAutoComplete.text()).toContain("Maria Ivanenko");
   });
 
   it("renders edit mode with a display-only project field and status select", () => {
