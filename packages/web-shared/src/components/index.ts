@@ -1,4 +1,5 @@
 export { default as AuthSignInForm } from "./AuthSignInForm.vue";
+export { default as BillableDefaultBackfillDialog } from "./BillableDefaultBackfillDialog.vue";
 export { default as EditFormPanel } from "./EditFormPanel.vue";
 export { default as EmptyStateBlock } from "./EmptyStateBlock.vue";
 export { default as EntryActionButton } from "./EntryActionButton.vue";

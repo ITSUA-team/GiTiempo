@@ -8,6 +8,7 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import {
+  BillableDefaultBackfillDialog,
   SectionHeader,
   StatCard,
   SurfaceCard,
@@ -44,6 +45,16 @@ const loading = ref(true);
 const loadError = ref<string | null>(null);
 const initialLoaded = ref(false);
 const savingProjectEditId = ref<string | null>(null);
+const submittingProjectBackfill = ref(false);
+
+const projectBackfillDialog = ref<{
+  hasTasks: boolean;
+  hasTimeEntries: boolean;
+  projectId: string;
+  projectName: string;
+  updateTasks: boolean;
+  updateTimeEntries: boolean;
+} | null>(null);
 
 const {
   collapseRow: collapseProjectRow,
@@ -133,6 +144,87 @@ async function refresh(): Promise<void> {
   }
 }
 
+async function openProjectBackfillDialogIfNeeded(
+  project: ProjectResponse,
+): Promise<void> {
+  try {
+    const [tasksData, timeEntriesData] = await Promise.all([
+      adminProjectsClient.listProjectTasks(project.id),
+      adminProjectsClient.listProjectTimeEntries(project.id, { limit: 1 }),
+    ]);
+    const hasTasks = tasksData.length > 0;
+    const hasTimeEntries = timeEntriesData.meta.total > 0;
+
+    if (!hasTasks && !hasTimeEntries) {
+      return;
+    }
+
+    projectBackfillDialog.value = {
+      hasTasks,
+      hasTimeEntries,
+      projectId: project.id,
+      projectName: project.name,
+      updateTasks: hasTasks,
+      updateTimeEntries: hasTimeEntries,
+    };
+  } catch (err) {
+    errorToast(
+      err instanceof Error
+        ? err.message
+        : 'Failed to check existing project records',
+      {
+        error: err,
+        logContext: { action: 'check-project-backfill', feature: 'projects' },
+      },
+    );
+  }
+}
+
+function closeProjectBackfillDialog(): void {
+  if (submittingProjectBackfill.value) {
+    return;
+  }
+
+  projectBackfillDialog.value = null;
+}
+
+async function handleProjectBackfillSubmitted(): Promise<void> {
+  const dialog = projectBackfillDialog.value;
+
+  if (!dialog) {
+    return;
+  }
+
+  submittingProjectBackfill.value = true;
+
+  try {
+    const result = await adminProjectsClient.backfillProjectBillableDefault(
+      dialog.projectId,
+      {
+        updateTasks: dialog.updateTasks,
+        updateTimeEntries: dialog.updateTimeEntries,
+      },
+    );
+    const updatedCount = result.tasksUpdated + result.timeEntriesUpdated;
+
+    successToast(
+      `${updatedCount} existing ${updatedCount === 1 ? 'record has' : 'records have'} been updated.`,
+    );
+    projectBackfillDialog.value = null;
+    await refresh();
+  } catch (err) {
+    errorToast(
+      err instanceof Error ? err.message : 'Failed to update existing records',
+      {
+        error: err,
+        logContext: { action: 'backfill-project-default', feature: 'projects' },
+      },
+    );
+  } finally {
+    submittingProjectBackfill.value = false;
+  }
+}
+
 function handleNewProject(): void {
   router.push({ name: routeNames.addProject });
 }
@@ -157,11 +249,14 @@ async function handleProjectEditSubmitted(
   const memberIdsToRemove = project.members
     .map((member) => member.userId)
     .filter((id) => !nextMemberIds.has(id));
+  const defaultBillableChanged =
+    input.defaultBillableForTasks !== project.defaultBillableForTasks;
 
   savingProjectEditId.value = project.id;
 
   try {
     await adminProjectsClient.updateProject(project.id, {
+      defaultBillableForTasks: input.defaultBillableForTasks,
       visibility: input.visibility,
     });
 
@@ -175,6 +270,10 @@ async function handleProjectEditSubmitted(
     successToast(`${project.name} has been updated.`);
     collapseProjectRow(project);
     await refresh();
+
+    if (defaultBillableChanged) {
+      await openProjectBackfillDialogIfNeeded(project);
+    }
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to save project', {
       error: err,
@@ -308,6 +407,20 @@ onMounted(fetchAll);
           </template>
         </ProjectsTable>
       </SurfaceCard>
+
+      <BillableDefaultBackfillDialog
+        v-if="projectBackfillDialog"
+        v-model:update-tasks="projectBackfillDialog.updateTasks"
+        v-model:update-time-entries="projectBackfillDialog.updateTimeEntries"
+        :entity-name="projectBackfillDialog.projectName"
+        :has-tasks="projectBackfillDialog.hasTasks"
+        :has-time-entries="projectBackfillDialog.hasTimeEntries"
+        :is-open="true"
+        :is-submitting="submittingProjectBackfill"
+        variant="project"
+        @close="closeProjectBackfillDialog"
+        @submit="handleProjectBackfillSubmitted"
+      />
     </template>
   </div>
 </template>

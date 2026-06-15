@@ -40,6 +40,7 @@ export function useProjectTaskDialog() {
   const dialogProjectId = ref<string | null>(null);
   const dialogTaskTitle = ref("");
   const dialogTaskStatus = ref<TaskStatus>("open");
+  const dialogDefaultBillableForTimeEntries = ref(true);
   const dialogErrors = ref<ProjectsDialogErrors>(defaultDialogErrors());
   const dialogRequestErrorMessage = ref<string | null>(null);
   const isDialogOpen = computed(() => dialogMode.value !== null);
@@ -72,13 +73,18 @@ export function useProjectTaskDialog() {
     dialogProjectId.value = null;
     dialogTaskTitle.value = "";
     dialogTaskStatus.value = "open";
+    dialogDefaultBillableForTimeEntries.value = true;
     clearDialogErrors();
   }
 
-  function openCreateDialog(projectId: string | null = null): void {
+  function openCreateDialog(
+    projectId: string | null = null,
+    defaultBillableForTimeEntries = true,
+  ): void {
     resetDialogState();
     dialogMode.value = "create";
     dialogProjectId.value = projectId;
+    dialogDefaultBillableForTimeEntries.value = defaultBillableForTimeEntries;
   }
 
   function openEditDialog(task: TaskResponse): void {
@@ -88,6 +94,7 @@ export function useProjectTaskDialog() {
     dialogProjectId.value = task.projectId;
     dialogTaskTitle.value = task.title;
     dialogTaskStatus.value = task.status;
+    dialogDefaultBillableForTimeEntries.value = task.defaultBillableForTimeEntries;
   }
 
   function closeDialog(): void {
@@ -112,6 +119,11 @@ export function useProjectTaskDialog() {
     dialogRequestErrorMessage.value = null;
   }
 
+  function setDialogDefaultBillableForTimeEntries(value: boolean): void {
+    dialogDefaultBillableForTimeEntries.value = value;
+    dialogRequestErrorMessage.value = null;
+  }
+
   function setDialogRequestError(message: string | null): void {
     dialogRequestErrorMessage.value = message;
   }
@@ -131,6 +143,7 @@ export function useProjectTaskDialog() {
 
     if (dialogMode.value === "edit") {
       const parsed = updateTaskSchema.safeParse({
+        defaultBillableForTimeEntries: dialogDefaultBillableForTimeEntries.value,
         status: dialogTaskStatus.value,
         title: trimmedTitle,
       });
@@ -155,7 +168,10 @@ export function useProjectTaskDialog() {
       };
     }
 
-    const parsed = createTaskSchema.safeParse({ title: trimmedTitle });
+    const parsed = createTaskSchema.safeParse({
+      defaultBillableForTimeEntries: dialogDefaultBillableForTimeEntries.value,
+      title: trimmedTitle,
+    });
 
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
@@ -180,6 +196,7 @@ export function useProjectTaskDialog() {
   return {
     closeDialog,
     dialogErrors,
+    dialogDefaultBillableForTimeEntries,
     dialogMode,
     dialogProjectId,
     dialogRequestErrorMessage,
@@ -193,6 +210,7 @@ export function useProjectTaskDialog() {
     openCreateDialog,
     openEditDialog,
     setDialogProjectId,
+    setDialogDefaultBillableForTimeEntries,
     setDialogRequestError,
     setDialogTaskStatus,
     setDialogTaskTitle,

@@ -20,6 +20,7 @@ function mountDialog(
         status: null,
         title: null,
       },
+      defaultBillableForTimeEntries: true,
       isDeleting: false,
       isOpen: true,
       isSaving: false,
@@ -29,6 +30,7 @@ function mountDialog(
         {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
+          defaultBillableForTasks: true,
           description: null,
           id: "project-1",
           isActive: true,
@@ -57,6 +59,12 @@ function mountDialog(
           template:
             '<button :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
+        Checkbox: {
+          props: ["disabled", "modelValue"],
+          emits: ["update:modelValue"],
+          template:
+            '<input :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
+        },
         Dialog: {
           props: ["closable", "dismissableMask", "visible"],
           emits: ["update:visible"],
@@ -84,17 +92,31 @@ describe("ProjectTaskDialog", () => {
   it("renders the create form and emits project and title updates", async () => {
     const wrapper = mountDialog();
     const selects = wrapper.findAll("select");
-    const input = wrapper.get("input");
+    const input = wrapper
+      .findAll("input")
+      .find((candidate) => candidate.attributes("type") !== "checkbox");
 
     await selects[0]?.setValue("project-1");
-    await input.setValue("Write release checklist");
+    await input?.setValue("Write release checklist");
 
     expect(wrapper.emitted("update:projectId")?.[0]).toEqual(["project-1"]);
     expect(wrapper.emitted("update:title")?.[0]).toEqual([
       "Write release checklist",
     ]);
     expect(wrapper.text()).toContain("Create task");
+    expect(wrapper.text()).toContain("Default billable for time entries");
+    expect(wrapper.text()).toContain("New time entries for this task inherit this value.");
     expect(wrapper.text()).not.toContain("Cancel");
+  });
+
+  it("emits default billable updates", async () => {
+    const wrapper = mountDialog({ defaultBillableForTimeEntries: false });
+
+    await wrapper.get('input[type="checkbox"]').setValue(true);
+
+    expect(wrapper.emitted("update:defaultBillableForTimeEntries")?.[0]).toEqual([
+      true,
+    ]);
   });
 
   it("renders edit mode with a display-only project field and status select", () => {

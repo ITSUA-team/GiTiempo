@@ -26,6 +26,7 @@ vi.mock('@/services/admin-projects-client', () => ({
 const project: ProjectResponse = {
   color: null,
   createdAt: '2026-05-01T10:00:00.000Z',
+  defaultBillableForTasks: true,
   description: null,
   id: 'project-1',
   isActive: true,
@@ -96,7 +97,11 @@ const stubs = {
   },
   Form: {
     template:
-      '<form><slot :memberIds="{ invalid: false }" :visibility="{ invalid: false }" /></form>',
+      '<form><slot :defaultBillableForTasks="{ invalid: false }" :memberIds="{ invalid: false }" :visibility="{ invalid: false }" /></form>',
+  },
+  Checkbox: {
+    props: ['inputId', 'name'],
+    template: '<input :id="inputId" :name="name" type="checkbox" />',
   },
   MultiSelect: {
     props: ['id', 'name', 'options'],
@@ -128,6 +133,9 @@ describe('ProjectEditForm', () => {
     );
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
+    expect(wrapper.text()).toContain('New task billable default');
+    expect(wrapper.find('input[name="defaultBillableForTasks"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Billable by default');
     expect(wrapper.text()).toContain('Pat PM');
     expect(wrapper.text()).toContain('member@example.com');
     expect(wrapper.text()).not.toContain('Alex Admin');

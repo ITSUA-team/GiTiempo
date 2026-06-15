@@ -19,6 +19,7 @@ const projectRow = {
   name: 'Project',
   color: null,
   visibility: 'private' as const,
+  defaultBillableForTasks: true,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -30,6 +31,7 @@ const taskRow = {
   projectId: 'project-1',
   title: 'Task',
   status: 'open' as const,
+  defaultBillableForTimeEntries: true,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -111,6 +113,60 @@ describe('TasksService', () => {
     expect(db.insert).not.toHaveBeenCalled();
   });
 
+  it('inherits the project billable default when creating a task', async () => {
+    const returning = vi.fn().mockResolvedValue([
+      {
+        ...taskRow,
+        defaultBillableForTimeEntries: false,
+      },
+    ]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const db = { insert: vi.fn().mockReturnValue({ values }) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue({
+        ...projectRow,
+        defaultBillableForTasks: false,
+      }),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.createTask(user, projectRow.id, {
+      title: 'Task',
+    });
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTimeEntries: false,
+      }),
+    );
+    expect(result.defaultBillableForTimeEntries).toBe(false);
+  });
+
+  it('allows task creates to override the inherited billable default', async () => {
+    const returning = vi.fn().mockResolvedValue([taskRow]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const db = { insert: vi.fn().mockReturnValue({ values }) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue({
+        ...projectRow,
+        defaultBillableForTasks: false,
+      }),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.createTask(user, projectRow.id, {
+      title: 'Task',
+      defaultBillableForTimeEntries: true,
+    });
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTimeEntries: true,
+      }),
+    );
+    expect(result.defaultBillableForTimeEntries).toBe(true);
+  });
+
   it('checks project visibility before updating a task', async () => {
     const updatedTask = {
       ...taskRow,
@@ -136,6 +192,7 @@ describe('TasksService', () => {
     expect(projects.requireVisibleProject).toHaveBeenCalledWith(
       user,
       taskRow.projectId,
+      db,
     );
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -143,6 +200,74 @@ describe('TasksService', () => {
       }),
     );
     expect(result.title).toBe('Renamed');
+  });
+
+  it('saves task billable defaults without backfilling time entries', async () => {
+    const updatedTask = {
+      ...taskRow,
+      defaultBillableForTimeEntries: false,
+      updatedAt: new Date('2026-01-02T00:00:00Z'),
+    };
+    const returning = vi.fn().mockResolvedValue([updatedTask]);
+    const whereUpdate = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where: whereUpdate });
+    const db = {
+      select: vi.fn().mockReturnValue(selectRows([taskRow])),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.updateTask(user, taskRow.id, {
+      defaultBillableForTimeEntries: false,
+    });
+
+    expect(db.update).toHaveBeenCalledWith(tasks);
+    expect(db.update).not.toHaveBeenCalledWith(timeEntries);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTimeEntries: false,
+      }),
+    );
+    expect(result.defaultBillableForTimeEntries).toBe(false);
+  });
+
+  it('backfills a task billable default to existing time entries', async () => {
+    const updatedEntries = [{ id: 'entry-1' }, { id: 'entry-2' }];
+    const returning = vi.fn().mockResolvedValue(updatedEntries);
+    const set = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({ returning }),
+    });
+    const tx = {
+      select: vi.fn().mockReturnValue(
+        selectRows([
+          {
+            ...taskRow,
+            defaultBillableForTimeEntries: false,
+          },
+        ]),
+      ),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.backfillBillableDefault(user, taskRow.id, {
+      updateTimeEntries: true,
+    });
+
+    expect(result).toEqual({ timeEntriesUpdated: 2 });
+    expect(tx.update).toHaveBeenCalledWith(timeEntries);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isBillable: false,
+      }),
+    );
   });
 
   it('rejects task updates in an inactive project', async () => {

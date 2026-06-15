@@ -132,7 +132,7 @@ export class TimeEntriesService {
           endedAt,
           durationSeconds,
           description: input.description ?? null,
-          isBillable: input.isBillable ?? true,
+          isBillable: input.isBillable ?? task.defaultBillableForTimeEntries,
           source: 'manual',
         })
         .returning({ id: timeEntries.id });
@@ -347,6 +347,7 @@ export class TimeEntriesService {
           project.id,
           issueKey,
           input.issueTitle,
+          project.defaultBillableForTasks,
         );
         const lockedTask = await this.requireTaskRowForUpdate(
           tx,
@@ -367,6 +368,7 @@ export class TimeEntriesService {
             workspaceId: user.workspaceId,
             taskId: lockedTask.id,
             userId: user.sub,
+            isBillable: lockedTask.defaultBillableForTimeEntries,
             startedAt: new Date(),
             source: 'extension',
           })
@@ -440,6 +442,7 @@ export class TimeEntriesService {
             workspaceId: user.workspaceId,
             taskId: task.id,
             userId: user.sub,
+            isBillable: task.defaultBillableForTimeEntries,
             startedAt: new Date(),
             source,
           })
@@ -717,6 +720,7 @@ export class TimeEntriesService {
     projectId: string,
     issueKey: string,
     issueTitle: string,
+    defaultBillableForTimeEntries: boolean,
   ): Promise<TaskRow> {
     const existingRef = await this.findGitHubTaskRef(
       db,
@@ -740,6 +744,7 @@ export class TimeEntriesService {
         workspaceId,
         projectId,
         title: issueTitle,
+        defaultBillableForTimeEntries,
       })
       .returning();
     if (!task) throw new Error('Failed to create GitHub task');

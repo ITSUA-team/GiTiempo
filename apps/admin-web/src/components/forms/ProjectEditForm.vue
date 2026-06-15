@@ -9,6 +9,7 @@ import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 
@@ -35,6 +36,7 @@ const visibilityOptions = [
 ];
 
 const initialValues: ProjectEditFormInput = {
+  defaultBillableForTasks: props.project.defaultBillableForTasks,
   visibility: props.project.visibility,
   memberIds: props.project.members.map((m) => m.userId),
 };
@@ -99,6 +101,26 @@ function handleSave({
             :invalid="$form.visibility?.invalid"
             fluid
           />
+        </div>
+
+        <div class="flex min-w-0 flex-col gap-1.5 sm:w-[200px] sm:shrink-0">
+          <span class="text-text-dark font-sans text-[13px] leading-none font-medium">
+            New task billable default
+          </span>
+          <label
+            for="edit-default-billable-for-tasks"
+            class="border-divider bg-surface-primary flex h-[38px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
+          >
+            <Checkbox
+              input-id="edit-default-billable-for-tasks"
+              name="defaultBillableForTasks"
+              binary
+              :disabled="saving"
+            />
+            <span class="text-text-dark text-sm font-medium">
+              Billable by default
+            </span>
+          </label>
         </div>
 
         <div

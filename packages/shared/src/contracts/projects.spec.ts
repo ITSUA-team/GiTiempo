@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  backfillProjectBillableDefaultSchema,
+  createProjectSchema,
+  projectBillableDefaultBackfillResponseSchema,
   projectDetailResponseSchema,
   projectListResponseSchema,
+  updateProjectSchema,
 } from "./projects.js";
 
 const baseProject = {
   color: null,
   createdAt: "2026-05-01T10:00:00.000Z",
   description: null,
+  defaultBillableForTasks: true,
   id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
   isActive: true,
   members: [],
@@ -25,6 +30,7 @@ describe("projectListResponseSchema", () => {
     const result = projectListResponseSchema.parse([baseProject]);
 
     expect(result[0]?.totalSeconds).toBe(43200);
+    expect(result[0]?.defaultBillableForTasks).toBe(true);
   });
 
   it("requires totalSeconds even when legacy totalHours is present", () => {
@@ -38,6 +44,70 @@ describe("projectListResponseSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual([0, "totalSeconds"]);
+  });
+});
+
+describe("createProjectSchema", () => {
+  it("accepts defaultBillableForTasks", () => {
+    const result = createProjectSchema.parse({
+      defaultBillableForTasks: false,
+      name: "Project Orion",
+    });
+
+    expect(result.defaultBillableForTasks).toBe(false);
+  });
+
+  it("rejects non-boolean defaultBillableForTasks", () => {
+    const result = createProjectSchema.safeParse({
+      defaultBillableForTasks: "false",
+      name: "Project Orion",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["defaultBillableForTasks"]);
+  });
+});
+
+describe("updateProjectSchema", () => {
+  it("accepts defaultBillableForTasks as the only update field", () => {
+    const result = updateProjectSchema.parse({
+      defaultBillableForTasks: false,
+    });
+
+    expect(result.defaultBillableForTasks).toBe(false);
+  });
+});
+
+describe("backfillProjectBillableDefaultSchema", () => {
+  it("accepts selected downstream record types", () => {
+    const result = backfillProjectBillableDefaultSchema.parse({
+      updateTasks: true,
+      updateTimeEntries: true,
+    });
+
+    expect(result).toEqual({ updateTasks: true, updateTimeEntries: true });
+  });
+
+  it("rejects requests with no selected record type", () => {
+    const result = backfillProjectBillableDefaultSchema.safeParse({
+      updateTasks: false,
+      updateTimeEntries: false,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      "At least one existing record type must be selected",
+    );
+  });
+
+  it("accepts backfill response counts", () => {
+    const result = projectBillableDefaultBackfillResponseSchema.parse({
+      tasksUpdated: 2,
+      timeEntriesUpdated: 3,
+    });
+
+    expect(result.tasksUpdated).toBe(2);
+    expect(result.timeEntriesUpdated).toBe(3);
   });
 });
 

@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
+import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projects } from '../schemas/projects.schema';
 import { ProjectsService } from './projects.service';
@@ -32,6 +34,7 @@ const projectRow = {
   description: 'Project description',
   color: null,
   visibility: 'private' as const,
+  defaultBillableForTasks: true,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -137,6 +140,7 @@ describe('ProjectsService', () => {
 
     expect(result.id).toBe(projectRow.id);
     expect(result.totalSeconds).toBe(0);
+    expect(result.defaultBillableForTasks).toBe(true);
     expect(result.members).toHaveLength(1);
     expect(result.members[0]?.userId).toBe(
       '00000000-0000-4000-8000-000000000001',
@@ -147,6 +151,39 @@ describe('ProjectsService', () => {
       userId: pmUser.sub,
       assignedBy: pmUser.sub,
     });
+  });
+
+  it('stores explicit project billable defaults on create', async () => {
+    const createdRow = { ...projectRow, defaultBillableForTasks: false };
+    const returning = vi.fn().mockResolvedValue([createdRow]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const db = {
+      insert: vi.fn().mockReturnValue({ values }),
+      select: vi.fn().mockReturnValue(
+        selectRows([
+          {
+            ...projectResponseRow,
+            defaultBillableForTasks: false,
+          },
+        ]),
+      ),
+    };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+
+    const result = await service.createProject(adminUser, {
+      name: 'Project',
+      defaultBillableForTasks: false,
+    });
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTasks: false,
+      }),
+    );
+    expect(result.defaultBillableForTasks).toBe(false);
   });
 
   it('rejects assignment targets with admin role', async () => {
@@ -248,6 +285,93 @@ describe('ProjectsService', () => {
     expect(set).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ isActive: true }),
+    );
+  });
+
+  it('saves project billable defaults without backfilling downstream rows', async () => {
+    const updatedRow = { ...projectRow, defaultBillableForTasks: false };
+    const returning = vi.fn().mockResolvedValue([updatedRow]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const db = { update: vi.fn().mockReturnValue({ set }) };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+    Object.defineProperty(service, 'requireProjectInWorkspace', {
+      value: vi.fn().mockResolvedValue(projectRow),
+    });
+    Object.defineProperty(service, 'findProjectResponseInWorkspace', {
+      value: vi.fn().mockResolvedValue({
+        ...projectResponseRow,
+        defaultBillableForTasks: false,
+      }),
+    });
+
+    const result = await service.updateProject(adminUser, projectRow.id, {
+      defaultBillableForTasks: false,
+    });
+
+    expect(result.defaultBillableForTasks).toBe(false);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTasks: false,
+      }),
+    );
+  });
+
+  it('backfills selected project downstream billable defaults', async () => {
+    const taskReturning = vi
+      .fn()
+      .mockResolvedValue([{ id: 'task-1' }, { id: 'task-2' }]);
+    const entryReturning = vi.fn().mockResolvedValue([{ id: 'entry-1' }]);
+    const taskSet = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({ returning: taskReturning }),
+    });
+    const entrySet = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({ returning: entryReturning }),
+    });
+    const projectTaskSubquery = {
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({}),
+      }),
+    };
+    const tx = {
+      select: vi.fn().mockReturnValue(projectTaskSubquery),
+      update: vi.fn((table) => {
+        if (table === tasksTable) return { set: taskSet };
+        if (table === timeEntries) return { set: entrySet };
+        throw new Error('Unexpected update table');
+      }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+    Object.defineProperty(service, 'requireProjectForUpdate', {
+      value: vi.fn().mockResolvedValue({
+        project: { ...projectRow, defaultBillableForTasks: false },
+        role: 'admin',
+      }),
+    });
+
+    const result = await service.backfillBillableDefault(
+      adminUser,
+      projectRow.id,
+      { updateTasks: true, updateTimeEntries: true },
+    );
+
+    expect(result).toEqual({ tasksUpdated: 2, timeEntriesUpdated: 1 });
+    expect(taskSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTimeEntries: false,
+      }),
+    );
+    expect(entrySet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isBillable: false,
+      }),
     );
   });
 

@@ -1,10 +1,12 @@
 import {
+  backfillTaskBillableDefaultSchema,
   createManualTimeEntrySchema,
   createTaskSchema,
   currentTimeEntryResponseSchema,
   projectListResponseSchema,
   type StartTimerInput,
   taskResponseSchema,
+  taskBillableDefaultBackfillResponseSchema,
   startTimerSchema,
   taskListResponseSchema,
   timeEntryListQuerySchema,
@@ -12,10 +14,12 @@ import {
   timeEntryResponseSchema,
   updateTaskSchema,
   updateTimeEntrySchema,
+  type BackfillTaskBillableDefaultInput,
   type CreateManualTimeEntryInput,
   type CreateTaskInput,
   type CurrentTimeEntryResponse,
   type ProjectResponse,
+  type TaskBillableDefaultBackfillResponse,
   type TaskResponse,
   type TimeEntryListQuery,
   type TimeEntryListResponse,
@@ -32,6 +36,10 @@ interface TimeEntriesClientOptions {
 }
 
 export interface TimeEntriesClient {
+  backfillTaskBillableDefault(
+    taskId: string,
+    input: BackfillTaskBillableDefaultInput,
+  ): Promise<TaskBillableDefaultBackfillResponse>;
   createManualEntry(
     input: CreateManualTimeEntryInput,
   ): Promise<TimeEntryResponse>;
@@ -45,6 +53,10 @@ export interface TimeEntriesClient {
   listOwnEntries(
     query?: Partial<TimeEntryListQuery>,
     options?: { signal?: AbortSignal },
+  ): Promise<TimeEntryListResponse>;
+  listProjectTimeEntries(
+    projectId: string,
+    query?: Partial<TimeEntryListQuery>,
   ): Promise<TimeEntryListResponse>;
   listProjectTasks(projectId: string): Promise<TaskResponse[]>;
   listVisibleProjects(): Promise<ProjectResponse[]>;
@@ -96,6 +108,14 @@ export function createTimeEntriesClient({
   apiClient,
 }: TimeEntriesClientOptions): TimeEntriesClient {
   return {
+    backfillTaskBillableDefault(taskId, input) {
+      return apiClient.requestJson({
+        body: backfillTaskBillableDefaultSchema.parse(input),
+        method: "POST",
+        path: `/tasks/${taskId}/billable-default/backfill`,
+        responseSchema: taskBillableDefaultBackfillResponseSchema,
+      });
+    },
     createManualEntry(input) {
       return apiClient.requestJson({
         body: createManualTimeEntrySchema.parse(input),
@@ -137,6 +157,14 @@ export function createTimeEntriesClient({
         path: `/time-entries?${search}`,
         responseSchema: timeEntryListResponseSchema,
         signal: options?.signal,
+      });
+    },
+    listProjectTimeEntries(projectId, query) {
+      const search = buildTimeEntryListQuery(query);
+
+      return apiClient.requestJson({
+        path: `/projects/${projectId}/time-entries?${search}`,
+        responseSchema: timeEntryListResponseSchema,
       });
     },
     listProjectTasks(projectId) {

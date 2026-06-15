@@ -38,6 +38,7 @@ function createProject(
     visibility: 'public',
     workspaceId,
     ...overrides,
+    defaultBillableForTasks: overrides.defaultBillableForTasks ?? true,
   };
 }
 

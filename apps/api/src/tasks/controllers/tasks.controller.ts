@@ -23,7 +23,9 @@ import {
 import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { BackfillTaskBillableDefaultDto } from '../dto/backfill-task-billable-default.dto';
 import { CreateTaskDto } from '../dto/create-task.dto';
+import { TaskBillableDefaultBackfillResponseDto } from '../dto/task-billable-default-backfill-response.dto';
 import { TaskListResponseDto } from '../dto/task-list-response.dto';
 import { TaskResponseDto } from '../dto/task-response.dto';
 import { UpdateTaskDto } from '../dto/update-task.dto';
@@ -88,6 +90,21 @@ export class TasksController {
     @Body() body: UpdateTaskDto,
   ): Promise<TaskResponseDto> {
     return this.tasks.updateTask(user, id, body);
+  }
+
+  @Post('tasks/:id/billable-default/backfill')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Backfill a task billable default' })
+  @ApiOkResponse({ type: TaskBillableDefaultBackfillResponseDto })
+  @ApiNotFoundResponse({ description: 'Task not found' })
+  @ApiUnprocessableEntityResponse({ description: 'Project is inactive' })
+  @ZodSerializerDto(TaskBillableDefaultBackfillResponseDto)
+  backfillBillableDefault(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: BackfillTaskBillableDefaultDto,
+  ): Promise<TaskBillableDefaultBackfillResponseDto> {
+    return this.tasks.backfillBillableDefault(user, id, body);
   }
 
   @Delete('tasks/:id')

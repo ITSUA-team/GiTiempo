@@ -6,8 +6,19 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { and, eq, gte, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type {
+  BackfillProjectBillableDefaultInput,
   CreateProjectAssignmentInput,
   CreateProjectInput,
   ManagementProjectSummaryResponse,
@@ -16,6 +27,7 @@ import type {
   ProjectAssignmentResponse,
   ProjectDetailResponse,
   ProjectMember,
+  ProjectBillableDefaultBackfillResponse,
   ProjectProviderSummary,
   ProjectResponse,
   ProjectSource,
@@ -201,6 +213,7 @@ export class ProjectsService {
       description: input.description ?? null,
       color: input.color ?? null,
       visibility: input.visibility ?? 'private',
+      defaultBillableForTasks: input.defaultBillableForTasks ?? true,
     };
 
     if (membership.role === 'admin') {
@@ -270,21 +283,11 @@ export class ProjectsService {
     projectId: string,
     input: UpdateProjectInput,
   ): Promise<ProjectResponse> {
-    const membership = await this.members.requireRole(
-      user.sub,
-      user.workspaceId,
-      ['admin', 'pm'],
-    );
-
-    if (membership.role === 'pm') {
-      await this.requireVisibleProject(user, projectId);
-      if (input.isActive !== undefined) {
-        throw new ForbiddenException(
-          'Only admins can change project active state',
-        );
-      }
-    } else {
-      await this.requireProjectInWorkspace(user.workspaceId, projectId);
+    const { role } = await this.requireProjectForUpdate(user, projectId);
+    if (role === 'pm' && input.isActive !== undefined) {
+      throw new ForbiddenException(
+        'Only admins can change project active state',
+      );
     }
 
     const [row] = await this.db
@@ -297,6 +300,9 @@ export class ProjectsService {
         ...(input.color !== undefined ? { color: input.color } : {}),
         ...(input.visibility !== undefined
           ? { visibility: input.visibility }
+          : {}),
+        ...(input.defaultBillableForTasks !== undefined
+          ? { defaultBillableForTasks: input.defaultBillableForTasks }
           : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
         updatedAt: new Date(),
@@ -316,6 +322,68 @@ export class ProjectsService {
     );
     if (!response) throw new NotFoundException('Project not found');
     return this.toProjectResponse(response);
+  }
+
+  async backfillBillableDefault(
+    user: AuthUser,
+    projectId: string,
+    input: BackfillProjectBillableDefaultInput,
+  ): Promise<ProjectBillableDefaultBackfillResponse> {
+    return this.db.transaction(async (tx) => {
+      const { project } = await this.requireProjectForUpdate(
+        user,
+        projectId,
+        tx,
+      );
+      const updatedAt = new Date();
+      let tasksUpdated = 0;
+      let timeEntriesUpdated = 0;
+
+      if (input.updateTasks === true) {
+        const updatedTasks = await tx
+          .update(tasksTable)
+          .set({
+            defaultBillableForTimeEntries: project.defaultBillableForTasks,
+            updatedAt,
+          })
+          .where(
+            and(
+              eq(tasksTable.workspaceId, user.workspaceId),
+              eq(tasksTable.projectId, project.id),
+            ),
+          )
+          .returning({ id: tasksTable.id });
+        tasksUpdated = updatedTasks.length;
+      }
+
+      if (input.updateTimeEntries === true) {
+        const projectTaskIds = tx
+          .select({ id: tasksTable.id })
+          .from(tasksTable)
+          .where(
+            and(
+              eq(tasksTable.workspaceId, user.workspaceId),
+              eq(tasksTable.projectId, project.id),
+            ),
+          );
+        const updatedEntries = await tx
+          .update(timeEntries)
+          .set({
+            isBillable: project.defaultBillableForTasks,
+            updatedAt,
+          })
+          .where(
+            and(
+              eq(timeEntries.workspaceId, user.workspaceId),
+              inArray(timeEntries.taskId, projectTaskIds),
+            ),
+          )
+          .returning({ id: timeEntries.id });
+        timeEntriesUpdated = updatedEntries.length;
+      }
+
+      return { tasksUpdated, timeEntriesUpdated };
+    });
   }
 
   async listAssignments(
@@ -501,6 +569,33 @@ export class ProjectsService {
     return row.project;
   }
 
+  private async requireProjectForUpdate(
+    user: AuthUser,
+    projectId: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
+  ): Promise<{ project: ProjectRow; role: 'admin' | 'pm' }> {
+    const membership = await this.members.requireRole(
+      user.sub,
+      user.workspaceId,
+      ['admin', 'pm'],
+    );
+    if (membership.role === 'admin') {
+      return {
+        project: await this.requireProjectInWorkspace(
+          user.workspaceId,
+          projectId,
+          db,
+        ),
+        role: 'admin',
+      };
+    }
+
+    return {
+      project: await this.requireVisibleProject(user, projectId, db),
+      role: 'pm',
+    };
+  }
+
   private async requireProjectInWorkspace(
     workspaceId: string,
     projectId: string,
@@ -557,6 +652,7 @@ export class ProjectsService {
       description: projects.description,
       color: projects.color,
       visibility: projects.visibility,
+      defaultBillableForTasks: projects.defaultBillableForTasks,
       source: sql<ProjectSource>`CASE WHEN EXISTS (
         SELECT 1
         FROM "project_external_refs"
@@ -603,6 +699,7 @@ export class ProjectsService {
       description: row.description,
       color: row.color,
       visibility: row.visibility,
+      defaultBillableForTasks: row.defaultBillableForTasks,
       source: row.source,
       totalSeconds: Math.trunc(toNumber(row.totalSeconds)),
       members,

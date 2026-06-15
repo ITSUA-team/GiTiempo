@@ -159,6 +159,50 @@ describe('Time entries (e2e)', () => {
     expect(list.body.meta.total).toBe(1);
   });
 
+  it('inherits task billable defaults for manual and timer entries', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const taskId = await createTask(
+      platformProjectId,
+      `Search task search Billable Defaults ${suffix}`,
+      false,
+    );
+
+    const inheritedManual = await request(app.getHttpServer())
+      .post('/time-entries')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        taskId,
+        startedAt: '2026-05-01T10:00:00.000Z',
+        endedAt: '2026-05-01T10:30:00.000Z',
+      });
+    expect(inheritedManual.status).toBe(201);
+    expect(inheritedManual.body.isBillable).toBe(false);
+
+    const overrideManual = await request(app.getHttpServer())
+      .post('/time-entries')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        taskId,
+        startedAt: '2026-05-01T11:00:00.000Z',
+        endedAt: '2026-05-01T11:30:00.000Z',
+        isBillable: true,
+      });
+    expect(overrideManual.status).toBe(201);
+    expect(overrideManual.body.isBillable).toBe(true);
+
+    const startedTimer = await request(app.getHttpServer())
+      .post('/time-entries/timer/start')
+      .set('Authorization', bearer(memberToken))
+      .send({ taskId });
+    expect(startedTimer.status).toBe(201);
+    expect(startedTimer.body.isBillable).toBe(false);
+
+    const stoppedTimer = await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', bearer(memberToken));
+    expect(stoppedTimer.status).toBe(200);
+  });
+
   it('searches own entries by task title with filters and pagination', async () => {
     const suffix = randomUUID().slice(0, 8);
     const [otherProject] = await db
@@ -746,6 +790,79 @@ describe('Time entries (e2e)', () => {
     expect(assignment?.userId).toBe(otherMemberUserId);
   });
 
+  it('starts GitHub timers with existing task billable defaults', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/existing-billable-${suffix}`;
+    const issueNumber = 777;
+    const taskId = await createTask(
+      platformProjectId,
+      `Search task search GitHub Billable ${suffix}`,
+      false,
+    );
+    await createGitHubRefs(githubRepo, issueNumber, taskId);
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        githubRepo,
+        issueNumber,
+        issueTitle: 'Existing billable issue',
+      });
+
+    expect(started.status).toBe(201);
+    expect(started.body.taskId).toBe(taskId);
+    expect(started.body.isBillable).toBe(false);
+  });
+
+  it('creates GitHub issue tasks from the project billable default', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const githubRepo = `gitiempo-test/lazy-billable-${suffix}`;
+    const issueNumber = 778;
+
+    const [project] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: githubRepo,
+        visibility: 'public',
+        defaultBillableForTasks: false,
+      })
+      .returning();
+    if (!project) throw new Error('Expected GitHub project');
+
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: project.id,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: githubRepo,
+      externalUrl: `https://github.com/${githubRepo}`,
+      metadata: { githubRepo },
+      syncedAt: new Date(),
+    });
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(otherMemberToken))
+      .send({
+        githubRepo,
+        issueNumber,
+        issueTitle: 'Chrome extension issue',
+      });
+
+    expect(started.status).toBe(201);
+    expect(started.body.projectId).toBe(project.id);
+    expect(started.body.isBillable).toBe(false);
+
+    const [createdTask] = await db
+      .select({ value: tasks.defaultBillableForTimeEntries })
+      .from(tasks)
+      .where(eq(tasks.id, started.body.taskId))
+      .limit(1);
+    expect(createdTask?.value).toBe(false);
+  });
+
   it('does not grant project visibility through existing GitHub refs', async () => {
     const suffix = randomUUID().slice(0, 8);
     const githubRepo = `gitiempo-test/existing-${suffix}`;
@@ -950,10 +1067,19 @@ describe('Time entries (e2e)', () => {
       });
   }
 
-  async function createTask(projectId: string, title: string): Promise<string> {
+  async function createTask(
+    projectId: string,
+    title: string,
+    defaultBillableForTimeEntries = true,
+  ): Promise<string> {
     const [task] = await db
       .insert(tasks)
-      .values({ workspaceId, projectId, title })
+      .values({
+        workspaceId,
+        projectId,
+        title,
+        defaultBillableForTimeEntries,
+      })
       .returning({ id: tasks.id });
     if (!task) throw new Error('Expected created task');
     return task.id;
