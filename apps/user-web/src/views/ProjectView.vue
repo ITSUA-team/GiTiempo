@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
+import Select from "primevue/select";
 import Skeleton from "primevue/skeleton";
 import { computed, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
@@ -23,6 +24,8 @@ import { resolveDataPageState } from "@/lib/page-state";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import {
   formatUpdatedLabel,
+  type ProjectStatusFilterOption,
+  type ProjectUpdatedFilterOption,
   type ProjectsSearchSuggestion,
 } from "@/lib/projects-page-helpers";
 import { useAuthStore } from "@/stores/auth";
@@ -90,7 +93,13 @@ const {
   handleSearchComplete,
   searchSuggestions,
   selectedSearchValue,
+  selectedStatusFilter,
+  selectedUpdatedFilter,
   setSearchValue,
+  setStatusFilterValue,
+  setUpdatedFilterValue,
+  statusFilterOptions,
+  updatedFilterOptions,
 } = search;
 const { isDeletingTaskId, isSavingDialog } = mutations;
 const { requestErrorMessage, visibleProjects } = data;
@@ -278,13 +287,32 @@ async function retryLoadPage(): Promise<void> {
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
     <template v-if="pageState === 'loading'">
-      <div class="flex max-w-[360px] flex-col gap-1.5">
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Skeleton
-          width="4rem"
+          width="22.5rem"
           height="1rem"
         />
         <Skeleton
-          width="100%"
+          width="11.25rem"
+          height="1rem"
+        />
+        <Skeleton
+          width="11.25rem"
+          height="1rem"
+        />
+      </div>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <Skeleton
+          width="22.5rem"
+          height="2.75rem"
+        />
+        <Skeleton
+          width="11.25rem"
+          height="2.75rem"
+        />
+        <Skeleton
+          width="11.25rem"
           height="2.75rem"
         />
       </div>
@@ -331,27 +359,88 @@ async function retryLoadPage(): Promise<void> {
     </template>
 
     <template v-else>
-      <div class="flex max-w-[360px] flex-col gap-1.5">
-        <label
-          for="projects-search"
-          class="text-text-dark text-[13px] font-medium"
-        >
-          Search
-        </label>
-        <AutoComplete
-          input-id="projects-search"
-          option-label="label"
-          placeholder="Search projects or tasks"
-          :model-value="selectedSearchValue"
-          :suggestions="searchSuggestions"
-          complete-on-focus
-          dropdown
-          dropdown-mode="blank"
-          fluid
-          :min-length="0"
-          @complete="handleSearchComplete($event.query)"
-          @update:model-value="setSearchValue(($event ?? null) as ProjectsSearchSuggestion | string | null)"
-        />
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:flex-wrap"
+        data-testid="projects-filters"
+      >
+        <div class="flex w-full flex-col gap-1.5 sm:w-[360px]">
+          <label
+            for="projects-search"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Search
+          </label>
+          <AutoComplete
+            data-testid="projects-search-filter"
+            input-id="projects-search"
+            class="w-full"
+            option-label="label"
+            placeholder="Search projects or tasks"
+            :model-value="selectedSearchValue"
+            :suggestions="searchSuggestions"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            fluid
+            :min-length="0"
+            @complete="handleSearchComplete($event.query)"
+            @update:model-value="setSearchValue(($event ?? null) as ProjectsSearchSuggestion | string | null)"
+          >
+            <template #option="slotProps">
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-text-dark text-sm"
+                  :class="slotProps.option.kind === 'project' ? 'font-semibold' : 'font-normal'"
+                >
+                  {{ slotProps.option.label }}
+                </span>
+                <span class="text-text-muted text-xs">
+                  {{ slotProps.option.meta }}
+                </span>
+              </div>
+            </template>
+          </AutoComplete>
+        </div>
+
+        <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">
+          <label
+            for="projects-status-filter"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Status
+          </label>
+          <Select
+            data-testid="projects-status-filter"
+            input-id="projects-status-filter"
+            class="w-full"
+            option-label="label"
+            placeholder="All statuses"
+            :model-value="selectedStatusFilter"
+            fluid
+            :options="statusFilterOptions"
+            @update:model-value="setStatusFilterValue(($event ?? null) as ProjectStatusFilterOption | null)"
+          />
+        </div>
+
+        <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">
+          <label
+            for="projects-updated-filter"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Updated
+          </label>
+          <Select
+            data-testid="projects-updated-filter"
+            input-id="projects-updated-filter"
+            class="w-full"
+            option-label="label"
+            placeholder="Any time"
+            :model-value="selectedUpdatedFilter"
+            fluid
+            :options="updatedFilterOptions"
+            @update:model-value="setUpdatedFilterValue(($event ?? null) as ProjectUpdatedFilterOption | null)"
+          />
+        </div>
       </div>
 
       <SurfaceCard
@@ -387,7 +476,7 @@ async function retryLoadPage(): Promise<void> {
             No projects or tasks match this view
           </h2>
           <p class="text-text-muted text-sm">
-            Clear the search or use a project section add action when projects are visible.
+            Clear the filters to restore visible project sections.
           </p>
         </div>
       </SurfaceCard>

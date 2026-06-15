@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
@@ -7,12 +8,14 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
+  filterAutocompleteStrings,
   managementTableColumnPt,
-  managementTableFilterInputClass,
+  managementTableFilterAutoCompletePt,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
+import AutoComplete from 'primevue/autocomplete';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -32,7 +35,11 @@ import type {
   ProjectsTableRow,
 } from '@/lib/projects-table';
 
-defineProps<{
+interface AutoCompleteCompleteEvent {
+  query: string;
+}
+
+const props = defineProps<{
   emptyDescription: string;
   expandedRows: ProjectsTableExpandedRows;
   filters: ProjectsTableFilters;
@@ -44,6 +51,19 @@ defineProps<{
   sourceFilterOptions: ProjectsTableFilterOption<ProjectResponse['source']>[];
   visibilityFilterOptions: ProjectsTableFilterOption<ProjectResponse['visibility']>[];
 }>();
+
+const projectQuerySuggestions = ref<string[]>([]);
+
+const projectQueryOptions = computed(() =>
+  [...new Set(props.rows.map((row) => row.name))].sort((a, b) => a.localeCompare(b)),
+);
+
+function handleProjectQueryComplete(event: AutoCompleteCompleteEvent): void {
+  projectQuerySuggestions.value = filterAutocompleteStrings(
+    projectQueryOptions.value,
+    event.query,
+  );
+}
 
 const emit = defineEmits<{
   'edit-project': [project: ProjectResponse];
@@ -60,12 +80,12 @@ function updateGlobalFilter(value: string | undefined): void {
   updateFilters({ global: value });
 }
 
-function updateProjectQueryFilter(value: string | undefined): void {
-  updateFilters({ projectQuery: value });
+function updateProjectQueryFilter(value: string | null | undefined): void {
+  updateFilters({ projectQuery: value ?? '' });
 }
 
-function updateMemberIdsFilter(value: string[] | undefined): void {
-  updateFilters({ memberIds: value });
+function updateMemberIdsFilter(value: string[] | null | undefined): void {
+  updateFilters({ memberIds: value ?? [] });
 }
 
 function updateSourceFilter(
@@ -132,11 +152,17 @@ const columns: ManagementTableColumn[] = [
         for="mobile-project-name-filter"
         class="text-text-muted text-[12px] font-medium"
       >Project</label>
-      <InputText
-        id="mobile-project-name-filter"
+      <AutoComplete
+        input-id="mobile-project-name-filter"
         :model-value="filters.projectQuery"
-        class="h-[38px] w-full rounded-[6px] text-[14px]"
+        :suggestions="projectQuerySuggestions"
+        complete-on-focus
+        dropdown
+        dropdown-mode="blank"
+        :min-length="0"
         placeholder="Filter project"
+        :pt="managementTableFilterAutoCompletePt"
+        @complete="handleProjectQueryComplete"
         @update:model-value="updateProjectQueryFilter"
       />
     </div>
@@ -202,7 +228,7 @@ const columns: ManagementTableColumn[] = [
           class="text-text-muted text-[12px] font-medium"
         >Assigned members</label>
         <MultiSelect
-          id="mobile-project-members-filter"
+          input-id="mobile-project-members-filter"
           :model-value="filters.memberIds"
           :options="memberFilterOptions"
           display="chip"
@@ -211,8 +237,6 @@ const columns: ManagementTableColumn[] = [
           option-value="value"
           placeholder="All members"
           show-clear
-          :max-selected-labels="1"
-          selected-items-label="{0} members"
           :pt="managementTableFilterMultiSelectPt"
           @update:model-value="updateMemberIdsFilter"
         />
@@ -360,11 +384,17 @@ const columns: ManagementTableColumn[] = [
     <template #filters>
       <div class="flex min-w-[860px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
-          <InputText
+          <AutoComplete
             :model-value="filters.projectQuery"
+            :suggestions="projectQuerySuggestions"
             aria-label="Filter projects by name"
-            :class="managementTableFilterInputClass"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            :min-length="0"
             placeholder="Filter project"
+            :pt="managementTableFilterAutoCompletePt"
+            @complete="handleProjectQueryComplete"
             @update:model-value="updateProjectQueryFilter"
           />
         </div>
@@ -394,8 +424,6 @@ const columns: ManagementTableColumn[] = [
             option-value="value"
             placeholder="All members"
             show-clear
-            :max-selected-labels="1"
-            selected-items-label="{0} members"
             :pt="managementTableFilterMultiSelectPt"
             @update:model-value="updateMemberIdsFilter"
           />

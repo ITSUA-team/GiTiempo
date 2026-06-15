@@ -64,6 +64,10 @@ function compareTimeZones(a: string, b: string): number {
 	return a < b ? -1 : 1;
 }
 
+function formatTimeZoneLabel(timeZone: string): string {
+	return timeZone.replaceAll('_', ' ');
+}
+
 export function getSettingsTimeZoneOptions(
 	currentTimeZones: readonly CurrentTimeZoneValue[] = [],
 ): SettingsTimeZoneOption[] {
@@ -79,7 +83,7 @@ export function getSettingsTimeZoneOptions(
 	}
 
 	return [...values].sort(compareTimeZones).map((value) => ({
-		label: value,
+		label: formatTimeZoneLabel(value),
 		value,
 	}));
 }

@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { computed } from "vue";
+import { filterAutocompleteOptions } from "@gitiempo/web-shared";
+import { computed, shallowRef, watch } from "vue";
 
 const props = defineProps<{
   errors: {
@@ -46,11 +48,31 @@ const statusOptions = [
 const selectedProjectName = computed(() => {
   return props.projects.find((project) => project.id === props.projectId)?.name ?? "";
 });
+const selectedProject = computed(() =>
+  props.projects.find((project) => project.id === props.projectId) ?? null,
+);
+const projectSearchValue = shallowRef<string | null>(null);
+const projectSearchQuery = shallowRef("");
+const projectSuggestions = computed(() => {
+  return filterAutocompleteOptions(
+    props.projects,
+    projectSearchQuery.value,
+    (project) => project.name,
+  );
+});
 
 const projectModel = computed({
-  get: () => props.projectId,
-  set: (value: string | null | undefined) => {
-    emit("update:projectId", value ?? null);
+  get: () => projectSearchValue.value ?? selectedProject.value,
+  set: (value: ProjectResponse | string | null | undefined) => {
+    if (typeof value === "string") {
+      projectSearchValue.value = value;
+      projectSearchQuery.value = value;
+      return;
+    }
+
+    projectSearchValue.value = null;
+    projectSearchQuery.value = "";
+    emit("update:projectId", value?.id ?? null);
   },
 });
 
@@ -76,6 +98,18 @@ const defaultBillableModel = computed({
 });
 
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
+
+watch(
+  [() => props.isOpen, () => props.mode, () => props.projectId],
+  () => {
+    projectSearchValue.value = null;
+    projectSearchQuery.value = "";
+  },
+);
+
+function handleProjectComplete(event: { query: string }): void {
+  projectSearchQuery.value = event.query;
+}
 </script>
 
 <template>
@@ -138,18 +172,23 @@ const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
         >
           {{ selectedProjectName }}
         </div>
-        <Select
+        <AutoComplete
           v-else
           v-model="projectModel"
-          filter
+          complete-on-focus
+          data-key="id"
+          dropdown
+          dropdown-mode="blank"
           fluid
+          force-selection
           input-id="project-task-project"
+          :min-length="0"
           option-label="name"
-          option-value="id"
           placeholder="Select project"
           :disabled="isDialogMutating"
           :invalid="!!props.errors.projectId"
-          :options="props.projects"
+          :suggestions="projectSuggestions"
+          @complete="handleProjectComplete"
         />
         <small
           v-if="props.errors.projectId"

@@ -84,8 +84,10 @@ function mountDialog(overrides: DialogProps = {}) {
           props: [
             "completeOnFocus",
             "disabled",
+            "dropdown",
             "dropdownClass",
             "dropdownMode",
+            "fluid",
             "forceSelection",
             "inputClass",
             "minLength",
@@ -103,7 +105,7 @@ function mountDialog(overrides: DialogProps = {}) {
             },
           },
           template:
-            '<input :class="$attrs.class" :data-dropdown-class="dropdownClass" :data-input-class="inputClass" :data-list-container-pt-class="pt?.listContainer?.class" :data-option-pt-class="pt?.option?.class" :data-overlay-class="overlayClass" :data-root-pt-class="pt?.root?.class" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input :class="$attrs.class" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-overlay-class="overlayClass" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "variant"],
@@ -174,12 +176,15 @@ describe("TopBarTimerTaskDialog", () => {
     expect(autoCompletes[1]?.props("dropdownMode")).toBe("blank");
     expect(autoCompletes[1]?.props("minLength")).toBe(0);
     for (const autoComplete of autoCompletes) {
-      expect(autoComplete.classes()).toContain("h-[38px]");
-      expect(autoComplete.attributes("data-dropdown-class")).toContain("w-10");
-      expect(autoComplete.attributes("data-input-class")).toContain("bg-transparent");
-      expect(autoComplete.attributes("data-input-class")).toContain("font-medium");
-      expect(autoComplete.attributes("data-root-pt-class")).toContain("h-[38px]");
-      expect(autoComplete.attributes("data-root-pt-class")).toContain("border-divider");
+      expect(autoComplete.classes()).toContain("w-full");
+      expect(autoComplete.classes()).toContain("max-w-full");
+      expect(autoComplete.classes()).toContain("min-w-0");
+      expect(autoComplete.attributes("data-dropdown")).toBe("true");
+      expect(autoComplete.attributes("data-fluid")).toBe("true");
+      expect(autoComplete.attributes("data-force-selection")).toBe("true");
+      expect(autoComplete.attributes("data-overlay-class")).toBe(
+        "max-w-[calc(100vw-2rem)]",
+      );
     }
     expect(wrapper.text()).not.toContain("AutoComplete");
     expect(taskSuggestions.map((task) => task.title)).toEqual([
@@ -239,6 +244,28 @@ describe("TopBarTimerTaskDialog", () => {
     ]);
   });
 
+  it("disables selection actions while autocomplete text is not a selected option", async () => {
+    const idleWrapper = mountDialog();
+    const idleAutoCompletes = idleWrapper.findAllComponents({ name: "AutoComplete" });
+
+    await idleAutoCompletes[1]?.vm.$emit("update:modelValue", "Loose task text");
+    await nextTick();
+
+    expect(idleWrapper.emitted("update:selectedTaskId")).toBeUndefined();
+    expect(findButtonByLabel(idleWrapper, "Start timer")?.attributes("disabled")).toBeDefined();
+
+    const runningWrapper = mountDialog({ primaryActionLabel: "Stop" });
+    const runningAutoCompletes = runningWrapper.findAllComponents({ name: "AutoComplete" });
+
+    await runningAutoCompletes[0]?.vm.$emit("update:modelValue", "Loose project text");
+    await nextTick();
+
+    expect(runningWrapper.emitted("update:selectedProjectId")).toBeUndefined();
+    expect(runningAutoCompletes[1]?.props("disabled")).toBe(true);
+    expect(findButtonByLabel(runningWrapper, "Change task")?.attributes("disabled")).toBeDefined();
+    expect(findButtonByLabel(runningWrapper, "Stop timer")?.attributes("disabled")).toBeUndefined();
+  });
+
   it("filters predictive search suggestions by typed text", async () => {
     const wrapper = mountDialog({
       projectOptions: [projectOrion, internalOpsProject],
@@ -255,7 +282,11 @@ describe("TopBarTimerTaskDialog", () => {
     ).toEqual(["Internal Ops"]);
     expect(
       autoCompletes[1]?.props("suggestions").map((task: typeof reportsTask) => task.title),
-    ).toEqual(["Fix alert routing"]);
+    ).toEqual(["Fix alert routing", "New task"]);
+    expect(autoCompletes[1]?.props("suggestions").at(-1)).toMatchObject({
+      id: TOP_BAR_TIMER_NEW_TASK_ID,
+      title: "New task",
+    });
   });
 
   it("renders the inline New task title field from the popup design", async () => {
@@ -430,13 +461,13 @@ describe("TopBarTimerTaskDialog", () => {
     for (const predictiveField of predictiveFields) {
       expect(predictiveField.classes()).toContain("min-w-0");
       expect(predictiveField.classes()).toContain("max-w-full");
-      expect(predictiveField.attributes("data-root-pt-class")).toContain("min-w-0");
-      expect(predictiveField.attributes("data-root-pt-class")).toContain("h-[38px]");
-      expect(predictiveField.attributes("data-input-class")).toContain("bg-transparent");
+      expect(predictiveField.classes()).toContain("w-full");
+      expect(predictiveField.attributes("data-dropdown")).toBe("true");
+      expect(predictiveField.attributes("data-fluid")).toBe("true");
+      expect(predictiveField.attributes("data-force-selection")).toBe("true");
       expect(predictiveField.attributes("data-overlay-class")).toBe(
         "max-w-[calc(100vw-2rem)]",
       );
-      expect(predictiveField.attributes("data-option-pt-class")).toContain("truncate");
     }
   });
 

@@ -15,8 +15,52 @@ export interface ProjectsSearchSuggestion {
   id: string;
   kind: 'project' | 'task';
   label: string;
+  meta: string;
   projectId: string;
 }
+
+export type ProjectStatusFilterValue = 'all' | 'open' | 'closed';
+
+export interface ProjectStatusFilterOption {
+  label: string;
+  value: ProjectStatusFilterValue;
+}
+
+export type ProjectUpdatedFilterValue = 'any' | 'today' | 'last-7-days' | 'older';
+
+export interface ProjectUpdatedFilterOption {
+  label: string;
+  value: ProjectUpdatedFilterValue;
+}
+
+export interface ProjectTaskGroupFilterOptions {
+  nowMs?: number;
+  status?: ProjectStatusFilterValue;
+  updated?: ProjectUpdatedFilterValue;
+}
+
+export const ALL_PROJECT_STATUSES_FILTER: ProjectStatusFilterOption = {
+  label: 'All statuses',
+  value: 'all',
+};
+
+export const ANY_PROJECT_UPDATED_FILTER: ProjectUpdatedFilterOption = {
+  label: 'Any time',
+  value: 'any',
+};
+
+export const PROJECT_STATUS_FILTER_OPTIONS: ProjectStatusFilterOption[] = [
+  ALL_PROJECT_STATUSES_FILTER,
+  { label: 'Open', value: 'open' },
+  { label: 'Closed', value: 'closed' },
+];
+
+export const PROJECT_UPDATED_FILTER_OPTIONS: ProjectUpdatedFilterOption[] = [
+  ANY_PROJECT_UPDATED_FILTER,
+  { label: 'Today', value: 'today' },
+  { label: 'Last 7 days', value: 'last-7-days' },
+  { label: 'Older', value: 'older' },
+];
 
 export function normalizeSearchValue(value: string): string {
   return value.trim().toLowerCase();
@@ -48,28 +92,93 @@ export function buildProjectTaskGroups(
 export function filterProjectTaskGroups(
   groups: ProjectsPageTaskGroup[],
   searchText: string,
+  options: ProjectTaskGroupFilterOptions = {},
 ): ProjectsPageTaskGroup[] {
   const normalized = normalizeSearchValue(searchText);
+  const statusFilter = options.status ?? ALL_PROJECT_STATUSES_FILTER.value;
+  const updatedFilter = options.updated ?? ANY_PROJECT_UPDATED_FILTER.value;
+  const hasStructuredFilters =
+    statusFilter !== ALL_PROJECT_STATUSES_FILTER.value ||
+    updatedFilter !== ANY_PROJECT_UPDATED_FILTER.value;
+  const searchFilteredGroups = filterProjectTaskGroupsBySearch(
+    groups,
+    normalized,
+  );
 
-  if (normalized.length === 0) {
-    return groups;
+  if (!hasStructuredFilters) {
+    return searchFilteredGroups;
   }
 
-  return groups.flatMap((group) => {
-    const projectMatch = group.project.name.toLowerCase().includes(normalized);
-
-    if (projectMatch) {
-      return [group];
-    }
-
-    const matchingTasks = group.tasks.filter((task) =>
-      task.title.toLowerCase().includes(normalized),
+  return searchFilteredGroups.flatMap((group) => {
+    const matchingTasks = group.tasks.filter(
+      (task) =>
+        matchesTaskStatusFilter(task, statusFilter) &&
+        matchesTaskUpdatedFilter(task, updatedFilter, options.nowMs),
     );
 
     return matchingTasks.length > 0
       ? [{ project: group.project, tasks: matchingTasks }]
       : [];
   });
+}
+
+function filterProjectTaskGroupsBySearch(
+  groups: ProjectsPageTaskGroup[],
+  normalizedSearchText: string,
+): ProjectsPageTaskGroup[] {
+  if (normalizedSearchText.length === 0) {
+    return groups;
+  }
+
+  return groups.flatMap((group) => {
+    const projectMatch = group.project.name
+      .toLowerCase()
+      .includes(normalizedSearchText);
+
+    if (projectMatch) {
+      return [group];
+    }
+
+    const matchingTasks = group.tasks.filter((task) =>
+      task.title.toLowerCase().includes(normalizedSearchText),
+    );
+
+    return matchingTasks.length > 0
+      ? [{ project: group.project, tasks: matchingTasks }]
+      : [];
+  });
+}
+
+function matchesTaskStatusFilter(
+  task: TaskResponse,
+  filter: ProjectStatusFilterValue,
+): boolean {
+  return filter === ALL_PROJECT_STATUSES_FILTER.value || task.status === filter;
+}
+
+function matchesTaskUpdatedFilter(
+  task: TaskResponse,
+  filter: ProjectUpdatedFilterValue,
+  nowMs = Date.now(),
+): boolean {
+  if (filter === ANY_PROJECT_UPDATED_FILTER.value) {
+    return true;
+  }
+
+  const taskDateKey = getLocalDateKey(task.updatedAt);
+  const now = new Date(nowMs);
+  const todayKey = getLocalDateKey(now);
+  const lastSevenDaysStartKey = getLocalDateKey(addLocalDays(now, -6));
+
+  if (filter === 'today') {
+    return taskDateKey === todayKey;
+  }
+
+  if (filter === 'last-7-days') {
+    return taskDateKey >= lastSevenDaysStartKey && taskDateKey <= todayKey;
+  }
+
+  return taskDateKey < lastSevenDaysStartKey;
 }
 
 export function buildProjectSearchSuggestions(
@@ -88,6 +197,7 @@ export function buildProjectSearchSuggestions(
         id: `project:${group.project.id}`,
         kind: 'project',
         label: group.project.name,
+        meta: 'Project',
         projectId: group.project.id,
       });
     }
@@ -101,6 +211,7 @@ export function buildProjectSearchSuggestions(
           id: `task:${task.id}`,
           kind: 'task',
           label: task.title,
+          meta: `Task • ${group.project.name}`,
           projectId: group.project.id,
         });
       }

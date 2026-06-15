@@ -41,6 +41,7 @@ describe('ProjectsTable', () => {
           tooltip: tooltipDirective,
         },
         stubs: {
+          AutoComplete: true,
           EmptyStateBlock: true,
           IconField: passthroughStub,
           InputIcon: true,
