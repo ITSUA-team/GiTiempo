@@ -86,9 +86,35 @@ const members: WorkspaceMemberListResponse = [
 ];
 
 const stubs = {
+  AutoComplete: {
+    name: 'AutoComplete',
+    props: {
+      completeOnFocus: Boolean,
+      dropdown: Boolean,
+      dropdownMode: String,
+      fluid: Boolean,
+      forceSelection: Boolean,
+      inputId: String,
+      invalid: Boolean,
+      minLength: Number,
+      multiple: Boolean,
+      name: String,
+      optionLabel: Function,
+      placeholder: String,
+      pt: Object,
+      suggestions: Array,
+    },
+    template: `<div>
+      <input :id="inputId" :name="name" :placeholder="placeholder" />
+      <span v-for="suggestion in suggestions" :key="suggestion">
+        {{ optionLabel ? optionLabel(suggestion) : suggestion }}
+      </span>
+    </div>`,
+  },
   Button: {
-    props: ['disabled', 'label', 'type'],
-    template: '<button :disabled="disabled" :type="type">{{ label }}</button>',
+    props: ['disabled', 'label', 'loading', 'type', 'unstyled'],
+    template:
+      '<button v-bind="$attrs" :disabled="disabled" :type="type"><slot>{{ label }}</slot></button>',
   },
   EditFormPanel: {
     props: ['title'],
@@ -98,14 +124,19 @@ const stubs = {
     template:
       '<form><slot :memberIds="{ invalid: false }" :visibility="{ invalid: false }" /></form>',
   },
-  MultiSelect: {
-    props: ['id', 'name', 'options'],
-    template:
-      '<select :id="id" :name="name"><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
-  },
   Select: {
-    props: ['id', 'name'],
-    template: '<select :id="id" :name="name" />',
+    name: 'Select',
+    props: {
+      fluid: Boolean,
+      inputId: String,
+      invalid: Boolean,
+      name: String,
+      optionLabel: String,
+      optionValue: String,
+      options: Array,
+    },
+    template:
+      '<select :id="inputId" :name="name"><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
   },
 };
 
@@ -128,12 +159,81 @@ describe('ProjectEditForm', () => {
     );
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
+    const memberInput = wrapper.getComponent({ name: 'AutoComplete' });
+    const visibilityInput = wrapper.getComponent({ name: 'Select' });
+
+    expect(memberInput.props('multiple')).toBe(true);
+    expect(memberInput.props('dropdown')).toBe(true);
+    expect(memberInput.props('forceSelection')).toBe(true);
+    expect(memberInput.props('completeOnFocus')).toBe(true);
+    expect(memberInput.props('minLength')).toBe(0);
+    expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
+    expect(memberInput.props('placeholder')).toBe('Select members');
+    expect(visibilityInput.props('optionLabel')).toBe('label');
+    expect(visibilityInput.props('optionValue')).toBe('value');
+    expect(visibilityInput.props('options')).toEqual([
+      { label: 'Public', value: 'public' },
+      { label: 'Private', value: 'private' },
+    ]);
     expect(wrapper.text()).toContain('Pat PM');
     expect(wrapper.text()).toContain('member@example.com');
     expect(wrapper.text()).not.toContain('Alex Admin');
     expect(wrapper.text()).toContain('Archive project');
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save');
+
+    const archiveButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Archive project',
+    );
+    const cancelButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Cancel',
+    );
+    const saveButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Save',
+    );
+
+    expect(archiveButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-surface-primary',
+        'border-destructive',
+        'cursor-pointer',
+        'h-8',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
+        'text-[13px]',
+        'text-destructive',
+        'font-semibold',
+      ]),
+    );
+    expect(cancelButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-surface-primary',
+        'border-divider',
+        'cursor-pointer',
+        'h-8',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
+        'text-[13px]',
+        'text-text-dark',
+        'font-medium',
+      ]),
+    );
+    expect(saveButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-brand',
+        'border-0',
+        'cursor-pointer',
+        'h-8',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
+        'text-[13px]',
+        'text-text-inverse',
+        'font-semibold',
+      ]),
+    );
   });
 
   it('emits the status-specific action from the inline project settings panel', async () => {
