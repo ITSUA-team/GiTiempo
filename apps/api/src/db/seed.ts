@@ -222,7 +222,6 @@ async function main(): Promise<void> {
           },
         })
         .returning();
-      if (!row) throw new Error(`Failed to seed user ${user.email}`);
       userIdsByFirebaseUid.set(user.firebaseUid, row.id);
 
       if (user.role === 'admin') {

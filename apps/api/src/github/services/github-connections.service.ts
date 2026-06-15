@@ -46,24 +46,11 @@ export class GithubConnectionsService {
     tokens: GithubTokenSet,
   ): Promise<GithubConnectionRow> {
     const now = new Date();
-    const [row] = await this.db
-      .insert(githubConnections)
-      .values({
-        userId,
-        githubUserId: profile.githubUserId,
-        login: profile.login,
-        avatarUrl: profile.avatarUrl,
-        accessTokenEncrypted: this.encryption.encrypt(tokens.accessToken),
-        refreshTokenEncrypted: this.encryption.encrypt(tokens.refreshToken),
-        tokenExpiresAt: tokens.tokenExpiresAt,
-        refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
-        connected: true,
-        connectedAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: githubConnections.userId,
-        set: {
+    const row = (
+      await this.db
+        .insert(githubConnections)
+        .values({
+          userId,
           githubUserId: profile.githubUserId,
           login: profile.login,
           avatarUrl: profile.avatarUrl,
@@ -72,11 +59,25 @@ export class GithubConnectionsService {
           tokenExpiresAt: tokens.tokenExpiresAt,
           refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
           connected: true,
+          connectedAt: now,
           updatedAt: now,
-        },
-      })
-      .returning();
-    if (!row) throw new Error('Failed to upsert GitHub connection');
+        })
+        .onConflictDoUpdate({
+          target: githubConnections.userId,
+          set: {
+            githubUserId: profile.githubUserId,
+            login: profile.login,
+            avatarUrl: profile.avatarUrl,
+            accessTokenEncrypted: this.encryption.encrypt(tokens.accessToken),
+            refreshTokenEncrypted: this.encryption.encrypt(tokens.refreshToken),
+            tokenExpiresAt: tokens.tokenExpiresAt,
+            refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
+            connected: true,
+            updatedAt: now,
+          },
+        })
+        .returning()
+    )[0]!;
     return row;
   }
 

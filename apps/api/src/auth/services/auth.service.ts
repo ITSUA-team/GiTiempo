@@ -415,28 +415,26 @@ export class AuthService {
         throw createRegistrationConflict('workspace_name_unavailable');
       }
 
-      const [userRow] = await tx
-        .insert(users)
-        .values({
-          avatarUrl: null,
-          displayName: input.displayName,
-          email: input.email,
-          firebaseUid: input.firebaseUid,
-        })
-        .returning();
-      if (!userRow) {
-        throw new Error('Failed to create registration user');
-      }
+      const userRow = (
+        await tx
+          .insert(users)
+          .values({
+            avatarUrl: null,
+            displayName: input.displayName,
+            email: input.email,
+            firebaseUid: input.firebaseUid,
+          })
+          .returning()
+      )[0]!;
 
-      const [workspaceRow] = await tx
-        .insert(workspaces)
-        .values({
-          name: input.workspaceName,
-        })
-        .returning();
-      if (!workspaceRow) {
-        throw new Error('Failed to create workspace');
-      }
+      const workspaceRow = (
+        await tx
+          .insert(workspaces)
+          .values({
+            name: input.workspaceName,
+          })
+          .returning()
+      )[0]!;
 
       await tx.insert(workspaceSettings).values({
         workspaceId: workspaceRow.id,

@@ -129,24 +129,25 @@ export class UsersService {
    */
   async upsertFromFirebase(input: UpsertFromFirebaseInput): Promise<UserRow> {
     const now = new Date();
-    const [row] = await this.db
-      .insert(users)
-      .values({
-        firebaseUid: input.firebaseUid,
-        email: input.email,
-        displayName: input.displayName ?? null,
-        avatarUrl: input.avatarUrl ?? null,
-      })
-      .onConflictDoUpdate({
-        target: users.firebaseUid,
-        set: {
+    const row = (
+      await this.db
+        .insert(users)
+        .values({
+          firebaseUid: input.firebaseUid,
           email: input.email,
-          displayName: firebaseDisplayNameFallback(input.displayName),
-          updatedAt: now,
-        },
-      })
-      .returning();
-    if (!row) throw new Error('Failed to upsert user');
+          displayName: input.displayName ?? null,
+          avatarUrl: input.avatarUrl ?? null,
+        })
+        .onConflictDoUpdate({
+          target: users.firebaseUid,
+          set: {
+            email: input.email,
+            displayName: firebaseDisplayNameFallback(input.displayName),
+            updatedAt: now,
+          },
+        })
+        .returning()
+    )[0]!;
     return row;
   }
 
