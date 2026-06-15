@@ -28,12 +28,6 @@ const emit = defineEmits<{
   submit: [payload: RegisterFormValues];
 }>();
 
-const passwordInputProps: Record<string, string> = {
-  "data-testid": "register-password",
-};
-const confirmPasswordInputProps: Record<string, string> = {
-  "data-testid": "register-confirm-password",
-};
 const resolver = zodResolver(registerFormSchema);
 
 function getFieldMessage(
@@ -175,7 +169,7 @@ function handleSubmit(event: FormSubmitEvent): void {
           :invalid="$form.password?.invalid || !!fieldErrors.password"
           fluid
           input-class="h-[42px] w-full"
-          :input-props="passwordInputProps"
+          :pt="{ pcInputText: { root: { 'data-testid': 'register-password' } } }"
         />
         <Message
           v-if="getFieldMessage($form.password?.error?.message, fieldErrors.password)"
@@ -205,7 +199,7 @@ function handleSubmit(event: FormSubmitEvent): void {
           :invalid="$form.confirmPassword?.invalid || !!fieldErrors.confirmPassword"
           fluid
           input-class="h-[42px] w-full"
-          :input-props="confirmPasswordInputProps"
+          :pt="{ pcInputText: { root: { 'data-testid': 'register-confirm-password' } } }"
         />
         <Message
           v-if="getFieldMessage($form.confirmPassword?.error?.message, fieldErrors.confirmPassword)"

@@ -16,9 +16,10 @@ import { getAuthRuntime } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
 import { type RegisterFormValues } from "@/validation/register";
 
-export type RegisterFieldName = keyof RegisterFormValues;
-
-export type RegisterFieldErrors = Record<RegisterFieldName, string | null>;
+export type RegisterFieldErrors = Record<
+  keyof RegisterFormValues,
+  string | null
+>;
 
 function createEmptyFieldErrors(): RegisterFieldErrors {
   return {
