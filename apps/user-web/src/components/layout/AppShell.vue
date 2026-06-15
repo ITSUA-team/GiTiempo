@@ -14,7 +14,7 @@ import TopBarTimer from "@/components/timer/TopBarTimer.vue";
 import { provideTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { appEnv } from "@/config/env";
 import { routeNames } from "@/constants/routes";
-import { workspaceClient } from "@/services/workspace-client";
+import { getWorkspaceClient } from "@/services/workspace-client";
 import { useAuthStore } from "@/stores/auth";
 import {
   USER_COUNTERPART_LABEL,
@@ -57,7 +57,7 @@ watch(
     workspaceNameRequestToken = accessToken;
 
     try {
-      const workspace = await workspaceClient.getWorkspace();
+      const workspace = await getWorkspaceClient().getWorkspace();
       authStore.setWorkspaceName(workspace.name);
     } catch (error) {
       workspaceNameRequestToken = null;

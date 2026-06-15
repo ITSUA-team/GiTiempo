@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sql } from 'drizzle-orm';
-import type { RegisterRequest, RegistrationErrorCode } from '@gitiempo/shared';
+import type { RegisterRequest } from '@gitiempo/shared';
 import type { Env } from '../../config/env.validation';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
 import { DRIZZLE } from '../../db/db.constants';
@@ -29,6 +29,7 @@ import {
   FirebaseAdminAuthError,
   type FirebaseAdminService,
 } from './firebase-admin.interface';
+import { REGISTRATION_ERROR_MESSAGES } from '../registration-errors';
 import { TokenService } from './token.service';
 import type { AuthUser } from '../types/auth-user';
 
@@ -38,15 +39,6 @@ export interface TokenPair {
   accessTokenExpiresIn: number;
 }
 
-const REGISTRATION_ERROR_MESSAGES: Record<RegistrationErrorCode, string> = {
-  duplicate_email: 'An account already exists for that email.',
-  invalid_workspace_name: 'Enter a valid workspace name.',
-  rate_limited: 'Too many registration attempts. Please try again later.',
-  registration_service_unavailable:
-    'Registration is temporarily unavailable. Please try again later.',
-  weak_password: 'Choose a stronger password and try again.',
-  workspace_name_unavailable: 'That workspace name is already in use.',
-};
 const POSTGRES_UNIQUE_VIOLATION = '23505';
 const USERS_EMAIL_LOOKUP_UNIQUE_INDEX = 'users_email_lookup_unique';
 const WORKSPACES_NAME_LOOKUP_UNIQUE_INDEX = 'workspaces_name_lookup_unique';

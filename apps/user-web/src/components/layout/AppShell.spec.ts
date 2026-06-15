@@ -24,9 +24,9 @@ vi.mock("primevue/usetoast", () => ({
 }));
 
 vi.mock("@/services/workspace-client", () => ({
-  workspaceClient: {
+  getWorkspaceClient: () => ({
     getWorkspace: testMocks.getWorkspace,
-  },
+  }),
 }));
 
 describe("AppShell", () => {

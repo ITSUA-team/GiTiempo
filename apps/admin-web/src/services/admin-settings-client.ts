@@ -60,23 +60,12 @@ export function createAdminSettingsClient({
 	};
 }
 
-function createDefaultAdminSettingsClient(): AdminSettingsClient {
-	return createAdminSettingsClient({
+let defaultAdminSettingsClient: AdminSettingsClient | null = null;
+
+export function getAdminSettingsClient(): AdminSettingsClient {
+	defaultAdminSettingsClient ??= createAdminSettingsClient({
 		apiClient: getAuthenticatedAppApiClient(),
 	});
-}
 
-export const adminSettingsClient: AdminSettingsClient = {
-	getWorkspace() {
-		return createDefaultAdminSettingsClient().getWorkspace();
-	},
-	getWorkspaceSettings() {
-		return createDefaultAdminSettingsClient().getWorkspaceSettings();
-	},
-	updateWorkspace(input) {
-		return createDefaultAdminSettingsClient().updateWorkspace(input);
-	},
-	updateWorkspaceSettings(input) {
-		return createDefaultAdminSettingsClient().updateWorkspaceSettings(input);
-	},
-};
+	return defaultAdminSettingsClient;
+}

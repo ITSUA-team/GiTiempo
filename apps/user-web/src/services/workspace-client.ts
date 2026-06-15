@@ -5,17 +5,12 @@ import {
 
 import { getAuthenticatedAppApiClient } from "@/services/api-client";
 
-function createDefaultWorkspaceClient() {
-  return createWorkspaceClient({
+let defaultWorkspaceClient: WorkspaceClient | null = null;
+
+export function getWorkspaceClient(): WorkspaceClient {
+  defaultWorkspaceClient ??= createWorkspaceClient({
     apiClient: getAuthenticatedAppApiClient(),
   });
-}
 
-export const workspaceClient: WorkspaceClient = {
-  getWorkspace() {
-    return createDefaultWorkspaceClient().getWorkspace();
-  },
-  updateWorkspace(input) {
-    return createDefaultWorkspaceClient().updateWorkspace(input);
-  },
-};
+  return defaultWorkspaceClient;
+}

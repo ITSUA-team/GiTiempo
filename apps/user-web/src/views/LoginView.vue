@@ -5,6 +5,7 @@ import Button from "primevue/button";
 import {
   AuthIntroPanel,
   AuthSignInForm,
+  getErrorMessage,
   StandaloneSplitPage,
   type EmailPasswordSignInInput,
 } from "@gitiempo/web-shared";
@@ -46,12 +47,6 @@ async function navigateAfterLogin(): Promise<void> {
   await router.replace(redirectTarget.value ?? { name: routeNames.dashboard });
 }
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "Something went wrong while signing in.";
-}
-
 async function handleEmailSignIn({
   email,
   password,
@@ -62,7 +57,10 @@ async function handleEmailSignIn({
     await authStore.loginWithEmailPassword(email, password);
     await navigateAfterLogin();
   } catch (error) {
-    errorMessage.value = getErrorMessage(error);
+    errorMessage.value = getErrorMessage(
+      error,
+      "Something went wrong while signing in.",
+    );
   }
 }
 
@@ -73,7 +71,10 @@ async function handleGoogleSignIn(): Promise<void> {
     await authStore.loginWithGoogle();
     await navigateAfterLogin();
   } catch (error) {
-    errorMessage.value = getErrorMessage(error);
+    errorMessage.value = getErrorMessage(
+      error,
+      "Something went wrong while signing in.",
+    );
   }
 }
 

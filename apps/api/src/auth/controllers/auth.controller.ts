@@ -14,7 +14,6 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import type { RegisterRequest } from '@gitiempo/shared';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { ThrottleErrorCode } from '../../commons/decorators/throttle-error-code.decorator';
 import { AuthService } from '../services/auth.service';
@@ -25,7 +24,6 @@ import { RefreshDto } from '../dto/refresh.dto';
 import { LogoutDto } from '../dto/logout.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
-import { RegisterBodyPipe } from '../pipes/register-body.pipe';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -65,9 +63,7 @@ export class AuthController {
     description: 'Registration could not complete safely',
   })
   @ZodSerializerDto(TokenPairResponseDto)
-  register(
-    @Body(new RegisterBodyPipe()) body: RegisterRequest,
-  ): Promise<TokenPairResponseDto> {
+  register(@Body() body: RegisterDto): Promise<TokenPairResponseDto> {
     return this.auth.register(body);
   }
 
