@@ -13,25 +13,19 @@ const props = defineProps<{
 
 const skeletonConfig = {
   members: {
-    actionWidth: '8.5rem',
-    descriptionWidth: 'min(100%, 24rem)',
     filterCount: 0,
     statCount: 3,
     tableActionWidth: '17.5rem',
     tableHeaderWidths: ['120px', '220px', '140px', '150px'],
   },
   projects: {
-    actionWidth: '7.5rem',
-    descriptionWidth: 'min(100%, 22rem)',
     filterCount: 0,
     statCount: 3,
     tableActionWidth: '16rem',
     tableHeaderWidths: ['140px', '220px', '120px', '120px', '150px'],
   },
   reports: {
-    actionWidth: '6.875rem',
-    descriptionWidth: 'min(100%, 28rem)',
-    filterCount: 4,
+    filterCount: 5,
     statCount: 4,
     tableActionWidth: '17.5rem',
     tableHeaderWidths: ['180px', '140px', '140px'],
@@ -48,29 +42,9 @@ const skeletonConfig = {
     <span class="sr-only">Loading page content</span>
 
     <div class="flex flex-col gap-6">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1.5">
-          <Skeleton
-            width="10rem"
-            height="2rem"
-            border-radius="6px"
-          />
-          <Skeleton
-            :width="skeletonConfig[props.variant].descriptionWidth"
-            height="1rem"
-            border-radius="6px"
-          />
-        </div>
-        <Skeleton
-          :width="skeletonConfig[props.variant].actionWidth"
-          height="2.25rem"
-          border-radius="6px"
-        />
-      </div>
-
       <div
         v-if="skeletonConfig[props.variant].filterCount > 0"
-        class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]"
+        class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px_auto]"
       >
         <div
           v-for="index in skeletonConfig[props.variant].filterCount"
@@ -78,9 +52,15 @@ const skeletonConfig = {
           class="flex flex-col gap-1.5"
         >
           <Skeleton
+            v-if="props.variant !== 'reports' || index < skeletonConfig[props.variant].filterCount"
             width="5rem"
             height="0.875rem"
             border-radius="4px"
+          />
+          <span
+            v-else
+            aria-hidden="true"
+            class="hidden h-[0.875rem] lg:block"
           />
           <Skeleton
             height="2.375rem"

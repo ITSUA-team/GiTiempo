@@ -8,14 +8,12 @@ import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
-  EntryActionButton,
   SurfaceCard,
   filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
-import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
@@ -468,14 +466,9 @@ onBeforeUnmount(() => {
           No time entries match these filters
         </h2>
         <p class="text-text-muted text-sm">
-          Add a new time entry or adjust the current filters.
+          Adjust the current filters to find tracked work.
         </p>
       </div>
-      <EntryActionButton
-        :icon="PlusIcon"
-        label="New time entry"
-        @click="void openCreateDialog()"
-      />
     </SurfaceCard>
 
     <div

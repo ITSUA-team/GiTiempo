@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import { SectionHeader, SurfaceCard } from '@gitiempo/web-shared';
+import { SurfaceCard } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
 
 import SettingsForm from '@/components/settings/SettingsForm.vue';
@@ -115,12 +115,6 @@ watch(
     <SettingsPageSkeleton v-if="loading && !initialLoaded" />
 
     <template v-else>
-      <SectionHeader
-        title="Settings"
-        description="Configure workspace defaults, billing preferences, and organization details."
-        variant="page"
-      />
-
       <SurfaceCard
         v-if="requestError && !loading"
         class="max-w-[620px]"

@@ -228,6 +228,21 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.text()).not.toContain("Running timer");
   });
 
+  it("renders app and page breadcrumbs in the brand area", () => {
+    const wrapper = mountHeader({
+      props: {
+        pageName: "Time Entries",
+      },
+    });
+
+    const breadcrumb = wrapper.get('[data-testid="workspace-header-breadcrumb"]');
+
+    expect(breadcrumb.text()).toContain("GiTiempo");
+    expect(breadcrumb.text()).toContain("/");
+    expect(breadcrumb.text()).toContain("Time Entries");
+    expect(wrapper.text()).not.toContain("Workspace Alpha");
+  });
+
   it("renders app-owned center slot content in the responsive center row", () => {
     const wrapper = mountHeader({
       props: {

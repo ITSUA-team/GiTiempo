@@ -8750,11 +8750,11 @@
                         },
                         {
                           "type": "frame",
-                          "id": "SbNSt",
+                          "id": "mLUwe",
                           "name": "expand",
                           "width": "fill_container",
-                          "fill": "$color-app-bg",
-                          "stroke": "$color-divider",
+                          "fill": "#F4F4F5",
+                          "stroke": "#EEEEEE",
                           "strokeWidth": {
                             "top": 1
                           },
@@ -8765,8 +8765,9 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "8fqnz",
-                              "fill": "$color-text-dark",
+                              "id": "T2YZl",
+                              "name": "Member settings title",
+                              "fill": "#1A1A1A",
                               "content": "Member settings",
                               "fontFamily": "Inter",
                               "fontSize": 13,
@@ -8774,135 +8775,188 @@
                             },
                             {
                               "type": "frame",
-                              "id": "HAUEF",
-                              "name": "checks",
+                              "id": "T2naQe",
+                              "name": "Assigned projects autocomplete multiselect field",
                               "width": "fill_container",
-                              "gap": 12,
+                              "layout": "vertical",
+                              "gap": 6,
                               "children": [
                                 {
+                                  "type": "text",
+                                  "id": "KtRhu",
+                                  "name": "Assigned projects label",
+                                  "fill": "#1A1A1A",
+                                  "content": "Assigned projects",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
                                   "type": "frame",
-                                  "id": "HsPoK",
-                                  "name": "check1",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
+                                  "id": "QNcVQ",
+                                  "name": "Project autocomplete multiselect input",
+                                  "width": "fill_container",
+                                  "height": 42,
+                                  "fill": "#FFFFFF",
+                                  "cornerRadius": 6,
+                                  "stroke": "#5D2B85",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "gap": 8,
                                   "padding": [
-                                    8,
-                                    12
+                                    0,
+                                    10
                                   ],
                                   "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "gN1wJ",
-                                      "name": "box1",
-                                      "width": 16,
-                                      "height": 16,
-                                      "fill": "$color-brand",
-                                      "cornerRadius": 4,
-                                      "justifyContent": "center",
+                                      "id": "tzPHL",
+                                      "name": "Selected project chips and search",
+                                      "width": "fill_container",
+                                      "gap": 6,
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "text",
-                                          "id": "hNh6Z",
-                                          "fill": "$color-surface",
-                                          "content": "✓",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 10,
-                                          "fontWeight": "600"
+                                          "type": "frame",
+                                          "id": "CZROh",
+                                          "name": "Project Orion selected chip",
+                                          "fill": "#E8E1F5",
+                                          "cornerRadius": 12,
+                                          "gap": 5,
+                                          "padding": [
+                                            4,
+                                            8
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "WC0lR",
+                                              "name": "Project Orion selected label",
+                                              "fill": "#5D2B85",
+                                              "content": "Project Orion",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "P8FEzU",
+                                              "name": "Project Orion remove",
+                                              "fill": "#5D2B85",
+                                              "content": "×",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "fEm5Q",
+                                          "name": "Workspace Ops selected chip",
+                                          "fill": "#E8E1F5",
+                                          "cornerRadius": 12,
+                                          "gap": 5,
+                                          "padding": [
+                                            4,
+                                            8
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "ejyuB",
+                                              "name": "Workspace Ops selected label",
+                                              "fill": "#5D2B85",
+                                              "content": "Workspace Ops",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "lbM5Q",
+                                              "name": "Workspace Ops remove",
+                                              "fill": "#5D2B85",
+                                              "content": "×",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "jXhct",
+                                          "name": "Project autocomplete search affordance",
+                                          "gap": 5,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "RAOuC",
+                                              "name": "Project search icon",
+                                              "width": 13,
+                                              "height": 13,
+                                              "icon": "search",
+                                              "library": "lucide",
+                                              "fill": "#666666"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "iI0WP",
+                                              "name": "Project search placeholder",
+                                              "fill": "#666666",
+                                              "content": "Search projects...",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 13,
+                                              "fontWeight": "500"
+                                            }
+                                          ]
                                         }
                                       ]
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "S3Bpn",
-                                      "fill": "$color-text-dark",
-                                      "content": "Project Orion",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "500"
+                                      "type": "icon",
+                                      "id": "e9Kn5N",
+                                      "name": "Autocomplete dropdown chevron",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "#666666"
                                     }
                                   ]
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "Fa5O7",
-                                  "name": "check2",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "gap": 8,
-                                  "padding": [
-                                    8,
-                                    12
-                                  ],
+                                  "id": "OmLw0",
+                                  "name": "Autocomplete helper row",
+                                  "width": "fill_container",
+                                  "gap": 6,
                                   "alignItems": "center",
                                   "children": [
                                     {
-                                      "type": "frame",
-                                      "id": "El9Mr",
-                                      "width": 16,
-                                      "height": 16,
-                                      "fill": "$color-surface",
-                                      "cornerRadius": 4,
-                                      "stroke": "$color-divider",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner"
+                                      "type": "icon",
+                                      "id": "tDZx9",
+                                      "name": "Autocomplete helper icon",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "sparkles",
+                                      "library": "lucide",
+                                      "fill": "#666666"
                                     },
                                     {
                                       "type": "text",
-                                      "id": "VJWIS",
-                                      "fill": "$color-text-dark",
-                                      "content": "Billing API",
+                                      "id": "Rlgma",
+                                      "name": "Autocomplete helper text",
+                                      "fill": "#666666",
+                                      "content": "Type to search active projects, then select multiple results.",
                                       "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "500"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "LZZXt",
-                                  "name": "check3",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "gap": 8,
-                                  "padding": [
-                                    8,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "HXhOs",
-                                      "name": "box3",
-                                      "width": 16,
-                                      "height": 16,
-                                      "fill": "$color-brand",
-                                      "cornerRadius": 4,
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "wTzI4",
-                                          "fill": "$color-surface",
-                                          "content": "✓",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 10,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "jx1Mc",
-                                      "fill": "$color-text-dark",
-                                      "content": "Workspace Ops",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "500"
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 }
@@ -8910,7 +8964,7 @@
                             },
                             {
                               "type": "frame",
-                              "id": "7FdUh",
+                              "id": "tWJmm",
                               "name": "expandActions",
                               "width": "fill_container",
                               "gap": 10,
@@ -8918,7 +8972,7 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "Y5hxe",
+                                  "id": "fJpA7",
                                   "name": "Remove memberButton",
                                   "fill": "#FFFFFF",
                                   "cornerRadius": 6,
@@ -8929,10 +8983,12 @@
                                     8,
                                     14
                                   ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "Ur2hJ",
+                                      "id": "DDvXn",
                                       "name": "Remove memberText",
                                       "fill": "#D32F2F",
                                       "content": "Remove member",
@@ -8944,21 +9000,25 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "6VBWA",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
+                                  "id": "sr8Fm",
+                                  "name": "Cancel button",
+                                  "fill": "#FFFFFF",
+                                  "cornerRadius": 6,
+                                  "stroke": "#EEEEEE",
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
                                   "padding": [
                                     8,
                                     14
                                   ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "DT1ak",
-                                      "fill": "$color-text-dark",
+                                      "id": "Qtwsi",
+                                      "name": "Cancel text",
+                                      "fill": "#1A1A1A",
                                       "content": "Cancel",
                                       "fontFamily": "Inter",
                                       "fontSize": 13,
@@ -8968,18 +9028,22 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "gaZc3",
-                                  "fill": "$color-brand",
-                                  "cornerRadius": "$radius-sm",
+                                  "id": "CRmSo",
+                                  "name": "Save changes button",
+                                  "fill": "#5D2B85",
+                                  "cornerRadius": 6,
                                   "padding": [
                                     8,
                                     14
                                   ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "y3sLc",
-                                      "fill": "$color-surface",
+                                      "id": "Re3We",
+                                      "name": "Save changes text",
+                                      "fill": "#FFFFFF",
                                       "content": "Save changes",
                                       "fontFamily": "Inter",
                                       "fontSize": 13,
@@ -10820,16 +10884,17 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "SvnYS",
-                                  "name": "membersSelectWrap",
+                                  "id": "GyDBI",
+                                  "name": "membersAutocompleteWrap",
                                   "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "V98AA",
-                                      "fill": "$color-text-dark",
+                                      "id": "laLnP",
+                                      "name": "Select members label",
+                                      "fill": "#1A1A1A",
                                       "content": "Select members",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
@@ -10837,38 +10902,140 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "Wmytq",
-                                      "name": "membersSelect",
+                                      "id": "DQWCb",
+                                      "name": "Members autocomplete multiselect",
+                                      "width": "fill_container",
                                       "height": 38,
-                                      "fill": "$color-surface",
+                                      "fill": "#FFFFFF",
                                       "cornerRadius": 6,
-                                      "stroke": "$color-divider",
+                                      "stroke": "#5D2B85",
                                       "strokeWidth": 1,
                                       "strokeAlignment": "inner",
+                                      "gap": 8,
                                       "padding": [
                                         0,
-                                        12
+                                        10
                                       ],
-                                      "justifyContent": "space_between",
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "text",
-                                          "id": "N1myyV",
-                                          "fill": "$color-text-dark",
-                                          "content": "Alexey T. (pm), Nina K. (member)",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 14,
-                                          "fontWeight": "500"
+                                          "type": "frame",
+                                          "id": "yKQgh",
+                                          "name": "Selected member chips and search",
+                                          "width": "fill_container",
+                                          "gap": 6,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "WYuOC",
+                                              "name": "Alexey T. selected chip",
+                                              "fill": "#E8E1F5",
+                                              "cornerRadius": 12,
+                                              "gap": 5,
+                                              "padding": [
+                                                3,
+                                                8
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "d7Skr",
+                                                  "name": "Alexey T. selected label",
+                                                  "fill": "#5D2B85",
+                                                  "content": "Alexey T.",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "600"
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "QApI8",
+                                                  "name": "Alexey T. remove",
+                                                  "fill": "#5D2B85",
+                                                  "content": "×",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "600"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "U55BZ",
+                                              "name": "Nina K. selected chip",
+                                              "fill": "#E8E1F5",
+                                              "cornerRadius": 12,
+                                              "gap": 5,
+                                              "padding": [
+                                                3,
+                                                8
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "CbOQF",
+                                                  "name": "Nina K. selected label",
+                                                  "fill": "#5D2B85",
+                                                  "content": "Nina K.",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "600"
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "j5Nhx",
+                                                  "name": "Nina K. remove",
+                                                  "fill": "#5D2B85",
+                                                  "content": "×",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "600"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "z829p",
+                                              "name": "Member autocomplete search affordance",
+                                              "gap": 5,
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "icon",
+                                                  "id": "h1vTz",
+                                                  "name": "Member search icon",
+                                                  "width": 13,
+                                                  "height": 13,
+                                                  "icon": "search",
+                                                  "library": "lucide",
+                                                  "fill": "#666666"
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "hFoAp",
+                                                  "name": "Member search placeholder",
+                                                  "fill": "#666666",
+                                                  "content": "Search members...",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 13,
+                                                  "fontWeight": "500"
+                                                }
+                                              ]
+                                            }
+                                          ]
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "Jp9kK",
-                                          "fill": "$color-text-muted",
-                                          "content": "v",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
+                                          "type": "icon",
+                                          "id": "rFmpv",
+                                          "name": "Members autocomplete chevron",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "chevron-down",
+                                          "library": "lucide",
+                                          "fill": "#666666"
                                         }
                                       ]
                                     }

@@ -1,8 +1,8 @@
 ## Context
 
-The affected surfaces are record-list pages in `apps/user-web` and `apps/admin-web`. Current implementations and archived specs still reference text create/add buttons in some locations, while the approved UI docs and `GITiempo.pen` frames now specify primary icon-only create/add actions for contextual section and table-header entry points.
+The affected surfaces are record-list pages in `apps/user-web` and `apps/admin-web`. Current implementations and archived specs still reference text create/add buttons in some locations, while the approved UI docs and `GITiempo.pen` frames now specify primary icon-only create/add actions for contextual section and table-header entry points. Admin Invoices is intentionally excluded from visible scope until an invoice API/contract exists.
 
-Relevant source-of-truth files are `docs/ui/pages-user.md`, `docs/ui/pages-admin.md`, `docs/ui/patterns.md`, `docs/ui/components.md`, `docs/ui/accessibility.md`, `apps/user-web/AGENTS.md`, and `apps/admin-web/AGENTS.md`. The approved design frames are `Time Entries`, `Projects List`, `Admin Invoices`, `Admin Members`, and `Admin Projects`.
+Relevant source-of-truth files are `docs/ui/pages-user.md`, `docs/ui/pages-admin.md`, `docs/ui/patterns.md`, `docs/ui/components.md`, `docs/ui/accessibility.md`, `apps/user-web/AGENTS.md`, and `apps/admin-web/AGENTS.md`. The approved design frames are `Time Entries`, `Projects List`, `Admin Members`, and `Admin Projects`; the `Admin Invoices` frame remains deferred.
 
 No backend coordination is required. The existing create/edit/invite dialogs, API clients, validation, routes, and mutation flows remain responsible for the actual operations; only opener affordances change.
 
@@ -11,13 +11,14 @@ No backend coordination is required. The existing create/edit/invite dialogs, AP
 **Goals:**
 - Replace contextual create/add text openers with filled primary icon-only PrimeVue actions on the specified user and admin pages.
 - Keep tooltip text and `aria-label` explicit and equal to the previous action intent.
-- Preserve existing opener behavior: selected day prefill for Time Entries, selected project prefill for User Projects, invoice/member/project create or invite flow entry for admin pages, and `/projects/new` navigation for Admin Projects.
+- Preserve existing opener behavior: selected day prefill for Time Entries, selected project prefill for User Projects, member invite flow entry, and `/projects/new` navigation for Admin Projects.
+- Keep the temporary Admin Invoices section invisible until invoice contracts exist.
 - Cover both desktop/table and mobile-card branches where the action appears, especially User Projects mobile sections.
 - Keep implementation aligned with approved `.pen` layout, token-backed styling, and PrimeVue component conventions.
 
 **Non-Goals:**
 - Changing dialog titles, dialog submit buttons, form field order, validation, API request payloads, or mutation behavior.
-- Adding new backend endpoints, shared contracts, database changes, or OpenAPI changes.
+- Adding new backend endpoints, shared contracts, database changes, OpenAPI changes, or visible invoice UI.
 - Refactoring unrelated row actions, delete/edit flows, filters, pagination, or table shells.
 - Replacing PrimeVue buttons with custom raw controls.
 

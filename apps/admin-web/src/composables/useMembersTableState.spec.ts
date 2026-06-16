@@ -20,7 +20,7 @@ function createMembers(): WorkspaceMemberListResponse {
       id: 'member-1',
       joinedAt: '2026-05-01T10:00:00.000Z',
       lastActiveAt: now.toISOString(),
-      projectsAssignedCount: 1,
+      projectsAssignedCount: 17,
       role: 'pm',
       userId: 'user-2',
       workspaceId: 'workspace-1',
@@ -105,6 +105,28 @@ function createProjects(): ProjectListResponse {
       visibility: 'private',
       workspaceId: 'workspace-1',
     },
+    {
+      color: null,
+      createdAt: '2026-05-01T10:00:00.000Z',
+      description: null,
+      id: 'project-3',
+      isActive: false,
+      members: [
+        {
+          avatarUrl: null,
+          displayName: 'Pat PM',
+          email: 'pat@example.com',
+          role: 'pm',
+          userId: 'user-2',
+        },
+      ],
+      name: 'Legacy Migration',
+      source: 'manual',
+      totalSeconds: 7200,
+      updatedAt: '2026-05-01T10:00:00.000Z',
+      visibility: 'private',
+      workspaceId: 'workspace-1',
+    },
   ];
 }
 
@@ -146,6 +168,7 @@ describe('useMembersTableState', () => {
     });
     expect(state.projectFilterOptions.value).toEqual([
       { label: 'Billing API', value: 'project-2' },
+      { label: 'Legacy Migration', value: 'project-3' },
       { label: 'Project Orion', value: 'project-1' },
     ]);
     expect(state.emptyDescription.value).toBe('No members match the current filters.');

@@ -8,7 +8,6 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import {
-  SectionHeader,
   StatCard,
   SurfaceCard,
   useIsMobileViewport,
@@ -258,12 +257,6 @@ onMounted(fetchAll);
     </template>
 
     <template v-else>
-      <SectionHeader
-        title="Projects"
-        description="Manage project visibility, member assignments, and manual project creation."
-        variant="page"
-      />
-
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Active Projects"

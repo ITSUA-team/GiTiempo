@@ -1,22 +1,15 @@
 ## MODIFIED Requirements
 
-### Requirement: Invoice Creation Workflow
-The invoices page SHALL provide invoice creation through a modal workflow opened from the invoices table header.
+### Requirement: Deferred Invoice UI
+The invoices page UI SHALL remain hidden until an invoice API/contract exists.
 
-#### Scenario: Create invoice from table-header icon action
+#### Scenario: Deferred invoice route renders no temporary invoice section
 
 - **GIVEN** a user opens the invoices page
-- **WHEN** the invoices table header renders
-- **THEN** an icon-only primary action sits next to the table search control
-- **AND** the action exposes tooltip and accessible label copy `Create invoice`
-- **AND** activating the action opens the invoice creation dialog.
+- **WHEN** the route content renders
+- **THEN** the page does not render an invoice table, search control, create action, or modal dialog
+- **AND** the admin shell navigation does not expose an Invoices entry while the invoice UI is deferred.
 
-#### Scenario: Create invoice from dialog
-
-- GIVEN a user opens the invoice creation flow
-- WHEN the dialog is rendered
-- THEN the dialog exposes project, date range, rate, discount, and total amount inputs
-- AND the dialog submit action copy remains unchanged.
 
 ### Requirement: Administrative Management Pages
 The members, projects, and settings pages MUST support the documented administrative management flows.

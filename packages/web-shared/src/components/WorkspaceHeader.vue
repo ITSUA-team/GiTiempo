@@ -55,7 +55,7 @@ const props = withDefaults(
     counterpartLabel: string;
     centerContentAlign?: CenterContentAlign;
     displayName: string;
-    pageName: string;
+    pageName?: string;
     productName?: string;
     profileContextLabel?: string;
     settingsIcon?: Component;
@@ -69,6 +69,7 @@ const props = withDefaults(
   }>(),
   {
     centerContentAlign: "center",
+    pageName: undefined,
     productName: "GiTiempo",
     profileContextLabel: undefined,
     settingsIcon: undefined,
@@ -81,6 +82,8 @@ const props = withDefaults(
 
 const slots = useSlots();
 const hasCenterSlot = computed(() => Boolean(slots.center));
+const normalizedPageName = computed(() => props.pageName?.trim() ?? "");
+const hasPageName = computed(() => normalizedPageName.value.length > 0);
 
 const emit = defineEmits<{
   signOut: [];
@@ -264,19 +267,34 @@ onBeforeUnmount(() => {
   <header
     class="bg-surface-primary after:bg-divider sticky top-0 z-20 grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[4rem_auto] items-center gap-x-4 px-4 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:content-[''] sm:h-16 sm:grid-rows-1 sm:px-6"
   >
-    <div class="row-start-1 flex items-center gap-3">
+    <div class="row-start-1 flex min-w-0 items-center gap-3">
       <div
         class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs leading-[14px] font-semibold"
       >
         {{ props.workspaceShortName }}
       </div>
-      <div class="flex min-w-0 items-center gap-2">
-        <p class="text-text-dark truncate text-base leading-[19px] font-semibold">
+      <div
+        v-if="hasPageName"
+        class="flex min-w-0 items-center gap-2"
+        data-testid="workspace-header-breadcrumb"
+      >
+        <p class="text-base font-semibold">
           {{ props.productName }}
         </p>
-        <span class="text-text-subtle text-[13px] leading-4 font-medium">/</span>
-        <p class="text-text-dark truncate text-[13px] leading-4 font-semibold">
-          {{ props.pageName }}
+
+        <span class="text-text-muted text-[13px] font-medium">/</span>
+
+        <p class="text-text-dark truncate text-[13px] font-semibold">
+          {{ normalizedPageName }}
+        </p>
+      </div>
+
+      <div
+        v-else
+        class="flex flex-col gap-0.5"
+      >
+        <p class="text-base font-semibold">
+          {{ props.productName }}
         </p>
       </div>
     </div>
