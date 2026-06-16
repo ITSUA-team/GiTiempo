@@ -9,6 +9,7 @@ import { createProtectedRouter } from "@gitiempo/web-shared/router";
 import AppShell from "@/components/layout/AppShell.vue";
 import { routeNames } from "@/constants/routes";
 import LoginView from "@/views/LoginView.vue";
+import RegisterView from "@/views/RegisterView.vue";
 import { pinia } from "@/stores";
 import { useAuthStore } from "@/stores/auth";
 
@@ -43,6 +44,14 @@ const publicRoutes: RouteRecordRaw[] = [
     path: "/login",
     name: routeNames.login,
     component: LoginView,
+    meta: {
+      guestOnly: true,
+    },
+  },
+  {
+    path: "/register",
+    name: routeNames.register,
+    component: RegisterView,
     meta: {
       guestOnly: true,
     },

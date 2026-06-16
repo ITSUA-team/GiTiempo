@@ -20,6 +20,25 @@ function mountForm(props?: Partial<InstanceType<typeof AuthSignInForm>["$props"]
   });
 }
 
+function mountFormWithSlot() {
+  return mount(AuthSignInForm, {
+    props: {
+      description: "Use your workspace account to continue.",
+      emailPlaceholder: "alex@example.com",
+      errorMessage: null,
+      isSubmitting: false,
+      title: "Sign in",
+    },
+    slots: {
+      "secondary-actions":
+        '<button type="button" data-testid="custom-secondary-action">Create workspace</button>',
+    },
+    global: {
+      plugins: [PrimeVue],
+    },
+  });
+}
+
 describe("AuthSignInForm", () => {
   it("shows validation errors and blocks submit for invalid data", async () => {
     const wrapper = mountForm();
@@ -69,5 +88,20 @@ describe("AuthSignInForm", () => {
     expect(wrapper.get('[data-testid="sign-in-error"]').text()).toBe(
       "Invalid credentials",
     );
+  });
+
+  it("renders custom secondary actions below Google sign-in", () => {
+    const wrapper = mountFormWithSlot();
+
+    expect(wrapper.get('[data-testid="custom-secondary-action"]').text()).toBe(
+      "Create workspace",
+    );
+  });
+
+  it("associates the email label with the rendered input", () => {
+    const wrapper = mountForm();
+
+    expect(wrapper.get('label[for="sign-in-email"]').text()).toBe("Email");
+    expect(wrapper.get("input#sign-in-email").attributes("name")).toBe("email");
   });
 });

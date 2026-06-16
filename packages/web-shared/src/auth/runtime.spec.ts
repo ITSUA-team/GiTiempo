@@ -37,6 +37,11 @@ function createRuntime(overrides?: {
         refreshToken: "refresh-token",
       }),
       logoutAuthSession: async () => undefined,
+      registerWorkspaceOwner: async () => ({
+        accessToken: "registered-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "registered-refresh-token",
+      }),
       refreshAuthSession: async () => ({
         accessToken: "access-token-next",
         accessTokenExpiresIn: 900,
@@ -97,6 +102,24 @@ describe("createDefaultAuthRuntime", () => {
 
     await expect(runtime.signInWithGoogle()).resolves.toBe("google-id-token");
     expect(firebaseMocks.signInWithPopup).toHaveBeenCalledOnce();
+  });
+
+  it("delegates workspace registration through the shared auth client", async () => {
+    const runtime = createRuntime();
+
+    await expect(
+      runtime.registerWorkspaceOwner({
+        email: "owner@example.com",
+        fullName: "Owner Name",
+        ownerAcknowledgement: true,
+        password: "password123",
+        workspaceName: "Workspace Alpha",
+      }),
+    ).resolves.toEqual({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    });
   });
 
   it("signs out of the identity provider when Firebase is configured", async () => {

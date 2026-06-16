@@ -81,9 +81,7 @@ function hasUnsafeRedirectCharacter(redirect: string): boolean {
   return false;
 }
 
-function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
-  const redirect = to.query.redirect;
-
+export function normalizeRedirectTargetValue(redirect: unknown): string | null {
   if (
     typeof redirect !== "string" ||
     !redirect.startsWith("/") ||
@@ -104,6 +102,10 @@ function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
   } catch {
     return null;
   }
+}
+
+function normalizeRedirectTarget(to: RouteLocationNormalized): string | null {
+  return normalizeRedirectTargetValue(to.query.redirect);
 }
 
 function getDefaultAuthenticatedRoute(

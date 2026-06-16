@@ -34,6 +34,11 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
       refreshToken: "refresh-token-next",
     }),
     logoutSession: async () => undefined,
+    registerWorkspaceOwner: async () => ({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    }),
     refreshSession: async () => ({
       accessToken: "restored-access-token",
       accessTokenExpiresIn: 900,
@@ -114,6 +119,24 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
+  it("falls back to the dashboard when the login redirect query is unsafe", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { router, wrapper } = await mountLoginView(
+      "/login?redirect=%2F%2Fevil.example.test%2Fescape",
+    );
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("password123");
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
+    await wrapper.get("form").trigger("submit");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
   it("shows sign-in errors without navigating away from login", async () => {
     setAuthRuntimeForTesting(
       createRuntimeMock({
@@ -170,5 +193,31 @@ describe("LoginView", () => {
     expect(workspaceLink.attributes("href")).toBe(
       "https://admin.example.test/login",
     );
+  });
+
+  it("navigates to register from the create workspace action without reusing login errors", async () => {
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        signInWithEmailPassword: async () => {
+          throw new Error("Invalid user credentials");
+        },
+      }),
+    );
+    const { router, wrapper } = await mountLoginView();
+
+    await wrapper.get('[data-testid="sign-in-email"]').setValue("alexey@example.com");
+    await wrapper.get('[data-testid="sign-in-password"]').setValue("bad-password");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(wrapper.text()).toContain("Invalid user credentials");
+
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.register,
+    );
+    await wrapper.get('[data-testid="sign-in-create-workspace"]').trigger("click");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.register);
   });
 });

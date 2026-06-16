@@ -9,8 +9,10 @@ import {
   useWorkspaceSettingsQuery,
 } from '@/composables/query';
 
-import { adminSettingsClient } from '@/services/admin-settings-client';
-import type { AdminSettingsClient } from '@/services/admin-settings-client';
+import {
+  getAdminSettingsClient,
+  type AdminSettingsClient,
+} from '@/services/admin-settings-client';
 import { adminSettingsKeys, type AdminServerStateScope } from '@/lib/query-keys';
 
 interface AdminSettingsDataResult {
@@ -40,7 +42,7 @@ function getErrorMessage(error: unknown): string {
 
 export function useAdminSettingsData({
   accessToken,
-  client = adminSettingsClient,
+  client = getAdminSettingsClient(),
   onError,
   scope,
 }: UseAdminSettingsDataOptions) {

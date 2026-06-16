@@ -17,12 +17,12 @@ const testMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/services/admin-settings-client', () => ({
-  adminSettingsClient: {
+  getAdminSettingsClient: () => ({
     getWorkspace: testMocks.getWorkspace,
     getWorkspaceSettings: testMocks.getWorkspaceSettings,
     updateWorkspace: testMocks.updateWorkspace,
     updateWorkspaceSettings: testMocks.updateWorkspaceSettings,
-  },
+  }),
 }));
 
 vi.mock('@/composables/feedback/useToasts', () => ({
