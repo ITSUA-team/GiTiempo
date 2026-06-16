@@ -86,27 +86,28 @@ const members: WorkspaceMemberListResponse = [
 ];
 
 const stubs = {
-  MultiSelect: {
-    name: 'MultiSelect',
+  AutoComplete: {
+    name: 'AutoComplete',
     props: {
-      display: String,
-      filter: Boolean,
+      completeOnFocus: Boolean,
+      dropdown: Boolean,
+      dropdownMode: String,
       fluid: Boolean,
+      forceSelection: Boolean,
       inputId: String,
       invalid: Boolean,
-      maxSelectedLabels: Number,
+      minLength: Number,
       multiple: Boolean,
       name: String,
-      optionLabel: String,
-      optionValue: String,
-      options: Array,
+      optionLabel: Function,
       placeholder: String,
       pt: Object,
+      suggestions: Array,
     },
     template: `<div>
       <input :id="inputId" :name="name" :placeholder="placeholder" />
-      <span v-for="option in options" :key="option.value">
-        {{ option.label }}
+      <span v-for="suggestion in suggestions" :key="suggestion">
+        {{ optionLabel ? optionLabel(suggestion) : suggestion }}
       </span>
     </div>`,
   },
@@ -158,19 +159,16 @@ describe('ProjectEditForm', () => {
     );
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
-    const memberInput = wrapper.getComponent({ name: 'MultiSelect' });
+    const memberInput = wrapper.getComponent({ name: 'AutoComplete' });
     const visibilityInput = wrapper.getComponent({ name: 'Select' });
 
-    expect(memberInput.props('display')).toBe('chip');
-    expect(memberInput.props('filter')).toBe(true);
-    expect(memberInput.props('optionLabel')).toBe('label');
-    expect(memberInput.props('optionValue')).toBe('value');
-    expect(memberInput.props('maxSelectedLabels')).toBe(2);
-    expect(memberInput.props('options')).toEqual([
-      { label: 'Pat PM', value: 'user-2' },
-      { label: 'member@example.com', value: 'user-3' },
-    ]);
-    expect(memberInput.props('placeholder')).toBe('Select members');
+    expect(memberInput.props('multiple')).toBe(true);
+    expect(memberInput.props('dropdown')).toBe(true);
+    expect(memberInput.props('forceSelection')).toBe(true);
+    expect(memberInput.props('completeOnFocus')).toBe(true);
+    expect(memberInput.props('minLength')).toBe(0);
+    expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
+    expect(memberInput.props('placeholder')).toBe('Search members...');
     expect(visibilityInput.props('optionLabel')).toBe('label');
     expect(visibilityInput.props('optionValue')).toBe('value');
     expect(visibilityInput.props('options')).toEqual([

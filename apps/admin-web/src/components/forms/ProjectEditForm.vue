@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
@@ -8,8 +9,8 @@ import { EditFormPanel, projectEditFormSchema } from '@gitiempo/web-shared';
 import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
+import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 
 const props = defineProps<{
@@ -28,23 +29,42 @@ const emit = defineEmits<{
 const memberOptions = props.allMembers
   .filter((m) => m.role !== WorkspaceRoles.Admin)
   .map((m) => ({ label: m.displayName ?? m.email, value: m.userId }));
+const memberSuggestions = ref(memberOptions.map((option) => option.value));
 
 const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
 
-const memberMultiSelectPt = {
-  root: {
-    class: 'min-h-[38px] w-full items-center rounded-[6px] font-sans text-[14px] font-medium',
+const memberAutoCompletePt = {
+  root: { class: 'min-h-[38px] w-full' },
+  pcInputText: {
+    root: {
+      class: 'min-h-[38px] w-full rounded-[6px] font-sans text-[14px] font-medium',
+    },
   },
-  labelContainer: { class: 'flex min-h-[38px] items-center' },
-  label: {
-    class: 'flex min-h-[38px] items-center font-sans text-[14px] font-medium',
+  inputMultiple: {
+    class: 'min-h-[38px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
   },
   chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
   option: { class: 'font-sans text-[14px]' },
 } as const;
+
+interface AutoCompleteCompleteEvent {
+  query: string;
+}
+
+function getMemberOptionLabel(memberId: string): string {
+  return memberOptions.find((option) => option.value === memberId)?.label ?? memberId;
+}
+
+function handleMemberComplete(event: AutoCompleteCompleteEvent): void {
+  const query = event.query.trim().toLowerCase();
+
+  memberSuggestions.value = memberOptions
+    .filter((option) => option.label.toLowerCase().includes(query))
+    .map((option) => option.value);
+}
 
 const initialValues: ProjectEditFormInput = {
   visibility: props.project.visibility,
@@ -85,19 +105,22 @@ function handleSave({
             for="edit-members"
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
           >Select members</label>
-          <MultiSelect
+          <AutoComplete
             input-id="edit-members"
             name="memberIds"
-            :options="memberOptions"
-            display="chip"
-            filter
-            option-label="label"
-            option-value="value"
-            placeholder="Select members"
+            :suggestions="memberSuggestions"
+            :option-label="getMemberOptionLabel"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            force-selection
+            multiple
+            :min-length="0"
+            placeholder="Search members..."
             :invalid="$form.memberIds?.invalid"
-            :max-selected-labels="2"
-            :pt="memberMultiSelectPt"
+            :pt="memberAutoCompletePt"
             fluid
+            @complete="handleMemberComplete"
           />
         </div>
 
