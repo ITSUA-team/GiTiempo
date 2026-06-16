@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
 import { timeEntries } from '../schemas/time-entries.schema';
 import { calculateDurationSeconds } from '../time-entry-duration';
 import { TimeEntriesService } from './time-entries.service';
@@ -35,6 +36,95 @@ const completedEntry = {
   source: 'manual' as const,
   createdAt: new Date('2026-01-01T10:00:00.000Z'),
   updatedAt: new Date('2026-01-01T10:00:00.000Z'),
+};
+
+const projectRow = {
+  id: 'project-1',
+  workspaceId: user.workspaceId,
+  name: 'org/repo',
+  description: null,
+  color: null,
+  visibility: 'private' as const,
+  isActive: true,
+  createdAt: new Date('2026-01-01T10:00:00.000Z'),
+  updatedAt: new Date('2026-01-01T10:00:00.000Z'),
+};
+
+const taskRow = {
+  id: 'task-1',
+  workspaceId: user.workspaceId,
+  projectId: projectRow.id,
+  title: 'Issue title',
+  status: 'open' as const,
+  isActive: true,
+  createdAt: new Date('2026-01-01T10:00:00.000Z'),
+  updatedAt: new Date('2026-01-01T10:00:00.000Z'),
+};
+
+const projectResponse = {
+  id: projectRow.id,
+  workspaceId: user.workspaceId,
+  name: 'org/repo',
+  description: null,
+  color: null,
+  visibility: 'private' as const,
+  source: 'github' as const,
+  totalSeconds: 0,
+  members: [],
+  isActive: true,
+  createdAt: '2026-01-01T10:00:00.000Z',
+  updatedAt: '2026-01-01T10:00:00.000Z',
+};
+
+const projectDetailResponse = {
+  ...projectResponse,
+  providerSummary: {
+    source: 'github' as const,
+    externalType: 'repository',
+    externalKey: 'org/repo',
+    externalUrl: 'https://github.com/org/repo',
+  },
+  trackedSummary: {
+    totalSeconds: 0,
+    billableSeconds: 0,
+    billableShare: null,
+    lastActivityAt: null,
+  },
+  assignedMembersSummary: {
+    count: 0,
+    previewMembers: [],
+    remainingCount: 0,
+  },
+};
+
+const taskResponse = {
+  id: taskRow.id,
+  workspaceId: user.workspaceId,
+  projectId: projectRow.id,
+  title: 'Issue title',
+  status: 'open' as const,
+  isActive: true,
+  githubIssue: { githubRepo: 'org/repo', issueNumber: 123 },
+  createdAt: '2026-01-01T10:00:00.000Z',
+  updatedAt: '2026-01-01T10:00:00.000Z',
+};
+
+const visibleGitHubIssue = {
+  id: 'issue-1',
+  nodeId: 'I_kwDO',
+  repository: { owner: 'org', name: 'repo', fullName: 'org/repo' },
+  number: 123,
+  title: 'Issue title',
+  state: 'open' as const,
+  url: 'https://github.com/org/repo/issues/123',
+  updatedAt: '2026-01-01T10:00:00.000Z',
+};
+
+const materializeInput = {
+  githubRepo: 'org/repo',
+  issueNumber: 123,
+  issueTitle: 'Issue title',
+  sourceType: 'repository' as const,
 };
 
 function selectRows(rows: unknown[]) {
@@ -604,17 +694,6 @@ describe('TimeEntriesService', () => {
 
   it('starts GitHub timer transactionally', async () => {
     const tx = {
-      select: vi.fn().mockReturnValue(
-        selectRowsForUpdate([
-          {
-            id: 'task-1',
-            isActive: true,
-            projectId: 'project-1',
-            status: 'open',
-            workspaceId: user.workspaceId,
-          },
-        ]),
-      ),
       insert: vi.fn((table) => {
         if (table === timeEntries) {
           return {
@@ -642,17 +721,10 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
     );
-    Object.defineProperty(service, 'findOrCreateGitHubProject', {
+    Object.defineProperty(service, 'materializeGitHubTaskTarget', {
       value: vi.fn().mockResolvedValue({
         project: { id: 'project-1', isActive: true },
-        created: true,
-      }),
-    });
-    Object.defineProperty(service, 'findOrCreateGitHubTask', {
-      value: vi.fn().mockResolvedValue({
-        id: 'task-1',
-        isActive: true,
-        status: 'open',
+        task: { id: 'task-1', isActive: true, status: 'open' },
       }),
     });
     Object.defineProperty(service, 'requireEntryResponse', {
@@ -666,7 +738,7 @@ describe('TimeEntriesService', () => {
     });
 
     expect(db.transaction).toHaveBeenCalledOnce();
-    expect(tx.select).toHaveBeenCalled();
+    expect(tx.insert).toHaveBeenCalledWith(timeEntries);
   });
 
   it('rejects GitHub timers for closed tasks', async () => {
@@ -695,18 +767,10 @@ describe('TimeEntriesService', () => {
       {} as never,
       mockUsersActivity as never,
     );
-    Object.defineProperty(service, 'findOrCreateGitHubProject', {
-      value: vi.fn().mockResolvedValue({
-        project: { id: 'project-1', isActive: true },
-        created: true,
-      }),
-    });
-    Object.defineProperty(service, 'findOrCreateGitHubTask', {
-      value: vi.fn().mockResolvedValue({
-        id: 'task-1',
-        isActive: true,
-        status: 'closed',
-      }),
+    Object.defineProperty(service, 'materializeGitHubTaskTarget', {
+      value: vi
+        .fn()
+        .mockRejectedValue(new UnprocessableEntityException('Task is closed')),
     });
 
     await expect(
@@ -717,5 +781,286 @@ describe('TimeEntriesService', () => {
       }),
     ).rejects.toThrow('Task is closed');
     expect(tx.insert).not.toHaveBeenCalled();
+  });
+
+  it('materializes a connected GitHub issue without time-entry side effects', async () => {
+    const usersActivity = {
+      touchLastActive: vi.fn().mockResolvedValue(undefined),
+    };
+    const tx = {
+      insert: vi.fn((table) => {
+        if (table === timeEntries) throw new Error('unexpected time entry');
+        return {
+          values: vi.fn().mockReturnValue({
+            onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+          }),
+        };
+      }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const projects = {
+      getProject: vi.fn().mockResolvedValue(projectDetailResponse),
+      requireVisibleProject: vi.fn(),
+    };
+    const tasks = { getTask: vi.fn().mockResolvedValue(taskResponse) };
+    const github = {
+      requireVisibleIssue: vi.fn().mockResolvedValue(visibleGitHubIssue),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      projects as never,
+      tasks as never,
+      usersActivity as never,
+      github as never,
+    );
+    Object.defineProperty(service, 'findGitHubTaskRef', {
+      value: vi.fn().mockResolvedValue(null),
+    });
+    Object.defineProperty(service, 'findOrCreateGitHubProject', {
+      value: vi.fn().mockResolvedValue({ project: projectRow, created: false }),
+    });
+    Object.defineProperty(service, 'findOrCreateGitHubTask', {
+      value: vi.fn().mockResolvedValue(taskRow),
+    });
+    Object.defineProperty(service, 'requireTaskRowForUpdate', {
+      value: vi.fn().mockResolvedValue(taskRow),
+    });
+
+    await expect(
+      service.materializeGitHubIssueTimerTarget(user, materializeInput),
+    ).resolves.toEqual({ project: projectResponse, task: taskResponse });
+
+    expect(github.requireVisibleIssue).toHaveBeenCalledWith(
+      user,
+      materializeInput,
+    );
+    expect(tx.insert).not.toHaveBeenCalledWith(timeEntries);
+    expect(usersActivity.touchLastActive).not.toHaveBeenCalled();
+  });
+
+  it('reuses an existing GitHub issue task mapping', async () => {
+    const db = { transaction: vi.fn((callback) => callback({})) };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const projects = {
+      getProject: vi.fn().mockResolvedValue(projectDetailResponse),
+      requireVisibleProject: vi.fn(),
+    };
+    const tasks = { getTask: vi.fn().mockResolvedValue(taskResponse) };
+    const github = {
+      requireVisibleIssue: vi.fn().mockResolvedValue(visibleGitHubIssue),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      projects as never,
+      tasks as never,
+      mockUsersActivity as never,
+      github as never,
+    );
+    const createProject = vi.fn();
+    const createTask = vi.fn();
+    Object.defineProperty(service, 'findGitHubTaskRef', {
+      value: vi
+        .fn()
+        .mockResolvedValue({ taskId: taskRow.id, projectId: projectRow.id }),
+    });
+    Object.defineProperty(service, 'requireTaskRowForUpdate', {
+      value: vi.fn().mockResolvedValue(taskRow),
+    });
+    Object.defineProperty(service, 'requireProjectRow', {
+      value: vi.fn().mockResolvedValue(projectRow),
+    });
+    Object.defineProperty(service, 'findOrCreateGitHubProject', {
+      value: createProject,
+    });
+    Object.defineProperty(service, 'findOrCreateGitHubTask', {
+      value: createTask,
+    });
+
+    await service.materializeGitHubIssueTimerTarget(user, materializeInput);
+
+    expect(createProject).not.toHaveBeenCalled();
+    expect(createTask).not.toHaveBeenCalled();
+    expect(tasks.getTask).toHaveBeenCalledWith(user, taskRow.id);
+  });
+
+  it('preserves non-admin visibility for a newly created GitHub project', async () => {
+    const assignmentInsert = {
+      values: vi.fn().mockReturnValue({
+        onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+      }),
+    };
+    const tx = {
+      insert: vi.fn((table) => {
+        if (table === projectAssignments) return assignmentInsert;
+        throw new Error('unexpected insert');
+      }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
+    };
+    const projects = {
+      getProject: vi.fn().mockResolvedValue(projectDetailResponse),
+      requireVisibleProject: vi.fn(),
+    };
+    const tasks = { getTask: vi.fn().mockResolvedValue(taskResponse) };
+    const github = {
+      requireVisibleIssue: vi.fn().mockResolvedValue(visibleGitHubIssue),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      projects as never,
+      tasks as never,
+      mockUsersActivity as never,
+      github as never,
+    );
+    Object.defineProperty(service, 'findGitHubTaskRef', {
+      value: vi.fn().mockResolvedValue(null),
+    });
+    Object.defineProperty(service, 'findOrCreateGitHubProject', {
+      value: vi.fn().mockResolvedValue({ project: projectRow, created: true }),
+    });
+    Object.defineProperty(service, 'findOrCreateGitHubTask', {
+      value: vi.fn().mockResolvedValue(taskRow),
+    });
+    Object.defineProperty(service, 'requireTaskRowForUpdate', {
+      value: vi.fn().mockResolvedValue(taskRow),
+    });
+
+    await service.materializeGitHubIssueTimerTarget(user, materializeInput);
+
+    expect(tx.insert).toHaveBeenCalledWith(projectAssignments);
+    expect(assignmentInsert.values).toHaveBeenCalledWith({
+      workspaceId: user.workspaceId,
+      projectId: projectRow.id,
+      userId: user.sub,
+      assignedBy: user.sub,
+    });
+  });
+
+  it('rejects disconnected GitHub materialization before creating work', async () => {
+    const db = { transaction: vi.fn() };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
+    };
+    const github = {
+      requireVisibleIssue: vi
+        .fn()
+        .mockRejectedValue(
+          new NotFoundException('GitHub connection not found'),
+        ),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      github as never,
+    );
+
+    await expect(
+      service.materializeGitHubIssueTimerTarget(user, materializeInput),
+    ).rejects.toThrow('GitHub connection not found');
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects invisible GitHub issues before creating work', async () => {
+    const db = { transaction: vi.fn() };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
+    };
+    const github = {
+      requireVisibleIssue: vi
+        .fn()
+        .mockRejectedValue(new NotFoundException('GitHub issue not found')),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      github as never,
+    );
+
+    await expect(
+      service.materializeGitHubIssueTimerTarget(user, materializeInput),
+    ).rejects.toThrow('GitHub issue not found');
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects closed mapped tasks as timer targets', async () => {
+    const db = { transaction: vi.fn((callback) => callback({})) };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const github = {
+      requireVisibleIssue: vi.fn().mockResolvedValue(visibleGitHubIssue),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      github as never,
+    );
+    Object.defineProperty(service, 'findGitHubTaskRef', {
+      value: vi
+        .fn()
+        .mockResolvedValue({ taskId: taskRow.id, projectId: projectRow.id }),
+    });
+    Object.defineProperty(service, 'requireTaskRowForUpdate', {
+      value: vi.fn().mockResolvedValue({ ...taskRow, status: 'closed' }),
+    });
+    Object.defineProperty(service, 'requireProjectRow', {
+      value: vi.fn().mockResolvedValue(projectRow),
+    });
+
+    await expect(
+      service.materializeGitHubIssueTimerTarget(user, materializeInput),
+    ).rejects.toThrow('Task is closed');
+  });
+
+  it('rejects inactive mapped work as a timer target', async () => {
+    const db = { transaction: vi.fn((callback) => callback({})) };
+    const members = {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const github = {
+      requireVisibleIssue: vi.fn().mockResolvedValue(visibleGitHubIssue),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      github as never,
+    );
+    Object.defineProperty(service, 'findGitHubTaskRef', {
+      value: vi
+        .fn()
+        .mockResolvedValue({ taskId: taskRow.id, projectId: projectRow.id }),
+    });
+    Object.defineProperty(service, 'requireTaskRowForUpdate', {
+      value: vi.fn().mockResolvedValue(taskRow),
+    });
+    Object.defineProperty(service, 'requireProjectRow', {
+      value: vi.fn().mockResolvedValue({ ...projectRow, isActive: false }),
+    });
+
+    await expect(
+      service.materializeGitHubIssueTimerTarget(user, materializeInput),
+    ).rejects.toThrow('Project is inactive');
   });
 });

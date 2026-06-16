@@ -17,9 +17,14 @@ import {
 } from "@gitiempo/web-shared";
 
 import { createDefaultProfileGitHubClient } from "@/config/clients";
-import type { ProfileGitHubClient } from "@/services/profile-github-client";
+import type { GitHubClient } from "@/services/github-client";
 
 /* eslint-disable no-unused-vars */
+
+export type ProfileGitHubClient = Pick<
+  GitHubClient,
+  "disconnect" | "getAuthUrl" | "getConnectionStatus"
+>;
 
 interface UseProfileGithubConnectionOptions {
   client?: ProfileGitHubClient;

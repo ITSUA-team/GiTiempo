@@ -5,13 +5,17 @@ import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Textarea from "primevue/textarea";
-import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { filterAutocompleteOptions, useIsMobileViewport } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
+import {
+  isWorkspaceProjectOption,
+  type TopBarProjectOption,
+  type TopBarTaskOption,
+} from "@/lib/top-bar-task-picker-options";
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
 
-type ProjectAutoCompleteValue = ProjectResponse | string | null;
+type ProjectAutoCompleteValue = TopBarProjectOption | string | null;
 
 interface NewTaskOption {
   id: typeof TOP_BAR_TIMER_NEW_TASK_ID;
@@ -19,7 +23,7 @@ interface NewTaskOption {
   title: "New task";
 }
 
-type TaskPickerOption = TaskResponse | NewTaskOption;
+type TaskPickerOption = TopBarTaskOption | NewTaskOption;
 type TaskAutoCompleteValue = TaskPickerOption | string | null;
 
 interface AutoCompleteCompleteEvent {
@@ -39,13 +43,14 @@ const props = defineProps<{
   isPrimaryActionDisabled: boolean;
   isPrimaryActionPending: boolean;
   primaryActionLabel: string;
-  projectOptions: ProjectResponse[];
+  githubSourcesErrorMessage: string | null;
+  projectOptions: TopBarProjectOption[];
   projectsErrorMessage: string | null;
   selectedDescription: string;
   selectedProjectId: string | null;
   selectedTaskId: string | null;
   selectionUpdateErrorMessage: string | null;
-  taskOptions: TaskResponse[];
+  taskOptions: TopBarTaskOption[];
   tasksErrorMessage: string | null;
   timerActionErrorMessage: string | null;
 }>();
@@ -94,14 +99,16 @@ const newTaskOption: NewTaskOption = {
 };
 const taskPickerOptions = computed<TaskPickerOption[]>(() => [
   ...props.taskOptions,
-  newTaskOption,
+  ...(canCreateTaskInSelectedProject.value ? [newTaskOption] : []),
 ]);
 const mobileProjectModel = shallowRef<ProjectAutoCompleteValue>(null);
 const mobileTaskModel = shallowRef<TaskAutoCompleteValue>(null);
-const projectSuggestions = shallowRef<ProjectResponse[]>([]);
+const projectSuggestions = shallowRef<TopBarProjectOption[]>([]);
 const taskSuggestions = shallowRef<TaskPickerOption[]>([]);
 const isNewTaskSelected = computed(
-  () => props.selectedTaskId === TOP_BAR_TIMER_NEW_TASK_ID,
+  () =>
+    props.selectedTaskId === TOP_BAR_TIMER_NEW_TASK_ID &&
+    canCreateTaskInSelectedProject.value,
 );
 const hasSelectedProjectOption = computed(() =>
   isProjectOption(mobileProjectModel.value),
@@ -130,8 +137,15 @@ const isPrimaryButtonDisabled = computed(
 const isConfirmButtonDisabled = computed(
   () => props.isConfirmSelectionDisabled || isSelectionModelIncomplete.value,
 );
-const selectedProjectName = computed(
-  () => findProjectOption(props.selectedProjectId)?.name ?? null,
+const selectedProjectOption = computed(() => findProjectOption(props.selectedProjectId));
+const selectedProjectName = computed(() => selectedProjectOption.value?.name ?? null);
+const canCreateTaskInSelectedProject = computed(() =>
+  isWorkspaceProjectOption(selectedProjectOption.value),
+);
+const taskHelperText = computed(() =>
+  canCreateTaskInSelectedProject.value
+    ? "Visible tasks are listed first. New task is the last option. New time entries inherit the selected task billable default."
+    : "Open GitHub issues from this source are listed. Pick an issue to use its local timer task.",
 );
 const newTaskHint = computed(() => {
   const projectName = selectedProjectName.value ?? "the selected project";
@@ -148,7 +162,7 @@ const primaryButtonLoading = computed(() =>
     : props.isCreatingTask,
 );
 
-function findProjectOption(projectId: string | null): ProjectResponse | null {
+function findProjectOption(projectId: string | null): TopBarProjectOption | null {
   if (!projectId) {
     return null;
   }
@@ -161,7 +175,7 @@ function findTaskOption(taskId: string | null): TaskPickerOption | null {
     return null;
   }
 
-  if (taskId === TOP_BAR_TIMER_NEW_TASK_ID) {
+  if (taskId === TOP_BAR_TIMER_NEW_TASK_ID && canCreateTaskInSelectedProject.value) {
     return newTaskOption;
   }
 
@@ -170,7 +184,7 @@ function findTaskOption(taskId: string | null): TaskPickerOption | null {
 
 function isProjectOption(
   value: ProjectAutoCompleteValue | undefined,
-): value is ProjectResponse {
+): value is TopBarProjectOption {
   return typeof value === "object" && value !== null && "name" in value;
 }
 
@@ -223,7 +237,7 @@ function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
       event.query,
       (task) => task.title,
     ),
-    newTaskOption,
+    ...(canCreateTaskInSelectedProject.value ? [newTaskOption] : []),
   ];
 }
 
@@ -281,6 +295,18 @@ watch(
         </p>
         <p class="text-destructive mt-1 text-xs">
           {{ props.projectsErrorMessage }}
+        </p>
+      </div>
+
+      <div
+        v-else-if="props.githubSourcesErrorMessage"
+        class="border-divider bg-app-bg rounded-lg border p-3"
+      >
+        <p class="text-text-dark text-sm font-medium">
+          GitHub sources could not be loaded.
+        </p>
+        <p class="text-text-muted mt-1 text-xs">
+          Workspace projects are still available. Try again after GitHub is available.
         </p>
       </div>
 
@@ -369,7 +395,7 @@ watch(
           />
         </div>
         <small class="text-text-muted text-xs">
-          Visible tasks are listed first. New task is the last option. New time entries inherit the selected task billable default.
+          {{ taskHelperText }}
         </small>
 
         <div
@@ -424,7 +450,7 @@ watch(
         class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
       >
         <p class="text-destructive text-sm font-medium">
-          Could not load tasks for this project.
+          Could not load tasks for this source.
         </p>
         <p class="text-destructive mt-1 text-xs">
           {{ props.tasksErrorMessage }}
@@ -436,10 +462,10 @@ watch(
         class="bg-app-bg rounded-lg p-3"
       >
         <p class="text-text-dark text-sm font-medium">
-          No existing active tasks in this project.
+          {{ canCreateTaskInSelectedProject ? 'No existing active tasks in this project.' : 'No open GitHub issues in this source.' }}
         </p>
         <p class="text-text-muted mt-1 text-xs">
-          Pick New task to create one, or choose a different project.
+          {{ canCreateTaskInSelectedProject ? 'Pick New task to create one, or choose a different project.' : 'Choose a different GitHub source or workspace project.' }}
         </p>
       </div>
 

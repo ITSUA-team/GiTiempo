@@ -1,9 +1,15 @@
 import { mount } from "@vue/test-utils";
-import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
+import type { GitHubIssue, ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
+import {
+  toGitHubRepositorySourceOption,
+  toRepositoryIssueTaskOption,
+  toWorkspaceProjectOption,
+  toWorkspaceTaskOption,
+} from "@/lib/top-bar-task-picker-options";
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
@@ -47,6 +53,39 @@ const alertTask = {
   title: "Fix alert routing",
 } satisfies TaskResponse;
 
+const projectOrionOption = toWorkspaceProjectOption(projectOrion);
+const internalOpsProjectOption = toWorkspaceProjectOption(internalOpsProject);
+const reportsTaskOption = toWorkspaceTaskOption(reportsTask);
+const alertTaskOption = toWorkspaceTaskOption(alertTask);
+const githubRepository = {
+  description: "Frontend workspace",
+  fullName: "octo/frontend",
+  id: "repo-1",
+  isArchived: false,
+  name: "frontend",
+  nodeId: "R_kgDOFront",
+  owner: "octo",
+  updatedAt: "2026-04-20T12:00:00.000Z",
+  url: "https://github.com/octo/frontend",
+  visibility: "private",
+} as const;
+const githubRepositoryOption = toGitHubRepositorySourceOption(githubRepository);
+const githubIssue = {
+  id: "issue-1",
+  nodeId: "I_kwDOIssue",
+  number: 42,
+  repository: {
+    fullName: "octo/frontend",
+    name: "frontend",
+    owner: "octo",
+  },
+  state: "open",
+  title: "Fix GitHub timer picker",
+  updatedAt: "2026-04-20T12:00:00.000Z",
+  url: "https://github.com/octo/frontend/issues/42",
+} satisfies GitHubIssue;
+const githubIssueOption = toRepositoryIssueTaskOption(githubRepositoryOption, githubIssue);
+
 type DialogProps = Partial<InstanceType<typeof TopBarTimerTaskDialog>["$props"]>;
 
 function mountDialog(overrides: DialogProps = {}) {
@@ -64,13 +103,14 @@ function mountDialog(overrides: DialogProps = {}) {
       isPrimaryActionDisabled: false,
       isPrimaryActionPending: false,
       primaryActionLabel: "Start",
-      projectOptions: [projectOrion],
+      githubSourcesErrorMessage: null,
+      projectOptions: [projectOrionOption],
       projectsErrorMessage: null,
       selectedDescription: "",
       selectedProjectId: "project-1",
       selectedTaskId: "task-1",
       selectionUpdateErrorMessage: null,
-      taskOptions: [reportsTask],
+      taskOptions: [reportsTaskOption],
       tasksErrorMessage: null,
       timerActionErrorMessage: null,
       ...overrides,
@@ -213,8 +253,8 @@ describe("TopBarTimerTaskDialog", () => {
 
   it("emits selected project, task, and New task option ids", async () => {
     const wrapper = mountDialog({
-      projectOptions: [projectOrion, internalOpsProject],
-      taskOptions: [reportsTask, alertTask],
+      projectOptions: [projectOrionOption, internalOpsProjectOption],
+      taskOptions: [reportsTaskOption, alertTaskOption],
     });
     const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
 
@@ -225,8 +265,8 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.emitted("update:selectedProjectId")).toBeUndefined();
 
-    await autoCompletes[0]?.vm.$emit("update:modelValue", internalOpsProject);
-    await autoCompletes[1]?.vm.$emit("update:modelValue", alertTask);
+    await autoCompletes[0]?.vm.$emit("update:modelValue", internalOpsProjectOption);
+    await autoCompletes[1]?.vm.$emit("update:modelValue", alertTaskOption);
 
     expect(wrapper.emitted("update:selectedProjectId")?.[0]).toEqual(["project-2"]);
     expect(wrapper.emitted("update:selectedTaskId")?.[0]).toEqual(["task-2"]);
@@ -266,8 +306,8 @@ describe("TopBarTimerTaskDialog", () => {
 
   it("filters predictive search suggestions by typed text", async () => {
     const wrapper = mountDialog({
-      projectOptions: [projectOrion, internalOpsProject],
-      taskOptions: [reportsTask, alertTask],
+      projectOptions: [projectOrionOption, internalOpsProjectOption],
+      taskOptions: [reportsTaskOption, alertTaskOption],
     });
     const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
 
@@ -285,6 +325,38 @@ describe("TopBarTimerTaskDialog", () => {
       id: TOP_BAR_TIMER_NEW_TASK_ID,
       title: "New task",
     });
+  });
+
+  it("renders GitHub source issue options without the manual New task option", async () => {
+    const wrapper = mountDialog({
+      projectOptions: [projectOrionOption, githubRepositoryOption],
+      selectedProjectId: githubRepositoryOption.id,
+      selectedTaskId: githubIssueOption.id,
+      taskOptions: [githubIssueOption],
+    });
+    const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
+
+    await autoCompletes[1]?.vm.$emit("complete", { query: "GitHub" });
+    await nextTick();
+
+    expect(wrapper.text()).toContain(
+      "Open GitHub issues from this source are listed.",
+    );
+    expect(wrapper.find("#top-bar-timer-new-task-title").exists()).toBe(false);
+    expect(
+      autoCompletes[1]?.props("suggestions").map((task: { title: string }) => task.title),
+    ).toEqual(["#42 Fix GitHub timer picker"]);
+    expect(wrapper.text()).not.toContain("New task is the last option.");
+
+    await autoCompletes[0]?.vm.$emit("update:modelValue", githubRepositoryOption);
+    await autoCompletes[1]?.vm.$emit("update:modelValue", githubIssueOption);
+
+    expect(wrapper.emitted("update:selectedProjectId")?.[0]).toEqual([
+      githubRepositoryOption.id,
+    ]);
+    expect(wrapper.emitted("update:selectedTaskId")?.[0]).toEqual([
+      githubIssueOption.id,
+    ]);
   });
 
   it("renders the inline New task title field from the popup design", async () => {
@@ -337,7 +409,7 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(wrapper.find('[data-testid="spinner"]').exists()).toBe(true);
     expect(wrapper.text()).not.toContain("No existing active tasks in this project.");
-    expect(wrapper.text()).not.toContain("Could not load tasks for this project.");
+    expect(wrapper.text()).not.toContain("Could not load tasks for this source.");
   });
 
   it("renders a distinct project request-error state", () => {
@@ -347,10 +419,22 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.text()).toContain("projects failed");
   });
 
+  it("does not expose internal GitHub source error details", () => {
+    const wrapper = mountDialog({
+      githubSourcesErrorMessage:
+        'Failed query: select "access_token_encrypted" from "github_connections"',
+    });
+
+    expect(wrapper.text()).toContain("GitHub sources could not be loaded.");
+    expect(wrapper.text()).toContain("Workspace projects are still available.");
+    expect(wrapper.text()).not.toContain("Failed query");
+    expect(wrapper.text()).not.toContain("github_connections");
+  });
+
   it("renders a distinct task request-error state", () => {
     const wrapper = mountDialog({ tasksErrorMessage: "network down", taskOptions: [] });
 
-    expect(wrapper.text()).toContain("Could not load tasks for this project.");
+    expect(wrapper.text()).toContain("Could not load tasks for this source.");
     expect(wrapper.text()).toContain("network down");
     expect(wrapper.text()).not.toContain("No existing active tasks in this project.");
   });

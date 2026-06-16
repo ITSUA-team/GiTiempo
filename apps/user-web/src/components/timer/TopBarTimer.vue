@@ -32,6 +32,7 @@ const {
   isLoadingProjects,
   isLoadingSummary,
   isLoadingTasks,
+  githubSourcesErrorMessage,
   isPrimaryActionPending,
   isTimerRunning,
   openDialog,
@@ -192,6 +193,7 @@ watch(
     :is-primary-action-disabled="isDialogPrimaryActionDisabled"
     :is-primary-action-pending="isPrimaryActionPending"
     :primary-action-label="primaryActionLabel"
+    :github-sources-error-message="githubSourcesErrorMessage"
     :project-options="projectOptions"
     :projects-error-message="projectsErrorMessage ?? summaryErrorMessage"
     :selected-description="selectedDescription"

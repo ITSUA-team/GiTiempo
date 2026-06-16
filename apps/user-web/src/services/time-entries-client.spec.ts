@@ -193,6 +193,69 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("materializes a GitHub issue timer target with bearer auth", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        project: {
+          color: null,
+          createdAt: "2026-04-20T12:00:00.000Z",
+          description: null,
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          isActive: true,
+          members: [],
+          name: "GitHub / octo/frontend",
+          source: "github",
+          totalSeconds: 0,
+          updatedAt: "2026-04-20T12:00:00.000Z",
+          visibility: "public",
+          workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+        },
+        task: {
+          createdAt: "2026-04-20T12:00:00.000Z",
+          githubIssue: {
+            githubRepo: "octo/frontend",
+            issueNumber: 42,
+          },
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+          isActive: true,
+          projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+          status: "open",
+          title: "#42 Fix GitHub timer picker",
+          updatedAt: "2026-04-20T12:00:00.000Z",
+          workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+        },
+      }),
+    );
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+
+    const response = await client.materializeGitHubIssueTimerTarget({
+      githubRepo: "octo/frontend",
+      issueNumber: 42,
+      issueTitle: "Fix GitHub timer picker",
+      sourceType: "repository",
+    });
+    const { path, requestInit } = getRecordedFetchRequest(fetchFn);
+
+    expect(response.task.githubIssue).toEqual({
+      githubRepo: "octo/frontend",
+      issueNumber: 42,
+    });
+    expect(path).toBe("/time-entries/timer/github-issue-target");
+    expect(requestInit).toEqual({
+      body: JSON.stringify({
+        githubRepo: "octo/frontend",
+        issueNumber: 42,
+        issueTitle: "Fix GitHub timer picker",
+        sourceType: "repository",
+      }),
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+  });
+
   it("creates a new task in the selected project", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({

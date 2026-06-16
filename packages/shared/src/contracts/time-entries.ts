@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { syncedGitHubIssueSchema } from "./github.js";
+import { projectResponseSchema } from "./projects.js";
+import { taskResponseSchema } from "./tasks.js";
 
 export const timeEntrySourceSchema = z.enum(["web", "extension", "manual"]);
 
@@ -156,6 +158,60 @@ export const startTimerFromGitHubSchema = z
   })
   .strict();
 
+const githubIssueTimerTargetBaseSchema = syncedGitHubIssueSchema.extend({
+  issueTitle: z.string().min(1).max(500),
+});
+
+export const materializeGitHubIssueTimerTargetSchema =
+  githubIssueTimerTargetBaseSchema
+    .extend({
+      githubProjectId: z.string().min(1).max(255).optional(),
+      githubProjectItemId: z.string().min(1).max(255).optional(),
+      sourceType: z.enum(["repository", "project"]),
+    })
+    .strict()
+    .superRefine((data, ctx) => {
+      if (data.sourceType === "project") {
+        if (data.githubProjectId === undefined) {
+          ctx.addIssue({
+            code: "custom",
+            message: "githubProjectId is required for project source",
+            path: ["githubProjectId"],
+          });
+        }
+        if (data.githubProjectItemId === undefined) {
+          ctx.addIssue({
+            code: "custom",
+            message: "githubProjectItemId is required for project source",
+            path: ["githubProjectItemId"],
+          });
+        }
+        return;
+      }
+
+      if (data.githubProjectId !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: "githubProjectId is only accepted for project source",
+          path: ["githubProjectId"],
+        });
+      }
+      if (data.githubProjectItemId !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: "githubProjectItemId is only accepted for project source",
+          path: ["githubProjectItemId"],
+        });
+      }
+    });
+
+export const githubIssueTimerTargetResponseSchema = z
+  .object({
+    project: projectResponseSchema,
+    task: taskResponseSchema,
+  })
+  .strict();
+
 export type TimeEntrySource = z.infer<typeof timeEntrySourceSchema>;
 export type TimeEntryResponse = z.infer<typeof timeEntryResponseSchema>;
 export type TimeEntryListResponse = z.infer<
@@ -172,4 +228,10 @@ export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntrySchema>;
 export type StartTimerInput = z.infer<typeof startTimerSchema>;
 export type StartTimerFromGitHubInput = z.infer<
   typeof startTimerFromGitHubSchema
+>;
+export type MaterializeGitHubIssueTimerTargetInput = z.infer<
+  typeof materializeGitHubIssueTimerTargetSchema
+>;
+export type GitHubIssueTimerTargetResponse = z.infer<
+  typeof githubIssueTimerTargetResponseSchema
 >;

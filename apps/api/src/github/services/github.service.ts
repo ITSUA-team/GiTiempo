@@ -3,7 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import type {
   GitHubAuthUrlResponse,
   GitHubConnectionStatusResponse,
+  GitHubIssue,
   GitHubIssueListQuery,
+  MaterializeGitHubIssueTimerTargetInput,
   GitHubOwnerListQuery,
   GitHubOwnerListResponse,
   GitHubProjectIssueListResponse,
@@ -131,6 +133,20 @@ export class GithubService {
       q: query.q,
       limit: query.limit,
       pageToken: query.pageToken,
+    });
+  }
+
+  async requireVisibleIssue(
+    user: AuthUser,
+    input: MaterializeGitHubIssueTimerTargetInput,
+  ): Promise<GitHubIssue> {
+    const accessToken = await this.connections.getValidAccessToken(user.sub);
+    const [owner, repo] = input.githubRepo.split('/');
+    return this.apiClient.getRepositoryIssue({
+      accessToken,
+      owner: owner!,
+      repo: repo!,
+      issueNumber: input.issueNumber,
     });
   }
 

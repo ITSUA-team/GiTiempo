@@ -120,6 +120,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | GET    | `/time-entries/current`                 | JWT  | Any  | Get currently running timer (if any)                                                               |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
 | POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Start timer from GitHub issue — auto-creates project and task if needed (used by Chrome extension) |
+| POST   | `/time-entries/timer/github-issue-target` | JWT | Any  | Resolve a connected-user GitHub issue selection into a local project/task timer target without starting or updating a timer |
 | POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop running timer                                                                                 |
 
 **GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`, `search?`
@@ -141,9 +142,12 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 **POST /time-entries/timer/start** body: `{ taskId: string, description?: string | null }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string }`
+**POST /time-entries/timer/github-issue-target** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string, sourceType: "repository" }` or `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string, sourceType: "project", githubProjectId: string, githubProjectItemId: string }`
 
 - `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
 - `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
+- `/time-entries/timer/github-issue-target` requires the user to be an active workspace member with a usable connected GitHub account, verifies the issue is visible through that GitHub account, creates or reuses provider-neutral local project/task records, and returns `{ project, task }` using the shared project and task response shapes.
+- `/time-entries/timer/github-issue-target` does not create, stop, or update a time entry. Disconnected or invisible GitHub issues are rejected before local work records are created. Existing mapped closed tasks or inactive projects/tasks are rejected with `422 Unprocessable Entity`.
 
 **GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`, `search?`
 

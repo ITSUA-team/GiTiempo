@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type {
@@ -258,6 +259,25 @@ export class GithubApiClientService {
     };
   }
 
+  async getRepositoryIssue(input: {
+    accessToken: string;
+    owner: string;
+    repo: string;
+    issueNumber: number;
+  }): Promise<GitHubIssue> {
+    const result = await this.rest<GitHubIssueRest>(
+      input.accessToken,
+      `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}/issues/${input.issueNumber}`,
+      {},
+      null,
+      'GitHub issue not found',
+    );
+    if (result.body.pull_request !== undefined) {
+      throw new NotFoundException('GitHub issue not found');
+    }
+    return this.toIssue(result.body, input.owner, input.repo);
+  }
+
   async listProjectIssues(input: {
     accessToken: string;
     projectId: string;
@@ -375,6 +395,7 @@ export class GithubApiClientService {
     path: string,
     query: Record<string, string>,
     paginationKind: 'rest-page' | 'rest-cursor' | null,
+    notFoundMessage?: string,
   ): Promise<RestResult<T>> {
     const url = new URL(path, GITHUB_API);
     for (const [key, value] of Object.entries(query)) {
@@ -385,6 +406,9 @@ export class GithubApiClientService {
     });
     const body = (await this.readJson(response)) as T;
     if (!response.ok) {
+      if (response.status === 404 && notFoundMessage) {
+        throw new NotFoundException(notFoundMessage);
+      }
       this.logger.warn({
         event: 'github.api.request_failed',
         status: response.status,

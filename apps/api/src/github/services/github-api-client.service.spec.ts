@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -192,6 +193,47 @@ describe('GithubApiClientService', () => {
     expect(requestUrl.pathname).toBe('/search/issues');
     expect(requestUrl.searchParams.get('q')).toContain('repo:octo/repo');
     expect(result.items[0]?.state).toBe('closed');
+  });
+
+  it('loads one repository issue for visibility checks', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        id: 1,
+        node_id: 'I_kwDO',
+        number: 123,
+        title: 'Timer issue',
+        state: 'open',
+        html_url: 'https://github.com/octo/repo/issues/123',
+        updated_at: '2026-05-14T12:00:00Z',
+      }),
+    );
+
+    const result = await service.getRepositoryIssue({
+      accessToken,
+      owner: 'octo',
+      repo: 'repo',
+      issueNumber: 123,
+    });
+
+    const requestUrl = new URL(fetchMock.mock.calls[0]![0] as URL);
+    expect(requestUrl.pathname).toBe('/repos/octo/repo/issues/123');
+    expect(result.repository.fullName).toBe('octo/repo');
+    expect(result.number).toBe(123);
+  });
+
+  it('rejects invisible repository issues as not found', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ message: `missing ${accessToken}` }, { status: 404 }),
+    );
+
+    await expect(
+      service.getRepositoryIssue({
+        accessToken,
+        owner: 'octo',
+        repo: 'repo',
+        issueNumber: 123,
+      }),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('normalizes Project V2 issue items and skipped counts', async () => {

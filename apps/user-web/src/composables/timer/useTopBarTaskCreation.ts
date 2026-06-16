@@ -31,7 +31,7 @@ export function useTopBarTaskCreation({
   const isCreatingTask = computed(() => createTaskMutation.isPending.value);
 
   async function createTaskFromDialog(): Promise<void> {
-    const projectId = picker.selectedProjectId.value;
+    const projectId = picker.selectedWorkspaceProject.value?.id ?? null;
 
     if (!projectId) {
       return;
@@ -48,11 +48,8 @@ export function useTopBarTaskCreation({
         input: parsed,
         projectId,
       });
-      const cachedTasks = picker.getCachedTasks(projectId) ?? [];
-      const nextTasks = [...cachedTasks, task];
 
-      picker.setCachedTasks(projectId, nextTasks);
-      picker.setTasks(nextTasks);
+      picker.appendWorkspaceTaskToCache(projectId, task);
       picker.setSelectedTaskId(task.id);
       picker.setCreateTaskTitle("");
       appToast.showSuccessToast(

@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import type { GitHubConnectionStatusResponse } from "@gitiempo/shared";
 
-import { useProfileGithubConnection } from "./useProfileGithubConnection";
-import type { ProfileGitHubClient } from "@/services/profile-github-client";
+import {
+  useProfileGithubConnection,
+  type ProfileGitHubClient,
+} from "./useProfileGithubConnection";
 
 function createConnectedStatus(avatarUrl: string | null = "https://avatars.example.test/octo.png"): GitHubConnectionStatusResponse {
   return {

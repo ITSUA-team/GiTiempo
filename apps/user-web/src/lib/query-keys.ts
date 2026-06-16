@@ -74,6 +74,34 @@ export const timerKeys = {
     scope: UserServerStateScope,
     query?: Partial<TimeEntryListQuery>,
   ) => [...timerKeys.all(scope), "eligible-last-entry", normalizeTimeEntryListQuery(query)] as const,
+  githubConnection: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "github-connection"] as const,
+  githubOwners: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "github-owners"] as const,
+  githubProjectIssues: (
+    scope: UserServerStateScope,
+    projectId: string | null | undefined,
+  ) => [...timerKeys.all(scope), "github-project-issues", normalizeString(projectId)] as const,
+  githubProjects: (
+    scope: UserServerStateScope,
+    ownerType: string,
+    owner?: string | null,
+  ) => [...timerKeys.all(scope), "github-projects", ownerType, normalizeString(owner)] as const,
+  githubRepositories: (
+    scope: UserServerStateScope,
+    ownerType: string,
+    owner?: string | null,
+  ) => [...timerKeys.all(scope), "github-repositories", ownerType, normalizeString(owner)] as const,
+  githubRepositoryIssues: (
+    scope: UserServerStateScope,
+    owner: string | null | undefined,
+    repo: string | null | undefined,
+  ) => [
+    ...timerKeys.all(scope),
+    "github-repository-issues",
+    normalizeString(owner),
+    normalizeString(repo),
+  ] as const,
   projectTasks: (scope: UserServerStateScope, projectId: string | null | undefined) =>
     [...timerKeys.all(scope), "project-tasks", normalizeString(projectId)] as const,
   visibleProjects: (scope: UserServerStateScope) =>

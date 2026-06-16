@@ -2,6 +2,8 @@ import {
   createManualTimeEntrySchema,
   createTaskSchema,
   currentTimeEntryResponseSchema,
+  githubIssueTimerTargetResponseSchema,
+  materializeGitHubIssueTimerTargetSchema,
   projectListResponseSchema,
   type StartTimerInput,
   taskResponseSchema,
@@ -15,6 +17,8 @@ import {
   type CreateManualTimeEntryInput,
   type CreateTaskInput,
   type CurrentTimeEntryResponse,
+  type GitHubIssueTimerTargetResponse,
+  type MaterializeGitHubIssueTimerTargetInput,
   type ProjectResponse,
   type TaskResponse,
   type TimeEntryListQuery,
@@ -48,6 +52,9 @@ export interface TimeEntriesClient {
   ): Promise<TimeEntryListResponse>;
   listProjectTasks(projectId: string): Promise<TaskResponse[]>;
   listVisibleProjects(): Promise<ProjectResponse[]>;
+  materializeGitHubIssueTimerTarget(
+    input: MaterializeGitHubIssueTimerTargetInput,
+  ): Promise<GitHubIssueTimerTargetResponse>;
   startTimer(input: StartTimerInput): Promise<TimeEntryResponse>;
   stopTimer(): Promise<TimeEntryResponse>;
   updateEntry(
@@ -149,6 +156,14 @@ export function createTimeEntriesClient({
       return apiClient.requestJson({
         path: "/projects",
         responseSchema: projectListResponseSchema,
+      });
+    },
+    materializeGitHubIssueTimerTarget(input) {
+      return apiClient.requestJson({
+        body: materializeGitHubIssueTimerTargetSchema.parse(input),
+        method: "POST",
+        path: "/time-entries/timer/github-issue-target",
+        responseSchema: githubIssueTimerTargetResponseSchema,
       });
     },
     startTimer(input) {

@@ -26,6 +26,10 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { CreateManualTimeEntryDto } from '../dto/create-manual-time-entry.dto';
 import { CurrentTimeEntryResponseDto } from '../dto/current-time-entry-response.dto';
+import {
+  GitHubIssueTimerTargetResponseDto,
+  MaterializeGitHubIssueTimerTargetDto,
+} from '../dto/materialize-github-issue-timer-target.dto';
 import { StartTimerFromGitHubDto } from '../dto/start-timer-from-github.dto';
 import { StartTimerDto } from '../dto/start-timer.dto';
 import { TimeEntryListQueryDto } from '../dto/time-entry-list-query.dto';
@@ -104,6 +108,20 @@ export class TimeEntriesController {
     @Body() body: StartTimerFromGitHubDto,
   ): Promise<TimeEntryResponseDto> {
     return this.timeEntries.startTimerFromGitHub(user, body);
+  }
+
+  @Post('time-entries/timer/github-issue-target')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resolve a GitHub issue into a timer task target' })
+  @ApiOkResponse({ type: GitHubIssueTimerTargetResponseDto })
+  @ApiNotFoundResponse({ description: 'GitHub connection or issue not found' })
+  @ApiUnprocessableEntityResponse({ description: 'Project or task inactive' })
+  @ZodSerializerDto(GitHubIssueTimerTargetResponseDto)
+  materializeGitHubIssueTimerTarget(
+    @CurrentUser() user: AuthUser,
+    @Body() body: MaterializeGitHubIssueTimerTargetDto,
+  ): Promise<GitHubIssueTimerTargetResponseDto> {
+    return this.timeEntries.materializeGitHubIssueTimerTarget(user, body);
   }
 
   @Post('time-entries/timer/stop')

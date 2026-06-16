@@ -19,17 +19,22 @@ import {
 import type {
   CreateManualTimeEntryInput,
   CurrentTimeEntryResponse,
+  GitHubIssueTimerTargetResponse,
+  MaterializeGitHubIssueTimerTargetInput,
+  ProjectResponse,
   StartTimerFromGitHubInput,
   StartTimerInput,
   TimeEntryListQuery,
   TimeEntryListResponse,
   TimeEntryResponse,
   TimeEntrySource,
+  WorkspaceRole,
   UpdateTimeEntryInput,
 } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { GithubService } from '../../github/services/github.service';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
@@ -76,6 +81,11 @@ interface GitHubProjectResult {
   created: boolean;
 }
 
+interface GitHubTaskTargetResult {
+  project: ProjectRow;
+  task: TaskRow;
+}
+
 @Injectable()
 export class TimeEntriesService {
   constructor(
@@ -84,6 +94,7 @@ export class TimeEntriesService {
     private readonly projects: ProjectsService,
     private readonly tasks: TasksService,
     private readonly usersActivity: UsersActivityService,
+    private readonly github?: GithubService,
   ) {}
 
   async listOwnEntries(
@@ -311,61 +322,20 @@ export class TimeEntriesService {
 
     try {
       const entryId = await this.db.transaction(async (tx) => {
-        const { project, created } = await this.findOrCreateGitHubProject(
+        const { task } = await this.materializeGitHubTaskTarget(
           tx,
           user,
+          membership.role,
           githubRepo,
-        );
-        if (!project.isActive) {
-          throw new UnprocessableEntityException('Project is inactive');
-        }
-
-        if (membership.role !== 'admin') {
-          if (!created) {
-            await this.projects.requireVisibleProject(user, project.id);
-          } else {
-            await tx
-              .insert(projectAssignments)
-              .values({
-                workspaceId: user.workspaceId,
-                projectId: project.id,
-                userId: user.sub,
-                assignedBy: user.sub,
-              })
-              .onConflictDoNothing({
-                target: [
-                  projectAssignments.projectId,
-                  projectAssignments.userId,
-                ],
-              });
-          }
-        }
-
-        const task = await this.findOrCreateGitHubTask(
-          tx,
-          user.workspaceId,
-          project.id,
           issueKey,
           input.issueTitle,
         );
-        const lockedTask = await this.requireTaskRowForUpdate(
-          tx,
-          user.workspaceId,
-          project.id,
-          task.id,
-        );
-        if (!lockedTask.isActive) {
-          throw new UnprocessableEntityException('Task is inactive');
-        }
-        if (lockedTask.status === 'closed') {
-          throw new UnprocessableEntityException('Task is closed');
-        }
 
         const [entry] = await tx
           .insert(timeEntries)
           .values({
             workspaceId: user.workspaceId,
-            taskId: lockedTask.id,
+            taskId: task.id,
             userId: user.sub,
             startedAt: new Date(),
             source: 'extension',
@@ -382,6 +352,42 @@ export class TimeEntriesService {
       this.handleRunningTimerConflict(error);
       throw error;
     }
+  }
+
+  async materializeGitHubIssueTimerTarget(
+    user: AuthUser,
+    input: MaterializeGitHubIssueTimerTargetInput,
+  ): Promise<GitHubIssueTimerTargetResponse> {
+    if (!this.github) throw new Error('GitHub service is not configured');
+
+    const membership = await this.members.requireActiveMembership(
+      user.sub,
+      user.workspaceId,
+    );
+    const issue = await this.github.requireVisibleIssue(user, input);
+    const githubRepo = issue.repository.fullName;
+    const issueKey = `${githubRepo}#${issue.number}`;
+
+    const target = await this.db.transaction((tx) =>
+      this.materializeGitHubTaskTarget(
+        tx,
+        user,
+        membership.role,
+        githubRepo,
+        issueKey,
+        issue.title,
+      ),
+    );
+
+    const [projectDetail, task] = await Promise.all([
+      this.projects.getProject(user, target.project.id),
+      this.tasks.getTask(user, target.task.id),
+    ]);
+
+    return {
+      project: toProjectResponse(projectDetail),
+      task,
+    };
   }
 
   async stopTimer(user: AuthUser): Promise<TimeEntryResponse> {
@@ -718,20 +724,10 @@ export class TimeEntriesService {
     issueKey: string,
     issueTitle: string,
   ): Promise<TaskRow> {
-    const existingRef = await this.findGitHubTaskRef(
-      db,
-      workspaceId,
-      projectId,
-      issueKey,
-    );
+    const existingRef = await this.findGitHubTaskRef(db, workspaceId, issueKey);
 
     if (existingRef) {
-      return this.requireTaskRow(
-        db,
-        workspaceId,
-        projectId,
-        existingRef.taskId,
-      );
+      return this.requireTaskRow(db, workspaceId, existingRef.taskId);
     }
 
     const [task] = await db
@@ -774,15 +770,124 @@ export class TimeEntriesService {
       const winningRef = await this.findGitHubTaskRef(
         db,
         workspaceId,
-        projectId,
         issueKey,
       );
       if (!winningRef) throw new NotFoundException('Task not found');
 
-      return this.requireTaskRow(db, workspaceId, projectId, winningRef.taskId);
+      return this.requireTaskRow(db, workspaceId, winningRef.taskId);
     }
 
     return task;
+  }
+
+  private async materializeGitHubTaskTarget(
+    db: QueryExecutor,
+    user: AuthUser,
+    role: WorkspaceRole,
+    githubRepo: string,
+    issueKey: string,
+    issueTitle: string,
+  ): Promise<GitHubTaskTargetResult> {
+    const existingRef = await this.findGitHubTaskRef(
+      db,
+      user.workspaceId,
+      issueKey,
+    );
+    if (existingRef) {
+      const task = await this.requireTaskRowForUpdate(
+        db,
+        user.workspaceId,
+        existingRef.taskId,
+      );
+      const project = await this.requireProjectRow(
+        db,
+        user.workspaceId,
+        task.projectId,
+      );
+      this.assertGitHubTargetTrackable(project, task);
+      await this.ensureGitHubTargetProjectVisible(
+        db,
+        user,
+        role,
+        project,
+        false,
+      );
+      return { project, task };
+    }
+
+    const { project, created } = await this.findOrCreateGitHubProject(
+      db,
+      user,
+      githubRepo,
+    );
+    this.assertProjectActive(project);
+    await this.ensureGitHubTargetProjectVisible(
+      db,
+      user,
+      role,
+      project,
+      created,
+    );
+
+    const task = await this.findOrCreateGitHubTask(
+      db,
+      user.workspaceId,
+      project.id,
+      issueKey,
+      issueTitle,
+    );
+    const lockedTask = await this.requireTaskRowForUpdate(
+      db,
+      user.workspaceId,
+      task.id,
+    );
+    const targetProject =
+      lockedTask.projectId === project.id
+        ? project
+        : await this.requireProjectRow(
+            db,
+            user.workspaceId,
+            lockedTask.projectId,
+          );
+    this.assertGitHubTargetTrackable(targetProject, lockedTask);
+    if (targetProject.id !== project.id) {
+      await this.ensureGitHubTargetProjectVisible(
+        db,
+        user,
+        role,
+        targetProject,
+        false,
+      );
+    }
+
+    return { project: targetProject, task: lockedTask };
+  }
+
+  private async ensureGitHubTargetProjectVisible(
+    db: QueryExecutor,
+    user: AuthUser,
+    role: WorkspaceRole,
+    project: ProjectRow,
+    created: boolean,
+  ): Promise<void> {
+    if (role === 'admin') return;
+
+    if (!created) {
+      await this.projects.requireVisibleProject(user, project.id, db);
+      return;
+    }
+
+    await db
+      .insert(projectAssignments)
+      .values({
+        workspaceId: user.workspaceId,
+        projectId: project.id,
+        userId: user.sub,
+        assignedBy: user.sub,
+      })
+      .onConflictDoNothing({
+        target: [projectAssignments.projectId, projectAssignments.userId],
+      });
   }
 
   private async findGitHubProjectRef(
@@ -809,16 +914,17 @@ export class TimeEntriesService {
   private async findGitHubTaskRef(
     db: QueryExecutor,
     workspaceId: string,
-    projectId: string,
     issueKey: string,
-  ): Promise<{ taskId: string } | null> {
+  ): Promise<{ taskId: string; projectId: string } | null> {
     const [existingRef] = await db
-      .select({ taskId: taskExternalRefs.taskId })
+      .select({
+        taskId: taskExternalRefs.taskId,
+        projectId: taskExternalRefs.projectId,
+      })
       .from(taskExternalRefs)
       .where(
         and(
           eq(taskExternalRefs.workspaceId, workspaceId),
-          eq(taskExternalRefs.projectId, projectId),
           eq(taskExternalRefs.provider, 'github'),
           eq(taskExternalRefs.externalType, 'issue'),
           eq(taskExternalRefs.externalKey, issueKey),
@@ -851,18 +957,13 @@ export class TimeEntriesService {
   private async requireTaskRow(
     db: QueryExecutor,
     workspaceId: string,
-    projectId: string,
     taskId: string,
   ): Promise<TaskRow> {
     const [task] = await db
       .select()
       .from(tasksTable)
       .where(
-        and(
-          eq(tasksTable.id, taskId),
-          eq(tasksTable.workspaceId, workspaceId),
-          eq(tasksTable.projectId, projectId),
-        ),
+        and(eq(tasksTable.id, taskId), eq(tasksTable.workspaceId, workspaceId)),
       )
       .limit(1);
     if (!task) throw new NotFoundException('Task not found');
@@ -872,23 +973,37 @@ export class TimeEntriesService {
   private async requireTaskRowForUpdate(
     db: QueryExecutor,
     workspaceId: string,
-    projectId: string,
     taskId: string,
   ): Promise<TaskRow> {
     const [task] = await db
       .select()
       .from(tasksTable)
       .where(
-        and(
-          eq(tasksTable.id, taskId),
-          eq(tasksTable.workspaceId, workspaceId),
-          eq(tasksTable.projectId, projectId),
-        ),
+        and(eq(tasksTable.id, taskId), eq(tasksTable.workspaceId, workspaceId)),
       )
       .limit(1)
       .for('update');
     if (!task) throw new NotFoundException('Task not found');
     return task;
+  }
+
+  private assertGitHubTargetTrackable(
+    project: ProjectRow,
+    task: TaskRow,
+  ): void {
+    this.assertProjectActive(project);
+    if (!task.isActive) {
+      throw new UnprocessableEntityException('Task is inactive');
+    }
+    if (task.status === 'closed') {
+      throw new UnprocessableEntityException('Task is closed');
+    }
+  }
+
+  private assertProjectActive(project: ProjectRow): void {
+    if (!project.isActive) {
+      throw new UnprocessableEntityException('Project is inactive');
+    }
   }
 
   private handleRunningTimerConflict(error: unknown): void {
@@ -920,4 +1035,21 @@ function getPostgresError(error: unknown): {
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+function toProjectResponse(project: ProjectResponse): ProjectResponse {
+  return {
+    id: project.id,
+    workspaceId: project.workspaceId,
+    name: project.name,
+    description: project.description,
+    color: project.color,
+    visibility: project.visibility,
+    source: project.source,
+    totalSeconds: project.totalSeconds,
+    members: project.members,
+    isActive: project.isActive,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+  };
 }

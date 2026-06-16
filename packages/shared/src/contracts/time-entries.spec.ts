@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  githubIssueTimerTargetResponseSchema,
+  materializeGitHubIssueTimerTargetSchema,
   startTimerSchema,
   timeEntryResponseSchema,
   updateTimeEntrySchema,
 } from "./time-entries.js";
+
+const workspaceId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000";
+const projectId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f";
+const taskId = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001";
+const createdAt = "2026-04-21T09:00:00.000Z";
 
 describe("timeEntryResponseSchema", () => {
   it("accepts stable github issue linkage on time entry responses", () => {
@@ -168,5 +175,90 @@ describe("startTimerSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["description"]);
+  });
+});
+
+describe("materializeGitHubIssueTimerTargetSchema", () => {
+  it("accepts repository-source GitHub issue selections", () => {
+    const result = materializeGitHubIssueTimerTargetSchema.parse({
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+      issueTitle: "Fix selector options",
+      sourceType: "repository",
+    });
+
+    expect(result).toEqual({
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+      issueTitle: "Fix selector options",
+      sourceType: "repository",
+    });
+  });
+
+  it("accepts GitHub Project V2-source issue selections", () => {
+    const result = materializeGitHubIssueTimerTargetSchema.parse({
+      githubProjectId: "PVT_kwDOExample",
+      githubProjectItemId: "PVTI_kwDOExample",
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+      issueTitle: "Fix selector options",
+      sourceType: "project",
+    });
+
+    expect(result.sourceType).toBe("project");
+    if (result.sourceType !== "project") throw new Error("Expected project source");
+    expect(result.githubProjectId).toBe("PVT_kwDOExample");
+    expect(result.githubProjectItemId).toBe("PVTI_kwDOExample");
+  });
+
+  it("rejects invalid materialization payloads", () => {
+    const result = materializeGitHubIssueTimerTargetSchema.safeParse({
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+      issueTitle: "Fix selector options",
+      sourceType: "project",
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("githubIssueTimerTargetResponseSchema", () => {
+  it("accepts local project and task context with GitHub issue linkage", () => {
+    const result = githubIssueTimerTargetResponseSchema.parse({
+      project: {
+        id: projectId,
+        workspaceId,
+        name: "octo/repo",
+        description: null,
+        color: null,
+        visibility: "private",
+        source: "github",
+        totalSeconds: 0,
+        members: [],
+        isActive: true,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      task: {
+        id: taskId,
+        workspaceId,
+        projectId,
+        title: "Fix selector options",
+        status: "open",
+        isActive: true,
+        githubIssue: {
+          githubRepo: "octo/repo",
+          issueNumber: 184,
+        },
+        createdAt,
+        updatedAt: createdAt,
+      },
+    });
+
+    expect(result.task.githubIssue).toEqual({
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+    });
   });
 });

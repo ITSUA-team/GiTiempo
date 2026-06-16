@@ -17,6 +17,6 @@ import { GithubService } from './services/github.service';
     GithubOauthStateService,
     GithubService,
   ],
-  exports: [GithubConnectionsService],
+  exports: [GithubConnectionsService, GithubService],
 })
 export class GithubModule {}

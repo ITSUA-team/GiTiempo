@@ -25,6 +25,7 @@ describe('GithubService', () => {
     listProjects: vi.fn(),
     listRepositoryIssues: vi.fn(),
     listProjectIssues: vi.fn(),
+    getRepositoryIssue: vi.fn(),
   };
   const user = {
     sub: 'user-1',
@@ -175,5 +176,49 @@ describe('GithubService', () => {
       limit: 30,
       pageToken: undefined,
     });
+  });
+
+  it('requires a visible repository issue through the connected token', async () => {
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.getRepositoryIssue.mockResolvedValue({
+      id: '1',
+      nodeId: 'I_kwDO',
+      repository: { owner: 'octo', name: 'repo', fullName: 'octo/repo' },
+      number: 123,
+      title: 'Issue title',
+      state: 'open',
+      url: 'https://github.com/octo/repo/issues/123',
+      updatedAt: '2026-05-14T12:00:00.000Z',
+    });
+
+    await service().requireVisibleIssue(user, {
+      githubRepo: 'octo/repo',
+      issueNumber: 123,
+      issueTitle: 'Issue title',
+      sourceType: 'repository',
+    });
+
+    expect(apiClient.getRepositoryIssue).toHaveBeenCalledWith({
+      accessToken: 'ghu_token',
+      owner: 'octo',
+      repo: 'repo',
+      issueNumber: 123,
+    });
+  });
+
+  it('does not call GitHub issue API without a usable connection', async () => {
+    connections.getValidAccessToken.mockRejectedValue(
+      new Error('GitHub connection not found'),
+    );
+
+    await expect(
+      service().requireVisibleIssue(user, {
+        githubRepo: 'octo/repo',
+        issueNumber: 123,
+        issueTitle: 'Issue title',
+        sourceType: 'repository',
+      }),
+    ).rejects.toThrow('GitHub connection not found');
+    expect(apiClient.getRepositoryIssue).not.toHaveBeenCalled();
   });
 });

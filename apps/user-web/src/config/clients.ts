@@ -1,5 +1,5 @@
 import { getAuthenticatedAppApiClient } from "@/services/api-client";
-import { createProfileGitHubClient } from "@/services/profile-github-client";
+import { createGitHubClient } from "@/services/github-client";
 import { createTimeEntriesClient } from "@/services/time-entries-client";
 
 export function createDefaultTimeEntriesClient() {
@@ -7,5 +7,9 @@ export function createDefaultTimeEntriesClient() {
 }
 
 export function createDefaultProfileGitHubClient() {
-  return createProfileGitHubClient({ apiClient: getAuthenticatedAppApiClient() });
+  return createGitHubClient({ apiClient: getAuthenticatedAppApiClient() });
+}
+
+export function createDefaultGitHubClient() {
+  return createGitHubClient({ apiClient: getAuthenticatedAppApiClient() });
 }

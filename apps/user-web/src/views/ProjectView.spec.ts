@@ -81,6 +81,9 @@ function createClientMock(): TimeEntriesClient & {
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
   listVisibleProjects: ReturnType<typeof vi.fn<TimeEntriesClient["listVisibleProjects"]>>;
+  materializeGitHubIssueTimerTarget: ReturnType<
+    typeof vi.fn<TimeEntriesClient["materializeGitHubIssueTimerTarget"]>
+  >;
   startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
   stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
   updateEntry: ReturnType<typeof vi.fn<TimeEntriesClient["updateEntry"]>>;
@@ -102,6 +105,10 @@ function createClientMock(): TimeEntriesClient & {
     })),
     listProjectTasks: vi.fn(async () => []),
     listVisibleProjects: vi.fn(async () => []),
+    materializeGitHubIssueTimerTarget: vi.fn(async () => ({
+      project: createProject("project-1", "Project Orion"),
+      task: createTask("task-1", "project-1", "Improve reports filters"),
+    })),
     startTimer: vi.fn(async () => {
       throw new Error("unused");
     }),

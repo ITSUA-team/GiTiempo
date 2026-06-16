@@ -28,9 +28,12 @@
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
 - A completed timer entry or manual entry may seed the last tracked task context if that task is still visible and active.
 - Starting from the popup creates a fresh running time entry. It must not resume or update the previous time entry record.
-- The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
-- The `Task` select lists visible tasks first and appends `New task` as the last option.
-- When `Task = New task`, the created task inherits the selected project's default `isBillable` value.
+- The task-picker dialog includes `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
+- Project options list visible workspace-local projects first. When the user has a connected GitHub account, append GitHub-backed repository and Project V2 sources visible through that account after the workspace-local projects.
+- If no GitHub account is connected, the task-picker remains valid with workspace-local project/task options only and does not render disconnected GitHub state as a workspace project/task loading failure.
+- Selecting a workspace-local project loads visible tasks for that project; the `Task` select lists those visible tasks first and appends `New task` as the last option.
+- Selecting a GitHub-backed source loads visible GitHub issue options for that source. GitHub source task options do not include manual `New task` creation.
+- When `Task = New task`, the created task inherits the selected workspace project's default `isBillable` value.
 - When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description.
 - The fresh running time entry initializes `isBillable` from the selected task's default billable value before any per-entry override.
 - When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
@@ -41,8 +44,9 @@
 - Clicking the compact timer surface opens the centered task-picker dialog. The surface should hug its content width and stay aligned to the avatar side instead of expanding across the full center area.
 - On mobile, a single `Task & timer` opener lives on the left side of the strip so it remains reachable when the profile menu opens from the top-right identity area.
 - On mobile, the right-side metadata uses project on the first line and task on the second line, with running elapsed time shown there when applicable; the opener remains the guaranteed task-picker entry point if metadata is partially covered.
-- The task-picker dialog uses predictive Project -> Task selection only for task targeting; it also includes the optional time-entry description field.
-- When `Task` is set to `New task`, show a single required new-task title input directly below the task select and create that task inside the currently selected visible project.
+- The task-picker dialog uses predictive Project -> Task selection for task targeting; workspace-local options remain first and connected-user GitHub-backed options are additive.
+- When a connected GitHub issue option is selected, resolve it to a local timer task context before starting a new timer or moving a running timer.
+- When `Task` is set to `New task`, show a single required new-task title input directly below the task select and create that task inside the currently selected visible workspace project.
 - The dialog does not support creating a new project.
 - When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with the state-appropriate timer action.
 - Manual interval entry stays on Time Entries only. It does not move into the top-bar timer surface or task-picker dialog.

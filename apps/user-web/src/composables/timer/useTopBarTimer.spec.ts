@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import type {
+  GitHubIssue,
   ProjectResponse,
   TaskResponse,
   TimeEntryListResponse,
@@ -13,6 +14,7 @@ import { defineComponent, h } from 'vue';
 import { useTopBarTimer } from './useTopBarTimer';
 import { timeEntriesKeys } from '@/lib/query-keys';
 import { TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/top-bar-timer-helpers';
+import type { GitHubClient } from '@/services/github-client';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 import {
@@ -75,6 +77,24 @@ function createTask(
     title,
     updatedAt: '2026-04-20T12:00:00.000Z',
     workspaceId: TEST_IDS.workspace,
+  };
+}
+
+function createGitHubIssue(overrides: Partial<GitHubIssue> = {}): GitHubIssue {
+  return {
+    id: 'github-issue-1',
+    nodeId: 'I_kwDOGitHubIssue',
+    number: 42,
+    repository: {
+      fullName: 'octo/frontend',
+      name: 'frontend',
+      owner: 'octo',
+    },
+    state: 'open',
+    title: 'Fix GitHub timer picker',
+    updatedAt: '2026-04-20T12:00:00.000Z',
+    url: 'https://github.com/octo/frontend/issues/42',
+    ...overrides,
   };
 }
 
@@ -158,6 +178,9 @@ function createClientMock(): TimeEntriesClient & {
   listVisibleProjects: ReturnType<
     typeof vi.fn<TimeEntriesClient['listVisibleProjects']>
   >;
+  materializeGitHubIssueTimerTarget: ReturnType<
+    typeof vi.fn<TimeEntriesClient['materializeGitHubIssueTimerTarget']>
+  >;
   startTimer: ReturnType<typeof vi.fn<TimeEntriesClient['startTimer']>>;
   stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient['stopTimer']>>;
   updateEntry: ReturnType<typeof vi.fn<TimeEntriesClient['updateEntry']>>;
@@ -174,6 +197,10 @@ function createClientMock(): TimeEntriesClient & {
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTasks: vi.fn(async () => []),
     listVisibleProjects: vi.fn(async () => []),
+    materializeGitHubIssueTimerTarget: vi.fn(async () => ({
+      project: createProject(TEST_IDS.project, 'GitHub / octo/frontend'),
+      task: createTask(TEST_IDS.task, TEST_IDS.project, '#42 Fix GitHub timer picker'),
+    })),
     startTimer: vi.fn(async () => createRunningEntry()),
     stopTimer: vi.fn(async () => createCompletedEntry()),
     updateEntry: vi.fn(async () => createRunningEntry()),
@@ -183,8 +210,101 @@ function createClientMock(): TimeEntriesClient & {
   };
 }
 
+function createGitHubClientMock(): GitHubClient & {
+  disconnect: ReturnType<typeof vi.fn<GitHubClient['disconnect']>>;
+  getAuthUrl: ReturnType<typeof vi.fn<GitHubClient['getAuthUrl']>>;
+  getConnectionStatus: ReturnType<
+    typeof vi.fn<GitHubClient['getConnectionStatus']>
+  >;
+  listOwners: ReturnType<typeof vi.fn<GitHubClient['listOwners']>>;
+  listProjectIssues: ReturnType<typeof vi.fn<GitHubClient['listProjectIssues']>>;
+  listProjects: ReturnType<typeof vi.fn<GitHubClient['listProjects']>>;
+  listRepositories: ReturnType<typeof vi.fn<GitHubClient['listRepositories']>>;
+  listRepositoryIssues: ReturnType<
+    typeof vi.fn<GitHubClient['listRepositoryIssues']>
+  >;
+} {
+  return {
+    disconnect: vi.fn(async () => undefined),
+    getAuthUrl: vi.fn(async () => ({
+      authorizationUrl: 'https://github.com/login/oauth/authorize',
+    })),
+    getConnectionStatus: vi.fn(async () => ({ account: null, status: 'disconnected' })),
+    listOwners: vi.fn(async () => ({ items: [] })),
+    listProjectIssues: vi.fn(async () => ({
+      items: [],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+      skipped: { draftIssues: 0, pullRequests: 0, redacted: 0, unknown: 0 },
+    })),
+    listProjects: vi.fn(async () => ({
+      items: [],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    })),
+    listRepositories: vi.fn(async () => ({
+      items: [],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    })),
+    listRepositoryIssues: vi.fn(async () => ({
+      items: [],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    })),
+  };
+}
+
+function mockConnectedGitHubRepositorySource(
+  githubClient: ReturnType<typeof createGitHubClientMock>,
+): void {
+  githubClient.getConnectionStatus.mockResolvedValue({
+    account: {
+      avatarUrl: null,
+      connectedAt: '2026-04-20T12:00:00.000Z',
+      githubUserId: '123456',
+      login: 'octo',
+      updatedAt: '2026-04-20T12:00:00.000Z',
+    },
+    status: 'connected',
+  });
+  githubClient.listOwners.mockResolvedValue({
+    items: [
+      {
+        avatarUrl: null,
+        label: 'octo',
+        login: 'octo',
+        type: 'personal',
+        url: 'https://github.com/octo',
+      },
+    ],
+  });
+  githubClient.listRepositories.mockResolvedValue({
+    items: [
+      {
+        description: null,
+        fullName: 'octo/frontend',
+        id: 'repo-1',
+        isArchived: false,
+        name: 'frontend',
+        nodeId: 'R_kgDOFrontend',
+        owner: 'octo',
+        updatedAt: '2026-04-20T12:00:00.000Z',
+        url: 'https://github.com/octo/frontend',
+        visibility: 'private',
+      },
+    ],
+    pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+  });
+  githubClient.listProjects.mockResolvedValue({
+    items: [],
+    pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+  });
+  githubClient.listRepositoryIssues.mockResolvedValue({
+    items: [createGitHubIssue()],
+    pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+  });
+}
+
 function mountTopBarTimer(options?: {
   client?: ReturnType<typeof createClientMock>;
+  githubClient?: ReturnType<typeof createGitHubClientMock>;
   toast?: { add: ReturnType<typeof vi.fn> };
 }) {
   const pinia = createPinia();
@@ -195,6 +315,7 @@ function mountTopBarTimer(options?: {
 
   authStore.accessToken = 'access-token';
   const client = options?.client ?? createClientMock();
+  const githubClient = options?.githubClient ?? createGitHubClientMock();
   const queryClient = createTestQueryClient();
   const toast = options?.toast ?? { add: vi.fn() };
   let topBarTimer!: ReturnType<typeof useTopBarTimer>;
@@ -202,6 +323,7 @@ function mountTopBarTimer(options?: {
     setup() {
       topBarTimer = useTopBarTimer({
         client,
+        githubClient,
         toast: toast as never,
       });
 
@@ -215,7 +337,7 @@ function mountTopBarTimer(options?: {
     },
   });
 
-  return { client, queryClient, topBarTimer, toast, wrapper };
+  return { client, githubClient, queryClient, topBarTimer, toast, wrapper };
 }
 
 async function startTimerFromSeededDialog(
@@ -400,6 +522,408 @@ describe('useTopBarTimer', () => {
       taskTitle: 'Improve reports filters',
     });
     expect(topBarTimer.selectedDescription.value).toBe('');
+  });
+
+  it('appends connected GitHub repository and project sources after workspace projects', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'Project Orion'),
+    ]);
+    githubClient.getConnectionStatus.mockResolvedValue({
+      account: {
+        avatarUrl: null,
+        connectedAt: '2026-04-20T12:00:00.000Z',
+        githubUserId: '123456',
+        login: 'octo',
+        updatedAt: '2026-04-20T12:00:00.000Z',
+      },
+      status: 'connected',
+    });
+    githubClient.listOwners.mockResolvedValue({
+      items: [
+        {
+          avatarUrl: null,
+          label: 'octo',
+          login: 'octo',
+          type: 'personal',
+          url: 'https://github.com/octo',
+        },
+      ],
+    });
+    githubClient.listRepositories.mockResolvedValue({
+      items: [
+        {
+          description: 'Frontend workspace',
+          fullName: 'octo/frontend',
+          id: 'repo-1',
+          isArchived: false,
+          name: 'frontend',
+          nodeId: 'R_kgDOFrontend',
+          owner: 'octo',
+          updatedAt: '2026-04-20T12:00:00.000Z',
+          url: 'https://github.com/octo/frontend',
+          visibility: 'private',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    githubClient.listProjects.mockResolvedValue({
+      items: [
+        {
+          description: null,
+          id: 'PVT_kwDORoadmap',
+          number: 7,
+          owner: 'octo',
+          state: 'open',
+          title: 'Roadmap',
+          updatedAt: '2026-04-20T12:00:00.000Z',
+          url: 'https://github.com/users/octo/projects/7',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.projectOptions.value.map((project) => project.name)).toEqual([
+      'Project Orion',
+      'GitHub repo: octo/frontend',
+      'GitHub project: octo / Roadmap',
+    ]);
+    expect(githubClient.listRepositories).toHaveBeenCalledWith({
+      limit: 100,
+      ownerType: 'personal',
+    });
+  });
+
+  it('keeps GitHub disconnected state additive to workspace project selection', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'Project Orion'),
+    ]);
+    githubClient.getConnectionStatus.mockResolvedValue({
+      account: null,
+      status: 'disconnected',
+    });
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.projectOptions.value.map((project) => project.name)).toEqual([
+      'Project Orion',
+    ]);
+    expect(topBarTimer.projectsErrorMessage.value).toBeNull();
+    expect(topBarTimer.githubSourcesErrorMessage.value).toBeNull();
+    expect(githubClient.listOwners).not.toHaveBeenCalled();
+  });
+
+  it('keeps GitHub source failures generic and additive to workspace projects', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'Project Orion'),
+    ]);
+    githubClient.getConnectionStatus.mockRejectedValue(
+      new Error(
+        'Failed query: select "access_token_encrypted" from "github_connections" params: secret',
+      ),
+    );
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(topBarTimer.projectOptions.value.map((project) => project.name)).toEqual([
+      'Project Orion',
+    ]);
+    expect(topBarTimer.projectsErrorMessage.value).toBeNull();
+    expect(topBarTimer.githubSourcesErrorMessage.value).toBe(
+      'GitHub sources are unavailable right now.',
+    );
+    expect(topBarTimer.githubSourcesErrorMessage.value).not.toContain(
+      'Failed query',
+    );
+    expect(githubClient.listOwners).not.toHaveBeenCalled();
+  });
+
+  it('materializes a selected GitHub repository issue before starting a timer', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+    const materializedProject = createProject('github-project-1', 'GitHub / octo/frontend');
+    const materializedTask = {
+      ...createTask('github-task-1', materializedProject.id, '#42 Fix GitHub timer picker'),
+      githubIssue: {
+        githubRepo: 'octo/frontend',
+        issueNumber: 42,
+      },
+    };
+
+    client.listVisibleProjects.mockResolvedValue([]);
+    client.materializeGitHubIssueTimerTarget.mockResolvedValue({
+      project: materializedProject,
+      task: materializedTask,
+    });
+    githubClient.getConnectionStatus.mockResolvedValue({
+      account: {
+        avatarUrl: null,
+        connectedAt: '2026-04-20T12:00:00.000Z',
+        githubUserId: '123456',
+        login: 'octo',
+        updatedAt: '2026-04-20T12:00:00.000Z',
+      },
+      status: 'connected',
+    });
+    githubClient.listOwners.mockResolvedValue({
+      items: [
+        {
+          avatarUrl: null,
+          label: 'octo',
+          login: 'octo',
+          type: 'personal',
+          url: 'https://github.com/octo',
+        },
+      ],
+    });
+    githubClient.listRepositories.mockResolvedValue({
+      items: [
+        {
+          description: null,
+          fullName: 'octo/frontend',
+          id: 'repo-1',
+          isArchived: false,
+          name: 'frontend',
+          nodeId: 'R_kgDOFrontend',
+          owner: 'octo',
+          updatedAt: '2026-04-20T12:00:00.000Z',
+          url: 'https://github.com/octo/frontend',
+          visibility: 'private',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    githubClient.listProjects.mockResolvedValue({
+      items: [],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    githubClient.listRepositoryIssues.mockResolvedValue({
+      items: [createGitHubIssue()],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    topBarTimer.setSelectedProjectId('github-repository:octo/frontend');
+    await flushPromises();
+    topBarTimer.setSelectedTaskId(
+      'github-repository:octo/frontend:issue:octo/frontend#42',
+    );
+    topBarTimer.setSelectedDescription('Pair on GitHub sync');
+
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      '#42 Fix GitHub timer picker',
+    ]);
+
+    await topBarTimer.handleDialogPrimaryAction();
+    await flushPromises();
+
+    expect(client.materializeGitHubIssueTimerTarget).toHaveBeenCalledWith({
+      githubRepo: 'octo/frontend',
+      issueNumber: 42,
+      issueTitle: 'Fix GitHub timer picker',
+      sourceType: 'repository',
+    });
+    expect(client.startTimer).toHaveBeenCalledWith({
+      description: 'Pair on GitHub sync',
+      taskId: 'github-task-1',
+    });
+  });
+
+  it('keeps GitHub issue materialization failures retryable in the dialog', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+    const toast = { add: vi.fn() };
+    const materializedProject = createProject('github-project-1', 'GitHub / octo/frontend');
+    const materializedTask = {
+      ...createTask('github-task-1', materializedProject.id, '#42 Fix GitHub timer picker'),
+      githubIssue: {
+        githubRepo: 'octo/frontend',
+        issueNumber: 42,
+      },
+    };
+
+    client.listVisibleProjects.mockResolvedValue([]);
+    client.materializeGitHubIssueTimerTarget
+      .mockRejectedValueOnce(new Error('GitHub issue is no longer visible'))
+      .mockResolvedValueOnce({
+        project: materializedProject,
+        task: materializedTask,
+      });
+    mockConnectedGitHubRepositorySource(githubClient);
+
+    const mounted = mountTopBarTimer({ client, githubClient, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+    topBarTimer.setSelectedProjectId('github-repository:octo/frontend');
+    await flushPromises();
+    topBarTimer.setSelectedTaskId(
+      'github-repository:octo/frontend:issue:octo/frontend#42',
+    );
+
+    await topBarTimer.handleDialogPrimaryAction();
+    await flushPromises();
+
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+    expect(topBarTimer.selectionUpdateErrorMessage.value).toBe(
+      'GitHub issue is no longer visible',
+    );
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        summary: 'Could not prepare the GitHub issue',
+      }),
+    );
+
+    await topBarTimer.handleDialogPrimaryAction();
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: 'github-task-1' });
+  });
+
+  it('materializes a selected GitHub issue before updating a running timer', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+    const materializedProject = createProject('github-project-1', 'GitHub / octo/frontend');
+    const materializedTask = {
+      ...createTask('github-task-1', materializedProject.id, '#42 Fix GitHub timer picker'),
+      githubIssue: {
+        githubRepo: 'octo/frontend',
+        issueNumber: 42,
+      },
+    };
+
+    client.getCurrentTimer.mockResolvedValue({ timeEntry: createRunningEntry() });
+    client.listVisibleProjects.mockResolvedValue([]);
+    client.materializeGitHubIssueTimerTarget.mockResolvedValue({
+      project: materializedProject,
+      task: materializedTask,
+    });
+    githubClient.getConnectionStatus.mockResolvedValue({
+      account: {
+        avatarUrl: null,
+        connectedAt: '2026-04-20T12:00:00.000Z',
+        githubUserId: '123456',
+        login: 'octo',
+        updatedAt: '2026-04-20T12:00:00.000Z',
+      },
+      status: 'connected',
+    });
+    githubClient.listOwners.mockResolvedValue({
+      items: [
+        {
+          avatarUrl: null,
+          label: 'octo',
+          login: 'octo',
+          type: 'personal',
+          url: 'https://github.com/octo',
+        },
+      ],
+    });
+    githubClient.listRepositories.mockResolvedValue({
+      items: [
+        {
+          description: null,
+          fullName: 'octo/frontend',
+          id: 'repo-1',
+          isArchived: false,
+          name: 'frontend',
+          nodeId: 'R_kgDOFrontend',
+          owner: 'octo',
+          updatedAt: '2026-04-20T12:00:00.000Z',
+          url: 'https://github.com/octo/frontend',
+          visibility: 'private',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    githubClient.listProjects.mockResolvedValue({
+      items: [],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    githubClient.listRepositoryIssues.mockResolvedValue({
+      items: [createGitHubIssue()],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    topBarTimer.setSelectedProjectId('github-repository:octo/frontend');
+    await flushPromises();
+    topBarTimer.setSelectedTaskId(
+      'github-repository:octo/frontend:issue:octo/frontend#42',
+    );
+    topBarTimer.setSelectedDescription('Move to GitHub issue');
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(client.materializeGitHubIssueTimerTarget).toHaveBeenCalledWith({
+      githubRepo: 'octo/frontend',
+      issueNumber: 42,
+      issueTitle: 'Fix GitHub timer picker',
+      sourceType: 'repository',
+    });
+    expect(client.updateEntry).toHaveBeenCalledWith(TEST_IDS.runningEntry, {
+      description: 'Move to GitHub issue',
+      taskId: 'github-task-1',
+    });
   });
 
   it('filters closed tasks out of timer picker options', async () => {

@@ -7,12 +7,18 @@ import { computed, ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 
 import { useUpdateTimeEntryMutation } from '@/composables/query';
-import { createDefaultTimeEntriesClient } from '@/config/clients';
+import {
+  createDefaultGitHubClient,
+  createDefaultTimeEntriesClient,
+} from '@/config/clients';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
+import { toGitHubIssueTimerTargetInput } from '@/lib/top-bar-task-picker-options';
 import {
   isRunningTimer,
   TOP_BAR_TIMER_NEW_TASK_ID,
+  type SelectedTaskContext,
 } from '@/lib/top-bar-timer-helpers';
+import type { GitHubClient } from '@/services/github-client';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 
@@ -27,6 +33,7 @@ interface UseTopBarTimerOptions {
   authStore?: ReturnType<typeof useAuthStore>;
   clearIntervalFn?: typeof clearInterval;
   client?: TimeEntriesClient;
+  githubClient?: GitHubClient;
   now?: () => number;
   setIntervalFn?: typeof setInterval;
   toast?: ToastLike;
@@ -35,6 +42,7 @@ interface UseTopBarTimerOptions {
 export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const authStore = options.authStore ?? useAuthStore();
   const client = options.client ?? createDefaultTimeEntriesClient();
+  const githubClient = options.githubClient ?? createDefaultGitHubClient();
   const toast = options.toast ?? useToast();
   const appToast = createAppToast(toast);
   const now = options.now ?? (() => Date.now());
@@ -42,6 +50,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
   const picker = useTopBarTaskPicker();
   const selectionUpdateErrorMessage = ref<string | null>(null);
+  const isMaterializingGitHubIssue = ref(false);
   const accessToken = computed(() => authStore.accessToken);
   const scope = computed(() => getUserServerStateScope(authStore.accessToken));
   const summary = useTopBarTimerSummary({ accessToken, client, scope, toast });
@@ -56,6 +65,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const taskOptions = useTopBarTaskOptions({
     accessToken,
     client,
+    githubClient,
     picker,
     scope,
   });
@@ -140,15 +150,22 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isTimerRunning.value ? 'Stop' : 'Start',
   );
   const isNewTaskSelected = computed(
-    () => picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID,
+    () =>
+      picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID &&
+      picker.canCreateTaskInSelectedProject.value,
   );
   const isCreateTaskDisabled = computed(() => {
     return (
-      !picker.selectedProjectId.value ||
+      !picker.selectedWorkspaceProject.value ||
       taskCreation.isCreatingTask.value ||
       picker.isCreateTaskTitleEmpty.value
     );
   });
+  const hasSelectedTimerTarget = computed(
+    () =>
+      picker.getSelectedTaskContext() !== null ||
+      picker.selectedGitHubIssueTask.value !== null,
+  );
   const isConfirmSelectionDisabled = computed(() => {
     if (isNewTaskSelected.value) {
       return isCreateTaskDisabled.value || updateTimeEntryMutation.isPending.value;
@@ -157,6 +174,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     return (
       picker.isConfirmSelectionDisabled.value ||
       taskCreation.isCreatingTask.value ||
+      isMaterializingGitHubIssue.value ||
       updateTimeEntryMutation.isPending.value
     );
   });
@@ -164,6 +182,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     if (
       timerActions.isPrimaryActionPending.value ||
       summary.isLoadingSummary.value ||
+      isMaterializingGitHubIssue.value ||
       updateTimeEntryMutation.isPending.value
     ) {
       return true;
@@ -181,7 +200,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     }
 
     return (
-      picker.getSelectedTaskContext() === null ||
+      !hasSelectedTimerTarget.value ||
       summary.summaryErrorMessage.value !== null
     );
   });
@@ -193,9 +212,16 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     return (
       isConfirmSelectionDisabled.value ||
       timerActions.isPrimaryActionPending.value ||
+      isMaterializingGitHubIssue.value ||
       updateTimeEntryMutation.isPending.value
     );
   });
+  const isConfirmingSelection = computed(
+    () => updateTimeEntryMutation.isPending.value || isMaterializingGitHubIssue.value,
+  );
+  const isPrimaryActionPending = computed(
+    () => timerActions.isPrimaryActionPending.value || isMaterializingGitHubIssue.value,
+  );
 
   async function openDialog(): Promise<void> {
     selectionUpdateErrorMessage.value = null;
@@ -257,7 +283,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       return;
     }
 
-    const context = picker.getSelectedTaskContext();
+    const context = await resolveSelectedTaskContext();
 
     if (!context) {
       return;
@@ -331,7 +357,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
         return;
       }
 
-      const context = picker.getSelectedTaskContext();
+      const context = await resolveSelectedTaskContext();
 
       if (!context) {
         return;
@@ -391,6 +417,53 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     }
   });
 
+  async function resolveSelectedTaskContext(): Promise<SelectedTaskContext | null> {
+    const localContext = picker.getSelectedTaskContext();
+
+    if (localContext) {
+      return localContext;
+    }
+
+    const githubIssueTask = picker.selectedGitHubIssueTask.value;
+
+    if (!githubIssueTask) {
+      return null;
+    }
+
+    selectionUpdateErrorMessage.value = null;
+    isMaterializingGitHubIssue.value = true;
+
+    try {
+      const target = await client.materializeGitHubIssueTimerTarget(
+        toGitHubIssueTimerTargetInput(githubIssueTask),
+      );
+
+      return {
+        githubIssue: target.task.githubIssue,
+        projectId: target.project.id,
+        projectName: target.project.name,
+        taskId: target.task.id,
+        taskTitle: target.task.title,
+      };
+    } catch (error) {
+      const message = getErrorMessage(error);
+
+      selectionUpdateErrorMessage.value = message;
+      appToast.showErrorToast({
+        detail: 'Refresh GitHub issues and try again.',
+        error,
+        logContext: {
+          action: 'materialize-github-issue-task',
+          feature: 'top-bar-timer',
+        },
+        summary: 'Could not prepare the GitHub issue',
+      });
+      return null;
+    } finally {
+      isMaterializingGitHubIssue.value = false;
+    }
+  }
+
   return {
     closeDialog,
     confirmSelectedTask,
@@ -401,7 +474,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     elapsedTimeLabel,
     handleDialogPrimaryAction,
     isConfirmSelectionDisabled,
-    isConfirmingSelection: updateTimeEntryMutation.isPending,
+    isConfirmingSelection,
     isCreateTaskDisabled,
     isCreatingTask: taskCreation.isCreatingTask,
     isDialogPrimaryActionDisabled,
@@ -410,12 +483,14 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isLoadingProjects: taskOptions.isLoadingProjects,
     isLoadingSummary: summary.isLoadingSummary,
     isLoadingTasks: taskOptions.isLoadingTasks,
-    isPrimaryActionPending: timerActions.isPrimaryActionPending,
+    isMaterializingGitHubIssue,
+    isPrimaryActionPending,
     isTimerRunning,
     openDialog,
     primaryActionLabel,
+    githubSourcesErrorMessage: picker.githubSourcesErrorMessage,
     projectsErrorMessage: picker.projectsErrorMessage,
-    projectOptions: picker.activeProjects,
+    projectOptions: picker.projectOptions,
     refreshSummary: summary.refreshSummary,
     selectedContext: summary.selectedContext,
     selectedDescription: picker.selectedDescription,
@@ -431,7 +506,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     startTimerFromDialog,
     stopTimerFromDialog,
     summaryErrorMessage: summary.summaryErrorMessage,
-    taskOptions: picker.activeTasks,
+    taskOptions: picker.taskOptions,
     tasksErrorMessage: picker.tasksErrorMessage,
     timerActionErrorMessage: timerActions.timerActionErrorMessage,
     timerGitHubIssue,

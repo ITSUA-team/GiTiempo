@@ -103,6 +103,8 @@ Use sequential PrimeVue `<AutoComplete dropdown forceSelection>` controls.
 - Use PrimeVue `<AutoComplete dropdown forceSelection>` for each level.
 - Disable each level until the previous one has a value.
 - Use `:loading` while downstream options are fetched.
+- For the top-bar timer picker, visible workspace-local projects are listed first and connected-user GitHub-backed project or repository sources are appended after them when a GitHub account is connected.
+- Disconnected GitHub state must not block workspace-local project/task selection.
 - This pattern is used inside the centered top-bar task-picker dialog.
 
 ```vue
@@ -206,18 +208,22 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 
 - The full compact top-bar timer surface is always clickable, including when the current timer summary is loading, unavailable, or not yet startable.
 - The dialog is the primary place to switch the selected task context and to trigger timer start/stop behavior in `user-web`.
-- Use visible `Project -> Task` selection only.
+- Use `Project -> Task` selection for task targeting.
 - Use sequential PrimeVue `<AutoComplete dropdown forceSelection>` controls for project and task selection.
-- The selected project must be visible to the current user.
-- The selected task must belong to the selected visible project.
-- The `Task` select lists visible tasks first and appends `New task` as the last option.
-- When `Task = New task`, the created task inherits the selected project's default billable value.
+- Project options list visible workspace-local projects first, then connected-user GitHub-backed repository and Project V2 sources when the user has a connected GitHub account.
+- When no GitHub account is connected, keep the workspace-local selector flow valid and do not show disconnected GitHub state as a project/task request failure.
+- The selected workspace project must be visible to the current user.
+- The selected workspace task must belong to the selected visible workspace project.
+- Selecting a GitHub-backed source loads visible GitHub issue candidates for that source, then resolves the selected issue to a local timer task target before timer start or running-task update.
+- For workspace-local projects, the `Task` select lists visible tasks first and appends `New task` as the last option.
+- GitHub-backed task lists do not include manual `New task` creation.
+- When `Task = New task`, the created task inherits the selected workspace project's default billable value.
 - The dialog includes an optional `Description` field directly below `Task`; it is a time-entry note, not task metadata.
 - Use PrimeVue `<Textarea>` for the description field.
 - When the timer is idle, the popup primary action is `Start timer`, and the selected task and description become the draft for the new running entry. There is no separate shell-level start button outside the popup.
 - The running-entry draft initializes `isBillable` from the selected task's default billable value.
 - When the timer is already running, secondary `Change task` updates the running entry's task and description without stopping the timer, and primary `Stop timer` sits to its right in the same popup. These actions do not reappear as separate shell-level controls.
-- The dialog supports creating a new task inside the currently selected visible project through the `Task` select.
+- The dialog supports creating a new task inside the currently selected visible workspace project through the `Task` select.
 - Do not support creating a new project from this dialog.
 - When `Task` is set to `New task`, show a single required task-title input directly below the task select, backed by the existing task-create contract.
 - When task creation succeeds, keep the dialog open with the new task selected and let the user confirm with the state-appropriate timer action.
