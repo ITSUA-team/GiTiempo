@@ -252,6 +252,21 @@ describe('ProjectsTable', () => {
     expect(wrapper.getComponent(ManagementTableShell).props('value')).toEqual(createRows());
   });
 
+  it('places the new-project action in the table header beside search', async () => {
+    const wrapper = mountProjectsTable();
+    const search = wrapper.get('input[aria-label="Search projects"]');
+    const newProjectButton = wrapper.get('[data-testid="projects-table-new-project"]');
+
+    expect(newProjectButton.attributes('aria-label')).toBe('New project');
+    expect(newProjectButton.attributes('data-tooltip')).toBe('New project');
+    expect(newProjectButton.text()).toBe('');
+    expect(newProjectButton.element.parentElement?.contains(search.element)).toBe(true);
+
+    await newProjectButton.trigger('click');
+
+    expect(wrapper.emitted('new-project')).toEqual([[]]);
+  });
+
   it('emits expanded row updates from the table shell contract', async () => {
     const wrapper = mountProjectsTable();
 

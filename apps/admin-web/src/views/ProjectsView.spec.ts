@@ -134,6 +134,10 @@ const ProjectsTableStub = {
       data-testid="project-filter-intent"
       @click="$emit('update:filters', { global: 'orion' })"
     />
+    <button
+      data-testid="project-new-intent"
+      @click="$emit('new-project')"
+    />
     <slot v-if="rows[0]" name="row-expansion" :row="rows[0]" />
   </div>`,
 };
@@ -358,6 +362,15 @@ describe('ProjectsView', () => {
     expect(wrapper.get('[data-testid="projects-table"]').text()).toContain(
       '1 rows | 0 member filters | loading=false | search=orion',
     );
+  });
+
+  it('navigates to the add-project page from the table header action', async () => {
+    const wrapper = mountProjectsView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-new-intent"]').trigger('click');
+
+    expect(testMocks.routerPush).toHaveBeenCalledWith({ name: 'admin-add-project' });
   });
 
   it('confirms project archive, shows success feedback, and refreshes projects', async () => {

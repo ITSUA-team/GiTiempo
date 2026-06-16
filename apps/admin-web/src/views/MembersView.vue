@@ -6,10 +6,8 @@ import type {
   WorkspaceInviteResponse,
   WorkspaceMemberListResponse,
   WorkspaceMemberResponse,
-  WorkspaceRole,
 } from '@gitiempo/shared';
 import {
-  SectionHeader,
   StatCard,
   SurfaceCard,
   useIsMobileViewport,
@@ -17,7 +15,6 @@ import {
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
-import MemberAssignPmPanel from '@/components/forms/MemberAssignPmPanel.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
 import MemberInviteDialog from '@/components/forms/MemberInviteDialog.vue';
 import MembersTable from '@/components/MembersTable.vue';
@@ -26,6 +23,7 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useMembersTableState } from '@/composables/useMembersTableState';
+import type { MembersTableRow } from '@/lib/members-table';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -47,7 +45,6 @@ const inviteDialogVisible = ref(false);
 const resendingInviteId = ref<string | null>(null);
 const cancelingInviteId = ref<string | null>(null);
 const savingMemberAssignmentId = ref<string | null>(null);
-const savingMemberRoleId = ref<string | null>(null);
 
 interface LoadDataOptions {
   errorAction: string;
@@ -230,14 +227,20 @@ function handleEditMember(member: WorkspaceMemberResponse): void {
 }
 
 async function handleAssignmentsSubmitted(
-  member: WorkspaceMemberResponse,
+  row: MembersTableRow,
   input: MemberAssignFormInput,
 ): Promise<void> {
+  if (!row.canAssignPm) {
+    return;
+  }
+
   const token = authStore.accessToken;
 
   if (!token) {
     return;
   }
+
+  const { member } = row;
 
   const currentAssignedIds = new Set(
     projects.value
@@ -273,38 +276,6 @@ async function handleAssignmentsSubmitted(
     });
   } finally {
     savingMemberAssignmentId.value = null;
-  }
-}
-
-async function handleRoleSubmitted(
-  member: WorkspaceMemberResponse,
-  role: WorkspaceRole,
-): Promise<void> {
-  if (role === member.role) {
-    collapseMemberRow(member);
-    return;
-  }
-
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  savingMemberRoleId.value = member.id;
-
-  try {
-    await adminMembersClient.updateMemberRole(member.id, { role });
-    successToast(`Role for ${getMemberDisplayName(member)} changed to ${role}.`);
-    collapseMemberRow(member);
-    await refreshMembers();
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to update role', {
-      error: err,
-      logContext: { action: 'update-member-role', feature: 'members' },
-    });
-  } finally {
-    savingMemberRoleId.value = null;
   }
 }
 
@@ -379,12 +350,6 @@ onMounted(fetchAll);
     </template>
 
     <template v-else>
-      <SectionHeader
-        title="Members"
-        description="Manage team roles, project assignments, and member activity."
-        variant="page"
-      />
-
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Active Members"
@@ -422,19 +387,13 @@ onMounted(fetchAll);
               class="flex flex-col gap-3"
             >
               <MemberEditForm
+                :can-assign-pm="row.canAssignPm"
                 :can-remove="row.canManage"
-                :member="row.member"
-                :saving="savingMemberRoleId === row.id"
-                @remove="handleRemoveMember(row.member)"
-                @save="handleRoleSubmitted(row.member, $event)"
-                @cancelled="collapseMemberRow(row.member)"
-              />
-              <MemberAssignPmPanel
-                v-if="row.canAssignPm"
                 :member="row.member"
                 :projects="projects"
                 :saving="savingMemberAssignmentId === row.id"
-                @save="handleAssignmentsSubmitted(row.member, $event)"
+                @remove="handleRemoveMember(row.member)"
+                @save="handleAssignmentsSubmitted(row, $event)"
                 @cancelled="collapseMemberRow(row.member)"
               />
             </div>

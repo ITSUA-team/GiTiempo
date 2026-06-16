@@ -87,9 +87,35 @@ const members: WorkspaceMemberListResponse = [
 ];
 
 const stubs = {
+  AutoComplete: {
+    name: 'AutoComplete',
+    props: {
+      completeOnFocus: Boolean,
+      dropdown: Boolean,
+      dropdownMode: String,
+      fluid: Boolean,
+      forceSelection: Boolean,
+      inputId: String,
+      invalid: Boolean,
+      minLength: Number,
+      multiple: Boolean,
+      name: String,
+      optionLabel: Function,
+      placeholder: String,
+      pt: Object,
+      suggestions: Array,
+    },
+    template: `<div>
+      <input :id="inputId" :name="name" :placeholder="placeholder" />
+      <span v-for="suggestion in suggestions" :key="suggestion">
+        {{ optionLabel ? optionLabel(suggestion) : suggestion }}
+      </span>
+    </div>`,
+  },
   Button: {
-    props: ['disabled', 'label', 'type'],
-    template: '<button :disabled="disabled" :type="type">{{ label }}</button>',
+    props: ['disabled', 'label', 'loading', 'type', 'unstyled'],
+    template:
+      '<button v-bind="$attrs" :disabled="disabled" :type="type"><slot>{{ label }}</slot></button>',
   },
   EditFormPanel: {
     props: ['title'],
@@ -103,14 +129,19 @@ const stubs = {
     props: ['inputId', 'name'],
     template: '<input :id="inputId" :name="name" type="checkbox" />',
   },
-  MultiSelect: {
-    props: ['id', 'name', 'options'],
-    template:
-      '<select :id="id" :name="name"><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
-  },
   Select: {
-    props: ['id', 'name'],
-    template: '<select :id="id" :name="name" />',
+    name: 'Select',
+    props: {
+      fluid: Boolean,
+      inputId: String,
+      invalid: Boolean,
+      name: String,
+      optionLabel: String,
+      optionValue: String,
+      options: Array,
+    },
+    template:
+      '<select :id="inputId" :name="name"><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
   },
 };
 
@@ -119,7 +150,7 @@ describe('ProjectEditForm', () => {
     setActivePinia(createPinia());
   });
 
-  it('keeps project settings in a desktop row with a mobile stack', () => {
+  it('keeps project settings controls at the same edit-form height', () => {
     const wrapper = mount(ProjectEditForm, {
       props: { allMembers: members, project },
       global: { plugins: [createPinia()], stubs },
@@ -134,14 +165,93 @@ describe('ProjectEditForm', () => {
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
     expect(wrapper.text()).toContain('New task billable default');
-    expect(wrapper.find('input[name="defaultBillableForTasks"]').exists()).toBe(true);
+    const billableInput = wrapper.find('input[name="defaultBillableForTasks"]');
+    const billableControl = wrapper.get('label[for="edit-default-billable-for-tasks"]');
+
+    expect(billableInput.exists()).toBe(true);
+    expect(billableControl.classes()).toContain('h-[42px]');
     expect(wrapper.text()).toContain('Billable by default');
+    const memberInput = wrapper.getComponent({ name: 'AutoComplete' });
+    const visibilityInput = wrapper.getComponent({ name: 'Select' });
+
+    expect(memberInput.props('multiple')).toBe(true);
+    expect(memberInput.props('dropdown')).toBe(true);
+    expect(memberInput.props('forceSelection')).toBe(true);
+    expect(memberInput.props('completeOnFocus')).toBe(true);
+    expect(memberInput.props('minLength')).toBe(0);
+    expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
+    expect(memberInput.props('placeholder')).toBe('Search members...');
+    expect(memberInput.props('pt')).toMatchObject({
+      inputMultiple: {
+        class: expect.stringContaining('min-h-[42px]'),
+      },
+    });
+    expect(visibilityInput.attributes('class')).toContain('h-[42px]');
+    expect(visibilityInput.props('optionLabel')).toBe('label');
+    expect(visibilityInput.props('optionValue')).toBe('value');
+    expect(visibilityInput.props('options')).toEqual([
+      { label: 'Public', value: 'public' },
+      { label: 'Private', value: 'private' },
+    ]);
     expect(wrapper.text()).toContain('Pat PM');
     expect(wrapper.text()).toContain('member@example.com');
     expect(wrapper.text()).not.toContain('Alex Admin');
     expect(wrapper.text()).toContain('Archive project');
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save');
+
+    const archiveButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Archive project',
+    );
+    const cancelButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Cancel',
+    );
+    const saveButton = wrapper.findAll('button').find((button) =>
+      button.text() === 'Save',
+    );
+
+    expect(archiveButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-surface-primary',
+        'border-destructive',
+        'cursor-pointer',
+        'h-[42px]',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
+        'text-[13px]',
+        'text-destructive',
+        'font-semibold',
+      ]),
+    );
+    expect(cancelButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-surface-primary',
+        'border-divider',
+        'cursor-pointer',
+        'h-[42px]',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
+        'text-[13px]',
+        'text-text-dark',
+        'font-medium',
+      ]),
+    );
+    expect(saveButton?.classes()).toEqual(
+      expect.arrayContaining([
+        'bg-brand',
+        'border-0',
+        'cursor-pointer',
+        'h-[42px]',
+        'rounded-sm',
+        'px-3.5',
+        'py-2',
+        'text-[13px]',
+        'text-text-inverse',
+        'font-semibold',
+      ]),
+    );
   });
 
   it('emits the status-specific action from the inline project settings panel', async () => {

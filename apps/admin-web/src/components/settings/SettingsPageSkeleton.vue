@@ -11,19 +11,6 @@ import Skeleton from 'primevue/skeleton';
   >
     <span class="sr-only">Loading settings</span>
 
-    <div class="flex flex-col gap-1.5">
-      <Skeleton
-        width="9rem"
-        height="2rem"
-        border-radius="6px"
-      />
-      <Skeleton
-        width="min(100%, 28rem)"
-        height="1rem"
-        border-radius="6px"
-      />
-    </div>
-
     <div class="flex w-full max-w-[620px] flex-col gap-2">
       <SurfaceCard
         class="w-full"

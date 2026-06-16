@@ -228,6 +228,21 @@ describe('MembersTable', () => {
     ).toEqual(createRows());
   });
 
+  it('places the invite action in the table header beside search', async () => {
+    const wrapper = mountMembersTable();
+    const search = wrapper.get('input[aria-label="Search members"]');
+    const inviteButton = wrapper.get('[data-testid="members-table-invite"]');
+
+    expect(inviteButton.attributes('aria-label')).toBe('Invite member');
+    expect(inviteButton.attributes('data-tooltip')).toBe('Invite member');
+    expect(inviteButton.text()).toBe('');
+    expect(inviteButton.element.parentElement?.contains(search.element)).toBe(true);
+
+    await inviteButton.trigger('click');
+
+    expect(wrapper.emitted('invite-member')).toEqual([[]]);
+  });
+
   it('emits expanded row updates from the table shell contract', async () => {
     const wrapper = mountMembersTable();
 
