@@ -9,6 +9,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ZodValidationException } from 'nestjs-zod';
 import type { Request, Response } from 'express';
+import {
+  getRegistrationValidationCode,
+  REGISTRATION_ERROR_MESSAGES,
+} from '../../auth/registration-errors';
 import type { Env } from '../../config/env.validation';
 
 /**
@@ -19,6 +23,7 @@ import type { Env } from '../../config/env.validation';
  */
 export interface ApiErrorResponse {
   statusCode: number;
+  code?: string;
   error: string;
   message: string | string[];
   requestId?: string;
@@ -49,7 +54,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.config.get('NODE_ENV', { infer: true }) === 'production';
     const requestId = request.id;
 
-    const payload = this.buildPayload(exception, requestId, isProduction);
+    const payload = this.buildPayload(
+      exception,
+      request,
+      requestId,
+      isProduction,
+    );
 
     // Log server errors (5xx) at error level, client errors at debug.
     if (payload.statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
@@ -79,6 +89,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   private buildPayload(
     exception: unknown,
+    request: Request,
     requestId: string | undefined,
     isProduction: boolean,
   ): ApiErrorResponse {
@@ -86,10 +97,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof ZodValidationException) {
       const zodError = exception.getZodError() as { issues: ZodIssueLike[] };
       const issues: ZodIssueLike[] = zodError.issues;
+      const registrationValidationCode =
+        request.method === 'POST' && request.path === '/auth/register'
+          ? getRegistrationValidationCode(issues)
+          : null;
+
       return {
         statusCode: HttpStatus.BAD_REQUEST,
+        ...(registrationValidationCode
+          ? { code: registrationValidationCode }
+          : {}),
         error: 'BadRequest',
-        message: 'Validation failed',
+        message: registrationValidationCode
+          ? REGISTRATION_ERROR_MESSAGES[registrationValidationCode]
+          : 'Validation failed',
         details: issues.map((issue) => ({
           path: issue.path,
           message: issue.message,
@@ -131,8 +152,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
             ? ((res as { message: string | string[] }).message ??
               httpEx.message)
             : httpEx.message;
+      const code =
+        typeof res === 'object' && res !== null && 'code' in res
+          ? String((res as { code: unknown }).code)
+          : undefined;
+      const details =
+        typeof res === 'object' && res !== null && 'details' in res
+          ? (res as { details: unknown }).details
+          : undefined;
       return {
         statusCode: status,
+        ...(code ? { code } : {}),
+        ...(details === undefined ? {} : { details }),
         error: errorName,
         message,
         requestId,

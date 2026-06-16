@@ -5,6 +5,15 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Env } from './env.validation';
 
 const REQUEST_ID_HEADER = 'x-request-id';
+export const SENSITIVE_LOG_REDACT_PATHS: string[] = [
+  'req.headers.authorization',
+  'req.headers.cookie',
+  'req.body.firebaseIdToken',
+  'req.body.refreshToken',
+  'req.body.password',
+  'res.body.accessToken',
+  'res.body.refreshToken',
+];
 
 function compactReqSerializer(req: IncomingMessage & { id?: string }) {
   return {
@@ -63,14 +72,7 @@ export const LoggerModuleConfig = LoggerModule.forRootAsync({
             }
           : {}),
         redact: {
-          paths: [
-            'req.headers.authorization',
-            'req.headers.cookie',
-            'req.body.firebaseIdToken',
-            'req.body.refreshToken',
-            'res.body.accessToken',
-            'res.body.refreshToken',
-          ],
+          paths: SENSITIVE_LOG_REDACT_PATHS,
           censor: '[REDACTED]',
         },
         autoLogging: {

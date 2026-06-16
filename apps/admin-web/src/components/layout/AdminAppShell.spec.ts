@@ -39,9 +39,9 @@ function createAuthProfile(role: WorkspaceRole = WorkspaceRoles.Admin): UserResp
 }
 
 vi.mock("@/services/admin-settings-client", () => ({
-  adminSettingsClient: {
+  getAdminSettingsClient: () => ({
     getWorkspace: testMocks.getWorkspace,
-  },
+  }),
 }));
 
 vi.mock("@/composables/feedback/useToasts", () => ({

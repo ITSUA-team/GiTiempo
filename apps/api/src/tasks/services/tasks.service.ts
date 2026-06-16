@@ -78,15 +78,16 @@ export class TasksService {
       throw new UnprocessableEntityException('Project is inactive');
     }
 
-    const [row] = await this.db
-      .insert(tasks)
-      .values({
-        workspaceId: user.workspaceId,
-        projectId: project.id,
-        title: input.title,
-      })
-      .returning();
-    if (!row) throw new Error('Failed to create task');
+    const row = (
+      await this.db
+        .insert(tasks)
+        .values({
+          workspaceId: user.workspaceId,
+          projectId: project.id,
+          title: input.title,
+        })
+        .returning()
+    )[0]!;
     return this.toResponse(row, null);
   }
 

@@ -15,7 +15,7 @@ import {
 import { useToasts } from "@/composables/feedback/useToasts";
 import { appEnv } from "@/config/env";
 import { routeNames } from "@/constants/routes";
-import { adminSettingsClient } from "@/services/admin-settings-client";
+import { getAdminSettingsClient } from "@/services/admin-settings-client";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
@@ -74,7 +74,7 @@ watch(
     workspaceNameRequestToken = accessToken;
 
     try {
-      const workspace = await adminSettingsClient.getWorkspace();
+      const workspace = await getAdminSettingsClient().getWorkspace();
       authStore.setWorkspaceName(workspace.name);
     } catch (error) {
       workspaceNameRequestToken = null;

@@ -7,5 +7,6 @@ export const routeNames = {
   notFound: "not-found",
   profile: "profile",
   project: "project",
+  register: "register",
   timeEntries: "time-entries",
 } as const;

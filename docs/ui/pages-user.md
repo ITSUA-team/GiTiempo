@@ -122,6 +122,42 @@
 - Disconnect confirmation and callback notifications should use standard PrimeVue `<ConfirmDialog>` and `<Toast>` components; do not invent custom dialog or toast patterns for this page.
 - Sign out is owned by the shared header profile dropdown; do not render a duplicate sign-out action in the Profile page content.
 
+## Login Page
+
+- `/login` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
+- The login page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- Use the approved `Login Page` `.pen` screen as the desktop parity source.
+- The left brand panel keeps the existing product value copy and workspace-management summary cards.
+- The main panel title is `Sign in` with email/password fields ordered `Email`, then `Password`.
+- The primary action is `Sign in`.
+- `Continue with Google` remains a secondary sign-in action below the primary action.
+- Add a secondary outlined `Create workspace` action below `Continue with Google`. It links to `/register` and opens the register new workflow without changing the login form state.
+- Keep the register action visually secondary to both sign-in actions. Do not render it as a second filled primary button.
+- Keep the existing invite/help text below the action stack so users joining an existing workspace still understand they need an invitation.
+- Login errors stay scoped to the sign-in attempt. Navigating to `/register` must not reuse or display stale login submission errors.
+
+## Register New Workflow Page
+
+- `/register` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
+- The register page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- Use the approved `Register New Workflow` `.pen` screen as the desktop parity source and `Register New Workflow Mobile` as the mobile parity source.
+- The page creates the first workspace owner account for a new workspace only after an approved backend/API registration contract exists. It does not replace invite acceptance for members joining an existing workspace.
+- The left desktop brand panel explains the new-workspace flow: create owner account, name the workspace, continue to dashboard.
+- The mobile layout keeps the same content hierarchy while stacking the brand header, fields, owner acknowledgement, and actions in one column.
+- The main panel title is `Create workspace` with helper copy explaining that the account becomes the initial workspace owner after registration succeeds.
+- The default form fields are ordered `Work email`, `Full name`, `Workspace name`, `Password`, then `Confirm password`.
+- Password fields use PrimeVue `<Password>` controls with feedback disabled unless a later approved password-strength requirement adds explicit feedback behavior.
+- The owner acknowledgement checkbox follows the password fields and must be checked before submission. Desktop copy is `I agree to receive workspace email and accept the workspace owner responsibility.`
+- The primary action is `Create workspace`.
+- The secondary account action is an inline `Sign in` link for existing users. It navigates to `/login` and does not compete visually with the primary action.
+- Do not add Google sign-up, invite acceptance, or password setup actions to this page unless docs, specs, and design are updated together.
+- Registration implementation must use a shared contract-facing validation schema and a typed frontend API client once the backend/API contract exists. Do not create an ad hoc route-local fetch path for this workflow.
+- The page must not ship as a disabled placeholder. If the registration backend is unavailable, the route should remain unregistered or intentionally gated until the approved contract exists.
+- While registration is submitting, keep the panel shape stable, show loading on `Create workspace`, and prevent duplicate submissions.
+- Successful registration should establish the normal app session from the approved registration response and redirect to the dashboard.
+- Registration errors stay inline in the panel and should also use toast feedback for failed submission. Required mapped cases once backend support exists: duplicate email, weak password, invalid workspace name, workspace name unavailable, rate limiting, and registration service unavailable.
+- Query and form tests should cover default render, required-field validation, owner acknowledgement validation, duplicate-submit prevention, successful dashboard redirect, existing-account navigation, and each mapped backend error once implementation begins.
+
 ## Invite Accept Page
 
 - `/invites/accept?token=...` renders as a standalone unauthenticated route-level page outside the authenticated app shell.

@@ -12,9 +12,34 @@ import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTim
 import { createAppRouter, routeNames } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
+const testMocks = vi.hoisted(() => ({
+  getWorkspace: vi.fn(),
+  toastAdd: vi.fn(),
+}));
+
+vi.mock("primevue/usetoast", () => ({
+  useToast: () => ({
+    add: testMocks.toastAdd,
+  }),
+}));
+
+vi.mock("@/services/workspace-client", () => ({
+  getWorkspaceClient: () => ({
+    getWorkspace: testMocks.getWorkspace,
+  }),
+}));
+
 describe("AppShell", () => {
   beforeEach(() => {
     clearRefreshToken();
+    testMocks.getWorkspace.mockReset();
+    testMocks.toastAdd.mockReset();
+    testMocks.getWorkspace.mockResolvedValue({
+      createdAt: "2026-05-01T10:00:00.000Z",
+      id: "11111111-1111-4111-8111-111111111111",
+      name: "GiTiempo Studio",
+      updatedAt: "2026-05-01T10:00:00.000Z",
+    });
     vi.stubEnv("VITE_ADMIN_APP_URL", "https://admin.example.test/login");
   });
 
@@ -82,6 +107,7 @@ describe("AppShell", () => {
             template: `
               <header>
                 <span data-testid="workspace-header-page-name">{{ pageName }}</span>
+                <span data-testid="workspace-header-workspace-name">{{ workspaceName }}</span>
                 <span data-testid="workspace-header-center-align">{{ centerContentAlign }}</span>
                 <span data-testid="workspace-header-page-name">{{ pageName }}</span>
                 <span data-testid="workspace-header-show-display-name">{{ String(showDisplayName) }}</span>
@@ -148,5 +174,9 @@ describe("AppShell", () => {
 
     expect(logoutSpy).toHaveBeenCalledTimes(1);
     expect(router.currentRoute.value.name).toBe(routeNames.login);
+    expect(testMocks.getWorkspace).toHaveBeenCalledWith();
+    expect(wrapper.get('[data-testid="workspace-header-workspace-name"]').text()).toBe(
+      "GiTiempo Studio",
+    );
   });
 });

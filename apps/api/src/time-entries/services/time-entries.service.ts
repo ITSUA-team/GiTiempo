@@ -122,21 +122,22 @@ export class TimeEntriesService {
         input.taskId,
         tx,
       );
-      const [row] = await tx
-        .insert(timeEntries)
-        .values({
-          workspaceId: user.workspaceId,
-          taskId: task.id,
-          userId: user.sub,
-          startedAt,
-          endedAt,
-          durationSeconds,
-          description: input.description ?? null,
-          isBillable: input.isBillable ?? true,
-          source: 'manual',
-        })
-        .returning({ id: timeEntries.id });
-      if (!row) throw new Error('Failed to create time entry');
+      const row = (
+        await tx
+          .insert(timeEntries)
+          .values({
+            workspaceId: user.workspaceId,
+            taskId: task.id,
+            userId: user.sub,
+            startedAt,
+            endedAt,
+            durationSeconds,
+            description: input.description ?? null,
+            isBillable: input.isBillable ?? true,
+            source: 'manual',
+          })
+          .returning({ id: timeEntries.id })
+      )[0]!;
       return row.id;
     });
 
@@ -361,17 +362,18 @@ export class TimeEntriesService {
           throw new UnprocessableEntityException('Task is closed');
         }
 
-        const [entry] = await tx
-          .insert(timeEntries)
-          .values({
-            workspaceId: user.workspaceId,
-            taskId: lockedTask.id,
-            userId: user.sub,
-            startedAt: new Date(),
-            source: 'extension',
-          })
-          .returning({ id: timeEntries.id });
-        if (!entry) throw new Error('Failed to start timer');
+        const entry = (
+          await tx
+            .insert(timeEntries)
+            .values({
+              workspaceId: user.workspaceId,
+              taskId: lockedTask.id,
+              userId: user.sub,
+              startedAt: new Date(),
+              source: 'extension',
+            })
+            .returning({ id: timeEntries.id })
+        )[0]!;
         return entry.id;
       });
 
@@ -433,18 +435,19 @@ export class TimeEntriesService {
           taskId,
           tx,
         );
-        const [row] = await tx
-          .insert(timeEntries)
-          .values({
-            description,
-            workspaceId: user.workspaceId,
-            taskId: task.id,
-            userId: user.sub,
-            startedAt: new Date(),
-            source,
-          })
-          .returning({ id: timeEntries.id });
-        if (!row) throw new Error('Failed to start timer');
+        const row = (
+          await tx
+            .insert(timeEntries)
+            .values({
+              description,
+              workspaceId: user.workspaceId,
+              taskId: task.id,
+              userId: user.sub,
+              startedAt: new Date(),
+              source,
+            })
+            .returning({ id: timeEntries.id })
+        )[0]!;
         return row.id;
       });
 
@@ -658,15 +661,16 @@ export class TimeEntriesService {
       return { project, created: false };
     }
 
-    const [project] = await db
-      .insert(projectsTable)
-      .values({
-        workspaceId: user.workspaceId,
-        name: githubRepo,
-        color: null,
-      })
-      .returning();
-    if (!project) throw new Error('Failed to create GitHub project');
+    const project = (
+      await db
+        .insert(projectsTable)
+        .values({
+          workspaceId: user.workspaceId,
+          name: githubRepo,
+          color: null,
+        })
+        .returning()
+    )[0]!;
 
     const [createdRef] = await db
       .insert(projectExternalRefs)
@@ -734,15 +738,16 @@ export class TimeEntriesService {
       );
     }
 
-    const [task] = await db
-      .insert(tasksTable)
-      .values({
-        workspaceId,
-        projectId,
-        title: issueTitle,
-      })
-      .returning();
-    if (!task) throw new Error('Failed to create GitHub task');
+    const task = (
+      await db
+        .insert(tasksTable)
+        .values({
+          workspaceId,
+          projectId,
+          title: issueTitle,
+        })
+        .returning()
+    )[0]!;
 
     const [repo, issueNumber] = issueKey.split('#');
     const [createdRef] = await db

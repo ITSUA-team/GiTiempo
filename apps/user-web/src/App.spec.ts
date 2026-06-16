@@ -29,6 +29,10 @@ const AuthSignInFormStub = {
   template: '<form data-testid="auth-sign-in-form">{{ title }}</form>',
 };
 
+const RegisterViewStub = {
+  template: '<section data-testid="register-view" />',
+};
+
 async function mountAppAt(path: string) {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -47,6 +51,7 @@ async function mountAppAt(path: string) {
         AuthIntroPanel: AuthIntroPanelStub,
         AuthSignInForm: AuthSignInFormStub,
         ConfirmDialog: ConfirmDialogHostStub,
+        RegisterView: RegisterViewStub,
         Toast: ToastHostStub,
       },
     },
@@ -78,6 +83,15 @@ describe("user App", () => {
       "data-position": "top-right",
       "data-root-class": "w-80",
     });
+    expect(wrapper.findAll('[data-testid="confirm-dialog-host"]')).toHaveLength(1);
+  });
+
+  it("renders the register route outside the authenticated app shell", async () => {
+    const { router, wrapper } = await mountAppAt("/register");
+
+    expect(router.currentRoute.value.name).toBe(routeNames.register);
+    expect(wrapper.find('[data-testid="register-view"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="toast-host"]')).toHaveLength(1);
     expect(wrapper.findAll('[data-testid="confirm-dialog-host"]')).toHaveLength(1);
   });
 });
