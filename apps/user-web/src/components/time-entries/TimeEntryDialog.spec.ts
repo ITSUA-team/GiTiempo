@@ -43,7 +43,6 @@ function mountDialog(
         {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
-          defaultBillableForTasks: true,
           description: null,
           id: "project-1",
           isActive: true,
@@ -58,7 +57,6 @@ function mountDialog(
         {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
-          defaultBillableForTasks: false,
           description: null,
           id: "project-2",
           isActive: true,

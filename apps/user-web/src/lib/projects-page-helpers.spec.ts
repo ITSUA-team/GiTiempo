@@ -16,7 +16,6 @@ function createProject(id: string, name: string): ProjectResponse {
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
-    defaultBillableForTasks: true,
     description: null,
     id,
     isActive: true,
@@ -39,7 +38,6 @@ function createTask(
 ): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
-    defaultBillableForTimeEntries: true,
     githubIssue: null,
     id,
     isActive: true,

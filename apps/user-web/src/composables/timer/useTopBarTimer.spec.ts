@@ -45,7 +45,6 @@ function createProject(
   return {
     color: null,
     createdAt: '2026-04-20T12:00:00.000Z',
-    defaultBillableForTasks: true,
     description: null,
     id,
     isActive,
@@ -68,7 +67,6 @@ function createTask(
 ): TaskResponse {
   return {
     createdAt: '2026-04-20T12:00:00.000Z',
-    defaultBillableForTimeEntries: true,
     githubIssue: null,
     id,
     isActive,

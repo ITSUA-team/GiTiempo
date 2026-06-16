@@ -78,7 +78,6 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
-    defaultBillableForTasks: true,
     description: null,
     id: TEST_IDS.projectOrion,
     isActive: true,
@@ -96,7 +95,6 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
-    defaultBillableForTimeEntries: true,
     githubIssue: null,
     id: TEST_IDS.taskReports,
     isActive: true,
