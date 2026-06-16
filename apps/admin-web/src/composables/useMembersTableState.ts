@@ -62,12 +62,14 @@ function getInitials(member: WorkspaceMemberResponse): string {
   return parts.join('') || '??';
 }
 
-function getProjectsAssignedCount(member: WorkspaceMemberResponse): number {
-  return member.projectsAssignedCount;
+function isMemberAssignedToProject(
+  project: ProjectListResponse[number],
+  member: WorkspaceMemberResponse,
+): boolean {
+  return project.members.some((projectMember) => projectMember.userId === member.userId);
 }
 
-function formatProjectsAssigned(member: WorkspaceMemberResponse): string {
-  const count = getProjectsAssignedCount(member);
+function formatProjectsAssigned(count: number): string {
   return `${count} project${count === 1 ? '' : 's'}`;
 }
 
@@ -115,10 +117,14 @@ export function useMembersTableState({
     member: WorkspaceMemberResponse,
   ): MembersTableFilterOption[] {
     return projects.value
-      .filter((project) =>
-        project.members.some((projectMember) => projectMember.userId === member.userId),
-      )
+      .filter((project) => isMemberAssignedToProject(project, member))
       .map((project) => ({ label: project.name, value: project.id }));
+  }
+
+  function getActiveProjectsAssignedCount(member: WorkspaceMemberResponse): number {
+    return projects.value.filter(
+      (project) => project.isActive && isMemberAssignedToProject(project, member),
+    ).length;
   }
 
   function matchesLastActiveFilter(member: WorkspaceMemberResponse): boolean {
@@ -172,11 +178,12 @@ export function useMembersTableState({
     }
 
     const projectLabels = getMemberProjectOptions(member).map((project) => project.label);
+    const activeProjectsAssignedCount = getActiveProjectsAssignedCount(member);
     const haystack = [
       getMemberDisplayName(member),
       member.email,
       formatWorkspaceRole(member.role),
-      formatProjectsAssigned(member),
+      formatProjectsAssigned(activeProjectsAssignedCount),
       formatLocalCalendarDate(member.lastActiveAt),
       ...projectLabels,
     ].join(' ');
@@ -191,6 +198,7 @@ export function useMembersTableState({
 
   function createRow(member: WorkspaceMemberResponse): MembersTableRow {
     const self = isSelf(member);
+    const activeProjectsAssignedCount = getActiveProjectsAssignedCount(member);
 
     return {
       avatarImage: member.avatarUrl ?? undefined,
@@ -202,7 +210,7 @@ export function useMembersTableState({
       lastActiveLabel: formatLocalCalendarDate(member.lastActiveAt),
       member,
       primaryLabel: member.displayName ?? member.email,
-      projectsAssignedLabel: formatProjectsAssigned(member),
+      projectsAssignedLabel: formatProjectsAssigned(activeProjectsAssignedCount),
       roleLabel: formatWorkspaceRole(member.role),
       secondaryLabel: member.displayName ? member.email : null,
     };

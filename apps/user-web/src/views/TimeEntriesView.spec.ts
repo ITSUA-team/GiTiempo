@@ -489,11 +489,12 @@ describe("TimeEntriesView", () => {
     const { wrapper } = await mountView();
 
     await flushPromises();
-    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
 
+    expect(wrapper.find('[data-testid="time-entries-header-create"]').exists()).toBe(false);
+
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
 
-    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
     const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
     await editButtons[editButtons.length - 1]!.trigger("click");
 

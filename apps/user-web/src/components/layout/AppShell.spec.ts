@@ -109,6 +109,7 @@ describe("AppShell", () => {
                 <span data-testid="workspace-header-page-name">{{ pageName }}</span>
                 <span data-testid="workspace-header-workspace-name">{{ workspaceName }}</span>
                 <span data-testid="workspace-header-center-align">{{ centerContentAlign }}</span>
+                <span data-testid="workspace-header-page-name">{{ pageName }}</span>
                 <span data-testid="workspace-header-show-display-name">{{ String(showDisplayName) }}</span>
                 <div data-testid="workspace-header-center-row">
                   <slot name="center" />
@@ -133,6 +134,7 @@ describe("AppShell", () => {
     expect(settingsLink.text()).toBe("Profile");
     expect(settingsLink.attributes("href")).toBe("/profile");
     expect(wrapper.get('[data-testid="workspace-header-center-align"]').text()).toBe("end");
+    expect(wrapper.get('[data-testid="workspace-header-page-name"]').text()).toBe("Dashboard");
     expect(wrapper.get('[data-testid="workspace-header-show-display-name"]').text()).toBe("false");
     expect(wrapper.find('[data-testid="dashboard-overview"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="workspace-header-center-row"]').exists()).toBe(true);

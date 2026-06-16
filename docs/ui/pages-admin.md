@@ -32,12 +32,10 @@
 
 ## Invoices Page
 
-- Invoice list table with status tags.
-- Invoice list table is searchable with placeholder `Search invoices` and uses column filters for invoice id/name, project, amount, and status.
-- An icon-only primary action sits in the invoices table header next to the search control and opens the modal dialog. Use tooltip/accessibility copy `Create invoice`.
-- Invoice id/name is the edit entry point and opens the popup. Do not keep a separate Actions column in the table.
-- The shared invoice dialog uses title `Invoice` for existing rows and covers both create and edit/detail states with fields for project `<AutoComplete dropdown forceSelection>`, date range, hourly rate, discount, and total amount.
-- Status-specific invoice actions live inside the popup instead of the table row, and `Delete invoice` remains inside the dialog for editable invoices.
+- Invoice page UI is deferred until an invoice API/contract exists.
+- Do not expose invoices in authenticated shell navigation, dashboard metrics/activity, or page/table content while the invoice UI is deferred.
+- The protected `/invoices` route may remain as a hidden route-inventory placeholder, but it must not render a temporary invoice table, search control, create action, modal dialog, or fabricated invoice data.
+- When invoice contracts ship, restore the approved invoices page requirements from the design: searchable invoice table, status tags, table-header `Create invoice` action, invoice edit/details dialog, and status-specific invoice actions inside the dialog.
 
 ## Members Page
 
@@ -49,7 +47,7 @@
 - Pending invitations render in a separate card below the members table using the same management-table/card visual language. Desktop/tablet columns are Email, Role, Expires, and Actions; mobile renders stacked cards with the same fields.
 - Pending invitation row actions are icon-only controls with text tooltips and accessible labels: `Resend invite` and `Cancel invite`. `Resend invite` calls the admin-only resend endpoint, shows success/error toast feedback, and refreshes pending invite data. `Cancel invite` uses the shared destructive confirmation dialog before issuing the existing cancel request.
 - Empty pending invitations state is distinct from request-error state; failed resend or cancel keeps the row visible and surfaces the backend message.
-- Project assignment is handled with inline expansion and checkboxes for non-admin members.
+- Project assignment is handled with inline expansion and PrimeVue `<AutoComplete multiple dropdown forceSelection>` for non-admin members, with selected projects shown as removable chips and typeahead search over active projects.
 
 ## Projects Page
 
@@ -59,7 +57,7 @@
 - An icon-only primary action sits in the projects table header next to the search control. Use tooltip/accessibility copy `New project`.
 - The project name is the edit entry point and opens the inline project settings section instead of using a row-level edit icon.
 - The status-specific secondary action lives inside the inline project settings section instead of the table row: active projects show `Archive project`, and archived projects show `Unarchive project`.
-- Project settings row is a single line: `Select members` uses PrimeVue `<MultiSelect>`, `Visibility` uses PrimeVue `<AutoComplete dropdown forceSelection>`, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
+- Project settings row is a single line: `Select members` uses PrimeVue `<AutoComplete multiple dropdown forceSelection>` with selected members shown as removable chips and typeahead search over non-admin members, `Visibility` uses PrimeVue `<AutoComplete dropdown forceSelection>`, `New task billable default` uses a binary billable control, followed by `Cancel` and `Save` actions.
 - Manual project creation uses the authenticated Add Project page at `/projects/new` and includes `Default billable for new tasks`.
 - When a project default billable value changes after tasks or time entries already exist in that project, save the new default immediately for future tasks, then show a follow-up popup that asks only whether existing tasks and existing time entries in that project should also be updated.
 
