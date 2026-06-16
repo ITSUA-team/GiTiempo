@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE, Reflector } from '@nestjs/core';
 import {
-  ThrottlerGuard,
+  type ThrottlerModuleOptions,
   ThrottlerModule,
   ThrottlerStorage,
 } from '@nestjs/throttler';
@@ -22,6 +22,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { TimeEntriesModule } from './time-entries/time-entries.module';
 import { ReportsModule } from './reports/reports.module';
 import { GithubModule } from './github/github.module';
+import { AppThrottlerGuard } from './commons/guards/app-throttler.guard';
 
 @Module({
   imports: [
@@ -64,10 +65,10 @@ import { GithubModule } from './github/github.module';
       provide: APP_GUARD,
       inject: ['THROTTLER:MODULE_OPTIONS', ThrottlerStorage, Reflector],
       useFactory: (
-        options: ConstructorParameters<typeof ThrottlerGuard>[0],
+        options: ThrottlerModuleOptions,
         storage: ThrottlerStorage,
         reflector: Reflector,
-      ) => new ThrottlerGuard(options, storage, reflector),
+      ) => new AppThrottlerGuard(options, storage, reflector),
     },
   ],
 })

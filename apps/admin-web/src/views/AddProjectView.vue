@@ -128,7 +128,7 @@ onMounted(loadMembers);
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="flex min-w-0 flex-col gap-5">
     <div>
       <Button
         label="← Back to projects"
@@ -148,8 +148,8 @@ onMounted(loadMembers);
       </p>
     </div>
 
-    <div class="flex gap-5">
-      <div class="bg-surface-primary flex flex-1 flex-col gap-3 rounded-lg p-4">
+    <div class="flex min-w-0 flex-col gap-5 md:flex-row">
+      <div class="bg-surface-primary flex min-w-0 flex-1 flex-col gap-3 rounded-lg p-4">
         <h2 class="text-text-dark text-lg font-semibold">
           Add Project Manually
         </h2>
@@ -184,7 +184,7 @@ onMounted(loadMembers);
               </small>
             </div>
 
-            <div class="flex gap-3">
+            <div class="flex flex-col gap-3 sm:flex-row">
               <div class="flex flex-1 flex-col gap-1.5">
                 <label class="text-text-dark text-[13px] font-medium">
                   Source
@@ -194,7 +194,7 @@ onMounted(loadMembers);
                 </div>
               </div>
 
-              <div class="flex w-40 flex-col gap-1.5">
+              <div class="flex w-full flex-col gap-1.5 sm:w-40">
                 <label
                   for="project-manager"
                   class="text-text-dark text-[13px] font-medium"
@@ -287,7 +287,7 @@ onMounted(loadMembers);
         </Form>
       </div>
 
-      <div class="shadow-card bg-surface-primary flex w-80 shrink-0 flex-col gap-3.5 rounded-lg p-5">
+      <div class="shadow-card bg-surface-primary flex w-full flex-col gap-3.5 rounded-lg p-5 md:w-80 md:shrink-0">
         <h2 class="text-text-dark text-lg font-semibold">
           Project Source
         </h2>

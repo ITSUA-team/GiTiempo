@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "users_email_lookup_unique" ON "users" USING btree (lower(btrim("email")));--> statement-breakpoint
+CREATE UNIQUE INDEX "workspaces_name_lookup_unique" ON "workspaces" USING btree (lower(regexp_replace(btrim("name"), '[[:space:]]+', ' ', 'g')));

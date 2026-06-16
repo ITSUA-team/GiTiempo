@@ -1,5 +1,5 @@
 {
-  "id": "e475c88d-844d-48c8-99ef-0f0210737f5e",
+  "id": "3f745d19-aa30-44af-9eaa-eb7b9881e19b",
   "prevId": "5684b52f-3184-4d60-9faf-5f32948a38de",
   "version": "7",
   "dialect": "postgresql",
@@ -60,7 +60,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "users_email_lookup_unique": {
+          "name": "users_email_lookup_unique",
+          "columns": [
+            {
+              "expression": "lower(btrim(\"email\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
@@ -252,7 +268,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "workspaces_name_lookup_unique": {
+          "name": "workspaces_name_lookup_unique",
+          "columns": [
+            {
+              "expression": "lower(regexp_replace(btrim(\"name\"), '[[:space:]]+', ' ', 'g'))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -657,13 +689,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'private'"
-        },
-        "default_task_billable": {
-          "name": "default_task_billable",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
         },
         "is_active": {
           "name": "is_active",
@@ -1168,13 +1193,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'open'"
-        },
-        "default_time_entry_billable": {
-          "name": "default_time_entry_billable",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
         },
         "is_active": {
           "name": "is_active",

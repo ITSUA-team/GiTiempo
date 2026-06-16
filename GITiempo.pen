@@ -13656,7 +13656,7 @@
       "id": "JvrFN",
       "x": 0,
       "y": -1100,
-      "name": "Login",
+      "name": "Login Page",
       "clip": true,
       "width": 1280,
       "height": 900,
@@ -13899,6 +13899,7 @@
               "id": "7loGY",
               "name": "panel",
               "width": "fill_container",
+              "height": 478,
               "fill": "$color-surface",
               "cornerRadius": "$radius-lg",
               "layout": "vertical",
@@ -14042,6 +14043,7 @@
                   "id": "Cuwiv",
                   "name": "actions",
                   "width": "fill_container",
+                  "height": 150,
                   "layout": "vertical",
                   "gap": 12,
                   "children": [
@@ -14091,6 +14093,32 @@
                           "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ElOaY",
+                      "name": "Create workspace link button",
+                      "width": "fill_container",
+                      "height": 42,
+                      "fill": "$color-surface",
+                      "cornerRadius": 6,
+                      "stroke": "$color-brand",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Z0uJgH",
+                          "name": "Create workspace link label",
+                          "fill": "$color-brand",
+                          "content": "Create workspace",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "700"
                         }
                       ]
                     }
@@ -26350,6 +26378,1283 @@
           "fontFamily": "Inter",
           "fontSize": 12,
           "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "a9IDJT",
+      "x": 17810,
+      "y": -1100,
+      "name": "Register New Workflow",
+      "clip": true,
+      "width": 1280,
+      "height": 900,
+      "fill": "$color-app-bg",
+      "children": [
+        {
+          "type": "frame",
+          "id": "QzfCn",
+          "name": "Brand and workflow context",
+          "width": 500,
+          "height": "fill_container",
+          "fill": "$color-brand",
+          "layout": "vertical",
+          "padding": [
+            56,
+            52
+          ],
+          "justifyContent": "space_between",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ZIYGa",
+              "name": "Brand header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Uqohg",
+                  "name": "Logo row",
+                  "width": "fill_container",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "WwTWR",
+                      "name": "GT mark",
+                      "width": 38,
+                      "height": 38,
+                      "fill": "$color-surface",
+                      "cornerRadius": 10,
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "q0QFKG",
+                          "name": "GT mark text",
+                          "fill": "$color-brand",
+                          "content": "GT",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "cYlJF",
+                      "name": "Product name",
+                      "fill": "#FFFFFF",
+                      "content": "GiTiempo",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "TQODc",
+                  "name": "Hero copy",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YEhzR",
+                      "name": "Eyebrow",
+                      "fill": "#FFFFFFB8",
+                      "content": "NEW WORKSPACE",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z0Avv",
+                      "name": "Title",
+                      "fill": "#FFFFFF",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Register your team and start tracking work.",
+                      "lineHeight": 1.08,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 42,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Xzuwc",
+                      "name": "Description",
+                      "fill": "#FFFFFFCC",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Create the first workspace owner account. Invite teammates after your workspace is ready.",
+                      "lineHeight": 1.55,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "BAl2D",
+                  "name": "Workflow steps",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "fYjTY",
+                      "name": "Step 1",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Vg8TX",
+                          "name": "Step badge 1",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "#FFFFFF1F",
+                          "cornerRadius": 14,
+                          "stroke": "#FFFFFF33",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "jguPl",
+                              "name": "Step badge label 1",
+                              "fill": "#FFFFFF",
+                              "content": "1",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "o3u1E",
+                          "name": "Step label 1",
+                          "fill": "#FFFFFFE6",
+                          "content": "Create owner account",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "idkXr",
+                      "name": "Step 2",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "KfZC2",
+                          "name": "Step badge 2",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "#FFFFFF1F",
+                          "cornerRadius": 14,
+                          "stroke": "#FFFFFF33",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "I2WJpa",
+                              "name": "Step badge label 2",
+                              "fill": "#FFFFFF",
+                              "content": "2",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "H21da",
+                          "name": "Step label 2",
+                          "fill": "#FFFFFFE6",
+                          "content": "Name the workspace",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "w84QKg",
+                      "name": "Step 3",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "byqpG",
+                          "name": "Step badge 3",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "#FFFFFF1F",
+                          "cornerRadius": 14,
+                          "stroke": "#FFFFFF33",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "U6Led",
+                              "name": "Step badge label 3",
+                              "fill": "#FFFFFF",
+                              "content": "3",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "oj8kp",
+                          "name": "Step label 3",
+                          "fill": "#FFFFFFE6",
+                          "content": "Continue to dashboard",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eO37H",
+              "name": "Security note",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EHsBX",
+                  "name": "Security note title",
+                  "fill": "#FFFFFF",
+                  "content": "Owner registration",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "OTTrH",
+                  "name": "Security note body",
+                  "fill": "#FFFFFFB8",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "This flow creates the first workspace owner only. Existing members continue to join through invites.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Lr76n",
+          "name": "Registration form area",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$color-app-bg",
+          "layout": "vertical",
+          "padding": [
+            48,
+            64
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "MRaQW",
+              "name": "Registration panel",
+              "width": 500,
+              "fill": "$color-surface",
+              "cornerRadius": 10,
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000018",
+                "offset": {
+                  "x": 0,
+                  "y": 12
+                },
+                "blur": 28
+              },
+              "layout": "vertical",
+              "gap": 24,
+              "padding": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Bz0E9",
+                  "name": "Panel header",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "g6fZJp",
+                      "name": "Panel title",
+                      "fill": "$color-text-dark",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Create workspace",
+                      "lineHeight": 1.12,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 28,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "CuLTq",
+                      "name": "Panel helper",
+                      "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Use a work email. This account becomes the initial workspace owner after registration succeeds.",
+                      "lineHeight": 1.55,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Y21YAm",
+                  "name": "Contract notice",
+                  "width": "fill_container",
+                  "fill": "$color-status-warn-bg",
+                  "cornerRadius": 6,
+                  "gap": 10,
+                  "padding": [
+                    12,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "gm4e4",
+                      "name": "Notice icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "shield-alert",
+                      "library": "lucide",
+                      "fill": "$color-status-warn-text"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WlmgI",
+                      "name": "Notice copy",
+                      "fill": "$color-status-warn-text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Registration requires the approved backend contract before implementation.",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "arci7",
+                  "name": "Registration fields",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "vCqlB",
+                      "name": "Work email field",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g1o4a",
+                          "name": "Work email label",
+                          "fill": "$color-text-dark",
+                          "content": "Work email",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Xq436",
+                          "name": "Work email input",
+                          "width": "fill_container",
+                          "height": 42,
+                          "fill": "$color-surface",
+                          "cornerRadius": 6,
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "t5xbOt",
+                              "name": "Work email placeholder",
+                              "fill": "#999999",
+                              "content": "name@company.com",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Q3wefR",
+                      "name": "Full name field",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QPqYS",
+                          "name": "Full name label",
+                          "fill": "$color-text-dark",
+                          "content": "Full name",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ExxhI",
+                          "name": "Full name input",
+                          "width": "fill_container",
+                          "height": 42,
+                          "fill": "$color-surface",
+                          "cornerRadius": 6,
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ZzCLH",
+                              "name": "Full name placeholder",
+                              "fill": "#999999",
+                              "content": "Alex Morgan",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lTsv5",
+                      "name": "Workspace name field",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "kK2nL",
+                          "name": "Workspace name label",
+                          "fill": "$color-text-dark",
+                          "content": "Workspace name",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "k4vjyw",
+                          "name": "Workspace name input",
+                          "width": "fill_container",
+                          "height": 42,
+                          "fill": "$color-surface",
+                          "cornerRadius": 6,
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xVuUl",
+                              "name": "Workspace name placeholder",
+                              "fill": "#999999",
+                              "content": "Northstar Studio",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "k1SrR",
+                      "name": "Password field",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "E6zCN",
+                          "name": "Password label",
+                          "fill": "$color-text-dark",
+                          "content": "Password",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "FnqSE",
+                          "name": "Password input",
+                          "width": "fill_container",
+                          "height": 42,
+                          "fill": "$color-surface",
+                          "cornerRadius": 6,
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "NiMpo",
+                              "name": "Password placeholder",
+                              "fill": "#999999",
+                              "content": "••••••••••",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ROdG9",
+                      "name": "Confirm password field",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cCMfb",
+                          "name": "Confirm password label",
+                          "fill": "$color-text-dark",
+                          "content": "Confirm password",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "VBgWO",
+                          "name": "Confirm password input",
+                          "width": "fill_container",
+                          "height": 42,
+                          "fill": "$color-surface",
+                          "cornerRadius": 6,
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ni8qG",
+                              "name": "Confirm password placeholder",
+                              "fill": "#999999",
+                              "content": "••••••••••",
+                              "fontFamily": "$font-sans",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "i4JSG",
+                  "name": "Terms acknowledgement",
+                  "width": "fill_container",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "z8dnM",
+                      "name": "Checkbox",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "$color-surface",
+                      "cornerRadius": 4,
+                      "stroke": "$color-brand",
+                      "strokeWidth": 1.5
+                    },
+                    {
+                      "type": "text",
+                      "id": "nvbau",
+                      "name": "Terms label",
+                      "fill": "$color-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "I agree to receive workspace email and accept the workspace owner responsibility.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "W4z20",
+                  "name": "Actions",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "j74yU",
+                      "name": "Create workspace button",
+                      "width": "fill_container",
+                      "height": 42,
+                      "fill": "$color-brand",
+                      "cornerRadius": 6,
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "DTLUD",
+                          "name": "Create workspace label",
+                          "fill": "#FFFFFF",
+                          "content": "Create workspace",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Z1F5mX",
+                      "name": "Sign in link row",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "H8imVF",
+                          "name": "Existing account copy",
+                          "fill": "$color-text-muted",
+                          "content": "Already have an account?",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Ma89I",
+                          "name": "Sign in link",
+                          "fill": "$color-brand",
+                          "content": "Sign in",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "L4Y9Np",
+      "x": 19180,
+      "y": -1100,
+      "name": "Register New Workflow Mobile",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "$color-app-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "a3vPOb",
+          "name": "Mobile brand header",
+          "width": "fill_container",
+          "fill": "$color-brand",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [
+            28,
+            24
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Dm2oe",
+              "name": "Mobile logo row",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "V1Qy3j",
+                  "name": "Mobile GT mark",
+                  "width": 34,
+                  "height": 34,
+                  "fill": "$color-surface",
+                  "cornerRadius": 9,
+                  "layout": "vertical",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Jwv62",
+                      "name": "Mobile GT text",
+                      "fill": "$color-brand",
+                      "content": "GT",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "FrCUi",
+                  "name": "Mobile product name",
+                  "fill": "#FFFFFF",
+                  "content": "GiTiempo",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 15,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "EaqCP",
+              "name": "Mobile title",
+              "fill": "#FFFFFF",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Create your workspace.",
+              "lineHeight": 1.12,
+              "fontFamily": "$font-sans",
+              "fontSize": 28,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "i6sNt",
+              "name": "Mobile helper",
+              "fill": "#FFFFFFCC",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Register the first owner account, then invite the rest of your team.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font-sans",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "hyAoP",
+          "name": "Mobile form area",
+          "width": "fill_container",
+          "fill": "$color-app-bg",
+          "layout": "vertical",
+          "gap": 18,
+          "padding": [
+            24,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Aoygr",
+              "name": "Mobile contract notice",
+              "width": "fill_container",
+              "fill": "$color-status-warn-bg",
+              "cornerRadius": 6,
+              "gap": 8,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "nambu",
+                  "name": "Mobile notice icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "shield-alert",
+                  "library": "lucide",
+                  "fill": "$color-status-warn-text"
+                },
+                {
+                  "type": "text",
+                  "id": "QyVH9",
+                  "name": "Mobile notice copy",
+                  "fill": "$color-status-warn-text",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Requires approved registration API support.",
+                  "lineHeight": 1.35,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "D7P5E",
+              "name": "Mobile fields",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "w0y7T",
+                  "name": "Mobile Work email field",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WbU5w",
+                      "name": "Mobile Work email label",
+                      "fill": "$color-text-dark",
+                      "content": "Work email",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XVtHc",
+                      "name": "Mobile Work email input",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$color-surface",
+                      "cornerRadius": 6,
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b5iVZ",
+                          "name": "Mobile Work email placeholder",
+                          "fill": "#999999",
+                          "content": "name@company.com",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Row96",
+                  "name": "Mobile Full name field",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wd0iz",
+                      "name": "Mobile Full name label",
+                      "fill": "$color-text-dark",
+                      "content": "Full name",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KUjSX",
+                      "name": "Mobile Full name input",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$color-surface",
+                      "cornerRadius": 6,
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "r7HeP0",
+                          "name": "Mobile Full name placeholder",
+                          "fill": "#999999",
+                          "content": "Alex Morgan",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "eDap3",
+                  "name": "Mobile Workspace name field",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "eziz0",
+                      "name": "Mobile Workspace name label",
+                      "fill": "$color-text-dark",
+                      "content": "Workspace name",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "I0mpW",
+                      "name": "Mobile Workspace name input",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$color-surface",
+                      "cornerRadius": 6,
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pDWiA",
+                          "name": "Mobile Workspace name placeholder",
+                          "fill": "#999999",
+                          "content": "Northstar Studio",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ISFKt",
+                  "name": "Mobile Password field",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YAM8r",
+                      "name": "Mobile Password label",
+                      "fill": "$color-text-dark",
+                      "content": "Password",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "F2RWaf",
+                      "name": "Mobile Password input",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$color-surface",
+                      "cornerRadius": 6,
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "EIkJU",
+                          "name": "Mobile Password placeholder",
+                          "fill": "#999999",
+                          "content": "••••••••••",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tnSud",
+                  "name": "Mobile Confirm password field",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "gg9eQ",
+                      "name": "Mobile Confirm password label",
+                      "fill": "$color-text-dark",
+                      "content": "Confirm password",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e40gZd",
+                      "name": "Mobile Confirm password input",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$color-surface",
+                      "cornerRadius": 6,
+                      "stroke": "$color-divider",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i45KhQ",
+                          "name": "Mobile Confirm password placeholder",
+                          "fill": "#999999",
+                          "content": "••••••••••",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "h5dnJ",
+              "name": "Mobile terms acknowledgement",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "naot0",
+                  "name": "Mobile checkbox",
+                  "width": 18,
+                  "height": 18,
+                  "fill": "$color-surface",
+                  "cornerRadius": 4,
+                  "stroke": "$color-brand",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "text",
+                  "id": "iQhfU",
+                  "name": "Mobile terms label",
+                  "fill": "$color-text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "I accept workspace owner responsibility.",
+                  "lineHeight": 1.35,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ryyAm",
+              "name": "Mobile create workspace button",
+              "width": "fill_container",
+              "height": 42,
+              "fill": "$color-brand",
+              "cornerRadius": 6,
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "kB8JT",
+                  "name": "Mobile create workspace label",
+                  "fill": "#FFFFFF",
+                  "content": "Create workspace",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "j3hlFO",
+              "name": "Mobile sign in link row",
+              "width": "fill_container",
+              "gap": 4,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "CIO1C",
+                  "name": "Mobile existing account copy",
+                  "fill": "$color-text-muted",
+                  "content": "Already registered?",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "WC99J",
+                  "name": "Mobile sign in link",
+                  "fill": "$color-brand",
+                  "content": "Sign in",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
         }
       ]
     }

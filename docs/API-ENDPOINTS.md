@@ -11,11 +11,19 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | Method | Path            | Auth | Role | Description                                              |
 | ------ | --------------- | ---- | ---- | -------------------------------------------------------- |
 | POST   | `/auth/login`   | None | —    | Exchange Firebase ID token for JWT access/refresh tokens |
+| POST   | `/auth/register`| None | —    | Register the first workspace owner and issue API tokens  |
 | POST   | `/auth/refresh` | None | —    | Exchange refresh token for new access/refresh pair       |
 | POST   | `/auth/logout`  | JWT  | Any  | Invalidate current refresh token                         |
 
 **POST /auth/login** body: `{ firebaseIdToken: string }`
+**POST /auth/register** body: `{ email: string, fullName: string, workspaceName: string, password: string, ownerAcknowledgement: true }`
 **POST /auth/refresh** body: `{ refreshToken: string }`
+
+`POST /auth/register` is the only public first-workspace-owner registration path. It creates the Firebase identity, local user, workspace, owner membership, and returns the normal token pair. Existing-workspace member onboarding remains invite-only; the User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation.
+
+Successful registration returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`.
+
+Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`. These are returned in the standard error response `code` field; `error` remains the HTTP-category label.
 
 ---
 
@@ -246,8 +254,12 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 ```json
 {
-  "statusCode": 401,
-  "error": "Unauthorized",
-  "message": "Access token expired"
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "An account already exists for that email.",
+  "code": "duplicate_email",
+  "requestId": "req_123"
 }
 ```
+
+`code` is optional unless an endpoint defines stable machine-readable error identifiers. When present, clients should branch on `code` and treat `message` as display text rather than as the parsing contract.

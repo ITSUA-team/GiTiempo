@@ -217,11 +217,9 @@ export class ProjectsService {
     };
 
     if (membership.role === 'admin') {
-      const [row] = await this.db
-        .insert(projects)
-        .values(createValues)
-        .returning();
-      if (!row) throw new Error('Failed to create project');
+      const row = (
+        await this.db.insert(projects).values(createValues).returning()
+      )[0]!;
       const response = await this.findProjectResponseInWorkspace(
         user.workspaceId,
         row.id,
@@ -231,11 +229,9 @@ export class ProjectsService {
     }
 
     const row = await this.db.transaction(async (tx) => {
-      const [inserted] = await tx
-        .insert(projects)
-        .values(createValues)
-        .returning();
-      if (!inserted) throw new Error('Failed to create project');
+      const inserted = (
+        await tx.insert(projects).values(createValues).returning()
+      )[0]!;
 
       await tx.insert(projectAssignments).values({
         workspaceId: user.workspaceId,
@@ -470,16 +466,17 @@ export class ProjectsService {
         .limit(1);
       if (existing) throw new ConflictException('Project assignment exists');
 
-      const [created] = await tx
-        .insert(projectAssignments)
-        .values({
-          workspaceId: user.workspaceId,
-          projectId: project.id,
-          userId: input.userId,
-          assignedBy: user.sub,
-        })
-        .returning();
-      if (!created) throw new Error('Failed to create project assignment');
+      const created = (
+        await tx
+          .insert(projectAssignments)
+          .values({
+            workspaceId: user.workspaceId,
+            projectId: project.id,
+            userId: input.userId,
+            assignedBy: user.sub,
+          })
+          .returning()
+      )[0]!;
 
       const [row] = await tx
         .select({

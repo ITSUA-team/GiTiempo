@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import Button from "primevue/button";
 import {
   AuthIntroPanel,
   AuthSignInForm,
+  getErrorMessage,
+  StandaloneSplitPage,
   type EmailPasswordSignInInput,
 } from "@gitiempo/web-shared";
+import { normalizeRedirectTargetValue } from "@gitiempo/web-shared/router";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
 
 import { appEnv } from "@/config/env";
@@ -36,21 +40,11 @@ const introFeatureCards = [
 ];
 
 const redirectTarget = computed(() => {
-  const redirect = route.query.redirect;
-
-  return typeof redirect === "string" && redirect.startsWith("/")
-    ? redirect
-    : null;
+  return normalizeRedirectTargetValue(route.query.redirect);
 });
 
 async function navigateAfterLogin(): Promise<void> {
   await router.replace(redirectTarget.value ?? { name: routeNames.dashboard });
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "Something went wrong while signing in.";
 }
 
 async function handleEmailSignIn({
@@ -63,7 +57,10 @@ async function handleEmailSignIn({
     await authStore.loginWithEmailPassword(email, password);
     await navigateAfterLogin();
   } catch (error) {
-    errorMessage.value = getErrorMessage(error);
+    errorMessage.value = getErrorMessage(
+      error,
+      "Something went wrong while signing in.",
+    );
   }
 }
 
@@ -74,14 +71,21 @@ async function handleGoogleSignIn(): Promise<void> {
     await authStore.loginWithGoogle();
     await navigateAfterLogin();
   } catch (error) {
-    errorMessage.value = getErrorMessage(error);
+    errorMessage.value = getErrorMessage(
+      error,
+      "Something went wrong while signing in.",
+    );
   }
+}
+
+function goToRegister(): void {
+  void router.push({ name: routeNames.register });
 }
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
-    <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
+  <StandaloneSplitPage>
+    <template #left>
       <AuthIntroPanel
         workspace-label="Time tracking for modern product teams"
         hero-title="Track work where your tasks already live."
@@ -93,7 +97,9 @@ async function handleGoogleSignIn(): Promise<void> {
         counterpart-prompt="Need admin tools? Open"
         product-tagline="GiTiempo"
       />
+    </template>
 
+    <template #right>
       <section
         class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
       >
@@ -105,8 +111,20 @@ async function handleGoogleSignIn(): Promise<void> {
           :is-submitting="authStore.isSubmitting"
           @submit-credentials="handleEmailSignIn"
           @submit-google="handleGoogleSignIn"
-        />
+        >
+          <template #secondary-actions>
+            <Button
+              type="button"
+              label="Create workspace"
+              severity="secondary"
+              variant="outlined"
+              class="h-11"
+              data-testid="sign-in-create-workspace"
+              @click="goToRegister"
+            />
+          </template>
+        </AuthSignInForm>
       </section>
-    </div>
-  </div>
+    </template>
+  </StandaloneSplitPage>
 </template>

@@ -661,15 +661,16 @@ export class TimeEntriesService {
       return { project, created: false };
     }
 
-    const [project] = await db
-      .insert(projectsTable)
-      .values({
-        workspaceId: user.workspaceId,
-        name: githubRepo,
-        color: null,
-      })
-      .returning();
-    if (!project) throw new Error('Failed to create GitHub project');
+    const project = (
+      await db
+        .insert(projectsTable)
+        .values({
+          workspaceId: user.workspaceId,
+          name: githubRepo,
+          color: null,
+        })
+        .returning()
+    )[0]!;
 
     const [createdRef] = await db
       .insert(projectExternalRefs)

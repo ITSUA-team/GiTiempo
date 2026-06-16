@@ -8,8 +8,10 @@ import {
   useUpdateWorkspaceSettingsMutation,
 } from '@/composables/query';
 
-import { adminSettingsClient } from '@/services/admin-settings-client';
-import type { AdminSettingsClient } from '@/services/admin-settings-client';
+import {
+  getAdminSettingsClient,
+  type AdminSettingsClient,
+} from '@/services/admin-settings-client';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import {
   getWorkspaceSettingsUpdatePayload,
@@ -57,7 +59,7 @@ function getErrorMessage(error: unknown): string {
 
 export function useAdminSettingsPersistence({
   accessToken,
-  client = adminSettingsClient,
+  client = getAdminSettingsClient(),
   onError,
   scope,
 }: UseAdminSettingsPersistenceOptions) {

@@ -46,6 +46,11 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
       refreshToken: "refresh-token-next",
     }),
     logoutSession: async () => undefined,
+    registerWorkspaceOwner: async () => ({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    }),
     refreshSession: async () => ({
       accessToken: "restored-access-token",
       accessTokenExpiresIn: 900,
@@ -76,7 +81,7 @@ describe("useAuthStore", () => {
 
     expect(authStore.displayName).toBe("Workspace member");
     expect(authStore.userInitials).toBe("WM");
-    expect(authStore.workspaceName).toBe("Workspace Alpha");
+    expect(authStore.workspaceName).toBe("Workspace");
   });
 
   it("restores a session from refresh token during bootstrap", async () => {
@@ -227,6 +232,16 @@ describe("useAuthStore", () => {
     expect(authStore.isSubmitting).toBe(false);
   });
 
+  it("updates the workspace label from shell workspace loading", () => {
+    const authStore = useAuthStore();
+
+    expect(authStore.workspaceName).toBe("Workspace");
+
+    authStore.setWorkspaceName("Updated Workspace");
+
+    expect(authStore.workspaceName).toBe("Updated Workspace");
+  });
+
   it("logs in with a Firebase token and persists the token pair", async () => {
     setAuthRuntimeForTesting(createRuntimeMock());
 
@@ -239,6 +254,26 @@ describe("useAuthStore", () => {
     expect(getRefreshToken()).toBe("refresh-token-next");
     expect(authStore.profile?.email).toBe("alexey@example.com");
     expect(authStore.bootstrapComplete).toBe(true);
+  });
+
+  it("establishes a session directly from an approved token pair", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+
+    const authStore = useAuthStore();
+    seedAuthenticatedQueryCache();
+
+    await authStore.establishSessionFromTokenPair({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    });
+
+    expect(authStore.isAuthenticated).toBe(true);
+    expect(authStore.accessToken).toBe("registered-access-token");
+    expect(getRefreshToken()).toBe("registered-refresh-token");
+    expect(authStore.profile?.email).toBe("alexey@example.com");
+    expect(authStore.bootstrapComplete).toBe(true);
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("clears stale local session state when login exchange fails", async () => {
@@ -336,6 +371,7 @@ describe("useAuthStore", () => {
 
     const authStore = useAuthStore();
     authStore.accessToken = "current-access-token";
+    authStore.setWorkspaceName("Updated Workspace");
     seedAuthenticatedQueryCache();
 
     await authStore.logout();
@@ -344,6 +380,7 @@ describe("useAuthStore", () => {
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.accessToken).toBeNull();
     expect(authStore.profile).toBeNull();
+    expect(authStore.workspaceName).toBe("Workspace");
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
     expectAuthenticatedQueryCacheCleared();
@@ -361,12 +398,14 @@ describe("useAuthStore", () => {
 
     const authStore = useAuthStore();
     authStore.accessToken = "current-access-token";
+    authStore.setWorkspaceName("Updated Workspace");
 
     await authStore.logout();
 
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.accessToken).toBeNull();
     expect(authStore.profile).toBeNull();
+    expect(authStore.workspaceName).toBe("Workspace");
     expect(getRefreshToken()).toBeNull();
     expect(authStore.bootstrapComplete).toBe(true);
   });
