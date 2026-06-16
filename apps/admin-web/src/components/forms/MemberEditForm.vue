@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
 import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
+import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
 
 const props = defineProps<{
+  canAssignPm?: boolean;
   canRemove?: boolean;
   member: WorkspaceMemberResponse;
   projects: ProjectListResponse;
@@ -24,6 +25,10 @@ const emit = defineEmits<{
 const resolver = zodResolver(memberAssignFormSchema);
 
 const activeProjects = computed(() => props.projects.filter((project) => project.isActive));
+const activeProjectOptions = computed(() =>
+  activeProjects.value.map((project) => ({ label: project.name, value: project.id })),
+);
+const projectSuggestions = ref<string[]>([]);
 const initialValues = computed<MemberAssignFormInput>(() => ({
   projectIds: activeProjects.value
     .filter((project) =>
@@ -32,6 +37,44 @@ const initialValues = computed<MemberAssignFormInput>(() => ({
     .map((project) => project.id),
 }));
 
+const projectAutoCompletePt = {
+  root: { class: 'min-h-[38px] w-full' },
+  pcInputText: {
+    root: {
+      class: 'min-h-[38px] w-full rounded-[6px] font-sans text-[14px] font-medium',
+    },
+  },
+  inputMultiple: {
+    class: 'min-h-[38px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
+  },
+  chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
+  option: { class: 'font-sans text-[14px]' },
+} as const;
+
+interface AutoCompleteCompleteEvent {
+  query: string;
+}
+
+function getProjectOptionLabel(projectId: string): string {
+  return activeProjectOptions.value.find((option) => option.value === projectId)?.label ?? projectId;
+}
+
+function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
+  const query = event.query.trim().toLowerCase();
+
+  projectSuggestions.value = activeProjectOptions.value
+    .filter((option) => option.label.toLowerCase().includes(query))
+    .map((option) => option.value);
+}
+
+watch(
+  activeProjectOptions,
+  (options) => {
+    projectSuggestions.value = options.map((option) => option.value);
+  },
+  { immediate: true },
+);
+
 function handleSave({
   valid,
   values,
@@ -39,7 +82,7 @@ function handleSave({
   valid: boolean;
   values: Record<string, unknown>;
 }): void {
-  if (!valid || props.saving) {
+  if (!valid || props.saving || !props.canAssignPm) {
     return;
   }
 
@@ -50,6 +93,7 @@ function handleSave({
 <template>
   <EditFormPanel title="Member settings">
     <Form
+      v-slot="$form"
       :resolver="resolver"
       :initial-values="initialValues"
       @submit="handleSave"
@@ -59,29 +103,56 @@ function handleSave({
         class="flex flex-col gap-3"
       >
         <div
-          data-testid="member-edit-project-list"
-          class="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:gap-3"
+          v-if="props.canAssignPm"
+          data-testid="member-edit-project-select"
+          class="flex flex-col gap-1.5"
         >
           <label
-            v-for="project in activeProjects"
-            :key="project.id"
-            :for="`member-settings-${member.id}-${project.id}`"
-            class="bg-surface-primary flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-[6px] px-3 py-2 sm:w-auto"
+            :for="`member-settings-${member.id}-projects`"
+            class="text-text-dark font-sans text-[12px] leading-none font-medium"
+          >Assigned projects</label>
+          <AutoComplete
+            :input-id="`member-settings-${member.id}-projects`"
+            name="projectIds"
+            :suggestions="projectSuggestions"
+            :option-label="getProjectOptionLabel"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            force-selection
+            multiple
+            :min-length="0"
+            placeholder="Search projects..."
+            :invalid="$form.projectIds?.invalid"
+            :disabled="saving"
+            :pt="projectAutoCompletePt"
+            fluid
+            @complete="handleProjectComplete"
+          />
+          <small class="text-text-muted text-xs">
+            Type to search active projects, then select multiple results.
+          </small>
+          <small
+            v-if="$form.projectIds?.invalid"
+            class="text-destructive text-xs"
           >
-            <Checkbox
-              name="projectIds"
-              :input-id="`member-settings-${member.id}-${project.id}`"
-              :value="project.id"
-            />
-            <span class="text-text-dark text-[13px] font-medium">{{ project.name }}</span>
-          </label>
+            {{ $form.projectIds.error?.message }}
+          </small>
         </div>
 
         <div
-          v-if="activeProjects.length === 0"
+          v-if="props.canAssignPm && activeProjects.length === 0"
           class="text-text-muted text-[13px]"
         >
           No active projects available.
+        </div>
+
+        <div
+          v-if="!props.canAssignPm"
+          data-testid="member-edit-assignment-unavailable"
+          class="text-text-muted text-[13px]"
+        >
+          Project assignments are available only for other non-admin members.
         </div>
 
         <div
@@ -107,6 +178,7 @@ function handleSave({
             Cancel
           </Button>
           <Button
+            v-if="props.canAssignPm"
             unstyled
             :disabled="saving"
             :loading="saving"

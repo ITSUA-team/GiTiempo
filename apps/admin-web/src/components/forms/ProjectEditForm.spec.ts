@@ -86,28 +86,27 @@ const members: WorkspaceMemberListResponse = [
 ];
 
 const stubs = {
-  AutoComplete: {
-    name: 'AutoComplete',
+  MultiSelect: {
+    name: 'MultiSelect',
     props: {
-      completeOnFocus: Boolean,
-      dropdown: Boolean,
-      dropdownMode: String,
+      display: String,
+      filter: Boolean,
       fluid: Boolean,
-      forceSelection: Boolean,
       inputId: String,
       invalid: Boolean,
-      minLength: Number,
+      maxSelectedLabels: Number,
       multiple: Boolean,
       name: String,
-      optionLabel: Function,
+      optionLabel: String,
+      optionValue: String,
+      options: Array,
       placeholder: String,
       pt: Object,
-      suggestions: Array,
     },
     template: `<div>
       <input :id="inputId" :name="name" :placeholder="placeholder" />
-      <span v-for="suggestion in suggestions" :key="suggestion">
-        {{ optionLabel ? optionLabel(suggestion) : suggestion }}
+      <span v-for="option in options" :key="option.value">
+        {{ option.label }}
       </span>
     </div>`,
   },
@@ -159,15 +158,18 @@ describe('ProjectEditForm', () => {
     );
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
-    const memberInput = wrapper.getComponent({ name: 'AutoComplete' });
+    const memberInput = wrapper.getComponent({ name: 'MultiSelect' });
     const visibilityInput = wrapper.getComponent({ name: 'Select' });
 
-    expect(memberInput.props('multiple')).toBe(true);
-    expect(memberInput.props('dropdown')).toBe(true);
-    expect(memberInput.props('forceSelection')).toBe(true);
-    expect(memberInput.props('completeOnFocus')).toBe(true);
-    expect(memberInput.props('minLength')).toBe(0);
-    expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
+    expect(memberInput.props('display')).toBe('chip');
+    expect(memberInput.props('filter')).toBe(true);
+    expect(memberInput.props('optionLabel')).toBe('label');
+    expect(memberInput.props('optionValue')).toBe('value');
+    expect(memberInput.props('maxSelectedLabels')).toBe(2);
+    expect(memberInput.props('options')).toEqual([
+      { label: 'Pat PM', value: 'user-2' },
+      { label: 'member@example.com', value: 'user-3' },
+    ]);
     expect(memberInput.props('placeholder')).toBe('Select members');
     expect(visibilityInput.props('optionLabel')).toBe('label');
     expect(visibilityInput.props('optionValue')).toBe('value');

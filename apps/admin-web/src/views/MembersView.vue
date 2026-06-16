@@ -23,6 +23,7 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useMembersTableState } from '@/composables/useMembersTableState';
+import type { MembersTableRow } from '@/lib/members-table';
 import { adminMembersClient } from '@/services/admin-members-client';
 import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
@@ -226,14 +227,20 @@ function handleEditMember(member: WorkspaceMemberResponse): void {
 }
 
 async function handleAssignmentsSubmitted(
-  member: WorkspaceMemberResponse,
+  row: MembersTableRow,
   input: MemberAssignFormInput,
 ): Promise<void> {
+  if (!row.canAssignPm) {
+    return;
+  }
+
   const token = authStore.accessToken;
 
   if (!token) {
     return;
   }
+
+  const { member } = row;
 
   const currentAssignedIds = new Set(
     projects.value
@@ -380,12 +387,13 @@ onMounted(fetchAll);
               class="flex flex-col gap-3"
             >
               <MemberEditForm
+                :can-assign-pm="row.canAssignPm"
                 :can-remove="row.canManage"
                 :member="row.member"
                 :projects="projects"
                 :saving="savingMemberAssignmentId === row.id"
                 @remove="handleRemoveMember(row.member)"
-                @save="handleAssignmentsSubmitted(row.member, $event)"
+                @save="handleAssignmentsSubmitted(row, $event)"
                 @cancelled="collapseMemberRow(row.member)"
               />
             </div>

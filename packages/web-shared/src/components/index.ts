@@ -1,9 +1,4 @@
 export { default as AuthSignInForm } from "./AuthSignInForm.vue";
-export { default as AutocompleteField } from "./AutocompleteField.vue";
-export type {
-  AutocompleteFieldOption,
-  AutocompleteFieldValue,
-} from "./autocomplete-field";
 export { default as EditFormPanel } from "./EditFormPanel.vue";
 export { default as EmptyStateBlock } from "./EmptyStateBlock.vue";
 export { default as EntryActionButton } from "./EntryActionButton.vue";

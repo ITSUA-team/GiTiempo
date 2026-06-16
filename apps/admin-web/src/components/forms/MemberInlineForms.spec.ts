@@ -94,10 +94,6 @@ const stubs = {
     template:
       '<button v-bind="$attrs" :disabled="disabled" :type="type"><slot>{{ label }}</slot></button>',
   },
-  Checkbox: {
-    props: ['inputId', 'name', 'value'],
-    template: '<input :id="inputId" type="checkbox" :name="name" :value="value" />',
-  },
   EditFormPanel: {
     props: ['title'],
     template: '<section><h2>{{ title }}</h2><slot /></section>',
@@ -106,7 +102,33 @@ const stubs = {
     emits: ['submit'],
     props: ['initialValues', 'resolver'],
     template:
-      '<form @submit.prevent="$emit(\'submit\', { valid: true, values: initialValues })"><slot /></form>',
+      '<form @submit.prevent="$emit(\'submit\', { valid: true, values: initialValues })"><slot :projectIds="{ invalid: false }" /></form>',
+  },
+  AutoComplete: {
+    name: 'AutoComplete',
+    props: {
+      completeOnFocus: Boolean,
+      disabled: Boolean,
+      dropdown: Boolean,
+      dropdownMode: String,
+      fluid: Boolean,
+      forceSelection: Boolean,
+      inputId: String,
+      invalid: Boolean,
+      minLength: Number,
+      multiple: Boolean,
+      name: String,
+      optionLabel: Function,
+      placeholder: String,
+      pt: Object,
+      suggestions: Array,
+    },
+    template: `<div data-testid="member-edit-project-autocomplete">
+      <input :id="inputId" :name="name" :placeholder="placeholder" :disabled="disabled" />
+      <span v-for="suggestion in suggestions" :key="suggestion">
+        {{ optionLabel ? optionLabel(suggestion) : suggestion }}
+      </span>
+    </div>`,
   },
 };
 
@@ -115,9 +137,9 @@ describe('member inline forms', () => {
     setActivePinia(createPinia());
   });
 
-  it('renders member settings as project checkboxes with the design action row', async () => {
+  it('renders member settings as a project autocomplete multiselect with the design action row', async () => {
     const wrapper = mount(MemberEditForm, {
-      props: { canRemove: true, member, projects },
+      props: { canAssignPm: true, canRemove: true, member, projects },
       global: { plugins: [createPinia()], stubs },
     });
 
@@ -125,15 +147,27 @@ describe('member inline forms', () => {
     expect(wrapper.get('[data-testid="member-edit-form-layout"]').classes()).toEqual(
       expect.arrayContaining(['flex', 'flex-col', 'gap-3']),
     );
-    expect(wrapper.get('[data-testid="member-edit-project-list"]').classes()).toEqual(
-      expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:flex-wrap']),
+    expect(wrapper.get('[data-testid="member-edit-project-select"]').classes()).toEqual(
+      expect.arrayContaining(['flex', 'flex-col', 'gap-1.5']),
     );
     expect(wrapper.get('[data-testid="member-edit-form-actions"]').classes()).toEqual(
       expect.arrayContaining(['grid', 'grid-cols-1', 'sm:flex', 'sm:justify-end']),
     );
-    expect(wrapper.findAll('[name="projectIds"]')).toHaveLength(2);
+    const projectSelect = wrapper.getComponent({ name: 'AutoComplete' });
+
+    expect(projectSelect.props('multiple')).toBe(true);
+    expect(projectSelect.props('dropdown')).toBe(true);
+    expect(projectSelect.props('forceSelection')).toBe(true);
+    expect(projectSelect.props('completeOnFocus')).toBe(true);
+    expect(projectSelect.props('minLength')).toBe(0);
+    expect(projectSelect.props('placeholder')).toBe('Search projects...');
+    expect(projectSelect.props('suggestions')).toEqual(['project-1', 'project-2']);
+    expect(wrapper.findAll('[name="projectIds"]')).toHaveLength(1);
     expect(wrapper.text()).toContain('Project Orion');
     expect(wrapper.text()).toContain('Project Atlas');
+    expect(wrapper.text()).toContain(
+      'Type to search active projects, then select multiple results.',
+    );
     expect(wrapper.text()).not.toContain('Archived Project');
     expect(wrapper.text()).not.toContain('Name');
     expect(wrapper.text()).not.toContain('Email');
@@ -204,7 +238,7 @@ describe('member inline forms', () => {
 
   it('submits selected project assignments from the single settings panel', async () => {
     const wrapper = mount(MemberEditForm, {
-      props: { member, projects },
+      props: { canAssignPm: true, member, projects },
       global: { plugins: [createPinia()], stubs },
     });
 
@@ -215,10 +249,31 @@ describe('member inline forms', () => {
 
   it('disables member settings actions while the assignment save is pending', () => {
     const wrapper = mount(MemberEditForm, {
-      props: { canRemove: true, member, projects, saving: true },
+      props: { canAssignPm: true, canRemove: true, member, projects, saving: true },
       global: { plugins: [createPinia()], stubs },
     });
 
     expect(wrapper.get('button').attributes('disabled')).toBeDefined();
+  });
+
+  it('keeps project assignment controls hidden when assignment is not allowed', async () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canAssignPm: false, canRemove: true, member, projects },
+      global: { plugins: [createPinia()], stubs },
+    });
+
+    expect(wrapper.find('[data-testid="member-edit-project-select"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-edit-project-autocomplete"]').exists()).toBe(false);
+    expect(wrapper.findAll('[name="projectIds"]')).toHaveLength(0);
+    expect(wrapper.find('[data-testid="member-edit-assignment-unavailable"]').text()).toBe(
+      'Project assignments are available only for other non-admin members.',
+    );
+    expect(wrapper.text()).toContain('Remove member');
+    expect(wrapper.text()).toContain('Cancel');
+    expect(wrapper.text()).not.toContain('Save changes');
+
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.emitted('save')).toBeUndefined();
   });
 });

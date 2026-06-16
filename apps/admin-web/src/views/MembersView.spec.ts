@@ -121,6 +121,7 @@ const MembersTableStub = {
 const MemberEditFormStub = {
   name: 'MemberEditForm',
   props: {
+    canAssignPm: { type: Boolean, default: false },
     canRemove: { type: Boolean, default: false },
     member: { type: Object, required: true },
     projects: { type: Array, required: true },
@@ -128,9 +129,9 @@ const MemberEditFormStub = {
   },
   template: `
     <div data-testid="member-edit-panel">
-      Member settings for {{ member.email }} across {{ projects.length }} projects | saving={{ saving }}
+      Member settings for {{ member.email }} across {{ projects.length }} projects | assign={{ canAssignPm }} | saving={{ saving }}
       <button v-if="canRemove" data-testid="member-edit-remove" @click="$emit('remove')" />
-      <button data-testid="member-edit-save" @click="$emit('save', { projectIds: [] })" />
+      <button v-if="canAssignPm" data-testid="member-edit-save" @click="$emit('save', { projectIds: [] })" />
       <button data-testid="member-edit-cancel" @click="$emit('cancelled')" />
     </div>
   `,
@@ -584,6 +585,33 @@ describe('MembersView', () => {
       'Project assignments for Pat PM saved.',
     );
     expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
+  });
+
+  it('keeps project assignment controls unavailable for admin member rows', async () => {
+    testMocks.listMembers.mockResolvedValue([
+      {
+        ...createMember(),
+        displayName: 'Alex Admin',
+        email: 'alex@example.com',
+        id: 'member-admin',
+        role: 'admin',
+        userId: 'admin-2',
+      },
+    ]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+
+    const wrapper = mountMembersView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get('[data-testid="member-edit-panel"]').text()).toContain(
+      'assign=false',
+    );
+    expect(wrapper.find('[data-testid="member-edit-save"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-edit-remove"]').exists()).toBe(true);
   });
 
   it('opens edit expansion from a table intent and cancel collapses without refresh', async () => {
