@@ -161,6 +161,11 @@ describe('member inline forms', () => {
     expect(projectSelect.props('completeOnFocus')).toBe(true);
     expect(projectSelect.props('minLength')).toBe(0);
     expect(projectSelect.props('placeholder')).toBe('Search projects...');
+    expect(projectSelect.props('pt')).toMatchObject({
+      inputMultiple: {
+        class: expect.stringContaining('min-h-[42px]'),
+      },
+    });
     expect(projectSelect.props('suggestions')).toEqual(['project-1', 'project-2']);
     expect(wrapper.findAll('[name="projectIds"]')).toHaveLength(1);
     expect(wrapper.text()).toContain('Project Orion');
@@ -185,7 +190,7 @@ describe('member inline forms', () => {
         'bg-surface-primary',
         'border-destructive',
         'cursor-pointer',
-        'h-8',
+        'h-[42px]',
         'rounded-sm',
         'px-3.5',
         'py-2',
@@ -207,7 +212,7 @@ describe('member inline forms', () => {
         'bg-surface-primary',
         'border-divider',
         'cursor-pointer',
-        'h-8',
+        'h-[42px]',
         'rounded-sm',
         'px-3.5',
         'py-2',
@@ -221,7 +226,7 @@ describe('member inline forms', () => {
         'bg-brand',
         'border-0',
         'cursor-pointer',
-        'h-8',
+        'h-[42px]',
         'rounded-sm',
         'px-3.5',
         'py-2',

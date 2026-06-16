@@ -145,7 +145,7 @@ describe('ProjectEditForm', () => {
     setActivePinia(createPinia());
   });
 
-  it('keeps project settings in a desktop row with a mobile stack', () => {
+  it('keeps project settings controls at the same edit-form height', () => {
     const wrapper = mount(ProjectEditForm, {
       props: { allMembers: members, project },
       global: { plugins: [createPinia()], stubs },
@@ -169,6 +169,12 @@ describe('ProjectEditForm', () => {
     expect(memberInput.props('minLength')).toBe(0);
     expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
     expect(memberInput.props('placeholder')).toBe('Search members...');
+    expect(memberInput.props('pt')).toMatchObject({
+      inputMultiple: {
+        class: expect.stringContaining('min-h-[42px]'),
+      },
+    });
+    expect(visibilityInput.attributes('class')).toContain('h-[42px]');
     expect(visibilityInput.props('optionLabel')).toBe('label');
     expect(visibilityInput.props('optionValue')).toBe('value');
     expect(visibilityInput.props('options')).toEqual([
@@ -197,7 +203,7 @@ describe('ProjectEditForm', () => {
         'bg-surface-primary',
         'border-destructive',
         'cursor-pointer',
-        'h-8',
+        'h-[42px]',
         'rounded-sm',
         'px-3.5',
         'py-2',
@@ -211,7 +217,7 @@ describe('ProjectEditForm', () => {
         'bg-surface-primary',
         'border-divider',
         'cursor-pointer',
-        'h-8',
+        'h-[42px]',
         'rounded-sm',
         'px-3.5',
         'py-2',
@@ -225,7 +231,7 @@ describe('ProjectEditForm', () => {
         'bg-brand',
         'border-0',
         'cursor-pointer',
-        'h-8',
+        'h-[42px]',
         'rounded-sm',
         'px-3.5',
         'py-2',
