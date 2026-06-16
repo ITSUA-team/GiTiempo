@@ -151,7 +151,7 @@ async function openProjectBackfillDialogIfNeeded(
 ): Promise<void> {
   try {
     const [tasksData, timeEntriesData] = await Promise.all([
-      adminProjectsClient.listProjectTasks(project.id),
+      adminProjectsClient.listProjectTasks(project.id, { includeInactive: true }),
       adminProjectsClient.listProjectTimeEntries(project.id, { limit: 1 }),
     ]);
     const hasTasks = tasksData.length > 0;
@@ -251,13 +251,12 @@ async function handleProjectEditSubmitted(
   const memberIdsToRemove = project.members
     .map((member) => member.userId)
     .filter((id) => !nextMemberIds.has(id));
-  const defaultBillableChanged =
-    input.defaultBillableForTasks !== project.defaultBillableForTasks;
+  let savedProject: ProjectResponse | null = null;
 
   savingProjectEditId.value = project.id;
 
   try {
-    await adminProjectsClient.updateProject(project.id, {
+    savedProject = await adminProjectsClient.updateProject(project.id, {
       defaultBillableForTasks: input.defaultBillableForTasks,
       visibility: input.visibility,
     });
@@ -273,14 +272,21 @@ async function handleProjectEditSubmitted(
     collapseProjectRow(project);
     await refresh();
 
-    if (defaultBillableChanged) {
-      await openProjectBackfillDialogIfNeeded(project);
+    if (savedProject.defaultBillableForTasks !== project.defaultBillableForTasks) {
+      await openProjectBackfillDialogIfNeeded(savedProject);
     }
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to save project', {
       error: err,
       logContext: { action: 'update-project', feature: 'projects' },
     });
+
+    if (
+      savedProject &&
+      savedProject.defaultBillableForTasks !== project.defaultBillableForTasks
+    ) {
+      await openProjectBackfillDialogIfNeeded(savedProject);
+    }
   } finally {
     savingProjectEditId.value = null;
   }

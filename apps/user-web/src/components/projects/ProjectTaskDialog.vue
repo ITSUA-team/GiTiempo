@@ -6,7 +6,7 @@ import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { filterAutocompleteOptions } from "@gitiempo/web-shared";
+import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 const props = defineProps<{
@@ -143,17 +143,11 @@ function handleProjectComplete(event: { query: string }): void {
     </template>
 
     <div class="flex flex-col gap-4">
-      <div
+      <InlineRequestMessage
         v-if="props.requestErrorMessage"
-        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
-      >
-        <p class="text-destructive text-sm font-medium">
-          {{ props.mode === 'edit' ? 'Could not update this task.' : 'Could not create this task.' }}
-        </p>
-        <p class="text-destructive mt-1 text-xs">
-          {{ props.requestErrorMessage }}
-        </p>
-      </div>
+        :message="props.requestErrorMessage"
+        :title="props.mode === 'edit' ? 'Could not update this task.' : 'Could not create this task.'"
+      />
 
       <div class="flex flex-col gap-1">
         <label

@@ -19,6 +19,19 @@ export const taskResponseSchema = z.object({
 
 export const taskListResponseSchema = z.array(taskResponseSchema);
 
+export const taskListQuerySchema = z
+  .object({
+    includeInactive: z
+      .preprocess((value) => {
+        if (value === "true") return true;
+        if (value === "false") return false;
+        return value;
+      }, z.boolean())
+      .optional()
+      .default(false),
+  })
+  .strict();
+
 export const createTaskSchema = z
   .object({
     title: z.string().min(1).max(500),
@@ -59,6 +72,7 @@ export const taskBillableDefaultBackfillResponseSchema = z.object({
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 export type TaskResponse = z.infer<typeof taskResponseSchema>;
 export type TaskListResponse = z.infer<typeof taskListResponseSchema>;
+export type TaskListQuery = z.infer<typeof taskListQuerySchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type BackfillTaskBillableDefaultInput = z.infer<

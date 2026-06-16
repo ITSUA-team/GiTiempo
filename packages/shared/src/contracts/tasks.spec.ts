@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   backfillTaskBillableDefaultSchema,
   createTaskSchema,
+  taskListQuerySchema,
   taskBillableDefaultBackfillResponseSchema,
   taskResponseSchema,
   updateTaskSchema,
@@ -67,6 +68,21 @@ describe("createTaskSchema", () => {
     expect(result.error?.issues[0]?.path).toEqual([
       "defaultBillableForTimeEntries",
     ]);
+  });
+});
+
+describe("taskListQuerySchema", () => {
+  it("defaults to active tasks only", () => {
+    expect(taskListQuerySchema.parse({})).toEqual({ includeInactive: false });
+  });
+
+  it("accepts string booleans from query parameters", () => {
+    expect(taskListQuerySchema.parse({ includeInactive: "true" })).toEqual({
+      includeInactive: true,
+    });
+    expect(taskListQuerySchema.parse({ includeInactive: "false" })).toEqual({
+      includeInactive: false,
+    });
   });
 });
 

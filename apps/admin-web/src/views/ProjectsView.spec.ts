@@ -258,7 +258,14 @@ describe('ProjectsView', () => {
       timeEntriesUpdated: 0,
     });
     testMocks.removeAssignment.mockResolvedValue(undefined);
-    testMocks.updateProject.mockResolvedValue(undefined);
+    testMocks.updateProject.mockImplementation(
+      (projectId: string, input: Partial<ReturnType<typeof createProject>> = {}) =>
+        Promise.resolve({
+          ...createProject({ isActive: projectId !== 'project-archived' }),
+          id: projectId,
+          ...input,
+        }),
+    );
   });
 
   it('renders request errors with a retry action', async () => {
@@ -549,7 +556,7 @@ describe('ProjectsView', () => {
     expect(testMocks.backfillProjectBillableDefault).not.toHaveBeenCalled();
   });
 
-  it('opens a billable-default backfill dialog after saving a changed default with downstream records', async () => {
+  it('opens a billable-default backfill dialog when changed defaults have historical downstream records', async () => {
     const project = createProject({ defaultBillableForTasks: true });
 
     testMocks.listProjects
@@ -562,7 +569,7 @@ describe('ProjectsView', () => {
         defaultBillableForTimeEntries: false,
         githubIssue: null,
         id: 'task-1',
-        isActive: true,
+        isActive: false,
         projectId: project.id,
         status: 'open',
         title: 'Improve reports filters',
@@ -591,7 +598,9 @@ describe('ProjectsView', () => {
       defaultBillableForTasks: false,
       visibility: 'public',
     });
-    expect(testMocks.listProjectTasks).toHaveBeenCalledWith('project-active');
+    expect(testMocks.listProjectTasks).toHaveBeenCalledWith('project-active', {
+      includeInactive: true,
+    });
     expect(testMocks.listProjectTimeEntries).toHaveBeenCalledWith(
       'project-active',
       { limit: 1 },
@@ -615,6 +624,65 @@ describe('ProjectsView', () => {
     expect(wrapper.find('[data-testid="project-backfill-dialog"]').exists()).toBe(false);
   });
 
+  it('opens the billable-default backfill dialog from saved project state when assignment updates fail', async () => {
+    const project = {
+      ...createProject({ defaultBillableForTasks: true }),
+      members: [
+        {
+          avatarUrl: null,
+          displayName: 'Pat PM',
+          email: 'pat@example.com',
+          role: 'pm' as const,
+          userId: 'user-2',
+        },
+      ],
+    };
+
+    testMocks.listProjects.mockResolvedValue([project]);
+    testMocks.removeAssignment.mockRejectedValueOnce(new Error('Assignment update failed'));
+    testMocks.listProjectTasks.mockResolvedValue([
+      {
+        createdAt: '2026-05-01T10:00:00.000Z',
+        defaultBillableForTimeEntries: false,
+        githubIssue: null,
+        id: 'task-1',
+        isActive: true,
+        projectId: project.id,
+        status: 'open',
+        title: 'Improve reports filters',
+        updatedAt: '2026-05-01T10:00:00.000Z',
+        workspaceId: project.workspaceId,
+      },
+    ]);
+
+    const wrapper = mountProjectsView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-testid="project-edit-save-default-change"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.updateProject).toHaveBeenCalledWith('project-active', {
+      defaultBillableForTasks: false,
+      visibility: 'public',
+    });
+    expect(testMocks.removeAssignment).toHaveBeenCalledWith('project-active', 'user-2');
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'Assignment update failed',
+      expect.objectContaining({
+        logContext: { action: 'update-project', feature: 'projects' },
+      }),
+    );
+    expect(testMocks.listProjectTasks).toHaveBeenCalledWith('project-active', {
+      includeInactive: true,
+    });
+    expect(wrapper.get('[data-testid="project-backfill-dialog"]').text()).toContain(
+      'Project Orion | tasks=true | entries=false | updateTasks=true | updateEntries=false',
+    );
+    expect(testMocks.successToast).not.toHaveBeenCalled();
+  });
+
   it('skips the billable-default backfill dialog when a changed default has no downstream records', async () => {
     const project = createProject({ defaultBillableForTasks: true });
 
@@ -634,7 +702,9 @@ describe('ProjectsView', () => {
       defaultBillableForTasks: false,
       visibility: 'public',
     });
-    expect(testMocks.listProjectTasks).toHaveBeenCalledWith('project-active');
+    expect(testMocks.listProjectTasks).toHaveBeenCalledWith('project-active', {
+      includeInactive: true,
+    });
     expect(wrapper.find('[data-testid="project-backfill-dialog"]').exists()).toBe(false);
     expect(testMocks.backfillProjectBillableDefault).not.toHaveBeenCalled();
   });

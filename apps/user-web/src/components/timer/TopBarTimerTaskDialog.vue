@@ -6,7 +6,11 @@ import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { filterAutocompleteOptions, useIsMobileViewport } from "@gitiempo/web-shared";
+import {
+  filterAutocompleteOptions,
+  InlineRequestMessage,
+  useIsMobileViewport,
+} from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
@@ -272,41 +276,23 @@ watch(
     </template>
 
     <div class="flex flex-col gap-4">
-      <div
+      <InlineRequestMessage
         v-if="props.projectsErrorMessage"
-        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
-      >
-        <p class="text-destructive text-sm font-medium">
-          Could not load visible projects.
-        </p>
-        <p class="text-destructive mt-1 text-xs">
-          {{ props.projectsErrorMessage }}
-        </p>
-      </div>
+        :message="props.projectsErrorMessage"
+        title="Could not load visible projects."
+      />
 
-      <div
+      <InlineRequestMessage
         v-if="props.selectionUpdateErrorMessage"
-        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
-      >
-        <p class="text-destructive text-sm font-medium">
-          Could not update the active timer task.
-        </p>
-        <p class="text-destructive mt-1 text-xs">
-          {{ props.selectionUpdateErrorMessage }}
-        </p>
-      </div>
+        :message="props.selectionUpdateErrorMessage"
+        title="Could not update the active timer task."
+      />
 
-      <div
+      <InlineRequestMessage
         v-if="props.timerActionErrorMessage"
-        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
-      >
-        <p class="text-destructive text-sm font-medium">
-          Could not {{ props.primaryActionLabel === 'Stop' ? 'stop' : 'start' }} the timer.
-        </p>
-        <p class="text-destructive mt-1 text-xs">
-          {{ props.timerActionErrorMessage }}
-        </p>
-      </div>
+        :message="props.timerActionErrorMessage"
+        :title="`Could not ${props.primaryActionLabel === 'Stop' ? 'stop' : 'start'} the timer.`"
+      />
 
       <div class="flex flex-col gap-1">
         <label
@@ -419,17 +405,11 @@ watch(
         />
       </div>
 
-      <div
+      <InlineRequestMessage
         v-else-if="props.tasksErrorMessage"
-        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
-      >
-        <p class="text-destructive text-sm font-medium">
-          Could not load tasks for this project.
-        </p>
-        <p class="text-destructive mt-1 text-xs">
-          {{ props.tasksErrorMessage }}
-        </p>
-      </div>
+        :message="props.tasksErrorMessage"
+        title="Could not load tasks for this project."
+      />
 
       <div
         v-else-if="props.selectedProjectId && !props.taskOptions.length && !isNewTaskSelected"

@@ -5,8 +5,6 @@ import {
 } from '@nestjs/common';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
-import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
-import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projects } from '../schemas/projects.schema';
 import { ProjectsService } from './projects.service';
@@ -321,28 +319,11 @@ describe('ProjectsService', () => {
   });
 
   it('backfills selected project downstream billable defaults', async () => {
-    const taskReturning = vi
-      .fn()
-      .mockResolvedValue([{ id: 'task-1' }, { id: 'task-2' }]);
-    const entryReturning = vi.fn().mockResolvedValue([{ id: 'entry-1' }]);
-    const taskSet = vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({ returning: taskReturning }),
-    });
-    const entrySet = vi.fn().mockReturnValue({
-      where: vi.fn().mockReturnValue({ returning: entryReturning }),
-    });
-    const projectTaskSubquery = {
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({}),
-      }),
-    };
     const tx = {
-      select: vi.fn().mockReturnValue(projectTaskSubquery),
-      update: vi.fn((table) => {
-        if (table === tasksTable) return { set: taskSet };
-        if (table === timeEntries) return { set: entrySet };
-        throw new Error('Unexpected update table');
-      }),
+      execute: vi
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ updatedCount: 2 }] })
+        .mockResolvedValueOnce({ rows: [{ updatedCount: '1' }] }),
     };
     const db = { transaction: vi.fn((callback) => callback(tx)) };
     const members = {
@@ -363,16 +344,7 @@ describe('ProjectsService', () => {
     );
 
     expect(result).toEqual({ tasksUpdated: 2, timeEntriesUpdated: 1 });
-    expect(taskSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        defaultBillableForTimeEntries: false,
-      }),
-    );
-    expect(entrySet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isBillable: false,
-      }),
-    );
+    expect(tx.execute).toHaveBeenCalledTimes(2);
   });
 
   it('uses the provided selector when checking project visibility', async () => {

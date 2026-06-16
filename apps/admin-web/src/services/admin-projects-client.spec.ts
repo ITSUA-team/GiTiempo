@@ -130,7 +130,7 @@ describe('createAdminProjectsClient', () => {
 			);
 
 		await expect(
-			client.listProjectTasks(projectResponse.id),
+			client.listProjectTasks(projectResponse.id, { includeInactive: true }),
 		).resolves.toHaveLength(1);
 		await expect(
 			client.listProjectTimeEntries(projectResponse.id, { limit: 1 }),
@@ -142,7 +142,7 @@ describe('createAdminProjectsClient', () => {
 
 		expect(fetchFn).toHaveBeenNthCalledWith(
 			1,
-			`https://api.example.test/projects/${projectResponse.id}/tasks`,
+			`https://api.example.test/projects/${projectResponse.id}/tasks?includeInactive=true`,
 			expect.objectContaining({ method: 'GET' }),
 		);
 		expect(fetchFn).toHaveBeenNthCalledWith(

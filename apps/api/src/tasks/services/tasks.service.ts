@@ -9,6 +9,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import type {
   BackfillTaskBillableDefaultInput,
   CreateTaskInput,
+  TaskListQuery,
   TaskBillableDefaultBackfillResponse,
   TaskResponse,
   UpdateTaskInput,
@@ -40,10 +41,20 @@ export class TasksService {
   async listProjectTasks(
     user: AuthUser,
     projectId: string,
+    query: TaskListQuery = { includeInactive: false },
   ): Promise<TaskResponse[]> {
     const project = await this.projects.requireVisibleProject(user, projectId);
     if (!project.isActive) {
       throw new NotFoundException('Project not found');
+    }
+
+    const conditions = [
+      eq(tasks.workspaceId, user.workspaceId),
+      eq(tasks.projectId, project.id),
+    ];
+
+    if (!query.includeInactive) {
+      conditions.push(eq(tasks.isActive, true));
     }
 
     const rows = await this.db
@@ -59,13 +70,7 @@ export class TasksService {
           eq(taskExternalRefs.externalType, 'issue'),
         ),
       )
-      .where(
-        and(
-          eq(tasks.workspaceId, user.workspaceId),
-          eq(tasks.projectId, project.id),
-          eq(tasks.isActive, true),
-        ),
-      );
+      .where(and(...conditions));
 
     return rows.map((row) => this.toResponse(row));
   }

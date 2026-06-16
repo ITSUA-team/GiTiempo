@@ -6,17 +6,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import {
-  and,
-  eq,
-  gte,
-  inArray,
-  isNotNull,
-  lt,
-  or,
-  sql,
-  type SQL,
-} from 'drizzle-orm';
+import { and, eq, gte, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import type {
   BackfillProjectBillableDefaultInput,
   CreateProjectAssignmentInput,
@@ -57,6 +47,8 @@ type ProjectResponseRow = ProjectRow & {
 type ProjectAssignmentRow = Omit<ProjectAssignmentResponse, 'assignedAt'> & {
   assignedAt: Date;
 };
+type UpdateCountExecutor = Pick<DrizzleDB, 'execute'>;
+type UpdateCountRow = { updatedCount: number | string | null };
 
 @Injectable()
 export class ProjectsService {
@@ -336,46 +328,23 @@ export class ProjectsService {
       let timeEntriesUpdated = 0;
 
       if (input.updateTasks === true) {
-        const updatedTasks = await tx
-          .update(tasksTable)
-          .set({
-            defaultBillableForTimeEntries: project.defaultBillableForTasks,
-            updatedAt,
-          })
-          .where(
-            and(
-              eq(tasksTable.workspaceId, user.workspaceId),
-              eq(tasksTable.projectId, project.id),
-            ),
-          )
-          .returning({ id: tasksTable.id });
-        tasksUpdated = updatedTasks.length;
+        tasksUpdated = await this.updateProjectTasksBillableDefault(
+          tx,
+          user.workspaceId,
+          project.id,
+          project.defaultBillableForTasks,
+          updatedAt,
+        );
       }
 
       if (input.updateTimeEntries === true) {
-        const projectTaskIds = tx
-          .select({ id: tasksTable.id })
-          .from(tasksTable)
-          .where(
-            and(
-              eq(tasksTable.workspaceId, user.workspaceId),
-              eq(tasksTable.projectId, project.id),
-            ),
-          );
-        const updatedEntries = await tx
-          .update(timeEntries)
-          .set({
-            isBillable: project.defaultBillableForTasks,
-            updatedAt,
-          })
-          .where(
-            and(
-              eq(timeEntries.workspaceId, user.workspaceId),
-              inArray(timeEntries.taskId, projectTaskIds),
-            ),
-          )
-          .returning({ id: timeEntries.id });
-        timeEntriesUpdated = updatedEntries.length;
+        timeEntriesUpdated = await this.updateProjectTimeEntriesBillableDefault(
+          tx,
+          user.workspaceId,
+          project.id,
+          project.defaultBillableForTasks,
+          updatedAt,
+        );
       }
 
       return { tasksUpdated, timeEntriesUpdated };
@@ -630,6 +599,57 @@ export class ProjectsService {
       )
       .limit(1);
     return row ?? null;
+  }
+
+  private async updateProjectTasksBillableDefault(
+    db: UpdateCountExecutor,
+    workspaceId: string,
+    projectId: string,
+    isBillable: boolean,
+    updatedAt: Date,
+  ): Promise<number> {
+    const result = await db.execute<UpdateCountRow>(sql`
+      WITH updated AS (
+        UPDATE "tasks"
+        SET
+          "default_time_entry_billable" = ${isBillable},
+          "updated_at" = ${updatedAt}
+        WHERE "workspace_id" = ${workspaceId}
+          AND "project_id" = ${projectId}
+        RETURNING 1
+      )
+      SELECT COUNT(*)::integer AS "updatedCount" FROM updated
+    `);
+
+    return toNumber(result.rows[0]?.updatedCount);
+  }
+
+  private async updateProjectTimeEntriesBillableDefault(
+    db: UpdateCountExecutor,
+    workspaceId: string,
+    projectId: string,
+    isBillable: boolean,
+    updatedAt: Date,
+  ): Promise<number> {
+    const result = await db.execute<UpdateCountRow>(sql`
+      WITH updated AS (
+        UPDATE "time_entries"
+        SET
+          "is_billable" = ${isBillable},
+          "updated_at" = ${updatedAt}
+        WHERE "workspace_id" = ${workspaceId}
+          AND "task_id" IN (
+            SELECT "id"
+            FROM "tasks"
+            WHERE "workspace_id" = ${workspaceId}
+              AND "project_id" = ${projectId}
+          )
+        RETURNING 1
+      )
+      SELECT COUNT(*)::integer AS "updatedCount" FROM updated
+    `);
+
+    return toNumber(result.rows[0]?.updatedCount);
   }
 
   private visibleNonAdminProjectCondition(userId: string): SQL {

@@ -9,7 +9,6 @@ import {
   taskBillableDefaultBackfillResponseSchema,
   startTimerSchema,
   taskListResponseSchema,
-  timeEntryListQuerySchema,
   timeEntryListResponseSchema,
   timeEntryResponseSchema,
   updateTaskSchema,
@@ -28,6 +27,7 @@ import {
   type UpdateTimeEntryInput,
 } from "@gitiempo/shared";
 import type { AuthenticatedApiClient } from "@gitiempo/web-shared/http";
+import { buildTimeEntryListQueryString } from "@gitiempo/web-shared/query";
 
 /* eslint-disable no-unused-vars */
 
@@ -73,36 +73,6 @@ export interface TimeEntriesClient {
 }
 
 /* eslint-enable no-unused-vars */
-
-function buildTimeEntryListQuery(query: Partial<TimeEntryListQuery> | undefined): string {
-  const parsed = timeEntryListQuerySchema.parse(query ?? {});
-  const searchParams = new URLSearchParams();
-
-  searchParams.set("page", String(parsed.page));
-  searchParams.set("limit", String(parsed.limit));
-
-  if (parsed.dateFrom) {
-    searchParams.set("dateFrom", parsed.dateFrom);
-  }
-
-  if (parsed.dateTo) {
-    searchParams.set("dateTo", parsed.dateTo);
-  }
-
-  if (parsed.projectId) {
-    searchParams.set("projectId", parsed.projectId);
-  }
-
-  if (parsed.taskId) {
-    searchParams.set("taskId", parsed.taskId);
-  }
-
-  if (parsed.search) {
-    searchParams.set("search", parsed.search);
-  }
-
-  return searchParams.toString();
-}
 
 export function createTimeEntriesClient({
   apiClient,
@@ -151,7 +121,7 @@ export function createTimeEntriesClient({
       });
     },
     listOwnEntries(query, options) {
-      const search = buildTimeEntryListQuery(query);
+      const search = buildTimeEntryListQueryString(query);
 
       return apiClient.requestJson({
         path: `/time-entries?${search}`,
@@ -160,7 +130,7 @@ export function createTimeEntriesClient({
       });
     },
     listProjectTimeEntries(projectId, query) {
-      const search = buildTimeEntryListQuery(query);
+      const search = buildTimeEntryListQueryString(query);
 
       return apiClient.requestJson({
         path: `/projects/${projectId}/time-entries?${search}`,

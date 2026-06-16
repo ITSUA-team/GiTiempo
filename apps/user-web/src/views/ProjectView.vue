@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
-import Button from "primevue/button";
 import Select from "primevue/select";
 import Skeleton from "primevue/skeleton";
 import { computed, ref } from "vue";
@@ -10,7 +9,7 @@ import {
   BillableDefaultBackfillDialog,
   createAppConfirm,
   createAppToast,
-  SurfaceCard,
+  RequestStateCard,
 } from "@gitiempo/web-shared";
 
 import ProjectTaskDialog from "@/components/projects/ProjectTaskDialog.vue";
@@ -443,43 +442,23 @@ async function retryLoadPage(): Promise<void> {
         </div>
       </div>
 
-      <SurfaceCard
+      <RequestStateCard
         v-if="pageState === 'request-error'"
         border
-        body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
         data-testid="projects-request-error"
-      >
-        <div class="flex flex-col gap-1">
-          <h2 class="text-text-dark text-lg font-semibold">
-            Could not load projects
-          </h2>
-          <p class="text-text-muted text-sm">
-            {{ requestErrorMessage }}
-          </p>
-        </div>
-        <Button
-          label="Retry"
-          severity="secondary"
-          variant="outlined"
-          @click="void retryLoadPage()"
-        />
-      </SurfaceCard>
+        :description="requestErrorMessage"
+        retry-label="Retry"
+        title="Could not load projects"
+        @retry="void retryLoadPage()"
+      />
 
-      <SurfaceCard
+      <RequestStateCard
         v-else-if="pageState === 'empty'"
         border
-        body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
         data-testid="projects-empty-state"
-      >
-        <div class="flex flex-col gap-1">
-          <h2 class="text-text-dark text-lg font-semibold">
-            No projects or tasks match this view
-          </h2>
-          <p class="text-text-muted text-sm">
-            Clear the filters to restore visible project sections.
-          </p>
-        </div>
-      </SurfaceCard>
+        description="Clear the filters to restore visible project sections."
+        title="No projects or tasks match this view"
+      />
 
       <div
         v-else

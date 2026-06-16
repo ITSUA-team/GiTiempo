@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -26,6 +27,7 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import { BackfillTaskBillableDefaultDto } from '../dto/backfill-task-billable-default.dto';
 import { CreateTaskDto } from '../dto/create-task.dto';
 import { TaskBillableDefaultBackfillResponseDto } from '../dto/task-billable-default-backfill-response.dto';
+import { TaskListQueryDto } from '../dto/task-list-query.dto';
 import { TaskListResponseDto } from '../dto/task-list-response.dto';
 import { TaskResponseDto } from '../dto/task-response.dto';
 import { UpdateTaskDto } from '../dto/update-task.dto';
@@ -46,8 +48,9 @@ export class TasksController {
   listProjectTasks(
     @CurrentUser() user: AuthUser,
     @Param('projectId') projectId: string,
+    @Query() query: TaskListQueryDto,
   ): Promise<TaskResponseDto[]> {
-    return this.tasks.listProjectTasks(user, projectId);
+    return this.tasks.listProjectTasks(user, projectId, query);
   }
 
   @Post('projects/:projectId/tasks')

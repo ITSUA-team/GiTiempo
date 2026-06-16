@@ -6,7 +6,7 @@ import {
 	projectBillableDefaultBackfillResponseSchema,
 	projectResponseSchema,
 	taskListResponseSchema,
-	timeEntryListQuerySchema,
+	taskListQuerySchema,
 	timeEntryListResponseSchema,
 	updateProjectSchema,
 	type BackfillProjectBillableDefaultInput,
@@ -16,11 +16,13 @@ import {
 	type ProjectListResponse,
 	type ProjectResponse,
 	type TaskListResponse,
+	type TaskListQuery,
 	type TimeEntryListQuery,
 	type TimeEntryListResponse,
 	type UpdateProjectInput,
 } from '@gitiempo/shared';
 import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
+import { buildTimeEntryListQueryString } from '@gitiempo/web-shared/query';
 
 import { getAuthenticatedAppApiClient } from '@/services/api-client';
 
@@ -43,7 +45,10 @@ export interface AdminProjectsClient {
 		input: CreateProjectInput,
 	): Promise<ProjectResponse>;
 	getManagementSummary(): Promise<ManagementProjectSummaryResponse>;
-	listProjectTasks(projectId: string): Promise<TaskListResponse>;
+	listProjectTasks(
+		projectId: string,
+		query?: Partial<TaskListQuery>,
+	): Promise<TaskListResponse>;
 	listProjectTimeEntries(
 		projectId: string,
 		query?: Partial<TimeEntryListQuery>,
@@ -57,38 +62,6 @@ export interface AdminProjectsClient {
 		projectId: string,
 		input: UpdateProjectInput,
 	): Promise<ProjectResponse>;
-}
-
-function buildTimeEntryListQuery(
-	query: Partial<TimeEntryListQuery> | undefined,
-): string {
-	const parsed = timeEntryListQuerySchema.parse(query ?? {});
-	const searchParams = new URLSearchParams();
-
-	searchParams.set('page', String(parsed.page));
-	searchParams.set('limit', String(parsed.limit));
-
-	if (parsed.dateFrom) {
-		searchParams.set('dateFrom', parsed.dateFrom);
-	}
-
-	if (parsed.dateTo) {
-		searchParams.set('dateTo', parsed.dateTo);
-	}
-
-	if (parsed.projectId) {
-		searchParams.set('projectId', parsed.projectId);
-	}
-
-	if (parsed.taskId) {
-		searchParams.set('taskId', parsed.taskId);
-	}
-
-	if (parsed.search) {
-		searchParams.set('search', parsed.search);
-	}
-
-	return searchParams.toString();
 }
 
 export function createAdminProjectsClient({
@@ -135,15 +108,23 @@ export function createAdminProjectsClient({
 			});
 		},
 
-		listProjectTasks(projectId) {
+		listProjectTasks(projectId, query) {
+			const parsed = taskListQuerySchema.parse(query ?? {});
+			const searchParams = new URLSearchParams();
+			if (parsed.includeInactive) {
+				searchParams.set('includeInactive', 'true');
+			}
+			const search = searchParams.toString();
+			const queryString = search ? `?${search}` : '';
+
 			return apiClient.requestJson({
-				path: `/projects/${projectId}/tasks`,
+				path: `/projects/${projectId}/tasks${queryString}`,
 				responseSchema: taskListResponseSchema,
 			});
 		},
 
 		listProjectTimeEntries(projectId, query) {
-			const search = buildTimeEntryListQuery(query);
+			const search = buildTimeEntryListQueryString(query);
 
 			return apiClient.requestJson({
 				path: `/projects/${projectId}/time-entries?${search}`,
@@ -194,8 +175,11 @@ export const adminProjectsClient: AdminProjectsClient = {
 	getManagementSummary() {
 		return createDefaultAdminProjectsClient().getManagementSummary();
 	},
-	listProjectTasks(projectId) {
-		return createDefaultAdminProjectsClient().listProjectTasks(projectId);
+	listProjectTasks(projectId, query) {
+		return createDefaultAdminProjectsClient().listProjectTasks(
+			projectId,
+			query,
+		);
 	},
 	listProjectTimeEntries(projectId, query) {
 		return createDefaultAdminProjectsClient().listProjectTimeEntries(

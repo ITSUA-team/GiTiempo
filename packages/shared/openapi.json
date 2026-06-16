@@ -1048,6 +1048,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

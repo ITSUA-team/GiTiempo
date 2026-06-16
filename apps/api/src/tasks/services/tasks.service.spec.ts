@@ -52,6 +52,37 @@ function selectRowsForUpdate(rows: unknown[]) {
   return { from };
 }
 
+function collectSqlParamValues(value: unknown): unknown[] {
+  const values: unknown[] = [];
+  const seen = new WeakSet<object>();
+
+  const visit = (candidate: unknown): void => {
+    if (candidate === null || candidate === undefined) return;
+    if (typeof candidate !== 'object') {
+      values.push(candidate);
+      return;
+    }
+    if (seen.has(candidate)) return;
+
+    seen.add(candidate);
+    if (Array.isArray(candidate)) {
+      for (const item of candidate) visit(item);
+      return;
+    }
+    if ('queryChunks' in candidate) {
+      visit((candidate as { queryChunks: unknown }).queryChunks);
+      return;
+    }
+    if ('value' in candidate) {
+      visit((candidate as { value: unknown }).value);
+    }
+  };
+
+  visit(value);
+
+  return values;
+}
+
 describe('TasksService', () => {
   it('includes synced github issue linkage in project task lists', async () => {
     const listRows = [
@@ -95,6 +126,40 @@ describe('TasksService', () => {
       user,
       projectRow.id,
     );
+    expect(collectSqlParamValues(where.mock.calls[0]?.[0])).toEqual(
+      expect.arrayContaining([user.workspaceId, projectRow.id]),
+    );
+    expect(collectSqlParamValues(where.mock.calls[0]?.[0])).toContain(true);
+  });
+
+  it('can include inactive historical tasks for backfill detection', async () => {
+    const listRows = [
+      {
+        ...taskRow,
+        githubIssueExternalKey: null,
+        isActive: false,
+      },
+    ];
+    const where = vi.fn().mockResolvedValue(listRows);
+    const leftJoin = vi.fn().mockReturnValue({ where });
+    const from = vi.fn().mockReturnValue({ leftJoin });
+    const db = {
+      select: vi.fn().mockReturnValue({ from }),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.listProjectTasks(user, projectRow.id, {
+      includeInactive: true,
+    });
+
+    expect(result[0]?.isActive).toBe(false);
+    expect(collectSqlParamValues(where.mock.calls[0]?.[0])).toEqual(
+      expect.arrayContaining([user.workspaceId, projectRow.id]),
+    );
+    expect(collectSqlParamValues(where.mock.calls[0]?.[0])).not.toContain(true);
   });
 
   it('rejects task creation in an inactive project', async () => {
