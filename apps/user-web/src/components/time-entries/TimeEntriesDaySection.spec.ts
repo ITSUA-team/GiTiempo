@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
+import type { DirectiveBinding } from 'vue';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import TimeEntriesDaySection from './TimeEntriesDaySection.vue';
@@ -67,6 +68,18 @@ const group: TimeEntriesDayGroup = {
   ],
 };
 
+function setTooltipValueAttribute(
+  element: HTMLElement,
+  binding: DirectiveBinding<string | undefined>,
+): void {
+  if (binding.value === undefined) {
+    element.removeAttribute('data-tooltip-value');
+    return;
+  }
+
+  element.setAttribute('data-tooltip-value', binding.value);
+}
+
 function mountSection(props: Partial<InstanceType<typeof TimeEntriesDaySection>['$props']> = {}) {
   return mount(TimeEntriesDaySection, {
     props: {
@@ -79,6 +92,12 @@ function mountSection(props: Partial<InstanceType<typeof TimeEntriesDaySection>[
       ...props,
     },
     global: {
+      directives: {
+        tooltip: {
+          mounted: setTooltipValueAttribute,
+          updated: setTooltipValueAttribute,
+        },
+      },
       plugins: [PrimeVue],
     },
   });
@@ -126,8 +145,10 @@ describe('TimeEntriesDaySection', () => {
     const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
 
     expect(startTimerButton.attributes('aria-label')).toBe('Start timer for Improve reports filters');
+    expect(startTimerButton.attributes('data-tooltip-value')).toBe('Start timer for Improve reports filters');
     expect(startTimerButton.text()).toBe('');
     expect(startTimerButton.find('svg').exists()).toBe(true);
+    expect(startTimerButton.find('[data-icon="play"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="time-entry-start-timer-entry-running"]').exists()).toBe(false);
 
     await startTimerButton.trigger('click');
@@ -183,6 +204,40 @@ describe('TimeEntriesDaySection', () => {
     const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
 
     expect(startTimerButton.attributes('disabled')).toBeDefined();
+  });
+
+  it('disables direct timer starts when the parent reports an active timer', async () => {
+    const wrapper = mountSection({ isStartTimerDisabled: true });
+    const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
+
+    expect(startTimerButton.attributes('disabled')).toBeDefined();
+    expect(startTimerButton.classes()).toContain('bg-surface-primary');
+    expect(startTimerButton.classes()).toContain('border-divider');
+    expect(startTimerButton.attributes('data-tooltip-value')).toBeUndefined();
+    expect(startTimerButton.find('[data-icon="play"]').exists()).toBe(true);
+    expect(startTimerButton.find('svg').classes()).toContain('text-text-subtle');
+
+    await startTimerButton.trigger('click');
+
+    expect(wrapper.emitted('startTimer')).toBeUndefined();
+  });
+
+  it('disables mobile direct timer starts when the parent reports an active timer', async () => {
+    mockMatchMedia(true);
+
+    const wrapper = mountSection({ isStartTimerDisabled: true });
+    const startTimerButton = wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]');
+
+    expect(startTimerButton.attributes('disabled')).toBeDefined();
+    expect(startTimerButton.classes()).toContain('bg-surface-primary');
+    expect(startTimerButton.classes()).toContain('border-divider');
+    expect(startTimerButton.attributes('data-tooltip-value')).toBeUndefined();
+    expect(startTimerButton.find('[data-icon="play"]').exists()).toBe(true);
+    expect(startTimerButton.find('svg').classes()).toContain('text-text-subtle');
+
+    await startTimerButton.trigger('click');
+
+    expect(wrapper.emitted('startTimer')).toBeUndefined();
   });
 
   it('renders the desktop entry table branch without an actions column', () => {

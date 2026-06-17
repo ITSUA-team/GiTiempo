@@ -24,7 +24,7 @@ import {
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
-import { useStartTimerMutation } from "@/composables/query";
+import { useCurrentTimerQuery, useStartTimerMutation } from "@/composables/query";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
@@ -76,6 +76,16 @@ const data = useTimeEntriesData({
   setIntervalFn: setInterval,
 });
 const taskOptions = useTimeEntryTaskOptions({ client });
+const currentTimerGuardQueryKey = computed(() => [
+  ...timerKeys.all(scope.value),
+  "time-entries-current-timer-guard",
+] as const);
+const currentTimerGuardQuery = useCurrentTimerQuery({
+  accessToken,
+  client,
+  queryKey: currentTimerGuardQueryKey,
+  scope,
+});
 const startTimerMutation = useStartTimerMutation({
   accessToken,
   client,
@@ -147,6 +157,10 @@ const filterAutoCompletePt = {
 } as const;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
 const startingTimerEntryId = shallowRef<string | null>(null);
+const isDirectStartBlockedByCurrentTimer = computed(() =>
+  currentTimerGuardQuery.isFetching.value ||
+  currentTimerGuardQuery.data.value?.timeEntry?.endedAt === null,
+);
 const selectedProjectFilterOption = computed(
   () =>
     visibleProjects.value.find((project) => project.id === selectedProjectId.value) ??
@@ -332,7 +346,11 @@ function openActiveTimerDialog(): void {
 }
 
 async function startTimerForEntry(entry: TimeEntryResponse): Promise<void> {
-  if (entry.endedAt === null || startingTimerEntryId.value !== null) {
+  if (
+    entry.endedAt === null ||
+    startingTimerEntryId.value !== null ||
+    isDirectStartBlockedByCurrentTimer.value
+  ) {
     return;
   }
 
@@ -520,6 +538,7 @@ onBeforeUnmount(() => {
         :format-duration="formatDuration"
         :format-time-range="formatTimeRange"
         :group="group"
+        :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
         :show-header="groupIndex === 0"
         :starting-timer-entry-id="startingTimerEntryId"
         @create-for-day="(day) => void openCreateDialog(day)"

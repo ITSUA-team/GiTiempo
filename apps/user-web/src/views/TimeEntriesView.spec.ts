@@ -360,7 +360,13 @@ async function mountView(
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
           emits: ["createForDay", "editEntry", "openActiveTimer", "startTimer"],
-          props: ["formatDuration", "formatTimeRange", "group", "startingTimerEntryId"],
+          props: [
+            "formatDuration",
+            "formatTimeRange",
+            "group",
+            "isStartTimerDisabled",
+            "startingTimerEntryId",
+          ],
           template: `
             <section>
               <p>{{ group.heading }}</p>
@@ -371,9 +377,9 @@ async function mountView(
                   <button
                     v-if="entry.endedAt !== null"
                     :data-testid="'time-entry-start-timer-' + entry.id"
-                    :disabled="startingTimerEntryId !== null && startingTimerEntryId !== undefined"
+                    :disabled="isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)"
                     type="button"
-                    @click="$emit('startTimer', entry)"
+                    @click="!(isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)) && $emit('startTimer', entry)"
                   >Start timer</button>
                   <button
                     v-if="entry.endedAt !== null"
@@ -553,6 +559,41 @@ describe("TimeEntriesView", () => {
         summary: "Timer started",
       }),
     );
+  });
+
+  it("disables completed-entry direct starts while the current timer is already running", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+        source: "web",
+      }),
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    const startTimerButton = wrapper.get(
+      `[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`,
+    );
+
+    expect(client.getCurrentTimer).toHaveBeenCalledWith();
+    expect(startTimerButton.attributes("disabled")).toBeDefined();
+
+    await startTimerButton.trigger("click");
+    await flushPromises();
+
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Could not start timer" }),
+    );
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
   });
 
   it("keeps direct timer start failures retryable with the backend message visible", async () => {

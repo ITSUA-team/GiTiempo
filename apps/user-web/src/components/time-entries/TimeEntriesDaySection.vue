@@ -24,6 +24,7 @@ const props = defineProps<{
   // eslint-disable-next-line no-unused-vars
   formatTimeRange: (entry: TimeEntryResponse) => string;
   group: TimeEntriesDayGroup;
+  isStartTimerDisabled?: boolean;
   showHeader: boolean;
   startingTimerEntryId?: string | null;
 }>();
@@ -46,6 +47,9 @@ const columns = [
   { key: 'time', label: 'Time', width: 160 },
   { key: 'duration', label: 'Duration', width: 112 },
 ] satisfies ManagementTableColumn[];
+const startTimerButtonBaseClass = 'h-8 w-12 min-w-0 shrink-0 rounded-[6px] p-0';
+const startTimerButtonDisabledClass =
+  `${startTimerButtonBaseClass} border-divider bg-surface-primary text-text-subtle border`;
 
 function getEntryRowClass(entry: TimeEntryResponse): string {
   return entry.endedAt === null ? "bg-accent-tint" : "bg-surface-primary hover:bg-app-bg";
@@ -74,8 +78,23 @@ function isStartTimerPending(entry: TimeEntryResponse): boolean {
   return props.startingTimerEntryId === entry.id;
 }
 
-function isStartTimerDisabled(): boolean {
-  return props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined;
+function isDirectStartDisabled(): boolean {
+  return props.isStartTimerDisabled === true ||
+    (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined);
+}
+
+function getStartTimerButtonRootClass(): string {
+  return isDirectStartDisabled()
+    ? startTimerButtonDisabledClass
+    : startTimerButtonBaseClass;
+}
+
+function getStartTimerIconClass(): string {
+  return isDirectStartDisabled() ? 'text-text-subtle size-5' : 'text-text-inverse size-5';
+}
+
+function getStartTimerTooltip(entry: TimeEntryResponse): string | undefined {
+  return isDirectStartDisabled() ? undefined : getStartTimerLabel(entry);
 }
 
 function handleEntryTaskOpen(entry: TimeEntryResponse): void {
@@ -88,7 +107,7 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
 }
 
 function handleStartTimer(entry: TimeEntryResponse): void {
-  if (entry.endedAt === null || isStartTimerDisabled()) {
+  if (entry.endedAt === null || isDirectStartDisabled()) {
     return;
   }
 
@@ -123,21 +142,25 @@ function handleStartTimer(entry: TimeEntryResponse): void {
         <div class="flex min-w-0 items-start gap-3">
           <Button
             v-if="entry.endedAt !== null"
-            v-tooltip.bottom="getStartTimerLabel(entry)"
+            v-tooltip.bottom="getStartTimerTooltip(entry)"
             :aria-label="getStartTimerLabel(entry)"
             :data-testid="`time-entry-mobile-start-timer-${entry.id}`"
-            :disabled="isStartTimerDisabled()"
+            :disabled="isDirectStartDisabled()"
             :loading="isStartTimerPending(entry)"
             type="button"
             :pt="{
-              root: { class: 'h-8 w-10 min-w-0 shrink-0 rounded-[6px] p-0' },
+              root: { class: getStartTimerButtonRootClass() },
             }"
             @click="handleStartTimer(entry)"
           >
-            <PlayIcon
-              aria-hidden="true"
-              class="text-text-inverse size-3.5"
-            />
+            <span
+              data-icon="play"
+            >
+              <PlayIcon
+                aria-hidden="true"
+                :class="getStartTimerIconClass()"
+              />
+            </span>
           </Button>
 
           <div class="flex min-w-0 flex-col gap-1">
@@ -214,21 +237,25 @@ function handleStartTimer(entry: TimeEntryResponse): void {
           <div class="flex min-w-0 items-center gap-2">
             <Button
               v-if="entry.endedAt !== null"
-              v-tooltip.bottom="getStartTimerLabel(entry)"
+              v-tooltip.bottom="getStartTimerTooltip(entry)"
               :aria-label="getStartTimerLabel(entry)"
               :data-testid="`time-entry-start-timer-${entry.id}`"
-              :disabled="isStartTimerDisabled()"
+              :disabled="isDirectStartDisabled()"
               :loading="isStartTimerPending(entry)"
               type="button"
               :pt="{
-                root: { class: 'h-8 w-10 min-w-0 shrink-0 rounded-[6px] p-0' },
+                root: { class: getStartTimerButtonRootClass() },
               }"
               @click="handleStartTimer(entry)"
             >
-              <PlayIcon
-                aria-hidden="true"
-                class="text-text-inverse size-3.5"
-              />
+              <span
+                data-icon="play"
+              >
+                <PlayIcon
+                  aria-hidden="true"
+                  :class="getStartTimerIconClass()"
+                />
+              </span>
             </Button>
 
             <div class="flex min-w-0 flex-col">
