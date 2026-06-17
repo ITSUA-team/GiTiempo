@@ -142,7 +142,7 @@ export function useTopBarTimerSummary({
   }
 
   const summaryQuery = useQuery({
-    queryKey: computed(() => timerKeys.current(scope.value)),
+    queryKey: computed(() => timerKeys.summary(scope.value)),
     enabled: computed(() => Boolean(accessToken.value)),
     queryFn: async () => {
       const { timeEntry } = await client.getCurrentTimer();

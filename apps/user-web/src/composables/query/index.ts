@@ -198,7 +198,7 @@ async function reconcileTimeEntryCachesAfterTimeEntryMutation(
 export const useCurrentTimerQuery = (options: UseCurrentTimerQueryOptions) =>
   useQuery({
     queryKey: computed(() =>
-      toValue(options.queryKey) ?? timerKeys.current(toValue(options.scope)),
+      toValue(options.queryKey) ?? timerKeys.currentRaw(toValue(options.scope)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () => options.client.getCurrentTimer(),

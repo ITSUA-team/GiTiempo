@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { PlusIcon } from "@heroicons/vue/24/outline";
-import { PlayIcon, StopIcon } from "@heroicons/vue/24/solid";
-import Button from "primevue/button";
 import Column from "primevue/column";
 
 import type { TimeEntryResponse } from "@gitiempo/shared";
@@ -15,6 +13,7 @@ import {
 } from "@gitiempo/web-shared";
 
 import type { TimeEntriesDayGroup } from "@/lib/time-entry-display";
+import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 
@@ -49,10 +48,6 @@ const columns = [
   { key: 'time', label: 'Time', width: 160 },
   { key: 'duration', label: 'Duration', width: 112 },
 ] satisfies ManagementTableColumn[];
-const startTimerButtonBaseClass = 'h-8 w-12 min-w-0 shrink-0 rounded-[6px] p-0';
-const startTimerButtonDisabledClass =
-  `${startTimerButtonBaseClass} border-divider bg-surface-primary text-text-subtle border`;
-const stopTimerButtonBaseClass = 'h-8 w-12 min-w-0 shrink-0 rounded-[6px] p-0';
 
 function getEntryRowClass(entry: TimeEntryResponse): string {
   return entry.endedAt === null ? "bg-accent-tint" : "bg-surface-primary hover:bg-app-bg";
@@ -73,14 +68,6 @@ function getEntryTaskTestId(
     : `${prefix}-edit-${entry.id}`;
 }
 
-function getStartTimerLabel(entry: TimeEntryResponse): string {
-  return `Start timer for ${entry.task.title}`;
-}
-
-function getStopTimerLabel(entry: TimeEntryResponse): string {
-  return `Stop timer for ${entry.task.title}`;
-}
-
 function isStartTimerPending(entry: TimeEntryResponse): boolean {
   return props.startingTimerEntryId === entry.id;
 }
@@ -96,20 +83,6 @@ function isDirectStartDisabled(): boolean {
 
 function isStopTimerDisabled(): boolean {
   return props.stoppingTimerEntryId !== null && props.stoppingTimerEntryId !== undefined;
-}
-
-function getStartTimerButtonRootClass(): string {
-  return isDirectStartDisabled()
-    ? startTimerButtonDisabledClass
-    : startTimerButtonBaseClass;
-}
-
-function getStartTimerIconClass(): string {
-  return isDirectStartDisabled() ? 'text-text-subtle size-5' : 'text-text-inverse size-5';
-}
-
-function getStartTimerTooltip(entry: TimeEntryResponse): string | undefined {
-  return isDirectStartDisabled() ? undefined : getStartTimerLabel(entry);
 }
 
 function handleStopTimer(entry: TimeEntryResponse): void {
@@ -163,48 +136,24 @@ function handleStartTimer(entry: TimeEntryResponse): void {
         :tone="entry.endedAt === null ? 'highlighted' : 'default'"
       >
         <div class="flex min-w-0 items-start gap-3">
-          <Button
+          <TimeEntryTimerAction
             v-if="entry.endedAt !== null"
-            v-tooltip.bottom="getStartTimerTooltip(entry)"
-            :aria-label="getStartTimerLabel(entry)"
-            :data-testid="`time-entry-mobile-start-timer-${entry.id}`"
+            action="start"
             :disabled="isDirectStartDisabled()"
-            :loading="isStartTimerPending(entry)"
-            type="button"
-            :pt="{
-              root: { class: getStartTimerButtonRootClass() },
-            }"
-            @click="handleStartTimer(entry)"
-          >
-            <span
-              data-icon="play"
-            >
-              <PlayIcon
-                aria-hidden="true"
-                :class="getStartTimerIconClass()"
-              />
-            </span>
-          </Button>
-          <Button
+            :entry="entry"
+            :is-loading="isStartTimerPending(entry)"
+            test-id-prefix="time-entry-mobile"
+            @trigger="handleStartTimer"
+          />
+          <TimeEntryTimerAction
             v-else
-            v-tooltip.bottom="getStopTimerLabel(entry)"
-            :aria-label="getStopTimerLabel(entry)"
-            :data-testid="`time-entry-mobile-stop-timer-${entry.id}`"
+            action="stop"
             :disabled="isStopTimerDisabled()"
-            :loading="isStopTimerPending(entry)"
-            type="button"
-            :pt="{
-              root: { class: stopTimerButtonBaseClass },
-            }"
-            @click="handleStopTimer(entry)"
-          >
-            <span data-icon="stop">
-              <StopIcon
-                aria-hidden="true"
-                class="text-text-inverse size-5"
-              />
-            </span>
-          </Button>
+            :entry="entry"
+            :is-loading="isStopTimerPending(entry)"
+            test-id-prefix="time-entry-mobile"
+            @trigger="handleStopTimer"
+          />
 
           <div class="flex min-w-0 flex-col gap-1">
             <div class="flex max-w-full min-w-0 items-center gap-1">
@@ -271,48 +220,24 @@ function handleStartTimer(entry: TimeEntryResponse): void {
       <Column :pt="managementTableColumnPt">
         <template #body="{ data: entry }">
           <div class="flex min-w-0 items-center gap-2">
-            <Button
+            <TimeEntryTimerAction
               v-if="entry.endedAt !== null"
-              v-tooltip.bottom="getStartTimerTooltip(entry)"
-              :aria-label="getStartTimerLabel(entry)"
-              :data-testid="`time-entry-start-timer-${entry.id}`"
+              action="start"
               :disabled="isDirectStartDisabled()"
-              :loading="isStartTimerPending(entry)"
-              type="button"
-              :pt="{
-                root: { class: getStartTimerButtonRootClass() },
-              }"
-              @click="handleStartTimer(entry)"
-            >
-              <span
-                data-icon="play"
-              >
-                <PlayIcon
-                  aria-hidden="true"
-                  :class="getStartTimerIconClass()"
-                />
-              </span>
-            </Button>
-            <Button
+              :entry="entry"
+              :is-loading="isStartTimerPending(entry)"
+              test-id-prefix="time-entry"
+              @trigger="handleStartTimer"
+            />
+            <TimeEntryTimerAction
               v-else
-              v-tooltip.bottom="getStopTimerLabel(entry)"
-              :aria-label="getStopTimerLabel(entry)"
-              :data-testid="`time-entry-stop-timer-${entry.id}`"
+              action="stop"
               :disabled="isStopTimerDisabled()"
-              :loading="isStopTimerPending(entry)"
-              type="button"
-              :pt="{
-                root: { class: stopTimerButtonBaseClass },
-              }"
-              @click="handleStopTimer(entry)"
-            >
-              <span data-icon="stop">
-                <StopIcon
-                  aria-hidden="true"
-                  class="text-text-inverse size-5"
-                />
-              </span>
-            </Button>
+              :entry="entry"
+              :is-loading="isStopTimerPending(entry)"
+              test-id-prefix="time-entry"
+              @trigger="handleStopTimer"
+            />
 
             <div class="flex min-w-0 flex-col">
               <div class="flex max-w-full min-w-0 items-center gap-1">

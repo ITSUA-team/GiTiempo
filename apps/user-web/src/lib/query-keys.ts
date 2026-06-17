@@ -69,7 +69,10 @@ export const timeEntriesKeys = {
 export const timerKeys = {
   all: (scope?: UserServerStateScope) =>
     ["user-web", normalizeScope(scope), "top-bar-timer"] as const,
-  current: (scope: UserServerStateScope) => [...timerKeys.all(scope), "current"] as const,
+  currentRaw: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "current", "raw"] as const,
+  summary: (scope: UserServerStateScope) =>
+    [...timerKeys.all(scope), "current", "summary"] as const,
   eligibleLastEntry: (
     scope: UserServerStateScope,
     query?: Partial<TimeEntryListQuery>,

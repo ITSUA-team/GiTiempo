@@ -82,14 +82,9 @@ const data = useTimeEntriesData({
   setIntervalFn: setInterval,
 });
 const taskOptions = useTimeEntryTaskOptions({ client });
-const currentTimerGuardQueryKey = computed(() => [
-  ...timerKeys.all(scope.value),
-  "time-entries-current-timer-guard",
-] as const);
 const currentTimerGuardQuery = useCurrentTimerQuery({
   accessToken,
   client,
-  queryKey: currentTimerGuardQueryKey,
   scope,
 });
 const startTimerMutation = useStartTimerMutation({
