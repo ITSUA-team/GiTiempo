@@ -388,6 +388,13 @@ async function startTimerForEntry(entry: TimeEntryResponse): Promise<void> {
   }
 }
 
+async function refreshTimerAndEntries(): Promise<void> {
+  await Promise.allSettled([
+    queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) }),
+    data.loadEntries(),
+  ]);
+}
+
 async function stopTimerForEntry(entry: TimeEntryResponse): Promise<void> {
   if (entry.endedAt !== null || stoppingTimerEntryId.value !== null) {
     return;
@@ -396,6 +403,20 @@ async function stopTimerForEntry(entry: TimeEntryResponse): Promise<void> {
   stoppingTimerEntryId.value = entry.id;
 
   try {
+    const currentTimerResult = await currentTimerGuardQuery.refetch({
+      throwOnError: true,
+    });
+    const currentTimer = currentTimerResult.data?.timeEntry ?? null;
+
+    if (currentTimer?.id !== entry.id) {
+      await refreshTimerAndEntries();
+      appToast.showInfoToast(
+        "Timer status refreshed",
+        "The running timer changed. Please try again.",
+      );
+      return;
+    }
+
     await stopTimerMutation.mutateAsync();
     appToast.showSuccessToast(
       "Timer stopped",

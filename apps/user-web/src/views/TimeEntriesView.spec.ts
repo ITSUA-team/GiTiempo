@@ -544,6 +544,14 @@ describe("TimeEntriesView", () => {
 
   it("stops the active timer from a running entry row", async () => {
     const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+        source: "web",
+      }),
+    });
     client.stopTimer.mockResolvedValueOnce(createEntry({
       endedAt: "2026-04-21T11:00:05.000Z",
       id: TEST_IDS.runningEntry,
@@ -556,6 +564,7 @@ describe("TimeEntriesView", () => {
     await flushPromises();
     await flushPromises();
 
+    expect(client.getCurrentTimer).toHaveBeenCalled();
     expect(client.stopTimer).toHaveBeenCalledWith();
     expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
@@ -568,8 +577,50 @@ describe("TimeEntriesView", () => {
     );
   });
 
+  it("refreshes state without stopping when the clicked running row is stale", async () => {
+    const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.updatedEntry,
+        source: "web",
+        task: {
+          id: TEST_IDS.taskAdmin,
+          title: "Ship admin polish",
+        },
+        taskId: TEST_IDS.taskAdmin,
+      }),
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.stopTimer).not.toHaveBeenCalled();
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "The running timer changed. Please try again.",
+        severity: "info",
+        summary: "Timer status refreshed",
+      }),
+    );
+  });
+
   it("keeps active timer stop failures retryable with the backend message visible", async () => {
     const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+        source: "web",
+      }),
+    });
     client.stopTimer.mockRejectedValueOnce(new Error("Timer is not running"));
 
     const { wrapper } = await mountView(client);
