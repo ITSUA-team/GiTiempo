@@ -3319,6 +3319,104 @@
           },
           "defaultBillableForTasks": {
             "type": "boolean"
+          },
+          "providerReference": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "github"
+                    ]
+                  },
+                  "externalId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "nullable": true
+                  },
+                  "externalKey": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200,
+                    "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
+                  },
+                  "externalUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "externalType": {
+                    "type": "string",
+                    "enum": [
+                      "repository"
+                    ]
+                  }
+                },
+                "required": [
+                  "provider",
+                  "externalKey",
+                  "externalUrl",
+                  "externalType"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "github"
+                    ]
+                  },
+                  "externalId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "nullable": true
+                  },
+                  "externalKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "externalUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "nullable": true
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "externalType": {
+                    "type": "string",
+                    "enum": [
+                      "project_v2"
+                    ]
+                  }
+                },
+                "required": [
+                  "provider",
+                  "externalKey",
+                  "externalUrl",
+                  "externalType"
+                ],
+                "additionalProperties": false
+              }
+            ]
           }
         },
         "required": [
@@ -3808,6 +3906,124 @@
           },
           "defaultBillableForTimeEntries": {
             "type": "boolean"
+          },
+          "providerReference": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "github"
+                    ]
+                  },
+                  "externalId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "nullable": true
+                  },
+                  "externalKey": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 250,
+                    "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+#[1-9]\\d*$"
+                  },
+                  "externalUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "sourceType": {
+                    "type": "string",
+                    "enum": [
+                      "repository_issue"
+                    ]
+                  },
+                  "externalType": {
+                    "type": "string",
+                    "enum": [
+                      "issue"
+                    ]
+                  }
+                },
+                "required": [
+                  "provider",
+                  "externalKey",
+                  "externalUrl",
+                  "sourceType",
+                  "externalType"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "github"
+                    ]
+                  },
+                  "externalId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "nullable": true
+                  },
+                  "externalKey": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 250,
+                    "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+#[1-9]\\d*$"
+                  },
+                  "externalUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "sourceType": {
+                    "type": "string",
+                    "enum": [
+                      "project_v2_issue_item"
+                    ]
+                  },
+                  "externalType": {
+                    "type": "string",
+                    "enum": [
+                      "issue"
+                    ]
+                  },
+                  "projectItemId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                },
+                "required": [
+                  "provider",
+                  "externalKey",
+                  "externalUrl",
+                  "sourceType",
+                  "externalType",
+                  "projectItemId"
+                ],
+                "additionalProperties": false
+              }
+            ]
           }
         },
         "required": [

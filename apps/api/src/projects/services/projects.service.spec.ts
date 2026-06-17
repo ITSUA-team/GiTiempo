@@ -6,6 +6,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { projectAssignments } from '../schemas/project-assignments.schema';
+import { projectExternalRefs } from '../schemas/project-external-refs.schema';
 import { projects } from '../schemas/projects.schema';
 import { ProjectsService } from './projects.service';
 
@@ -182,6 +183,141 @@ describe('ProjectsService', () => {
       }),
     );
     expect(result.defaultBillableForTasks).toBe(false);
+  });
+
+  it('persists GitHub project references atomically on create', async () => {
+    const referenceValues = vi.fn().mockReturnValue({
+      onConflictDoNothing: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: 'project-ref-1' }]),
+      }),
+    });
+    const tx = {
+      insert: vi.fn((table) => {
+        if (table === projects) {
+          return {
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([projectRow]),
+            }),
+          };
+        }
+        if (table === projectExternalRefs) {
+          return { values: referenceValues };
+        }
+        throw new Error('Unexpected insert table');
+      }),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
+      select: vi.fn().mockReturnValue(
+        selectRows([
+          {
+            ...projectResponseRow,
+            source: 'github',
+          },
+        ]),
+      ),
+    };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+
+    const result = await service.createProject(adminUser, {
+      name: 'octo-org/repo',
+      providerReference: {
+        provider: 'github',
+        externalType: 'repository',
+        externalId: '123',
+        externalKey: 'octo-org/repo',
+        externalUrl: 'https://github.com/octo-org/repo',
+        metadata: { description: 'Repository project' },
+      },
+    });
+
+    expect(result.source).toBe('github');
+    expect(referenceValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: adminUser.workspaceId,
+        projectId: projectRow.id,
+        provider: 'github',
+        externalType: 'repository',
+        externalId: '123',
+        externalKey: 'octo-org/repo',
+        externalUrl: 'https://github.com/octo-org/repo',
+        metadata: { description: 'Repository project' },
+        syncedAt: expect.any(Date),
+      }),
+    );
+  });
+
+  it('rejects duplicate GitHub project references without fetching a row', async () => {
+    const tx = {
+      insert: vi.fn((table) => {
+        if (table === projects) {
+          return {
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([projectRow]),
+            }),
+          };
+        }
+        if (table === projectExternalRefs) {
+          return {
+            values: vi.fn().mockReturnValue({
+              onConflictDoNothing: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          };
+        }
+        throw new Error('Unexpected insert table');
+      }),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback(tx)),
+      select: vi.fn(),
+    };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const service = new ProjectsService(db as never, members as never);
+
+    await expect(
+      service.createProject(adminUser, {
+        name: 'octo-org/repo',
+        providerReference: {
+          provider: 'github',
+          externalType: 'repository',
+          externalKey: 'octo-org/repo',
+          externalUrl: 'https://github.com/octo-org/repo',
+        },
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it('validates project create permissions before storing GitHub refs', async () => {
+    const db = {
+      transaction: vi.fn(),
+      insert: vi.fn(),
+    };
+    const members = {
+      requireRole: vi.fn().mockRejectedValue(new ForbiddenException()),
+    };
+    const service = new ProjectsService(db as never, members as never);
+
+    await expect(
+      service.createProject(adminUser, {
+        name: 'octo-org/repo',
+        providerReference: {
+          provider: 'github',
+          externalType: 'repository',
+          externalKey: 'octo-org/repo',
+          externalUrl: 'https://github.com/octo-org/repo',
+        },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(db.insert).not.toHaveBeenCalled();
   });
 
   it('rejects assignment targets with admin role', async () => {

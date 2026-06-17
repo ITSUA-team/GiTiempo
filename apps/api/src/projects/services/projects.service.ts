@@ -208,7 +208,7 @@ export class ProjectsService {
       defaultBillableForTasks: input.defaultBillableForTasks ?? true,
     };
 
-    if (membership.role === 'admin') {
+    if (membership.role === 'admin' && input.providerReference === undefined) {
       const row = (
         await this.db.insert(projects).values(createValues).returning()
       )[0]!;
@@ -225,12 +225,23 @@ export class ProjectsService {
         await tx.insert(projects).values(createValues).returning()
       )[0]!;
 
-      await tx.insert(projectAssignments).values({
-        workspaceId: user.workspaceId,
-        projectId: inserted.id,
-        userId: user.sub,
-        assignedBy: user.sub,
-      });
+      if (membership.role === 'pm') {
+        await tx.insert(projectAssignments).values({
+          workspaceId: user.workspaceId,
+          projectId: inserted.id,
+          userId: user.sub,
+          assignedBy: user.sub,
+        });
+      }
+
+      if (input.providerReference !== undefined) {
+        await this.createProjectProviderReference(
+          tx,
+          user.workspaceId,
+          inserted.id,
+          input.providerReference,
+        );
+      }
 
       return inserted;
     });
@@ -241,6 +252,40 @@ export class ProjectsService {
     );
     if (!response) throw new Error('Failed to fetch created project');
     return this.toProjectResponse(response);
+  }
+
+  private async createProjectProviderReference(
+    db: Pick<DrizzleDB, 'insert'>,
+    workspaceId: string,
+    projectId: string,
+    reference: NonNullable<CreateProjectInput['providerReference']>,
+  ): Promise<void> {
+    const [createdRef] = await db
+      .insert(projectExternalRefs)
+      .values({
+        workspaceId,
+        projectId,
+        provider: reference.provider,
+        externalType: reference.externalType,
+        externalId: reference.externalId ?? null,
+        externalKey: reference.externalKey,
+        externalUrl: reference.externalUrl,
+        metadata: reference.metadata ?? {},
+        syncedAt: new Date(),
+      })
+      .onConflictDoNothing({
+        target: [
+          projectExternalRefs.workspaceId,
+          projectExternalRefs.provider,
+          projectExternalRefs.externalType,
+          projectExternalRefs.externalKey,
+        ],
+      })
+      .returning({ id: projectExternalRefs.id });
+
+    if (!createdRef) {
+      throw new ConflictException('GitHub project is already linked');
+    }
   }
 
   async getProject(

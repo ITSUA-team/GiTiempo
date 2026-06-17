@@ -2,6 +2,7 @@ export * from "./auth";
 export * from "./autocomplete";
 export * from "./browser-history";
 export * from "./feedback";
+export * from "./github-browsing-client";
 export * from "./components";
 export * from "./query";
 export * from "./router";

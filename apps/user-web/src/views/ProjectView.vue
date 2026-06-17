@@ -84,6 +84,7 @@ const {
   openEditDialog,
   setDialogDefaultBillableForTimeEntries,
   setDialogProjectId: setDialogProjectIdValue,
+  setDialogProviderReference,
   setDialogTaskStatus,
   setDialogTaskTitle,
 } = dialog;
@@ -140,6 +141,15 @@ function setDialogProjectId(value: string | null): void {
       getProjectDefaultBillable(value),
     );
   }
+}
+
+function handleTaskDialogGitHubLoadError(message: string, error: unknown): void {
+  appToast.showErrorToast({
+    detail: message,
+    error,
+    logContext: { action: "load-github-task-candidates", feature: "projects-page" },
+    summary: "Could not load GitHub task candidates",
+  });
 }
 
 async function openTaskBackfillDialogIfNeeded(
@@ -494,8 +504,10 @@ async function retryLoadPage(): Promise<void> {
       :value-title="dialogTaskTitle"
       @close="closeDialog"
       @delete-task="requestDeleteDialogTask"
+      @github-load-error="handleTaskDialogGitHubLoadError"
       @save="void saveDialog()"
       @update:default-billable-for-time-entries="setDialogDefaultBillableForTimeEntries"
+      @update:provider-reference="setDialogProviderReference"
       @update:project-id="setDialogProjectId"
       @update:status="setDialogTaskStatus"
       @update:title="setDialogTaskTitle"

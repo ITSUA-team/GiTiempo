@@ -5,9 +5,23 @@ import Checkbox from "primevue/checkbox";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
-import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
+import type {
+  GitHubIssue,
+  GitHubIssueCreateReference,
+  GitHubOwner,
+  GitHubProject,
+  GitHubProjectIssueItem,
+  GitHubRepository,
+  ProjectResponse,
+  TaskStatus,
+} from "@gitiempo/shared";
 import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
+
+import {
+  createDefaultGitHubBrowsingClient,
+  createDefaultProfileGitHubClient,
+} from "@/config/clients";
 
 const props = defineProps<{
   errors: {
@@ -33,12 +47,34 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: [];
   deleteTask: [];
+  githubLoadError: [message: string, error: unknown];
   save: [];
   "update:defaultBillableForTimeEntries": [value: boolean];
+  "update:providerReference": [value: GitHubIssueCreateReference | null];
   "update:projectId": [value: string | null];
   "update:status": [value: TaskStatus];
   "update:title": [value: string];
 }>();
+
+type GitHubConnectionState =
+  | "idle"
+  | "loading"
+  | "connected"
+  | "disconnected"
+  | "error";
+
+type AutoCompleteValue<T> = T | string | null | undefined;
+
+interface GitHubIssueCandidate {
+  issue: GitHubIssue;
+  label: string;
+  projectId: string | null;
+  projectItemId: string | null;
+  sourceType: "repository_issue" | "project_v2_issue_item";
+}
+
+const profileGitHubClient = createDefaultProfileGitHubClient();
+const githubBrowsingClient = createDefaultGitHubBrowsingClient();
 
 const statusOptions = [
   { label: "Open", value: "open" },
@@ -50,6 +86,9 @@ const selectedProjectName = computed(() => {
 });
 const selectedProject = computed(() =>
   props.projects.find((project) => project.id === props.projectId) ?? null,
+);
+const selectedProjectCanHintGitHubScope = computed(
+  () => props.mode === "create" && selectedProject.value?.source === "github",
 );
 const projectSearchValue = shallowRef<string | null>(null);
 const projectSearchQuery = shallowRef("");
@@ -86,6 +125,10 @@ const statusModel = computed({
 const titleModel = computed({
   get: () => props.valueTitle,
   set: (value: string) => {
+    if (props.mode === "create" && selectedGitHubIssue.value) {
+      clearGitHubIssueSelection();
+    }
+
     emit("update:title", value);
   },
 });
@@ -98,6 +141,39 @@ const defaultBillableModel = computed({
 });
 
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
+const githubConnectionState = shallowRef<GitHubConnectionState>("idle");
+const githubConnectionError = shallowRef<string | null>(null);
+const githubOwners = shallowRef<GitHubOwner[]>([]);
+const githubOwnerSuggestions = shallowRef<GitHubOwner[]>([]);
+const selectedGitHubOwner = shallowRef<GitHubOwner | null>(null);
+const githubOwnersLoading = shallowRef(false);
+const githubOwnersError = shallowRef<string | null>(null);
+const githubRepositories = shallowRef<GitHubRepository[]>([]);
+const githubRepositorySuggestions = shallowRef<GitHubRepository[]>([]);
+const selectedGitHubRepository = shallowRef<GitHubRepository | null>(null);
+const githubRepositoriesLoading = shallowRef(false);
+const githubRepositoriesError = shallowRef<string | null>(null);
+const githubProjects = shallowRef<GitHubProject[]>([]);
+const githubProjectSuggestions = shallowRef<GitHubProject[]>([]);
+const selectedGitHubProject = shallowRef<GitHubProject | null>(null);
+const githubProjectsLoading = shallowRef(false);
+const githubProjectsError = shallowRef<string | null>(null);
+const githubIssueCandidates = shallowRef<GitHubIssueCandidate[]>([]);
+const githubIssueSuggestions = shallowRef<GitHubIssueCandidate[]>([]);
+const selectedGitHubIssue = shallowRef<GitHubIssueCandidate | null>(null);
+const githubIssuesLoading = shallowRef(false);
+const githubIssuesError = shallowRef<string | null>(null);
+const selectedGitHubIssueSource = computed(() => {
+  if (!selectedGitHubIssue.value) return "Manual";
+
+  return selectedGitHubIssue.value.sourceType === "project_v2_issue_item"
+    ? "GitHub Project V2 issue"
+    : "GitHub repository issue";
+});
+
+const hasGitHubIssueScope = computed(
+  () => selectedGitHubRepository.value !== null || selectedGitHubProject.value !== null,
+);
 
 watch(
   [() => props.isOpen, () => props.mode, () => props.projectId],
@@ -107,8 +183,430 @@ watch(
   },
 );
 
+watch(
+  [() => props.isOpen, () => props.mode],
+  ([isOpen, mode]) => {
+    resetGitHubTaskCandidates();
+
+    if (isOpen && mode === "create") {
+      void loadGitHubConnectionStatus();
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => props.projectId,
+  () => {
+    if (props.mode === "create") clearGitHubIssueSelection();
+  },
+);
+
 function handleProjectComplete(event: { query: string }): void {
   projectSearchQuery.value = event.query;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function emitGitHubLoadError(error: unknown, fallback: string): string {
+  const message = getErrorMessage(error, fallback);
+
+  emit("githubLoadError", message, error);
+
+  return message;
+}
+
+function getGitHubOwnerLabel(owner: GitHubOwner): string {
+  const suffix = owner.type === "organization" ? "organization" : "personal";
+
+  return `${owner.label} (${suffix})`;
+}
+
+function getGitHubRepositoryLabel(repository: GitHubRepository): string {
+  return repository.fullName;
+}
+
+function getGitHubProjectLabel(project: GitHubProject): string {
+  return `${project.title} #${project.number}`;
+}
+
+function getGitHubIssueLabel(candidate: GitHubIssueCandidate): string {
+  return candidate.label;
+}
+
+function getOwnerScopedQuery(owner: GitHubOwner) {
+  return owner.type === "organization"
+    ? { ownerType: "organization" as const, owner: owner.login, limit: 100 }
+    : { ownerType: "personal" as const, limit: 100 };
+}
+
+function isGitHubOwner(value: AutoCompleteValue<GitHubOwner>): value is GitHubOwner {
+  return typeof value === "object" && value !== null && "login" in value;
+}
+
+function isGitHubRepository(
+  value: AutoCompleteValue<GitHubRepository>,
+): value is GitHubRepository {
+  return typeof value === "object" && value !== null && "fullName" in value;
+}
+
+function isGitHubProject(
+  value: AutoCompleteValue<GitHubProject>,
+): value is GitHubProject {
+  return typeof value === "object" && value !== null && "title" in value;
+}
+
+function isGitHubIssueCandidate(
+  value: AutoCompleteValue<GitHubIssueCandidate>,
+): value is GitHubIssueCandidate {
+  return typeof value === "object" && value !== null && "issue" in value;
+}
+
+function clearGitHubIssueSelection(): void {
+  selectedGitHubIssue.value = null;
+  emit("update:providerReference", null);
+}
+
+function clearGitHubIssues(): void {
+  githubIssueCandidates.value = [];
+  githubIssueSuggestions.value = [];
+  githubIssuesError.value = null;
+  clearGitHubIssueSelection();
+}
+
+function clearGitHubScopes(): void {
+  githubRepositories.value = [];
+  githubRepositorySuggestions.value = [];
+  selectedGitHubRepository.value = null;
+  githubRepositoriesError.value = null;
+  githubProjects.value = [];
+  githubProjectSuggestions.value = [];
+  selectedGitHubProject.value = null;
+  githubProjectsError.value = null;
+  clearGitHubIssues();
+}
+
+function resetGitHubTaskCandidates(): void {
+  githubConnectionState.value = "idle";
+  githubConnectionError.value = null;
+  githubOwners.value = [];
+  githubOwnerSuggestions.value = [];
+  selectedGitHubOwner.value = null;
+  githubOwnersError.value = null;
+  clearGitHubScopes();
+}
+
+function createRepositoryIssueCandidate(issue: GitHubIssue): GitHubIssueCandidate {
+  return {
+    issue,
+    label: `#${issue.number} ${issue.title}`,
+    projectId: null,
+    projectItemId: null,
+    sourceType: "repository_issue",
+  };
+}
+
+function createProjectIssueCandidate(
+  item: GitHubProjectIssueItem,
+  projectId: string,
+): GitHubIssueCandidate {
+  return {
+    issue: item.issue,
+    label: `#${item.issue.number} ${item.issue.title}`,
+    projectId,
+    projectItemId: item.projectItemId,
+    sourceType: "project_v2_issue_item",
+  };
+}
+
+function createIssueProviderReference(
+  candidate: GitHubIssueCandidate,
+): GitHubIssueCreateReference {
+  const base = {
+    provider: "github" as const,
+    externalType: "issue" as const,
+    externalId: candidate.issue.id,
+    externalKey: `${candidate.issue.repository.fullName}#${candidate.issue.number}`,
+    externalUrl: candidate.issue.url,
+    metadata: {
+      nodeId: candidate.issue.nodeId,
+      number: candidate.issue.number,
+      projectId: candidate.projectId,
+      repository: candidate.issue.repository.fullName,
+      state: candidate.issue.state,
+      title: candidate.issue.title,
+      updatedAt: candidate.issue.updatedAt,
+    },
+  };
+
+  if (candidate.sourceType === "project_v2_issue_item") {
+    return {
+      ...base,
+      sourceType: "project_v2_issue_item",
+      projectItemId: candidate.projectItemId ?? "",
+    };
+  }
+
+  return {
+    ...base,
+    sourceType: "repository_issue",
+  };
+}
+
+async function loadGitHubRepositories(): Promise<void> {
+  if (!selectedGitHubOwner.value) return;
+
+  githubRepositoriesLoading.value = true;
+  githubRepositoriesError.value = null;
+
+  try {
+    const response = await githubBrowsingClient.listRepositories(
+      getOwnerScopedQuery(selectedGitHubOwner.value),
+    );
+    githubRepositories.value = response.items;
+    githubRepositorySuggestions.value = response.items;
+  } catch (error) {
+    githubRepositories.value = [];
+    githubRepositorySuggestions.value = [];
+    githubRepositoriesError.value = emitGitHubLoadError(
+      error,
+      "Failed to load GitHub repositories",
+    );
+  } finally {
+    githubRepositoriesLoading.value = false;
+  }
+}
+
+async function loadGitHubProjects(): Promise<void> {
+  if (!selectedGitHubOwner.value) return;
+
+  githubProjectsLoading.value = true;
+  githubProjectsError.value = null;
+
+  try {
+    const response = await githubBrowsingClient.listProjects(
+      getOwnerScopedQuery(selectedGitHubOwner.value),
+    );
+    githubProjects.value = response.items;
+    githubProjectSuggestions.value = response.items;
+  } catch (error) {
+    githubProjects.value = [];
+    githubProjectSuggestions.value = [];
+    githubProjectsError.value = emitGitHubLoadError(
+      error,
+      "Failed to load GitHub Projects",
+    );
+  } finally {
+    githubProjectsLoading.value = false;
+  }
+}
+
+async function loadGitHubScopes(): Promise<void> {
+  clearGitHubScopes();
+
+  if (!selectedGitHubOwner.value) return;
+
+  await Promise.all([loadGitHubRepositories(), loadGitHubProjects()]);
+}
+
+async function loadGitHubOwners(preferredLogin?: string | null): Promise<void> {
+  githubOwnersLoading.value = true;
+  githubOwnersError.value = null;
+
+  try {
+    const response = await githubBrowsingClient.listOwners({ type: "all" });
+    githubOwners.value = response.items;
+    githubOwnerSuggestions.value = response.items;
+    selectedGitHubOwner.value =
+      response.items.find((owner) => owner.login === preferredLogin) ??
+      response.items[0] ??
+      null;
+    await loadGitHubScopes();
+  } catch (error) {
+    githubOwners.value = [];
+    githubOwnerSuggestions.value = [];
+    selectedGitHubOwner.value = null;
+    clearGitHubScopes();
+    githubOwnersError.value = emitGitHubLoadError(
+      error,
+      "Failed to load GitHub owners",
+    );
+  } finally {
+    githubOwnersLoading.value = false;
+  }
+}
+
+async function loadGitHubConnectionStatus(): Promise<void> {
+  githubConnectionState.value = "loading";
+  githubConnectionError.value = null;
+  clearGitHubScopes();
+
+  try {
+    const response = await profileGitHubClient.getConnectionStatus();
+
+    if (response.status === "disconnected") {
+      githubConnectionState.value = "disconnected";
+      return;
+    }
+
+    githubConnectionState.value = "connected";
+    await loadGitHubOwners(response.account.login);
+  } catch (error) {
+    githubConnectionState.value = "error";
+    githubConnectionError.value = emitGitHubLoadError(
+      error,
+      "Failed to load GitHub connection status",
+    );
+  }
+}
+
+async function loadRepositoryIssues(): Promise<void> {
+  const repository = selectedGitHubRepository.value;
+
+  if (!repository) return;
+
+  githubIssuesLoading.value = true;
+  githubIssuesError.value = null;
+
+  try {
+    const response = await githubBrowsingClient.listRepositoryIssues(
+      repository.owner,
+      repository.name,
+      { limit: 100, state: "all" },
+    );
+    githubIssueCandidates.value = response.items.map(createRepositoryIssueCandidate);
+    githubIssueSuggestions.value = githubIssueCandidates.value;
+  } catch (error) {
+    githubIssueCandidates.value = [];
+    githubIssueSuggestions.value = [];
+    githubIssuesError.value = emitGitHubLoadError(
+      error,
+      "Failed to load GitHub issues",
+    );
+  } finally {
+    githubIssuesLoading.value = false;
+  }
+}
+
+async function loadProjectIssues(): Promise<void> {
+  const project = selectedGitHubProject.value;
+
+  if (!project) return;
+
+  githubIssuesLoading.value = true;
+  githubIssuesError.value = null;
+
+  try {
+    const response = await githubBrowsingClient.listProjectIssues(project.id, {
+      limit: 100,
+      state: "all",
+    });
+    githubIssueCandidates.value = response.items.map((item) =>
+      createProjectIssueCandidate(item, project.id),
+    );
+    githubIssueSuggestions.value = githubIssueCandidates.value;
+  } catch (error) {
+    githubIssueCandidates.value = [];
+    githubIssueSuggestions.value = [];
+    githubIssuesError.value = emitGitHubLoadError(
+      error,
+      "Failed to load GitHub project issues",
+    );
+  } finally {
+    githubIssuesLoading.value = false;
+  }
+}
+
+function handleGitHubOwnerComplete(event: { query: string }): void {
+  githubOwnerSuggestions.value = filterAutocompleteOptions(
+    githubOwners.value,
+    event.query,
+    (owner) => `${owner.label} ${owner.login} ${owner.type}`,
+  );
+}
+
+function handleGitHubRepositoryComplete(event: { query: string }): void {
+  githubRepositorySuggestions.value = filterAutocompleteOptions(
+    githubRepositories.value,
+    event.query,
+    (repository) => `${repository.fullName} ${repository.description ?? ""}`,
+  );
+}
+
+function handleGitHubProjectComplete(event: { query: string }): void {
+  githubProjectSuggestions.value = filterAutocompleteOptions(
+    githubProjects.value,
+    event.query,
+    (project) => `${project.title} ${project.owner} ${project.description ?? ""}`,
+  );
+}
+
+function handleGitHubIssueComplete(event: { query: string }): void {
+  githubIssueSuggestions.value = filterAutocompleteOptions(
+    githubIssueCandidates.value,
+    event.query,
+    (candidate) => `${candidate.issue.title} ${candidate.issue.number}`,
+  );
+}
+
+function handleGitHubOwnerUpdate(value: AutoCompleteValue<GitHubOwner>): void {
+  if (!isGitHubOwner(value)) {
+    if (value === null || value === "") {
+      selectedGitHubOwner.value = null;
+      clearGitHubScopes();
+    }
+    return;
+  }
+
+  selectedGitHubOwner.value = value;
+  void loadGitHubScopes();
+}
+
+function handleGitHubRepositoryUpdate(
+  value: AutoCompleteValue<GitHubRepository>,
+): void {
+  if (!isGitHubRepository(value)) {
+    if (value === null || value === "") {
+      selectedGitHubRepository.value = null;
+      clearGitHubIssues();
+    }
+    return;
+  }
+
+  selectedGitHubRepository.value = value;
+  selectedGitHubProject.value = null;
+  clearGitHubIssueSelection();
+  void loadRepositoryIssues();
+}
+
+function handleGitHubProjectUpdate(value: AutoCompleteValue<GitHubProject>): void {
+  if (!isGitHubProject(value)) {
+    if (value === null || value === "") {
+      selectedGitHubProject.value = null;
+      clearGitHubIssues();
+    }
+    return;
+  }
+
+  selectedGitHubProject.value = value;
+  selectedGitHubRepository.value = null;
+  clearGitHubIssueSelection();
+  void loadProjectIssues();
+}
+
+function handleGitHubIssueUpdate(
+  value: AutoCompleteValue<GitHubIssueCandidate>,
+): void {
+  if (!isGitHubIssueCandidate(value)) {
+    if (value === null || value === "") clearGitHubIssueSelection();
+    return;
+  }
+
+  selectedGitHubIssue.value = value;
+  emit("update:title", value.issue.title);
+  emit("update:providerReference", createIssueProviderReference(value));
 }
 </script>
 
@@ -192,6 +690,273 @@ function handleProjectComplete(event: { query: string }): void {
         </small>
       </div>
 
+      <div
+        v-if="props.mode === 'create'"
+        data-testid="github-task-candidate-controls"
+        class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-3.5"
+      >
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+          <div class="flex flex-col gap-1">
+            <h3 class="text-text-dark text-base font-semibold">
+              GitHub issue source
+            </h3>
+            <p class="text-text-muted text-[13px]">
+              Choose an issue from a connected repository or Project V2 scope, or keep manual entry.
+            </p>
+          </div>
+          <Button
+            v-if="githubConnectionState === 'error'"
+            data-testid="github-task-connection-retry"
+            label="Retry GitHub"
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            :disabled="isDialogMutating"
+            @click="void loadGitHubConnectionStatus()"
+          />
+        </div>
+
+        <div
+          v-if="githubConnectionState === 'loading'"
+          class="text-text-muted text-[13px]"
+        >
+          Checking GitHub connection...
+        </div>
+
+        <InlineRequestMessage
+          v-else-if="githubConnectionState === 'error'"
+          :message="`${githubConnectionError ?? 'GitHub is unavailable.'} Manual task creation is still available.`"
+          title="Could not load GitHub candidates."
+        />
+
+        <div
+          v-else-if="githubConnectionState === 'disconnected'"
+          data-testid="github-task-disconnected-state"
+          class="text-text-muted text-[13px]"
+        >
+          Connect GitHub from your profile to browse issue candidates. You can still create a manual task now.
+        </div>
+
+        <div
+          v-else-if="githubConnectionState === 'connected'"
+          class="flex flex-col gap-3"
+        >
+          <div
+            v-if="selectedProjectCanHintGitHubScope"
+            class="border-divider bg-surface-primary text-text-muted rounded-md border px-3 py-2 text-xs"
+          >
+            This project is GitHub-backed. Select the matching GitHub scope below to browse issue candidates.
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label
+              for="project-task-github-owner"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              GitHub owner
+            </label>
+            <AutoComplete
+              input-id="project-task-github-owner"
+              :model-value="selectedGitHubOwner"
+              :suggestions="githubOwnerSuggestions"
+              :option-label="getGitHubOwnerLabel"
+              complete-on-focus
+              dropdown
+              dropdown-mode="blank"
+              force-selection
+              :min-length="0"
+              placeholder="Select owner"
+              :disabled="isDialogMutating || githubOwnersLoading"
+              :loading="githubOwnersLoading"
+              show-clear
+              @complete="handleGitHubOwnerComplete"
+              @update:model-value="handleGitHubOwnerUpdate"
+            />
+            <small
+              v-if="githubOwnersError"
+              class="text-destructive text-xs"
+            >
+              {{ githubOwnersError }}
+            </small>
+          </div>
+
+          <Button
+            v-if="githubOwnersError"
+            label="Retry owners"
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            class="self-start"
+            :disabled="isDialogMutating || githubOwnersLoading"
+            @click="void loadGitHubOwners()"
+          />
+
+          <div
+            v-if="selectedGitHubOwner"
+            class="grid gap-3 sm:grid-cols-2"
+          >
+            <div class="flex flex-col gap-1.5">
+              <label
+                for="project-task-github-repository"
+                class="text-text-dark text-[13px] font-medium"
+              >
+                Repository scope
+              </label>
+              <AutoComplete
+                input-id="project-task-github-repository"
+                :model-value="selectedGitHubRepository"
+                :suggestions="githubRepositorySuggestions"
+                :option-label="getGitHubRepositoryLabel"
+                complete-on-focus
+                dropdown
+                dropdown-mode="blank"
+                force-selection
+                :min-length="0"
+                placeholder="Search repositories"
+                :disabled="isDialogMutating || githubRepositoriesLoading || !!githubRepositoriesError"
+                :loading="githubRepositoriesLoading"
+                show-clear
+                @complete="handleGitHubRepositoryComplete"
+                @update:model-value="handleGitHubRepositoryUpdate"
+              />
+              <small
+                v-if="githubRepositoriesError"
+                class="text-destructive text-xs"
+              >
+                {{ githubRepositoriesError }}
+              </small>
+              <small
+                v-else-if="!githubRepositoriesLoading && githubRepositories.length === 0"
+                class="text-text-muted text-xs"
+              >
+                No repositories are available for this owner.
+              </small>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label
+                for="project-task-github-project"
+                class="text-text-dark text-[13px] font-medium"
+              >
+                Project V2 scope
+              </label>
+              <AutoComplete
+                input-id="project-task-github-project"
+                :model-value="selectedGitHubProject"
+                :suggestions="githubProjectSuggestions"
+                :option-label="getGitHubProjectLabel"
+                complete-on-focus
+                dropdown
+                dropdown-mode="blank"
+                force-selection
+                :min-length="0"
+                placeholder="Search Projects V2"
+                :disabled="isDialogMutating || githubProjectsLoading || !!githubProjectsError"
+                :loading="githubProjectsLoading"
+                show-clear
+                @complete="handleGitHubProjectComplete"
+                @update:model-value="handleGitHubProjectUpdate"
+              />
+              <small
+                v-if="githubProjectsError"
+                class="text-destructive text-xs"
+              >
+                {{ githubProjectsError }}
+              </small>
+              <small
+                v-else-if="!githubProjectsLoading && githubProjects.length === 0"
+                class="text-text-muted text-xs"
+              >
+                No Projects V2 are available for this owner.
+              </small>
+            </div>
+          </div>
+
+          <Button
+            v-if="githubRepositoriesError || githubProjectsError"
+            data-testid="github-task-scopes-retry"
+            label="Retry scopes"
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            class="self-start"
+            :disabled="isDialogMutating || githubRepositoriesLoading || githubProjectsLoading"
+            @click="void loadGitHubScopes()"
+          />
+
+          <div
+            v-if="hasGitHubIssueScope"
+            class="flex flex-col gap-1.5"
+          >
+            <label
+              for="project-task-github-issue"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              Issue candidate
+            </label>
+            <AutoComplete
+              input-id="project-task-github-issue"
+              :model-value="selectedGitHubIssue"
+              :suggestions="githubIssueSuggestions"
+              :option-label="getGitHubIssueLabel"
+              complete-on-focus
+              dropdown
+              dropdown-mode="blank"
+              force-selection
+              :min-length="0"
+              placeholder="Search issues"
+              :disabled="isDialogMutating || githubIssuesLoading || !!githubIssuesError"
+              :loading="githubIssuesLoading"
+              show-clear
+              @complete="handleGitHubIssueComplete"
+              @update:model-value="handleGitHubIssueUpdate"
+            />
+            <small
+              v-if="githubIssuesError"
+              class="text-destructive text-xs"
+            >
+              {{ githubIssuesError }}
+            </small>
+            <small
+              v-else-if="!githubIssuesLoading && githubIssueCandidates.length === 0"
+              class="text-text-muted text-xs"
+            >
+              No issues are available for this scope.
+            </small>
+          </div>
+
+          <Button
+            v-if="githubIssuesError"
+            data-testid="github-task-issues-retry"
+            label="Retry issues"
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            class="self-start"
+            :disabled="isDialogMutating || githubIssuesLoading"
+            @click="selectedGitHubProject ? void loadProjectIssues() : void loadRepositoryIssues()"
+          />
+
+          <div
+            v-if="selectedGitHubIssue"
+            data-testid="github-task-selected-source"
+            class="border-brand bg-accent-tint flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span class="text-text-dark text-[13px] font-medium">
+              Selected {{ selectedGitHubIssueSource }}: {{ selectedGitHubIssue.label }}
+            </span>
+            <Button
+              label="Use manual task title"
+              severity="secondary"
+              variant="outlined"
+              size="small"
+              :disabled="isDialogMutating"
+              @click="clearGitHubIssueSelection"
+            />
+          </div>
+        </div>
+      </div>
+
       <div class="flex flex-col gap-1">
         <label
           for="project-task-title"
@@ -202,6 +967,7 @@ function handleProjectComplete(event: { query: string }): void {
         <InputText
           id="project-task-title"
           v-model="titleModel"
+          data-testid="project-task-title-input"
           class="h-[38px] w-full"
           :disabled="isDialogMutating"
           :invalid="!!props.errors.title"

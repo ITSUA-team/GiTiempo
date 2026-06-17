@@ -48,6 +48,18 @@ describe("projectListResponseSchema", () => {
 });
 
 describe("createProjectSchema", () => {
+  it("accepts existing manual create payloads", () => {
+    const result = createProjectSchema.parse({
+      name: "Project Orion",
+      visibility: "private",
+    });
+
+    expect(result).toEqual({
+      name: "Project Orion",
+      visibility: "private",
+    });
+  });
+
   it("accepts defaultBillableForTasks", () => {
     const result = createProjectSchema.parse({
       defaultBillableForTasks: false,
@@ -65,6 +77,72 @@ describe("createProjectSchema", () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual(["defaultBillableForTasks"]);
+  });
+
+  it("accepts GitHub repository provider references", () => {
+    const result = createProjectSchema.parse({
+      name: "octo-org/repo",
+      providerReference: {
+        provider: "github",
+        externalType: "repository",
+        externalId: "123",
+        externalKey: "octo-org/repo",
+        externalUrl: "https://github.com/octo-org/repo",
+        metadata: { description: "Repository project" },
+      },
+    });
+
+    expect(result.providerReference?.externalType).toBe("repository");
+  });
+
+  it("accepts GitHub Project V2 provider references", () => {
+    const result = createProjectSchema.parse({
+      name: "Roadmap",
+      providerReference: {
+        provider: "github",
+        externalType: "project_v2",
+        externalId: "PVT_kwDO",
+        externalKey: "PVT_kwDO",
+        externalUrl: "https://github.com/orgs/octo-org/projects/7",
+        metadata: { title: "Roadmap" },
+      },
+    });
+
+    expect(result.providerReference?.externalType).toBe("project_v2");
+  });
+
+  it("rejects unsupported provider references", () => {
+    const result = createProjectSchema.safeParse({
+      name: "Project Orion",
+      providerReference: {
+        provider: "linear",
+        externalType: "repository",
+        externalKey: "LIN-1",
+        externalUrl: "https://linear.app/team/issue/LIN-1",
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual([
+      "providerReference",
+      "provider",
+    ]);
+  });
+
+  it("rejects unknown create fields", () => {
+    const result = createProjectSchema.safeParse({
+      name: "Project Orion",
+      providerReference: {
+        provider: "github",
+        externalType: "repository",
+        externalKey: "octo-org/repo",
+        externalUrl: "https://github.com/octo-org/repo",
+      },
+      source: "github",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual([]);
   });
 });
 

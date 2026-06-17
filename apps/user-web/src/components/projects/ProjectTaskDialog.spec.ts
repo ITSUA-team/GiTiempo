@@ -1,7 +1,102 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const githubMocks = vi.hoisted(() => ({
+  getConnectionStatus: vi.fn(),
+  listOwners: vi.fn(),
+  listProjectIssues: vi.fn(),
+  listProjects: vi.fn(),
+  listRepositories: vi.fn(),
+  listRepositoryIssues: vi.fn(),
+}));
+
+vi.mock("@/config/clients", () => ({
+  createDefaultGitHubBrowsingClient: () => ({
+    listOwners: githubMocks.listOwners,
+    listProjectIssues: githubMocks.listProjectIssues,
+    listProjects: githubMocks.listProjects,
+    listRepositories: githubMocks.listRepositories,
+    listRepositoryIssues: githubMocks.listRepositoryIssues,
+  }),
+  createDefaultProfileGitHubClient: () => ({
+    getConnectionStatus: githubMocks.getConnectionStatus,
+  }),
+}));
 
 import ProjectTaskDialog from "./ProjectTaskDialog.vue";
+
+const disconnectedGitHubStatus = {
+  account: null,
+  status: "disconnected" as const,
+};
+
+const connectedGitHubStatus = {
+  account: {
+    avatarUrl: null,
+    connectedAt: "2026-05-01T10:00:00.000Z",
+    githubUserId: "123456",
+    login: "octo-org",
+    updatedAt: "2026-05-01T10:00:00.000Z",
+  },
+  status: "connected" as const,
+};
+
+const githubOwner = {
+  avatarUrl: null,
+  label: "Octo Org",
+  login: "octo-org",
+  type: "organization" as const,
+  url: "https://github.com/octo-org",
+};
+
+const githubRepository = {
+  description: "Repository project",
+  fullName: "octo-org/repo",
+  id: "repo-1",
+  isArchived: false,
+  name: "repo",
+  nodeId: "R_kwDO",
+  owner: "octo-org",
+  updatedAt: "2026-05-02T10:00:00.000Z",
+  url: "https://github.com/octo-org/repo",
+  visibility: "private" as const,
+};
+
+const githubProject = {
+  description: null,
+  id: "PVT_kwDO",
+  number: 7,
+  owner: "octo-org",
+  state: "open" as const,
+  title: "Roadmap",
+  updatedAt: "2026-05-03T10:00:00.000Z",
+  url: "https://github.com/orgs/octo-org/projects/7",
+};
+
+const githubIssue = {
+  id: "issue-1",
+  nodeId: "I_kwDO",
+  number: 42,
+  repository: {
+    fullName: "octo-org/repo",
+    name: "repo",
+    owner: "octo-org",
+  },
+  state: "open" as const,
+  title: "Track project work",
+  updatedAt: "2026-05-04T10:00:00.000Z",
+  url: "https://github.com/octo-org/repo/issues/42",
+};
+
+function createDeferred<T>() {
+  // eslint-disable-next-line no-unused-vars
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
+}
 
 function findButtonByLabel(
   wrapper: ReturnType<typeof mountDialog>,
@@ -84,11 +179,38 @@ function mountDialog(
             "suggestions",
           ],
           emits: ["complete", "update:modelValue"],
+          methods: {
+            getOptionKey(option: Record<string, unknown>): string {
+              const issue = option.issue as Record<string, unknown> | undefined;
+
+              return String(
+                option[this.dataKey] ??
+                  option.id ??
+                  option.projectItemId ??
+                  issue?.id ??
+                  option.login ??
+                  option.label ??
+                  option.title,
+              );
+            },
+            getOptionLabel(option: Record<string, unknown>): string {
+              if (typeof this.optionLabel === "function") {
+                return this.optionLabel(option);
+              }
+              if (typeof this.optionLabel === "string") {
+                return String(option[this.optionLabel] ?? "");
+              }
+
+              return String(option.label ?? option.title ?? option.name ?? "");
+            },
+          },
           computed: {
             displayValue(): string {
               return typeof this.modelValue === "string"
                 ? this.modelValue
-                : this.modelValue?.[this.optionLabel] ?? "";
+                : this.modelValue
+                  ? this.getOptionLabel(this.modelValue)
+                  : "";
             },
           },
           template: `
@@ -107,11 +229,11 @@ function mountDialog(
               <button :data-testid="inputId + '-complete-admin'" type="button" @click="$emit('complete', { query: 'admin' })">Complete admin</button>
               <button
                 v-for="suggestion in suggestions"
-                :key="suggestion[dataKey]"
-                :data-testid="inputId + '-option-' + suggestion[dataKey]"
+                :key="getOptionKey(suggestion)"
+                :data-testid="inputId + '-option-' + getOptionKey(suggestion)"
                 type="button"
                 @click="$emit('update:modelValue', suggestion)"
-              >{{ suggestion[optionLabel] }}</button>
+              >{{ getOptionLabel(suggestion) }}</button>
             </div>
           `,
         },
@@ -137,7 +259,7 @@ function mountDialog(
           props: ["modelValue"],
           emits: ["update:modelValue"],
           template:
-            '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Select: {
           props: ["disabled", "modelValue", "optionLabel", "optionValue", "options"],
@@ -151,6 +273,35 @@ function mountDialog(
 }
 
 describe("ProjectTaskDialog", () => {
+  beforeEach(() => {
+    githubMocks.getConnectionStatus.mockReset();
+    githubMocks.listOwners.mockReset();
+    githubMocks.listProjectIssues.mockReset();
+    githubMocks.listProjects.mockReset();
+    githubMocks.listRepositories.mockReset();
+    githubMocks.listRepositoryIssues.mockReset();
+
+    githubMocks.getConnectionStatus.mockResolvedValue(disconnectedGitHubStatus);
+    githubMocks.listOwners.mockResolvedValue({ items: [githubOwner] });
+    githubMocks.listRepositories.mockResolvedValue({
+      items: [githubRepository],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    githubMocks.listProjects.mockResolvedValue({
+      items: [githubProject],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    githubMocks.listRepositoryIssues.mockResolvedValue({
+      items: [githubIssue],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    githubMocks.listProjectIssues.mockResolvedValue({
+      items: [{ isArchived: false, issue: githubIssue, projectItemId: "PVTI_kwDO" }],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+      skipped: { draftIssues: 0, pullRequests: 0, redacted: 0, unknown: 0 },
+    });
+  });
+
   it("renders the create form and emits project and title updates", async () => {
     const wrapper = mountDialog();
     const titleInput = wrapper.findAll("input")[1]!;
@@ -199,6 +350,117 @@ describe("ProjectTaskDialog", () => {
     expect(projectAutoComplete.text()).toContain("Project Orion");
   });
 
+  it("loads connected GitHub repository issues and emits provider metadata", async () => {
+    githubMocks.getConnectionStatus.mockResolvedValue(connectedGitHubStatus);
+    const wrapper = mountDialog({ projectId: "project-1" });
+
+    await flushPromises();
+
+    expect(githubMocks.listOwners).toHaveBeenCalledWith({ type: "all" });
+    expect(githubMocks.listRepositories).toHaveBeenCalledWith({
+      limit: 100,
+      owner: "octo-org",
+      ownerType: "organization",
+    });
+    expect(wrapper.text()).toContain("GitHub issue source");
+
+    await wrapper.get('[data-testid="project-task-github-repository-option-repo-1"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-issue-option-issue-1"]').trigger("click");
+
+    expect(wrapper.emitted("update:title")?.at(-1)).toEqual(["Track project work"]);
+    expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([
+      expect.objectContaining({
+        externalKey: "octo-org/repo#42",
+        externalType: "issue",
+        provider: "github",
+        sourceType: "repository_issue",
+      }),
+    ]);
+    expect(wrapper.text()).toContain("Selected GitHub repository issue");
+  });
+
+  it("emits Project V2 issue-item metadata and can clear it for manual entry", async () => {
+    githubMocks.getConnectionStatus.mockResolvedValue(connectedGitHubStatus);
+    const wrapper = mountDialog({ projectId: "project-1" });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-project-option-PVT_kwDO"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-issue-option-PVTI_kwDO"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([
+      expect.objectContaining({
+        externalKey: "octo-org/repo#42",
+        projectItemId: "PVTI_kwDO",
+        sourceType: "project_v2_issue_item",
+      }),
+    ]);
+
+    await wrapper.get('[data-testid="github-task-selected-source"] button').trigger("click");
+
+    expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([null]);
+  });
+
+  it("clears GitHub metadata when the manual title field is edited", async () => {
+    githubMocks.getConnectionStatus.mockResolvedValue(connectedGitHubStatus);
+    const wrapper = mountDialog({ projectId: "project-1" });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-repository-option-repo-1"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-issue-option-issue-1"]').trigger("click");
+    await wrapper.get('[data-testid="project-task-title-input"]').setValue("Manual follow-up");
+
+    expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([null]);
+    expect(wrapper.emitted("update:title")?.at(-1)).toEqual(["Manual follow-up"]);
+  });
+
+  it("keeps manual creation available when GitHub is disconnected", async () => {
+    const wrapper = mountDialog();
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("You can still create a manual task now.");
+    expect(wrapper.text()).toContain("Task title");
+    expect(githubMocks.listOwners).not.toHaveBeenCalled();
+  });
+
+  it("renders GitHub loading, empty, and retryable error states", async () => {
+    const connectionRequest = createDeferred<typeof connectedGitHubStatus>();
+    githubMocks.getConnectionStatus.mockReturnValueOnce(connectionRequest.promise);
+    const wrapper = mountDialog({ projectId: "project-1" });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Checking GitHub connection...");
+
+    connectionRequest.resolve(connectedGitHubStatus);
+    githubMocks.listRepositoryIssues
+      .mockRejectedValueOnce(new Error("Issues unavailable"))
+      .mockResolvedValueOnce({
+        items: [],
+        pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+      });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="project-task-github-repository-option-repo-1"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Issues unavailable");
+    expect(wrapper.emitted("githubLoadError")?.at(-1)).toEqual([
+      "Issues unavailable",
+      expect.any(Error),
+    ]);
+
+    await wrapper.get('[data-testid="github-task-issues-retry"]').trigger("click");
+    await flushPromises();
+
+    expect(githubMocks.listRepositoryIssues).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain("No issues are available for this scope.");
+  });
+
   it("renders edit mode with a display-only project field and status select", () => {
     const wrapper = mountDialog({
       mode: "edit",
@@ -217,6 +479,7 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Delete task");
     expect(wrapper.text()).toContain("Save changes");
+    expect(wrapper.find('[data-testid="github-task-candidate-controls"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain("Cancel");
   });
 

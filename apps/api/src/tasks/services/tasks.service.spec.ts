@@ -1,7 +1,12 @@
-import { UnprocessableEntityException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
+import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { tasks } from '../schemas/tasks.schema';
 import { TasksService } from './tasks.service';
 
@@ -230,6 +235,138 @@ describe('TasksService', () => {
       }),
     );
     expect(result.defaultBillableForTimeEntries).toBe(true);
+  });
+
+  it('persists GitHub issue references atomically on create', async () => {
+    const referenceValues = vi.fn().mockReturnValue({
+      onConflictDoNothing: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: 'task-ref-1' }]),
+      }),
+    });
+    const tx = {
+      insert: vi.fn((table) => {
+        if (table === tasks) {
+          return {
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([taskRow]),
+            }),
+          };
+        }
+        if (table === taskExternalRefs) {
+          return { values: referenceValues };
+        }
+        throw new Error('Unexpected insert table');
+      }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.createTask(user, projectRow.id, {
+      title: 'Track project work',
+      providerReference: {
+        provider: 'github',
+        sourceType: 'project_v2_issue_item',
+        externalType: 'issue',
+        externalId: '123',
+        externalKey: 'octo-org/repo#42',
+        externalUrl: 'https://github.com/octo-org/repo/issues/42',
+        projectItemId: 'PVTI_kwDO',
+        metadata: { title: 'Track project work' },
+      },
+    });
+
+    expect(result.githubIssue).toEqual({
+      githubRepo: 'octo-org/repo',
+      issueNumber: 42,
+    });
+    expect(referenceValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: user.workspaceId,
+        projectId: projectRow.id,
+        taskId: taskRow.id,
+        provider: 'github',
+        externalType: 'issue',
+        externalId: '123',
+        externalKey: 'octo-org/repo#42',
+        externalUrl: 'https://github.com/octo-org/repo/issues/42',
+        metadata: {
+          title: 'Track project work',
+          projectItemId: 'PVTI_kwDO',
+        },
+        syncedAt: expect.any(Date),
+      }),
+    );
+  });
+
+  it('rejects duplicate GitHub issue references without returning a task', async () => {
+    const tx = {
+      insert: vi.fn((table) => {
+        if (table === tasks) {
+          return {
+            values: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([taskRow]),
+            }),
+          };
+        }
+        if (table === taskExternalRefs) {
+          return {
+            values: vi.fn().mockReturnValue({
+              onConflictDoNothing: vi.fn().mockReturnValue({
+                returning: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          };
+        }
+        throw new Error('Unexpected insert table');
+      }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    await expect(
+      service.createTask(user, projectRow.id, {
+        title: 'Track project work',
+        providerReference: {
+          provider: 'github',
+          sourceType: 'repository_issue',
+          externalType: 'issue',
+          externalKey: 'octo-org/repo#42',
+          externalUrl: 'https://github.com/octo-org/repo/issues/42',
+        },
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('validates project visibility before storing GitHub task refs', async () => {
+    const db = {
+      transaction: vi.fn(),
+      insert: vi.fn(),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockRejectedValue(new NotFoundException()),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    await expect(
+      service.createTask(user, projectRow.id, {
+        title: 'Track project work',
+        providerReference: {
+          provider: 'github',
+          sourceType: 'repository_issue',
+          externalType: 'issue',
+          externalKey: 'octo-org/repo#42',
+          externalUrl: 'https://github.com/octo-org/repo/issues/42',
+        },
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(db.insert).not.toHaveBeenCalled();
   });
 
   it('checks project visibility before updating a task', async () => {

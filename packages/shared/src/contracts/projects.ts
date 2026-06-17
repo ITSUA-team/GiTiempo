@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { githubProjectCreateReferenceSchema } from "./github.js";
 import { workspaceRoleSchema } from "./workspace-members.js";
 
 export const projectVisibilitySchema = z.enum(["public", "private"]);
@@ -81,6 +82,7 @@ export const createProjectSchema = z
       .optional(),
     visibility: projectVisibilitySchema.optional(),
     defaultBillableForTasks: z.boolean().optional(),
+    providerReference: githubProjectCreateReferenceSchema.optional(),
   })
   .strict();
 

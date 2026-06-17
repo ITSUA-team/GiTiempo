@@ -85,6 +85,84 @@ export const syncedGitHubIssueSchema = z.object({
   issueNumber: z.number().int().positive(),
 });
 
+const githubRepositoryKeySchema = z
+  .string()
+  .min(3)
+  .max(200)
+  .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
+
+const githubIssueExternalKeySchema = z
+  .string()
+  .min(5)
+  .max(250)
+  .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#[1-9]\d*$/);
+
+const githubCreateReferenceMetadataSchema = z.record(
+  z.string(),
+  z.unknown(),
+);
+
+const githubCreateReferenceBaseSchema = z.object({
+  provider: z.literal("github"),
+  externalId: z.string().min(1).max(255).nullable().optional(),
+  externalKey: z.string().min(1).max(500),
+  externalUrl: githubUrlSchema.nullable(),
+  metadata: githubCreateReferenceMetadataSchema.optional(),
+});
+
+export const githubProjectRepositoryCreateReferenceSchema =
+  githubCreateReferenceBaseSchema
+    .extend({
+      externalType: z.literal("repository"),
+      externalKey: githubRepositoryKeySchema,
+      externalUrl: githubUrlSchema,
+    })
+    .strict();
+
+export const githubProjectV2CreateReferenceSchema =
+  githubCreateReferenceBaseSchema
+    .extend({
+      externalType: z.literal("project_v2"),
+    })
+    .strict();
+
+export const githubProjectCreateReferenceSchema = z.discriminatedUnion(
+  "externalType",
+  [
+    githubProjectRepositoryCreateReferenceSchema,
+    githubProjectV2CreateReferenceSchema,
+  ],
+);
+
+export const githubRepositoryIssueCreateReferenceSchema =
+  githubCreateReferenceBaseSchema
+    .extend({
+      sourceType: z.literal("repository_issue"),
+      externalType: z.literal("issue"),
+      externalKey: githubIssueExternalKeySchema,
+      externalUrl: githubUrlSchema,
+    })
+    .strict();
+
+export const githubProjectV2IssueItemCreateReferenceSchema =
+  githubCreateReferenceBaseSchema
+    .extend({
+      sourceType: z.literal("project_v2_issue_item"),
+      externalType: z.literal("issue"),
+      externalKey: githubIssueExternalKeySchema,
+      externalUrl: githubUrlSchema,
+      projectItemId: z.string().min(1).max(255),
+    })
+    .strict();
+
+export const githubIssueCreateReferenceSchema = z.discriminatedUnion(
+  "sourceType",
+  [
+    githubRepositoryIssueCreateReferenceSchema,
+    githubProjectV2IssueItemCreateReferenceSchema,
+  ],
+);
+
 export const githubBrowsingPaginationSchema = z.object({
   limit: z.number().int().min(1).max(100),
   hasNextPage: z.boolean(),
@@ -207,6 +285,24 @@ export type GitHubOwnerType = z.infer<typeof githubOwnerTypeSchema>;
 export type GitHubOwnerScope = z.infer<typeof githubOwnerScopeSchema>;
 export type GitHubIssueState = z.infer<typeof githubIssueStateSchema>;
 export type SyncedGitHubIssue = z.infer<typeof syncedGitHubIssueSchema>;
+export type GitHubProjectRepositoryCreateReference = z.infer<
+  typeof githubProjectRepositoryCreateReferenceSchema
+>;
+export type GitHubProjectV2CreateReference = z.infer<
+  typeof githubProjectV2CreateReferenceSchema
+>;
+export type GitHubProjectCreateReference = z.infer<
+  typeof githubProjectCreateReferenceSchema
+>;
+export type GitHubRepositoryIssueCreateReference = z.infer<
+  typeof githubRepositoryIssueCreateReferenceSchema
+>;
+export type GitHubProjectV2IssueItemCreateReference = z.infer<
+  typeof githubProjectV2IssueItemCreateReferenceSchema
+>;
+export type GitHubIssueCreateReference = z.infer<
+  typeof githubIssueCreateReferenceSchema
+>;
 export type GitHubBrowsingPagination = z.infer<
   typeof githubBrowsingPaginationSchema
 >;

@@ -85,19 +85,85 @@ export class TasksService {
       throw new UnprocessableEntityException('Project is inactive');
     }
 
-    const [row] = await this.db
-      .insert(tasks)
+    const createValues = {
+      workspaceId: user.workspaceId,
+      projectId: project.id,
+      title: input.title,
+      defaultBillableForTimeEntries:
+        input.defaultBillableForTimeEntries ?? project.defaultBillableForTasks,
+    };
+
+    const providerReference = input.providerReference;
+
+    if (providerReference === undefined) {
+      const [row] = await this.db
+        .insert(tasks)
+        .values(createValues)
+        .returning();
+      if (!row) throw new Error('Failed to create task');
+      return this.toResponse(row, null);
+    }
+
+    const row = await this.db.transaction(async (tx) => {
+      const [createdTask] = await tx
+        .insert(tasks)
+        .values(createValues)
+        .returning();
+      if (!createdTask) throw new Error('Failed to create task');
+
+      await this.createTaskProviderReference(
+        tx,
+        user.workspaceId,
+        project.id,
+        createdTask.id,
+        providerReference,
+      );
+
+      return createdTask;
+    });
+
+    return this.toResponse(row, providerReference.externalKey);
+  }
+
+  private async createTaskProviderReference(
+    db: Pick<DrizzleDB, 'insert'>,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+    reference: NonNullable<CreateTaskInput['providerReference']>,
+  ): Promise<void> {
+    const [createdRef] = await db
+      .insert(taskExternalRefs)
       .values({
-        workspaceId: user.workspaceId,
-        projectId: project.id,
-        title: input.title,
-        defaultBillableForTimeEntries:
-          input.defaultBillableForTimeEntries ??
-          project.defaultBillableForTasks,
+        workspaceId,
+        projectId,
+        taskId,
+        provider: reference.provider,
+        externalType: reference.externalType,
+        externalId: reference.externalId ?? null,
+        externalKey: reference.externalKey,
+        externalUrl: reference.externalUrl,
+        metadata: {
+          ...(reference.metadata ?? {}),
+          ...(reference.sourceType === 'project_v2_issue_item'
+            ? { projectItemId: reference.projectItemId }
+            : {}),
+        },
+        syncedAt: new Date(),
       })
-      .returning();
-    if (!row) throw new Error('Failed to create task');
-    return this.toResponse(row, null);
+      .onConflictDoNothing({
+        target: [
+          taskExternalRefs.workspaceId,
+          taskExternalRefs.provider,
+          taskExternalRefs.externalType,
+          taskExternalRefs.externalKey,
+        ],
+      })
+      .returning({ id: taskExternalRefs.id });
+
+    if (!createdRef) {
+      throw new ConflictException('GitHub issue is already linked');
+    }
   }
 
   async getTask(user: AuthUser, taskId: string): Promise<TaskResponse> {

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  githubIssueCreateReferenceSchema,
   githubIssueListQuerySchema,
   githubOwnerListQuerySchema,
   githubOwnerListResponseSchema,
+  githubProjectCreateReferenceSchema,
   githubProjectIssueListResponseSchema,
   githubProjectListQuerySchema,
   githubProjectListResponseSchema,
@@ -174,5 +176,56 @@ describe("GitHub browsing contracts", () => {
     });
 
     expect(result.skipped.pullRequests).toBe(1);
+  });
+
+  it("accepts project create references for repositories and Project V2", () => {
+    expect(
+      githubProjectCreateReferenceSchema.parse({
+        provider: "github",
+        externalType: "repository",
+        externalId: "123",
+        externalKey: "octo-org/repo",
+        externalUrl: "https://github.com/octo-org/repo",
+        metadata: { name: "repo" },
+      }).externalKey,
+    ).toBe("octo-org/repo");
+
+    expect(
+      githubProjectCreateReferenceSchema.parse({
+        provider: "github",
+        externalType: "project_v2",
+        externalId: "PVT_kwDO",
+        externalKey: "PVT_kwDO",
+        externalUrl: "https://github.com/orgs/octo-org/projects/7",
+        metadata: { title: "Roadmap" },
+      }).externalType,
+    ).toBe("project_v2");
+  });
+
+  it("accepts issue create references from repositories and Project V2 items", () => {
+    expect(
+      githubIssueCreateReferenceSchema.parse({
+        provider: "github",
+        sourceType: "repository_issue",
+        externalType: "issue",
+        externalId: "123",
+        externalKey: "octo-org/repo#42",
+        externalUrl: "https://github.com/octo-org/repo/issues/42",
+        metadata: { title: "Track project work" },
+      }).externalKey,
+    ).toBe("octo-org/repo#42");
+
+    expect(
+      githubIssueCreateReferenceSchema.parse({
+        provider: "github",
+        sourceType: "project_v2_issue_item",
+        externalType: "issue",
+        externalId: "123",
+        externalKey: "octo-org/repo#42",
+        externalUrl: "https://github.com/octo-org/repo/issues/42",
+        projectItemId: "PVTI_kwDO",
+        metadata: { projectId: "PVT_kwDO" },
+      }).sourceType,
+    ).toBe("project_v2_issue_item");
   });
 });

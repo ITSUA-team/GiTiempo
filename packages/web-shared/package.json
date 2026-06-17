@@ -24,6 +24,10 @@
       "types": "./src/http.ts",
       "default": "./src/http.ts"
     },
+    "./github-browsing-client": {
+      "types": "./src/github-browsing-client.ts",
+      "default": "./src/github-browsing-client.ts"
+    },
     "./query": {
       "types": "./src/query/index.ts",
       "default": "./src/query/index.ts"

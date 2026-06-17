@@ -1,5 +1,6 @@
 import {
   createTaskSchema,
+  type GitHubIssueCreateReference,
   type TaskResponse,
   type TaskStatus,
   updateTaskSchema,
@@ -40,6 +41,7 @@ export function useProjectTaskDialog() {
   const dialogProjectId = ref<string | null>(null);
   const dialogTaskTitle = ref("");
   const dialogTaskStatus = ref<TaskStatus>("open");
+  const dialogProviderReference = ref<GitHubIssueCreateReference | null>(null);
   const dialogDefaultBillableForTimeEntries = ref(true);
   const dialogErrors = ref<ProjectsDialogErrors>(defaultDialogErrors());
   const dialogRequestErrorMessage = ref<string | null>(null);
@@ -73,6 +75,7 @@ export function useProjectTaskDialog() {
     dialogProjectId.value = null;
     dialogTaskTitle.value = "";
     dialogTaskStatus.value = "open";
+    dialogProviderReference.value = null;
     dialogDefaultBillableForTimeEntries.value = true;
     clearDialogErrors();
   }
@@ -103,6 +106,7 @@ export function useProjectTaskDialog() {
 
   function setDialogProjectId(value: string | null): void {
     dialogProjectId.value = value;
+    dialogProviderReference.value = null;
     dialogErrors.value.projectId = null;
     dialogRequestErrorMessage.value = null;
   }
@@ -121,6 +125,13 @@ export function useProjectTaskDialog() {
 
   function setDialogDefaultBillableForTimeEntries(value: boolean): void {
     dialogDefaultBillableForTimeEntries.value = value;
+    dialogRequestErrorMessage.value = null;
+  }
+
+  function setDialogProviderReference(
+    value: GitHubIssueCreateReference | null,
+  ): void {
+    dialogProviderReference.value = value;
     dialogRequestErrorMessage.value = null;
   }
 
@@ -170,6 +181,7 @@ export function useProjectTaskDialog() {
 
     const parsed = createTaskSchema.safeParse({
       defaultBillableForTimeEntries: dialogDefaultBillableForTimeEntries.value,
+      providerReference: dialogProviderReference.value ?? undefined,
       title: trimmedTitle,
     });
 
@@ -198,6 +210,7 @@ export function useProjectTaskDialog() {
     dialogErrors,
     dialogDefaultBillableForTimeEntries,
     dialogMode,
+    dialogProviderReference,
     dialogProjectId,
     dialogRequestErrorMessage,
     dialogSaveLabel,
@@ -211,6 +224,7 @@ export function useProjectTaskDialog() {
     openEditDialog,
     setDialogProjectId,
     setDialogDefaultBillableForTimeEntries,
+    setDialogProviderReference,
     setDialogRequestError,
     setDialogTaskStatus,
     setDialogTaskTitle,

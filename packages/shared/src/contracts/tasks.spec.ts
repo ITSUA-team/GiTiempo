@@ -49,6 +49,14 @@ describe("taskResponseSchema", () => {
 });
 
 describe("createTaskSchema", () => {
+  it("accepts existing manual create payloads", () => {
+    const result = createTaskSchema.parse({
+      title: "Improve reports filters",
+    });
+
+    expect(result).toEqual({ title: "Improve reports filters" });
+  });
+
   it("accepts defaultBillableForTimeEntries", () => {
     const result = createTaskSchema.parse({
       defaultBillableForTimeEntries: false,
@@ -68,6 +76,79 @@ describe("createTaskSchema", () => {
     expect(result.error?.issues[0]?.path).toEqual([
       "defaultBillableForTimeEntries",
     ]);
+  });
+
+  it("accepts GitHub repository issue provider references", () => {
+    const result = createTaskSchema.parse({
+      title: "Track project work",
+      providerReference: {
+        provider: "github",
+        sourceType: "repository_issue",
+        externalType: "issue",
+        externalId: "123",
+        externalKey: "octo-org/repo#42",
+        externalUrl: "https://github.com/octo-org/repo/issues/42",
+        metadata: { title: "Track project work" },
+      },
+    });
+
+    expect(result.providerReference?.sourceType).toBe("repository_issue");
+  });
+
+  it("accepts GitHub Project V2 issue-item provider references", () => {
+    const result = createTaskSchema.parse({
+      title: "Track project work",
+      providerReference: {
+        provider: "github",
+        sourceType: "project_v2_issue_item",
+        externalType: "issue",
+        externalId: "123",
+        externalKey: "octo-org/repo#42",
+        externalUrl: "https://github.com/octo-org/repo/issues/42",
+        projectItemId: "PVTI_kwDO",
+        metadata: { projectId: "PVT_kwDO" },
+      },
+    });
+
+    expect(result.providerReference?.sourceType).toBe(
+      "project_v2_issue_item",
+    );
+  });
+
+  it("rejects unsupported provider references", () => {
+    const result = createTaskSchema.safeParse({
+      title: "Improve reports filters",
+      providerReference: {
+        provider: "linear",
+        sourceType: "repository_issue",
+        externalType: "issue",
+        externalKey: "LIN-1",
+        externalUrl: "https://linear.app/team/issue/LIN-1",
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual([
+      "providerReference",
+      "provider",
+    ]);
+  });
+
+  it("rejects unknown create fields", () => {
+    const result = createTaskSchema.safeParse({
+      title: "Improve reports filters",
+      providerReference: {
+        provider: "github",
+        sourceType: "repository_issue",
+        externalType: "issue",
+        externalKey: "octo-org/repo#42",
+        externalUrl: "https://github.com/octo-org/repo/issues/42",
+      },
+      githubIssue: { githubRepo: "octo-org/repo", issueNumber: 42 },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual([]);
   });
 });
 

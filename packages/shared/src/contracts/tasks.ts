@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { syncedGitHubIssueSchema } from "./github.js";
+import {
+  githubIssueCreateReferenceSchema,
+  syncedGitHubIssueSchema,
+} from "./github.js";
 
 export const taskStatusSchema = z.enum(["open", "closed"]);
 
@@ -36,6 +39,7 @@ export const createTaskSchema = z
   .object({
     title: z.string().min(1).max(500),
     defaultBillableForTimeEntries: z.boolean().optional(),
+    providerReference: githubIssueCreateReferenceSchema.optional(),
   })
   .strict();
 

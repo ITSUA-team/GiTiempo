@@ -20,6 +20,16 @@ const primeVueMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/config/clients", () => ({
+  createDefaultGitHubBrowsingClient: () => ({
+    listOwners: vi.fn(),
+    listProjectIssues: vi.fn(),
+    listProjects: vi.fn(),
+    listRepositories: vi.fn(),
+    listRepositoryIssues: vi.fn(),
+  }),
+  createDefaultProfileGitHubClient: () => ({
+    getConnectionStatus: vi.fn(),
+  }),
   createDefaultTimeEntriesClient: () => clientRef.current,
 }));
 
@@ -218,6 +228,7 @@ async function mountView(client = createClientMock()) {
             "deleteTask",
             "save",
             "update:defaultBillableForTimeEntries",
+            "update:providerReference",
             "update:projectId",
             "update:status",
             "update:title",
@@ -235,6 +246,11 @@ async function mountView(client = createClientMock()) {
               <p data-testid="dialog-default-billable">{{ String(defaultBillableForTimeEntries) }}</p>
               <p data-testid="dialog-request-error">{{ requestErrorMessage }}</p>
               <button data-testid="dialog-title-input" type="button" @click="$emit('update:title', 'Write release checklist')">Title</button>
+              <button
+                data-testid="dialog-github-issue-input"
+                type="button"
+                @click="$emit('update:title', 'Track project work'); $emit('update:providerReference', { provider: 'github', sourceType: 'repository_issue', externalType: 'issue', externalId: 'issue-1', externalKey: 'octo-org/repo#42', externalUrl: 'https://github.com/octo-org/repo/issues/42', metadata: { title: 'Track project work' } })"
+              >GitHub issue</button>
               <button data-testid="dialog-edit-title-input" type="button" @click="$emit('update:title', 'Updated task')">Edit title</button>
               <button data-testid="dialog-default-false" type="button" @click="$emit('update:defaultBillableForTimeEntries', false)">Default false</button>
               <button data-testid="dialog-default-true" type="button" @click="$emit('update:defaultBillableForTimeEntries', true)">Default true</button>
@@ -459,6 +475,39 @@ describe("ProjectView", () => {
     });
     expect(wrapper.text()).toContain("Write release checklist");
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
+  });
+
+  it("creates a task with GitHub provider metadata emitted by the dialog", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject("project-1", "Project Orion", true, false),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      createTask("task-new", "project-1", "Track project work"),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-github-issue-input"]').trigger("click");
+
+    expect(client.createTask).not.toHaveBeenCalled();
+
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith("project-1", {
+      defaultBillableForTimeEntries: false,
+      providerReference: expect.objectContaining({
+        externalKey: "octo-org/repo#42",
+        externalType: "issue",
+        provider: "github",
+        sourceType: "repository_issue",
+      }),
+      title: "Track project work",
+    });
   });
 
   it("updates existing entries only after an edited task default changes and the follow-up is submitted", async () => {

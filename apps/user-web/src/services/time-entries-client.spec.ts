@@ -230,6 +230,68 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("creates a new task with GitHub issue provider metadata", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        createdAt: "2026-04-20T12:00:00.000Z",
+        defaultBillableForTimeEntries: false,
+        githubIssue: null,
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        isActive: true,
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        status: "open",
+        title: "Track project work",
+        updatedAt: "2026-04-20T12:00:00.000Z",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+      }),
+    );
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+
+    await client.createTask(
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      {
+        providerReference: {
+          provider: "github",
+          sourceType: "repository_issue",
+          externalType: "issue",
+          externalId: "issue-1",
+          externalKey: "octo-org/repo#42",
+          externalUrl: "https://github.com/octo-org/repo/issues/42",
+          metadata: { title: "Track project work" },
+        },
+        title: "Track project work",
+      },
+    );
+
+    const [url, init] = fetchFn.mock.calls[0] as unknown as [
+      string,
+      { body?: unknown; headers?: unknown; method?: string },
+    ];
+
+    expect(url).toBe(
+      "/projects/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f/tasks",
+    );
+    expect(init).toMatchObject({
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      providerReference: {
+        provider: "github",
+        sourceType: "repository_issue",
+        externalType: "issue",
+        externalId: "issue-1",
+        externalKey: "octo-org/repo#42",
+        externalUrl: "https://github.com/octo-org/repo/issues/42",
+        metadata: { title: "Track project work" },
+      },
+      title: "Track project work",
+    });
+  });
+
   it("updates an existing task and parses the response", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
