@@ -75,15 +75,9 @@ afterAll(() => {
 });
 
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
-  const {
-    defaultBillableForTasks = false,
-    ...projectOverrides
-  } = overrides;
-
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
-    defaultBillableForTasks,
     description: null,
     id: TEST_IDS.projectOrion,
     isActive: true,
@@ -94,19 +88,13 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
     workspaceId: TEST_IDS.workspace,
-    ...projectOverrides,
+    ...overrides,
   };
 }
 
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
-  const {
-    defaultBillableForTimeEntries = false,
-    ...taskOverrides
-  } = overrides;
-
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
-    defaultBillableForTimeEntries,
     githubIssue: null,
     id: TEST_IDS.taskReports,
     isActive: true,
@@ -115,7 +103,7 @@ function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
     title: "Improve reports filters",
     updatedAt: "2026-04-20T12:00:00.000Z",
     workspaceId: TEST_IDS.workspace,
-    ...taskOverrides,
+    ...overrides,
   };
 }
 

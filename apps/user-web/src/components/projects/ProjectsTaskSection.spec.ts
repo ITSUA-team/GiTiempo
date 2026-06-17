@@ -11,7 +11,6 @@ function createProject(): ProjectResponse {
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
-    defaultBillableForTasks: false,
     description: null,
     id: "project-1",
     isActive: true,
@@ -26,14 +25,8 @@ function createProject(): ProjectResponse {
 }
 
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
-  const {
-    defaultBillableForTimeEntries = false,
-    ...taskOverrides
-  } = overrides;
-
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
-    defaultBillableForTimeEntries,
     githubIssue: null,
     id: "task-1",
     isActive: true,
@@ -42,7 +35,7 @@ function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
     title: "Improve reports filters",
     updatedAt: "2026-04-21T10:00:00.000Z",
     workspaceId: "workspace-1",
-    ...taskOverrides,
+    ...overrides,
   };
 }
 
