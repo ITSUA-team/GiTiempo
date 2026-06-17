@@ -33,16 +33,37 @@ describe('GithubApiClientService', () => {
     vi.unstubAllGlobals();
   });
 
-  it('lists owners with personal account and organizations', async () => {
-    fetchMock.mockResolvedValue(
-      jsonResponse([
-        {
-          login: 'octo-org',
-          avatar_url: 'https://avatars.githubusercontent.com/u/1',
-          html_url: 'https://github.com/octo-org',
-        },
-      ]),
-    );
+  it('lists owners with personal account and installed organizations', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          installations: [
+            {
+              id: 42,
+              account: {
+                login: 'octo-org',
+                avatar_url: 'https://avatars.githubusercontent.com/u/1',
+                html_url: 'https://github.com/octo-org',
+                type: 'Organization',
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            login: 'octo-org',
+            avatar_url: 'https://avatars.githubusercontent.com/u/1',
+            html_url: 'https://github.com/octo-org',
+          },
+          {
+            login: 'legacy-org',
+            avatar_url: 'https://avatars.githubusercontent.com/u/2',
+            html_url: 'https://github.com/legacy-org',
+          },
+        ]),
+      );
 
     const result = await service.listOwners(
       accessToken,
@@ -53,7 +74,11 @@ describe('GithubApiClientService', () => {
     expect(result.items.map((owner) => owner.login)).toEqual([
       'octocat',
       'octo-org',
+      'legacy-org',
     ]);
+    expect(
+      fetchMock.mock.calls.map((call) => new URL(call[0] as URL).pathname),
+    ).toEqual(['/user/installations', '/user/orgs']);
     expect(JSON.stringify(result)).not.toContain(accessToken);
   });
 
@@ -93,25 +118,85 @@ describe('GithubApiClientService', () => {
     expect(result.pagination.nextPageToken).not.toContain('page=2');
   });
 
-  it('normalizes project responses with cursor page tokens', async () => {
-    fetchMock.mockResolvedValue(
-      jsonResponse(
-        [
+  it('lists organization repositories through matching app installation', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          installations: [
+            {
+              id: 42,
+              account: { login: 'octo-org', type: 'Organization' },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
           {
-            node_id: 'PVT_kwDO',
-            number: 7,
-            title: 'Roadmap',
-            owner: { login: 'octo-org' },
-            state: 'open',
-            description: null,
-            html_url: 'https://github.com/orgs/octo-org/projects/7',
-            updated_at: '2026-05-14T12:00:00Z',
+            repositories: [
+              {
+                id: 1,
+                node_id: 'R_kwDO',
+                name: 'repo',
+                full_name: 'octo-org/repo',
+                owner: { login: 'octo-org' },
+                private: true,
+                archived: false,
+                description: null,
+                html_url: 'https://github.com/octo-org/repo',
+                updated_at: '2026-05-14T12:00:00Z',
+              },
+            ],
           },
-        ],
-        {
-          link: '<https://api.github.com/orgs/octo-org/projectsV2?after=abc>; rel="next"',
+          {
+            link: '<https://api.github.com/user/installations/42/repositories?page=2>; rel="next"',
+          },
+        ),
+      );
+
+    const result = await service.listRepositories({
+      accessToken,
+      ownerType: 'organization',
+      owner: 'octo-org',
+      limit: 30,
+    });
+
+    const requestPaths = fetchMock.mock.calls.map(
+      (call) => new URL(call[0] as URL).pathname,
+    );
+    expect(requestPaths).toEqual([
+      '/user/installations',
+      '/user/installations/42/repositories',
+    ]);
+    expect(result.items[0]).toMatchObject({
+      fullName: 'octo-org/repo',
+      visibility: 'private',
+    });
+    expect(result.pagination.nextPageToken).toEqual(expect.any(String));
+  });
+
+  it('normalizes Project V2 responses with GraphQL cursor page tokens', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        data: {
+          owner: {
+            projectsV2: {
+              nodes: [
+                {
+                  id: 'PVT_kwDO',
+                  number: 7,
+                  title: 'Roadmap',
+                  closed: false,
+                  shortDescription: null,
+                  url: 'https://github.com/orgs/octo-org/projects/7',
+                  updatedAt: '2026-05-14T12:00:00Z',
+                },
+              ],
+              pageInfo: { hasNextPage: true, endCursor: 'cursor-1' },
+            },
+          },
         },
-      ),
+      }),
     );
 
     const result = await service.listProjects({
@@ -121,8 +206,62 @@ describe('GithubApiClientService', () => {
       limit: 30,
     });
 
+    const requestUrl = new URL(fetchMock.mock.calls[0]![0] as string);
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
+    expect(requestUrl.pathname).toBe('/graphql');
+    expect(fetchMock.mock.calls[0]![1].method).toBe('POST');
+    expect(requestBody.query).toContain('organization(login: $owner)');
+    expect(requestBody.variables).toEqual({
+      owner: 'octo-org',
+      first: 30,
+      after: null,
+    });
     expect(result.items[0]?.id).toBe('PVT_kwDO');
+    expect(result.items[0]?.state).toBe('open');
     expect(result.pagination.nextPageToken).toEqual(expect.any(String));
+  });
+
+  it('uses the GraphQL user scope for personal Project V2 responses', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        data: {
+          owner: {
+            projectsV2: {
+              nodes: [
+                {
+                  id: 'PVT_personal',
+                  number: 3,
+                  title: 'Personal board',
+                  closed: true,
+                  shortDescription: 'Personal work',
+                  url: 'https://github.com/users/octocat/projects/3',
+                  updatedAt: '2026-05-15T12:00:00Z',
+                },
+              ],
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+          },
+        },
+      }),
+    );
+
+    const result = await service.listProjects({
+      accessToken,
+      ownerType: 'personal',
+      owner: 'octocat',
+      limit: 100,
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
+    expect(requestBody.query).toContain('user(login: $owner)');
+    expect(requestBody.variables.owner).toBe('octocat');
+    expect(result.items[0]).toMatchObject({
+      id: 'PVT_personal',
+      owner: 'octocat',
+      state: 'closed',
+      description: 'Personal work',
+    });
+    expect(result.pagination.nextPageToken).toBeNull();
   });
 
   it('filters pull requests from repository issue responses', async () => {

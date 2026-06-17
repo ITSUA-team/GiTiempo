@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   type CreateProjectInput,
@@ -34,6 +34,8 @@ interface ProjectFormInstance {
   /* eslint-enable no-unused-vars */
 }
 
+type ProjectCreateMode = 'manual' | 'github';
+
 const router = useRouter();
 const authStore = useAuthStore();
 const { successToast, errorToast } = useToasts();
@@ -43,6 +45,7 @@ const membersLoading = ref(false);
 const membersError = ref<string | null>(null);
 const isSubmitting = ref(false);
 const projectFormRef = ref<ProjectFormInstance | null>(null);
+const createMode = ref<ProjectCreateMode>('manual');
 
 const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
@@ -100,6 +103,14 @@ const {
     });
   },
 });
+
+const isGitHubMode = computed(() => createMode.value === 'github');
+const createButtonLabel = computed(() =>
+  isGitHubMode.value ? 'Create GitHub project' : 'Create project',
+);
+const isCreateDisabled = computed(
+  () => isSubmitting.value || (isGitHubMode.value && !githubProviderReference.value),
+);
 
 const githubAutoCompletePt = {
   root: { class: 'w-full' },
@@ -161,8 +172,25 @@ function handleProjectUpdate(value: GitHubProject | string | null): void {
   if (candidateName) setProjectName(candidateName);
 }
 
-function handleManualSource(): void {
+function selectCreateMode(mode: ProjectCreateMode): void {
+  if (createMode.value === mode) return;
+
+  createMode.value = mode;
+  if (mode === 'manual') {
+    clearGitHubSelection();
+    setProjectName('');
+    return;
+  }
+
+  setProjectName(selectedCandidateLabel.value ?? '');
+  if (connectionState.value === 'idle' || connectionState.value === 'error') {
+    loadGitHubConnection();
+  }
+}
+
+function clearGitHubSourceSelection(): void {
   clearGitHubSelection();
+  setProjectName('');
 }
 
 function loadGitHubConnection(): void {
@@ -220,23 +248,36 @@ async function handleSubmit({
     managerUserId,
   } = values as CreateProjectFormInput;
 
+  if (isGitHubMode.value && !githubProviderReference.value) {
+    errorToast('Select a GitHub repository or Project V2 before creating.', {
+      logContext: { action: 'create-project', feature: 'projects' },
+    });
+    return;
+  }
+
   isSubmitting.value = true;
 
   try {
-    const trimmedName = (name || projectName.value).trim();
+    const rawName = isGitHubMode.value
+      ? selectedCandidateLabel.value ?? projectName.value
+      : name || projectName.value;
+    const trimmedName = rawName.trim();
+    if (!trimmedName) {
+      throw new Error('Project name is required');
+    }
     const createInput: CreateProjectInput = {
       defaultBillableForTasks,
       name: trimmedName,
       visibility,
     };
 
-    if (githubProviderReference.value) {
+    if (isGitHubMode.value && githubProviderReference.value) {
       createInput.providerReference = githubProviderReference.value;
     }
 
     const project = await adminProjectsClient.createProject(createInput);
 
-    if (managerUserId) {
+    if (!isGitHubMode.value && managerUserId) {
       await adminProjectsClient.assignMember(project.id, managerUserId);
     }
 
@@ -258,7 +299,6 @@ function handleBack(): void {
 
 onMounted(() => {
   void loadMembers();
-  loadGitHubConnection();
 });
 </script>
 
@@ -278,18 +318,19 @@ onMounted(() => {
         Add Project
       </h1>
       <p class="text-text-muted text-sm font-normal">
-        Create a project manually now, with the flexibility to add workspace
-        imports alongside it.
+        Choose a manual project or create from a connected GitHub repository or
+        Project V2 source.
       </p>
     </div>
 
     <div class="flex min-w-0 flex-col gap-5 md:flex-row">
       <div class="bg-surface-primary flex min-w-0 flex-1 flex-col gap-3 rounded-lg p-4">
         <h2 class="text-text-dark text-lg font-semibold">
-          Add Project Manually
+          {{ isGitHubMode ? 'Add GitHub Project' : 'Add Project Manually' }}
         </h2>
 
         <div
+          v-if="isGitHubMode"
           data-testid="github-project-candidate-controls"
           class="border-divider bg-app-bg flex flex-col gap-3 rounded-lg border p-3.5"
         >
@@ -299,7 +340,7 @@ onMounted(() => {
                 GitHub project source
               </h3>
               <p class="text-text-muted text-[13px] font-normal">
-                Browse connected repositories or Projects V2, or keep manual entry.
+                Browse connected repositories or Projects V2 sources.
               </p>
             </div>
             <Button
@@ -327,7 +368,8 @@ onMounted(() => {
             size="small"
             variant="simple"
           >
-            {{ connectionError }} Manual project creation is still available.
+            {{ connectionError }} Switch to Manual project if you want to create
+            without GitHub.
           </Message>
 
           <div
@@ -336,7 +378,7 @@ onMounted(() => {
             class="text-text-muted text-[13px]"
           >
             Connect GitHub from your profile to browse provider-backed candidates.
-            You can still create a manual project now.
+            Switch to Manual project if you want to create without GitHub.
           </div>
 
           <div
@@ -494,12 +536,12 @@ onMounted(() => {
                 Selected {{ selectedCandidateSource }}: {{ selectedCandidateLabel }}
               </span>
               <Button
-                label="Use manual entry"
+                label="Clear selection"
                 severity="secondary"
                 variant="outlined"
                 size="small"
                 :disabled="isSubmitting"
-                @click="handleManualSource"
+                @click="clearGitHubSourceSelection"
               />
             </div>
           </div>
@@ -512,7 +554,10 @@ onMounted(() => {
           :initial-values="initialValues"
           @submit="handleSubmit"
         >
-          <div class="flex flex-col gap-2.5">
+          <div
+            v-if="!isGitHubMode"
+            class="flex flex-col gap-2.5"
+          >
             <div class="flex flex-col gap-1.5">
               <label
                 for="project-name"
@@ -538,44 +583,33 @@ onMounted(() => {
               </small>
             </div>
 
-            <div class="flex flex-col gap-3 sm:flex-row">
-              <div class="flex flex-1 flex-col gap-1.5">
-                <label class="text-text-dark text-[13px] font-medium">
-                  Source
-                </label>
-                <div class="border-divider text-text-dark bg-surface-primary flex h-[34px] items-center rounded-[6px] border px-3 text-[14px] font-medium">
-                  {{ selectedCandidateSource }}
-                </div>
-              </div>
-
-              <div class="flex w-full flex-col gap-1.5 sm:w-40">
-                <label
-                  for="project-manager"
-                  class="text-text-dark text-[13px] font-medium"
-                >
-                  Project manager
-                </label>
-                <Select
-                  id="project-manager"
-                  name="managerUserId"
-                  :options="memberOptions()"
-                  option-label="label"
-                  option-value="value"
-                  placeholder="Select"
-                  :loading="membersLoading"
-                  :disabled="isSubmitting || membersLoading"
-                  :pt="{
-                    root: { class: 'h-[34px] w-full rounded-[6px] text-[14px]' },
-                    label: { class: 'flex items-center py-0 text-[14px] font-medium' },
-                  }"
-                />
-                <small
-                  v-if="membersError"
-                  class="text-status-error-text text-xs"
-                >
-                  {{ membersError }}
-                </small>
-              </div>
+            <div class="flex flex-col gap-1.5">
+              <label
+                for="project-manager"
+                class="text-text-dark text-[13px] font-medium"
+              >
+                Project manager
+              </label>
+              <Select
+                id="project-manager"
+                name="managerUserId"
+                :options="memberOptions()"
+                option-label="label"
+                option-value="value"
+                placeholder="Select"
+                :loading="membersLoading"
+                :disabled="isSubmitting || membersLoading"
+                :pt="{
+                  root: { class: 'h-[34px] w-full rounded-[6px] text-[14px]' },
+                  label: { class: 'flex items-center py-0 text-[14px] font-medium' },
+                }"
+              />
+              <small
+                v-if="membersError"
+                class="text-status-error-text text-xs"
+              >
+                {{ membersError }}
+              </small>
             </div>
 
             <div class="flex flex-col gap-1.5">
@@ -633,8 +667,9 @@ onMounted(() => {
               @click="handleBack"
             />
             <Button
-              label="Create project"
+              :label="createButtonLabel"
               type="submit"
+              :disabled="isCreateDisabled"
               :loading="isSubmitting"
             />
           </div>
@@ -643,16 +678,21 @@ onMounted(() => {
 
       <div class="shadow-card bg-surface-primary flex w-full flex-col gap-3.5 rounded-lg p-5 md:w-80 md:shrink-0">
         <h2 class="text-text-dark text-lg font-semibold">
-          Project Source
+          Creation Type
         </h2>
         <p class="text-text-muted text-[13px] font-normal">
-          Projects can come from GitHub candidates or be added manually. The
-          pending source updates before you submit.
+          Manual and GitHub projects are separate creation paths. Switch modes
+          before filling fields.
         </p>
 
-        <div
-          class="flex flex-col gap-2 rounded-lg border p-3.5"
-          :class="selectedCandidateLabel ? 'border-divider bg-app-bg' : 'border-brand bg-accent-tint'"
+        <button
+          type="button"
+          data-testid="select-manual-project-source"
+          :aria-pressed="!isGitHubMode"
+          :disabled="isSubmitting"
+          class="flex cursor-pointer flex-col gap-2 rounded-lg border p-3.5 text-left transition disabled:cursor-not-allowed disabled:opacity-60"
+          :class="!isGitHubMode ? 'border-brand bg-accent-tint' : 'border-divider bg-app-bg'"
+          @click="selectCreateMode('manual')"
         >
           <span class="text-text-dark text-sm font-semibold">
             Manual project
@@ -661,28 +701,33 @@ onMounted(() => {
             Use this when a project is internal, still being prepared, or not
             available through a workspace import yet.
           </span>
-        </div>
+        </button>
 
-        <div
-          class="flex flex-col gap-2 rounded-lg border p-3.5"
-          :class="selectedCandidateLabel ? 'border-brand bg-accent-tint' : 'border-divider bg-app-bg'"
+        <button
+          type="button"
+          data-testid="select-github-project-source"
+          :aria-pressed="isGitHubMode"
+          :disabled="isSubmitting"
+          class="flex cursor-pointer flex-col gap-2 rounded-lg border p-3.5 text-left transition disabled:cursor-not-allowed disabled:opacity-60"
+          :class="isGitHubMode ? 'border-brand bg-accent-tint' : 'border-divider bg-app-bg'"
+          @click="selectCreateMode('github')"
         >
           <span class="text-text-dark text-sm font-semibold">
             GitHub project source
           </span>
           <span class="text-text-muted text-[13px] font-normal">
-            <template v-if="selectedCandidateLabel">
+            <template v-if="isGitHubMode && selectedCandidateLabel">
               Pending source: {{ selectedCandidateSource }} {{ selectedCandidateLabel }}.
             </template>
             <template v-else>
               Select a repository or Project V2 project to preserve its external context.
             </template>
           </span>
-        </div>
+        </button>
 
         <p class="text-text-muted text-xs font-normal">
-          You can still assign the PM, set visibility, and adjust project
-          details after creation.
+          GitHub mode shows only GitHub source fields here. PM, visibility, and
+          defaults can be adjusted after creation.
         </p>
       </div>
     </div>

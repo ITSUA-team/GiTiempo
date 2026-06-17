@@ -264,7 +264,7 @@ function mountAddProjectView() {
       plugins: [pinia],
       stubs: {
         Button: {
-          props: ['disabled', 'label', 'loading', 'type', 'variant'],
+          props: ['disabled', 'label', 'loading', 'outlined', 'severity', 'type', 'variant'],
           emits: ['click'],
           template:
             '<button v-bind="$attrs" :disabled="disabled" :type="type" @click="$emit(\'click\')">{{ label }}</button>',
@@ -339,7 +339,9 @@ describe('AddProjectView', () => {
     expect(wrapper.text()).toContain('Billable by default');
     expect(wrapper.find('input[name="defaultBillableForTasks"]').exists()).toBe(true);
     expect(wrapper.text()).toContain('New tasks in this project inherit this value unless changed later.');
-    expect(wrapper.text()).toContain('You can still create a manual project now.');
+    expect(wrapper.find('[data-testid="project-create-mode"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="github-project-candidate-controls"]').exists()).toBe(false);
+    expect(testMocks.getConnectionStatus).not.toHaveBeenCalled();
     expect(testMocks.listOwners).not.toHaveBeenCalled();
 
     await wrapper.get('input[name="name"]').setValue('Customer Portal');
@@ -366,9 +368,11 @@ describe('AddProjectView', () => {
     const wrapper = mountAddProjectView();
 
     await flushPromises();
+    await wrapper.get('[data-testid="select-github-project-source"]').trigger('click');
+    await flushPromises();
 
     expect(wrapper.text()).toContain('Checking GitHub connection...');
-    expect(wrapper.text()).toContain('Project name');
+    expect(wrapper.find('input[name="name"]').exists()).toBe(false);
 
     connectionRequest.resolve(connectedGitHubStatus);
     await flushPromises();
@@ -380,6 +384,8 @@ describe('AddProjectView', () => {
     testMocks.getConnectionStatus.mockResolvedValue(connectedGitHubStatus);
     const wrapper = mountAddProjectView();
 
+    await flushPromises();
+    await wrapper.get('[data-testid="select-github-project-source"]').trigger('click');
     await flushPromises();
 
     expect(testMocks.listOwners).toHaveBeenCalledWith({ type: 'all' });
@@ -393,14 +399,13 @@ describe('AddProjectView', () => {
       owner: 'octo-org',
       ownerType: 'organization',
     });
+    expect(wrapper.find('input[name="name"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Project manager');
+    expect(wrapper.text()).not.toContain('Default billable for new tasks');
 
     await wrapper.get('[data-testid="github-repository-option-0"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.get('input[name="name"]').element).toHaveProperty(
-      'value',
-      'octo-org/repo',
-    );
     expect(wrapper.text()).toContain('Selected GitHub repository: octo-org/repo');
     expect(wrapper.text()).toContain('GitHub repository');
     expect(testMocks.createProject).not.toHaveBeenCalled();
@@ -419,6 +424,7 @@ describe('AddProjectView', () => {
       }),
       visibility: 'private',
     });
+    expect(testMocks.assignMember).not.toHaveBeenCalled();
   });
 
   it('submits Project V2 metadata when a Project V2 candidate is selected', async () => {
@@ -426,14 +432,13 @@ describe('AddProjectView', () => {
     const wrapper = mountAddProjectView();
 
     await flushPromises();
+    await wrapper.get('[data-testid="select-github-project-source"]').trigger('click');
+    await flushPromises();
 
     await wrapper.get('[data-testid="github-project-v2-option-0"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.get('input[name="name"]').element).toHaveProperty(
-      'value',
-      'Roadmap',
-    );
+    expect(wrapper.find('input[name="name"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('Selected GitHub Project V2: Roadmap');
     expect(testMocks.createProject).not.toHaveBeenCalled();
 
@@ -458,21 +463,25 @@ describe('AddProjectView', () => {
     const wrapper = mountAddProjectView();
 
     await flushPromises();
+    await wrapper.get('[data-testid="select-github-project-source"]').trigger('click');
+    await flushPromises();
     await wrapper.get('[data-testid="github-repository-option-0"]').trigger('click');
     await flushPromises();
 
-    await wrapper.get('[data-testid="github-selected-source"] button').trigger('click');
+    await wrapper.get('[data-testid="select-manual-project-source"]').trigger('click');
     await flushPromises();
 
     expect(wrapper.text()).not.toContain('Selected GitHub repository');
-    expect(wrapper.text()).toContain('Manual');
+    expect(wrapper.find('input[name="name"]').exists()).toBe(true);
+
+    await wrapper.get('input[name="name"]').setValue('Manual fallback');
 
     await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
     await flushPromises();
 
     expect(testMocks.createProject).toHaveBeenCalledWith({
       defaultBillableForTasks: false,
-      name: 'octo-org/repo',
+      name: 'Manual fallback',
       visibility: 'private',
     });
   });
@@ -491,6 +500,8 @@ describe('AddProjectView', () => {
     });
     const wrapper = mountAddProjectView();
 
+    await flushPromises();
+    await wrapper.get('[data-testid="select-github-project-source"]').trigger('click');
     await flushPromises();
 
     expect(wrapper.text()).toContain('Repositories unavailable');

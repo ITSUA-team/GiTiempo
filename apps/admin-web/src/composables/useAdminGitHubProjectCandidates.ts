@@ -54,7 +54,7 @@ function filterByQuery<T>(
 ): T[] {
   const normalizedQuery = query.trim().toLowerCase();
 
-  if (!normalizedQuery) return items;
+  if (!normalizedQuery) return [...items];
 
   return items.filter((item) =>
     getText(item).toLowerCase().includes(normalizedQuery),
@@ -83,6 +83,76 @@ function getOwnerScopedQuery(
   return owner.type === 'organization'
     ? { ownerType: 'organization', owner: owner.login, limit: 100 }
     : { ownerType: 'personal', limit: 100 };
+}
+
+function getOwnerDisplayLabel(owner: GitHubOwner): string {
+  const suffix = owner.type === 'organization' ? 'organization' : 'personal';
+
+  return `${owner.label} (${suffix})`;
+}
+
+function getOwnerSearchText(owner: GitHubOwner): string {
+  return `${getOwnerDisplayLabel(owner)} ${owner.login} ${owner.type}`;
+}
+
+function isSelectedOwnerQuery(query: string, owner: GitHubOwner | null): boolean {
+  if (!owner) return false;
+
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return false;
+
+  return [getOwnerDisplayLabel(owner), owner.label, owner.login].some(
+    (value) => value.toLowerCase() === normalizedQuery,
+  );
+}
+
+function isSelectedRepositoryQuery(
+  query: string,
+  repository: GitHubRepository | null,
+): boolean {
+  if (!repository) return false;
+
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return false;
+
+  return [repository.fullName, repository.name].some(
+    (value) => value.toLowerCase() === normalizedQuery,
+  );
+}
+
+function getProjectDisplayLabel(project: GitHubProject): string {
+  return `${project.title} #${project.number}`;
+}
+
+function getProjectSearchText(project: GitHubProject): string {
+  return `${getProjectDisplayLabel(project)} ${project.owner} ${project.description ?? ''}`;
+}
+
+function isSelectedProjectQuery(
+  query: string,
+  project: GitHubProject | null,
+): boolean {
+  if (!project) return false;
+
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return false;
+
+  return [getProjectDisplayLabel(project), project.title, String(project.number)].some(
+    (value) => value.toLowerCase() === normalizedQuery,
+  );
+}
+
+function getInitialOwner(
+  items: GitHubOwner[],
+  preferredLogin?: string | null,
+): GitHubOwner | null {
+  const preferredOrganization = items.find(
+    (owner) => owner.type === 'organization' && owner.login === preferredLogin,
+  );
+  const firstOrganization = items.find((owner) => owner.type === 'organization');
+  const preferredOwner = items.find((owner) => owner.login === preferredLogin);
+
+  return preferredOrganization ?? firstOrganization ?? preferredOwner ?? items[0] ?? null;
 }
 
 function createRepositoryReference(
@@ -261,10 +331,7 @@ export function useAdminGitHubProjectCandidates(
       const response = await browsingClient.listOwners({ type: 'all' });
       owners.value = response.items;
       ownerSuggestions.value = response.items;
-      selectedOwner.value =
-        response.items.find((owner) => owner.login === preferredLogin) ??
-        response.items[0] ??
-        null;
+      selectedOwner.value = getInitialOwner(response.items, preferredLogin);
       await loadCandidatesForSelectedOwner();
     } catch (error) {
       owners.value = [];
@@ -308,14 +375,24 @@ export function useAdminGitHubProjectCandidates(
   }
 
   function completeOwners(event: AutoCompleteCompleteEvent): void {
+    if (isSelectedOwnerQuery(event.query, selectedOwner.value)) {
+      ownerSuggestions.value = [...owners.value];
+      return;
+    }
+
     ownerSuggestions.value = filterByQuery(
       owners.value,
       event.query,
-      (owner) => `${owner.label} ${owner.login} ${owner.type}`,
+      getOwnerSearchText,
     );
   }
 
   function completeRepositories(event: AutoCompleteCompleteEvent): void {
+    if (isSelectedRepositoryQuery(event.query, selectedRepository.value)) {
+      repositorySuggestions.value = [...repositories.value];
+      return;
+    }
+
     repositorySuggestions.value = filterByQuery(
       repositories.value,
       event.query,
@@ -324,10 +401,15 @@ export function useAdminGitHubProjectCandidates(
   }
 
   function completeProjects(event: AutoCompleteCompleteEvent): void {
+    if (isSelectedProjectQuery(event.query, selectedProject.value)) {
+      projectSuggestions.value = [...projects.value];
+      return;
+    }
+
     projectSuggestions.value = filterByQuery(
       projects.value,
       event.query,
-      (project) => `${project.title} ${project.owner} ${project.description ?? ''}`,
+      getProjectSearchText,
     );
   }
 

@@ -53,16 +53,32 @@ type GitHubRepoRest = {
   updated_at?: string;
 };
 
-type GitHubProjectRest = {
-  node_id?: string;
+type GitHubInstallationRest = {
+  id?: number | string;
+  account?: {
+    login?: string;
+    avatar_url?: string | null;
+    html_url?: string | null;
+    type?: string;
+  } | null;
+};
+
+type GitHubInstallationListRest = {
+  installations?: GitHubInstallationRest[];
+};
+
+type GitHubInstallationRepositoryListRest = {
+  repositories?: GitHubRepoRest[];
+};
+
+type GitHubProjectGraphql = {
+  id?: string;
   number?: number;
   title?: string;
-  owner?: { login?: string };
-  state?: string;
-  description?: string | null;
-  short_description?: string | null;
-  html_url?: string | null;
-  updated_at?: string;
+  closed?: boolean;
+  shortDescription?: string | null;
+  url?: string | null;
+  updatedAt?: string;
 };
 
 type GitHubIssueRest = {
@@ -117,6 +133,21 @@ type ProjectIssueGraphqlResponse = {
   errors?: unknown[];
 };
 
+type ProjectListGraphqlResponse = {
+  data?: {
+    owner?: {
+      projectsV2?: {
+        nodes?: Array<GitHubProjectGraphql | null>;
+        pageInfo?: {
+          hasNextPage?: boolean;
+          endCursor?: string | null;
+        };
+      } | null;
+    } | null;
+  };
+  errors?: unknown[];
+};
+
 @Injectable()
 export class GithubApiClientService {
   private readonly logger = new Logger(GithubApiClientService.name);
@@ -126,9 +157,13 @@ export class GithubApiClientService {
     personal: { login: string; avatarUrl: string | null },
     type: 'all' | 'personal' | 'organization',
   ): Promise<GitHubOwnerListResponse> {
-    const items: GitHubOwner[] = [];
+    const items = new Map<string, GitHubOwner>();
+    const addOwner = (owner: GitHubOwner): void => {
+      items.set(`${owner.type}:${owner.login.toLowerCase()}`, owner);
+    };
+
     if (type === 'all' || type === 'personal') {
-      items.push({
+      addOwner({
         login: personal.login,
         label: personal.login,
         type: 'personal',
@@ -137,6 +172,11 @@ export class GithubApiClientService {
       });
     }
     if (type === 'all' || type === 'organization') {
+      for (const installation of await this.listInstallations(accessToken)) {
+        const owner = this.toInstallationOwner(installation);
+        if (owner) addOwner(owner);
+      }
+
       const orgs = await this.rest<GitHubOrgRest[]>(
         accessToken,
         '/user/orgs',
@@ -145,7 +185,7 @@ export class GithubApiClientService {
       );
       for (const org of orgs.body) {
         if (!org.login) continue;
-        items.push({
+        addOwner({
           login: org.login,
           label: org.login,
           type: 'organization',
@@ -154,7 +194,7 @@ export class GithubApiClientService {
         });
       }
     }
-    return { items };
+    return { items: [...items.values()] };
   }
 
   async listRepositories(input: {
@@ -165,6 +205,21 @@ export class GithubApiClientService {
     pageToken?: string;
   }): Promise<GitHubRepositoryListResponse> {
     const page = this.decodePage(input.pageToken, 'rest-page') ?? 1;
+    if (input.ownerType === 'organization') {
+      const installation = await this.findInstallationForOwner(
+        input.accessToken,
+        input.owner,
+      );
+      if (installation?.id !== undefined) {
+        return this.listInstallationRepositories(
+          input.accessToken,
+          installation.id,
+          input.limit,
+          page,
+        );
+      }
+    }
+
     const path =
       input.ownerType === 'personal'
         ? '/user/repos'
@@ -189,6 +244,30 @@ export class GithubApiClientService {
     };
   }
 
+  private async listInstallationRepositories(
+    accessToken: string,
+    installationId: number | string,
+    limit: number,
+    page: number,
+  ): Promise<GitHubRepositoryListResponse> {
+    const result = await this.rest<GitHubInstallationRepositoryListRest>(
+      accessToken,
+      `/user/installations/${encodeURIComponent(String(installationId))}/repositories`,
+      {
+        per_page: String(limit),
+        page: String(page),
+      },
+      'rest-page',
+    );
+    if (!Array.isArray(result.body.repositories)) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+    return {
+      items: result.body.repositories.map((repo) => this.toRepository(repo)),
+      pagination: result.pagination,
+    };
+  }
+
   async listProjects(input: {
     accessToken: string;
     ownerType: GitHubOwnerScope;
@@ -196,25 +275,62 @@ export class GithubApiClientService {
     limit: number;
     pageToken?: string;
   }): Promise<GitHubProjectListResponse> {
-    const after = this.decodePage(input.pageToken, 'rest-cursor');
-    const path =
+    const after = this.decodePage(input.pageToken, 'graphql-cursor');
+    const ownerSelection =
       input.ownerType === 'personal'
-        ? `/users/${encodeURIComponent(input.owner)}/projectsV2`
-        : `/orgs/${encodeURIComponent(input.owner)}/projectsV2`;
-    const query: Record<string, string> = { per_page: String(input.limit) };
-    if (after) query.after = after;
-
-    const result = await this.rest<GitHubProjectRest[]>(
+        ? 'user(login: $owner)'
+        : 'organization(login: $owner)';
+    const query = `
+      query($owner: String!, $first: Int!, $after: String) {
+        owner: ${ownerSelection} {
+          projectsV2(
+            first: $first,
+            after: $after,
+            orderBy: { field: UPDATED_AT, direction: DESC }
+          ) {
+            nodes {
+              id
+              number
+              title
+              closed
+              shortDescription
+              url
+              updatedAt
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    `;
+    const body = await this.graphql<ProjectListGraphqlResponse>(
       input.accessToken,
-      path,
       query,
-      'rest-cursor',
+      {
+        owner: input.owner,
+        first: input.limit,
+        after,
+      },
     );
+    const projects = body.data?.owner?.projectsV2;
+    if (!projects?.nodes || !projects.pageInfo) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
     return {
-      items: result.body.map((project) =>
-        this.toProject(project, input.owner, input.ownerType),
+      items: projects.nodes.flatMap((project) =>
+        project ? [this.toProject(project, input.owner, input.ownerType)] : [],
       ),
-      pagination: result.pagination,
+      pagination: {
+        limit: input.limit,
+        hasNextPage: projects.pageInfo.hasNextPage === true,
+        nextPageToken:
+          projects.pageInfo.hasNextPage && projects.pageInfo.endCursor
+            ? this.encodePage({
+                kind: 'graphql-cursor',
+                cursor: projects.pageInfo.endCursor,
+              })
+            : null,
+      },
     };
   }
 
@@ -368,6 +484,37 @@ export class GithubApiClientService {
       ),
       pagination: result.pagination,
     };
+  }
+
+  private async listInstallations(
+    accessToken: string,
+  ): Promise<GitHubInstallationRest[]> {
+    const result = await this.rest<GitHubInstallationListRest>(
+      accessToken,
+      '/user/installations',
+      { per_page: '100' },
+      null,
+    );
+    if (!Array.isArray(result.body.installations)) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
+    return result.body.installations;
+  }
+
+  private async findInstallationForOwner(
+    accessToken: string,
+    owner: string,
+  ): Promise<GitHubInstallationRest | null> {
+    const normalizedOwner = owner.toLowerCase();
+    const installations = await this.listInstallations(accessToken);
+
+    return (
+      installations.find(
+        (installation) =>
+          installation.account?.login?.toLowerCase() === normalizedOwner,
+      ) ?? null
+    );
   }
 
   private async rest<T>(
@@ -539,25 +686,42 @@ export class GithubApiClientService {
     };
   }
 
+  private toInstallationOwner(
+    installation: GitHubInstallationRest,
+  ): GitHubOwner | null {
+    const account = installation.account;
+    if (!account?.login || account.type?.toLowerCase() !== 'organization') {
+      return null;
+    }
+
+    return {
+      login: account.login,
+      label: account.login,
+      type: 'organization',
+      avatarUrl: account.avatar_url ?? null,
+      url: account.html_url ?? `https://github.com/${account.login}`,
+    };
+  }
+
   private toProject(
-    project: GitHubProjectRest,
+    project: GitHubProjectGraphql,
     fallbackOwner: string,
     ownerType: GitHubOwnerScope,
   ): GitHubProject {
-    if (!project.node_id || !project.number || !project.title) {
+    if (!project.id || !project.number || !project.title) {
       throw new ServiceUnavailableException('GitHub API returned invalid data');
     }
-    const owner = project.owner?.login ?? fallbackOwner;
     return {
-      id: project.node_id,
+      id: project.id,
       number: project.number,
       title: project.title,
-      owner,
-      state: project.state === 'closed' ? 'closed' : 'open',
-      description: project.description ?? project.short_description ?? null,
+      owner: fallbackOwner,
+      state: project.closed === true ? 'closed' : 'open',
+      description: project.shortDescription ?? null,
       url:
-        project.html_url ?? this.projectUrl(owner, ownerType, project.number),
-      updatedAt: this.requireDate(project.updated_at),
+        project.url ??
+        this.projectUrl(fallbackOwner, ownerType, project.number),
+      updatedAt: this.requireDate(project.updatedAt),
     };
   }
 
