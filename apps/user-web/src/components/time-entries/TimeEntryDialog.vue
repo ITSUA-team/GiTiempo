@@ -6,7 +6,7 @@ import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { filterAutocompleteOptions } from "@gitiempo/web-shared";
+import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
@@ -209,29 +209,17 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
     </template>
 
     <div class="flex flex-col gap-4">
-      <div
+      <InlineRequestMessage
         v-if="props.projectsErrorMessage"
-        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
-      >
-        <p class="text-destructive text-sm font-medium">
-          Could not load visible projects.
-        </p>
-        <p class="text-destructive mt-1 text-xs">
-          {{ props.projectsErrorMessage }}
-        </p>
-      </div>
+        :message="props.projectsErrorMessage"
+        title="Could not load visible projects."
+      />
 
-      <div
+      <InlineRequestMessage
         v-if="props.dialogErrorMessage"
-        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
-      >
-        <p class="text-destructive text-sm font-medium">
-          {{ props.mode === 'edit' ? 'Could not update this entry.' : 'Could not create this entry.' }}
-        </p>
-        <p class="text-destructive mt-1 text-xs">
-          {{ props.dialogErrorMessage }}
-        </p>
-      </div>
+        :message="props.dialogErrorMessage"
+        :title="props.mode === 'edit' ? 'Could not update this entry.' : 'Could not create this entry.'"
+      />
 
       <div class="flex flex-col gap-1">
         <label

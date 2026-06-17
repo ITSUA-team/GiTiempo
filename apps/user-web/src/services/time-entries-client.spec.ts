@@ -65,6 +65,7 @@ describe("createTimeEntriesClient", () => {
         {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
+          defaultBillableForTasks: false,
           description: null,
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
           isActive: true,
@@ -153,6 +154,7 @@ describe("createTimeEntriesClient", () => {
       jsonResponse([
         {
           createdAt: "2026-04-20T12:00:00.000Z",
+          defaultBillableForTimeEntries: false,
           githubIssue: {
             githubRepo: "octo/repo",
             issueNumber: 184,
@@ -197,6 +199,7 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
         createdAt: "2026-04-20T12:00:00.000Z",
+        defaultBillableForTimeEntries: false,
         githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         isActive: true,
@@ -231,6 +234,7 @@ describe("createTimeEntriesClient", () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
         createdAt: "2026-04-20T12:00:00.000Z",
+        defaultBillableForTimeEntries: true,
         githubIssue: null,
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         isActive: true,
@@ -264,6 +268,65 @@ describe("createTimeEntriesClient", () => {
           "Content-Type": "application/json",
         },
         method: "PATCH",
+      },
+    );
+  });
+
+  it("loads project time entries for task backfill detection", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        items: [],
+        meta: { limit: 1, page: 1, total: 2, totalPages: 2 },
+      }),
+    );
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+
+    await expect(
+      client.listProjectTimeEntries(
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        {
+          limit: 1,
+          taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        },
+      ),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        meta: expect.objectContaining({ total: 2 }),
+      }),
+    );
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/projects/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f/time-entries?page=1&limit=1&taskId=018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      {
+        body: undefined,
+        headers: {
+          Authorization: "Bearer access-token",
+        },
+        method: "GET",
+      },
+    );
+  });
+
+  it("posts task billable-default backfills explicitly", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({ timeEntriesUpdated: 4 }),
+    );
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+
+    const result = await client.backfillTaskBillableDefault(
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+      { updateTimeEntries: true },
+    );
+
+    expect(result.timeEntriesUpdated).toBe(4);
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001/billable-default/backfill",
+      {
+        body: JSON.stringify({ updateTimeEntries: true }),
+        headers: {
+          Authorization: "Bearer access-token",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
       },
     );
   });

@@ -36,6 +36,9 @@ const TEST_PROJECT_NAME_PREFIXES = [
   'Public Access ',
   'PM Public ',
   'No Members ',
+  'Billable Defaults ',
+  'Billable Auth ',
+  'Billable Private ',
 ] as const;
 
 const TEST_TASK_TITLE_PREFIXES = [
@@ -55,6 +58,10 @@ const TEST_TASK_TITLE_PREFIXES = [
   'Inactive Public Task ',
   'Inactive Admin Task ',
   'Public Task',
+  'Billable Inherit ',
+  'Billable Override ',
+  'Billable Auth Task ',
+  'Billable Private Task ',
 ] as const;
 
 describe('Projects and tasks (e2e)', () => {
@@ -231,6 +238,7 @@ describe('Projects and tasks (e2e)', () => {
       visibility: 'private',
       source: 'manual',
     });
+    expect(typeof platform.defaultBillableForTasks).toBe('boolean');
     expect(typeof platform.totalSeconds).toBe('number');
 
     const memberRes = await request(app.getHttpServer())
@@ -310,6 +318,232 @@ describe('Projects and tasks (e2e)', () => {
       .set('Authorization', bearer(adminToken));
     expect(getRes.status).toBe(200);
     expect(getRes.body.description).toBeNull();
+  });
+
+  it('saves billable defaults and backfills only on explicit request', async () => {
+    const createProject = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        name: `Billable Defaults ${randomUUID()}`,
+        defaultBillableForTasks: false,
+      });
+    expect(createProject.status).toBe(201);
+    expect(createProject.body.defaultBillableForTasks).toBe(false);
+
+    const getProject = await request(app.getHttpServer())
+      .get(`/projects/${createProject.body.id}`)
+      .set('Authorization', bearer(adminToken));
+    expect(getProject.status).toBe(200);
+    expect(getProject.body.defaultBillableForTasks).toBe(false);
+
+    const inheritedTask = await request(app.getHttpServer())
+      .post(`/projects/${createProject.body.id}/tasks`)
+      .set('Authorization', bearer(adminToken))
+      .send({ title: `Billable Inherit ${randomUUID()}` });
+    expect(inheritedTask.status).toBe(201);
+    expect(inheritedTask.body.defaultBillableForTimeEntries).toBe(false);
+
+    const overrideTask = await request(app.getHttpServer())
+      .post(`/projects/${createProject.body.id}/tasks`)
+      .set('Authorization', bearer(adminToken))
+      .send({
+        title: `Billable Override ${randomUUID()}`,
+        defaultBillableForTimeEntries: true,
+      });
+    expect(overrideTask.status).toBe(201);
+    expect(overrideTask.body.defaultBillableForTimeEntries).toBe(true);
+
+    const startedAt = new Date('2026-06-01T09:00:00.000Z');
+    const endedAt = new Date('2026-06-01T10:00:00.000Z');
+    await db.insert(timeEntries).values([
+      {
+        workspaceId,
+        taskId: inheritedTask.body.id,
+        userId: adminUserId,
+        startedAt,
+        endedAt,
+        durationSeconds: 3600,
+        isBillable: false,
+      },
+      {
+        workspaceId,
+        taskId: overrideTask.body.id,
+        userId: adminUserId,
+        startedAt,
+        endedAt,
+        durationSeconds: 3600,
+        isBillable: false,
+      },
+    ]);
+
+    const updateProject = await request(app.getHttpServer())
+      .patch(`/projects/${createProject.body.id}`)
+      .set('Authorization', bearer(adminToken))
+      .send({ defaultBillableForTasks: true });
+    expect(updateProject.status).toBe(200);
+    expect(updateProject.body.defaultBillableForTasks).toBe(true);
+
+    const taskRowsBeforeBackfill = await db
+      .select({ id: tasks.id, value: tasks.defaultBillableForTimeEntries })
+      .from(tasks)
+      .where(inArray(tasks.id, [inheritedTask.body.id, overrideTask.body.id]));
+    expect(taskRowsBeforeBackfill).toEqual(
+      expect.arrayContaining([
+        { id: inheritedTask.body.id, value: false },
+        { id: overrideTask.body.id, value: true },
+      ]),
+    );
+
+    const entryRowsBeforeBackfill = await db
+      .select({ isBillable: timeEntries.isBillable })
+      .from(timeEntries)
+      .where(
+        inArray(timeEntries.taskId, [
+          inheritedTask.body.id,
+          overrideTask.body.id,
+        ]),
+      );
+    expect(entryRowsBeforeBackfill.map((entry) => entry.isBillable)).toEqual([
+      false,
+      false,
+    ]);
+
+    const backfill = await request(app.getHttpServer())
+      .post(`/projects/${createProject.body.id}/billable-default/backfill`)
+      .set('Authorization', bearer(adminToken))
+      .send({ updateTasks: true, updateTimeEntries: true });
+    expect(backfill.status).toBe(200);
+    expect(backfill.body).toEqual({ tasksUpdated: 2, timeEntriesUpdated: 2 });
+
+    const taskRowsAfterBackfill = await db
+      .select({ value: tasks.defaultBillableForTimeEntries })
+      .from(tasks)
+      .where(inArray(tasks.id, [inheritedTask.body.id, overrideTask.body.id]));
+    expect(taskRowsAfterBackfill.map((task) => task.value)).toEqual([
+      true,
+      true,
+    ]);
+
+    const entryRowsAfterBackfill = await db
+      .select({ isBillable: timeEntries.isBillable })
+      .from(timeEntries)
+      .where(
+        inArray(timeEntries.taskId, [
+          inheritedTask.body.id,
+          overrideTask.body.id,
+        ]),
+      );
+    expect(entryRowsAfterBackfill.map((entry) => entry.isBillable)).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('rejects project billable backfills without project update permission', async () => {
+    const [project] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Billable Auth ${randomUUID()}`,
+        defaultBillableForTasks: true,
+      })
+      .returning();
+    if (!project) throw new Error('Expected project');
+
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: project.id,
+        title: `Billable Auth Task ${randomUUID()}`,
+        defaultBillableForTimeEntries: false,
+      })
+      .returning();
+    if (!task) throw new Error('Expected task');
+
+    const [entry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId: task.id,
+        userId: adminUserId,
+        startedAt: new Date('2026-06-01T09:00:00.000Z'),
+        endedAt: new Date('2026-06-01T10:00:00.000Z'),
+        durationSeconds: 3600,
+        isBillable: false,
+      })
+      .returning({ id: timeEntries.id });
+    if (!entry) throw new Error('Expected entry');
+
+    const backfill = await request(app.getHttpServer())
+      .post(`/projects/${project.id}/billable-default/backfill`)
+      .set('Authorization', bearer(memberToken))
+      .send({ updateTasks: true, updateTimeEntries: true });
+    expect(backfill.status).toBe(403);
+
+    const [unchangedTask] = await db
+      .select({ value: tasks.defaultBillableForTimeEntries })
+      .from(tasks)
+      .where(eq(tasks.id, task.id))
+      .limit(1);
+    const [unchangedEntry] = await db
+      .select({ value: timeEntries.isBillable })
+      .from(timeEntries)
+      .where(eq(timeEntries.id, entry.id))
+      .limit(1);
+    expect(unchangedTask?.value).toBe(false);
+    expect(unchangedEntry?.value).toBe(false);
+  });
+
+  it('rejects task billable backfills for invisible tasks', async () => {
+    const [project] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `Billable Private ${randomUUID()}`,
+        visibility: 'private',
+      })
+      .returning();
+    if (!project) throw new Error('Expected project');
+
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        workspaceId,
+        projectId: project.id,
+        title: `Billable Private Task ${randomUUID()}`,
+        defaultBillableForTimeEntries: true,
+      })
+      .returning();
+    if (!task) throw new Error('Expected task');
+
+    const [entry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId: task.id,
+        userId: adminUserId,
+        startedAt: new Date('2026-06-01T09:00:00.000Z'),
+        endedAt: new Date('2026-06-01T10:00:00.000Z'),
+        durationSeconds: 3600,
+        isBillable: false,
+      })
+      .returning({ id: timeEntries.id });
+    if (!entry) throw new Error('Expected entry');
+
+    const backfill = await request(app.getHttpServer())
+      .post(`/tasks/${task.id}/billable-default/backfill`)
+      .set('Authorization', bearer(otherMemberToken))
+      .send({ updateTimeEntries: true });
+    expect(backfill.status).toBe(404);
+
+    const [unchangedEntry] = await db
+      .select({ value: timeEntries.isBillable })
+      .from(timeEntries)
+      .where(eq(timeEntries.id, entry.id))
+      .limit(1);
+    expect(unchangedEntry?.value).toBe(false);
   });
 
   it('returns provider summaries for manual and GitHub-linked project details', async () => {

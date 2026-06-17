@@ -10,6 +10,7 @@ import { mockMatchMedia } from "@/test/mockMatchMedia";
 const projectOrion = {
   color: null,
   createdAt: "2026-04-20T12:00:00.000Z",
+  defaultBillableForTasks: true,
   description: null,
   id: "project-1",
   isActive: true,
@@ -30,6 +31,7 @@ const internalOpsProject = {
 
 const reportsTask = {
   createdAt: "2026-04-20T12:00:00.000Z",
+  defaultBillableForTimeEntries: true,
   githubIssue: null,
   id: "task-1",
   isActive: true,

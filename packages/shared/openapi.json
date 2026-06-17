@@ -844,6 +844,58 @@
         ]
       }
     },
+    "/projects/{id}/billable-default/backfill": {
+      "post": {
+        "operationId": "ProjectsController_backfillBillableDefault",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillProjectBillableDefaultDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectBillableDefaultBackfillResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Project update forbidden"
+          },
+          "404": {
+            "description": "Project not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Backfill a project billable default",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/projects/{id}/assignments": {
       "get": {
         "operationId": "ProjectsController_listAssignments",
@@ -995,6 +1047,15 @@
             "in": "path",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -1191,6 +1252,58 @@
           }
         ],
         "summary": "Delete a visible unused task",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/tasks/{id}/billable-default/backfill": {
+      "post": {
+        "operationId": "TasksController_backfillBillableDefault",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillTaskBillableDefaultDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskBillableDefaultBackfillResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found"
+          },
+          "422": {
+            "description": "Project is inactive"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Backfill a task billable default",
         "tags": [
           "tasks"
         ]
@@ -3045,6 +3158,9 @@
               "private"
             ]
           },
+          "defaultBillableForTasks": {
+            "type": "boolean"
+          },
           "source": {
             "type": "string",
             "enum": [
@@ -3119,6 +3235,7 @@
           "description",
           "color",
           "visibility",
+          "defaultBillableForTasks",
           "source",
           "totalSeconds",
           "members",
@@ -3199,6 +3316,9 @@
               "public",
               "private"
             ]
+          },
+          "defaultBillableForTasks": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -3237,6 +3357,9 @@
               "public",
               "private"
             ]
+          },
+          "defaultBillableForTasks": {
+            "type": "boolean"
           },
           "source": {
             "type": "string",
@@ -3437,6 +3560,7 @@
           "description",
           "color",
           "visibility",
+          "defaultBillableForTasks",
           "source",
           "totalSeconds",
           "members",
@@ -3473,11 +3597,45 @@
               "private"
             ]
           },
+          "defaultBillableForTasks": {
+            "type": "boolean"
+          },
           "isActive": {
             "type": "boolean"
           }
         },
         "additionalProperties": false
+      },
+      "BackfillProjectBillableDefaultDto": {
+        "type": "object",
+        "properties": {
+          "updateTasks": {
+            "type": "boolean"
+          },
+          "updateTimeEntries": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProjectBillableDefaultBackfillResponseDto": {
+        "type": "object",
+        "properties": {
+          "tasksUpdated": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "timeEntriesUpdated": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "tasksUpdated",
+          "timeEntriesUpdated"
+        ]
       },
       "ProjectAssignmentResponseDto": {
         "type": "object",
@@ -3589,6 +3747,9 @@
               "closed"
             ]
           },
+          "defaultBillableForTimeEntries": {
+            "type": "boolean"
+          },
           "isActive": {
             "type": "boolean"
           },
@@ -3630,6 +3791,7 @@
           "projectId",
           "title",
           "status",
+          "defaultBillableForTimeEntries",
           "isActive",
           "githubIssue",
           "createdAt",
@@ -3643,6 +3805,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "defaultBillableForTimeEntries": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -3665,11 +3830,42 @@
               "closed"
             ]
           },
+          "defaultBillableForTimeEntries": {
+            "type": "boolean"
+          },
           "isActive": {
             "type": "boolean"
           }
         },
         "additionalProperties": false
+      },
+      "BackfillTaskBillableDefaultDto": {
+        "type": "object",
+        "properties": {
+          "updateTimeEntries": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "updateTimeEntries"
+        ],
+        "additionalProperties": false
+      },
+      "TaskBillableDefaultBackfillResponseDto": {
+        "type": "object",
+        "properties": {
+          "timeEntriesUpdated": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "timeEntriesUpdated"
+        ]
       },
       "TimeEntryListResponseDto": {
         "type": "object",

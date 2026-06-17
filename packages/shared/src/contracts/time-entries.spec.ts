@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createManualTimeEntrySchema,
   startTimerSchema,
   timeEntryResponseSchema,
   updateTimeEntrySchema,
@@ -121,6 +122,29 @@ describe("updateTimeEntrySchema", () => {
   });
 });
 
+describe("createManualTimeEntrySchema", () => {
+  const validManualEntry = {
+    endedAt: "2026-04-21T10:00:00.000Z",
+    startedAt: "2026-04-21T09:00:00.000Z",
+    taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+  };
+
+  it("accepts manual create payloads without isBillable", () => {
+    const result = createManualTimeEntrySchema.parse(validManualEntry);
+
+    expect(result.isBillable).toBeUndefined();
+  });
+
+  it("accepts manual create payloads with isBillable override", () => {
+    const result = createManualTimeEntrySchema.parse({
+      ...validManualEntry,
+      isBillable: false,
+    });
+
+    expect(result.isBillable).toBe(false);
+  });
+});
+
 describe("startTimerSchema", () => {
   it("accepts start payloads without a description", () => {
     const result = startTimerSchema.parse({
@@ -154,6 +178,16 @@ describe("startTimerSchema", () => {
     const result = startTimerSchema.safeParse({
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
       unknown: true,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
+  });
+
+  it("rejects billable overrides", () => {
+    const result = startTimerSchema.safeParse({
+      isBillable: true,
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
     });
 
     expect(result.success).toBe(false);

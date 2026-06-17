@@ -62,6 +62,7 @@ function createProject(
   return {
     color: null,
     createdAt: '2026-05-01T10:00:00.000Z',
+    defaultBillableForTasks: true,
     description: null,
     id,
     isActive: true,
