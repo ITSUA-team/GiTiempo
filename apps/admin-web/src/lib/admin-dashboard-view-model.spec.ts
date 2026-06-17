@@ -62,6 +62,7 @@ function createProject(
   return {
     color: null,
     createdAt,
+    defaultBillableForTasks: true,
     description: null,
     id,
     isActive: true,

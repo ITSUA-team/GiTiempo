@@ -26,6 +26,9 @@ export const projects = pgTable(
       .$type<ProjectVisibility>()
       .default('private')
       .notNull(),
+    defaultBillableForTasks: boolean('default_task_billable')
+      .default(true)
+      .notNull(),
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()

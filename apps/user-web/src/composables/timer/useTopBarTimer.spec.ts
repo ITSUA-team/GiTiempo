@@ -41,10 +41,12 @@ function createProject(
   id: string,
   name: string,
   isActive = true,
+  defaultBillableForTasks = true,
 ): ProjectResponse {
   return {
     color: null,
     createdAt: '2026-04-20T12:00:00.000Z',
+    defaultBillableForTasks,
     description: null,
     id,
     isActive,
@@ -64,9 +66,11 @@ function createTask(
   title: string,
   isActive = true,
   status: TaskResponse['status'] = 'open',
+  defaultBillableForTimeEntries = true,
 ): TaskResponse {
   return {
     createdAt: '2026-04-20T12:00:00.000Z',
+    defaultBillableForTimeEntries,
     githubIssue: null,
     id,
     isActive,
@@ -142,6 +146,9 @@ function createOwnEntriesResponse(
 }
 
 function createClientMock(): TimeEntriesClient & {
+  backfillTaskBillableDefault: ReturnType<
+    typeof vi.fn<TimeEntriesClient['backfillTaskBillableDefault']>
+  >;
   createManualEntry: ReturnType<
     typeof vi.fn<TimeEntriesClient['createManualEntry']>
   >;
@@ -152,6 +159,9 @@ function createClientMock(): TimeEntriesClient & {
     typeof vi.fn<TimeEntriesClient['getCurrentTimer']>
   >;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient['listOwnEntries']>>;
+  listProjectTimeEntries: ReturnType<
+    typeof vi.fn<TimeEntriesClient['listProjectTimeEntries']>
+  >;
   listProjectTasks: ReturnType<
     typeof vi.fn<TimeEntriesClient['listProjectTasks']>
   >;
@@ -164,14 +174,25 @@ function createClientMock(): TimeEntriesClient & {
   updateTask: ReturnType<typeof vi.fn<TimeEntriesClient['updateTask']>>;
 } {
   return {
+    backfillTaskBillableDefault: vi.fn(async () => ({
+      timeEntriesUpdated: 0,
+    })),
     createManualEntry: vi.fn(async () => createCompletedEntry()),
     createTask: vi.fn(async (projectId, input) =>
-      createTask(TEST_IDS.taskNew, projectId, input.title),
+      createTask(
+        TEST_IDS.taskNew,
+        projectId,
+        input.title,
+        true,
+        'open',
+        input.defaultBillableForTimeEntries ?? true,
+      ),
     ),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
+    listProjectTimeEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTasks: vi.fn(async () => []),
     listVisibleProjects: vi.fn(async () => []),
     startTimer: vi.fn(async () => createRunningEntry()),
@@ -372,7 +393,7 @@ describe('useTopBarTimer', () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject('project-1', 'Project Orion'),
+      createProject('project-1', 'Project Orion', true, false),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask('task-1', 'project-1', 'Improve reports filters'),
@@ -406,7 +427,7 @@ describe('useTopBarTimer', () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject('project-1', 'Project Orion'),
+      createProject('project-1', 'Project Orion', true, false),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask('task-1', 'project-1', 'Improve reports filters'),
@@ -442,7 +463,7 @@ describe('useTopBarTimer', () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject('project-1', 'Project Orion'),
+      createProject('project-1', 'Project Orion', true, false),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask('task-1', 'project-1', 'Improve reports filters'),
@@ -525,7 +546,7 @@ describe('useTopBarTimer', () => {
     const toast = { add: vi.fn() };
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject('project-1', 'Project Orion'),
+      createProject('project-1', 'Project Orion', true, false),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask('task-1', 'project-1', 'Improve reports filters'),
@@ -546,6 +567,7 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(client.createTask).toHaveBeenCalledWith('project-1', {
+      defaultBillableForTimeEntries: false,
       title: 'Write release checklist',
     });
     expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
@@ -591,6 +613,7 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(client.createTask).toHaveBeenCalledWith('project-1', {
+      defaultBillableForTimeEntries: true,
       title: 'Write release checklist',
     });
     expect(client.startTimer).not.toHaveBeenCalled();
@@ -629,6 +652,7 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(client.createTask).toHaveBeenCalledWith(TEST_IDS.project, {
+      defaultBillableForTimeEntries: true,
       title: 'Write release checklist',
     });
     expect(client.updateEntry).not.toHaveBeenCalled();

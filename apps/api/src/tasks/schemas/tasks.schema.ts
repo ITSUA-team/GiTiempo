@@ -26,6 +26,9 @@ export const tasks = pgTable(
       .$type<TaskStatus>()
       .default('open')
       .notNull(),
+    defaultBillableForTimeEntries: boolean('default_time_entry_billable')
+      .default(true)
+      .notNull(),
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()

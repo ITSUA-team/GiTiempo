@@ -21,6 +21,7 @@ export const projectResponseSchema = z.object({
   description: projectDescriptionSchema,
   color: z.string().nullable(),
   visibility: projectVisibilitySchema,
+  defaultBillableForTasks: z.boolean(),
   source: projectSourceSchema,
   totalSeconds: z.number().int().min(0),
   members: z.array(projectMemberSchema),
@@ -79,6 +80,7 @@ export const createProjectSchema = z
       .nullable()
       .optional(),
     visibility: projectVisibilitySchema.optional(),
+    defaultBillableForTasks: z.boolean().optional(),
   })
   .strict();
 
@@ -92,6 +94,7 @@ export const updateProjectSchema = z
       .nullable()
       .optional(),
     visibility: projectVisibilitySchema.optional(),
+    defaultBillableForTasks: z.boolean().optional(),
     isActive: z.boolean().optional(),
   })
   .strict()
@@ -101,12 +104,29 @@ export const updateProjectSchema = z
       data.description !== undefined ||
       data.color !== undefined ||
       data.visibility !== undefined ||
+      data.defaultBillableForTasks !== undefined ||
       data.isActive !== undefined,
     {
       message: "At least one field must be provided",
       path: [],
     },
   );
+
+export const backfillProjectBillableDefaultSchema = z
+  .object({
+    updateTasks: z.boolean().optional(),
+    updateTimeEntries: z.boolean().optional(),
+  })
+  .strict()
+  .refine((data) => data.updateTasks === true || data.updateTimeEntries === true, {
+    message: "At least one existing record type must be selected",
+    path: [],
+  });
+
+export const projectBillableDefaultBackfillResponseSchema = z.object({
+  tasksUpdated: z.number().int().min(0),
+  timeEntriesUpdated: z.number().int().min(0),
+});
 
 export const projectAssignmentResponseSchema = z.object({
   id: z.uuid(),
@@ -158,6 +178,12 @@ export type MyProjectSummaryResponse = z.infer<
 >;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+export type BackfillProjectBillableDefaultInput = z.infer<
+  typeof backfillProjectBillableDefaultSchema
+>;
+export type ProjectBillableDefaultBackfillResponse = z.infer<
+  typeof projectBillableDefaultBackfillResponseSchema
+>;
 export type ProjectAssignmentResponse = z.infer<
   typeof projectAssignmentResponseSchema
 >;

@@ -26,6 +26,7 @@ vi.mock('@/services/admin-projects-client', () => ({
 const project: ProjectResponse = {
   color: null,
   createdAt: '2026-05-01T10:00:00.000Z',
+  defaultBillableForTasks: true,
   description: null,
   id: 'project-1',
   isActive: true,
@@ -122,7 +123,11 @@ const stubs = {
   },
   Form: {
     template:
-      '<form><slot :memberIds="{ invalid: false }" :visibility="{ invalid: false }" /></form>',
+      '<form><slot :defaultBillableForTasks="{ invalid: false }" :memberIds="{ invalid: false }" :visibility="{ invalid: false }" /></form>',
+  },
+  Checkbox: {
+    props: ['inputId', 'name'],
+    template: '<input :id="inputId" :name="name" type="checkbox" />',
   },
   Select: {
     name: 'Select',
@@ -159,6 +164,13 @@ describe('ProjectEditForm', () => {
     );
     expect(wrapper.get('label[for="edit-members"]').text()).toBe('Select members');
     expect(wrapper.get('label[for="edit-visibility"]').text()).toBe('Visibility');
+    expect(wrapper.text()).toContain('New task billable default');
+    const billableInput = wrapper.find('input[name="defaultBillableForTasks"]');
+    const billableControl = wrapper.get('label[for="edit-default-billable-for-tasks"]');
+
+    expect(billableInput.exists()).toBe(true);
+    expect(billableControl.classes()).toContain('h-[42px]');
+    expect(wrapper.text()).toContain('Billable by default');
     const memberInput = wrapper.getComponent({ name: 'AutoComplete' });
     const visibilityInput = wrapper.getComponent({ name: 'Select' });
 

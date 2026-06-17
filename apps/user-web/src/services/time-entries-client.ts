@@ -1,21 +1,24 @@
 import {
+  backfillTaskBillableDefaultSchema,
   createManualTimeEntrySchema,
   createTaskSchema,
   currentTimeEntryResponseSchema,
   projectListResponseSchema,
   type StartTimerInput,
   taskResponseSchema,
+  taskBillableDefaultBackfillResponseSchema,
   startTimerSchema,
   taskListResponseSchema,
-  timeEntryListQuerySchema,
   timeEntryListResponseSchema,
   timeEntryResponseSchema,
   updateTaskSchema,
   updateTimeEntrySchema,
+  type BackfillTaskBillableDefaultInput,
   type CreateManualTimeEntryInput,
   type CreateTaskInput,
   type CurrentTimeEntryResponse,
   type ProjectResponse,
+  type TaskBillableDefaultBackfillResponse,
   type TaskResponse,
   type TimeEntryListQuery,
   type TimeEntryListResponse,
@@ -24,6 +27,7 @@ import {
   type UpdateTimeEntryInput,
 } from "@gitiempo/shared";
 import type { AuthenticatedApiClient } from "@gitiempo/web-shared/http";
+import { buildTimeEntryListQueryString } from "@gitiempo/web-shared/query";
 
 /* eslint-disable no-unused-vars */
 
@@ -32,6 +36,10 @@ interface TimeEntriesClientOptions {
 }
 
 export interface TimeEntriesClient {
+  backfillTaskBillableDefault(
+    taskId: string,
+    input: BackfillTaskBillableDefaultInput,
+  ): Promise<TaskBillableDefaultBackfillResponse>;
   createManualEntry(
     input: CreateManualTimeEntryInput,
   ): Promise<TimeEntryResponse>;
@@ -45,6 +53,10 @@ export interface TimeEntriesClient {
   listOwnEntries(
     query?: Partial<TimeEntryListQuery>,
     options?: { signal?: AbortSignal },
+  ): Promise<TimeEntryListResponse>;
+  listProjectTimeEntries(
+    projectId: string,
+    query?: Partial<TimeEntryListQuery>,
   ): Promise<TimeEntryListResponse>;
   listProjectTasks(projectId: string): Promise<TaskResponse[]>;
   listVisibleProjects(): Promise<ProjectResponse[]>;
@@ -62,40 +74,18 @@ export interface TimeEntriesClient {
 
 /* eslint-enable no-unused-vars */
 
-function buildTimeEntryListQuery(query: Partial<TimeEntryListQuery> | undefined): string {
-  const parsed = timeEntryListQuerySchema.parse(query ?? {});
-  const searchParams = new URLSearchParams();
-
-  searchParams.set("page", String(parsed.page));
-  searchParams.set("limit", String(parsed.limit));
-
-  if (parsed.dateFrom) {
-    searchParams.set("dateFrom", parsed.dateFrom);
-  }
-
-  if (parsed.dateTo) {
-    searchParams.set("dateTo", parsed.dateTo);
-  }
-
-  if (parsed.projectId) {
-    searchParams.set("projectId", parsed.projectId);
-  }
-
-  if (parsed.taskId) {
-    searchParams.set("taskId", parsed.taskId);
-  }
-
-  if (parsed.search) {
-    searchParams.set("search", parsed.search);
-  }
-
-  return searchParams.toString();
-}
-
 export function createTimeEntriesClient({
   apiClient,
 }: TimeEntriesClientOptions): TimeEntriesClient {
   return {
+    backfillTaskBillableDefault(taskId, input) {
+      return apiClient.requestJson({
+        body: backfillTaskBillableDefaultSchema.parse(input),
+        method: "POST",
+        path: `/tasks/${taskId}/billable-default/backfill`,
+        responseSchema: taskBillableDefaultBackfillResponseSchema,
+      });
+    },
     createManualEntry(input) {
       return apiClient.requestJson({
         body: createManualTimeEntrySchema.parse(input),
@@ -131,12 +121,20 @@ export function createTimeEntriesClient({
       });
     },
     listOwnEntries(query, options) {
-      const search = buildTimeEntryListQuery(query);
+      const search = buildTimeEntryListQueryString(query);
 
       return apiClient.requestJson({
         path: `/time-entries?${search}`,
         responseSchema: timeEntryListResponseSchema,
         signal: options?.signal,
+      });
+    },
+    listProjectTimeEntries(projectId, query) {
+      const search = buildTimeEntryListQueryString(query);
+
+      return apiClient.requestJson({
+        path: `/projects/${projectId}/time-entries?${search}`,
+        responseSchema: timeEntryListResponseSchema,
       });
     },
     listProjectTasks(projectId) {
