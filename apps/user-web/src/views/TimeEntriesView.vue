@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
-import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
@@ -8,7 +7,9 @@ import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
+  EntryActionButton,
   getErrorMessage,
+  RequestStateCard,
   SurfaceCard,
   filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
@@ -16,6 +17,7 @@ import { useQueryClient } from "@tanstack/vue-query";
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
+import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
@@ -528,41 +530,29 @@ onBeforeUnmount(() => {
       </p>
     </SurfaceCard>
 
-    <SurfaceCard
+    <RequestStateCard
       v-else-if="pageState === 'request-error'"
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
       data-testid="time-entries-request-error"
-    >
-      <div class="flex flex-col gap-1">
-        <h2 class="text-text-dark text-lg font-semibold">
-          Could not load time entries
-        </h2>
-        <p class="text-text-muted text-sm">
-          {{ requestErrorMessage }}
-        </p>
-      </div>
-      <Button
-        label="Retry"
-        severity="secondary"
-        variant="outlined"
-        @click="void retryLoadEntries()"
-      />
-    </SurfaceCard>
+      :description="requestErrorMessage"
+      retry-label="Retry"
+      title="Could not load time entries"
+      @retry="void retryLoadEntries()"
+    />
 
-    <SurfaceCard
+    <RequestStateCard
       v-else-if="pageState === 'empty'"
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
       data-testid="time-entries-empty-state"
+      description="Add a new time entry or adjust the current filters."
+      title="No time entries match these filters"
     >
-      <div class="flex flex-col gap-1">
-        <h2 class="text-text-dark text-lg font-semibold">
-          No time entries match these filters
-        </h2>
-        <p class="text-text-muted text-sm">
-          Adjust the current filters to find tracked work.
-        </p>
-      </div>
-    </SurfaceCard>
+      <template #actions>
+        <EntryActionButton
+          :icon="PlusIcon"
+          label="New time entry"
+          @click="void openCreateDialog()"
+        />
+      </template>
+    </RequestStateCard>
 
     <div
       v-else

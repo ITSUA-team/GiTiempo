@@ -20,6 +20,7 @@ function mountDialog(
         status: null,
         title: null,
       },
+      defaultBillableForTimeEntries: true,
       isDeleting: false,
       isOpen: true,
       isSaving: false,
@@ -29,6 +30,7 @@ function mountDialog(
         {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
+          defaultBillableForTasks: true,
           description: null,
           id: "project-1",
           isActive: true,
@@ -43,6 +45,7 @@ function mountDialog(
         {
           color: null,
           createdAt: "2026-04-20T12:00:00.000Z",
+          defaultBillableForTasks: true,
           description: null,
           id: "project-2",
           isActive: true,
@@ -118,6 +121,12 @@ function mountDialog(
           template:
             '<button :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
+        Checkbox: {
+          props: ["disabled", "modelValue"],
+          emits: ["update:modelValue"],
+          template:
+            '<input :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
+        },
         Dialog: {
           props: ["closable", "dismissableMask", "visible"],
           emits: ["update:visible"],
@@ -154,7 +163,19 @@ describe("ProjectTaskDialog", () => {
       "Write release checklist",
     ]);
     expect(wrapper.text()).toContain("Create task");
+    expect(wrapper.text()).toContain("Default billable for time entries");
+    expect(wrapper.text()).toContain("New time entries for this task inherit this value.");
     expect(wrapper.text()).not.toContain("Cancel");
+  });
+
+  it("emits default billable updates", async () => {
+    const wrapper = mountDialog({ defaultBillableForTimeEntries: false });
+
+    await wrapper.get('input[type="checkbox"]').setValue(true);
+
+    expect(wrapper.emitted("update:defaultBillableForTimeEntries")?.[0]).toEqual([
+      true,
+    ]);
   });
 
   it("uses project autocomplete and shows all projects on empty dropdown query", async () => {

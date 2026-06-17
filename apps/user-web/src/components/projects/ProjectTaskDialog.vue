@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
+import Checkbox from "primevue/checkbox";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { filterAutocompleteOptions } from "@gitiempo/web-shared";
+import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 const props = defineProps<{
@@ -14,6 +15,7 @@ const props = defineProps<{
     status: string | null;
     title: string | null;
   };
+  defaultBillableForTimeEntries: boolean;
   isDeleting: boolean;
   isOpen: boolean;
   isSaving: boolean;
@@ -32,6 +34,7 @@ const emit = defineEmits<{
   close: [];
   deleteTask: [];
   save: [];
+  "update:defaultBillableForTimeEntries": [value: boolean];
   "update:projectId": [value: string | null];
   "update:status": [value: TaskStatus];
   "update:title": [value: string];
@@ -87,6 +90,13 @@ const titleModel = computed({
   },
 });
 
+const defaultBillableModel = computed({
+  get: () => props.defaultBillableForTimeEntries,
+  set: (value: boolean) => {
+    emit("update:defaultBillableForTimeEntries", value);
+  },
+});
+
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
 
 watch(
@@ -133,17 +143,11 @@ function handleProjectComplete(event: { query: string }): void {
     </template>
 
     <div class="flex flex-col gap-4">
-      <div
+      <InlineRequestMessage
         v-if="props.requestErrorMessage"
-        class="border-destructive/20 bg-destructive/5 rounded-lg border p-3"
-      >
-        <p class="text-destructive text-sm font-medium">
-          {{ props.mode === 'edit' ? 'Could not update this task.' : 'Could not create this task.' }}
-        </p>
-        <p class="text-destructive mt-1 text-xs">
-          {{ props.requestErrorMessage }}
-        </p>
-      </div>
+        :message="props.requestErrorMessage"
+        :title="props.mode === 'edit' ? 'Could not update this task.' : 'Could not create this task.'"
+      />
 
       <div class="flex flex-col gap-1">
         <label
@@ -235,6 +239,29 @@ function handleProjectComplete(event: { query: string }): void {
           class="text-destructive text-xs"
         >
           {{ props.errors.status }}
+        </small>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-text-dark text-[13px] font-medium">
+          Default billable for time entries
+        </span>
+        <label
+          for="project-task-default-billable"
+          class="border-divider bg-surface-primary flex h-[38px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
+        >
+          <Checkbox
+            id="project-task-default-billable"
+            v-model="defaultBillableModel"
+            binary
+            :disabled="isDialogMutating"
+          />
+          <span class="text-text-dark text-sm font-medium">
+            Billable by default
+          </span>
+        </label>
+        <small class="text-text-muted text-xs">
+          New time entries for this task inherit this value.
         </small>
       </div>
     </div>

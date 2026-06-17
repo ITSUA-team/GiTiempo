@@ -78,6 +78,7 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTasks: true,
     description: null,
     id: TEST_IDS.projectOrion,
     isActive: true,
@@ -95,6 +96,7 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTimeEntries: true,
     githubIssue: null,
     id: TEST_IDS.taskReports,
     isActive: true,
@@ -169,12 +171,14 @@ function createClientMock(options: {
   entriesResponse?: TimeEntryListResponse;
   tasksByProject?: Record<string, TaskResponse[]>;
 } = {}): TimeEntriesClient & {
+  backfillTaskBillableDefault: ReturnType<typeof vi.fn<TimeEntriesClient["backfillTaskBillableDefault"]>>;
   createManualEntry: ReturnType<typeof vi.fn<TimeEntriesClient["createManualEntry"]>>;
   createTask: ReturnType<typeof vi.fn<TimeEntriesClient["createTask"]>>;
   deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient["deleteEntry"]>>;
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
+  listProjectTimeEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTimeEntries"]>>;
   listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
   listVisibleProjects: ReturnType<typeof vi.fn<TimeEntriesClient["listVisibleProjects"]>>;
   startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
@@ -208,6 +212,9 @@ function createClientMock(options: {
   };
 
   return {
+    backfillTaskBillableDefault: vi.fn(async () => ({
+      timeEntriesUpdated: 0,
+    })),
     createManualEntry: vi.fn(async () => createEntry({ id: TEST_IDS.createdEntry })),
     createTask: vi.fn(async () => createTask()),
     deleteEntry: vi.fn(async () => undefined),
@@ -221,6 +228,7 @@ function createClientMock(options: {
         page: query?.page ?? entriesResponse.meta.page,
       },
     })),
+    listProjectTimeEntries: vi.fn(async () => createEntryListResponse([])),
     listProjectTasks: vi.fn(async (projectId) => tasksByProject[projectId] ?? []),
     listVisibleProjects: vi.fn(async () => [
       createProject(),

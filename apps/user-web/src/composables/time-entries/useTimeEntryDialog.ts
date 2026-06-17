@@ -189,6 +189,14 @@ export function useTimeEntryDialog() {
     dialogTaskValue.value = value;
     dialogErrors.value.taskId = null;
     dialogRequestErrorMessage.value = null;
+
+    if (
+      dialogMode.value === "create" &&
+      isTaskLookupOption(value) &&
+      typeof value.defaultBillableForTimeEntries === "boolean"
+    ) {
+      dialogIsBillable.value = value.defaultBillableForTimeEntries;
+    }
   }
 
   function setTaskFromEntryFallback(entry: TimeEntryResponse): void {

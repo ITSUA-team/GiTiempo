@@ -122,22 +122,21 @@ export class TimeEntriesService {
         input.taskId,
         tx,
       );
-      const row = (
-        await tx
-          .insert(timeEntries)
-          .values({
-            workspaceId: user.workspaceId,
-            taskId: task.id,
-            userId: user.sub,
-            startedAt,
-            endedAt,
-            durationSeconds,
-            description: input.description ?? null,
-            isBillable: input.isBillable ?? true,
-            source: 'manual',
-          })
-          .returning({ id: timeEntries.id })
-      )[0]!;
+      const [row] = await tx
+        .insert(timeEntries)
+        .values({
+          workspaceId: user.workspaceId,
+          taskId: task.id,
+          userId: user.sub,
+          startedAt,
+          endedAt,
+          durationSeconds,
+          description: input.description ?? null,
+          isBillable: input.isBillable ?? task.defaultBillableForTimeEntries,
+          source: 'manual',
+        })
+        .returning({ id: timeEntries.id });
+      if (!row) throw new Error('Failed to create time entry');
       return row.id;
     });
 
@@ -348,6 +347,7 @@ export class TimeEntriesService {
           project.id,
           issueKey,
           input.issueTitle,
+          project.defaultBillableForTasks,
         );
         const lockedTask = await this.requireTaskRowForUpdate(
           tx,
@@ -362,18 +362,18 @@ export class TimeEntriesService {
           throw new UnprocessableEntityException('Task is closed');
         }
 
-        const entry = (
-          await tx
-            .insert(timeEntries)
-            .values({
-              workspaceId: user.workspaceId,
-              taskId: lockedTask.id,
-              userId: user.sub,
-              startedAt: new Date(),
-              source: 'extension',
-            })
-            .returning({ id: timeEntries.id })
-        )[0]!;
+        const [entry] = await tx
+          .insert(timeEntries)
+          .values({
+            workspaceId: user.workspaceId,
+            taskId: lockedTask.id,
+            userId: user.sub,
+            isBillable: lockedTask.defaultBillableForTimeEntries,
+            startedAt: new Date(),
+            source: 'extension',
+          })
+          .returning({ id: timeEntries.id });
+        if (!entry) throw new Error('Failed to start timer');
         return entry.id;
       });
 
@@ -435,19 +435,19 @@ export class TimeEntriesService {
           taskId,
           tx,
         );
-        const row = (
-          await tx
-            .insert(timeEntries)
-            .values({
-              description,
-              workspaceId: user.workspaceId,
-              taskId: task.id,
-              userId: user.sub,
-              startedAt: new Date(),
-              source,
-            })
-            .returning({ id: timeEntries.id })
-        )[0]!;
+        const [row] = await tx
+          .insert(timeEntries)
+          .values({
+            description,
+            workspaceId: user.workspaceId,
+            taskId: task.id,
+            userId: user.sub,
+            isBillable: task.defaultBillableForTimeEntries,
+            startedAt: new Date(),
+            source,
+          })
+          .returning({ id: timeEntries.id });
+        if (!row) throw new Error('Failed to start timer');
         return row.id;
       });
 
@@ -721,6 +721,7 @@ export class TimeEntriesService {
     projectId: string,
     issueKey: string,
     issueTitle: string,
+    defaultBillableForTimeEntries: boolean,
   ): Promise<TaskRow> {
     const existingRef = await this.findGitHubTaskRef(
       db,
@@ -738,16 +739,16 @@ export class TimeEntriesService {
       );
     }
 
-    const task = (
-      await db
-        .insert(tasksTable)
-        .values({
-          workspaceId,
-          projectId,
-          title: issueTitle,
-        })
-        .returning()
-    )[0]!;
+    const [task] = await db
+      .insert(tasksTable)
+      .values({
+        workspaceId,
+        projectId,
+        title: issueTitle,
+        defaultBillableForTimeEntries,
+      })
+      .returning();
+    if (!task) throw new Error('Failed to create GitHub task');
 
     const [repo, issueNumber] = issueKey.split('#');
     const [createdRef] = await db

@@ -35,10 +35,12 @@ function createProject(
   id: string,
   name: string,
   isActive = true,
+  defaultBillableForTasks = true,
 ): ProjectResponse {
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTasks,
     description: null,
     id,
     isActive,
@@ -60,6 +62,7 @@ function createTask(
 ): TaskResponse {
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTimeEntries: true,
     githubIssue: null,
     id,
     isActive: true,
@@ -73,12 +76,14 @@ function createTask(
 }
 
 function createClientMock(): TimeEntriesClient & {
+  backfillTaskBillableDefault: ReturnType<typeof vi.fn<TimeEntriesClient["backfillTaskBillableDefault"]>>;
   createManualEntry: ReturnType<typeof vi.fn<TimeEntriesClient["createManualEntry"]>>;
   createTask: ReturnType<typeof vi.fn<TimeEntriesClient["createTask"]>>;
   deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient["deleteEntry"]>>;
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
+  listProjectTimeEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTimeEntries"]>>;
   listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
   listVisibleProjects: ReturnType<typeof vi.fn<TimeEntriesClient["listVisibleProjects"]>>;
   startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
@@ -87,11 +92,17 @@ function createClientMock(): TimeEntriesClient & {
   updateTask: ReturnType<typeof vi.fn<TimeEntriesClient["updateTask"]>>;
 } {
   return {
+    backfillTaskBillableDefault: vi.fn(async () => ({
+      timeEntriesUpdated: 0,
+    })),
     createManualEntry: vi.fn(async () => {
       throw new Error("unused");
     }),
     createTask: vi.fn(async (projectId, input) =>
-      createTask("task-new", projectId, input.title),
+      createTask("task-new", projectId, input.title, {
+        defaultBillableForTimeEntries:
+          input.defaultBillableForTimeEntries ?? true,
+      }),
     ),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
@@ -99,6 +110,10 @@ function createClientMock(): TimeEntriesClient & {
     listOwnEntries: vi.fn(async (): Promise<TimeEntryListResponse> => ({
       items: [],
       meta: { limit: 10, page: 1, total: 0, totalPages: 0 },
+    })),
+    listProjectTimeEntries: vi.fn(async (): Promise<TimeEntryListResponse> => ({
+      items: [],
+      meta: { limit: 1, page: 1, total: 0, totalPages: 0 },
     })),
     listProjectTasks: vi.fn(async () => []),
     listVisibleProjects: vi.fn(async () => []),
@@ -113,6 +128,8 @@ function createClientMock(): TimeEntriesClient & {
     }),
     updateTask: vi.fn(async (taskId, input) =>
       createTask(taskId, "project-1", input.title ?? "Updated task", {
+        defaultBillableForTimeEntries:
+          input.defaultBillableForTimeEntries ?? true,
         status: input.status ?? "open",
       }),
     ),
@@ -184,9 +201,29 @@ async function mountView(client = createClientMock()) {
           template:
             '<button type="button" :disabled="disabled" @click="$emit(\'click\')">{{ label }}</button>',
         },
+        BillableDefaultBackfillDialog: {
+          emits: ["close", "submit", "update:updateTimeEntries"],
+          props: ["entityName", "isSubmitting", "updateTimeEntries"],
+          template: `
+            <div data-testid="task-backfill-dialog">
+              <p data-testid="task-backfill-name">{{ entityName }}</p>
+              <button data-testid="task-backfill-submit" type="button" @click="$emit('submit')">Update existing records</button>
+              <button data-testid="task-backfill-close" type="button" @click="$emit('close')">Close</button>
+            </div>
+          `,
+        },
         ProjectTaskDialog: {
-          emits: ["close", "deleteTask", "save", "update:projectId", "update:status", "update:title"],
+          emits: [
+            "close",
+            "deleteTask",
+            "save",
+            "update:defaultBillableForTimeEntries",
+            "update:projectId",
+            "update:status",
+            "update:title",
+          ],
           props: [
+            "defaultBillableForTimeEntries",
             "isDeleting",
             "isOpen",
             "requestErrorMessage",
@@ -195,9 +232,12 @@ async function mountView(client = createClientMock()) {
           template: `
             <div v-if="isOpen" data-testid="project-task-dialog">
               <p data-testid="dialog-title-value">{{ valueTitle }}</p>
+              <p data-testid="dialog-default-billable">{{ String(defaultBillableForTimeEntries) }}</p>
               <p data-testid="dialog-request-error">{{ requestErrorMessage }}</p>
               <button data-testid="dialog-title-input" type="button" @click="$emit('update:title', 'Write release checklist')">Title</button>
               <button data-testid="dialog-edit-title-input" type="button" @click="$emit('update:title', 'Updated task')">Edit title</button>
+              <button data-testid="dialog-default-false" type="button" @click="$emit('update:defaultBillableForTimeEntries', false)">Default false</button>
+              <button data-testid="dialog-default-true" type="button" @click="$emit('update:defaultBillableForTimeEntries', true)">Default true</button>
               <button data-testid="dialog-status-input" type="button" @click="$emit('update:status', 'closed')">Status</button>
               <button data-testid="dialog-delete" type="button" @click="$emit('deleteTask')">Delete task</button>
               <button data-testid="dialog-save" type="button" @click="$emit('save')">Save</button>
@@ -395,11 +435,11 @@ describe("ProjectView", () => {
     expect(emptyWrapper.text()).not.toContain("Could not load projects");
   });
 
-  it("creates a task from a preselected project dialog and updates the local group", async () => {
+  it("creates a task from a preselected project dialog with the project billable default", async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject("project-1", "Project Orion"),
+      createProject("project-1", "Project Orion", true, false),
     ]);
     client.listProjectTasks.mockResolvedValueOnce([]).mockResolvedValueOnce([
       createTask("task-new", "project-1", "Write release checklist"),
@@ -414,10 +454,124 @@ describe("ProjectView", () => {
     await flushPromises();
 
     expect(client.createTask).toHaveBeenCalledWith("project-1", {
+      defaultBillableForTimeEntries: false,
       title: "Write release checklist",
     });
     expect(wrapper.text()).toContain("Write release checklist");
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
+  });
+
+  it("updates existing entries only after an edited task default changes and the follow-up is submitted", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters", {
+        defaultBillableForTimeEntries: true,
+      }),
+    ]);
+    client.listProjectTimeEntries.mockResolvedValueOnce({
+      items: [],
+      meta: { limit: 1, page: 1, total: 3, totalPages: 1 },
+    });
+    client.backfillTaskBillableDefault.mockResolvedValueOnce({
+      timeEntriesUpdated: 3,
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-default-false"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.updateTask).toHaveBeenCalledWith("task-1", {
+      defaultBillableForTimeEntries: false,
+      status: "open",
+      title: "Improve reports filters",
+    });
+    expect(client.listProjectTimeEntries).toHaveBeenCalledWith("project-1", {
+      limit: 1,
+      taskId: "task-1",
+    });
+    expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="task-backfill-name"]').text()).toBe(
+      "Improve reports filters",
+    );
+
+    await wrapper.get('[data-testid="task-backfill-submit"]').trigger("click");
+    await flushPromises();
+
+    expect(client.backfillTaskBillableDefault).toHaveBeenCalledWith("task-1", {
+      updateTimeEntries: true,
+    });
+    expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "success",
+        summary: "Existing time entries updated",
+      }),
+    );
+  });
+
+  it("does not show a task backfill follow-up when the edited default is unchanged", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters", {
+        defaultBillableForTimeEntries: true,
+      }),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-edit-title-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.listProjectTimeEntries).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
+  });
+
+  it("dismisses the task backfill follow-up without updating existing entries", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters", {
+        defaultBillableForTimeEntries: true,
+      }),
+    ]);
+    client.listProjectTimeEntries.mockResolvedValueOnce({
+      items: [],
+      meta: { limit: 1, page: 1, total: 1, totalPages: 1 },
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-default-false"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(true);
+
+    await wrapper.get('[data-testid="task-backfill-close"]').trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
+    expect(client.backfillTaskBillableDefault).not.toHaveBeenCalled();
   });
 
   it("keeps the dialog open when task mutations fail and exposes the request error", async () => {

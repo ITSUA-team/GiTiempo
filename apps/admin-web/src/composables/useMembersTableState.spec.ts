@@ -57,6 +57,7 @@ function createProjects(): ProjectListResponse {
     {
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
+      defaultBillableForTasks: true,
       description: null,
       id: 'project-1',
       isActive: true,
@@ -86,6 +87,7 @@ function createProjects(): ProjectListResponse {
     {
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
+      defaultBillableForTasks: true,
       description: null,
       id: 'project-2',
       isActive: true,
@@ -108,6 +110,7 @@ function createProjects(): ProjectListResponse {
     {
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
+      defaultBillableForTasks: true,
       description: null,
       id: 'project-3',
       isActive: false,

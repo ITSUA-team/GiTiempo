@@ -10,6 +10,7 @@ export const createProjectFormSchema = createProjectSchema.extend({
 export type CreateProjectFormInput = z.infer<typeof createProjectFormSchema>;
 
 export const projectEditFormSchema = z.object({
+  defaultBillableForTasks: z.boolean(),
   visibility: z.enum(["public", "private"]),
   memberIds: z.array(z.string()),
 });
