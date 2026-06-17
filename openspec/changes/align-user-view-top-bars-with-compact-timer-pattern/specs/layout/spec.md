@@ -2,7 +2,7 @@
 
 ### Requirement: User-Web Top-Bar Timer Center Region
 
-The authenticated user-web shell MUST reserve the top-bar center region for the compact timer surface on tablet and desktop, and MUST render the approved mobile timer strip inside shell chrome below the mobile top row while preserving the shared shell pattern and keeping admin-web unaffected. Shell chrome MUST expose timer actions only through the compact timer popup entry point, not as separate header-visible Start, Stop, or Change task buttons.
+The authenticated user-web shell MUST reserve the top-bar center region for the compact timer surface on tablet and desktop, and MUST render the approved mobile timer strip inside shell chrome below the mobile top row while preserving the shared shell pattern and keeping admin-web unaffected. Shell chrome MUST expose timer actions only through the compact timer popup entry point, not as separate header-visible Start, Stop, or Change task buttons. This shell ownership rule does not forbid the documented Time Entries row/card `Start timer` and `Stop timer` actions for existing entries.
 
 #### Scenario: User-web top bar shows compact timer center content
 
@@ -63,7 +63,7 @@ The authenticated user-web shell MUST reserve the top-bar center region for the 
 - WHEN the mobile timer strip and mobile bottom navigation are both visible
 - THEN the timer strip remains attached to the top shell chrome
 - AND the mobile bottom navigation remains visible and independently usable
-- AND page content does not become the owner of timer start, stop, or task-switching controls
+- AND page content does not become the owner of timer start, stop, or task-switching controls outside the documented Time Entries row/card actions for existing entries
 
 ### Requirement: Top-Bar Profile Dropdown Menu
 
