@@ -17,16 +17,23 @@ The admin Members page SHALL render current workspace membership and invite coun
 
 ### Requirement: Invite Member Dialog
 
-The admin Members page MUST provide an `Invite Member` dialog that creates a pending workspace invite.
+The admin Members page MUST provide an `Invite Member` dialog that creates a pending workspace invite and follows the shared non-destructive popup footer pattern.
 
 #### Scenario: Dialog validates and creates invite
 
 - **GIVEN** the admin opens the invite dialog
 - **WHEN** the dialog renders
-- **THEN** it shows email and role fields with Cancel and Send Invite actions
+- **THEN** it shows email and role fields with `Send Invite` as the only footer action
+- **AND** the dialog footer does not show a `Cancel` dismissal button
 - **AND** invalid email or missing role shows field-level validation without sending a request
 - **AND** successful invite creation closes the dialog, shows success notification, and updates the pending invite count
 - **AND** backend errors keep the dialog open and show the rejection reason
+
+#### Scenario: Invite dialog dismissal uses popup close control
+
+- **GIVEN** the invite dialog is open and not submitting
+- **WHEN** the user activates the built-in dialog close control or existing non-destructive mask dismissal
+- **THEN** the dialog closes without creating an invite
 
 ### Requirement: Members Table Columns And Data
 
@@ -36,7 +43,7 @@ The Members page MUST render workspace members using the documented management t
 
 - **GIVEN** the workspace member list has loaded
 - **WHEN** the table renders
-- **THEN** it shows Member, Role, Projects Assigned, Last Active, and Actions columns
+- **THEN** it shows Member, Role, Projects Assigned, and Last Active columns
 - **AND** the Member cell shows avatar, display name, and email
 - **AND** assignment count and last-active values come from the workspace member contract
 - **AND** the table uses the shared management table chrome instead of a parallel app-local copy

@@ -124,33 +124,48 @@ The user-web authenticated shell MUST expose timer state and task-context select
 
 ### Requirement: Top-Bar Timer Task Picker
 
-The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context or create a new task inside the selected visible project, MUST remain usable from the mobile timer strip, MUST support popup-owned timer Start and Stop actions, and MUST support reassigning the task of the currently running timer.
+The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context, add an optional time-entry description, or create a new task inside the selected visible project; MUST remain usable from the mobile timer strip; MUST support popup-owned timer Start and Stop actions; MUST support reassigning the task and description of the currently running timer; and MUST rely on popup dismissal controls instead of a footer `Cancel` button.
 
-#### Scenario: Existing task selected for idle timer context
+#### Scenario: Existing task and description selected for idle timer context
 
 - **GIVEN** the top-bar timer task picker is open
 - **AND** no timer is currently running
-- **WHEN** the user selects a visible project and one of that project's tasks
+- **WHEN** the user selects a visible project, one of that project's tasks, and enters a description
 - **THEN** the dialog allows starting a fresh timer for the selected task with `Start timer`
 - **AND** the top-bar timer context updates to the selected `Project / Task`
-- **AND** the start action starts a fresh timer for that task
+- **AND** the start action starts a fresh timer for that task with the submitted description
+
+#### Scenario: Idle timer can start with no description
+
+- **GIVEN** the top-bar timer task picker is open while the timer is idle
+- **WHEN** the user selects a visible project and task and leaves Description empty
+- **THEN** the dialog allows starting a fresh timer for the selected task with `Start timer`
+- **AND** the start action starts a fresh timer for that task with no description
 
 #### Scenario: Running timer task is preselected
 
 - **GIVEN** the authenticated user has a running timer
 - **WHEN** the user opens the top-bar timer task picker
 - **THEN** the dialog preselects the running timer's current project and task
+- **AND** the dialog pre-fills the running timer's current description when one exists
 - **AND** loading task options does not clear that preselected task unless the user selects a different project
 - **AND** the dialog exposes the running timer's popup-owned `Stop timer` action
 
-#### Scenario: Running timer task is reassigned
+#### Scenario: Running timer task and description are reassigned
 
 - **GIVEN** the authenticated user has a running timer
 - **AND** the top-bar timer task picker is open
-- **WHEN** the user selects a different visible active task and confirms the selection with the popup-owned task-change action
-- **THEN** the app updates the running time entry to that task without stopping the timer
+- **WHEN** the user selects a different visible active task, changes Description, and confirms the selection with the popup-owned task-change action
+- **THEN** the app updates the running time entry to that task and description without stopping the timer
 - **AND** the timer surface refreshes from the authoritative current timer state
 - **AND** the dialog closes after the refreshed timer state is applied
+
+#### Scenario: Running timer description can be cleared
+
+- **GIVEN** the top-bar timer task picker is open while a running timer has a description
+- **WHEN** the user clears Description and confirms with the popup-owned task-change action
+- **THEN** the app clears the running entry description without stopping the timer
+- **AND** the timer surface refreshes from the authoritative current timer state
 
 #### Scenario: Running timer stops before task reassignment completes
 
@@ -173,10 +188,11 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 
 - **GIVEN** the authenticated user has a running timer
 - **AND** the top-bar timer task picker is open
-- **WHEN** the user selects a different task and the running-entry task update fails
+- **WHEN** the user selects a different task or changes Description and the running-entry update fails
 - **THEN** the dialog remains open
 - **AND** the dialog shows inline error feedback
 - **AND** the visible current task does not switch to the failed selection
+- **AND** the dialog inputs remain available for retry unless the refreshed state makes the selection invalid
 - **AND** not-found, authorization, validation, visibility, or conflict responses refresh the authoritative timer summary
 
 #### Scenario: New task created inside selected project
@@ -198,9 +214,40 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **GIVEN** the authenticated user opens the task picker from the mobile timer strip `Task & timer` opener
 - **WHEN** the task-picker dialog renders below the mobile breakpoint
 - **THEN** the dialog uses a near-full-width mobile layout with scrollable content
-- **AND** the footer actions render as full-width stacked buttons
-- **AND** the popup-owned primary timer action renders before `Cancel` in the mobile stacked button and keyboard order
-- **AND** the dialog still separates existing task selection from creating a new task inside the selected visible project
+- **AND** the footer renders the state-appropriate primary action as a full-width button
+- **AND** the footer does not render a `Cancel` dismissal button
+- **AND** any running-timer `Change task` action remains a secondary full-width domain action rather than a dismissal action
+- **AND** the dialog still separates existing task selection and Description from creating a new task inside the selected visible project
+
+#### Scenario: Task picker dismissal uses popup close control
+
+- **GIVEN** the top-bar timer task picker is open and no primary action is submitted
+- **WHEN** the user activates the built-in dialog close control or existing non-destructive mask dismissal
+- **THEN** the dialog closes without changing the selected task context, creating a task, starting a timer, stopping a timer, or updating a running entry
+
+### Requirement: Time Entry Popup Footers
+
+The user-web Time Entries create and edit popups SHALL follow the shared non-destructive popup footer pattern while preserving manual entry save behavior.
+
+#### Scenario: Time-entry create popup footer uses save action only
+
+- **WHEN** the user opens the manual time-entry dialog in create mode from the page-level or day-level create action
+- **THEN** the dialog footer shows the primary create-mode save action
+- **AND** the dialog footer does not show a `Cancel` dismissal button
+
+#### Scenario: Time-entry edit popup footer uses save action only
+
+- **GIVEN** the user views a completed time entry in the Time Entries page
+- **WHEN** they open the edit dialog for that entry
+- **THEN** the dialog footer shows the primary `Save changes` action
+- **AND** the dialog footer does not show a `Cancel` dismissal button
+
+#### Scenario: Time-entry popup dismissal uses dialog controls
+
+- **GIVEN** a time-entry create or edit dialog is open
+- **WHEN** the user activates the built-in dialog close control or existing non-destructive mask dismissal
+- **THEN** the dialog closes without creating or updating a time entry
+- **AND** failed save attempts still keep the dialog open with pending values available for retry
 
 ### Requirement: Time Entries Page Record Management
 The Time Entries page MUST allow authenticated users to review, filter, create, edit, and delete their own time entries while keeping manual completed-entry creation out of the global top-bar timer surface.
@@ -719,4 +766,3 @@ The user top-bar timer task picker MUST preserve the project and task default in
 - **WHEN** the user starts the timer
 - **THEN** the timer start request does not send an entry-level billable override
 - **AND** the returned running entry reflects the backend-inherited `isBillable: false` value
-
