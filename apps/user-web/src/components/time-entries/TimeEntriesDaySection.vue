@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { PlusIcon } from "@heroicons/vue/24/outline";
+import { PlayIcon } from "@heroicons/vue/24/solid";
+import Button from "primevue/button";
 import Column from "primevue/column";
 
 import type { TimeEntryResponse } from "@gitiempo/shared";
@@ -23,12 +25,14 @@ const props = defineProps<{
   formatTimeRange: (entry: TimeEntryResponse) => string;
   group: TimeEntriesDayGroup;
   showHeader: boolean;
+  startingTimerEntryId?: string | null;
 }>();
 
 const emit = defineEmits<{
   createForDay: [day: string];
   editEntry: [entry: TimeEntryResponse];
   openActiveTimer: [];
+  startTimer: [entry: TimeEntryResponse];
 }>();
 const isMobileViewport = useIsMobileViewport();
 
@@ -62,6 +66,18 @@ function getEntryTaskTestId(
     : `${prefix}-edit-${entry.id}`;
 }
 
+function getStartTimerLabel(entry: TimeEntryResponse): string {
+  return `Start timer for ${entry.task.title}`;
+}
+
+function isStartTimerPending(entry: TimeEntryResponse): boolean {
+  return props.startingTimerEntryId === entry.id;
+}
+
+function isStartTimerDisabled(): boolean {
+  return props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined;
+}
+
 function handleEntryTaskOpen(entry: TimeEntryResponse): void {
   if (entry.endedAt === null) {
     emit("openActiveTimer");
@@ -69,6 +85,14 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
   }
 
   emit("editEntry", entry);
+}
+
+function handleStartTimer(entry: TimeEntryResponse): void {
+  if (entry.endedAt === null || isStartTimerDisabled()) {
+    return;
+  }
+
+  emit("startTimer", entry);
 }
 </script>
 
@@ -96,26 +120,47 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
         data-testid="time-entry-mobile-card"
         :tone="entry.endedAt === null ? 'highlighted' : 'default'"
       >
-        <div class="flex min-w-0 flex-col gap-1">
-          <div class="flex max-w-full min-w-0 items-center gap-1">
-            <TaskNameLink
-              :label="entry.task.title"
-              :open-label="getEntryTaskOpenLabel(entry)"
-              :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
-              @open="handleEntryTaskOpen(entry)"
-            />
-            <TaskGitHubIssueLink
-              v-if="entry.githubIssue"
-              :issue="entry.githubIssue"
-              :test-id="`time-entry-mobile-github-${entry.id}`"
-            />
-          </div>
-          <p
-            v-if="entry.description"
-            class="text-text-muted truncate text-xs"
+        <div class="flex min-w-0 items-start gap-3">
+          <Button
+            v-if="entry.endedAt !== null"
+            v-tooltip.bottom="getStartTimerLabel(entry)"
+            :aria-label="getStartTimerLabel(entry)"
+            :data-testid="`time-entry-mobile-start-timer-${entry.id}`"
+            :disabled="isStartTimerDisabled()"
+            :loading="isStartTimerPending(entry)"
+            type="button"
+            :pt="{
+              root: { class: 'h-8 w-10 min-w-0 shrink-0 rounded-[6px] p-0' },
+            }"
+            @click="handleStartTimer(entry)"
           >
-            {{ entry.description }}
-          </p>
+            <PlayIcon
+              aria-hidden="true"
+              class="text-text-inverse size-3.5"
+            />
+          </Button>
+
+          <div class="flex min-w-0 flex-col gap-1">
+            <div class="flex max-w-full min-w-0 items-center gap-1">
+              <TaskNameLink
+                :label="entry.task.title"
+                :open-label="getEntryTaskOpenLabel(entry)"
+                :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
+                @open="handleEntryTaskOpen(entry)"
+              />
+              <TaskGitHubIssueLink
+                v-if="entry.githubIssue"
+                :issue="entry.githubIssue"
+                :test-id="`time-entry-mobile-github-${entry.id}`"
+              />
+            </div>
+            <p
+              v-if="entry.description"
+              class="text-text-muted truncate text-xs"
+            >
+              {{ entry.description }}
+            </p>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -166,32 +211,53 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
     >
       <Column :pt="managementTableColumnPt">
         <template #body="{ data: entry }">
-          <div class="flex min-w-0 flex-col">
-            <div class="flex max-w-full min-w-0 items-center gap-1">
-              <TaskNameLink
-                :label="entry.task.title"
-                :open-label="getEntryTaskOpenLabel(entry)"
-                :test-id="getEntryTaskTestId(entry, 'time-entry')"
-                @open="handleEntryTaskOpen(entry)"
+          <div class="flex min-w-0 items-center gap-2">
+            <Button
+              v-if="entry.endedAt !== null"
+              v-tooltip.bottom="getStartTimerLabel(entry)"
+              :aria-label="getStartTimerLabel(entry)"
+              :data-testid="`time-entry-start-timer-${entry.id}`"
+              :disabled="isStartTimerDisabled()"
+              :loading="isStartTimerPending(entry)"
+              type="button"
+              :pt="{
+                root: { class: 'h-8 w-10 min-w-0 shrink-0 rounded-[6px] p-0' },
+              }"
+              @click="handleStartTimer(entry)"
+            >
+              <PlayIcon
+                aria-hidden="true"
+                class="text-text-inverse size-3.5"
               />
-              <TaskGitHubIssueLink
-                v-if="entry.githubIssue"
-                :issue="entry.githubIssue"
-                :test-id="`time-entry-github-${entry.id}`"
-              />
+            </Button>
+
+            <div class="flex min-w-0 flex-col">
+              <div class="flex max-w-full min-w-0 items-center gap-1">
+                <TaskNameLink
+                  :label="entry.task.title"
+                  :open-label="getEntryTaskOpenLabel(entry)"
+                  :test-id="getEntryTaskTestId(entry, 'time-entry')"
+                  @open="handleEntryTaskOpen(entry)"
+                />
+                <TaskGitHubIssueLink
+                  v-if="entry.githubIssue"
+                  :issue="entry.githubIssue"
+                  :test-id="`time-entry-github-${entry.id}`"
+                />
+              </div>
+              <p
+                v-if="entry.description"
+                class="text-text-muted truncate text-xs"
+              >
+                {{ entry.description }}
+              </p>
+              <p
+                v-if="entry.endedAt === null"
+                class="text-text-muted text-xs"
+              >
+                Stop from the top bar
+              </p>
             </div>
-            <p
-              v-if="entry.description"
-              class="text-text-muted truncate text-xs"
-            >
-              {{ entry.description }}
-            </p>
-            <p
-              v-if="entry.endedAt === null"
-              class="text-text-muted text-xs"
-            >
-              Stop from the top bar
-            </p>
           </div>
         </template>
       </Column>

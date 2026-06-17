@@ -75,9 +75,15 @@ afterAll(() => {
 });
 
 function createProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
+  const {
+    defaultBillableForTasks = false,
+    ...projectOverrides
+  } = overrides;
+
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTasks,
     description: null,
     id: TEST_IDS.projectOrion,
     isActive: true,
@@ -88,13 +94,19 @@ function createProject(overrides: Partial<ProjectResponse> = {}): ProjectRespons
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
     workspaceId: TEST_IDS.workspace,
-    ...overrides,
+    ...projectOverrides,
   };
 }
 
 function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
+  const {
+    defaultBillableForTimeEntries = false,
+    ...taskOverrides
+  } = overrides;
+
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTimeEntries,
     githubIssue: null,
     id: TEST_IDS.taskReports,
     isActive: true,
@@ -103,7 +115,7 @@ function createTask(overrides: Partial<TaskResponse> = {}): TaskResponse {
     title: "Improve reports filters",
     updatedAt: "2026-04-20T12:00:00.000Z",
     workspaceId: TEST_IDS.workspace,
-    ...overrides,
+    ...taskOverrides,
   };
 }
 
@@ -347,8 +359,8 @@ async function mountView(
         ProgressSpinner: { template: "<div />" },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
-          emits: ["createForDay", "editEntry", "openActiveTimer"],
-          props: ["formatDuration", "formatTimeRange", "group"],
+          emits: ["createForDay", "editEntry", "openActiveTimer", "startTimer"],
+          props: ["formatDuration", "formatTimeRange", "group", "startingTimerEntryId"],
           template: `
             <section>
               <p>{{ group.heading }}</p>
@@ -356,6 +368,13 @@ async function mountView(
                   <p>{{ entry.id }} {{ entry.task.title }}</p>
                   <p :data-testid="'time-entry-range-' + entry.id">{{ formatTimeRange(entry) }}</p>
                   <p>{{ formatDuration(entry) }}</p>
+                  <button
+                    v-if="entry.endedAt !== null"
+                    :data-testid="'time-entry-start-timer-' + entry.id"
+                    :disabled="startingTimerEntryId !== null && startingTimerEntryId !== undefined"
+                    type="button"
+                    @click="$emit('startTimer', entry)"
+                  >Start timer</button>
                   <button
                     v-if="entry.endedAt !== null"
                     data-testid="time-entry-edit-entry-completed"
@@ -510,6 +529,53 @@ describe("TimeEntriesView", () => {
     await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
 
     expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
+  it("starts a fresh timer from a completed entry row", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    const { topBarTimerDialogController, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.taskReports });
+    expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Tracking Improve reports filters.",
+        severity: "success",
+        summary: "Timer started",
+      }),
+    );
+  });
+
+  it("keeps direct timer start failures retryable with the backend message visible", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+
+    client.startTimer.mockRejectedValueOnce(new Error("A timer is already running"));
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).trigger("click");
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.taskReports });
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "A timer is already running",
+        severity: "error",
+        summary: "Could not start timer",
+      }),
+    );
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
   });
 

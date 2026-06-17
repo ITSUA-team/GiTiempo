@@ -8,10 +8,12 @@ import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
+  getErrorMessage,
   SurfaceCard,
   filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 
@@ -22,6 +24,7 @@ import {
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
+import { useStartTimerMutation } from "@/composables/query";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
@@ -29,6 +32,7 @@ import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMu
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { timerKeys } from "@/lib/query-keys";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
 
@@ -39,6 +43,7 @@ const toast = useToast();
 const appConfirm = createAppConfirm(confirm);
 const appToast = createAppToast(toast);
 const topBarTimerDialogController = useTopBarTimerDialogController();
+const queryClient = useQueryClient();
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
@@ -71,6 +76,11 @@ const data = useTimeEntriesData({
   setIntervalFn: setInterval,
 });
 const taskOptions = useTimeEntryTaskOptions({ client });
+const startTimerMutation = useStartTimerMutation({
+  accessToken,
+  client,
+  scope,
+});
 const mutations = useTimeEntryMutations({
   accessToken,
   client,
@@ -136,6 +146,7 @@ const filterAutoCompletePt = {
   root: { class: "max-w-full min-w-0" },
 } as const;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
+const startingTimerEntryId = shallowRef<string | null>(null);
 const selectedProjectFilterOption = computed(
   () =>
     visibleProjects.value.find((project) => project.id === selectedProjectId.value) ??
@@ -320,6 +331,33 @@ function openActiveTimerDialog(): void {
   topBarTimerDialogController.requestOpen();
 }
 
+async function startTimerForEntry(entry: TimeEntryResponse): Promise<void> {
+  if (entry.endedAt === null || startingTimerEntryId.value !== null) {
+    return;
+  }
+
+  startingTimerEntryId.value = entry.id;
+
+  try {
+    await startTimerMutation.mutateAsync({ taskId: entry.taskId });
+    appToast.showSuccessToast(
+      "Timer started",
+      `Tracking ${entry.task.title}.`,
+    );
+  } catch (error) {
+    appToast.showErrorToast({
+      detail: getErrorMessage(error),
+      error,
+      logContext: { action: "start-timer-from-entry", feature: "time-entries" },
+      summary: "Could not start timer",
+    });
+
+    await queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) });
+  } finally {
+    startingTimerEntryId.value = null;
+  }
+}
+
 async function retryLoadEntries(): Promise<void> {
   await data.loadEntries();
 }
@@ -483,9 +521,11 @@ onBeforeUnmount(() => {
         :format-time-range="formatTimeRange"
         :group="group"
         :show-header="groupIndex === 0"
+        :starting-timer-entry-id="startingTimerEntryId"
         @create-for-day="(day) => void openCreateDialog(day)"
         @edit-entry="(entry) => void openEditDialog(entry)"
         @open-active-timer="openActiveTimerDialog"
+        @start-timer="(entry) => void startTimerForEntry(entry)"
       />
 
       <SurfaceCard

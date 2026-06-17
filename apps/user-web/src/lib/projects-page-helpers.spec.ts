@@ -16,6 +16,7 @@ function createProject(id: string, name: string): ProjectResponse {
   return {
     color: null,
     createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTasks: false,
     description: null,
     id,
     isActive: true,
@@ -36,8 +37,14 @@ function createTask(
   updatedAt: string,
   overrides: Partial<TaskResponse> = {},
 ): TaskResponse {
+  const {
+    defaultBillableForTimeEntries = false,
+    ...taskOverrides
+  } = overrides;
+
   return {
     createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTimeEntries,
     githubIssue: null,
     id,
     isActive: true,
@@ -46,7 +53,7 @@ function createTask(
     title,
     updatedAt,
     workspaceId: "workspace-1",
-    ...overrides,
+    ...taskOverrides,
   };
 }
 

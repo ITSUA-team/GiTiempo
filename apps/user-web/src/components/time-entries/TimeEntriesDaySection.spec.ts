@@ -67,7 +67,7 @@ const group: TimeEntriesDayGroup = {
   ],
 };
 
-function mountSection() {
+function mountSection(props: Partial<InstanceType<typeof TimeEntriesDaySection>['$props']> = {}) {
   return mount(TimeEntriesDaySection, {
     props: {
       formatDuration: (entry: { id: string }) =>
@@ -76,6 +76,7 @@ function mountSection() {
         entry.endedAt === null ? '09:00 - Running' : '09:00 - 10:30',
       group,
       showHeader: true,
+      ...props,
     },
     global: {
       plugins: [PrimeVue],
@@ -101,6 +102,7 @@ describe('TimeEntriesDaySection', () => {
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
     expect(runningTimerButton.element.tagName).toBe('BUTTON');
     expect(runningTimerButton.attributes('aria-label')).toBe('Update active timer for Improve reports filters');
+    expect(wrapper.find('[data-testid="time-entry-start-timer-entry-running"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="time-entry-github-entry-running"]').attributes()).toMatchObject({
       href: 'https://github.com/octo/repo/issues/42',
       target: '_blank',
@@ -113,9 +115,26 @@ describe('TimeEntriesDaySection', () => {
     await runningTimerButton.trigger('click');
     await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger('click');
 
+    expect(wrapper.emitted('startTimer')).toBeUndefined();
     expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
     expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
     expect(wrapper.emitted('deleteEntry')).toBeUndefined();
+  });
+
+  it('starts a fresh timer from completed desktop rows', async () => {
+    const wrapper = mountSection();
+    const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
+
+    expect(startTimerButton.attributes('aria-label')).toBe('Start timer for Improve reports filters');
+    expect(startTimerButton.text()).toBe('');
+    expect(startTimerButton.find('svg').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entry-start-timer-entry-running"]').exists()).toBe(false);
+
+    await startTimerButton.trigger('click');
+
+    expect(wrapper.emitted('startTimer')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
+    expect(wrapper.emitted('openActiveTimer')).toBeUndefined();
+    expect(wrapper.emitted('editEntry')).toBeUndefined();
   });
 
   it('renders mobile cards with task name openers and separate github links', async () => {
@@ -137,6 +156,10 @@ describe('TimeEntriesDaySection', () => {
     expect(mobileCards[1]?.text()).toContain('09:00 - 10:30');
     expect(mobileCards[1]?.text()).toContain('1h 30m');
     expect(wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').element.tagName).toBe('BUTTON');
+    expect(wrapper.find('[data-testid="time-entry-mobile-start-timer-entry-running"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]').attributes('aria-label')).toBe(
+      'Start timer for Improve reports filters',
+    );
     expect(wrapper.get('[data-testid="time-entry-mobile-github-entry-running"]').attributes('href')).toBe(
       'https://github.com/octo/repo/issues/42',
     );
@@ -145,12 +168,21 @@ describe('TimeEntriesDaySection', () => {
     );
     expect(wrapper.find('[data-testid="time-entry-mobile-delete-entry-completed"]').exists()).toBe(false);
 
+    await wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]').trigger('click');
     await wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').trigger('click');
     await wrapper.get('[data-testid="time-entry-mobile-edit-entry-completed"]').trigger('click');
 
+    expect(wrapper.emitted('startTimer')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
     expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
     expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
     expect(wrapper.emitted('deleteEntry')).toBeUndefined();
+  });
+
+  it('disables direct timer starts while a start request is pending', () => {
+    const wrapper = mountSection({ startingTimerEntryId: 'entry-completed' });
+    const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
+
+    expect(startTimerButton.attributes('disabled')).toBeDefined();
   });
 
   it('renders the desktop entry table branch without an actions column', () => {
