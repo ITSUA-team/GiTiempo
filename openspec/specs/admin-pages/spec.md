@@ -3,9 +3,7 @@
 ## Purpose
 
 Define admin and project-manager SPA behavior for the admin-facing product pages in `admin-web`.
-
 ## Requirements
-
 ### Requirement: Admin Login Entry Page
 
 The `admin-web` app MUST provide a dedicated login page that offers the supported authentication methods and keeps the admin product visually distinct while following the shared auth direction.
@@ -174,28 +172,27 @@ The reports page MUST support report setup controls for backend CSV export, scop
 - **AND** summary totals remain based on the loaded report data rather than the table-only filters
 
 ### Requirement: Invoice Creation Workflow
+The invoices page UI SHALL remain hidden until an invoice API/contract exists.
 
-The invoices page SHALL provide invoice creation through a modal workflow.
+#### Scenario: Deferred invoice route renders no temporary invoice section
 
-#### Scenario: Create invoice from dialog
-
-- GIVEN a user opens the invoice creation flow
-- WHEN the dialog is rendered
-- THEN the dialog exposes project, date range, rate, discount, and total amount inputs
+- **GIVEN** a user opens the invoices page
+- **WHEN** the route content renders
+- **THEN** the page does not render an invoice table, search control, create action, or modal dialog
+- **AND** the admin shell navigation does not expose an Invoices entry while the invoice UI is deferred.
 
 ### Requirement: Administrative Management Pages
-
 The members, projects, and settings pages MUST support the documented administrative management flows.
 
 #### Scenario: Members management view
 
 - GIVEN an admin opens the members page
 - WHEN the page renders
-- THEN it shows a stats header with title, description, and a primary `Invite Member` action
-- AND it shows stat cards covering active members, pending invites, and assigned PMs
+- THEN it shows stat cards covering active members, pending invites, and assigned PMs
 - AND it shows a members table with member identity, role, project assignment count, last activity, and page-owned row intents
+- AND the members table header exposes a search control plus a primary icon-only `Invite member` action with explicit tooltip and accessible label copy `Invite member`
 - AND it exposes page-owned inline PM assignment only for non-admin member rows
-- AND it exposes page-owned inline edit and confirmed removal flows triggered by table intents
+- AND it exposes page-owned inline edit and confirmed removal flows triggered by table intents.
 
 #### Scenario: Workspace settings view
 
@@ -204,7 +201,7 @@ The members, projects, and settings pages MUST support the documented administra
 - THEN workspace settings are shown in a grouped single-column form layout
 - AND the form includes workspace name, currency, default hourly rate, and time zone fields
 - AND the time zone field is an editable selector populated with contract-valid time-zone options, including `UTC` and IANA time-zone names, the current persisted time-zone value, and the current draft/form time-zone value
-- AND save actions remain discoverable at section level or page bottom
+- AND save actions remain discoverable at section level or page bottom.
 
 #### Scenario: Workspace settings time zone save
 
@@ -212,14 +209,14 @@ The members, projects, and settings pages MUST support the documented administra
 - WHEN the admin saves settings
 - THEN the page submits the changed `timeZone` through the existing workspace settings update boundary
 - AND the saved form reconciles from the authoritative workspace settings response
-- AND unchanged workspace settings fields are not sent only to satisfy schemas
+- AND unchanged workspace settings fields are not sent only to satisfy schemas.
 
 #### Scenario: Workspace settings time zone validation
 
 - GIVEN an invalid time-zone value is represented in the Settings form state
 - WHEN the admin attempts to save settings
 - THEN the page shows field-level validation feedback for Time zone
-- AND no workspace settings update request is sent
+- AND no workspace settings update request is sent.
 
 ### Requirement: Projects Navigation Item Is Active On Project Subpages
 

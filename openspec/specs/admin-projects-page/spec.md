@@ -20,7 +20,6 @@ The admin Projects page MUST display a stats header and three stat cards sourced
 - **THEN** the page re-fetches `GET /projects/management-summary` without a full page reload
 
 ### Requirement: Admin Projects Page Renders Filterable Projects Table
-
 The admin Projects page MUST display all workspace projects in a searchable, column-filterable management table.
 
 #### Scenario: Table loads projects on mount
@@ -28,9 +27,10 @@ The admin Projects page MUST display all workspace projects in a searchable, col
 - **WHEN** the admin opens the Projects page
 - **THEN** the page fetches `GET /projects`
 - **AND** it fetches `GET /workspace-members` for assigned-member filter options
-- **AND** the table shows Project, Source, Assigned members, Hours, Visibility, and Actions columns
+- **AND** the table shows Project, Source, Assigned members, Hours, and Visibility columns without a separate row-actions column
 - **AND** active projects appear before archived projects
 - **AND** the table card header exposes a global search control with placeholder `Search projects`
+- **AND** the table card header exposes a primary icon-only `New project` action next to the search control with explicit tooltip and accessible label copy `New project`.
 
 #### Scenario: Projects member filters require loaded workspace member data
 
@@ -39,7 +39,7 @@ The admin Projects page MUST display all workspace projects in a searchable, col
 - **WHEN** the Projects page is still completing its initial load
 - **THEN** the page keeps the initial loading surface instead of rendering the Projects table with empty assigned-member filter options
 - **AND** if workspace member data fails during initial load, the page renders the retryable Projects request-error surface
-- **AND** the table does not imply that no workspace members are available only because workspace member data is unavailable
+- **AND** the table does not imply that no workspace members are available only because workspace member data is unavailable.
 
 #### Scenario: Project discovery filters narrow visible rows
 
@@ -53,14 +53,14 @@ The admin Projects page MUST display all workspace projects in a searchable, col
 - **AND** `40h+` matches loaded rows with `totalSeconds >= 144000`
 - **AND** `No hours` matches loaded rows with `totalSeconds === 0`
 - **AND** clearing active filters restores all loaded projects allowed by the page's role scope
-- **AND** filtering does not require a projects API request solely for table discovery
+- **AND** filtering does not require a projects API request solely for table discovery.
 
 #### Scenario: Projects filters follow approved table layout
 
 - **WHEN** the Projects table renders on desktop
 - **THEN** it shows a filter row directly below the column header with controls for Project, Source, Assigned members, Hours, and Visibility
-- **AND** the Actions column does not render a filter control
-- **AND** the mobile card list exposes equivalent search and filter controls above the cards
+- **AND** no row-actions column or row-action filter control is rendered
+- **AND** the mobile card list exposes equivalent search and filter controls above the cards.
 
 ### Requirement: Projects Table Is A Dumb Presentational Table
 
@@ -153,13 +153,13 @@ The Projects page MUST keep project archive and unarchive API orchestration outs
 - **AND** unarchive API errors are surfaced through error toast feedback without changing the row in loaded data
 
 ### Requirement: New Project Button Navigates To Add Project Route
-
-The admin Projects page MUST provide a New Project action that navigates to the add-project route.
+The admin Projects page MUST provide a table-header New Project action that navigates to the add-project route.
 
 #### Scenario: New Project navigates to add-project route
 
-- **WHEN** the admin clicks New Project
+- **WHEN** the admin clicks the table-header primary icon-only `New project` action
 - **THEN** the router navigates to `/projects/new`
+- **AND** the action exposes tooltip and accessible label copy `New project`.
 
 ### Requirement: Admin Projects Page Uses Component Composition
 

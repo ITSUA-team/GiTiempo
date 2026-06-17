@@ -21,20 +21,21 @@ The user-web app MUST provide an authenticated Projects list page reached from t
 ### Requirement: User Projects List Layout
 The Projects list page MUST match the approved user Projects list design and render visible projects grouped with their active tasks.
 
-#### Scenario: Projects page renders approved header and search
+#### Scenario: Projects page renders approved breadcrumb and lightweight filters
 - **WHEN** an authenticated user opens the Projects list page
-- **THEN** the page renders the title `Projects`
-- **AND** the page renders descriptive copy for managing tasks across visible projects
-- **AND** the header row renders a primary `+ New task` action
-- **AND** the filter row renders a single PrimeVue AutoComplete search field with placeholder `Search projects or tasks`
+- **THEN** the authenticated shell top-bar breadcrumb identifies the `Projects` page
+- **AND** the filter row renders a combined PrimeVue AutoComplete search field with placeholder `Search projects or tasks`
+- **AND** the filter row renders a `Status` PrimeVue Select with `All statuses`, `Open`, and `Closed` options
+- **AND** the filter row renders an `Updated` PrimeVue Select with `Any time`, `Today`, `Last 7 days`, and `Older` options
+- **AND** the page does not render a separate page-content text `+ New task` opener when task creation is provided through contextual project sections
 
 #### Scenario: Visible projects render grouped task sections
 - **GIVEN** visible projects and their active tasks load successfully
 - **WHEN** the Projects list page renders the results
 - **THEN** the content is grouped by visible project
 - **AND** each project section header shows the project name and active task count
-- **AND** each project section header renders a secondary `+ Add task` action
-- **AND** each task row shows task title, status, updated metadata, and icon-only `Edit` and `Delete` row actions
+- **AND** each project section header renders a primary icon-only `Add task` action with tooltip and accessible label copy `Add task`
+- **AND** each task row shows a clickable task title, status, and updated metadata without separate `Edit` or `Delete` row-action cells
 
 #### Scenario: Inactive tasks are excluded from grouped list
 - **GIVEN** a visible project has inactive tasks
@@ -48,55 +49,89 @@ The Projects list page MUST match the approved user Projects list design and ren
 - **AND** the page does not request default task lists for those inactive projects
 
 ### Requirement: User Projects Combined Search
-The Projects list page MUST filter already-loaded visible project and task data on the frontend using one combined projects/tasks search control.
+The Projects list page MUST filter already-loaded visible project and task data on the frontend using one combined projects/tasks search control plus lightweight `Status` and `Updated` controls. The `Updated` control MUST use the user's browser-local timezone for date buckets: `Today` is the current local calendar day, `Last 7 days` is the rolling seven-day local window including today, and `Older` is before that window.
 
 #### Scenario: Project match keeps full project group visible
 - **GIVEN** visible projects and tasks have loaded
+- **AND** the `Status` filter is `All statuses`
+- **AND** the `Updated` filter is `Any time`
 - **WHEN** the user searches text that matches a project name
 - **THEN** the matching project section remains visible
 - **AND** all loaded active task rows for that matching project remain visible
 
 #### Scenario: Task match narrows parent project rows
 - **GIVEN** visible projects and tasks have loaded
+- **AND** the `Status` filter is `All statuses`
+- **AND** the `Updated` filter is `Any time`
 - **WHEN** the user searches text that matches one or more task names
 - **THEN** each parent project section for matching tasks remains visible
 - **AND** each matching parent section shows only the matching task rows
 
-#### Scenario: Clearing search restores grouped list
-- **GIVEN** the combined projects/tasks search has filtered the page
-- **WHEN** the user clears the search field
+#### Scenario: Status filter narrows task rows
+- **GIVEN** visible projects and tasks have loaded with both open and closed tasks
+- **WHEN** the user selects `Open` from the `Status` filter
+- **THEN** only task rows with the user-facing status label `Open` remain visible
+- **AND** project groups with no remaining matching task rows are removed
+- **WHEN** the user selects `Closed` from the `Status` filter
+- **THEN** only task rows with the user-facing status label `Closed` remain visible
+- **AND** project groups with no remaining matching task rows are removed
+
+#### Scenario: Updated filter narrows task rows
+- **GIVEN** visible projects and tasks have loaded with tasks updated today, tasks updated within the last seven local days, and tasks updated before that seven-day window
+- **WHEN** the user selects `Today` from the `Updated` filter
+- **THEN** only task rows updated during the current browser-local calendar day remain visible
+- **AND** project groups with no remaining matching task rows are removed
+- **WHEN** the user selects `Last 7 days` from the `Updated` filter
+- **THEN** only task rows updated within the rolling seven-day browser-local window remain visible
+- **AND** project groups with no remaining matching task rows are removed
+- **WHEN** the user selects `Older` from the `Updated` filter
+- **THEN** only task rows updated before the rolling seven-day browser-local window remain visible
+- **AND** project groups with no remaining matching task rows are removed
+
+#### Scenario: Structured filters continue narrowing project-name matches
+- **GIVEN** visible projects and tasks have loaded
+- **AND** a project name matches the combined search text
+- **AND** only some tasks in that project match the selected `Status` and `Updated` filters
+- **WHEN** the Projects list page renders the filtered results
+- **THEN** the matching project section remains visible
+- **AND** that section shows only the task rows matching the selected `Status` and `Updated` filters
+- **AND** the matching project section is removed if no task rows remain after those structured filters
+
+#### Scenario: Filters stay frontend-only and user-scoped
+- **GIVEN** visible projects and tasks have already loaded
+- **WHEN** the user changes the combined search, `Status`, or `Updated` filters
+- **THEN** the page filters the already loaded visible project/task data on the frontend
+- **AND** the page does not add backend free-text search, backend status filters, backend updated filters, or new project/task list query parameters for these controls
+- **AND** the page does not render admin-style filters such as source, members, visibility, or billable-default
+
+#### Scenario: Clearing filters restores grouped list
+- **GIVEN** the combined projects/tasks search or structured filters have filtered the page
+- **WHEN** the user clears the search field and resets `Status` to `All statuses` and `Updated` to `Any time`
 - **THEN** the full loaded grouped project list is restored
 
 ### Requirement: User Projects Task Dialogs
 The Projects list page MUST use a true PrimeVue Dialog for task creation and update flows.
 
-#### Scenario: Page-level new task opens create dialog
-- **GIVEN** visible projects are available
-- **WHEN** the user activates the page-level `+ New task` action
-- **THEN** a task create dialog opens
-- **AND** the dialog requires a project selection
-- **AND** the dialog requires a task title
-- **AND** submitting valid input creates the task in the selected visible project
-
 #### Scenario: Project-level add task opens preselected create dialog
 - **GIVEN** a visible project section is rendered
-- **WHEN** the user activates that section's `+ Add task` action
-- **THEN** the task create dialog opens with that project selected
+- **WHEN** the user activates that section's primary icon-only `Add task` action
+- **THEN** a task create dialog opens with that project selected
 - **AND** submitting valid input creates the task in that project
+- **AND** the dialog submit action copy remains unchanged.
 
-#### Scenario: Edit action opens update dialog
+#### Scenario: Task title opens update dialog
 - **GIVEN** a task row is rendered
-- **WHEN** the user activates the row `Edit` action
+- **WHEN** the user activates the task title
 - **THEN** a task update dialog opens
 - **AND** the dialog pre-fills the task's project, title, and status
 - **AND** the project field is display-only in update mode
-- **AND** saving valid changes updates the task and refreshes the rendered row from the authoritative response
+- **AND** saving valid changes updates the task and refreshes the rendered row from the authoritative response.
 
 #### Scenario: Task dialog validation and request failures are retryable
 - **WHEN** task dialog validation fails or the create/update request fails
 - **THEN** the dialog remains open
 - **AND** the page surfaces the specific validation or request error
-- **AND** the user can correct the input and retry without reopening the dialog
+- **AND** the user can correct the input and retry without reopening the dialog.
 
 ### Requirement: User Projects Task Deletion
 The Projects list page MUST use confirmation before deleting tasks and MUST treat backend delete responses as authoritative.
@@ -156,13 +191,14 @@ User-web Projects task sections SHALL preserve desktop table rendering on tablet
 - **GIVEN** the Projects page has a visible project section with active tasks
 - **WHEN** the project section renders below the mobile breakpoint
 - **THEN** the section renders one stacked card per task instead of the fixed-width desktop task table
-- **AND** each task card shows the task title, status, updated metadata, and icon-only `Edit` and `Delete` actions with accessible labels
-- **AND** the project-level `+ Add task` action remains available in the section header
+- **AND** each task card shows a clickable task title, status, and updated metadata without separate `Edit` or `Delete` actions
+- **AND** the project-level primary icon-only `Add task` action remains available in the section header with explicit tooltip and accessible label copy `Add task`.
 
 #### Scenario: Projects task sections preserve desktop table
 - **GIVEN** the Projects page has a visible project section with active tasks
 - **WHEN** the project section renders at or above the mobile breakpoint
-- **THEN** the section continues to render the existing desktop task table with task, status, updated, and actions columns
+- **THEN** the section continues to render the existing desktop task table with task, status, and updated columns
+- **AND** the project-level primary icon-only `Add task` action remains available in the section header with explicit tooltip and accessible label copy `Add task`.
 
 ### Requirement: User Projects Updated Metadata Uses Browser-Local Timezone
 
