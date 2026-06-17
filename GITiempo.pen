@@ -3390,6 +3390,29 @@
                                   "alignItems": "center",
                                   "children": [
                                     {
+                                      "type": "frame",
+                                      "id": "stopRun1",
+                                      "name": "stopTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "stopRunIcon1",
+                                          "name": "stopTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "square",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
+                                    {
                                       "type": "text",
                                       "id": "jhosY",
                                       "fill": "#5D2B85",

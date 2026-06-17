@@ -193,6 +193,7 @@ Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
 - The row task/title click target should open the same shared dialog in edit mode.
 - Edit mode pre-fills the selected entry's current project, task, `startedAt`, `endedAt`, description, and `isBillable` state.
 - Completed entry rows/cards may render an icon-only `Start timer` action before the task content. This action bypasses the create/edit dialog and starts a fresh running timer for the existing entry's task.
+- The active running entry row/card may render a matching icon-only `Stop timer` action before the task content. This action bypasses the task-picker dialog and stops the current running timer.
 - Required fields follow the time-entry form contract: project, task, `startedAt`, and `endedAt`.
 - Optional fields are description and `isBillable`.
 - Create mode initializes `isBillable` from the selected task's default billable value and still allows a per-entry override before save.

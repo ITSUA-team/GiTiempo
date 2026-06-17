@@ -359,13 +359,14 @@ async function mountView(
         ProgressSpinner: { template: "<div />" },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
-          emits: ["createForDay", "editEntry", "openActiveTimer", "startTimer"],
+          emits: ["createForDay", "editEntry", "openActiveTimer", "startTimer", "stopTimer"],
           props: [
             "formatDuration",
             "formatTimeRange",
             "group",
             "isStartTimerDisabled",
             "startingTimerEntryId",
+            "stoppingTimerEntryId",
           ],
           template: `
             <section>
@@ -393,7 +394,13 @@ async function mountView(
                     type="button"
                     @click="$emit('openActiveTimer')"
                   >Update timer</button>
-                  <p v-if="entry.endedAt === null">Stop from the top bar</p>
+                  <button
+                    v-if="entry.endedAt === null"
+                    :data-testid="'time-entry-stop-timer-' + entry.id"
+                    :disabled="stoppingTimerEntryId !== null && stoppingTimerEntryId !== undefined"
+                    type="button"
+                    @click="!(stoppingTimerEntryId !== null && stoppingTimerEntryId !== undefined) && $emit('stopTimer', entry)"
+                  >Stop timer</button>
                 </div>
               <button data-testid="time-entries-day-create-2026-04-21" type="button" @click="$emit('createForDay', group.dateKey)">Create day</button>
             </section>
@@ -523,7 +530,8 @@ describe("TimeEntriesView", () => {
     const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
     await editButtons[editButtons.length - 1]!.trigger("click");
 
-    expect(wrapper.text()).toContain("Stop from the top bar");
+    expect(wrapper.find(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("Stop from the top bar");
     expect(primeVueMocks.confirmRequire).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
   });
@@ -535,6 +543,53 @@ describe("TimeEntriesView", () => {
     await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
 
     expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
+  it("stops the active timer from a running entry row", async () => {
+    const client = createClientMock();
+    client.stopTimer.mockResolvedValueOnce(createEntry({
+      endedAt: "2026-04-21T11:00:05.000Z",
+      id: TEST_IDS.runningEntry,
+    }));
+
+    const { topBarTimerDialogController, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.stopTimer).toHaveBeenCalledWith();
+    expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Stopped tracking Improve reports filters.",
+        severity: "success",
+        summary: "Timer stopped",
+      }),
+    );
+  });
+
+  it("keeps active timer stop failures retryable with the backend message visible", async () => {
+    const client = createClientMock();
+    client.stopTimer.mockRejectedValueOnce(new Error("Timer is not running"));
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+    await flushPromises();
+
+    expect(client.stopTimer).toHaveBeenCalledWith();
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Timer is not running",
+        severity: "error",
+        summary: "Could not stop timer",
+      }),
+    );
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
   });
 
@@ -761,7 +816,8 @@ describe("TimeEntriesView", () => {
 
     expect(wrapper.text()).toContain("Running");
     expect(wrapper.text()).toContain("02:00:05");
-    expect(wrapper.text()).toContain("Stop from the top bar");
+    expect(wrapper.find(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("Stop from the top bar");
     expect(wrapper.find('[data-testid="time-entry-edit-entry-completed"]').exists()).toBe(false);
 
     reconcileTimeEntryListCaches(queryClient, { userId: null, workspaceId: null }, stoppedEntry);

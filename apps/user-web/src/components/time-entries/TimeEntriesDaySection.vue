@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PlusIcon } from "@heroicons/vue/24/outline";
-import { PlayIcon } from "@heroicons/vue/24/solid";
+import { PlayIcon, StopIcon } from "@heroicons/vue/24/solid";
 import Button from "primevue/button";
 import Column from "primevue/column";
 
@@ -27,6 +27,7 @@ const props = defineProps<{
   isStartTimerDisabled?: boolean;
   showHeader: boolean;
   startingTimerEntryId?: string | null;
+  stoppingTimerEntryId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -34,6 +35,7 @@ const emit = defineEmits<{
   editEntry: [entry: TimeEntryResponse];
   openActiveTimer: [];
   startTimer: [entry: TimeEntryResponse];
+  stopTimer: [entry: TimeEntryResponse];
 }>();
 const isMobileViewport = useIsMobileViewport();
 
@@ -50,6 +52,7 @@ const columns = [
 const startTimerButtonBaseClass = 'h-8 w-12 min-w-0 shrink-0 rounded-[6px] p-0';
 const startTimerButtonDisabledClass =
   `${startTimerButtonBaseClass} border-divider bg-surface-primary text-text-subtle border`;
+const stopTimerButtonBaseClass = 'h-8 w-12 min-w-0 shrink-0 rounded-[6px] p-0';
 
 function getEntryRowClass(entry: TimeEntryResponse): string {
   return entry.endedAt === null ? "bg-accent-tint" : "bg-surface-primary hover:bg-app-bg";
@@ -74,13 +77,25 @@ function getStartTimerLabel(entry: TimeEntryResponse): string {
   return `Start timer for ${entry.task.title}`;
 }
 
+function getStopTimerLabel(entry: TimeEntryResponse): string {
+  return `Stop timer for ${entry.task.title}`;
+}
+
 function isStartTimerPending(entry: TimeEntryResponse): boolean {
   return props.startingTimerEntryId === entry.id;
+}
+
+function isStopTimerPending(entry: TimeEntryResponse): boolean {
+  return props.stoppingTimerEntryId === entry.id;
 }
 
 function isDirectStartDisabled(): boolean {
   return props.isStartTimerDisabled === true ||
     (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined);
+}
+
+function isStopTimerDisabled(): boolean {
+  return props.stoppingTimerEntryId !== null && props.stoppingTimerEntryId !== undefined;
 }
 
 function getStartTimerButtonRootClass(): string {
@@ -95,6 +110,14 @@ function getStartTimerIconClass(): string {
 
 function getStartTimerTooltip(entry: TimeEntryResponse): string | undefined {
   return isDirectStartDisabled() ? undefined : getStartTimerLabel(entry);
+}
+
+function handleStopTimer(entry: TimeEntryResponse): void {
+  if (entry.endedAt !== null || isStopTimerDisabled()) {
+    return;
+  }
+
+  emit("stopTimer", entry);
 }
 
 function handleEntryTaskOpen(entry: TimeEntryResponse): void {
@@ -162,6 +185,26 @@ function handleStartTimer(entry: TimeEntryResponse): void {
               />
             </span>
           </Button>
+          <Button
+            v-else
+            v-tooltip.bottom="getStopTimerLabel(entry)"
+            :aria-label="getStopTimerLabel(entry)"
+            :data-testid="`time-entry-mobile-stop-timer-${entry.id}`"
+            :disabled="isStopTimerDisabled()"
+            :loading="isStopTimerPending(entry)"
+            type="button"
+            :pt="{
+              root: { class: stopTimerButtonBaseClass },
+            }"
+            @click="handleStopTimer(entry)"
+          >
+            <span data-icon="stop">
+              <StopIcon
+                aria-hidden="true"
+                class="text-text-inverse size-5"
+              />
+            </span>
+          </Button>
 
           <div class="flex min-w-0 flex-col gap-1">
             <div class="flex max-w-full min-w-0 items-center gap-1">
@@ -208,13 +251,6 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             </span>
           </div>
         </div>
-
-        <p
-          v-if="entry.endedAt === null"
-          class="text-text-muted text-xs"
-        >
-          Stop from the top bar
-        </p>
       </MobileRecordCard>
     </div>
 
@@ -257,6 +293,26 @@ function handleStartTimer(entry: TimeEntryResponse): void {
                 />
               </span>
             </Button>
+            <Button
+              v-else
+              v-tooltip.bottom="getStopTimerLabel(entry)"
+              :aria-label="getStopTimerLabel(entry)"
+              :data-testid="`time-entry-stop-timer-${entry.id}`"
+              :disabled="isStopTimerDisabled()"
+              :loading="isStopTimerPending(entry)"
+              type="button"
+              :pt="{
+                root: { class: stopTimerButtonBaseClass },
+              }"
+              @click="handleStopTimer(entry)"
+            >
+              <span data-icon="stop">
+                <StopIcon
+                  aria-hidden="true"
+                  class="text-text-inverse size-5"
+                />
+              </span>
+            </Button>
 
             <div class="flex min-w-0 flex-col">
               <div class="flex max-w-full min-w-0 items-center gap-1">
@@ -277,12 +333,6 @@ function handleStartTimer(entry: TimeEntryResponse): void {
                 class="text-text-muted truncate text-xs"
               >
                 {{ entry.description }}
-              </p>
-              <p
-                v-if="entry.endedAt === null"
-                class="text-text-muted text-xs"
-              >
-                Stop from the top bar
               </p>
             </div>
           </div>

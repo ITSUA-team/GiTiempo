@@ -117,11 +117,14 @@ describe('TimeEntriesDaySection', () => {
     expect(editButton.text()).toContain('Improve reports filters');
     expect(editButton.classes()).toContain('text-brand');
     expect(editButton.find('svg').exists()).toBe(false);
-    expect(wrapper.text()).toContain('Stop from the top bar');
+    expect(wrapper.text()).not.toContain('Stop from the top bar');
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
     expect(runningTimerButton.element.tagName).toBe('BUTTON');
     expect(runningTimerButton.attributes('aria-label')).toBe('Update active timer for Improve reports filters');
     expect(wrapper.find('[data-testid="time-entry-start-timer-entry-running"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="time-entry-stop-timer-entry-running"]').attributes('aria-label')).toBe(
+      'Stop timer for Improve reports filters',
+    );
     expect(wrapper.get('[data-testid="time-entry-github-entry-running"]').attributes()).toMatchObject({
       href: 'https://github.com/octo/repo/issues/42',
       target: '_blank',
@@ -137,7 +140,24 @@ describe('TimeEntriesDaySection', () => {
     expect(wrapper.emitted('startTimer')).toBeUndefined();
     expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
     expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
+    expect(wrapper.emitted('stopTimer')).toBeUndefined();
     expect(wrapper.emitted('deleteEntry')).toBeUndefined();
+  });
+
+  it('stops the active timer from desktop rows', async () => {
+    const wrapper = mountSection();
+    const stopTimerButton = wrapper.get('[data-testid="time-entry-stop-timer-entry-running"]');
+
+    expect(stopTimerButton.attributes('aria-label')).toBe('Stop timer for Improve reports filters');
+    expect(stopTimerButton.attributes('data-tooltip-value')).toBe('Stop timer for Improve reports filters');
+    expect(stopTimerButton.find('[data-icon="stop"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entry-stop-timer-entry-completed"]').exists()).toBe(false);
+
+    await stopTimerButton.trigger('click');
+
+    expect(wrapper.emitted('stopTimer')?.[0]?.[0]).toMatchObject({ id: 'entry-running' });
+    expect(wrapper.emitted('startTimer')).toBeUndefined();
+    expect(wrapper.emitted('openActiveTimer')).toBeUndefined();
   });
 
   it('starts a fresh timer from completed desktop rows', async () => {
@@ -170,7 +190,7 @@ describe('TimeEntriesDaySection', () => {
     expect(mobileCards[0]?.text()).toContain('Project Orion');
     expect(mobileCards[0]?.text()).toContain('09:00 - Running');
     expect(mobileCards[0]?.text()).toContain('00:45:00');
-    expect(mobileCards[0]?.text()).toContain('Stop from the top bar');
+    expect(mobileCards[0]?.text()).not.toContain('Stop from the top bar');
     expect(mobileCards[1]?.text()).toContain('Improve reports filters');
     expect(mobileCards[1]?.text()).toContain('Updated note');
     expect(mobileCards[1]?.text()).toContain('Project Orion');
@@ -178,6 +198,9 @@ describe('TimeEntriesDaySection', () => {
     expect(mobileCards[1]?.text()).toContain('1h 30m');
     expect(wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').element.tagName).toBe('BUTTON');
     expect(wrapper.find('[data-testid="time-entry-mobile-start-timer-entry-running"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="time-entry-mobile-stop-timer-entry-running"]').attributes('aria-label')).toBe(
+      'Stop timer for Improve reports filters',
+    );
     expect(wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]').attributes('aria-label')).toBe(
       'Start timer for Improve reports filters',
     );
@@ -189,10 +212,12 @@ describe('TimeEntriesDaySection', () => {
     );
     expect(wrapper.find('[data-testid="time-entry-mobile-delete-entry-completed"]').exists()).toBe(false);
 
+    await wrapper.get('[data-testid="time-entry-mobile-stop-timer-entry-running"]').trigger('click');
     await wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]').trigger('click');
     await wrapper.get('[data-testid="time-entry-mobile-open-timer-entry-running"]').trigger('click');
     await wrapper.get('[data-testid="time-entry-mobile-edit-entry-completed"]').trigger('click');
 
+    expect(wrapper.emitted('stopTimer')?.[0]?.[0]).toMatchObject({ id: 'entry-running' });
     expect(wrapper.emitted('startTimer')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
     expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
     expect(wrapper.emitted('editEntry')?.[0]?.[0]).toMatchObject({ id: 'entry-completed' });
@@ -204,6 +229,17 @@ describe('TimeEntriesDaySection', () => {
     const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
 
     expect(startTimerButton.attributes('disabled')).toBeDefined();
+  });
+
+  it('disables active timer stops while a stop request is pending', async () => {
+    const wrapper = mountSection({ stoppingTimerEntryId: 'entry-running' });
+    const stopTimerButton = wrapper.get('[data-testid="time-entry-stop-timer-entry-running"]');
+
+    expect(stopTimerButton.attributes('disabled')).toBeDefined();
+
+    await stopTimerButton.trigger('click');
+
+    expect(wrapper.emitted('stopTimer')).toBeUndefined();
   });
 
   it('disables direct timer starts when the parent reports an active timer', async () => {
@@ -249,6 +285,6 @@ describe('TimeEntriesDaySection', () => {
     expect(wrapper.text()).toContain('Time');
     expect(wrapper.text()).toContain('Duration');
     expect(wrapper.text()).not.toContain('Actions');
-    expect(wrapper.text()).toContain('Stop from the top bar');
+    expect(wrapper.text()).not.toContain('Stop from the top bar');
   });
 });

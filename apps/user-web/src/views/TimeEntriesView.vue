@@ -24,7 +24,11 @@ import {
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
-import { useCurrentTimerQuery, useStartTimerMutation } from "@/composables/query";
+import {
+  useCurrentTimerQuery,
+  useStartTimerMutation,
+  useStopTimerMutation,
+} from "@/composables/query";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
@@ -87,6 +91,11 @@ const currentTimerGuardQuery = useCurrentTimerQuery({
   scope,
 });
 const startTimerMutation = useStartTimerMutation({
+  accessToken,
+  client,
+  scope,
+});
+const stopTimerMutation = useStopTimerMutation({
   accessToken,
   client,
   scope,
@@ -157,6 +166,7 @@ const filterAutoCompletePt = {
 } as const;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
 const startingTimerEntryId = shallowRef<string | null>(null);
+const stoppingTimerEntryId = shallowRef<string | null>(null);
 const isDirectStartBlockedByCurrentTimer = computed(() =>
   currentTimerGuardQuery.isFetching.value ||
   currentTimerGuardQuery.data.value?.timeEntry?.endedAt === null,
@@ -376,6 +386,33 @@ async function startTimerForEntry(entry: TimeEntryResponse): Promise<void> {
   }
 }
 
+async function stopTimerForEntry(entry: TimeEntryResponse): Promise<void> {
+  if (entry.endedAt !== null || stoppingTimerEntryId.value !== null) {
+    return;
+  }
+
+  stoppingTimerEntryId.value = entry.id;
+
+  try {
+    await stopTimerMutation.mutateAsync();
+    appToast.showSuccessToast(
+      "Timer stopped",
+      `Stopped tracking ${entry.task.title}.`,
+    );
+  } catch (error) {
+    appToast.showErrorToast({
+      detail: getErrorMessage(error),
+      error,
+      logContext: { action: "stop-timer-from-entry", feature: "time-entries" },
+      summary: "Could not stop timer",
+    });
+
+    await queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) });
+  } finally {
+    stoppingTimerEntryId.value = null;
+  }
+}
+
 async function retryLoadEntries(): Promise<void> {
   await data.loadEntries();
 }
@@ -541,10 +578,12 @@ onBeforeUnmount(() => {
         :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
         :show-header="groupIndex === 0"
         :starting-timer-entry-id="startingTimerEntryId"
+        :stopping-timer-entry-id="stoppingTimerEntryId"
         @create-for-day="(day) => void openCreateDialog(day)"
         @edit-entry="(entry) => void openEditDialog(entry)"
         @open-active-timer="openActiveTimerDialog"
         @start-timer="(entry) => void startTimerForEntry(entry)"
+        @stop-timer="(entry) => void stopTimerForEntry(entry)"
       />
 
       <SurfaceCard
