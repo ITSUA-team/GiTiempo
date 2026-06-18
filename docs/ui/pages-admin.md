@@ -71,13 +71,8 @@
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
 - Below the workspace settings form, render a second desktop card at the same `max-width: 620px` for `GitHub Workspace Access`.
-- The GitHub card title is `GitHub Workspace Access` with helper copy explaining that workspace members only see repositories, projects, and issues that overlap with both the workspace policy and their own GitHub access.
-- Show a visible policy-state badge in the card header. The approved state uses `Policy enabled`.
-- Include a non-destructive note block that states this is a workspace policy filter only: it does not grant GitHub access, install the GitHub App, or expose token material to the frontend.
-- The card includes an `Allowed organizations` section with one row per saved GitHub organization login. Each row shows the organization login, validation detail copy, a status badge, and a `Remove` action.
-- Supported row statuses for the approved design are `Validated`, `Needs app access`, and `Validation failed`.
-- `Needs app access` means the organization login is valid for the requesting admin account, but some private organization resources may still require GitHub-side GitHub App approval or installation before GiTiempo can read them.
-- `Validation failed` is a blocking validation state for that row and should not be represented as a successful saved policy entry.
+- The GitHub card title is `GitHub Workspace Access` with helper copy explaining that admins choose which GitHub organizations the workspace can use, while members still only see data their connected GitHub account can access.
+- The card includes an `Allowed organizations` section with one row per saved GitHub organization login. Each row shows the organization login, helper copy `Allowed for this workspace`, and a `Remove` action.
 - The card also includes an `Add organization` section with an `Organization login` text field and a primary `Add organization` action.
 - Organization validation is performed through the requesting admin's connected GitHub account before the organization is saved to the workspace policy.
 - This policy filters which GitHub organizations can appear in GiTiempo workspace flows; it does not broaden any member's underlying GitHub permissions.
