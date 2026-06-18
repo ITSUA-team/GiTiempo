@@ -396,7 +396,7 @@ describe('AddProjectView', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('Checking GitHub connection...');
-    expect(wrapper.find('input[name="name"]').exists()).toBe(false);
+    expect(wrapper.find('input[name="name"]').exists()).toBe(true);
 
     connectionRequest.resolve(connectedGitHubStatus);
     await flushPromises();
@@ -427,7 +427,7 @@ describe('AddProjectView', () => {
     expect(wrapper.text()).toContain('Octo Org (organization)');
     expect(wrapper.text()).toContain('ITSUA (organization)');
     expect(wrapper.text()).not.toContain('octocat (personal)');
-    expect(wrapper.find('input[name="name"]').exists()).toBe(false);
+    expect(wrapper.find('input[name="name"]').exists()).toBe(true);
     expect(wrapper.text()).toContain('Project manager');
     expect(wrapper.text()).toContain('Visibility');
     expect(wrapper.text()).toContain('Default billable for new tasks');
@@ -451,14 +451,19 @@ describe('AddProjectView', () => {
 
     expect(wrapper.text()).toContain('Selected GitHub repository: octo-org/repo');
     expect(wrapper.text()).toContain('GitHub repository');
+    expect((wrapper.get('input[name="name"]').element as HTMLInputElement).value).toBe(
+      'octo-org/repo',
+    );
     expect(testMocks.createProject).not.toHaveBeenCalled();
+
+    await wrapper.get('input[name="name"]').setValue('Edited local project name');
 
     await wrapper.get('[data-testid="submit-project-form"]').trigger('click');
     await flushPromises();
 
     expect(testMocks.createProject).toHaveBeenCalledWith({
       defaultBillableForTasks: false,
-      name: 'octo-org/repo',
+      name: 'Edited local project name',
       providerReference: expect.objectContaining({
         externalKey: 'octo-org/repo',
         externalType: 'repository',
@@ -529,7 +534,10 @@ describe('AddProjectView', () => {
     await wrapper.get('[data-testid="github-project-v2-option-0"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.find('input[name="name"]').exists()).toBe(false);
+    expect(wrapper.find('input[name="name"]').exists()).toBe(true);
+    expect((wrapper.get('input[name="name"]').element as HTMLInputElement).value).toBe(
+      'Roadmap',
+    );
     expect(wrapper.text()).toContain('Selected GitHub Project V2: Roadmap');
     expect(testMocks.createProject).not.toHaveBeenCalled();
 

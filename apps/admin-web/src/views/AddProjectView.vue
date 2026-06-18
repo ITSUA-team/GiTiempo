@@ -260,9 +260,7 @@ async function handleSubmit({
   isSubmitting.value = true;
 
   try {
-    const rawName = isGitHubMode.value
-      ? selectedCandidateLabel.value ?? projectName.value
-      : name || projectName.value;
+    const rawName = name || projectName.value;
     const trimmedName = rawName.trim();
     if (!trimmedName) {
       throw new Error('Project name is required');
@@ -590,10 +588,7 @@ onMounted(() => {
           @submit="handleSubmit"
         >
           <div class="flex flex-col gap-2.5">
-            <div
-              v-if="!isGitHubMode"
-              class="flex flex-col gap-1.5"
-            >
+            <div class="flex flex-col gap-1.5">
               <label
                 for="project-name"
                 class="text-text-dark text-[13px] font-medium"
