@@ -553,10 +553,8 @@ function handleGitHubIssueComplete(event: { query: string }): void {
 
 function handleGitHubOwnerUpdate(value: AutoCompleteValue<GitHubOwner>): void {
   if (!isGitHubOwner(value)) {
-    if (value === null || value === "") {
-      selectedGitHubOwner.value = null;
-      clearGitHubScopes();
-    }
+    selectedGitHubOwner.value = null;
+    clearGitHubScopes();
     return;
   }
 
@@ -568,10 +566,8 @@ function handleGitHubRepositoryUpdate(
   value: AutoCompleteValue<GitHubRepository>,
 ): void {
   if (!isGitHubRepository(value)) {
-    if (value === null || value === "") {
-      selectedGitHubRepository.value = null;
-      clearGitHubIssues();
-    }
+    selectedGitHubRepository.value = null;
+    clearGitHubIssues();
     return;
   }
 
@@ -583,10 +579,8 @@ function handleGitHubRepositoryUpdate(
 
 function handleGitHubProjectUpdate(value: AutoCompleteValue<GitHubProject>): void {
   if (!isGitHubProject(value)) {
-    if (value === null || value === "") {
-      selectedGitHubProject.value = null;
-      clearGitHubIssues();
-    }
+    selectedGitHubProject.value = null;
+    clearGitHubIssues();
     return;
   }
 
@@ -600,7 +594,7 @@ function handleGitHubIssueUpdate(
   value: AutoCompleteValue<GitHubIssueCandidate>,
 ): void {
   if (!isGitHubIssueCandidate(value)) {
-    if (value === null || value === "") clearGitHubIssueSelection();
+    clearGitHubIssueSelection();
     return;
   }
 

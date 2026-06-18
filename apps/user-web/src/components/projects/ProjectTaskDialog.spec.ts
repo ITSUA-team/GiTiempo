@@ -417,6 +417,44 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.emitted("update:title")?.at(-1)).toEqual(["Manual follow-up"]);
   });
 
+  it("clears GitHub metadata when the issue candidate field receives raw text", async () => {
+    githubMocks.getConnectionStatus.mockResolvedValue(connectedGitHubStatus);
+    const wrapper = mountDialog({ projectId: "project-1" });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-repository-option-repo-1"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-issue-option-issue-1"]').trigger("click");
+
+    expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([
+      expect.objectContaining({ externalKey: "octo-org/repo#42" }),
+    ]);
+
+    await wrapper.get('[data-testid="project-task-github-issue"] input').setValue("Manual follow-up");
+
+    expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([null]);
+    expect(wrapper.find('[data-testid="github-task-selected-source"]').exists()).toBe(false);
+  });
+
+  it("clears GitHub issue metadata when a selected scope field receives raw text", async () => {
+    githubMocks.getConnectionStatus.mockResolvedValue(connectedGitHubStatus);
+    const wrapper = mountDialog({ projectId: "project-1" });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-repository-option-repo-1"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-issue-option-issue-1"]').trigger("click");
+
+    expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([
+      expect.objectContaining({ externalKey: "octo-org/repo#42" }),
+    ]);
+
+    await wrapper.get('[data-testid="project-task-github-repository"] input').setValue("octo-org/other");
+
+    expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([null]);
+    expect(wrapper.find('[data-testid="github-task-selected-source"]').exists()).toBe(false);
+  });
+
   it("keeps manual creation available when GitHub is disconnected", async () => {
     const wrapper = mountDialog();
 

@@ -516,7 +516,7 @@ export function useAdminGitHubProjectCandidates(
     value: AutoCompleteValue<GitHubRepository>,
   ): string | null {
     if (!isRepository(value)) {
-      if (value === null || value === '') selectedRepository.value = null;
+      clearSelection();
       return null;
     }
 
@@ -528,7 +528,7 @@ export function useAdminGitHubProjectCandidates(
 
   function selectProject(value: AutoCompleteValue<GitHubProject>): string | null {
     if (!isProject(value)) {
-      if (value === null || value === '') selectedProject.value = null;
+      clearSelection();
       return null;
     }
 

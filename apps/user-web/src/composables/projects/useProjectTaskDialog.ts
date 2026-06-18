@@ -113,6 +113,9 @@ export function useProjectTaskDialog() {
 
   function setDialogTaskTitle(value: string): void {
     dialogTaskTitle.value = value;
+    if (dialogMode.value === "create") {
+      dialogProviderReference.value = null;
+    }
     dialogErrors.value.title = null;
     dialogRequestErrorMessage.value = null;
   }

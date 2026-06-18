@@ -510,6 +510,31 @@ describe("ProjectView", () => {
     });
   });
 
+  it("drops GitHub provider metadata when the task title changes manually", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject("project-1", "Project Orion", true, false),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      createTask("task-new", "project-1", "Write release checklist"),
+    ]);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-github-issue-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-title-input"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith("project-1", {
+      defaultBillableForTimeEntries: false,
+      title: "Write release checklist",
+    });
+  });
+
   it("updates existing entries only after an edited task default changes and the follow-up is submitted", async () => {
     const client = createClientMock();
 

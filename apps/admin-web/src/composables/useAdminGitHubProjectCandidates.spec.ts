@@ -285,4 +285,30 @@ describe('useAdminGitHubProjectCandidates', () => {
 
     expect(state.projectSuggestions.value).toEqual([project, secondProject]);
   });
+
+  it('clears selected provider references when candidate fields receive raw text', async () => {
+    const { state } = createCandidates();
+
+    await state.loadOwners('octocat');
+
+    state.selectRepository(repository);
+    expect(state.providerReference.value).toEqual(
+      expect.objectContaining({ externalKey: 'octo-org/repo' }),
+    );
+
+    state.selectRepository('octo-org/edited');
+    expect(state.selectedRepository.value).toBeNull();
+    expect(state.selectedCandidateLabel.value).toBeNull();
+    expect(state.providerReference.value).toBeUndefined();
+
+    state.selectProject(project);
+    expect(state.providerReference.value).toEqual(
+      expect.objectContaining({ externalKey: 'PVT_kwDO' }),
+    );
+
+    state.selectProject('Roadmap edited');
+    expect(state.selectedProject.value).toBeNull();
+    expect(state.selectedCandidateLabel.value).toBeNull();
+    expect(state.providerReference.value).toBeUndefined();
+  });
 });
