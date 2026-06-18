@@ -146,13 +146,11 @@ function getInitialOwner(
   items: GitHubOwner[],
   preferredLogin?: string | null,
 ): GitHubOwner | null {
-  const preferredOrganization = items.find(
-    (owner) => owner.type === 'organization' && owner.login === preferredLogin,
-  );
-  const firstOrganization = items.find((owner) => owner.type === 'organization');
   const preferredOwner = items.find((owner) => owner.login === preferredLogin);
+  const firstPersonal = items.find((owner) => owner.type === 'personal');
+  const firstOrganization = items.find((owner) => owner.type === 'organization');
 
-  return preferredOrganization ?? firstOrganization ?? preferredOwner ?? items[0] ?? null;
+  return preferredOwner ?? firstPersonal ?? firstOrganization ?? items[0] ?? null;
 }
 
 function createRepositoryReference(

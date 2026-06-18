@@ -85,7 +85,7 @@ const connectedGitHubStatus = {
     avatarUrl: 'https://avatars.example.test/octo.png',
     connectedAt: '2026-05-01T10:00:00.000Z',
     githubUserId: '123456',
-    login: 'octo-org',
+    login: 'octocat',
     updatedAt: '2026-05-01T10:00:00.000Z',
   },
   status: 'connected' as const,
@@ -96,7 +96,15 @@ const disconnectedGitHubStatus = {
   status: 'disconnected' as const,
 };
 
-const githubOwner = {
+const githubPersonalOwner = {
+  avatarUrl: null,
+  label: 'octocat',
+  login: 'octocat',
+  type: 'personal' as const,
+  url: 'https://github.com/octocat',
+};
+
+const githubOrganizationOwner = {
   avatarUrl: null,
   label: 'Octo Org',
   login: 'octo-org',
@@ -106,14 +114,14 @@ const githubOwner = {
 
 const githubRepository = {
   description: 'Repository project',
-  fullName: 'octo-org/repo',
+  fullName: 'octocat/repo',
   id: '123',
   isArchived: false,
   name: 'repo',
   nodeId: 'R_kwDO',
-  owner: 'octo-org',
+  owner: 'octocat',
   updatedAt: '2026-05-02T10:00:00.000Z',
-  url: 'https://github.com/octo-org/repo',
+  url: 'https://github.com/octocat/repo',
   visibility: 'private' as const,
 };
 
@@ -121,11 +129,11 @@ const githubProject = {
   description: null,
   id: 'PVT_kwDO',
   number: 7,
-  owner: 'octo-org',
+  owner: 'octocat',
   state: 'open' as const,
   title: 'Roadmap',
   updatedAt: '2026-05-03T10:00:00.000Z',
-  url: 'https://github.com/orgs/octo-org/projects/7',
+  url: 'https://github.com/users/octocat/projects/7',
 };
 
 function createDeferred<T>() {
@@ -319,7 +327,9 @@ describe('AddProjectView', () => {
         workspaceId: 'workspace-1',
       },
     ]);
-    testMocks.listOwners.mockResolvedValue({ items: [githubOwner] });
+    testMocks.listOwners.mockResolvedValue({
+      items: [githubPersonalOwner, githubOrganizationOwner],
+    });
     testMocks.listRepositories.mockResolvedValue({
       items: [githubRepository],
       pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
@@ -391,14 +401,14 @@ describe('AddProjectView', () => {
     expect(testMocks.listOwners).toHaveBeenCalledWith({ type: 'all' });
     expect(testMocks.listRepositories).toHaveBeenCalledWith({
       limit: 100,
-      owner: 'octo-org',
-      ownerType: 'organization',
+      ownerType: 'personal',
     });
     expect(testMocks.listProjects).toHaveBeenCalledWith({
       limit: 100,
-      owner: 'octo-org',
-      ownerType: 'organization',
+      ownerType: 'personal',
     });
+    expect(wrapper.text()).toContain('octocat (personal)');
+    expect(wrapper.text()).toContain('Octo Org (organization)');
     expect(wrapper.find('input[name="name"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('Project manager');
     expect(wrapper.text()).not.toContain('Default billable for new tasks');
@@ -406,7 +416,7 @@ describe('AddProjectView', () => {
     await wrapper.get('[data-testid="github-repository-option-0"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.text()).toContain('Selected GitHub repository: octo-org/repo');
+    expect(wrapper.text()).toContain('Selected GitHub repository: octocat/repo');
     expect(wrapper.text()).toContain('GitHub repository');
     expect(testMocks.createProject).not.toHaveBeenCalled();
 
@@ -415,11 +425,11 @@ describe('AddProjectView', () => {
 
     expect(testMocks.createProject).toHaveBeenCalledWith({
       defaultBillableForTasks: false,
-      name: 'octo-org/repo',
+      name: 'octocat/repo',
       providerReference: expect.objectContaining({
-        externalKey: 'octo-org/repo',
+        externalKey: 'octocat/repo',
         externalType: 'repository',
-        externalUrl: 'https://github.com/octo-org/repo',
+        externalUrl: 'https://github.com/octocat/repo',
         provider: 'github',
       }),
       visibility: 'private',
@@ -505,7 +515,9 @@ describe('AddProjectView', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('Repositories unavailable');
-    expect(wrapper.text()).toContain('No Projects V2 are available for this owner.');
+    expect(wrapper.text()).toContain(
+      'No Projects V2 are available for this owner.',
+    );
     expect(testMocks.errorToast).toHaveBeenCalledWith(
       'Repositories unavailable',
       expect.objectContaining({

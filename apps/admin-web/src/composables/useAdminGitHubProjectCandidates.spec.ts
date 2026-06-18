@@ -104,35 +104,51 @@ function createCandidates(
 }
 
 describe('useAdminGitHubProjectCandidates', () => {
-  it('prefers an organization owner when connected GitHub owners include one', async () => {
+  it('defaults to the connected personal owner while keeping organizations reachable', async () => {
     const { browsingClient, state } = createCandidates();
 
     await state.loadConnectionStatus();
 
-    expect(state.selectedOwner.value).toEqual(organizationOwner);
+    expect(browsingClient.listOwners).toHaveBeenCalledWith({
+      type: 'all',
+    });
+    expect(state.owners.value).toEqual([personalOwner, organizationOwner]);
+    expect(state.ownerSuggestions.value).toEqual([personalOwner, organizationOwner]);
+    expect(state.selectedOwner.value).toEqual(personalOwner);
     expect(browsingClient.listRepositories).toHaveBeenCalledWith({
       limit: 100,
-      owner: 'octo-org',
-      ownerType: 'organization',
+      ownerType: 'personal',
     });
     expect(browsingClient.listProjects).toHaveBeenCalledWith({
       limit: 100,
-      owner: 'octo-org',
-      ownerType: 'organization',
+      ownerType: 'personal',
     });
   });
 
-  it('keeps all owners reachable when completing a selected personal owner label', async () => {
-    const { state } = createCandidates();
+  it('loads organization candidates when an organization owner is selected', async () => {
+    const { browsingClient, state } = createCandidates();
 
     await state.loadOwners('octocat');
-    await state.selectOwner(personalOwner);
-    state.completeOwners({ query: 'octocat (personal)' });
+    state.completeOwners({ query: '' });
 
     expect(state.ownerSuggestions.value).toEqual([
       personalOwner,
       organizationOwner,
     ]);
+
+    await state.selectOwner(organizationOwner);
+
+    expect(state.selectedOwner.value).toEqual(organizationOwner);
+    expect(browsingClient.listRepositories).toHaveBeenLastCalledWith({
+      limit: 100,
+      owner: 'octo-org',
+      ownerType: 'organization',
+    });
+    expect(browsingClient.listProjects).toHaveBeenLastCalledWith({
+      limit: 100,
+      owner: 'octo-org',
+      ownerType: 'organization',
+    });
   });
 
   it('shows all GitHub options for empty autocomplete queries', async () => {

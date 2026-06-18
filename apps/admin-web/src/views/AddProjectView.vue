@@ -340,7 +340,8 @@ onMounted(() => {
                 GitHub project source
               </h3>
               <p class="text-text-muted text-[13px] font-normal">
-                Browse connected repositories or Projects V2 sources.
+                Browse the connected user and organization repositories or
+                Projects V2 sources.
               </p>
             </div>
             <Button
