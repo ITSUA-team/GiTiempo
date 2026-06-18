@@ -170,6 +170,10 @@ const selectedGitHubIssueSource = computed(() => {
     ? "GitHub Project V2 issue"
     : "GitHub repository issue";
 });
+let githubConnectionRequestId = 0;
+let githubOwnersRequestId = 0;
+let githubScopesRequestId = 0;
+let githubIssuesRequestId = 0;
 
 const hasGitHubIssueScope = computed(
   () => selectedGitHubRepository.value !== null || selectedGitHubProject.value !== null,
@@ -270,30 +274,38 @@ function clearGitHubIssueSelection(): void {
 }
 
 function clearGitHubIssues(): void {
+  githubIssuesRequestId += 1;
   githubIssueCandidates.value = [];
   githubIssueSuggestions.value = [];
+  githubIssuesLoading.value = false;
   githubIssuesError.value = null;
   clearGitHubIssueSelection();
 }
 
 function clearGitHubScopes(): void {
+  githubScopesRequestId += 1;
   githubRepositories.value = [];
   githubRepositorySuggestions.value = [];
   selectedGitHubRepository.value = null;
+  githubRepositoriesLoading.value = false;
   githubRepositoriesError.value = null;
   githubProjects.value = [];
   githubProjectSuggestions.value = [];
   selectedGitHubProject.value = null;
+  githubProjectsLoading.value = false;
   githubProjectsError.value = null;
   clearGitHubIssues();
 }
 
 function resetGitHubTaskCandidates(): void {
+  githubConnectionRequestId += 1;
+  githubOwnersRequestId += 1;
   githubConnectionState.value = "idle";
   githubConnectionError.value = null;
   githubOwners.value = [];
   githubOwnerSuggestions.value = [];
   selectedGitHubOwner.value = null;
+  githubOwnersLoading.value = false;
   githubOwnersError.value = null;
   clearGitHubScopes();
 }
@@ -355,19 +367,26 @@ function createIssueProviderReference(
   };
 }
 
-async function loadGitHubRepositories(): Promise<void> {
-  if (!selectedGitHubOwner.value) return;
+async function loadGitHubRepositories(
+  owner: GitHubOwner,
+  requestId: number,
+): Promise<void> {
+  if (requestId !== githubScopesRequestId) return;
 
   githubRepositoriesLoading.value = true;
   githubRepositoriesError.value = null;
 
   try {
     const response = await githubBrowsingClient.listRepositories(
-      getOwnerScopedQuery(selectedGitHubOwner.value),
+      getOwnerScopedQuery(owner),
     );
+    if (requestId !== githubScopesRequestId) return;
+
     githubRepositories.value = response.items;
     githubRepositorySuggestions.value = response.items;
   } catch (error) {
+    if (requestId !== githubScopesRequestId) return;
+
     githubRepositories.value = [];
     githubRepositorySuggestions.value = [];
     githubRepositoriesError.value = emitGitHubLoadError(
@@ -375,23 +394,32 @@ async function loadGitHubRepositories(): Promise<void> {
       "Failed to load GitHub repositories",
     );
   } finally {
-    githubRepositoriesLoading.value = false;
+    if (requestId === githubScopesRequestId) {
+      githubRepositoriesLoading.value = false;
+    }
   }
 }
 
-async function loadGitHubProjects(): Promise<void> {
-  if (!selectedGitHubOwner.value) return;
+async function loadGitHubProjects(
+  owner: GitHubOwner,
+  requestId: number,
+): Promise<void> {
+  if (requestId !== githubScopesRequestId) return;
 
   githubProjectsLoading.value = true;
   githubProjectsError.value = null;
 
   try {
     const response = await githubBrowsingClient.listProjects(
-      getOwnerScopedQuery(selectedGitHubOwner.value),
+      getOwnerScopedQuery(owner),
     );
+    if (requestId !== githubScopesRequestId) return;
+
     githubProjects.value = response.items;
     githubProjectSuggestions.value = response.items;
   } catch (error) {
+    if (requestId !== githubScopesRequestId) return;
+
     githubProjects.value = [];
     githubProjectSuggestions.value = [];
     githubProjectsError.value = emitGitHubLoadError(
@@ -399,24 +427,36 @@ async function loadGitHubProjects(): Promise<void> {
       "Failed to load GitHub Projects",
     );
   } finally {
-    githubProjectsLoading.value = false;
+    if (requestId === githubScopesRequestId) {
+      githubProjectsLoading.value = false;
+    }
   }
 }
 
 async function loadGitHubScopes(): Promise<void> {
   clearGitHubScopes();
 
-  if (!selectedGitHubOwner.value) return;
+  const owner = selectedGitHubOwner.value;
+  if (!owner) return;
 
-  await Promise.all([loadGitHubRepositories(), loadGitHubProjects()]);
+  const requestId = ++githubScopesRequestId;
+
+  await Promise.all([
+    loadGitHubRepositories(owner, requestId),
+    loadGitHubProjects(owner, requestId),
+  ]);
 }
 
 async function loadGitHubOwners(preferredLogin?: string | null): Promise<void> {
+  const requestId = ++githubOwnersRequestId;
+
   githubOwnersLoading.value = true;
   githubOwnersError.value = null;
 
   try {
     const response = await githubBrowsingClient.listOwners({ type: "all" });
+    if (requestId !== githubOwnersRequestId) return;
+
     githubOwners.value = response.items;
     githubOwnerSuggestions.value = response.items;
     selectedGitHubOwner.value =
@@ -425,6 +465,8 @@ async function loadGitHubOwners(preferredLogin?: string | null): Promise<void> {
       null;
     await loadGitHubScopes();
   } catch (error) {
+    if (requestId !== githubOwnersRequestId) return;
+
     githubOwners.value = [];
     githubOwnerSuggestions.value = [];
     selectedGitHubOwner.value = null;
@@ -434,17 +476,24 @@ async function loadGitHubOwners(preferredLogin?: string | null): Promise<void> {
       "Failed to load GitHub owners",
     );
   } finally {
-    githubOwnersLoading.value = false;
+    if (requestId === githubOwnersRequestId) {
+      githubOwnersLoading.value = false;
+    }
   }
 }
 
 async function loadGitHubConnectionStatus(): Promise<void> {
+  const requestId = ++githubConnectionRequestId;
+
+  githubOwnersRequestId += 1;
   githubConnectionState.value = "loading";
   githubConnectionError.value = null;
+  githubOwnersLoading.value = false;
   clearGitHubScopes();
 
   try {
     const response = await profileGitHubClient.getConnectionStatus();
+    if (requestId !== githubConnectionRequestId) return;
 
     if (response.status === "disconnected") {
       githubConnectionState.value = "disconnected";
@@ -454,6 +503,8 @@ async function loadGitHubConnectionStatus(): Promise<void> {
     githubConnectionState.value = "connected";
     await loadGitHubOwners(response.account.login);
   } catch (error) {
+    if (requestId !== githubConnectionRequestId) return;
+
     githubConnectionState.value = "error";
     githubConnectionError.value = emitGitHubLoadError(
       error,
@@ -467,6 +518,8 @@ async function loadRepositoryIssues(): Promise<void> {
 
   if (!repository) return;
 
+  const requestId = ++githubIssuesRequestId;
+
   githubIssuesLoading.value = true;
   githubIssuesError.value = null;
 
@@ -476,9 +529,13 @@ async function loadRepositoryIssues(): Promise<void> {
       repository.name,
       { limit: 100, state: "all" },
     );
+    if (requestId !== githubIssuesRequestId) return;
+
     githubIssueCandidates.value = response.items.map(createRepositoryIssueCandidate);
     githubIssueSuggestions.value = githubIssueCandidates.value;
   } catch (error) {
+    if (requestId !== githubIssuesRequestId) return;
+
     githubIssueCandidates.value = [];
     githubIssueSuggestions.value = [];
     githubIssuesError.value = emitGitHubLoadError(
@@ -486,7 +543,9 @@ async function loadRepositoryIssues(): Promise<void> {
       "Failed to load GitHub issues",
     );
   } finally {
-    githubIssuesLoading.value = false;
+    if (requestId === githubIssuesRequestId) {
+      githubIssuesLoading.value = false;
+    }
   }
 }
 
@@ -494,6 +553,8 @@ async function loadProjectIssues(): Promise<void> {
   const project = selectedGitHubProject.value;
 
   if (!project) return;
+
+  const requestId = ++githubIssuesRequestId;
 
   githubIssuesLoading.value = true;
   githubIssuesError.value = null;
@@ -503,11 +564,15 @@ async function loadProjectIssues(): Promise<void> {
       limit: 100,
       state: "all",
     });
+    if (requestId !== githubIssuesRequestId) return;
+
     githubIssueCandidates.value = response.items.map((item) =>
       createProjectIssueCandidate(item, project.id),
     );
     githubIssueSuggestions.value = githubIssueCandidates.value;
   } catch (error) {
+    if (requestId !== githubIssuesRequestId) return;
+
     githubIssueCandidates.value = [];
     githubIssueSuggestions.value = [];
     githubIssuesError.value = emitGitHubLoadError(
@@ -515,7 +580,9 @@ async function loadProjectIssues(): Promise<void> {
       "Failed to load GitHub project issues",
     );
   } finally {
-    githubIssuesLoading.value = false;
+    if (requestId === githubIssuesRequestId) {
+      githubIssuesLoading.value = false;
+    }
   }
 }
 

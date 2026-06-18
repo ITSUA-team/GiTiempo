@@ -111,6 +111,16 @@ function createCandidates(
   };
 }
 
+function createDeferred<T>() {
+  // eslint-disable-next-line no-unused-vars
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
+}
+
 describe('useAdminGitHubProjectCandidates', () => {
   it('loads organization owners instead of the connected personal account', async () => {
     const { browsingClient, state } = createCandidates();
@@ -310,5 +320,66 @@ describe('useAdminGitHubProjectCandidates', () => {
     expect(state.selectedProject.value).toBeNull();
     expect(state.selectedCandidateLabel.value).toBeNull();
     expect(state.providerReference.value).toBeUndefined();
+  });
+
+  it('keeps the latest owner candidates when earlier loads resolve later', async () => {
+    const { browsingClient, state } = createCandidates();
+
+    await state.loadOwners('octocat');
+
+    const staleRepositories = createDeferred<{
+      items: GitHubRepository[];
+      pagination: { hasNextPage: boolean; limit: number; nextPageToken: string | null };
+    }>();
+    const staleProjects = createDeferred<{
+      items: GitHubProject[];
+      pagination: { hasNextPage: boolean; limit: number; nextPageToken: string | null };
+    }>();
+    const latestRepositories = createDeferred<{
+      items: GitHubRepository[];
+      pagination: { hasNextPage: boolean; limit: number; nextPageToken: string | null };
+    }>();
+    const latestProjects = createDeferred<{
+      items: GitHubProject[];
+      pagination: { hasNextPage: boolean; limit: number; nextPageToken: string | null };
+    }>();
+
+    browsingClient.listRepositories
+      .mockReturnValueOnce(staleRepositories.promise)
+      .mockReturnValueOnce(latestRepositories.promise);
+    browsingClient.listProjects
+      .mockReturnValueOnce(staleProjects.promise)
+      .mockReturnValueOnce(latestProjects.promise);
+
+    const staleSelection = state.selectOwner(organizationOwner);
+    const latestSelection = state.selectOwner(defaultOrganizationOwner);
+
+    latestRepositories.resolve({
+      items: [secondRepository],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    latestProjects.resolve({
+      items: [secondProject],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    await latestSelection;
+
+    staleRepositories.resolve({
+      items: [repository],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    staleProjects.resolve({
+      items: [project],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    await staleSelection;
+
+    expect(state.selectedOwner.value).toEqual(defaultOrganizationOwner);
+    expect(state.repositories.value).toEqual([secondRepository]);
+    expect(state.repositorySuggestions.value).toEqual([secondRepository]);
+    expect(state.projects.value).toEqual([secondProject]);
+    expect(state.projectSuggestions.value).toEqual([secondProject]);
+    expect(state.repositoriesLoading.value).toBe(false);
+    expect(state.projectsLoading.value).toBe(false);
   });
 });

@@ -88,6 +88,16 @@ const githubIssue = {
   url: "https://github.com/octo-org/repo/issues/42",
 };
 
+const githubSecondIssue = {
+  ...githubIssue,
+  id: "issue-2",
+  nodeId: "I_kwDO_2",
+  number: 84,
+  title: "Plan roadmap delivery",
+  updatedAt: "2026-05-05T10:00:00.000Z",
+  url: "https://github.com/octo-org/repo/issues/84",
+};
+
 function createDeferred<T>() {
   // eslint-disable-next-line no-unused-vars
   let resolve!: (value: T) => void;
@@ -401,6 +411,58 @@ describe("ProjectTaskDialog", () => {
     await wrapper.get('[data-testid="github-task-selected-source"] button').trigger("click");
 
     expect(wrapper.emitted("update:providerReference")?.at(-1)).toEqual([null]);
+  });
+
+  it("keeps the latest GitHub issue scope when earlier loads resolve later", async () => {
+    const staleRepositoryIssues = createDeferred<{
+      items: (typeof githubIssue)[];
+      pagination: { hasNextPage: boolean; limit: number; nextPageToken: string | null };
+    }>();
+    const latestProjectIssues = createDeferred<{
+      items: { isArchived: boolean; issue: typeof githubIssue; projectItemId: string }[];
+      pagination: { hasNextPage: boolean; limit: number; nextPageToken: string | null };
+      skipped: { draftIssues: number; pullRequests: number; redacted: number; unknown: number };
+    }>();
+
+    githubMocks.getConnectionStatus.mockResolvedValue(connectedGitHubStatus);
+    githubMocks.listRepositoryIssues.mockReturnValueOnce(staleRepositoryIssues.promise);
+    githubMocks.listProjectIssues.mockReturnValueOnce(latestProjectIssues.promise);
+
+    const wrapper = mountDialog({ projectId: "project-1" });
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-task-github-repository-option-repo-1"]').trigger("click");
+    await wrapper.get('[data-testid="project-task-github-project-option-PVT_kwDO"]').trigger("click");
+
+    latestProjectIssues.resolve({
+      items: [
+        {
+          isArchived: false,
+          issue: githubSecondIssue,
+          projectItemId: "PVTI_second",
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+      skipped: { draftIssues: 0, pullRequests: 0, redacted: 0, unknown: 0 },
+    });
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="project-task-github-issue-option-PVTI_second"]').exists(),
+    ).toBe(true);
+
+    staleRepositoryIssues.resolve({
+      items: [githubIssue],
+      pagination: { hasNextPage: false, limit: 100, nextPageToken: null },
+    });
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="project-task-github-issue-option-PVTI_second"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="project-task-github-issue-option-issue-1"]').exists(),
+    ).toBe(false);
   });
 
   it("clears GitHub metadata when the manual title field is edited", async () => {

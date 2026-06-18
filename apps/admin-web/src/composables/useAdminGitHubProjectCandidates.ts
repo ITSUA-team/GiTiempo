@@ -246,6 +246,9 @@ export function useAdminGitHubProjectCandidates(
 ) {
   const browsingClient = options.browsingClient ?? adminGitHubBrowsingClient;
   const connectionClient = options.connectionClient ?? adminGitHubConnectionClient;
+  let connectionRequestId = 0;
+  let ownersRequestId = 0;
+  let candidatesRequestId = 0;
 
   const connectionState = ref<GitHubProjectCandidateConnectionState>('idle');
   const connectionError = ref<string | null>(null);
@@ -304,6 +307,8 @@ export function useAdminGitHubProjectCandidates(
     repositorySuggestions.value = [];
     projects.value = [];
     projectSuggestions.value = [];
+    repositoriesLoading.value = false;
+    projectsLoading.value = false;
     repositoriesError.value = null;
     projectsError.value = null;
   }
@@ -313,19 +318,26 @@ export function useAdminGitHubProjectCandidates(
     selectedProject.value = null;
   }
 
-  async function loadRepositories(): Promise<void> {
-    if (!selectedOwner.value) return;
+  async function loadRepositories(
+    owner: GitHubOwner,
+    requestId: number,
+  ): Promise<void> {
+    if (requestId !== candidatesRequestId) return;
 
     repositoriesLoading.value = true;
     repositoriesError.value = null;
 
     try {
       const response = await browsingClient.listRepositories(
-        getOwnerScopedQuery(selectedOwner.value),
+        getOwnerScopedQuery(owner),
       );
+      if (requestId !== candidatesRequestId) return;
+
       repositories.value = response.items;
       repositorySuggestions.value = response.items;
     } catch (error) {
+      if (requestId !== candidatesRequestId) return;
+
       repositories.value = [];
       repositorySuggestions.value = [];
       repositoriesError.value = notifyError(
@@ -333,23 +345,32 @@ export function useAdminGitHubProjectCandidates(
         'Failed to load GitHub repositories',
       );
     } finally {
-      repositoriesLoading.value = false;
+      if (requestId === candidatesRequestId) {
+        repositoriesLoading.value = false;
+      }
     }
   }
 
-  async function loadProjects(): Promise<void> {
-    if (!selectedOwner.value) return;
+  async function loadProjects(
+    owner: GitHubOwner,
+    requestId: number,
+  ): Promise<void> {
+    if (requestId !== candidatesRequestId) return;
 
     projectsLoading.value = true;
     projectsError.value = null;
 
     try {
       const response = await browsingClient.listProjects(
-        getOwnerScopedQuery(selectedOwner.value),
+        getOwnerScopedQuery(owner),
       );
+      if (requestId !== candidatesRequestId) return;
+
       projects.value = response.items;
       projectSuggestions.value = response.items;
     } catch (error) {
+      if (requestId !== candidatesRequestId) return;
+
       projects.value = [];
       projectSuggestions.value = [];
       projectsError.value = notifyError(
@@ -357,25 +378,38 @@ export function useAdminGitHubProjectCandidates(
         'Failed to load GitHub Projects',
       );
     } finally {
-      projectsLoading.value = false;
+      if (requestId === candidatesRequestId) {
+        projectsLoading.value = false;
+      }
     }
   }
 
   async function loadCandidatesForSelectedOwner(): Promise<void> {
     clearSelection();
+    candidatesRequestId += 1;
     clearCandidateLists();
 
-    if (!selectedOwner.value) return;
+    const owner = selectedOwner.value;
+    if (!owner) return;
 
-    await Promise.all([loadRepositories(), loadProjects()]);
+    const requestId = ++candidatesRequestId;
+
+    await Promise.all([
+      loadRepositories(owner, requestId),
+      loadProjects(owner, requestId),
+    ]);
   }
 
   async function loadOwners(preferredLogin?: string | null): Promise<void> {
+    const requestId = ++ownersRequestId;
+
     ownersLoading.value = true;
     ownersError.value = null;
 
     try {
       const response = await browsingClient.listOwners({ type: 'organization' });
+      if (requestId !== ownersRequestId) return;
+
       const organizationOwners = withDefaultOrganizationOwner(
         response.items.filter((owner) => owner.type === 'organization'),
       );
@@ -385,25 +419,37 @@ export function useAdminGitHubProjectCandidates(
       ownerFieldValue.value = selectedOwner.value;
       await loadCandidatesForSelectedOwner();
     } catch (error) {
+      if (requestId !== ownersRequestId) return;
+
       owners.value = [];
       ownerFieldValue.value = null;
       ownerSuggestions.value = [];
       selectedOwner.value = null;
+      candidatesRequestId += 1;
       clearCandidateLists();
       ownersError.value = notifyError(error, 'Failed to load GitHub organizations');
     } finally {
-      ownersLoading.value = false;
+      if (requestId === ownersRequestId) {
+        ownersLoading.value = false;
+      }
     }
   }
 
   async function loadConnectionStatus(): Promise<void> {
+    const requestId = ++connectionRequestId;
+
+    ownersRequestId += 1;
+    candidatesRequestId += 1;
     connectionState.value = 'loading';
     connectionError.value = null;
     connectedLogin.value = null;
+    ownersLoading.value = false;
     clearSelection();
+    clearCandidateLists();
 
     try {
       const response = await connectionClient.getConnectionStatus();
+      if (requestId !== connectionRequestId) return;
 
       if (response.status === 'disconnected') {
         connectionState.value = 'disconnected';
@@ -419,6 +465,8 @@ export function useAdminGitHubProjectCandidates(
       connectedLogin.value = response.account.login;
       await loadOwners(response.account.login);
     } catch (error) {
+      if (requestId !== connectionRequestId) return;
+
       connectionState.value = 'error';
       connectionError.value = notifyError(
         error,
@@ -492,6 +540,7 @@ export function useAdminGitHubProjectCandidates(
       if (selectedOwner.value && !isSelectedOwnerQuery(value, selectedOwner.value)) {
         selectedOwner.value = null;
         clearSelection();
+        candidatesRequestId += 1;
         clearCandidateLists();
       }
 
@@ -502,6 +551,7 @@ export function useAdminGitHubProjectCandidates(
       ownerFieldValue.value = null;
       selectedOwner.value = null;
       clearSelection();
+      candidatesRequestId += 1;
       clearCandidateLists();
 
       return;
