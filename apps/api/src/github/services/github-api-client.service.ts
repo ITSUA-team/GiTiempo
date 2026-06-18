@@ -890,9 +890,7 @@ export class GithubApiClientService {
     return {
       items: items.slice(0, limit),
       pagination: {
-        hasNextPage:
-          items.length > limit ||
-          responses.some((response) => response.pagination.hasNextPage),
+        hasNextPage: false,
         limit,
         nextPageToken: null,
       },

@@ -260,6 +260,11 @@ describe('GithubApiClientService', () => {
       'private',
       'public',
     ]);
+    expect(result.pagination).toEqual({
+      hasNextPage: false,
+      limit: 30,
+      nextPageToken: null,
+    });
   });
 
   it('lists organization repositories through user repo membership fallback', async () => {
