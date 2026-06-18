@@ -57,6 +57,20 @@ describe("user-web query keys", () => {
   });
 
   it("keeps timer project-task keys separate from projects page task keys", () => {
+    expect(timerKeys.currentRaw(scope)).toEqual([
+      "user-web",
+      { userId: "user-1", workspaceId: "workspace-1" },
+      "top-bar-timer",
+      "current",
+      "raw",
+    ]);
+    expect(timerKeys.summary(scope)).toEqual([
+      "user-web",
+      { userId: "user-1", workspaceId: "workspace-1" },
+      "top-bar-timer",
+      "current",
+      "summary",
+    ]);
     expect(timerKeys.projectTasks(scope, "project-1")).toEqual([
       "user-web",
       { userId: "user-1", workspaceId: "workspace-1" },
@@ -147,7 +161,7 @@ describe("user-web query keys", () => {
 
   it("rejects non-time-entry keys", () => {
     expect(
-      readTimeEntryListQueryKey(timerKeys.current(scope)),
+      readTimeEntryListQueryKey(timerKeys.currentRaw(scope)),
     ).toBeNull();
   });
 });

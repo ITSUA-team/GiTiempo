@@ -3390,6 +3390,29 @@
                                   "alignItems": "center",
                                   "children": [
                                     {
+                                      "type": "frame",
+                                      "id": "stopRun1",
+                                      "name": "stopTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "stopRunIcon1",
+                                          "name": "stopTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "square",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
+                                    {
                                       "type": "text",
                                       "id": "jhosY",
                                       "fill": "#5D2B85",
@@ -3507,6 +3530,29 @@
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "vS2ta",
+                                      "name": "startTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "aX9r2",
+                                          "name": "startTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "QrrEo",
@@ -3681,12 +3727,36 @@
                                   "name": "r3c1",
                                   "width": "fill_container",
                                   "height": "fill_container",
+                                  "gap": 8,
                                   "padding": [
                                     0,
                                     12
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "v1meT",
+                                      "name": "startTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "qA7WY",
+                                          "name": "startTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "6R6pX",
@@ -3795,6 +3865,29 @@
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "LHJr4",
+                                      "name": "startTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "mP4oS",
+                                          "name": "startTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "HMaIb",
