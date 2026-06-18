@@ -13,6 +13,7 @@ import {
 } from "@gitiempo/web-shared";
 
 import type { TimeEntriesDayGroup } from "@/lib/time-entry-display";
+import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 
@@ -22,13 +23,18 @@ const props = defineProps<{
   // eslint-disable-next-line no-unused-vars
   formatTimeRange: (entry: TimeEntryResponse) => string;
   group: TimeEntriesDayGroup;
+  isStartTimerDisabled?: boolean;
   showHeader: boolean;
+  startingTimerEntryId?: string | null;
+  stoppingTimerEntryId?: string | null;
 }>();
 
 const emit = defineEmits<{
   createForDay: [day: string];
   editEntry: [entry: TimeEntryResponse];
   openActiveTimer: [];
+  startTimer: [entry: TimeEntryResponse];
+  stopTimer: [entry: TimeEntryResponse];
 }>();
 const isMobileViewport = useIsMobileViewport();
 
@@ -62,6 +68,31 @@ function getEntryTaskTestId(
     : `${prefix}-edit-${entry.id}`;
 }
 
+function isStartTimerPending(entry: TimeEntryResponse): boolean {
+  return props.startingTimerEntryId === entry.id;
+}
+
+function isStopTimerPending(entry: TimeEntryResponse): boolean {
+  return props.stoppingTimerEntryId === entry.id;
+}
+
+function isDirectStartDisabled(): boolean {
+  return props.isStartTimerDisabled === true ||
+    (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined);
+}
+
+function isStopTimerDisabled(): boolean {
+  return props.stoppingTimerEntryId !== null && props.stoppingTimerEntryId !== undefined;
+}
+
+function handleStopTimer(entry: TimeEntryResponse): void {
+  if (entry.endedAt !== null || isStopTimerDisabled()) {
+    return;
+  }
+
+  emit("stopTimer", entry);
+}
+
 function handleEntryTaskOpen(entry: TimeEntryResponse): void {
   if (entry.endedAt === null) {
     emit("openActiveTimer");
@@ -69,6 +100,14 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
   }
 
   emit("editEntry", entry);
+}
+
+function handleStartTimer(entry: TimeEntryResponse): void {
+  if (entry.endedAt === null || isDirectStartDisabled()) {
+    return;
+  }
+
+  emit("startTimer", entry);
 }
 </script>
 
@@ -96,26 +135,47 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
         data-testid="time-entry-mobile-card"
         :tone="entry.endedAt === null ? 'highlighted' : 'default'"
       >
-        <div class="flex min-w-0 flex-col gap-1">
-          <div class="flex max-w-full min-w-0 items-center gap-1">
-            <TaskNameLink
-              :label="entry.task.title"
-              :open-label="getEntryTaskOpenLabel(entry)"
-              :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
-              @open="handleEntryTaskOpen(entry)"
-            />
-            <TaskGitHubIssueLink
-              v-if="entry.githubIssue"
-              :issue="entry.githubIssue"
-              :test-id="`time-entry-mobile-github-${entry.id}`"
-            />
+        <div class="flex min-w-0 items-start gap-3">
+          <TimeEntryTimerAction
+            v-if="entry.endedAt !== null"
+            action="start"
+            :disabled="isDirectStartDisabled()"
+            :entry="entry"
+            :is-loading="isStartTimerPending(entry)"
+            test-id-prefix="time-entry-mobile"
+            @trigger="handleStartTimer"
+          />
+          <TimeEntryTimerAction
+            v-else
+            action="stop"
+            :disabled="isStopTimerDisabled()"
+            :entry="entry"
+            :is-loading="isStopTimerPending(entry)"
+            test-id-prefix="time-entry-mobile"
+            @trigger="handleStopTimer"
+          />
+
+          <div class="flex min-w-0 flex-col gap-1">
+            <div class="flex max-w-full min-w-0 items-center gap-1">
+              <TaskNameLink
+                :label="entry.task.title"
+                :open-label="getEntryTaskOpenLabel(entry)"
+                :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
+                @open="handleEntryTaskOpen(entry)"
+              />
+              <TaskGitHubIssueLink
+                v-if="entry.githubIssue"
+                :issue="entry.githubIssue"
+                :test-id="`time-entry-mobile-github-${entry.id}`"
+              />
+            </div>
+            <p
+              v-if="entry.description"
+              class="text-text-muted truncate text-xs"
+            >
+              {{ entry.description }}
+            </p>
           </div>
-          <p
-            v-if="entry.description"
-            class="text-text-muted truncate text-xs"
-          >
-            {{ entry.description }}
-          </p>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -140,13 +200,6 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
             </span>
           </div>
         </div>
-
-        <p
-          v-if="entry.endedAt === null"
-          class="text-text-muted text-xs"
-        >
-          Stop from the top bar
-        </p>
       </MobileRecordCard>
     </div>
 
@@ -166,32 +219,47 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
     >
       <Column :pt="managementTableColumnPt">
         <template #body="{ data: entry }">
-          <div class="flex min-w-0 flex-col">
-            <div class="flex max-w-full min-w-0 items-center gap-1">
-              <TaskNameLink
-                :label="entry.task.title"
-                :open-label="getEntryTaskOpenLabel(entry)"
-                :test-id="getEntryTaskTestId(entry, 'time-entry')"
-                @open="handleEntryTaskOpen(entry)"
-              />
-              <TaskGitHubIssueLink
-                v-if="entry.githubIssue"
-                :issue="entry.githubIssue"
-                :test-id="`time-entry-github-${entry.id}`"
-              />
+          <div class="flex min-w-0 items-center gap-2">
+            <TimeEntryTimerAction
+              v-if="entry.endedAt !== null"
+              action="start"
+              :disabled="isDirectStartDisabled()"
+              :entry="entry"
+              :is-loading="isStartTimerPending(entry)"
+              test-id-prefix="time-entry"
+              @trigger="handleStartTimer"
+            />
+            <TimeEntryTimerAction
+              v-else
+              action="stop"
+              :disabled="isStopTimerDisabled()"
+              :entry="entry"
+              :is-loading="isStopTimerPending(entry)"
+              test-id-prefix="time-entry"
+              @trigger="handleStopTimer"
+            />
+
+            <div class="flex min-w-0 flex-col">
+              <div class="flex max-w-full min-w-0 items-center gap-1">
+                <TaskNameLink
+                  :label="entry.task.title"
+                  :open-label="getEntryTaskOpenLabel(entry)"
+                  :test-id="getEntryTaskTestId(entry, 'time-entry')"
+                  @open="handleEntryTaskOpen(entry)"
+                />
+                <TaskGitHubIssueLink
+                  v-if="entry.githubIssue"
+                  :issue="entry.githubIssue"
+                  :test-id="`time-entry-github-${entry.id}`"
+                />
+              </div>
+              <p
+                v-if="entry.description"
+                class="text-text-muted truncate text-xs"
+              >
+                {{ entry.description }}
+              </p>
             </div>
-            <p
-              v-if="entry.description"
-              class="text-text-muted truncate text-xs"
-            >
-              {{ entry.description }}
-            </p>
-            <p
-              v-if="entry.endedAt === null"
-              class="text-text-muted text-xs"
-            >
-              Stop from the top bar
-            </p>
           </div>
         </template>
       </Column>

@@ -192,6 +192,8 @@ Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
 - The day-level create action pre-populates the selected day in the form.
 - The row task/title click target should open the same shared dialog in edit mode.
 - Edit mode pre-fills the selected entry's current project, task, `startedAt`, `endedAt`, description, and `isBillable` state.
+- Completed entry rows/cards may render an icon-only `Start timer` action before the task content. This action bypasses the create/edit dialog and starts a fresh running timer for the existing entry's task.
+- The active running entry row/card may render a matching icon-only `Stop timer` action before the task content. This action bypasses the task-picker dialog and stops the current running timer.
 - Required fields follow the time-entry form contract: project, task, `startedAt`, and `endedAt`.
 - Optional fields are description and `isBillable`.
 - Create mode initializes `isBillable` from the selected task's default billable value and still allows a per-entry override before save.
@@ -260,6 +262,7 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
 - A completed timer entry or manual entry may seed the last tracked task context if the task remains trackable.
 - The popup `Start timer` action always creates a fresh running time entry. It must not resume or mutate the previous time entry record.
+- Direct Time Entries row/card `Start timer` actions also create fresh running time entries for existing tasks and must not resume or mutate the previous entry record.
 - Clicking the compact timer surface opens the centered task-picker dialog.
 - If there is no eligible last tracked task context, keep the same not-running surface and keep the compact timer surface clickable so the popup can seed a new startable task context.
 - While the timer summary is loading, render the same surface shape with the popup entry point visible.

@@ -25,7 +25,9 @@ The Time Entries page MUST allow authenticated users to review, filter, create, 
 - **WHEN** the page renders results
 - **THEN** entries are grouped by their started-at day
 - **AND** each day group shows a day heading and a primary icon-only `New time entry` action with explicit tooltip and accessible label copy `New time entry`
-- **AND** each entry row shows task, project, time range, duration, edit, and delete affordances according to entry state.
+- **AND** each entry row shows task, project, time range, duration, and entry-state actions.
+- **AND** completed entries expose a direct `Start timer` action for the entry's task.
+- **AND** the active running entry exposes a direct `Stop timer` action.
 
 #### Scenario: Running entries stay visible but not editable
 
@@ -34,7 +36,8 @@ The Time Entries page MUST allow authenticated users to review, filter, create, 
 - **THEN** the row is visually highlighted as running
 - **AND** the row displays running duration in `HH:MM:SS` format
 - **AND** the page does not allow editing or deleting it as a completed manual interval before it is stopped
-- **AND** timer stop remains owned by the global top-bar timer.
+- **AND** the row exposes a direct `Stop timer` action for that running entry.
+- **AND** global top-bar timer state stays synchronized from the authoritative stop response.
 
 #### Scenario: Day create opens manual-entry dialog with day preset
 
