@@ -16,7 +16,7 @@
 - The section-level `View all` action remains available in both desktop/table and mobile-card layouts.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
-- Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar only.
+- Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar. The Time Entries page is the only MVP page-content exception for direct row-level timer starts from existing entries.
 
 ## Global Top-Bar Timer
 
@@ -31,7 +31,7 @@
 - The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
 - The `Task` select lists visible tasks first and appends `New task` as the last option.
 - When `Task = New task`, the created task inherits the selected project's default `isBillable` value.
-- When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description.
+- When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description. Time Entries completed rows may also start a fresh timer directly for that row's task without opening the task-picker popup.
 - The fresh running time entry initializes `isBillable` from the selected task's default billable value before any per-entry override.
 - When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
 - The authenticated user-web profile trigger is avatar-only in the top bar; visible member-name text does not appear beside the avatar.
@@ -58,9 +58,9 @@
 - Day-level create uses the rendered local day as the preset calendar day for `startedAt` and `endedAt`.
 - At and above `640px`, each day group keeps the existing table layout for entries.
 - Below `640px`, each day group renders stacked mobile cards instead of the fixed-width desktop table.
-- Entry row/card content includes a clickable task name, project, time range, and duration. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the task name that opens the source issue in a new browser tab. Time-range labels use the user's current browser-local timezone.
+- Entry row/card content includes a first-column icon-only `Start timer` action for completed entries, a matching icon-only `Stop timer` action for the active running entry, a clickable task name, project, time range, and duration. The start action starts a fresh running timer for the same task without opening the task-picker popup and uses task-specific tooltip/accessibility copy such as `Start timer for Improve reports filters`. The stop action stops the current running timer without opening the task-picker popup and uses task-specific tooltip/accessibility copy such as `Stop timer for Improve reports filters`. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the task name that opens the source issue in a new browser tab. Time-range labels use the user's current browser-local timezone.
 - Running entry highlighted with `bg-accent-tint`.
-- Running-entry mobile cards keep the same highlight treatment and do not expose edit/delete actions; stopping remains owned by the global top-bar timer.
+- Running-entry mobile cards keep the same highlight treatment and expose the same direct `Stop timer` action as the desktop row; edit/delete actions remain unavailable for running entries.
 - Clicking the task name opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
 - Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
 - The shared time-entry dialog uses these fields in both create and edit modes: project `<AutoComplete dropdown forceSelection>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.

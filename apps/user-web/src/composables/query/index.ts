@@ -104,6 +104,7 @@ interface UserScopedMutationOptions {
 
 interface UseCurrentTimerQueryOptions extends UserScopedQueryOptions {
   client: CurrentTimerClient;
+  queryKey?: MaybeRefOrGetter<QueryKey>;
 }
 
 interface UseOwnTimeEntriesQueryOptions extends UserScopedQueryOptions {
@@ -196,7 +197,9 @@ async function reconcileTimeEntryCachesAfterTimeEntryMutation(
 
 export const useCurrentTimerQuery = (options: UseCurrentTimerQueryOptions) =>
   useQuery({
-    queryKey: computed(() => timerKeys.current(toValue(options.scope))),
+    queryKey: computed(() =>
+      toValue(options.queryKey) ?? timerKeys.currentRaw(toValue(options.scope)),
+    ),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () => options.client.getCurrentTimer(),
   });

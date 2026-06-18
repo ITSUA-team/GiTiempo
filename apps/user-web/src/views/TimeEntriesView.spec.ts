@@ -355,8 +355,15 @@ async function mountView(
         ProgressSpinner: { template: "<div />" },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
-          emits: ["createForDay", "editEntry", "openActiveTimer"],
-          props: ["formatDuration", "formatTimeRange", "group"],
+          emits: ["createForDay", "editEntry", "openActiveTimer", "startTimer", "stopTimer"],
+          props: [
+            "formatDuration",
+            "formatTimeRange",
+            "group",
+            "isStartTimerDisabled",
+            "startingTimerEntryId",
+            "stoppingTimerEntryId",
+          ],
           template: `
             <section>
               <p>{{ group.heading }}</p>
@@ -364,6 +371,13 @@ async function mountView(
                   <p>{{ entry.id }} {{ entry.task.title }}</p>
                   <p :data-testid="'time-entry-range-' + entry.id">{{ formatTimeRange(entry) }}</p>
                   <p>{{ formatDuration(entry) }}</p>
+                  <button
+                    v-if="entry.endedAt !== null"
+                    :data-testid="'time-entry-start-timer-' + entry.id"
+                    :disabled="isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)"
+                    type="button"
+                    @click="!(isStartTimerDisabled === true || (startingTimerEntryId !== null && startingTimerEntryId !== undefined)) && $emit('startTimer', entry)"
+                  >Start timer</button>
                   <button
                     v-if="entry.endedAt !== null"
                     data-testid="time-entry-edit-entry-completed"
@@ -376,7 +390,13 @@ async function mountView(
                     type="button"
                     @click="$emit('openActiveTimer')"
                   >Update timer</button>
-                  <p v-if="entry.endedAt === null">Stop from the top bar</p>
+                  <button
+                    v-if="entry.endedAt === null"
+                    :data-testid="'time-entry-stop-timer-' + entry.id"
+                    :disabled="stoppingTimerEntryId !== null && stoppingTimerEntryId !== undefined"
+                    type="button"
+                    @click="!(stoppingTimerEntryId !== null && stoppingTimerEntryId !== undefined) && $emit('stopTimer', entry)"
+                  >Stop timer</button>
                 </div>
               <button data-testid="time-entries-day-create-2026-04-21" type="button" @click="$emit('createForDay', group.dateKey)">Create day</button>
             </section>
@@ -506,7 +526,8 @@ describe("TimeEntriesView", () => {
     const editButtons = wrapper.findAll('[data-testid="time-entry-edit-entry-completed"]');
     await editButtons[editButtons.length - 1]!.trigger("click");
 
-    expect(wrapper.text()).toContain("Stop from the top bar");
+    expect(wrapper.find(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("Stop from the top bar");
     expect(primeVueMocks.confirmRequire).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="time-entry-delete-entry-completed"]').exists()).toBe(false);
   });
@@ -518,6 +539,186 @@ describe("TimeEntriesView", () => {
     await wrapper.get(`[data-testid="time-entry-open-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
 
     expect(topBarTimerDialogController.requestOpen).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
+  it("stops the active timer from a running entry row", async () => {
+    const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+        source: "web",
+      }),
+    });
+    client.stopTimer.mockResolvedValueOnce(createEntry({
+      endedAt: "2026-04-21T11:00:05.000Z",
+      id: TEST_IDS.runningEntry,
+    }));
+
+    const { topBarTimerDialogController, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.getCurrentTimer).toHaveBeenCalled();
+    expect(client.stopTimer).toHaveBeenCalledWith();
+    expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Stopped tracking Improve reports filters.",
+        severity: "success",
+        summary: "Timer stopped",
+      }),
+    );
+  });
+
+  it("refreshes state without stopping when the clicked running row is stale", async () => {
+    const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.updatedEntry,
+        source: "web",
+        task: {
+          id: TEST_IDS.taskAdmin,
+          title: "Ship admin polish",
+        },
+        taskId: TEST_IDS.taskAdmin,
+      }),
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.stopTimer).not.toHaveBeenCalled();
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(2);
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "The running timer changed. Please try again.",
+        severity: "info",
+        summary: "Timer status refreshed",
+      }),
+    );
+  });
+
+  it("keeps active timer stop failures retryable with the backend message visible", async () => {
+    const client = createClientMock();
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+        source: "web",
+      }),
+    });
+    client.stopTimer.mockRejectedValueOnce(new Error("Timer is not running"));
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).trigger("click");
+    await flushPromises();
+
+    expect(client.stopTimer).toHaveBeenCalledWith();
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Timer is not running",
+        severity: "error",
+        summary: "Could not stop timer",
+      }),
+    );
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
+  it("starts a fresh timer from a completed entry row", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    const { topBarTimerDialogController, wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.taskReports });
+    expect(topBarTimerDialogController.requestOpen).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Tracking Improve reports filters.",
+        severity: "success",
+        summary: "Timer started",
+      }),
+    );
+  });
+
+  it("disables completed-entry direct starts while the current timer is already running", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createEntry({
+        durationSeconds: null,
+        endedAt: null,
+        id: TEST_IDS.runningEntry,
+        source: "web",
+      }),
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    const startTimerButton = wrapper.get(
+      `[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`,
+    );
+
+    expect(client.getCurrentTimer).toHaveBeenCalledWith();
+    expect(startTimerButton.attributes("disabled")).toBeDefined();
+
+    await startTimerButton.trigger("click");
+    await flushPromises();
+
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(primeVueMocks.toastAdd).not.toHaveBeenCalledWith(
+      expect.objectContaining({ summary: "Could not start timer" }),
+    );
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+  });
+
+  it("keeps direct timer start failures retryable with the backend message visible", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+
+    client.startTimer.mockRejectedValueOnce(new Error("A timer is already running"));
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get(`[data-testid="time-entry-start-timer-${TEST_IDS.completedEntry}"]`).trigger("click");
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.taskReports });
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "A timer is already running",
+        severity: "error",
+        summary: "Could not start timer",
+      }),
+    );
     expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
   });
 
@@ -662,7 +863,8 @@ describe("TimeEntriesView", () => {
 
     expect(wrapper.text()).toContain("Running");
     expect(wrapper.text()).toContain("02:00:05");
-    expect(wrapper.text()).toContain("Stop from the top bar");
+    expect(wrapper.find(`[data-testid="time-entry-stop-timer-${TEST_IDS.runningEntry}"]`).exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("Stop from the top bar");
     expect(wrapper.find('[data-testid="time-entry-edit-entry-completed"]').exists()).toBe(false);
 
     reconcileTimeEntryListCaches(queryClient, { userId: null, workspaceId: null }, stoppedEntry);

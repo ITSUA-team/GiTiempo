@@ -2,7 +2,7 @@
 
 ### Requirement: Global Top-Bar Timer
 
-The user-web authenticated shell MUST expose timer state and task-context selection through a compact top-bar timer surface on tablet and desktop, and through the approved mobile timer strip on mobile authenticated member pages. Timer Start, Stop, and task-change controls MUST be owned by the task-picker popup flow rather than separate header-visible shell action buttons.
+The user-web authenticated shell MUST expose timer state and task-context selection through a compact top-bar timer surface on tablet and desktop, and through the approved mobile timer strip on mobile authenticated member pages. Timer Start, Stop, and task-change controls MUST be owned by the task-picker popup flow rather than separate header-visible shell action buttons. This top-bar ownership rule does not forbid the documented Time Entries row/card `Start timer` and `Stop timer` actions for existing entries.
 
 #### Scenario: Running timer shown in authenticated top bar
 
