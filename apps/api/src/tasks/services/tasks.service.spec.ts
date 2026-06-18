@@ -57,6 +57,14 @@ function selectRowsForUpdate(rows: unknown[]) {
   return { from };
 }
 
+function createGithubReferencesMock() {
+  return {
+    validateIssueReference: vi.fn(
+      async (_user: AuthUser, reference: unknown) => reference,
+    ),
+  };
+}
+
 function collectSqlParamValues(value: unknown): unknown[] {
   const values: unknown[] = [];
   const seen = new WeakSet<object>();
@@ -110,7 +118,11 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.listProjectTasks(user, projectRow.id);
 
@@ -154,7 +166,11 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.listProjectTasks(user, projectRow.id, {
       includeInactive: true,
@@ -175,7 +191,11 @@ describe('TasksService', () => {
       }),
     };
     const db = { insert: vi.fn() };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     await expect(
       service.createTask(user, projectRow.id, { title: 'Task' }),
@@ -198,7 +218,11 @@ describe('TasksService', () => {
         defaultBillableForTasks: false,
       }),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.createTask(user, projectRow.id, {
       title: 'Task',
@@ -222,7 +246,11 @@ describe('TasksService', () => {
         defaultBillableForTasks: false,
       }),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.createTask(user, projectRow.id, {
       title: 'Task',
@@ -262,7 +290,12 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const githubReferences = createGithubReferencesMock();
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      githubReferences as never,
+    );
 
     const result = await service.createTask(user, projectRow.id, {
       title: 'Track project work',
@@ -282,6 +315,10 @@ describe('TasksService', () => {
       githubRepo: 'octo-org/repo',
       issueNumber: 42,
     });
+    expect(githubReferences.validateIssueReference).toHaveBeenCalledWith(
+      user,
+      expect.objectContaining({ externalKey: 'octo-org/repo#42' }),
+    );
     expect(referenceValues).toHaveBeenCalledWith(
       expect.objectContaining({
         workspaceId: user.workspaceId,
@@ -327,7 +364,11 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     await expect(
       service.createTask(user, projectRow.id, {
@@ -351,7 +392,12 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockRejectedValue(new NotFoundException()),
     };
-    const service = new TasksService(db as never, projects as never);
+    const githubReferences = createGithubReferencesMock();
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      githubReferences as never,
+    );
 
     await expect(
       service.createTask(user, projectRow.id, {
@@ -365,6 +411,42 @@ describe('TasksService', () => {
         },
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(db.insert).not.toHaveBeenCalled();
+    expect(githubReferences.validateIssueReference).not.toHaveBeenCalled();
+  });
+
+  it('does not create a task when GitHub issue validation fails', async () => {
+    const db = {
+      transaction: vi.fn(),
+      insert: vi.fn(),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const githubReferences = {
+      validateIssueReference: vi
+        .fn()
+        .mockRejectedValue(new UnprocessableEntityException()),
+    };
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      githubReferences as never,
+    );
+
+    await expect(
+      service.createTask(user, projectRow.id, {
+        title: 'Track project work',
+        providerReference: {
+          provider: 'github',
+          sourceType: 'repository_issue',
+          externalType: 'issue',
+          externalKey: 'octo-org/repo#42',
+          externalUrl: 'https://github.com/octo-org/repo/issues/42',
+        },
+      }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
     expect(db.transaction).not.toHaveBeenCalled();
     expect(db.insert).not.toHaveBeenCalled();
   });
@@ -385,7 +467,11 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.updateTask(user, taskRow.id, {
       title: 'Renamed',
@@ -420,7 +506,11 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.updateTask(user, taskRow.id, {
       defaultBillableForTimeEntries: false,
@@ -457,7 +547,11 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.backfillBillableDefault(user, taskRow.id, {
       updateTimeEntries: true,
@@ -483,7 +577,11 @@ describe('TasksService', () => {
         isActive: false,
       }),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     await expect(
       service.updateTask(user, taskRow.id, { title: 'Renamed' }),
@@ -522,7 +620,11 @@ describe('TasksService', () => {
       const projects = {
         requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
       };
-      const service = new TasksService(db as never, projects as never);
+      const service = new TasksService(
+        db as never,
+        projects as never,
+        createGithubReferencesMock() as never,
+      );
 
       const result = await service.updateTask(user, taskRow.id, {
         status: 'closed',
@@ -561,7 +663,11 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = new TasksService(
+      db as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     await expect(
       service.requireTrackableTask(user, taskRow.id),
@@ -575,7 +681,11 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService({} as never, projects as never);
+    const service = new TasksService(
+      {} as never,
+      projects as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.requireTrackableTaskForUpdate(
       user,

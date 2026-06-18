@@ -228,4 +228,29 @@ describe("GitHub browsing contracts", () => {
       }).sourceType,
     ).toBe("project_v2_issue_item");
   });
+
+  it("rejects unknown create reference metadata fields", () => {
+    expect(
+      githubProjectCreateReferenceSchema.safeParse({
+        provider: "github",
+        externalType: "repository",
+        externalId: "123",
+        externalKey: "octo-org/repo",
+        externalUrl: "https://github.com/octo-org/repo",
+        metadata: { accessToken: "secret" },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      githubIssueCreateReferenceSchema.safeParse({
+        provider: "github",
+        sourceType: "repository_issue",
+        externalType: "issue",
+        externalId: "123",
+        externalKey: "octo-org/repo#42",
+        externalUrl: "https://github.com/octo-org/repo/issues/42",
+        metadata: { rawPayload: { title: "Track project work" } },
+      }).success,
+    ).toBe(false);
+  });
 });

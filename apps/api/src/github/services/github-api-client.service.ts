@@ -86,6 +86,7 @@ type GitHubProjectGraphql = {
   number?: number;
   title?: string;
   closed?: boolean;
+  owner?: { __typename?: string; login?: string } | null;
   shortDescription?: string | null;
   url?: string | null;
   updatedAt?: string;
@@ -143,6 +144,19 @@ type ProjectIssueGraphqlResponse = {
   errors?: unknown[];
 };
 
+type ProjectIssueItemGraphqlResponse = {
+  data?: {
+    node?: {
+      id?: string;
+      type?: string;
+      isArchived?: boolean;
+      project?: { id?: string } | null;
+      content?: ProjectItemContent | null;
+    } | null;
+  };
+  errors?: unknown[];
+};
+
 type ProjectListGraphqlResponse = {
   data?: {
     owner?: {
@@ -156,6 +170,18 @@ type ProjectListGraphqlResponse = {
     } | null;
   };
   errors?: unknown[];
+};
+
+type ProjectNodeGraphqlResponse = {
+  data?: {
+    node?: GitHubProjectGraphql | null;
+  };
+  errors?: unknown[];
+};
+
+export type GitHubProjectIssueItemLookup = {
+  item: GitHubProjectIssueListResponse['items'][number];
+  projectId: string;
 };
 
 @Injectable()
@@ -330,6 +356,21 @@ export class GithubApiClientService {
     };
   }
 
+  async getRepository(input: {
+    accessToken: string;
+    owner: string;
+    repo: string;
+  }): Promise<GitHubRepository> {
+    const result = await this.rest<GitHubRepoRest>(
+      input.accessToken,
+      `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}`,
+      {},
+      null,
+    );
+
+    return this.toRepository(result.body);
+  }
+
   private async listInstallationRepositories(
     accessToken: string,
     installationId: number | string,
@@ -448,6 +489,47 @@ export class GithubApiClientService {
     };
   }
 
+  async getProject(input: {
+    accessToken: string;
+    projectId: string;
+  }): Promise<GitHubProject> {
+    const query = `
+      query($id: ID!) {
+        node(id: $id) {
+          ... on ProjectV2 {
+            id
+            number
+            title
+            closed
+            owner {
+              __typename
+              ... on User { login }
+              ... on Organization { login }
+            }
+            shortDescription
+            url
+            updatedAt
+          }
+        }
+      }
+    `;
+    const body = await this.graphql<ProjectNodeGraphqlResponse>(
+      input.accessToken,
+      query,
+      { id: input.projectId },
+    );
+    const project = body.data?.node;
+    if (!project?.owner?.login) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
+    return this.toProject(
+      project,
+      project.owner.login,
+      project.owner.__typename === 'User' ? 'personal' : 'organization',
+    );
+  }
+
   async listRepositoryIssues(input: {
     accessToken: string;
     owner: string;
@@ -486,6 +568,25 @@ export class GithubApiClientService {
         .map((issue) => this.toIssue(issue, input.owner, input.repo)),
       pagination: result.pagination,
     };
+  }
+
+  async getRepositoryIssue(input: {
+    accessToken: string;
+    owner: string;
+    repo: string;
+    issueNumber: number;
+  }): Promise<GitHubIssue> {
+    const result = await this.rest<GitHubIssueRest>(
+      input.accessToken,
+      `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}/issues/${input.issueNumber}`,
+      {},
+      null,
+    );
+    if (result.body.pull_request !== undefined) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
+    return this.toIssue(result.body, input.owner, input.repo);
   }
 
   async listProjectIssues(input: {
@@ -569,6 +670,61 @@ export class GithubApiClientService {
       },
       skipped,
     };
+  }
+
+  async getProjectIssueItem(input: {
+    accessToken: string;
+    projectItemId: string;
+  }): Promise<GitHubProjectIssueItemLookup> {
+    const query = `
+      query($id: ID!) {
+        node(id: $id) {
+          ... on ProjectV2Item {
+            id
+            type
+            isArchived
+            project { id }
+            content {
+              __typename
+              ... on Issue {
+                id
+                repository {
+                  nameWithOwner
+                  name
+                  owner { login }
+                }
+                number
+                title
+                state
+                url
+                updatedAt
+              }
+            }
+          }
+        }
+      }
+    `;
+    const body = await this.graphql<ProjectIssueItemGraphqlResponse>(
+      input.accessToken,
+      query,
+      { id: input.projectItemId },
+    );
+    const node = body.data?.node;
+    if (!node?.project?.id) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+    const skipped: GitHubProjectIssueSkippedCounts = {
+      draftIssues: 0,
+      pullRequests: 0,
+      redacted: 0,
+      unknown: 0,
+    };
+    const item = this.toProjectIssueItem(node, 'all', skipped);
+    if (!item) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
+    return { item, projectId: node.project.id };
   }
 
   private async searchRepositoryIssues(input: {

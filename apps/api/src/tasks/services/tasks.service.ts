@@ -17,6 +17,7 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { GithubReferenceValidatorService } from '../../github/services/github-reference-validator.service';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
@@ -36,6 +37,7 @@ export class TasksService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     private readonly projects: ProjectsService,
+    private readonly githubReferences: GithubReferenceValidatorService,
   ) {}
 
   async listProjectTasks(
@@ -93,7 +95,12 @@ export class TasksService {
         input.defaultBillableForTimeEntries ?? project.defaultBillableForTasks,
     };
 
-    const providerReference = input.providerReference;
+    const providerReference = input.providerReference
+      ? await this.githubReferences.validateIssueReference(
+          user,
+          input.providerReference,
+        )
+      : undefined;
 
     if (providerReference === undefined) {
       const [row] = await this.db

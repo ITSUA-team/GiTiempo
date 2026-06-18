@@ -29,6 +29,7 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import { startOfUtcIsoWeek, startOfUtcMonth } from '../../common/time';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import { GithubReferenceValidatorService } from '../../github/services/github-reference-validator.service';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
@@ -55,6 +56,7 @@ export class ProjectsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
     private readonly members: MembersService,
+    private readonly githubReferences: GithubReferenceValidatorService,
   ) {}
 
   async listProjects(user: AuthUser): Promise<ProjectResponse[]> {
@@ -207,8 +209,14 @@ export class ProjectsService {
       visibility: input.visibility ?? 'private',
       defaultBillableForTasks: input.defaultBillableForTasks ?? true,
     };
+    const providerReference = input.providerReference
+      ? await this.githubReferences.validateProjectReference(
+          user,
+          input.providerReference,
+        )
+      : undefined;
 
-    if (membership.role === 'admin' && input.providerReference === undefined) {
+    if (membership.role === 'admin' && providerReference === undefined) {
       const row = (
         await this.db.insert(projects).values(createValues).returning()
       )[0]!;
@@ -234,12 +242,12 @@ export class ProjectsService {
         });
       }
 
-      if (input.providerReference !== undefined) {
+      if (providerReference !== undefined) {
         await this.createProjectProviderReference(
           tx,
           user.workspaceId,
           inserted.id,
-          input.providerReference,
+          providerReference,
         );
       }
 

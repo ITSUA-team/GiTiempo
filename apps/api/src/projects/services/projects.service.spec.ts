@@ -69,6 +69,14 @@ function selectJoinedRows(rows: unknown[]) {
   return { from };
 }
 
+function createGithubReferencesMock() {
+  return {
+    validateProjectReference: vi.fn(
+      async (_user: AuthUser, reference: unknown) => reference,
+    ),
+  };
+}
+
 function collectDateParams(value: unknown): string[] {
   const dates: string[] = [];
   const seen = new WeakSet<object>();
@@ -133,7 +141,11 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'pm' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.createProject(pmUser, { name: 'Project' });
 
@@ -170,7 +182,11 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.createProject(adminUser, {
       name: 'Project',
@@ -220,7 +236,12 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const githubReferences = createGithubReferencesMock();
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      githubReferences as never,
+    );
 
     const result = await service.createProject(adminUser, {
       name: 'octo-org/repo',
@@ -235,6 +256,10 @@ describe('ProjectsService', () => {
     });
 
     expect(result.source).toBe('github');
+    expect(githubReferences.validateProjectReference).toHaveBeenCalledWith(
+      adminUser,
+      expect.objectContaining({ externalKey: 'octo-org/repo' }),
+    );
     expect(referenceValues).toHaveBeenCalledWith(
       expect.objectContaining({
         workspaceId: adminUser.workspaceId,
@@ -279,7 +304,11 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
 
     await expect(
       service.createProject(adminUser, {
@@ -303,7 +332,12 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockRejectedValue(new ForbiddenException()),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const githubReferences = createGithubReferencesMock();
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      githubReferences as never,
+    );
 
     await expect(
       service.createProject(adminUser, {
@@ -318,6 +352,41 @@ describe('ProjectsService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.transaction).not.toHaveBeenCalled();
     expect(db.insert).not.toHaveBeenCalled();
+    expect(githubReferences.validateProjectReference).not.toHaveBeenCalled();
+  });
+
+  it('does not create a project when GitHub project validation fails', async () => {
+    const db = {
+      transaction: vi.fn(),
+      insert: vi.fn(),
+    };
+    const members = {
+      requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
+    };
+    const githubReferences = {
+      validateProjectReference: vi
+        .fn()
+        .mockRejectedValue(new UnprocessableEntityException()),
+    };
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      githubReferences as never,
+    );
+
+    await expect(
+      service.createProject(adminUser, {
+        name: 'octo-org/repo',
+        providerReference: {
+          provider: 'github',
+          externalType: 'repository',
+          externalKey: 'octo-org/repo',
+          externalUrl: 'https://github.com/octo-org/repo',
+        },
+      }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(db.insert).not.toHaveBeenCalled();
   });
 
   it('rejects assignment targets with admin role', async () => {
@@ -329,7 +398,11 @@ describe('ProjectsService', () => {
     };
     const db = { transaction: vi.fn((callback) => callback(tx)) };
     const members = { requireAdmin: vi.fn().mockResolvedValue(undefined) };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
 
     await expect(
       service.createAssignment(adminUser, projectRow.id, { userId: 'admin-2' }),
@@ -346,7 +419,11 @@ describe('ProjectsService', () => {
     };
     const db = { transaction: vi.fn((callback) => callback(tx)) };
     const members = { requireAdmin: vi.fn().mockResolvedValue(undefined) };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
 
     await expect(
       service.createAssignment(adminUser, projectRow.id, { userId: 'user-2' }),
@@ -358,7 +435,11 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'pm' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
     vi.spyOn(service, 'requireVisibleProject').mockResolvedValue(projectRow);
 
     await expect(
@@ -380,7 +461,11 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
     Object.defineProperty(service, 'requireProjectInWorkspace', {
       value: vi.fn().mockResolvedValue(projectRow),
     });
@@ -431,7 +516,11 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
     Object.defineProperty(service, 'requireProjectInWorkspace', {
       value: vi.fn().mockResolvedValue(projectRow),
     });
@@ -465,7 +554,11 @@ describe('ProjectsService', () => {
     const members = {
       requireRole: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
     Object.defineProperty(service, 'requireProjectForUpdate', {
       value: vi.fn().mockResolvedValue({
         project: { ...projectRow, defaultBillableForTasks: false },
@@ -493,7 +586,11 @@ describe('ProjectsService', () => {
     const members = {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'pm' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.requireVisibleProject(
       pmUser,
@@ -525,7 +622,11 @@ describe('ProjectsService', () => {
     const members = {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
-    const service = new ProjectsService(db as never, members as never);
+    const service = new ProjectsService(
+      db as never,
+      members as never,
+      createGithubReferencesMock() as never,
+    );
 
     const result = await service.getMySummary(adminUser);
 

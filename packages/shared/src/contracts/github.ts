@@ -97,17 +97,47 @@ const githubIssueExternalKeySchema = z
   .max(250)
   .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#[1-9]\d*$/);
 
-const githubCreateReferenceMetadataSchema = z.record(
-  z.string(),
-  z.unknown(),
-);
+const githubRepositoryCreateReferenceMetadataSchema = z
+  .object({
+    description: z.string().max(1000).nullable().optional(),
+    fullName: githubRepositoryKeySchema.optional(),
+    isArchived: z.boolean().optional(),
+    name: z.string().min(1).max(255).optional(),
+    nodeId: z.string().min(1).max(255).nullable().optional(),
+    owner: z.string().min(1).max(255).optional(),
+    updatedAt: dateTimeSchema.optional(),
+    visibility: z.enum(["public", "private", "internal"]).optional(),
+  })
+  .strict();
+
+const githubProjectV2CreateReferenceMetadataSchema = z
+  .object({
+    description: z.string().max(2000).nullable().optional(),
+    number: z.number().int().min(1).optional(),
+    owner: z.string().min(1).max(255).optional(),
+    state: z.enum(["open", "closed"]).optional(),
+    title: z.string().min(1).max(255).optional(),
+    updatedAt: dateTimeSchema.optional(),
+  })
+  .strict();
+
+const githubIssueCreateReferenceMetadataSchema = z
+  .object({
+    nodeId: z.string().min(1).max(255).nullable().optional(),
+    number: z.number().int().min(1).optional(),
+    projectId: z.string().min(1).max(255).nullable().optional(),
+    repository: githubRepositoryKeySchema.optional(),
+    state: z.enum(["open", "closed"]).optional(),
+    title: z.string().min(1).max(500).optional(),
+    updatedAt: dateTimeSchema.optional(),
+  })
+  .strict();
 
 const githubCreateReferenceBaseSchema = z.object({
   provider: z.literal("github"),
   externalId: z.string().min(1).max(255).nullable().optional(),
   externalKey: z.string().min(1).max(500),
   externalUrl: githubUrlSchema.nullable(),
-  metadata: githubCreateReferenceMetadataSchema.optional(),
 });
 
 export const githubProjectRepositoryCreateReferenceSchema =
@@ -116,6 +146,7 @@ export const githubProjectRepositoryCreateReferenceSchema =
       externalType: z.literal("repository"),
       externalKey: githubRepositoryKeySchema,
       externalUrl: githubUrlSchema,
+      metadata: githubRepositoryCreateReferenceMetadataSchema.optional(),
     })
     .strict();
 
@@ -123,6 +154,7 @@ export const githubProjectV2CreateReferenceSchema =
   githubCreateReferenceBaseSchema
     .extend({
       externalType: z.literal("project_v2"),
+      metadata: githubProjectV2CreateReferenceMetadataSchema.optional(),
     })
     .strict();
 
@@ -141,6 +173,7 @@ export const githubRepositoryIssueCreateReferenceSchema =
       externalType: z.literal("issue"),
       externalKey: githubIssueExternalKeySchema,
       externalUrl: githubUrlSchema,
+      metadata: githubIssueCreateReferenceMetadataSchema.optional(),
     })
     .strict();
 
@@ -152,6 +185,7 @@ export const githubProjectV2IssueItemCreateReferenceSchema =
       externalKey: githubIssueExternalKeySchema,
       externalUrl: githubUrlSchema,
       projectItemId: z.string().min(1).max(255),
+      metadata: githubIssueCreateReferenceMetadataSchema.optional(),
     })
     .strict();
 

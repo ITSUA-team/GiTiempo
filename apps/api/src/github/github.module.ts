@@ -5,6 +5,7 @@ import { GithubConnectionsService } from './services/github-connections.service'
 import { GithubEncryptionService } from './services/github-encryption.service';
 import { GithubOauthClientService } from './services/github-oauth-client.service';
 import { GithubOauthStateService } from './services/github-oauth-state.service';
+import { GithubReferenceValidatorService } from './services/github-reference-validator.service';
 import { GithubService } from './services/github.service';
 
 @Module({
@@ -15,8 +16,9 @@ import { GithubService } from './services/github.service';
     GithubEncryptionService,
     GithubOauthClientService,
     GithubOauthStateService,
+    GithubReferenceValidatorService,
     GithubService,
   ],
-  exports: [GithubConnectionsService],
+  exports: [GithubConnectionsService, GithubReferenceValidatorService],
 })
 export class GithubModule {}
