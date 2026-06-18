@@ -33,7 +33,7 @@ describe('GithubApiClientService', () => {
     vi.unstubAllGlobals();
   });
 
-  it('lists owners with personal account and installed organizations', async () => {
+  it('lists owners with personal account and member organizations', async () => {
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({
@@ -63,6 +63,45 @@ describe('GithubApiClientService', () => {
             html_url: 'https://github.com/legacy-org',
           },
         ]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            state: 'active',
+            organization: {
+              login: 'itsua',
+              avatar_url: 'https://avatars.githubusercontent.com/u/3',
+            },
+          },
+          {
+            state: 'pending',
+            organization: {
+              login: 'pending-org',
+              avatar_url: 'https://avatars.githubusercontent.com/u/4',
+            },
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            id: 3,
+            node_id: 'R_repo_org',
+            name: 'repo',
+            full_name: 'repo-org/repo',
+            owner: {
+              login: 'repo-org',
+              avatar_url: 'https://avatars.githubusercontent.com/u/5',
+              html_url: 'https://github.com/repo-org',
+              type: 'Organization',
+            },
+            private: true,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/repo-org/repo',
+            updated_at: '2026-05-14T12:00:00Z',
+          },
+        ]),
       );
 
     const result = await service.listOwners(
@@ -75,10 +114,17 @@ describe('GithubApiClientService', () => {
       'octocat',
       'octo-org',
       'legacy-org',
+      'itsua',
+      'repo-org',
     ]);
     expect(
       fetchMock.mock.calls.map((call) => new URL(call[0] as URL).pathname),
-    ).toEqual(['/user/installations', '/user/orgs']);
+    ).toEqual([
+      '/user/installations',
+      '/user/orgs',
+      '/user/memberships/orgs',
+      '/user/repos',
+    ]);
     expect(JSON.stringify(result)).not.toContain(accessToken);
   });
 
@@ -116,9 +162,13 @@ describe('GithubApiClientService', () => {
     expect(result.pagination.hasNextPage).toBe(true);
     expect(result.pagination.nextPageToken).toEqual(expect.any(String));
     expect(result.pagination.nextPageToken).not.toContain('page=2');
+    const requestUrl = new URL(fetchMock.mock.calls[0]![0] as string);
+    expect(requestUrl.searchParams.get('affiliation')).toBe(
+      'owner,collaborator,organization_member',
+    );
   });
 
-  it('lists organization repositories through matching app installation', async () => {
+  it('merges matching app installation repositories with user-accessible repositories', async () => {
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({
@@ -131,19 +181,35 @@ describe('GithubApiClientService', () => {
         }),
       )
       .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            id: 1,
+            node_id: 'R_private',
+            name: 'private-repo',
+            full_name: 'octo-org/private-repo',
+            owner: { login: 'octo-org', type: 'Organization' },
+            private: true,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/octo-org/private-repo',
+            updated_at: '2026-05-14T12:00:00Z',
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
         jsonResponse(
           {
             repositories: [
               {
                 id: 1,
                 node_id: 'R_kwDO',
-                name: 'repo',
-                full_name: 'octo-org/repo',
-                owner: { login: 'octo-org' },
-                private: true,
+                name: 'public-repo',
+                full_name: 'octo-org/public-repo',
+                owner: { login: 'octo-org', type: 'Organization' },
+                private: false,
                 archived: false,
                 description: null,
-                html_url: 'https://github.com/octo-org/repo',
+                html_url: 'https://github.com/octo-org/public-repo',
                 updated_at: '2026-05-14T12:00:00Z',
               },
             ],
@@ -152,6 +218,22 @@ describe('GithubApiClientService', () => {
             link: '<https://api.github.com/user/installations/42/repositories?page=2>; rel="next"',
           },
         ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            id: 3,
+            node_id: 'R_duplicate',
+            name: 'public-repo',
+            full_name: 'octo-org/public-repo',
+            owner: { login: 'octo-org', type: 'Organization' },
+            private: false,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/octo-org/public-repo',
+            updated_at: '2026-05-14T12:00:00Z',
+          },
+        ]),
       );
 
     const result = await service.listRepositories({
@@ -166,13 +248,224 @@ describe('GithubApiClientService', () => {
     );
     expect(requestPaths).toEqual([
       '/user/installations',
+      '/user/repos',
       '/user/installations/42/repositories',
+      '/orgs/octo-org/repos',
     ]);
-    expect(result.items[0]).toMatchObject({
-      fullName: 'octo-org/repo',
-      visibility: 'private',
+    expect(result.items.map((repo) => repo.fullName)).toEqual([
+      'octo-org/private-repo',
+      'octo-org/public-repo',
+    ]);
+    expect(result.items.map((repo) => repo.visibility)).toEqual([
+      'private',
+      'public',
+    ]);
+  });
+
+  it('lists organization repositories through user repo membership fallback', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          installations: [
+            {
+              id: 42,
+              account: { login: 'other-org', type: 'Organization' },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            id: 1,
+            node_id: 'R_kwDO',
+            name: 'repo',
+            full_name: 'itsua/repo',
+            owner: { login: 'itsua', type: 'Organization' },
+            private: true,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/itsua/repo',
+            updated_at: '2026-05-14T12:00:00Z',
+          },
+          {
+            id: 2,
+            node_id: 'R_other',
+            name: 'other',
+            full_name: 'other-org/other',
+            owner: { login: 'other-org', type: 'Organization' },
+            private: true,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/other-org/other',
+            updated_at: '2026-05-14T12:00:00Z',
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ message: 'Not Found' }, { status: 404 }),
+      );
+
+    const result = await service.listRepositories({
+      accessToken,
+      ownerType: 'organization',
+      owner: 'itsua',
+      limit: 30,
     });
-    expect(result.pagination.nextPageToken).toEqual(expect.any(String));
+
+    const requestUrls = fetchMock.mock.calls.map(
+      (call) => new URL(call[0] as URL),
+    );
+    expect(requestUrls.map((url) => url.pathname)).toEqual([
+      '/user/installations',
+      '/user/repos',
+      '/orgs/itsua/repos',
+    ]);
+    expect(requestUrls[1]?.searchParams.get('affiliation')).toBe(
+      'owner,collaborator,organization_member',
+    );
+    expect(requestUrls[1]?.searchParams.get('visibility')).toBe('all');
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      fullName: 'itsua/repo',
+      owner: 'itsua',
+    });
+  });
+
+  it('lists organization repositories through the organization endpoint fallback', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ installations: [] }))
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            id: 1,
+            node_id: 'R_kwDO',
+            name: 'repo',
+            full_name: 'itsua/repo',
+            owner: { login: 'itsua', type: 'Organization' },
+            private: true,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/itsua/repo',
+            updated_at: '2026-05-14T12:00:00Z',
+          },
+        ]),
+      );
+
+    const result = await service.listRepositories({
+      accessToken,
+      ownerType: 'organization',
+      owner: 'itsua',
+      limit: 30,
+    });
+
+    const requestUrls = fetchMock.mock.calls.map(
+      (call) => new URL(call[0] as URL),
+    );
+    expect(requestUrls.map((url) => url.pathname)).toEqual([
+      '/user/installations',
+      '/user/repos',
+      '/orgs/itsua/repos',
+    ]);
+    expect(requestUrls[2]?.searchParams.get('type')).toBe('all');
+    expect(result.items[0]).toMatchObject({ fullName: 'itsua/repo' });
+  });
+
+  it('merges private user-accessible repos with public organization repos', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ installations: [] }))
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            id: 1,
+            node_id: 'R_private',
+            name: 'private-repo',
+            full_name: 'itsua/private-repo',
+            owner: { login: 'itsua', type: 'Organization' },
+            private: true,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/itsua/private-repo',
+            updated_at: '2026-05-14T12:00:00Z',
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            id: 2,
+            node_id: 'R_public',
+            name: 'public-repo',
+            full_name: 'itsua/public-repo',
+            owner: { login: 'itsua', type: 'Organization' },
+            private: false,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/itsua/public-repo',
+            updated_at: '2026-05-15T12:00:00Z',
+          },
+        ]),
+      );
+
+    const result = await service.listRepositories({
+      accessToken,
+      ownerType: 'organization',
+      owner: 'itsua',
+      limit: 30,
+    });
+
+    expect(result.items.map((repo) => repo.fullName)).toEqual([
+      'itsua/private-repo',
+      'itsua/public-repo',
+    ]);
+    expect(result.items.map((repo) => repo.visibility)).toEqual([
+      'private',
+      'public',
+    ]);
+  });
+
+  it('falls back to user repo membership when installation lookup fails', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({ message: 'Not Found' }, { status: 404 }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            id: 1,
+            node_id: 'R_kwDO',
+            name: 'repo',
+            full_name: 'itsua/repo',
+            owner: { login: 'itsua', type: 'Organization' },
+            private: true,
+            archived: false,
+            description: null,
+            html_url: 'https://github.com/itsua/repo',
+            updated_at: '2026-05-14T12:00:00Z',
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ message: 'Not Found' }, { status: 404 }),
+      );
+
+    const result = await service.listRepositories({
+      accessToken,
+      ownerType: 'organization',
+      owner: 'itsua',
+      limit: 30,
+    });
+
+    const requestUrls = fetchMock.mock.calls.map(
+      (call) => new URL(call[0] as URL),
+    );
+    expect(requestUrls.map((url) => url.pathname)).toEqual([
+      '/user/installations',
+      '/user/repos',
+      '/orgs/itsua/repos',
+    ]);
+    expect(result.items[0]).toMatchObject({ fullName: 'itsua/repo' });
   });
 
   it('normalizes Project V2 responses with GraphQL cursor page tokens', async () => {

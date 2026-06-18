@@ -39,12 +39,22 @@ type GitHubOrgRest = {
   html_url?: string | null;
 };
 
+type GitHubOrgMembershipRest = {
+  state?: string;
+  organization?: GitHubOrgRest | null;
+};
+
 type GitHubRepoRest = {
   id?: number | string;
   node_id?: string | null;
   name?: string;
   full_name?: string;
-  owner?: { login?: string };
+  owner?: {
+    login?: string;
+    avatar_url?: string | null;
+    html_url?: string | null;
+    type?: string;
+  };
   private?: boolean;
   visibility?: string;
   archived?: boolean;
@@ -172,26 +182,46 @@ export class GithubApiClientService {
       });
     }
     if (type === 'all' || type === 'organization') {
-      for (const installation of await this.listInstallations(accessToken)) {
-        const owner = this.toInstallationOwner(installation);
-        if (owner) addOwner(owner);
+      try {
+        for (const installation of await this.listInstallations(accessToken)) {
+          const owner = this.toInstallationOwner(installation);
+          if (owner) addOwner(owner);
+        }
+      } catch (error) {
+        this.logOwnerSourceFailure('installations', error);
       }
 
-      const orgs = await this.rest<GitHubOrgRest[]>(
-        accessToken,
-        '/user/orgs',
-        { per_page: '100' },
-        null,
-      );
-      for (const org of orgs.body) {
-        if (!org.login) continue;
-        addOwner({
-          login: org.login,
-          label: org.login,
-          type: 'organization',
-          avatarUrl: org.avatar_url ?? null,
-          url: org.html_url ?? `https://github.com/${org.login}`,
-        });
+      try {
+        for (const org of await this.listUserOrganizations(accessToken)) {
+          const owner = this.toOrganizationOwner(org);
+          if (owner) addOwner(owner);
+        }
+      } catch (error) {
+        this.logOwnerSourceFailure('organizations', error);
+      }
+
+      try {
+        const memberships = await this.listOrganizationMemberships(accessToken);
+        for (const membership of memberships) {
+          if (membership.state !== 'active') continue;
+          const owner = this.toOrganizationOwner(
+            membership.organization ?? null,
+          );
+          if (owner) addOwner(owner);
+        }
+      } catch (error) {
+        this.logOwnerSourceFailure('memberships', error);
+      }
+
+      try {
+        const repos =
+          await this.listOrganizationMemberRepositories(accessToken);
+        for (const repo of repos) {
+          const owner = this.toRepositoryOrganizationOwner(repo);
+          if (owner) addOwner(owner);
+        }
+      } catch (error) {
+        this.logOwnerSourceFailure('repository_memberships', error);
       }
     }
     return { items: [...items.values()] };
@@ -206,31 +236,87 @@ export class GithubApiClientService {
   }): Promise<GitHubRepositoryListResponse> {
     const page = this.decodePage(input.pageToken, 'rest-page') ?? 1;
     if (input.ownerType === 'organization') {
-      const installation = await this.findInstallationForOwner(
-        input.accessToken,
-        input.owner,
-      );
-      if (installation?.id !== undefined) {
-        return this.listInstallationRepositories(
+      let installation: GitHubInstallationRest | null = null;
+      try {
+        installation = await this.findInstallationForOwner(
           input.accessToken,
-          installation.id,
-          input.limit,
-          page,
+          input.owner,
+        );
+      } catch (error) {
+        this.logger.warn({
+          event: 'github.repositories.installation_lookup_failed',
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      const responses: GitHubRepositoryListResponse[] = [];
+
+      try {
+        this.addRepositorySourceResponse(
+          responses,
+          'user_organization_repositories',
+          input.owner,
+          await this.listUserOrganizationRepositories(
+            input.accessToken,
+            input.owner,
+            input.limit,
+          ),
+        );
+      } catch (error) {
+        this.logRepositorySourceFailure(
+          'user_organization_repositories',
+          error,
         );
       }
+
+      if (installation?.id !== undefined) {
+        try {
+          this.addRepositorySourceResponse(
+            responses,
+            'installation_repositories',
+            input.owner,
+            await this.listInstallationRepositories(
+              input.accessToken,
+              installation.id,
+              input.limit,
+              page,
+            ),
+          );
+        } catch (error) {
+          this.logRepositorySourceFailure('installation_repositories', error);
+        }
+      }
+
+      try {
+        this.addRepositorySourceResponse(
+          responses,
+          'organization_repositories',
+          input.owner,
+          await this.listOrganizationRepositories(
+            input.accessToken,
+            input.owner,
+            input.limit,
+            page,
+          ),
+        );
+      } catch (error) {
+        this.logRepositorySourceFailure('organization_repositories', error);
+      }
+
+      if (responses.length > 0) {
+        return this.mergeRepositoryResponses(responses, input.limit);
+      }
+
+      throw new ServiceUnavailableException('GitHub API request failed');
     }
 
-    const path =
-      input.ownerType === 'personal'
-        ? '/user/repos'
-        : `/orgs/${encodeURIComponent(input.owner)}/repos`;
+    const path = '/user/repos';
     const query: Record<string, string> = {
       per_page: String(input.limit),
       page: String(page),
       sort: 'updated',
+      affiliation: 'owner,collaborator,organization_member',
     };
-    if (input.ownerType === 'personal') query.affiliation = 'owner';
-    else query.type = 'all';
 
     const result = await this.rest<GitHubRepoRest[]>(
       input.accessToken,
@@ -264,6 +350,34 @@ export class GithubApiClientService {
     }
     return {
       items: result.body.repositories.map((repo) => this.toRepository(repo)),
+      pagination: result.pagination,
+    };
+  }
+
+  private async listOrganizationRepositories(
+    accessToken: string,
+    owner: string,
+    limit: number,
+    page: number,
+  ): Promise<GitHubRepositoryListResponse> {
+    const result = await this.rest<GitHubRepoRest[]>(
+      accessToken,
+      `/orgs/${encodeURIComponent(owner)}/repos`,
+      {
+        per_page: String(limit),
+        page: String(page),
+        sort: 'updated',
+        type: 'all',
+      },
+      'rest-page',
+    );
+
+    if (!Array.isArray(result.body)) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
+    return {
+      items: result.body.map((repo) => this.toRepository(repo)),
       pagination: result.pagination,
     };
   }
@@ -502,6 +616,154 @@ export class GithubApiClientService {
     return result.body.installations;
   }
 
+  private async listUserOrganizations(
+    accessToken: string,
+  ): Promise<GitHubOrgRest[]> {
+    const result = await this.rest<GitHubOrgRest[]>(
+      accessToken,
+      '/user/orgs',
+      { per_page: '100' },
+      null,
+    );
+
+    if (!Array.isArray(result.body)) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
+    return result.body;
+  }
+
+  private async listOrganizationMemberships(
+    accessToken: string,
+  ): Promise<GitHubOrgMembershipRest[]> {
+    const result = await this.rest<GitHubOrgMembershipRest[]>(
+      accessToken,
+      '/user/memberships/orgs',
+      { per_page: '100', state: 'active' },
+      null,
+    );
+
+    if (!Array.isArray(result.body)) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
+    return result.body;
+  }
+
+  private async listOrganizationMemberRepositories(
+    accessToken: string,
+    owner?: string,
+  ): Promise<GitHubRepoRest[]> {
+    const repositories: GitHubRepoRest[] = [];
+    const normalizedOwner = owner?.toLowerCase();
+    let page = 1;
+    let hasNextPage = true;
+
+    while (hasNextPage && page <= 10) {
+      const result = await this.rest<GitHubRepoRest[]>(
+        accessToken,
+        '/user/repos',
+        {
+          affiliation: 'owner,collaborator,organization_member',
+          page: String(page),
+          per_page: '100',
+          sort: 'updated',
+          visibility: 'all',
+        },
+        'rest-page',
+      );
+
+      if (!Array.isArray(result.body)) {
+        throw new ServiceUnavailableException(
+          'GitHub API returned invalid data',
+        );
+      }
+
+      repositories.push(
+        ...result.body.filter((repo) => {
+          if (!normalizedOwner) return true;
+          return (
+            this.repositoryOwnerLogin(repo)?.toLowerCase() === normalizedOwner
+          );
+        }),
+      );
+      hasNextPage = result.pagination.hasNextPage;
+      page += 1;
+    }
+
+    return repositories;
+  }
+
+  private async listUserOrganizationRepositories(
+    accessToken: string,
+    owner: string,
+    limit: number,
+  ): Promise<GitHubRepositoryListResponse> {
+    const repositories = await this.listOrganizationMemberRepositories(
+      accessToken,
+      owner,
+    );
+
+    return {
+      items: repositories
+        .slice(0, limit)
+        .map((repo) => this.toRepository(repo)),
+      pagination: {
+        hasNextPage: repositories.length > limit,
+        limit,
+        nextPageToken: null,
+      },
+    };
+  }
+
+  private mergeRepositoryResponses(
+    responses: GitHubRepositoryListResponse[],
+    limit: number,
+  ): GitHubRepositoryListResponse {
+    if (responses.length === 1) return responses[0]!;
+
+    const repositories = new Map<string, GitHubRepository>();
+    for (const response of responses) {
+      for (const repository of response.items) {
+        repositories.set(repository.fullName.toLowerCase(), repository);
+      }
+    }
+
+    const items = [...repositories.values()];
+
+    return {
+      items: items.slice(0, limit),
+      pagination: {
+        hasNextPage:
+          items.length > limit ||
+          responses.some((response) => response.pagination.hasNextPage),
+        limit,
+        nextPageToken: null,
+      },
+    };
+  }
+
+  private addRepositorySourceResponse(
+    responses: GitHubRepositoryListResponse[],
+    source: string,
+    owner: string,
+    response: GitHubRepositoryListResponse,
+  ): void {
+    this.logger.log({
+      event: 'github.repositories.source_result',
+      owner,
+      privateCount: response.items.filter(
+        (repository) => repository.visibility === 'private',
+      ).length,
+      publicCount: response.items.filter(
+        (repository) => repository.visibility === 'public',
+      ).length,
+      source,
+      totalCount: response.items.length,
+    });
+    responses.push(response);
+  }
+
   private async findInstallationForOwner(
     accessToken: string,
     owner: string,
@@ -701,6 +963,55 @@ export class GithubApiClientService {
       avatarUrl: account.avatar_url ?? null,
       url: account.html_url ?? `https://github.com/${account.login}`,
     };
+  }
+
+  private toOrganizationOwner(org: GitHubOrgRest | null): GitHubOwner | null {
+    if (!org?.login) return null;
+
+    return {
+      login: org.login,
+      label: org.login,
+      type: 'organization',
+      avatarUrl: org.avatar_url ?? null,
+      url: org.html_url ?? `https://github.com/${org.login}`,
+    };
+  }
+
+  private toRepositoryOrganizationOwner(
+    repo: GitHubRepoRest,
+  ): GitHubOwner | null {
+    const login = this.repositoryOwnerLogin(repo);
+    if (!login || repo.owner?.type?.toLowerCase() !== 'organization') {
+      return null;
+    }
+
+    return {
+      login,
+      label: login,
+      type: 'organization',
+      avatarUrl: repo.owner?.avatar_url ?? null,
+      url: repo.owner?.html_url ?? `https://github.com/${login}`,
+    };
+  }
+
+  private repositoryOwnerLogin(repo: GitHubRepoRest): string | null {
+    return repo.owner?.login ?? repo.full_name?.split('/')[0] ?? null;
+  }
+
+  private logOwnerSourceFailure(source: string, error: unknown): void {
+    this.logger.warn({
+      event: 'github.owners.source_failed',
+      reason: error instanceof Error ? error.message : String(error),
+      source,
+    });
+  }
+
+  private logRepositorySourceFailure(source: string, error: unknown): void {
+    this.logger.warn({
+      event: 'github.repositories.source_failed',
+      reason: error instanceof Error ? error.message : String(error),
+      source,
+    });
   }
 
   private toProject(

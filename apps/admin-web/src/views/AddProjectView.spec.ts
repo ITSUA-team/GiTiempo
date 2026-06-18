@@ -112,16 +112,24 @@ const githubOrganizationOwner = {
   url: 'https://github.com/octo-org',
 };
 
+const githubSecondOrganizationOwner = {
+  avatarUrl: null,
+  label: 'ITSUA',
+  login: 'itsua',
+  type: 'organization' as const,
+  url: 'https://github.com/itsua',
+};
+
 const githubRepository = {
   description: 'Repository project',
-  fullName: 'octocat/repo',
+  fullName: 'octo-org/repo',
   id: '123',
   isArchived: false,
   name: 'repo',
   nodeId: 'R_kwDO',
-  owner: 'octocat',
+  owner: 'octo-org',
   updatedAt: '2026-05-02T10:00:00.000Z',
-  url: 'https://github.com/octocat/repo',
+  url: 'https://github.com/octo-org/repo',
   visibility: 'private' as const,
 };
 
@@ -216,6 +224,11 @@ const AutoCompleteStub = defineComponent({
 
       return String(value);
     },
+    handleInput(event: Event) {
+      const value = (event.target as HTMLInputElement).value;
+      this.$emit('update:modelValue', value);
+      this.$emit('complete', { query: value });
+    },
   },
   template: `
     <div :data-testid="inputId">
@@ -225,6 +238,7 @@ const AutoCompleteStub = defineComponent({
         :placeholder="placeholder"
         :value="getLabel(modelValue)"
         @focus="$emit('complete', { query: '' })"
+        @input="handleInput"
       />
       <button
         v-for="(suggestion, index) in suggestions"
@@ -328,7 +342,7 @@ describe('AddProjectView', () => {
       },
     ]);
     testMocks.listOwners.mockResolvedValue({
-      items: [githubPersonalOwner, githubOrganizationOwner],
+      items: [githubPersonalOwner, githubOrganizationOwner, githubSecondOrganizationOwner],
     });
     testMocks.listRepositories.mockResolvedValue({
       items: [githubRepository],
@@ -387,7 +401,7 @@ describe('AddProjectView', () => {
     connectionRequest.resolve(connectedGitHubStatus);
     await flushPromises();
 
-    expect(wrapper.text()).toContain('GitHub owner');
+    expect(wrapper.text()).toContain('GitHub organization');
   });
 
   it('loads connected GitHub candidates and submits repository metadata', async () => {
@@ -398,25 +412,44 @@ describe('AddProjectView', () => {
     await wrapper.get('[data-testid="select-github-project-source"]').trigger('click');
     await flushPromises();
 
-    expect(testMocks.listOwners).toHaveBeenCalledWith({ type: 'all' });
+    expect(testMocks.listOwners).toHaveBeenCalledWith({ type: 'organization' });
     expect(testMocks.listRepositories).toHaveBeenCalledWith({
       limit: 100,
-      ownerType: 'personal',
+      owner: 'ITSUA-team',
+      ownerType: 'organization',
     });
     expect(testMocks.listProjects).toHaveBeenCalledWith({
       limit: 100,
-      ownerType: 'personal',
+      owner: 'ITSUA-team',
+      ownerType: 'organization',
     });
-    expect(wrapper.text()).toContain('octocat (personal)');
+    expect(wrapper.text()).toContain('ITSUA-team (organization)');
     expect(wrapper.text()).toContain('Octo Org (organization)');
+    expect(wrapper.text()).toContain('ITSUA (organization)');
+    expect(wrapper.text()).not.toContain('octocat (personal)');
     expect(wrapper.find('input[name="name"]').exists()).toBe(false);
-    expect(wrapper.text()).not.toContain('Project manager');
-    expect(wrapper.text()).not.toContain('Default billable for new tasks');
+    expect(wrapper.text()).toContain('Project manager');
+    expect(wrapper.text()).toContain('Visibility');
+    expect(wrapper.text()).toContain('Default billable for new tasks');
+
+    await wrapper.get('[data-testid="github-owner-option-2"]').trigger('click');
+    await flushPromises();
+
+    expect(testMocks.listRepositories).toHaveBeenLastCalledWith({
+      limit: 100,
+      owner: 'itsua',
+      ownerType: 'organization',
+    });
+    expect(testMocks.listProjects).toHaveBeenLastCalledWith({
+      limit: 100,
+      owner: 'itsua',
+      ownerType: 'organization',
+    });
 
     await wrapper.get('[data-testid="github-repository-option-0"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.text()).toContain('Selected GitHub repository: octocat/repo');
+    expect(wrapper.text()).toContain('Selected GitHub repository: octo-org/repo');
     expect(wrapper.text()).toContain('GitHub repository');
     expect(testMocks.createProject).not.toHaveBeenCalled();
 
@@ -425,16 +458,64 @@ describe('AddProjectView', () => {
 
     expect(testMocks.createProject).toHaveBeenCalledWith({
       defaultBillableForTasks: false,
-      name: 'octocat/repo',
+      name: 'octo-org/repo',
       providerReference: expect.objectContaining({
-        externalKey: 'octocat/repo',
+        externalKey: 'octo-org/repo',
         externalType: 'repository',
-        externalUrl: 'https://github.com/octocat/repo',
+        externalUrl: 'https://github.com/octo-org/repo',
         provider: 'github',
       }),
       visibility: 'private',
     });
-    expect(testMocks.assignMember).not.toHaveBeenCalled();
+    expect(testMocks.assignMember).toHaveBeenCalledWith('project-1', 'pm-user');
+  });
+
+  it('allows typing an organization owner when GitHub returns no organizations', async () => {
+    testMocks.getConnectionStatus.mockResolvedValue(connectedGitHubStatus);
+    testMocks.listOwners.mockResolvedValue({ items: [] });
+    const wrapper = mountAddProjectView();
+
+    await flushPromises();
+    await wrapper.get('[data-testid="select-github-project-source"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('No organizations were returned by GitHub');
+    expect(wrapper.text()).toContain('ITSUA-team (organization)');
+    expect(testMocks.listRepositories).toHaveBeenCalledWith({
+      limit: 100,
+      owner: 'ITSUA-team',
+      ownerType: 'organization',
+    });
+    expect(testMocks.listProjects).toHaveBeenCalledWith({
+      limit: 100,
+      owner: 'ITSUA-team',
+      ownerType: 'organization',
+    });
+    const repositoryCallCount = testMocks.listRepositories.mock.calls.length;
+    const projectCallCount = testMocks.listProjects.mock.calls.length;
+
+    await wrapper.get('[data-testid="github-owner"] input').setValue('ITSUA');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Use ITSUA (organization)');
+    expect(testMocks.listRepositories).toHaveBeenCalledTimes(repositoryCallCount);
+    expect(testMocks.listProjects).toHaveBeenCalledTimes(projectCallCount);
+
+    await wrapper.get('[data-testid="github-owner-option-1"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('No organizations were returned by GitHub');
+    expect(testMocks.listRepositories).toHaveBeenCalledWith({
+      limit: 100,
+      owner: 'ITSUA',
+      ownerType: 'organization',
+    });
+    expect(testMocks.listProjects).toHaveBeenCalledWith({
+      limit: 100,
+      owner: 'ITSUA',
+      ownerType: 'organization',
+    });
+    expect(wrapper.text()).toContain('octo-org/repo');
   });
 
   it('submits Project V2 metadata when a Project V2 candidate is selected', async () => {
@@ -466,6 +547,7 @@ describe('AddProjectView', () => {
       }),
       visibility: 'private',
     });
+    expect(testMocks.assignMember).toHaveBeenCalledWith('project-1', 'pm-user');
   });
 
   it('clears GitHub metadata when switching back to manual entry', async () => {
@@ -516,7 +598,7 @@ describe('AddProjectView', () => {
 
     expect(wrapper.text()).toContain('Repositories unavailable');
     expect(wrapper.text()).toContain(
-      'No Projects V2 are available for this owner.',
+      'No accessible Projects V2 were returned for this organization.',
     );
     expect(testMocks.errorToast).toHaveBeenCalledWith(
       'Repositories unavailable',

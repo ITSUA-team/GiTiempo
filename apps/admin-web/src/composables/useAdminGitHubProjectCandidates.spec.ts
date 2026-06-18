@@ -19,6 +19,14 @@ const organizationOwner: GitHubOwner = {
   url: 'https://github.com/octo-org',
 };
 
+const defaultOrganizationOwner: GitHubOwner = {
+  avatarUrl: null,
+  label: 'ITSUA-team',
+  login: 'ITSUA-team',
+  type: 'organization',
+  url: 'https://github.com/ITSUA-team',
+};
+
 const repository: GitHubRepository = {
   description: null,
   fullName: 'octo-org/repo',
@@ -104,49 +112,59 @@ function createCandidates(
 }
 
 describe('useAdminGitHubProjectCandidates', () => {
-  it('defaults to the connected personal owner while keeping organizations reachable', async () => {
+  it('loads organization owners instead of the connected personal account', async () => {
     const { browsingClient, state } = createCandidates();
 
     await state.loadConnectionStatus();
 
     expect(browsingClient.listOwners).toHaveBeenCalledWith({
-      type: 'all',
+      type: 'organization',
     });
-    expect(state.owners.value).toEqual([personalOwner, organizationOwner]);
-    expect(state.ownerSuggestions.value).toEqual([personalOwner, organizationOwner]);
-    expect(state.selectedOwner.value).toEqual(personalOwner);
+    expect(state.owners.value).toEqual([
+      defaultOrganizationOwner,
+      organizationOwner,
+    ]);
+    expect(state.ownerFieldValue.value).toEqual(defaultOrganizationOwner);
+    expect(state.ownerSuggestions.value).toEqual([
+      defaultOrganizationOwner,
+      organizationOwner,
+    ]);
+    expect(state.selectedOwner.value).toEqual(defaultOrganizationOwner);
     expect(browsingClient.listRepositories).toHaveBeenCalledWith({
       limit: 100,
-      ownerType: 'personal',
+      owner: 'ITSUA-team',
+      ownerType: 'organization',
     });
     expect(browsingClient.listProjects).toHaveBeenCalledWith({
       limit: 100,
-      ownerType: 'personal',
+      owner: 'ITSUA-team',
+      ownerType: 'organization',
     });
   });
 
-  it('loads organization candidates when an organization owner is selected', async () => {
+  it('ignores personal owners returned from the browsing client', async () => {
     const { browsingClient, state } = createCandidates();
 
     await state.loadOwners('octocat');
     state.completeOwners({ query: '' });
 
     expect(state.ownerSuggestions.value).toEqual([
-      personalOwner,
+      defaultOrganizationOwner,
       organizationOwner,
     ]);
 
-    await state.selectOwner(organizationOwner);
+    await state.selectOwner(personalOwner);
 
-    expect(state.selectedOwner.value).toEqual(organizationOwner);
+    expect(state.selectedOwner.value).toBeNull();
+    expect(state.ownerFieldValue.value).toBeNull();
     expect(browsingClient.listRepositories).toHaveBeenLastCalledWith({
       limit: 100,
-      owner: 'octo-org',
+      owner: 'ITSUA-team',
       ownerType: 'organization',
     });
     expect(browsingClient.listProjects).toHaveBeenLastCalledWith({
       limit: 100,
-      owner: 'octo-org',
+      owner: 'ITSUA-team',
       ownerType: 'organization',
     });
   });
@@ -169,7 +187,7 @@ describe('useAdminGitHubProjectCandidates', () => {
     state.completeProjects({ query: '' });
 
     expect(state.ownerSuggestions.value).toEqual([
-      personalOwner,
+      defaultOrganizationOwner,
       organizationOwner,
     ]);
     expect(state.repositorySuggestions.value).toEqual([
@@ -177,6 +195,72 @@ describe('useAdminGitHubProjectCandidates', () => {
       secondRepository,
     ]);
     expect(state.projectSuggestions.value).toEqual([project, secondProject]);
+  });
+
+  it('defaults to ITSUA-team when GitHub returns no owners', async () => {
+    const { browsingClient, state } = createCandidates([]);
+
+    await state.loadOwners('octocat');
+
+    expect(state.owners.value).toEqual([defaultOrganizationOwner]);
+    expect(state.selectedOwner.value).toEqual(defaultOrganizationOwner);
+    expect(browsingClient.listRepositories).toHaveBeenLastCalledWith({
+      limit: 100,
+      owner: 'ITSUA-team',
+      ownerType: 'organization',
+    });
+    expect(browsingClient.listProjects).toHaveBeenLastCalledWith({
+      limit: 100,
+      owner: 'ITSUA-team',
+      ownerType: 'organization',
+    });
+
+    state.completeOwners({ query: 'ITSUA' });
+
+    expect(state.ownerSuggestions.value).toEqual([
+      defaultOrganizationOwner,
+      {
+        avatarUrl: null,
+        label: 'Use ITSUA',
+        login: 'ITSUA',
+        type: 'organization',
+        url: 'https://github.com/ITSUA',
+      },
+    ]);
+
+    await state.selectOwner(state.ownerSuggestions.value[1] ?? null);
+
+    expect(state.selectedOwner.value?.login).toBe('ITSUA');
+    state.ownerSuggestions.value = [];
+    state.completeOwners({ query: 'Use ITSUA (organization)' });
+    expect(state.ownerSuggestions.value[0]?.login).toBe('ITSUA');
+    expect(browsingClient.listRepositories).toHaveBeenLastCalledWith({
+      limit: 100,
+      owner: 'ITSUA',
+      ownerType: 'organization',
+    });
+    expect(browsingClient.listProjects).toHaveBeenLastCalledWith({
+      limit: 100,
+      owner: 'ITSUA',
+      ownerType: 'organization',
+    });
+  });
+
+  it('does not treat raw typed owner input as a selected owner', async () => {
+    const { browsingClient, state } = createCandidates([]);
+
+    await state.loadOwners('octocat');
+    const repositoryCallCount = browsingClient.listRepositories.mock.calls.length;
+    const projectCallCount = browsingClient.listProjects.mock.calls.length;
+
+    await state.selectOwner('ITSUA');
+
+    expect(state.ownerFieldValue.value).toBe('ITSUA');
+    expect(state.selectedOwner.value).toBeNull();
+    expect(browsingClient.listRepositories).toHaveBeenCalledTimes(
+      repositoryCallCount,
+    );
+    expect(browsingClient.listProjects).toHaveBeenCalledTimes(projectCallCount);
   });
 
   it('keeps all GitHub candidates visible when completing selected candidate labels', async () => {

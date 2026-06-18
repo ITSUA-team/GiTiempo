@@ -75,6 +75,8 @@ const {
   loadCandidatesForSelectedOwner,
   loadConnectionStatus,
   loadOwners,
+  ownerFieldValue,
+  owners,
   ownerSuggestions,
   ownersError,
   ownersLoading,
@@ -277,7 +279,7 @@ async function handleSubmit({
 
     const project = await adminProjectsClient.createProject(createInput);
 
-    if (!isGitHubMode.value && managerUserId) {
+    if (managerUserId) {
       await adminProjectsClient.assignMember(project.id, managerUserId);
     }
 
@@ -340,8 +342,16 @@ onMounted(() => {
                 GitHub project source
               </h3>
               <p class="text-text-muted text-[13px] font-normal">
-                Browse the connected user and organization repositories or
-                Projects V2 sources.
+                Browse repositories or Projects V2 sources for a GitHub
+                organization.
+              </p>
+              <p
+                v-if="connectedLogin"
+                class="text-text-muted text-xs"
+              >
+                Connected as @{{ connectedLogin }}. Private organization
+                repositories and Projects V2 require the GitHub App to be
+                granted access in GitHub.
               </p>
             </div>
             <Button
@@ -391,11 +401,11 @@ onMounted(() => {
                 for="github-owner"
                 class="text-text-dark text-[13px] font-medium"
               >
-                GitHub owner
+                GitHub organization
               </label>
               <AutoComplete
                 input-id="github-owner"
-                :model-value="selectedOwner"
+                :model-value="ownerFieldValue"
                 :suggestions="ownerSuggestions"
                 :option-label="getOwnerLabel"
                 complete-on-focus
@@ -404,13 +414,33 @@ onMounted(() => {
                 force-selection
                 :min-length="0"
                 show-clear
-                placeholder="Select owner"
+                placeholder="Select organization"
                 :loading="ownersLoading"
                 :disabled="isSubmitting || ownersLoading"
                 :pt="githubAutoCompletePt"
                 @complete="completeOwners"
                 @update:model-value="handleOwnerUpdate"
               />
+              <small class="text-text-muted text-xs">
+                Choose an organization such as ITSUA. The repository and
+                Project V2 lists reload for the selected organization. If it is
+                missing, type the organization login and select the typed option.
+                Private sources only appear after the GitHub App has access to
+                those repositories or organization projects.
+              </small>
+              <small
+                v-if="
+                  !selectedOwner &&
+                    !ownersLoading &&
+                    !ownersError &&
+                    owners.length === 0
+                "
+                class="text-text-muted text-xs"
+              >
+                No organizations were returned by GitHub for this connection.
+                Type the organization login manually, or reconnect GitHub if its
+                repositories still cannot load.
+              </small>
               <small
                 v-if="ownersError"
                 class="text-status-error-text text-xs"
@@ -421,7 +451,7 @@ onMounted(() => {
 
             <Button
               v-if="ownersError"
-              label="Retry owners"
+              label="Retry organizations"
               severity="secondary"
               variant="outlined"
               size="small"
@@ -469,7 +499,9 @@ onMounted(() => {
                   v-else-if="!repositoriesLoading && repositories.length === 0"
                   class="text-text-muted text-xs"
                 >
-                  No repositories are available for this owner.
+                  No accessible repositories were returned for this organization.
+                  Grant the GitHub App access to private repositories in GitHub,
+                  then reconnect if needed.
                 </small>
               </div>
 
@@ -508,7 +540,9 @@ onMounted(() => {
                   v-else-if="!projectsLoading && projects.length === 0"
                   class="text-text-muted text-xs"
                 >
-                  No Projects V2 are available for this owner.
+                  No accessible Projects V2 were returned for this organization.
+                  Grant the GitHub App organization Projects permission and
+                  access in GitHub, then reconnect if needed.
                 </small>
               </div>
             </div>
@@ -555,11 +589,11 @@ onMounted(() => {
           :initial-values="initialValues"
           @submit="handleSubmit"
         >
-          <div
-            v-if="!isGitHubMode"
-            class="flex flex-col gap-2.5"
-          >
-            <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-2.5">
+            <div
+              v-if="!isGitHubMode"
+              class="flex flex-col gap-1.5"
+            >
               <label
                 for="project-name"
                 class="text-text-dark text-[13px] font-medium"
@@ -727,8 +761,8 @@ onMounted(() => {
         </button>
 
         <p class="text-text-muted text-xs font-normal">
-          GitHub mode shows only GitHub source fields here. PM, visibility, and
-          defaults can be adjusted after creation.
+          GitHub mode preserves source metadata while still letting you set PM,
+          visibility, and task billing defaults before creation.
         </p>
       </div>
     </div>

@@ -43,6 +43,8 @@ interface UseAdminGitHubProjectCandidatesOptions {
 type TextGetter<T> = (item: T) => string;
 /* eslint-enable no-unused-vars */
 
+const DEFAULT_GITHUB_ORGANIZATION_LOGIN = 'ITSUA-team';
+
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
@@ -59,6 +61,50 @@ function filterByQuery<T>(
   return items.filter((item) =>
     getText(item).toLowerCase().includes(normalizedQuery),
   );
+}
+
+function createTypedOrganizationOwner(query: string): GitHubOwner | null {
+  const login = query.trim();
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login)) {
+    return null;
+  }
+
+  return {
+    avatarUrl: null,
+    label: `Use ${login}`,
+    login,
+    type: 'organization',
+    url: `https://github.com/${login}`,
+  };
+}
+
+function createDefaultOrganizationOwner(): GitHubOwner {
+  return {
+    avatarUrl: null,
+    label: DEFAULT_GITHUB_ORGANIZATION_LOGIN,
+    login: DEFAULT_GITHUB_ORGANIZATION_LOGIN,
+    type: 'organization',
+    url: `https://github.com/${DEFAULT_GITHUB_ORGANIZATION_LOGIN}`,
+  };
+}
+
+function isOwnerLogin(owner: GitHubOwner, login: string): boolean {
+  return owner.login.toLowerCase() === login.toLowerCase();
+}
+
+function withDefaultOrganizationOwner(items: GitHubOwner[]): GitHubOwner[] {
+  const defaultOwner = items.find((owner) =>
+    isOwnerLogin(owner, DEFAULT_GITHUB_ORGANIZATION_LOGIN),
+  );
+
+  if (defaultOwner) {
+    return [
+      defaultOwner,
+      ...items.filter((owner) => owner !== defaultOwner),
+    ];
+  }
+
+  return [createDefaultOrganizationOwner(), ...items];
 }
 
 function isOwner(value: AutoCompleteValue<GitHubOwner>): value is GitHubOwner {
@@ -80,9 +126,7 @@ function isProject(
 function getOwnerScopedQuery(
   owner: GitHubOwner,
 ): GitHubProjectListQuery & GitHubRepositoryListQuery {
-  return owner.type === 'organization'
-    ? { ownerType: 'organization', owner: owner.login, limit: 100 }
-    : { ownerType: 'personal', limit: 100 };
+  return { ownerType: 'organization', owner: owner.login, limit: 100 };
 }
 
 function getOwnerDisplayLabel(owner: GitHubOwner): string {
@@ -146,11 +190,15 @@ function getInitialOwner(
   items: GitHubOwner[],
   preferredLogin?: string | null,
 ): GitHubOwner | null {
-  const preferredOwner = items.find((owner) => owner.login === preferredLogin);
-  const firstPersonal = items.find((owner) => owner.type === 'personal');
+  const defaultOrganization = items.find((owner) =>
+    isOwnerLogin(owner, DEFAULT_GITHUB_ORGANIZATION_LOGIN),
+  );
+  const preferredOrganization = items.find(
+    (owner) => owner.type === 'organization' && owner.login === preferredLogin,
+  );
   const firstOrganization = items.find((owner) => owner.type === 'organization');
 
-  return preferredOwner ?? firstPersonal ?? firstOrganization ?? items[0] ?? null;
+  return defaultOrganization ?? preferredOrganization ?? firstOrganization ?? null;
 }
 
 function createRepositoryReference(
@@ -204,6 +252,7 @@ export function useAdminGitHubProjectCandidates(
   const connectedLogin = ref<string | null>(null);
 
   const owners = ref<GitHubOwner[]>([]);
+  const ownerFieldValue = ref<AutoCompleteValue<GitHubOwner>>(null);
   const ownerSuggestions = ref<GitHubOwner[]>([]);
   const selectedOwner = ref<GitHubOwner | null>(null);
   const ownersLoading = ref(false);
@@ -326,17 +375,22 @@ export function useAdminGitHubProjectCandidates(
     ownersError.value = null;
 
     try {
-      const response = await browsingClient.listOwners({ type: 'all' });
-      owners.value = response.items;
-      ownerSuggestions.value = response.items;
-      selectedOwner.value = getInitialOwner(response.items, preferredLogin);
+      const response = await browsingClient.listOwners({ type: 'organization' });
+      const organizationOwners = withDefaultOrganizationOwner(
+        response.items.filter((owner) => owner.type === 'organization'),
+      );
+      owners.value = organizationOwners;
+      ownerSuggestions.value = organizationOwners;
+      selectedOwner.value = getInitialOwner(organizationOwners, preferredLogin);
+      ownerFieldValue.value = selectedOwner.value;
       await loadCandidatesForSelectedOwner();
     } catch (error) {
       owners.value = [];
+      ownerFieldValue.value = null;
       ownerSuggestions.value = [];
       selectedOwner.value = null;
       clearCandidateLists();
-      ownersError.value = notifyError(error, 'Failed to load GitHub owners');
+      ownersError.value = notifyError(error, 'Failed to load GitHub organizations');
     } finally {
       ownersLoading.value = false;
     }
@@ -354,6 +408,7 @@ export function useAdminGitHubProjectCandidates(
       if (response.status === 'disconnected') {
         connectionState.value = 'disconnected';
         owners.value = [];
+        ownerFieldValue.value = null;
         ownerSuggestions.value = [];
         selectedOwner.value = null;
         clearCandidateLists();
@@ -374,15 +429,34 @@ export function useAdminGitHubProjectCandidates(
 
   function completeOwners(event: AutoCompleteCompleteEvent): void {
     if (isSelectedOwnerQuery(event.query, selectedOwner.value)) {
-      ownerSuggestions.value = [...owners.value];
+      ownerSuggestions.value = selectedOwner.value
+        ? [
+            selectedOwner.value,
+            ...owners.value.filter(
+              (owner) => owner.login !== selectedOwner.value?.login,
+            ),
+          ]
+        : [...owners.value];
       return;
     }
 
-    ownerSuggestions.value = filterByQuery(
+    const suggestions = filterByQuery(
       owners.value,
       event.query,
       getOwnerSearchText,
     );
+    const typedOwner = createTypedOrganizationOwner(event.query);
+
+    if (
+      typedOwner &&
+      !suggestions.some(
+        (owner) => owner.login.toLowerCase() === typedOwner.login.toLowerCase(),
+      )
+    ) {
+      suggestions.push(typedOwner);
+    }
+
+    ownerSuggestions.value = suggestions;
   }
 
   function completeRepositories(event: AutoCompleteCompleteEvent): void {
@@ -412,8 +486,10 @@ export function useAdminGitHubProjectCandidates(
   }
 
   async function selectOwner(value: AutoCompleteValue<GitHubOwner>): Promise<void> {
-    if (!isOwner(value)) {
-      if (value === null || value === '') {
+    ownerFieldValue.value = value;
+
+    if (typeof value === 'string') {
+      if (selectedOwner.value && !isSelectedOwnerQuery(value, selectedOwner.value)) {
         selectedOwner.value = null;
         clearSelection();
         clearCandidateLists();
@@ -422,6 +498,16 @@ export function useAdminGitHubProjectCandidates(
       return;
     }
 
+    if (!isOwner(value) || value.type !== 'organization') {
+      ownerFieldValue.value = null;
+      selectedOwner.value = null;
+      clearSelection();
+      clearCandidateLists();
+
+      return;
+    }
+
+    ownerFieldValue.value = value;
     selectedOwner.value = value;
     await loadCandidatesForSelectedOwner();
   }
@@ -464,6 +550,7 @@ export function useAdminGitHubProjectCandidates(
     loadCandidatesForSelectedOwner,
     loadConnectionStatus,
     loadOwners,
+    ownerFieldValue,
     owners,
     ownerSuggestions,
     ownersError,
