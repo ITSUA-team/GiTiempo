@@ -17,6 +17,7 @@ import {
   type AuthRuntime,
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
+import { formatLocalTimestampLabel } from "@/lib/time-formatters";
 
 const replaceSpy = vi.fn(async () => undefined);
 const toastAddSpy = vi.fn();
@@ -167,25 +168,13 @@ describe("ProfileView", () => {
 
   it("wires the identity form and GitHub surface without a duplicate sign-out action", async () => {
     const { wrapper } = await mountProfileView();
-    const connectedAt = new Date("2026-05-01T10:15:00.000Z");
-    const updatedAt = new Date("2026-05-04T08:45:00.000Z");
-    const formatDate = (value: Date) =>
-      new Intl.DateTimeFormat("en-US", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(value);
-    const formatTime = (value: Date) =>
-      value.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        hour12: false,
-        minute: "2-digit",
-      });
+    const connectedAt = "2026-05-01T10:15:00.000Z";
+    const updatedAt = "2026-05-04T08:45:00.000Z";
 
     expect(wrapper.text()).not.toContain("Manage your personal settings and session access.");
     expect(wrapper.text()).toContain("GitHub Connection");
-    expect(wrapper.text()).toContain(`${formatDate(connectedAt)}, ${formatTime(connectedAt)}`);
-    expect(wrapper.text()).toContain(`${formatDate(updatedAt)}, ${formatTime(updatedAt)}`);
+    expect(wrapper.text()).toContain(formatLocalTimestampLabel(connectedAt));
+    expect(wrapper.text()).toContain(formatLocalTimestampLabel(updatedAt));
     expect(wrapper.text()).not.toContain("2026-05-01T10:15:00.000Z");
     expect(wrapper.text()).not.toContain("Avatar");
     expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);

@@ -1,16 +1,60 @@
 import { z } from "zod";
 
 const timeZoneNamePattern = /^(?:UTC|[A-Za-z_]+(?:\/[A-Za-z0-9_+.-]+)+)$/;
+const fallbackTimeZones = new Set([
+  "UTC",
+  "Africa/Cairo",
+  "Africa/Johannesburg",
+  "America/Argentina/Buenos_Aires",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Mexico_City",
+  "America/New_York",
+  "America/Sao_Paulo",
+  "America/Toronto",
+  "Asia/Dubai",
+  "Asia/Hong_Kong",
+  "Asia/Jakarta",
+  "Asia/Jerusalem",
+  "Asia/Kolkata",
+  "Asia/Seoul",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Melbourne",
+  "Australia/Sydney",
+  "Europe/Amsterdam",
+  "Europe/Berlin",
+  "Europe/Kyiv",
+  "Europe/London",
+  "Europe/Madrid",
+  "Europe/Paris",
+  "Europe/Rome",
+  "Europe/Stockholm",
+  "Europe/Warsaw",
+]);
+
+function getRuntimeTimeZones(): Set<string> | null {
+  const supportedValuesOf = Intl.supportedValuesOf;
+
+  if (typeof supportedValuesOf !== "function") return null;
+
+  try {
+    const values = supportedValuesOf("timeZone");
+
+    return values.length > 0 ? new Set(values) : null;
+  } catch {
+    return null;
+  }
+}
+
+const runtimeTimeZones = getRuntimeTimeZones();
 
 function isValidTimeZone(timeZone: string): boolean {
   if (!timeZoneNamePattern.test(timeZone)) return false;
+  if (timeZone === "UTC") return true;
 
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone }).format(new Date(0));
-    return true;
-  } catch {
-    return false;
-  }
+  return runtimeTimeZones?.has(timeZone) === true || fallbackTimeZones.has(timeZone);
 }
 
 const timeZoneSchema = z
