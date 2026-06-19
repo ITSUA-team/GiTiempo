@@ -608,20 +608,16 @@ export class ProjectsService {
     isBillable: boolean,
     updatedAt: Date,
   ): Promise<number> {
-    const result = await db.execute<UpdateCountRow>(sql`
-      WITH updated AS (
-        UPDATE "tasks"
-        SET
-          "default_time_entry_billable" = ${isBillable},
-          "updated_at" = ${updatedAt}
-        WHERE "workspace_id" = ${workspaceId}
-          AND "project_id" = ${projectId}
-        RETURNING 1
-      )
-      SELECT COUNT(*)::integer AS "updatedCount" FROM updated
+    const result = await db.execute(sql`
+      UPDATE "tasks"
+      SET
+        "default_time_entry_billable" = ${isBillable},
+        "updated_at" = ${updatedAt}
+      WHERE "workspace_id" = ${workspaceId}
+        AND "project_id" = ${projectId}
     `);
 
-    return toNumber(result.rows[0]?.updatedCount);
+    return result.rowCount ?? 0;
   }
 
   private async updateProjectTimeEntriesBillableDefault(

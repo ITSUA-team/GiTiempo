@@ -322,7 +322,7 @@ describe('ProjectsService', () => {
     const tx = {
       execute: vi
         .fn()
-        .mockResolvedValueOnce({ rows: [{ updatedCount: 2 }] })
+        .mockResolvedValueOnce({ rowCount: 2 })
         .mockResolvedValueOnce({ rows: [{ updatedCount: '1' }] }),
     };
     const db = { transaction: vi.fn((callback) => callback(tx)) };
