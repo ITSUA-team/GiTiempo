@@ -34,15 +34,24 @@ import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
-import { projects as projectsTable } from '../../projects/schemas/projects.schema';
+import {
+  projectRowSelection,
+  projects as projectsTable,
+} from '../../projects/schemas/projects.schema';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
-import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
+import {
+  taskRowSelection,
+  tasks as tasksTable,
+} from '../../tasks/schemas/tasks.schema';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { users } from '../../users/schemas/users.schema';
 import { UsersActivityService } from '../../users/services/users-activity.service';
 import { calculateDurationSeconds } from '../time-entry-duration';
-import { timeEntries } from '../schemas/time-entries.schema';
+import {
+  timeEntries,
+  timeEntryRowSelection,
+} from '../schemas/time-entries.schema';
 
 type QueryExecutor = Pick<DrizzleDB, 'select' | 'insert' | 'update' | 'delete'>;
 type TimeEntryRow = typeof timeEntries.$inferSelect;
@@ -167,7 +176,7 @@ export class TimeEntriesService {
 
     const updatedId = await this.db.transaction(async (tx) => {
       const [row] = await tx
-        .select()
+        .select(timeEntryRowSelection)
         .from(timeEntries)
         .where(
           and(
@@ -389,7 +398,7 @@ export class TimeEntriesService {
   async stopTimer(user: AuthUser): Promise<TimeEntryResponse> {
     const entryId = await this.db.transaction(async (tx) => {
       const [row] = await tx
-        .select()
+        .select(timeEntryRowSelection)
         .from(timeEntries)
         .where(
           and(
@@ -570,7 +579,7 @@ export class TimeEntriesService {
     entryId: string,
   ): Promise<TimeEntryRow> {
     const [row] = await this.db
-      .select()
+      .select(timeEntryRowSelection)
       .from(timeEntries)
       .where(
         and(
@@ -841,7 +850,7 @@ export class TimeEntriesService {
     projectId: string,
   ): Promise<ProjectRow> {
     const [project] = await db
-      .select()
+      .select(projectRowSelection)
       .from(projectsTable)
       .where(
         and(
@@ -861,7 +870,7 @@ export class TimeEntriesService {
     taskId: string,
   ): Promise<TaskRow> {
     const [task] = await db
-      .select()
+      .select(taskRowSelection)
       .from(tasksTable)
       .where(
         and(
@@ -882,7 +891,7 @@ export class TimeEntriesService {
     taskId: string,
   ): Promise<TaskRow> {
     const [task] = await db
-      .select()
+      .select(taskRowSelection)
       .from(tasksTable)
       .where(
         and(

@@ -41,3 +41,18 @@ export const githubConnections = pgTable(
 );
 
 export type GithubConnectionRow = typeof githubConnections.$inferSelect;
+
+export const githubConnectionRowSelection = {
+  id: githubConnections.id,
+  userId: githubConnections.userId,
+  githubUserId: githubConnections.githubUserId,
+  login: githubConnections.login,
+  avatarUrl: githubConnections.avatarUrl,
+  accessTokenEncrypted: githubConnections.accessTokenEncrypted,
+  refreshTokenEncrypted: githubConnections.refreshTokenEncrypted,
+  tokenExpiresAt: githubConnections.tokenExpiresAt,
+  refreshTokenExpiresAt: githubConnections.refreshTokenExpiresAt,
+  connected: githubConnections.connected,
+  connectedAt: githubConnections.connectedAt,
+  updatedAt: githubConnections.updatedAt,
+};

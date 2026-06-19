@@ -54,3 +54,16 @@ export const projects = pgTable(
     ),
   ],
 );
+
+export const projectRowSelection = {
+  id: projects.id,
+  workspaceId: projects.workspaceId,
+  name: projects.name,
+  description: projects.description,
+  color: projects.color,
+  visibility: projects.visibility,
+  defaultBillableForTasks: projects.defaultBillableForTasks,
+  isActive: projects.isActive,
+  createdAt: projects.createdAt,
+  updatedAt: projects.updatedAt,
+};

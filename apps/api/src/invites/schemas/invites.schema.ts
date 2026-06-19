@@ -49,3 +49,15 @@ export const invites = pgTable(
     ),
   ],
 );
+
+export const inviteRowSelection = {
+  id: invites.id,
+  workspaceId: invites.workspaceId,
+  email: invites.email,
+  token: invites.token,
+  invitedBy: invites.invitedBy,
+  role: invites.role,
+  status: invites.status,
+  expiresAt: invites.expiresAt,
+  createdAt: invites.createdAt,
+};

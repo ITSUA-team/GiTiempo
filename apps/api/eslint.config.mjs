@@ -26,7 +26,22 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    },
+  },
+  {
+    files: ['src/**/*.ts'],
+    ignores: ['src/**/*.spec.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'CallExpression[arguments.length=0][callee.type="MemberExpression"][callee.property.name="select"]',
+          message:
+            'Use an explicit Drizzle selection map instead of select().',
+        },
+      ],
     },
   },
 );

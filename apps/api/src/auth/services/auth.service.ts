@@ -18,7 +18,7 @@ import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { UsersService } from '../../users/services/users.service';
-import { users } from '../../users/schemas/users.schema';
+import { userRowSelection, users } from '../../users/schemas/users.schema';
 import { refreshTokens } from '../schemas/refresh-tokens.schema';
 import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
@@ -487,7 +487,7 @@ export class AuthService {
     db: Pick<DrizzleDB, 'select'> = this.db,
   ) {
     const [row] = await db
-      .select()
+      .select(userRowSelection)
       .from(users)
       .where(sql`lower(btrim(${users.email})) = ${email}`)
       .limit(1);

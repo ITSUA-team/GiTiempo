@@ -25,3 +25,10 @@ export const workspaces = pgTable(
     ),
   ],
 );
+
+export const workspaceRowSelection = {
+  id: workspaces.id,
+  name: workspaces.name,
+  createdAt: workspaces.createdAt,
+  updatedAt: workspaces.updatedAt,
+};

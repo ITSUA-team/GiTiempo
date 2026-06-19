@@ -47,3 +47,15 @@ export const tasks = pgTable(
     ),
   ],
 );
+
+export const taskRowSelection = {
+  id: tasks.id,
+  projectId: tasks.projectId,
+  workspaceId: tasks.workspaceId,
+  title: tasks.title,
+  status: tasks.status,
+  defaultBillableForTimeEntries: tasks.defaultBillableForTimeEntries,
+  isActive: tasks.isActive,
+  createdAt: tasks.createdAt,
+  updatedAt: tasks.updatedAt,
+};

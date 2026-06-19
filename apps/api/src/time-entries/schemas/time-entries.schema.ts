@@ -78,3 +78,18 @@ export const timeEntries = pgTable(
     ),
   ],
 );
+
+export const timeEntryRowSelection = {
+  id: timeEntries.id,
+  taskId: timeEntries.taskId,
+  userId: timeEntries.userId,
+  workspaceId: timeEntries.workspaceId,
+  startedAt: timeEntries.startedAt,
+  endedAt: timeEntries.endedAt,
+  durationSeconds: timeEntries.durationSeconds,
+  description: timeEntries.description,
+  isBillable: timeEntries.isBillable,
+  source: timeEntries.source,
+  createdAt: timeEntries.createdAt,
+  updatedAt: timeEntries.updatedAt,
+};

@@ -140,7 +140,7 @@ export class MembersService {
   ): Promise<WorkspaceMemberResponse> {
     return this.db.transaction(async (tx) => {
       const [target] = await tx
-        .select()
+        .select({ role: workspaceMembers.role })
         .from(workspaceMembers)
         .where(
           and(
@@ -202,7 +202,7 @@ export class MembersService {
   async removeMember(workspaceId: string, memberId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
       const [target] = await tx
-        .select()
+        .select({ role: workspaceMembers.role })
         .from(workspaceMembers)
         .where(
           and(

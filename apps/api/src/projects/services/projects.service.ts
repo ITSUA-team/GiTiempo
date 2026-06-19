@@ -36,7 +36,7 @@ import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projectExternalRefs } from '../schemas/project-external-refs.schema';
-import { projects } from '../schemas/projects.schema';
+import { projectRowSelection, projects } from '../schemas/projects.schema';
 
 export type ProjectRow = typeof projects.$inferSelect;
 type ProjectResponseRow = ProjectRow & {
@@ -578,7 +578,7 @@ export class ProjectsService {
     db: Pick<DrizzleDB, 'select'>,
   ): Promise<ProjectRow | null> {
     const [row] = await db
-      .select()
+      .select(projectRowSelection)
       .from(projects)
       .where(
         and(eq(projects.id, projectId), eq(projects.workspaceId, workspaceId)),

@@ -33,3 +33,13 @@ export const workspaceSettings = pgTable(
     uniqueIndex('workspace_settings_workspace_id_unique').on(table.workspaceId),
   ],
 );
+
+export const workspaceSettingsRowSelection = {
+  id: workspaceSettings.id,
+  workspaceId: workspaceSettings.workspaceId,
+  currency: workspaceSettings.currency,
+  defaultHourlyRate: workspaceSettings.defaultHourlyRate,
+  timeZone: workspaceSettings.timeZone,
+  createdAt: workspaceSettings.createdAt,
+  updatedAt: workspaceSettings.updatedAt,
+};
