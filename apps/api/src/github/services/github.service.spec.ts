@@ -268,6 +268,57 @@ describe('GithubService', () => {
     expect(apiClient.listRepositories).not.toHaveBeenCalled();
   });
 
+  it('rejects organization-scoped project browsing when the owner is not allowed', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    workspaceGitHubOrganizations.assertOrganizationAllowed.mockRejectedValue(
+      new Error('blocked'),
+    );
+
+    await expect(
+      service().listProjects(user, {
+        ownerType: 'organization',
+        owner: 'octo-org',
+        limit: 30,
+      }),
+    ).rejects.toThrow('blocked');
+    expect(apiClient.listProjects).not.toHaveBeenCalled();
+  });
+
+  it('rejects organization repository issues when the owner is not allowed', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    workspaceGitHubOrganizations.assertOrganizationAllowed.mockRejectedValue(
+      new Error('blocked'),
+    );
+
+    await expect(
+      service().listRepositoryIssues(user, 'octo-org', 'repo', {
+        state: 'all',
+        limit: 30,
+      }),
+    ).rejects.toThrow('blocked');
+    expect(apiClient.listRepositoryIssues).not.toHaveBeenCalled();
+  });
+
   it('allows personal repository issues without checking the workspace organization policy', async () => {
     connections.status.mockResolvedValue({
       status: 'connected',
