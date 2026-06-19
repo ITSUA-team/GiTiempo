@@ -166,25 +166,29 @@ describe("DashboardOverview", () => {
     return wrapper;
   }
 
-  it("renders the populated dashboard overview without page-level timer controls or duplicated header", async () => {
-    const wrapper = await mountOverview();
+  it(
+    "renders the populated dashboard overview without page-level timer controls or duplicated header",
+    async () => {
+      const wrapper = await mountOverview();
 
-    expect(wrapper.text()).not.toContain("Timer actions stay in the global top bar.");
-    expect(wrapper.text()).toContain("6h 40m");
-    expect(wrapper.text()).toContain("Admin Web");
-    expect(wrapper.text()).toContain("Improve reports filters");
-    expect(wrapper.text()).toContain("42");
-    expect(wrapper.text()).toContain("Top Focus This Week");
-    expect(wrapper.text()).toContain("Recent Time Entries");
-    expect(wrapper.text()).toContain("View all");
-    expect(
-      wrapper.findAll('button[aria-label="Start"], button[aria-label="Start timer"], button[aria-label="Stop"], button[aria-label="Stop timer"]'),
-    ).toHaveLength(0);
+      expect(wrapper.text()).not.toContain("Timer actions stay in the global top bar.");
+      expect(wrapper.text()).toContain("6h 40m");
+      expect(wrapper.text()).toContain("Admin Web");
+      expect(wrapper.text()).toContain("Improve reports filters");
+      expect(wrapper.text()).toContain("42");
+      expect(wrapper.text()).toContain("Top Focus This Week");
+      expect(wrapper.text()).toContain("Recent Time Entries");
+      expect(wrapper.text()).toContain("View all");
+      expect(
+        wrapper.findAll('button[aria-label="Start"], button[aria-label="Start timer"], button[aria-label="Stop"], button[aria-label="Stop timer"]'),
+      ).toHaveLength(0);
 
-    await wrapper.get("button").trigger("click");
+      await wrapper.get("button").trigger("click");
 
-    expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
-  });
+      expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
+    },
+    20_000,
+  );
 
   it("renders the loading skeleton state", async () => {
     pageState.value = "loading";

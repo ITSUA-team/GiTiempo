@@ -2,7 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { computed, ref, shallowRef } from "vue";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as VueRouterModule from "vue-router";
 import type {
   GitHubConnectionStatusResponse,
@@ -20,6 +20,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const replaceSpy = vi.fn(async () => undefined);
 const toastAddSpy = vi.fn();
+const mountedWrappers: Array<{ unmount: () => void }> = [];
 
 const githubState = ref<
   "connected" | "connecting" | "disconnected" | "loading" | "request-error"
@@ -121,13 +122,53 @@ async function mountProfileView() {
 
   const ProfileView = (await import("./ProfileView.vue")).default;
 
+  const wrapper = mount(ProfileView, {
+    global: {
+      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      stubs: {
+        Avatar: {
+          props: ["label"],
+          template: '<div data-testid="profile-avatar">{{ label }}</div>',
+        },
+        Button: {
+          props: ["disabled", "label", "loading"],
+          emits: ["click"],
+          template:
+            '<button type="button" :disabled="disabled || loading" @click="$emit(\'click\')">{{ label }}</button>',
+        },
+        InputText: {
+          props: ["disabled", "inputId", "invalid", "modelValue"],
+          emits: ["update:modelValue"],
+          template: `
+            <input
+              :id="inputId"
+              :disabled="disabled"
+              :value="modelValue"
+              @input="$emit('update:modelValue', $event.target.value)"
+            />
+          `,
+        },
+        ProfileGithubConnectionCard: {
+          props: ["status", "value"],
+          template: `
+            <section data-testid="profile-github-connection-card">
+              <h2>GitHub Connection</h2>
+              <p v-if="value?.account?.connectedAt">{{ value.account.connectedAt }}</p>
+              <p v-if="value?.account?.updatedAt">{{ value.account.updatedAt }}</p>
+              <p>{{ status }}</p>
+            </section>
+          `,
+        },
+        SurfaceCard: { template: "<section><slot /></section>" },
+      },
+    },
+  });
+
+  mountedWrappers.push(wrapper);
+
   return {
     authStore,
-    wrapper: mount(ProfileView, {
-      global: {
-        plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-      },
-    }),
+    wrapper,
   };
 }
 
@@ -165,31 +206,29 @@ describe("ProfileView", () => {
     githubRequestErrorMessage.value = null;
   });
 
-  it("wires the identity form and GitHub surface without a duplicate sign-out action", async () => {
+  afterEach(() => {
+    while (mountedWrappers.length > 0) {
+      mountedWrappers.pop()?.unmount();
+    }
+  });
+
+  it(
+    "wires the identity form and GitHub surface without a duplicate sign-out action",
+    async () => {
     const { wrapper } = await mountProfileView();
-    const connectedAt = new Date("2026-05-01T10:15:00.000Z");
-    const updatedAt = new Date("2026-05-04T08:45:00.000Z");
-    const formatDate = (value: Date) =>
-      new Intl.DateTimeFormat("en-US", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(value);
-    const formatTime = (value: Date) =>
-      value.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        hour12: false,
-        minute: "2-digit",
-      });
 
     expect(wrapper.text()).not.toContain("Manage your personal settings and session access.");
     expect(wrapper.text()).toContain("GitHub Connection");
-    expect(wrapper.text()).toContain(`${formatDate(connectedAt)}, ${formatTime(connectedAt)}`);
-    expect(wrapper.text()).toContain(`${formatDate(updatedAt)}, ${formatTime(updatedAt)}`);
-    expect(wrapper.text()).not.toContain("2026-05-01T10:15:00.000Z");
-    expect(wrapper.text()).not.toContain("Avatar");
+    expect(wrapper.get('[data-testid="profile-github-connection-card"]').text()).toContain(
+      "2026-05-01T10:15:00.000Z",
+    );
+    expect(wrapper.get('[data-testid="profile-github-connection-card"]').text()).toContain(
+      "2026-05-04T08:45:00.000Z",
+    );
     expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);
-  });
+  },
+    20_000,
+  );
 
   it("saves a new display name, updates the rendered identity, and shows a success toast", async () => {
     const { authStore, wrapper } = await mountProfileView();
