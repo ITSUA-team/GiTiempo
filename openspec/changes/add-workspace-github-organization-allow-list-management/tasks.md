@@ -11,13 +11,14 @@
 
 - [x] 2.1 Add DTOs wrapping the shared contracts for workspace GitHub organization policy requests and responses.
 - [x] 2.2 Implement a workspace GitHub organization policy service that lists, adds, removes, normalizes, and de-duplicates allowed organization logins.
-- [x] 2.3 Validate add requests through the requesting admin's connected GitHub account before saving the organization policy row.
+- [x] 2.3 Validate add requests through the requesting admin's connected GitHub account before saving the organization policy row, including direct or active-membership fallback when the initial owner list does not include the organization.
 - [x] 2.4 Add admin-only workspace endpoints for listing, adding, and removing allowed GitHub organizations.
-- [x] 2.5 Add backend unit tests for admin success paths, duplicate casing, disconnected admin add failure, inaccessible organization add failure, remove behavior, and non-admin forbidden paths.
+- [x] 2.5 Add backend unit tests for admin success paths, duplicate casing, disconnected admin add failure, inaccessible organization add failure, membership fallback validation, remove behavior, and non-admin forbidden paths.
 - [x] 2.6 Classify add-organization validation failures into stable frontend-safe recovery reasons without exposing raw GitHub provider details.
 - [x] 2.7 Add backend tests for GitHub App blocked/needs-approval and retryable provider failure reason mapping.
 - [x] 2.8 Return structured recovery payloads with ordered GitHub App access step ids and backend-derived statuses for recoverable add-organization failures.
 - [x] 2.9 Add backend tests proving each recoverable add-organization failure returns the expected recovery step statuses without raw provider details.
+- [x] 2.10 Align the remove endpoint and tests on the policy row identifier returned by list/add responses, not the organization login string.
 
 ## 3. GitHub Policy Enforcement
 
@@ -26,6 +27,7 @@
 - [x] 3.3 Enforce policy for repository issue browsing and any project-issue browsing path that can identify an organization owner; fail closed when organization ownership cannot be verified.
 - [x] 3.4 Apply the same policy filter to GitHub-backed task-picker option loading when that provider surface exists in the implementation.
 - [x] 3.5 Add focused GitHub service/controller tests proving allowed, disallowed, empty-policy, and personal-owner behavior.
+- [x] 3.6 Confirm historical GitHub-backed local refs remain readable after policy removal while removed organizations stay unavailable for new GitHub browsing and selection flows.
 
 ## 4. Admin Settings UI
 
@@ -51,3 +53,4 @@
 - [x] 5.5 Run targeted manual or browser verification for the Settings card add/remove flow, including disconnected GitHub account and backend rejection states.
 - [x] 5.6 Run `openspec status --change add-workspace-github-organization-allow-list-management` and confirm the change is apply-ready.
 - [x] 5.7 Run targeted browser verification for the response-driven GitHub App access recovery cards with a real or mocked blocked organization state.
+- [x] 5.8 Update human API documentation for the workspace GitHub organization policy endpoints alongside OpenAPI.

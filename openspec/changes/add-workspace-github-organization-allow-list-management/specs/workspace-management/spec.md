@@ -20,6 +20,14 @@ The system MUST expose workspace GitHub organization allow-list management to wo
 - **THEN** the system persists the organization login for the workspace
 - **AND** the system returns the saved allowed organization
 
+#### Scenario: Admin add validates organization membership beyond the initial owner list
+- **GIVEN** the requester is an admin member of the current workspace with a connected GitHub account
+- **AND** the requested organization login is not present in the first visible-owner result set
+- **AND** a direct organization membership check or active membership listing confirms the requester can access the organization
+- **WHEN** the requester adds the organization to the workspace policy
+- **THEN** the system persists the organization login for the workspace
+- **AND** the system returns the provider-confirmed organization login
+
 #### Scenario: Admin add validates through GitHub connection
 - **GIVEN** the requester is an admin member of the current workspace
 - **AND** the requester has no usable connected GitHub account
@@ -46,6 +54,13 @@ The system MUST expose workspace GitHub organization allow-list management to wo
 - **AND** the workspace policy contains an allowed GitHub organization
 - **WHEN** the requester removes that organization login from the policy
 - **THEN** the organization is no longer allowed for new workspace GitHub flows
+
+#### Scenario: Admin removes an allowed GitHub organization by policy identifier
+- **GIVEN** the requester is an admin member of the current workspace
+- **AND** the workspace policy contains an allowed GitHub organization response with an identifier
+- **WHEN** the requester removes that organization using the policy identifier
+- **THEN** only that workspace policy row is removed
+- **AND** same-login policy rows in other workspaces are not removed
 
 #### Scenario: Non-admin cannot mutate allowed GitHub organizations
 - **GIVEN** the requester is authenticated but is not an admin member of the current workspace

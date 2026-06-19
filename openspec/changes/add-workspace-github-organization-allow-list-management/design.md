@@ -37,13 +37,13 @@ Affected instruction sources:
 
 2. **Expose policy through `workspace` admin endpoints.**
 
-   Add endpoints under the existing workspace boundary, for example `GET /workspace/github/organizations`, `POST /workspace/github/organizations`, and `DELETE /workspace/github/organizations/:login`. Reuse `WorkspaceAdminGuard`.
+   Add endpoints under the existing workspace boundary, for example `GET /workspace/github/organizations`, `POST /workspace/github/organizations`, and `DELETE /workspace/github/organizations/:organizationId`. Reuse `WorkspaceAdminGuard`. Deletion targets the policy row identifier returned by the list/add response, not a mutable or case-variant login string.
 
    Alternative considered: expose endpoints under `/github`. Rejected because the data is workspace policy, not connected-account profile state or GitHub browsing data.
 
 3. **Validate additions through the admin's connected GitHub account.**
 
-   On add, the backend requires the admin to have a usable GitHub connection, loads organization owners visible to that account, and saves only exact login matches for organization owners. This confirms the login is reachable through the same auth model used by members.
+   On add, the backend requires the admin to have a usable GitHub connection, loads organization owners visible to that account, and saves only exact normalized login matches for organization owners. Validation must not depend only on a single owner-list page: if the requested organization is not present in the initial owner list, the backend confirms active organization membership through a direct provider lookup or an active membership listing before rejecting it. This confirms the login is reachable through the same auth model used by members.
 
    Alternative considered: accept arbitrary logins and rely on later browse failures. Rejected because admins would get false-positive policy rows and members would see confusing empty/forbidden GitHub flows.
 
@@ -98,7 +98,7 @@ Affected instruction sources:
 
 Rollback is straightforward before policy data is used externally: remove the UI calls, remove service enforcement, and drop the new table through a down migration if the deployment process supports rollback migrations. Existing GitHub connections and manual/local workspace data are unaffected.
 
-## Open Questions
+## Resolved Questions
 
-- Should seeded local development include one example allowed organization, or should dev start with an empty allow-list to exercise the add flow?
-- If a user opens an older synced GitHub task whose organization is later removed from the allow-list, should the UI keep the historical external link visible while hiding it from new selection flows?
+- Seeded local development starts with an empty allow-list. This matches the empty-policy data-model requirement and keeps the add flow exercised without placeholder policy rows.
+- Historical GitHub-backed local project/task refs remain attached and readable after an organization is removed from the allow-list. Removal stops the organization from being used in new GitHub browsing, task-picker, or selection flows; it does not delete local records or erase prior external refs.

@@ -21,6 +21,13 @@ The system SHALL maintain a workspace-owned allow-list of GitHub organization lo
 - **THEN** the system verifies those existing refs do not map the same normalized repository or issue to different local records
 - **AND** the system backfills canonical organization-login GitHub refs for the existing local records when they are unambiguous
 
+#### Scenario: Removing an organization preserves historical GitHub-backed workspace refs
+- **GIVEN** the workspace already contains GitHub-backed local project or task refs for repositories in an organization
+- **AND** that organization is removed from the workspace policy
+- **WHEN** users view existing local GiTiempo project, task, or time history that already references those GitHub refs
+- **THEN** the system does not delete the local records or erase their existing external refs
+- **AND** the removed organization remains unavailable for new GitHub browsing, task-picker, or selection flows
+
 ### Requirement: GitHub Organization Policy Is A Filter Only
 The system MUST treat the workspace GitHub organization allow-list as a GiTiempo visibility policy layered on top of each user's connected GitHub account permissions.
 
