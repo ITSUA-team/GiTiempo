@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import {
+  workspaceGitHubOrganizations,
   users,
   workspaceMembers,
   workspaceSettings,
@@ -116,6 +117,23 @@ describe('Workspace settings (e2e)', () => {
       expect(res.body.currency).toBe('USD');
       expect(res.body.defaultHourlyRate).toBe(100);
       expect(res.body.timeZone).toBe('UTC');
+    });
+  });
+
+  describe('GET /workspace/github/organizations', () => {
+    it('returns an empty policy list when the workspace has no allowed organizations', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/workspace/github/organizations')
+        .set('Authorization', bearer(adminToken));
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ items: [] });
+
+      const rows = await db
+        .select()
+        .from(workspaceGitHubOrganizations)
+        .where(eq(workspaceGitHubOrganizations.workspaceId, workspaceId));
+      expect(rows).toEqual([]);
     });
   });
 

@@ -8,6 +8,7 @@ export interface AdminWebEnv {
     projectId?: string;
     storageBucket?: string;
   };
+  githubAppInstallUrl?: string;
   userAppUrl?: string;
 }
 
@@ -37,5 +38,8 @@ export const appEnv: AdminWebEnv = {
   },
   get userAppUrl() {
     return import.meta.env.VITE_USER_APP_URL;
+  },
+  get githubAppInstallUrl() {
+    return import.meta.env.VITE_GITHUB_APP_INSTALL_URL;
   },
 };

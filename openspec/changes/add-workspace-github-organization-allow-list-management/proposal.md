@@ -10,6 +10,8 @@ Workspace admins need a product-level way to control which GitHub organizations 
 - Filter GitHub organization owners, repositories, projects, project issues, repository issues, and task-picker GitHub options by the workspace allow-list.
 - Expose shared contracts and API endpoints for listing, adding, and removing allowed organizations.
 - Extend the admin Settings page's documented `GitHub Workspace Access` card so it uses the new API instead of remaining a static design requirement.
+- When adding an organization fails because the connected GitHub account or organization blocks the GitHub App path, surface backend-driven GitHub App access recovery cards in the Settings card with response-derived instructions and action links, without visible status tags.
+- Return stable, frontend-safe add-organization recovery payloads so the admin UI can distinguish disconnected GitHub account, inaccessible organization, GitHub App blocked/needs approval, and retryable provider failures while using the backend response as the status source of truth.
 - Preserve the existing GitHub App user-to-server auth model; the allow-list is a workspace filter and does not grant GitHub access.
 
 ## Capabilities
@@ -22,12 +24,13 @@ Workspace admins need a product-level way to control which GitHub organizations 
 - `contracts`: Add shared Zod request and response contracts for workspace GitHub organization policy endpoints.
 - `github-data-browsing-api`: Apply the workspace organization allow-list to organization-scoped GitHub browsing.
 - `workspace-management`: Expose admin-only API behavior for reading and mutating the workspace GitHub organization allow-list.
-- `admin-pages`: Make the Settings page GitHub Workspace Access card interactive against the policy API.
+- `admin-pages`: Make the Settings page GitHub Workspace Access card interactive against the policy API and guide admins through GitHub App install/approval/reconnect recovery when provider-side access blocks validation.
 
 ## Impact
 
 - Backend: `apps/api/src/workspaces`, `apps/api/src/github`, Drizzle schema/migration/seed/test fixtures, and OpenAPI export.
 - Shared contracts: `packages/shared/src/contracts` for policy request/response shapes.
 - Admin frontend: `apps/admin-web` Settings page data loading, validation, mutation, toasts, and tests.
+- Admin frontend: blocked-organization GitHub App access recovery cards with response-derived instructions, external GitHub install/settings links, internal reconnect link, retry action, and focused tests.
 - Existing GitHub browsing and task-picker flows gain policy filtering but retain the connected-user permission boundary.
 - No new external dependency and no shared organization GitHub credential.

@@ -32,6 +32,15 @@ The system MUST expose workspace GitHub organization allow-list management to wo
 - **WHEN** the requester attempts to add the organization to the workspace policy
 - **THEN** the system rejects the request without saving a policy record
 
+#### Scenario: Admin add returns safe recovery reason for GitHub-side access failures
+- **GIVEN** the requester is an admin member of the current workspace
+- **AND** the requester attempts to add a GitHub organization that cannot currently be validated because the requester has no connected GitHub account, the organization is not visible, the GitHub App is blocked or needs approval for the organization, or GitHub returns a retryable provider failure
+- **WHEN** the system rejects the add request
+- **THEN** the system does not save a policy record
+- **AND** the rejection includes a stable frontend-safe reason code for the recovery category
+- **AND** the rejection includes a structured GitHub App access recovery payload with ordered step ids and backend-derived status values
+- **AND** the rejection does not expose GitHub token material or raw provider secrets
+
 #### Scenario: Admin removes an allowed GitHub organization
 - **GIVEN** the requester is an admin member of the current workspace
 - **AND** the workspace policy contains an allowed GitHub organization
@@ -42,4 +51,3 @@ The system MUST expose workspace GitHub organization allow-list management to wo
 - **GIVEN** the requester is authenticated but is not an admin member of the current workspace
 - **WHEN** the requester attempts to add or remove an allowed GitHub organization
 - **THEN** the system rejects the request as forbidden
-

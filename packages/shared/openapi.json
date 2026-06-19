@@ -454,6 +454,582 @@
         ]
       }
     },
+    "/workspace/github/organizations": {
+      "get": {
+        "operationId": "WorkspacesController_listGitHubOrganizations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationListResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List workspace allowed GitHub organizations",
+        "tags": [
+          "workspace"
+        ]
+      },
+      "post": {
+        "operationId": "WorkspacesController_addGitHubOrganization",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddWorkspaceGitHubOrganizationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The organization cannot be added until the GitHub connection or GitHub App access issue is resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationRecoveryErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required"
+          },
+          "503": {
+            "description": "GitHub organization validation is temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceGitHubOrganizationRecoveryErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add an allowed GitHub organization to the workspace",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/workspace/github/organizations/{organizationId}": {
+      "delete": {
+        "operationId": "WorkspacesController_removeGitHubOrganization",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "Admin role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove an allowed GitHub organization from the workspace",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/github/connection": {
+      "get": {
+        "operationId": "GithubController_connectionStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubConnectionStatusResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current GitHub connection status",
+        "tags": [
+          "github"
+        ]
+      },
+      "delete": {
+        "operationId": "GithubController_disconnect",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Disconnect GitHub account",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/auth-url": {
+      "get": {
+        "operationId": "GithubController_authUrl",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubAuthUrlResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create GitHub OAuth authorization URL",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/owners": {
+      "get": {
+        "operationId": "GithubController_listOwners",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "all",
+                "personal",
+                "organization"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubOwnerListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List GitHub owners available for browsing",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/repos": {
+      "get": {
+        "operationId": "GithubController_listRepositories",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageToken",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "name": "ownerType",
+            "required": true,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "personal",
+                "organization"
+              ]
+            }
+          },
+          {
+            "name": "owner",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 255,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubRepositoryListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List GitHub repositories for an owner scope",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/projects": {
+      "get": {
+        "operationId": "GithubController_listProjects",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageToken",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "name": "ownerType",
+            "required": true,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "personal",
+                "organization"
+              ]
+            }
+          },
+          {
+            "name": "owner",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 255,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubProjectListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List GitHub Projects V2 for an owner scope",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/repos/{owner}/{repo}/issues": {
+      "get": {
+        "operationId": "GithubController_listRepositoryIssues",
+        "parameters": [
+          {
+            "name": "owner",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageToken",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubRepositoryIssueListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List GitHub repository issues",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/projects/{projectId}/issues": {
+      "get": {
+        "operationId": "GithubController_listProjectIssues",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageToken",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubProjectIssueListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List GitHub Project V2 issue items",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/callback": {
+      "get": {
+        "operationId": "GithubController_callback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "GitHub OAuth callback",
+        "tags": [
+          "github"
+        ]
+      }
+    },
     "/invites": {
       "get": {
         "operationId": "InvitesController_listInvites",
@@ -2136,462 +2712,6 @@
         ]
       }
     },
-    "/github/connection": {
-      "get": {
-        "operationId": "GithubController_connectionStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GithubConnectionStatusResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get current GitHub connection status",
-        "tags": [
-          "github"
-        ]
-      },
-      "delete": {
-        "operationId": "GithubController_disconnect",
-        "parameters": [],
-        "responses": {
-          "204": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Disconnect GitHub account",
-        "tags": [
-          "github"
-        ]
-      }
-    },
-    "/github/auth-url": {
-      "get": {
-        "operationId": "GithubController_authUrl",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GithubAuthUrlResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create GitHub OAuth authorization URL",
-        "tags": [
-          "github"
-        ]
-      }
-    },
-    "/github/owners": {
-      "get": {
-        "operationId": "GithubController_listOwners",
-        "parameters": [
-          {
-            "name": "type",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "all",
-              "type": "string",
-              "enum": [
-                "all",
-                "personal",
-                "organization"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GithubOwnerListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List GitHub owners available for browsing",
-        "tags": [
-          "github"
-        ]
-      }
-    },
-    "/github/repos": {
-      "get": {
-        "operationId": "GithubController_listRepositories",
-        "parameters": [
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 30,
-              "type": "integer"
-            }
-          },
-          {
-            "name": "pageToken",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minLength": 1,
-              "maxLength": 2000,
-              "type": "string"
-            }
-          },
-          {
-            "name": "ownerType",
-            "required": true,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "personal",
-                "organization"
-              ]
-            }
-          },
-          {
-            "name": "owner",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minLength": 1,
-              "maxLength": 255,
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GithubRepositoryListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List GitHub repositories for an owner scope",
-        "tags": [
-          "github"
-        ]
-      }
-    },
-    "/github/projects": {
-      "get": {
-        "operationId": "GithubController_listProjects",
-        "parameters": [
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 30,
-              "type": "integer"
-            }
-          },
-          {
-            "name": "pageToken",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minLength": 1,
-              "maxLength": 2000,
-              "type": "string"
-            }
-          },
-          {
-            "name": "ownerType",
-            "required": true,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "personal",
-                "organization"
-              ]
-            }
-          },
-          {
-            "name": "owner",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minLength": 1,
-              "maxLength": 255,
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GithubProjectListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List GitHub Projects V2 for an owner scope",
-        "tags": [
-          "github"
-        ]
-      }
-    },
-    "/github/repos/{owner}/{repo}/issues": {
-      "get": {
-        "operationId": "GithubController_listRepositoryIssues",
-        "parameters": [
-          {
-            "name": "owner",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "repo",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 30,
-              "type": "integer"
-            }
-          },
-          {
-            "name": "pageToken",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minLength": 1,
-              "maxLength": 2000,
-              "type": "string"
-            }
-          },
-          {
-            "name": "state",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "all",
-              "type": "string",
-              "enum": [
-                "open",
-                "closed",
-                "all"
-              ]
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "maxLength": 200,
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GithubRepositoryIssueListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List GitHub repository issues",
-        "tags": [
-          "github"
-        ]
-      }
-    },
-    "/github/projects/{projectId}/issues": {
-      "get": {
-        "operationId": "GithubController_listProjectIssues",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 30,
-              "type": "integer"
-            }
-          },
-          {
-            "name": "pageToken",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "minLength": 1,
-              "maxLength": 2000,
-              "type": "string"
-            }
-          },
-          {
-            "name": "state",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "default": "all",
-              "type": "string",
-              "enum": [
-                "open",
-                "closed",
-                "all"
-              ]
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "x-nestjs_zod-parent-additional-properties": false,
-            "schema": {
-              "maxLength": 200,
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GithubProjectIssueListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List GitHub Project V2 issue items",
-        "tags": [
-          "github"
-        ]
-      }
-    },
-    "/github/callback": {
-      "get": {
-        "operationId": "GithubController_callback",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "GitHub OAuth callback",
-        "tags": [
-          "github"
-        ]
-      }
-    },
     "/commons/health/live": {
       "get": {
         "operationId": "CommonsController_live",
@@ -3023,6 +3143,841 @@
           }
         },
         "additionalProperties": false
+      },
+      "WorkspaceGitHubOrganizationListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "workspaceId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "organizationLogin": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "createdByUserId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "workspaceId",
+                "organizationLogin",
+                "createdByUserId",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "AddWorkspaceGitHubOrganizationDto": {
+        "type": "object",
+        "properties": {
+          "organizationLogin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "organizationLogin"
+        ],
+        "additionalProperties": false
+      },
+      "WorkspaceGitHubOrganizationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "organizationLogin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "createdByUserId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "organizationLogin",
+          "createdByUserId",
+          "createdAt"
+        ]
+      },
+      "WorkspaceGitHubOrganizationRecoveryErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "workspace_github_organization_connection_required",
+              "workspace_github_organization_not_visible",
+              "workspace_github_organization_app_access_blocked",
+              "workspace_github_organization_provider_retryable"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recovery": {
+            "type": "object",
+            "properties": {
+              "organizationLogin": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "workspace_github_organization_connection_required",
+                  "workspace_github_organization_not_visible",
+                  "workspace_github_organization_app_access_blocked",
+                  "workspace_github_organization_provider_retryable"
+                ]
+              },
+              "steps": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "const": "install"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "action_required",
+                          "blocked",
+                          "complete",
+                          "disconnected",
+                          "ready",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "const": "approve"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "action_required",
+                          "blocked",
+                          "complete",
+                          "disconnected",
+                          "ready",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "const": "reconnect"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "action_required",
+                          "blocked",
+                          "complete",
+                          "disconnected",
+                          "ready",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "const": "retry"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "action_required",
+                          "blocked",
+                          "complete",
+                          "disconnected",
+                          "ready",
+                          "unknown"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "organizationLogin",
+              "reason",
+              "steps"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "code",
+          "error",
+          "message",
+          "recovery"
+        ],
+        "additionalProperties": false
+      },
+      "GithubConnectionStatusResponseDto": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "disconnected"
+                ]
+              },
+              "account": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "status",
+              "account"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "connected"
+                ]
+              },
+              "account": {
+                "type": "object",
+                "properties": {
+                  "githubUserId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "login": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "avatarUrl": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "connectedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "githubUserId",
+                  "login",
+                  "avatarUrl",
+                  "connectedAt",
+                  "updatedAt"
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "account"
+            ]
+          }
+        ]
+      },
+      "GithubAuthUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "authorizationUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "authorizationUrl"
+        ]
+      },
+      "GithubOwnerListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "login": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "personal",
+                    "organization"
+                  ]
+                },
+                "avatarUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "nullable": true
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "login",
+                "label",
+                "type",
+                "avatarUrl",
+                "url"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "GithubRepositoryListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "nodeId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "nullable": true
+                },
+                "owner": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fullName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "public",
+                    "private",
+                    "internal"
+                  ]
+                },
+                "isArchived": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "nodeId",
+                "owner",
+                "name",
+                "fullName",
+                "visibility",
+                "isArchived",
+                "description",
+                "url",
+                "updatedAt"
+              ]
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "hasNextPage": {
+                "type": "boolean"
+              },
+              "nextPageToken": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "nullable": true
+              }
+            },
+            "required": [
+              "limit",
+              "hasNextPage",
+              "nextPageToken"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "GithubProjectListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "number": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "owner": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "closed"
+                  ]
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "number",
+                "title",
+                "owner",
+                "state",
+                "description",
+                "url",
+                "updatedAt"
+              ]
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "hasNextPage": {
+                "type": "boolean"
+              },
+              "nextPageToken": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "nullable": true
+              }
+            },
+            "required": [
+              "limit",
+              "hasNextPage",
+              "nextPageToken"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "GithubRepositoryIssueListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "nodeId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "nullable": true
+                },
+                "repository": {
+                  "type": "object",
+                  "properties": {
+                    "owner": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fullName": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "owner",
+                    "name",
+                    "fullName"
+                  ]
+                },
+                "number": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "closed"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "nodeId",
+                "repository",
+                "number",
+                "title",
+                "state",
+                "url",
+                "updatedAt"
+              ]
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "hasNextPage": {
+                "type": "boolean"
+              },
+              "nextPageToken": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "nullable": true
+              }
+            },
+            "required": [
+              "limit",
+              "hasNextPage",
+              "nextPageToken"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "pagination"
+        ]
+      },
+      "GithubProjectIssueListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "projectItemId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "isArchived": {
+                  "type": "boolean"
+                },
+                "issue": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "nodeId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "nullable": true
+                    },
+                    "repository": {
+                      "type": "object",
+                      "properties": {
+                        "owner": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "fullName": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "owner",
+                        "name",
+                        "fullName"
+                      ]
+                    },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "closed"
+                      ]
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "nodeId",
+                    "repository",
+                    "number",
+                    "title",
+                    "state",
+                    "url",
+                    "updatedAt"
+                  ]
+                }
+              },
+              "required": [
+                "projectItemId",
+                "isArchived",
+                "issue"
+              ]
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "hasNextPage": {
+                "type": "boolean"
+              },
+              "nextPageToken": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "nullable": true
+              }
+            },
+            "required": [
+              "limit",
+              "hasNextPage",
+              "nextPageToken"
+            ]
+          },
+          "skipped": {
+            "type": "object",
+            "properties": {
+              "pullRequests": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "draftIssues": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "redacted": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "unknown": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "pullRequests",
+              "draftIssues",
+              "redacted",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "pagination",
+          "skipped"
+        ]
       },
       "WorkspaceInviteResponseDto": {
         "type": "object",
@@ -4947,587 +5902,6 @@
           "summary",
           "items",
           "meta"
-        ]
-      },
-      "GithubConnectionStatusResponseDto": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "enum": [
-                  "disconnected"
-                ]
-              },
-              "account": {
-                "type": "null"
-              }
-            },
-            "required": [
-              "status",
-              "account"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "enum": [
-                  "connected"
-                ]
-              },
-              "account": {
-                "type": "object",
-                "properties": {
-                  "githubUserId": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "login": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "avatarUrl": {
-                    "type": "string",
-                    "nullable": true
-                  },
-                  "connectedAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                  },
-                  "updatedAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                  }
-                },
-                "required": [
-                  "githubUserId",
-                  "login",
-                  "avatarUrl",
-                  "connectedAt",
-                  "updatedAt"
-                ]
-              }
-            },
-            "required": [
-              "status",
-              "account"
-            ]
-          }
-        ]
-      },
-      "GithubAuthUrlResponseDto": {
-        "type": "object",
-        "properties": {
-          "authorizationUrl": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "required": [
-          "authorizationUrl"
-        ]
-      },
-      "GithubOwnerListResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "login": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "label": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "type": {
-                  "type": "string",
-                  "enum": [
-                    "personal",
-                    "organization"
-                  ]
-                },
-                "avatarUrl": {
-                  "type": "string",
-                  "format": "uri",
-                  "nullable": true
-                },
-                "url": {
-                  "type": "string",
-                  "format": "uri",
-                  "nullable": true
-                }
-              },
-              "required": [
-                "login",
-                "label",
-                "type",
-                "avatarUrl",
-                "url"
-              ]
-            }
-          }
-        },
-        "required": [
-          "items"
-        ]
-      },
-      "GithubRepositoryListResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "nodeId": {
-                  "type": "string",
-                  "minLength": 1,
-                  "nullable": true
-                },
-                "owner": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "name": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "fullName": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "visibility": {
-                  "type": "string",
-                  "enum": [
-                    "public",
-                    "private",
-                    "internal"
-                  ]
-                },
-                "isArchived": {
-                  "type": "boolean"
-                },
-                "description": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "url": {
-                  "type": "string",
-                  "format": "uri"
-                },
-                "updatedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                }
-              },
-              "required": [
-                "id",
-                "nodeId",
-                "owner",
-                "name",
-                "fullName",
-                "visibility",
-                "isArchived",
-                "description",
-                "url",
-                "updatedAt"
-              ]
-            }
-          },
-          "pagination": {
-            "type": "object",
-            "properties": {
-              "limit": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100
-              },
-              "hasNextPage": {
-                "type": "boolean"
-              },
-              "nextPageToken": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 2000,
-                "nullable": true
-              }
-            },
-            "required": [
-              "limit",
-              "hasNextPage",
-              "nextPageToken"
-            ]
-          }
-        },
-        "required": [
-          "items",
-          "pagination"
-        ]
-      },
-      "GithubProjectListResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "number": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 9007199254740991
-                },
-                "title": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "owner": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "state": {
-                  "type": "string",
-                  "enum": [
-                    "open",
-                    "closed"
-                  ]
-                },
-                "description": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "url": {
-                  "type": "string",
-                  "format": "uri",
-                  "nullable": true
-                },
-                "updatedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                }
-              },
-              "required": [
-                "id",
-                "number",
-                "title",
-                "owner",
-                "state",
-                "description",
-                "url",
-                "updatedAt"
-              ]
-            }
-          },
-          "pagination": {
-            "type": "object",
-            "properties": {
-              "limit": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100
-              },
-              "hasNextPage": {
-                "type": "boolean"
-              },
-              "nextPageToken": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 2000,
-                "nullable": true
-              }
-            },
-            "required": [
-              "limit",
-              "hasNextPage",
-              "nextPageToken"
-            ]
-          }
-        },
-        "required": [
-          "items",
-          "pagination"
-        ]
-      },
-      "GithubRepositoryIssueListResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "nodeId": {
-                  "type": "string",
-                  "minLength": 1,
-                  "nullable": true
-                },
-                "repository": {
-                  "type": "object",
-                  "properties": {
-                    "owner": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "name": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "fullName": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "required": [
-                    "owner",
-                    "name",
-                    "fullName"
-                  ]
-                },
-                "number": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 9007199254740991
-                },
-                "title": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "state": {
-                  "type": "string",
-                  "enum": [
-                    "open",
-                    "closed"
-                  ]
-                },
-                "url": {
-                  "type": "string",
-                  "format": "uri"
-                },
-                "updatedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                }
-              },
-              "required": [
-                "id",
-                "nodeId",
-                "repository",
-                "number",
-                "title",
-                "state",
-                "url",
-                "updatedAt"
-              ]
-            }
-          },
-          "pagination": {
-            "type": "object",
-            "properties": {
-              "limit": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100
-              },
-              "hasNextPage": {
-                "type": "boolean"
-              },
-              "nextPageToken": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 2000,
-                "nullable": true
-              }
-            },
-            "required": [
-              "limit",
-              "hasNextPage",
-              "nextPageToken"
-            ]
-          }
-        },
-        "required": [
-          "items",
-          "pagination"
-        ]
-      },
-      "GithubProjectIssueListResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "projectItemId": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "isArchived": {
-                  "type": "boolean"
-                },
-                "issue": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "nodeId": {
-                      "type": "string",
-                      "minLength": 1,
-                      "nullable": true
-                    },
-                    "repository": {
-                      "type": "object",
-                      "properties": {
-                        "owner": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "name": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "fullName": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      },
-                      "required": [
-                        "owner",
-                        "name",
-                        "fullName"
-                      ]
-                    },
-                    "number": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "maximum": 9007199254740991
-                    },
-                    "title": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "state": {
-                      "type": "string",
-                      "enum": [
-                        "open",
-                        "closed"
-                      ]
-                    },
-                    "url": {
-                      "type": "string",
-                      "format": "uri"
-                    },
-                    "updatedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "nodeId",
-                    "repository",
-                    "number",
-                    "title",
-                    "state",
-                    "url",
-                    "updatedAt"
-                  ]
-                }
-              },
-              "required": [
-                "projectItemId",
-                "isArchived",
-                "issue"
-              ]
-            }
-          },
-          "pagination": {
-            "type": "object",
-            "properties": {
-              "limit": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100
-              },
-              "hasNextPage": {
-                "type": "boolean"
-              },
-              "nextPageToken": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 2000,
-                "nullable": true
-              }
-            },
-            "required": [
-              "limit",
-              "hasNextPage",
-              "nextPageToken"
-            ]
-          },
-          "skipped": {
-            "type": "object",
-            "properties": {
-              "pullRequests": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              "draftIssues": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              "redacted": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              "unknown": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              }
-            },
-            "required": [
-              "pullRequests",
-              "draftIssues",
-              "redacted",
-              "unknown"
-            ]
-          }
-        },
-        "required": [
-          "items",
-          "pagination",
-          "skipped"
         ]
       }
     }

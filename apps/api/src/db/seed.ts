@@ -14,6 +14,7 @@ import { invites } from '../invites/schemas/invites.schema';
 import { projects } from '../projects/schemas/projects.schema';
 import { projectAssignments } from '../projects/schemas/project-assignments.schema';
 import { tasks } from '../tasks/schemas/tasks.schema';
+import { workspaceGitHubOrganizations } from '../github/schemas/workspace-github-organizations.schema';
 
 interface SeedUser {
   firebaseUid: string;
@@ -66,6 +67,13 @@ const DEV_SEED_USERS: SeedUser[] = [
     displayName: 'Carol (seed)',
     avatarUrl: null,
     role: 'member',
+  },
+  {
+    firebaseUid: '5EU7Psf9HfeBoyq9qb91fHhj5jg2',
+    email: 'gitiempo@itsua.com',
+    displayName: 'Admin gitempo',
+    avatarUrl: null,
+    role: 'admin',
   },
 ];
 
@@ -138,6 +146,7 @@ async function main(): Promise<void> {
       projects,
       projectAssignments,
       tasks,
+      workspaceGitHubOrganizations,
     },
   });
 

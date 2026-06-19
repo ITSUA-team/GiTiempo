@@ -273,6 +273,8 @@ function handleTimeZoneUpdate(value: SettingsTimeZoneOption | string | null): vo
       </div>
     </SurfaceCard>
 
+    <slot name="after-card" />
+
     <div
       class="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:justify-end"
     >

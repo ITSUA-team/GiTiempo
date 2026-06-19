@@ -36,6 +36,18 @@ The admin Settings page MUST provide an interactive GitHub Workspace Access card
 - **THEN** the card keeps the entered login available for correction
 - **AND** the page shows error feedback without adding a local-only organization row
 
+#### Scenario: Settings page guides GitHub App access recovery
+- **GIVEN** an admin enters an organization login
+- **AND** the backend rejects the add request with a frontend-safe recovery payload for missing GitHub connection, inaccessible organization, GitHub App blocked or needing approval, or retryable provider failure
+- **WHEN** the Settings page renders the failed GitHub Workspace Access card
+- **THEN** the card shows a GitHub App access recovery card group above the Add organization form
+- **AND** each recovery card instruction and action state is derived from the backend response step status
+- **AND** each recovery card shows instruction copy and the appropriate action button or link without visible status tags
+- **AND** the recovery cards include install GitHub App, approve or unblock organization access, reconnect GitHub account, and retry allow-list check steps
+- **AND** GitHub actions open the configured GitHub App install URL or default GiTiempo GitHub App installation request URL in a new tab
+- **AND** the reconnect action routes to the existing user profile GitHub connection flow
+- **AND** the retry action reuses the same organization login without requiring the admin to retype it
+
 #### Scenario: Settings page removes organization
 - **GIVEN** an admin sees a saved allowed GitHub organization row
 - **WHEN** the admin activates Remove and the backend removes the policy row

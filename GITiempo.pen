@@ -11380,7 +11380,7 @@
       "name": "Admin Settings",
       "clip": true,
       "width": 1280,
-      "height": 1510,
+      "height": 1948,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -11520,7 +11520,7 @@
           "id": "tzdAb",
           "name": "main",
           "width": "fill_container",
-          "height": "fill_container",
+          "height": 1884,
           "children": [
             {
               "type": "frame",
@@ -11691,7 +11691,7 @@
               "id": "CTUf2",
               "name": "content",
               "width": "fill_container",
-              "height": "fill_container",
+              "height": 1820,
               "fill": "$color-app-bg",
               "layout": "vertical",
               "gap": 24,
@@ -12140,7 +12140,7 @@
                   "id": "ebpKL",
                   "name": "githubWorkspacePolicyCard",
                   "width": 620,
-                  "height": 640,
+                  "height": 1060,
                   "fill": "#FFFFFF",
                   "cornerRadius": 10,
                   "effect": {
@@ -12192,7 +12192,7 @@
                               "fill": "#52525B",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Manage the GitHub organizations available to this workspace from the admin app.",
+                              "content": "Choose which GitHub organizations this workspace can use. Members still only see data their connected GitHub account can access.",
                               "lineHeight": 1.45,
                               "fontFamily": "Inter",
                               "fontSize": 14,
@@ -12215,7 +12215,7 @@
                           "id": "OEgWA",
                           "name": "allowedOrganizationsTitle",
                           "fill": "#1A1A1A",
-                          "content": "Saved organizations",
+                          "content": "Allowed organizations",
                           "fontFamily": "Inter",
                           "fontSize": 16,
                           "fontWeight": "600"
@@ -12276,7 +12276,7 @@
                                   "id": "r8ylgr",
                                   "name": "ITSUA-teamMetaCopy",
                                   "fill": "#71717A",
-                                  "content": "Configured for this workspace",
+                                  "content": "Allowed for this workspace",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
@@ -12362,7 +12362,7 @@
                                   "id": "xLkl8",
                                   "name": "octo-orgMetaCopy",
                                   "fill": "#71717A",
-                                  "content": "Configured for this workspace",
+                                  "content": "Allowed for this workspace",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
@@ -12410,9 +12410,261 @@
                     },
                     {
                       "type": "frame",
+                      "id": "Cc7dt",
+                      "name": "GitHub App Access Recovery",
+                      "width": 580,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Ueob6",
+                          "name": "Recovery Header",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "B4c34E",
+                              "name": "Recovery Title",
+                              "fill": "#111827",
+                              "content": "GitHub App access",
+                              "fontFamily": "Inter",
+                              "fontSize": 17,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "TmfC9",
+                              "name": "Recovery Copy",
+                              "fill": "#6B7280",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Complete these steps when GitHub says the organization is not visible or blocks the GiTiempo app.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OVBss",
+                          "name": "Install Recovery Card",
+                          "width": "fill_container",
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 8,
+                          "stroke": "#E5E7EB",
+                          "padding": 12,
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "QQMnf",
+                              "name": "Install Copy",
+                              "fill": "#111827",
+                              "textGrowth": "fixed-width",
+                              "width": 388,
+                              "content": "Choose the organization, install GiTiempo, and select the required repositories.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "GrXmf",
+                              "name": "Install Action",
+                              "fill": "#EEE8FF",
+                              "cornerRadius": 6,
+                              "padding": [
+                                10,
+                                16
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "YwzZz",
+                                  "name": "Install Label",
+                                  "fill": "#5B21B6",
+                                  "content": "Open install",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pyICW",
+                          "name": "Approve Recovery Card",
+                          "width": "fill_container",
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 8,
+                          "stroke": "#E5E7EB",
+                          "padding": 12,
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "s5Dr0i",
+                              "name": "Approve Copy",
+                              "fill": "#111827",
+                              "textGrowth": "fixed-width",
+                              "width": 388,
+                              "content": "Open organization settings and unblock or approve the installed GiTiempo app before retrying.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mMUSw",
+                              "name": "Approve Action",
+                              "fill": "#EEE8FF",
+                              "cornerRadius": 6,
+                              "padding": [
+                                10,
+                                16
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "UWtTx",
+                                  "name": "Approve Label",
+                                  "fill": "#5B21B6",
+                                  "content": "Review GitHub",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "wxddI",
+                          "name": "Reconnect Recovery Card",
+                          "width": "fill_container",
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 8,
+                          "stroke": "#E5E7EB",
+                          "padding": 12,
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DTJHi",
+                              "name": "Reconnect Copy",
+                              "fill": "#111827",
+                              "textGrowth": "fixed-width",
+                              "width": 388,
+                              "content": "Reconnect after GitHub-side approval so GiTiempo gets a fresh authorization.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ikWzA",
+                              "name": "Reconnect Action",
+                              "fill": "#EEE8FF",
+                              "cornerRadius": 6,
+                              "padding": [
+                                10,
+                                16
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jf8Eq",
+                                  "name": "Reconnect Label",
+                                  "fill": "#5B21B6",
+                                  "content": "Reconnect",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "I5t3N",
+                          "name": "Retry Recovery Card",
+                          "width": "fill_container",
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 8,
+                          "stroke": "#E5E7EB",
+                          "padding": 12,
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ctjED",
+                              "name": "Retry Copy",
+                              "fill": "#111827",
+                              "textGrowth": "fixed-width",
+                              "width": 388,
+                              "content": "Return to this Settings card and retry the same organization login after you finish the earlier steps.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pq5iR",
+                              "name": "Retry Action",
+                              "fill": "#6D28D9",
+                              "cornerRadius": 6,
+                              "padding": [
+                                10,
+                                16
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "V2rM9",
+                                  "name": "Retry Label",
+                                  "fill": "#FFFFFF",
+                                  "content": "Retry check",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "SHYDR",
                       "name": "addOrganizationSection",
                       "width": "fill_container",
+                      "height": 143,
                       "layout": "vertical",
                       "gap": 10,
                       "children": [
@@ -12433,7 +12685,7 @@
                           "fill": "#52525B",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Add another GitHub organization to the workspace list.",
+                          "content": "Add another GitHub organization to the workspace allow-list.",
                           "lineHeight": 1.45,
                           "fontFamily": "Inter",
                           "fontSize": 13,
@@ -12456,7 +12708,7 @@
                           "id": "WIWAu",
                           "name": "addOrganizationRow",
                           "width": "fill_container",
-                          "height": 59,
+                          "height": 60,
                           "gap": 12,
                           "alignItems": "end",
                           "children": [
