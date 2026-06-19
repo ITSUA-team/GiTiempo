@@ -1,7 +1,7 @@
 ## 1. Source Review And Audit
 
 - [x] 1.1 Re-read `docs/ui/INDEX.md`, `docs/ui/patterns.md`, `apps/user-web/AGENTS.md`, and `apps/admin-web/AGENTS.md` before frontend edits.
-- [ ] 1.2 Open `GITiempo.pen` in the Pencil editor and inspect the affected popup frames for task create/update, time-entry create/edit, admin create-invoice, and top-bar timer task-picker parity. Not completed in the recorded session because the Pencil API could not inspect the file; see `design.md`.
+- [x] 1.2 Inspect `GITiempo.pen` for the affected popup frames covering task create/update, time-entry create/edit, admin create-invoice, member invite, admin inline settings, and top-bar timer task-picker parity. Completed from the checked-in `.pen` JSON because the Pencil editor API could not inspect the file without an open editor file; see `design.md`.
 - [x] 1.3 Audit current PrimeVue popup dialogs in `apps/user-web` and `apps/admin-web` for footer/body `Cancel` buttons, and classify each as in-scope non-destructive popup, destructive confirmation, non-popup reset form, or row action.
 
 ## 2. User-Web Dialog Updates
@@ -33,4 +33,4 @@
 - [x] 5.1 Run `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
 - [x] 5.2 Run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test` if any admin-web implementation or test files changed.
 - [x] 5.3 Perform targeted browser/manual checks for opening, dismissing via top-right close or allowed mask, and saving each affected popup; include mobile footer checks for the timer task-picker.
-- [ ] 5.4 Complete a final design parity review against `GITiempo.pen` and `docs/ui/patterns.md`, and document any PrimeVue-only compromise explicitly. The recorded verification covered `docs/ui/patterns.md`; `.pen` parity remains pending because Pencil inspection was unavailable.
+- [x] 5.4 Complete a final design parity review against `GITiempo.pen` and `docs/ui/patterns.md`, and document any PrimeVue-only compromise explicitly. The final review used the checked-in `.pen` JSON plus `docs/ui/patterns.md`; no PrimeVue-only compromise was identified, and the remaining mismatch is the documented docs-over-design invite-dialog `Cancel` exception in `design.md`.

@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Deferred Invoice UI
+### Requirement: Invoice Creation Workflow
 The invoices page UI SHALL remain hidden until an invoice API/contract exists.
 
 #### Scenario: Deferred invoice route renders no temporary invoice section
