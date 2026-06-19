@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import { SurfaceCard } from '@gitiempo/web-shared';
-import Button from 'primevue/button';
 
+import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import SettingsForm from '@/components/settings/SettingsForm.vue';
 import SettingsGitHubWorkspaceAccessCard from '@/components/settings/SettingsGitHubWorkspaceAccessCard.vue';
 import SettingsPageSkeleton from '@/components/settings/SettingsPageSkeleton.vue';
@@ -133,27 +132,16 @@ watch(
     <SettingsPageSkeleton v-if="loading && !initialLoaded" />
 
     <template v-else>
-      <SurfaceCard
+      <div
         v-if="requestError && !loading"
         class="max-w-[620px]"
-        padding-class="p-6"
       >
-        <div class="flex flex-col items-center gap-3 py-6 text-center">
-          <span class="text-text-dark text-[15px] font-semibold">
-            Failed to load settings
-          </span>
-          <span class="text-text-muted text-[13px]">
-            {{ requestError }}
-          </span>
-          <Button
-            label="Try again"
-            severity="secondary"
-            outlined
-            :loading="loading"
-            @click="retryLoadSettings"
-          />
-        </div>
-      </SurfaceCard>
+        <RequestErrorCard
+          title="Failed to load settings"
+          :message="requestError"
+          @retry="retryLoadSettings"
+        />
+      </div>
 
       <SettingsForm
         v-else
@@ -176,7 +164,6 @@ watch(
             :adding="workspaceGitHubOrganizations.adding.value"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
             :items="workspaceGitHubOrganizations.items.value"
-            :loading="workspaceGitHubOrganizations.loading.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"
             :recovery-checklist="workspaceGitHubOrganizations.recoveryChecklist.value"
             :removing-organization-id="workspaceGitHubOrganizations.removingOrganizationId.value"

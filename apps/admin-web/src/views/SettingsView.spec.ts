@@ -379,6 +379,14 @@ describe('SettingsView', () => {
       wrapper.get<HTMLInputElement>('#settings-time-zone').element.value,
     ).toBe('UTC');
     expect(
+      wrapper.get('#settings-workspace-name').element.closest('form'),
+    ).not.toBeNull();
+    expect(
+      wrapper
+        .get('#settings-github-organization-login')
+        .element.closest('form'),
+    ).toBeNull();
+    expect(
       wrapper.get<HTMLInputElement>('#settings-invoice-prefix').element
         .disabled,
     ).toBe(true);

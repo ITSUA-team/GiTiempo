@@ -9,9 +9,21 @@ const SkeletonStub = {
 
 const ButtonStub = {
   emits: ['click'],
-  props: ['label'],
-  template:
-    '<button type="button" @click="$emit(\'click\', $event)">{{ label }}</button>',
+  props: ['asChild', 'label'],
+  template: `
+    <slot
+      v-if="asChild"
+      :a11yAttrs="{ 'aria-label': label }"
+      class="p-button"
+    />
+    <button
+      v-else
+      type="button"
+      @click="$emit('click', $event)"
+    >
+      {{ label }}
+    </button>
+  `,
 };
 
 const InputTextStub = {
@@ -26,7 +38,6 @@ function createProps(overrides: Record<string, unknown> = {}) {
     adding: false,
     isInitialLoading: false,
     items: [],
-    loading: false,
     organizationLogin: '',
     organizationLoginError: null,
     recoveryChecklist: null,
