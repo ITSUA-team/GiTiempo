@@ -1,10 +1,14 @@
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
+import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
+import { workspaceGitHubOrganizations } from '../schemas/workspace-github-organizations.schema';
 import { WorkspaceGitHubOrganizationsService } from './workspace-github-organizations.service';
 
 const user: AuthUser = {
@@ -39,6 +43,65 @@ function createSelectOrderBy(rows: unknown[]) {
   return { from, where, orderBy };
 }
 
+function createAddDb({
+  existingRows = [],
+  projectRows = [],
+  taskRows = [],
+  insertedRows = [storedRow],
+}: {
+  existingRows?: unknown[];
+  projectRows?: unknown[];
+  taskRows?: unknown[];
+  insertedRows?: unknown[];
+}) {
+  const insertReturning = vi.fn().mockResolvedValue(insertedRows);
+  const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
+  const insertManyValues = vi.fn().mockResolvedValue(undefined);
+  const select = vi.fn().mockImplementation(() => ({
+    from: vi.fn((table) => {
+      if (table === workspaceGitHubOrganizations) {
+        return {
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(existingRows),
+          }),
+        };
+      }
+      if (table === projectExternalRefs) {
+        return {
+          where: vi.fn().mockResolvedValue(projectRows),
+        };
+      }
+      if (table === taskExternalRefs) {
+        return {
+          where: vi.fn().mockResolvedValue(taskRows),
+        };
+      }
+      throw new Error('Unexpected select table');
+    }),
+  }));
+  const tx = {
+    select,
+    insert: vi.fn((table) => {
+      if (table === workspaceGitHubOrganizations) {
+        return { values: insertValues };
+      }
+      if (table === projectExternalRefs || table === taskExternalRefs) {
+        return { values: insertManyValues };
+      }
+      throw new Error('Unexpected insert table');
+    }),
+  };
+
+  return {
+    db: {
+      ...tx,
+      transaction: vi.fn((callback) => callback(tx)),
+    },
+    insertValues,
+    insertManyValues,
+  };
+}
+
 describe('WorkspaceGitHubOrganizationsService', () => {
   it('lists workspace organization policy rows', async () => {
     const select = createSelectOrderBy([storedRow]);
@@ -65,15 +128,7 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('adds an allowed organization after validating GitHub visibility', async () => {
-    const existingLookup = createSelectLimit([]);
-    const insertReturning = vi.fn().mockResolvedValue([storedRow]);
-    const insertValues = vi
-      .fn()
-      .mockReturnValue({ returning: insertReturning });
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn().mockReturnValue({ values: insertValues }),
-    };
+    const { db, insertValues, insertManyValues } = createAddDb({});
     const connections = {
       status: vi.fn().mockResolvedValue({
         status: 'connected',
@@ -130,25 +185,20 @@ describe('WorkspaceGitHubOrganizationsService', () => {
         createdByUserId: 'user-1',
       }),
     );
+    expect(insertManyValues).not.toHaveBeenCalled();
     expect(result.organizationLogin).toBe('Octo-Org');
   });
 
   it('adds an organization found through exact active membership when owner listing omits it', async () => {
-    const existingLookup = createSelectLimit([]);
-    const insertReturning = vi.fn().mockResolvedValue([
-      {
-        ...storedRow,
-        organizationLogin: 'My-test-org-for-clock',
-        normalizedLogin: 'my-test-org-for-clock',
-      },
-    ]);
-    const insertValues = vi
-      .fn()
-      .mockReturnValue({ returning: insertReturning });
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn().mockReturnValue({ values: insertValues }),
-    };
+    const { db, insertValues } = createAddDb({
+      insertedRows: [
+        {
+          ...storedRow,
+          organizationLogin: 'My-test-org-for-clock',
+          normalizedLogin: 'my-test-org-for-clock',
+        },
+      ],
+    });
     const connections = {
       status: vi.fn().mockResolvedValue({
         status: 'connected',
@@ -196,21 +246,15 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('adds an organization found through listed active memberships when exact lookup misses', async () => {
-    const existingLookup = createSelectLimit([]);
-    const insertReturning = vi.fn().mockResolvedValue([
-      {
-        ...storedRow,
-        organizationLogin: 'My-test-org-for-clock',
-        normalizedLogin: 'my-test-org-for-clock',
-      },
-    ]);
-    const insertValues = vi
-      .fn()
-      .mockReturnValue({ returning: insertReturning });
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn().mockReturnValue({ values: insertValues }),
-    };
+    const { db, insertValues } = createAddDb({
+      insertedRows: [
+        {
+          ...storedRow,
+          organizationLogin: 'My-test-org-for-clock',
+          normalizedLogin: 'my-test-org-for-clock',
+        },
+      ],
+    });
     const connections = {
       status: vi.fn().mockResolvedValue({
         status: 'connected',
@@ -264,11 +308,7 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('returns the existing row for duplicate casing without inserting again', async () => {
-    const existingLookup = createSelectLimit([storedRow]);
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn(),
-    };
+    const { db } = createAddDb({ existingRows: [storedRow] });
     const service = new WorkspaceGitHubOrganizationsService(
       db as never,
       { status: vi.fn(), getValidAccessToken: vi.fn() } as never,
@@ -284,11 +324,7 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('rejects add attempts when the admin is not connected to GitHub', async () => {
-    const existingLookup = createSelectLimit([]);
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn(),
-    };
+    const { db } = createAddDb({});
     const service = new WorkspaceGitHubOrganizationsService(
       db as never,
       {
@@ -323,11 +359,7 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('rejects add attempts when the organization is not visible to the connected admin', async () => {
-    const existingLookup = createSelectLimit([]);
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn(),
-    };
+    const { db } = createAddDb({});
     const service = new WorkspaceGitHubOrganizationsService(
       db as never,
       {
@@ -376,11 +408,7 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('maps blocked GitHub App membership validation to a stable recovery code', async () => {
-    const existingLookup = createSelectLimit([]);
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn(),
-    };
+    const { db } = createAddDb({});
     const service = new WorkspaceGitHubOrganizationsService(
       db as never,
       {
@@ -431,11 +459,7 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('maps retryable GitHub provider failures to a stable recovery code', async () => {
-    const existingLookup = createSelectLimit([]);
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn(),
-    };
+    const { db } = createAddDb({});
     const service = new WorkspaceGitHubOrganizationsService(
       db as never,
       {
@@ -482,11 +506,7 @@ describe('WorkspaceGitHubOrganizationsService', () => {
   });
 
   it('maps unclassified provider bad requests to the generic retryable recovery payload', async () => {
-    const existingLookup = createSelectLimit([]);
-    const db = {
-      select: vi.fn().mockReturnValue({ from: existingLookup.from }),
-      insert: vi.fn(),
-    };
+    const { db } = createAddDb({});
     const service = new WorkspaceGitHubOrganizationsService(
       db as never,
       {
@@ -581,5 +601,165 @@ describe('WorkspaceGitHubOrganizationsService', () => {
         'other-org',
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('backfills canonical GitHub refs for existing workspace records when an organization is allowed', async () => {
+    const { db, insertManyValues } = createAddDb({
+      projectRows: [
+        {
+          id: 'project-ref-1',
+          workspaceId: 'workspace-1',
+          projectId: 'project-1',
+          provider: 'github',
+          externalType: 'repository',
+          externalId: null,
+          externalKey: 'octo-org/repo-one',
+          externalUrl: 'https://github.com/octo-org/repo-one',
+          metadata: { githubRepo: 'octo-org/repo-one' },
+          syncedAt: new Date('2026-06-18T00:00:00Z'),
+          createdAt: new Date('2026-06-18T00:00:00Z'),
+          updatedAt: new Date('2026-06-18T00:00:00Z'),
+        },
+      ],
+      taskRows: [
+        {
+          id: 'task-ref-1',
+          workspaceId: 'workspace-1',
+          projectId: 'project-1',
+          taskId: 'task-1',
+          provider: 'github',
+          externalType: 'issue',
+          externalId: null,
+          externalKey: 'octo-org/repo-one#123',
+          externalUrl: 'https://github.com/octo-org/repo-one/issues/123',
+          metadata: { githubRepo: 'octo-org/repo-one', issueNumber: 123 },
+          syncedAt: new Date('2026-06-18T00:00:00Z'),
+          createdAt: new Date('2026-06-18T00:00:00Z'),
+          updatedAt: new Date('2026-06-18T00:00:00Z'),
+        },
+      ],
+    });
+    const service = new WorkspaceGitHubOrganizationsService(
+      db as never,
+      {
+        status: vi.fn().mockResolvedValue({
+          status: 'connected',
+          account: {
+            githubUserId: '123',
+            login: 'octocat',
+            avatarUrl: null,
+            connectedAt: '2026-06-18T00:00:00.000Z',
+            updatedAt: '2026-06-18T00:00:00.000Z',
+          },
+        }),
+        getValidAccessToken: vi.fn().mockResolvedValue('ghu_token'),
+      } as never,
+      {
+        listOwners: vi.fn().mockResolvedValue({
+          items: [
+            {
+              login: 'Octo-Org',
+              label: 'Octo-Org',
+              type: 'organization',
+              avatarUrl: null,
+              url: 'https://github.com/Octo-Org',
+            },
+          ],
+        }),
+        listActiveOrganizationMemberships: vi.fn(),
+        getAuthenticatedUserOrganizationMembership: vi.fn(),
+      } as never,
+    );
+
+    await service.add(user, { organizationLogin: 'octo-org' });
+
+    expect(insertManyValues).toHaveBeenNthCalledWith(
+      1,
+      expect.arrayContaining([
+        expect.objectContaining({
+          projectId: 'project-1',
+          externalKey: 'Octo-Org/repo-one',
+        }),
+      ]),
+    );
+    expect(insertManyValues).toHaveBeenNthCalledWith(
+      2,
+      expect.arrayContaining([
+        expect.objectContaining({
+          taskId: 'task-1',
+          externalKey: 'Octo-Org/repo-one#123',
+        }),
+      ]),
+    );
+  });
+
+  it('rejects allow-list add when normalized repository mappings already point to different local projects', async () => {
+    const { db } = createAddDb({
+      projectRows: [
+        {
+          id: 'project-ref-1',
+          workspaceId: 'workspace-1',
+          projectId: 'project-1',
+          provider: 'github',
+          externalType: 'repository',
+          externalId: null,
+          externalKey: 'octo-org/repo-one',
+          externalUrl: 'https://github.com/octo-org/repo-one',
+          metadata: { githubRepo: 'octo-org/repo-one' },
+          syncedAt: new Date('2026-06-18T00:00:00Z'),
+          createdAt: new Date('2026-06-18T00:00:00Z'),
+          updatedAt: new Date('2026-06-18T00:00:00Z'),
+        },
+        {
+          id: 'project-ref-2',
+          workspaceId: 'workspace-1',
+          projectId: 'project-2',
+          provider: 'github',
+          externalType: 'repository',
+          externalId: null,
+          externalKey: 'Octo-Org/repo-one',
+          externalUrl: 'https://github.com/Octo-Org/repo-one',
+          metadata: { githubRepo: 'Octo-Org/repo-one' },
+          syncedAt: new Date('2026-06-18T00:00:00Z'),
+          createdAt: new Date('2026-06-18T00:00:00Z'),
+          updatedAt: new Date('2026-06-18T00:00:00Z'),
+        },
+      ],
+    });
+    const service = new WorkspaceGitHubOrganizationsService(
+      db as never,
+      {
+        status: vi.fn().mockResolvedValue({
+          status: 'connected',
+          account: {
+            githubUserId: '123',
+            login: 'octocat',
+            avatarUrl: null,
+            connectedAt: '2026-06-18T00:00:00.000Z',
+            updatedAt: '2026-06-18T00:00:00.000Z',
+          },
+        }),
+        getValidAccessToken: vi.fn().mockResolvedValue('ghu_token'),
+      } as never,
+      {
+        listOwners: vi.fn().mockResolvedValue({
+          items: [
+            {
+              login: 'Octo-Org',
+              label: 'Octo-Org',
+              type: 'organization',
+              avatarUrl: null,
+              url: 'https://github.com/Octo-Org',
+            },
+          ],
+        }),
+        listActiveOrganizationMemberships: vi.fn(),
+        getAuthenticatedUserOrganizationMembership: vi.fn(),
+      } as never,
+    );
+
+    await expect(
+      service.add(user, { organizationLogin: 'octo-org' }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });

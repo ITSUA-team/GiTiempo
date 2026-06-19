@@ -49,7 +49,7 @@ Affected instruction sources:
 
 4. **Policy filters after user auth, before organization-scoped provider calls are trusted.**
 
-   For owner lists, return personal owners plus organization owners that match the allow-list. For organization-scoped repository/project requests, reject or return a safe forbidden-style application error when the requested organization is not allowed. Repository issue requests should derive the repository owner from the URL/path owner and reject disallowed organization owners; personal repositories remain available. Project V2 issue requests should validate against stored metadata when available, or require enough owner context before surfacing organization-backed items.
+   For owner lists, return personal owners plus organization owners that match the allow-list. For organization-scoped repository/project requests, reject or return a safe forbidden-style application error when the requested organization is not allowed. Repository issue requests should derive the repository owner from the URL/path owner and reject disallowed organization owners; personal repositories remain available. Project V2 issue requests should validate project ownership first and then apply the allow-list again to each normalized issue item's repository owner before surfacing organization-backed items.
 
    Alternative considered: only filter owner dropdowns in the frontend. Rejected because direct API requests could still browse disallowed organizations.
 
@@ -78,6 +78,7 @@ Affected instruction sources:
 - **Admin validates an org they can see, but a member cannot see it** -> The allow-list remains only a GiTiempo filter; each member's connected GitHub account still determines actual access, and empty/member-specific results must stay clear.
 - **GitHub API pagination omits a visible organization during validation** -> Validation must page through all accessible organization owners up to the provider-supported limit or perform a direct organization lookup with membership/access confirmation.
 - **Case variants create duplicates** -> Normalize login for uniqueness and comparisons while preserving display login in responses.
+- **Pre-allow-list GitHub timers can drift into duplicate refs after an org is later connected** -> Keep extension timer creation permissive, match GitHub refs case-insensitively, and reconcile canonical organization-login refs when the allow-list row is created.
 - **Direct organization-scoped API calls bypass frontend filters** -> Enforce policy in backend services before provider data is returned.
 - **Project V2 issue calls may only receive a project node id** -> Store or carry owner metadata for GitHub project selections where possible; fail closed when organization ownership cannot be verified against policy.
 - **Settings page becomes too broad** -> Keep the GitHub access card in its own client/composable section so workspace identity/settings form behavior stays isolated.

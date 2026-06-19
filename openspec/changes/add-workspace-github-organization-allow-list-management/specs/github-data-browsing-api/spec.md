@@ -45,3 +45,9 @@ The system SHALL apply the workspace GitHub organization allow-list to organizat
 - **THEN** the response excludes disallowed organization data
 - **AND** the response MUST NOT expose GitHub token material or raw provider secrets
 
+#### Scenario: Project V2 issue policy applies to each issue repository owner
+- **GIVEN** a connected user requests issues for a Project V2 whose owner is allowed for the workspace
+- **AND** the returned issue items include repositories from both allowed and disallowed organizations
+- **WHEN** the system evaluates the normalized issue items
+- **THEN** it omits issue items whose repository owner is not allowed by the workspace policy
+- **AND** it keeps personal-owner issue items for the connected GitHub account

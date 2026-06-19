@@ -1,12 +1,13 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   Inject,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type {
   AddWorkspaceGitHubOrganizationInput,
   WorkspaceGitHubOrganizationRecoveryPayload,
@@ -17,15 +18,27 @@ import type {
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
+import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
+import {
+  normalizeGitHubIssueExternalKey,
+  normalizeGitHubLogin,
+  normalizeGitHubRepoKey,
+  rewriteGitHubIssueOwner,
+  rewriteGitHubRepoOwner,
+} from '../github-repo-key';
 import { workspaceGitHubOrganizations } from '../schemas/workspace-github-organizations.schema';
 import { GithubApiClientService } from './github-api-client.service';
 import { GithubConnectionsService } from './github-connections.service';
 
 type WorkspaceGitHubOrganizationRow =
   typeof workspaceGitHubOrganizations.$inferSelect;
+type QueryExecutor = Pick<DrizzleDB, 'select' | 'insert'>;
+type ProjectExternalRefRow = typeof projectExternalRefs.$inferSelect;
+type TaskExternalRefRow = typeof taskExternalRefs.$inferSelect;
 
 function normalizeOrganizationLogin(login: string): string {
-  return login.trim().toLowerCase();
+  return normalizeGitHubLogin(login);
 }
 
 function buildRecoveryPayload(
@@ -167,21 +180,31 @@ export class WorkspaceGitHubOrganizationsService {
       input,
     );
 
-    const [row] = await this.db
-      .insert(workspaceGitHubOrganizations)
-      .values({
-        workspaceId: user.workspaceId,
-        organizationLogin,
-        normalizedLogin,
-        createdByUserId: user.sub,
-      })
-      .returning();
+    const row = await this.db.transaction(async (tx) => {
+      const [createdRow] = await tx
+        .insert(workspaceGitHubOrganizations)
+        .values({
+          workspaceId: user.workspaceId,
+          organizationLogin,
+          normalizedLogin,
+          createdByUserId: user.sub,
+        })
+        .returning();
 
-    if (!row) {
-      throw new BadRequestException(
-        'GitHub organization could not be saved for this workspace',
+      if (!createdRow) {
+        throw new BadRequestException(
+          'GitHub organization could not be saved for this workspace',
+        );
+      }
+
+      await this.reconcileExistingGitHubRefs(
+        tx,
+        user.workspaceId,
+        organizationLogin,
       );
-    }
+
+      return createdRow;
+    });
 
     return this.toResponse(row);
   }
@@ -251,6 +274,189 @@ export class WorkspaceGitHubOrganizationsService {
       .limit(1);
 
     return row;
+  }
+
+  private async reconcileExistingGitHubRefs(
+    db: QueryExecutor,
+    workspaceId: string,
+    organizationLogin: string,
+  ): Promise<void> {
+    await this.reconcileProjectRefs(db, workspaceId, organizationLogin);
+    await this.reconcileTaskRefs(db, workspaceId, organizationLogin);
+  }
+
+  private async reconcileProjectRefs(
+    db: QueryExecutor,
+    workspaceId: string,
+    organizationLogin: string,
+  ): Promise<void> {
+    const rows = await db
+      .select()
+      .from(projectExternalRefs)
+      .where(
+        and(
+          eq(projectExternalRefs.workspaceId, workspaceId),
+          eq(projectExternalRefs.provider, 'github'),
+          eq(projectExternalRefs.externalType, 'repository'),
+          sql`lower(split_part(${projectExternalRefs.externalKey}, '/', 1)) = ${normalizeOrganizationLogin(organizationLogin)}`,
+        ),
+      );
+
+    const existingKeys = new Map(
+      rows.map((row) => [row.externalKey, row.projectId] as const),
+    );
+    const normalizedTargets = new Map<string, string>();
+    const inserts: Array<typeof projectExternalRefs.$inferInsert> = [];
+
+    for (const row of rows) {
+      const normalizedKey = normalizeGitHubRepoKey(row.externalKey);
+      if (!normalizedKey) {
+        continue;
+      }
+
+      const currentProjectId = normalizedTargets.get(normalizedKey);
+      if (currentProjectId && currentProjectId !== row.projectId) {
+        throw new ConflictException(
+          'Existing GitHub repository mappings for this organization are inconsistent',
+        );
+      }
+      normalizedTargets.set(normalizedKey, row.projectId);
+
+      const canonicalKey = rewriteGitHubRepoOwner(
+        row.externalKey,
+        organizationLogin,
+      );
+      if (!canonicalKey) {
+        continue;
+      }
+
+      const existingProjectId = existingKeys.get(canonicalKey);
+      if (existingProjectId) {
+        if (existingProjectId !== row.projectId) {
+          throw new ConflictException(
+            'Existing GitHub repository mappings for this organization are inconsistent',
+          );
+        }
+        continue;
+      }
+
+      existingKeys.set(canonicalKey, row.projectId);
+      inserts.push(this.toProjectRefAlias(row, canonicalKey));
+    }
+
+    if (inserts.length > 0) {
+      await db.insert(projectExternalRefs).values(inserts);
+    }
+  }
+
+  private async reconcileTaskRefs(
+    db: QueryExecutor,
+    workspaceId: string,
+    organizationLogin: string,
+  ): Promise<void> {
+    const rows = await db
+      .select()
+      .from(taskExternalRefs)
+      .where(
+        and(
+          eq(taskExternalRefs.workspaceId, workspaceId),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+          sql`lower(split_part(split_part(${taskExternalRefs.externalKey}, '#', 1), '/', 1)) = ${normalizeOrganizationLogin(organizationLogin)}`,
+        ),
+      );
+
+    const existingKeys = new Map(
+      rows.map((row) => [row.externalKey, row.taskId] as const),
+    );
+    const normalizedTargets = new Map<string, string>();
+    const inserts: Array<typeof taskExternalRefs.$inferInsert> = [];
+
+    for (const row of rows) {
+      const normalizedKey = normalizeGitHubIssueExternalKey(row.externalKey);
+      if (!normalizedKey) {
+        continue;
+      }
+
+      const currentTaskId = normalizedTargets.get(normalizedKey);
+      if (currentTaskId && currentTaskId !== row.taskId) {
+        throw new ConflictException(
+          'Existing GitHub issue mappings for this organization are inconsistent',
+        );
+      }
+      normalizedTargets.set(normalizedKey, row.taskId);
+
+      const canonicalKey = rewriteGitHubIssueOwner(
+        row.externalKey,
+        organizationLogin,
+      );
+      if (!canonicalKey) {
+        continue;
+      }
+
+      const existingTaskId = existingKeys.get(canonicalKey);
+      if (existingTaskId) {
+        if (existingTaskId !== row.taskId) {
+          throw new ConflictException(
+            'Existing GitHub issue mappings for this organization are inconsistent',
+          );
+        }
+        continue;
+      }
+
+      existingKeys.set(canonicalKey, row.taskId);
+      inserts.push(this.toTaskRefAlias(row, canonicalKey));
+    }
+
+    if (inserts.length > 0) {
+      await db.insert(taskExternalRefs).values(inserts);
+    }
+  }
+
+  private toProjectRefAlias(
+    row: ProjectExternalRefRow,
+    canonicalKey: string,
+  ): typeof projectExternalRefs.$inferInsert {
+    return {
+      workspaceId: row.workspaceId,
+      projectId: row.projectId,
+      provider: row.provider,
+      externalType: row.externalType,
+      externalId: row.externalId,
+      externalKey: canonicalKey,
+      externalUrl: `https://github.com/${canonicalKey}`,
+      metadata: {
+        ...row.metadata,
+        githubRepo: canonicalKey,
+      },
+      syncedAt: row.syncedAt,
+    };
+  }
+
+  private toTaskRefAlias(
+    row: TaskExternalRefRow,
+    canonicalKey: string,
+  ): typeof taskExternalRefs.$inferInsert {
+    const separatorIndex = canonicalKey.lastIndexOf('#');
+    const githubRepo = canonicalKey.slice(0, separatorIndex);
+    const issueNumber = Number(canonicalKey.slice(separatorIndex + 1));
+
+    return {
+      workspaceId: row.workspaceId,
+      projectId: row.projectId,
+      taskId: row.taskId,
+      provider: row.provider,
+      externalType: row.externalType,
+      externalId: row.externalId,
+      externalKey: canonicalKey,
+      externalUrl: `https://github.com/${githubRepo}/issues/${issueNumber}`,
+      metadata: {
+        ...row.metadata,
+        githubRepo,
+        issueNumber,
+      },
+      syncedAt: row.syncedAt,
+    };
   }
 
   private async validateVisibleOrganization(

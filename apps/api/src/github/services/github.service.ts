@@ -168,7 +168,7 @@ export class GithubService {
       connection.account.login,
     );
 
-    return this.apiClient.listProjectIssues({
+    const response = await this.apiClient.listProjectIssues({
       accessToken: connection.accessToken,
       projectId,
       state: query.state,
@@ -176,6 +176,21 @@ export class GithubService {
       limit: query.limit,
       pageToken: query.pageToken,
     });
+
+    const allowedOrganizations = await this.workspaceGitHubOrganizations
+      .listAllowedOrganizationLogins(user.workspaceId)
+      .then((items) => new Set(items.map((item) => this.normalizeLogin(item))));
+
+    return {
+      ...response,
+      items: response.items.filter((item) =>
+        this.isProjectIssueOwnerAllowed(
+          item.issue.repository.owner,
+          connection.account.login,
+          allowedOrganizations,
+        ),
+      ),
+    };
   }
 
   async completeCallback(query: {
@@ -312,6 +327,19 @@ export class GithubService {
     await this.workspaceGitHubOrganizations.assertOrganizationAllowed(
       workspaceId,
       owner.login,
+    );
+  }
+
+  private isProjectIssueOwnerAllowed(
+    owner: string,
+    personalLogin: string,
+    allowedOrganizations: Set<string>,
+  ): boolean {
+    const normalizedOwner = this.normalizeLogin(owner);
+
+    return (
+      normalizedOwner === this.normalizeLogin(personalLogin) ||
+      allowedOrganizations.has(normalizedOwner)
     );
   }
 

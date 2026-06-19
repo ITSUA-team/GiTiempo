@@ -321,4 +321,100 @@ describe('GithubService', () => {
     ).rejects.toThrow('could not be verified');
     expect(apiClient.listProjectIssues).not.toHaveBeenCalled();
   });
+
+  it('filters Project V2 issue items whose repository owners are outside the workspace allow-list', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.getProjectOwner.mockResolvedValue({
+      type: 'personal',
+      login: 'octocat',
+    });
+    apiClient.listProjectIssues.mockResolvedValue({
+      items: [
+        {
+          projectItemId: 'item-1',
+          isArchived: false,
+          issue: {
+            id: 'issue-1',
+            nodeId: 'issue-1',
+            repository: {
+              owner: 'octocat',
+              name: 'personal-repo',
+              fullName: 'octocat/personal-repo',
+            },
+            number: 1,
+            title: 'Personal issue',
+            state: 'open',
+            url: 'https://github.com/octocat/personal-repo/issues/1',
+            updatedAt: '2026-05-14T12:00:00.000Z',
+          },
+        },
+        {
+          projectItemId: 'item-2',
+          isArchived: false,
+          issue: {
+            id: 'issue-2',
+            nodeId: 'issue-2',
+            repository: {
+              owner: 'Octo-Org',
+              name: 'allowed-repo',
+              fullName: 'Octo-Org/allowed-repo',
+            },
+            number: 2,
+            title: 'Allowed org issue',
+            state: 'open',
+            url: 'https://github.com/Octo-Org/allowed-repo/issues/2',
+            updatedAt: '2026-05-14T12:00:00.000Z',
+          },
+        },
+        {
+          projectItemId: 'item-3',
+          isArchived: false,
+          issue: {
+            id: 'issue-3',
+            nodeId: 'issue-3',
+            repository: {
+              owner: 'Other-Org',
+              name: 'blocked-repo',
+              fullName: 'Other-Org/blocked-repo',
+            },
+            number: 3,
+            title: 'Blocked org issue',
+            state: 'open',
+            url: 'https://github.com/Other-Org/blocked-repo/issues/3',
+            updatedAt: '2026-05-14T12:00:00.000Z',
+          },
+        },
+      ],
+      pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
+      skipped: {
+        pullRequests: 0,
+        draftIssues: 0,
+        redacted: 0,
+        unknown: 0,
+      },
+    });
+    workspaceGitHubOrganizations.listAllowedOrganizationLogins.mockResolvedValue(
+      ['octo-org'],
+    );
+
+    const result = await service().listProjectIssues(user, 'PVT_kwDO', {
+      state: 'all',
+      limit: 30,
+    });
+
+    expect(result.items.map((item) => item.projectItemId)).toEqual([
+      'item-1',
+      'item-2',
+    ]);
+  });
 });

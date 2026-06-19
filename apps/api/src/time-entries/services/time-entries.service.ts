@@ -30,6 +30,10 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import {
+  normalizeGitHubIssueExternalKey,
+  normalizeGitHubRepoKey,
+} from '../../github/github-repo-key';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
@@ -796,6 +800,11 @@ export class TimeEntriesService {
     workspaceId: string,
     githubRepo: string,
   ): Promise<{ projectId: string } | null> {
+    const normalizedRepo = normalizeGitHubRepoKey(githubRepo);
+    if (!normalizedRepo) {
+      return null;
+    }
+
     const [existingRef] = await db
       .select({ projectId: projectExternalRefs.projectId })
       .from(projectExternalRefs)
@@ -804,7 +813,7 @@ export class TimeEntriesService {
           eq(projectExternalRefs.workspaceId, workspaceId),
           eq(projectExternalRefs.provider, 'github'),
           eq(projectExternalRefs.externalType, 'repository'),
-          eq(projectExternalRefs.externalKey, githubRepo),
+          sql`lower(${projectExternalRefs.externalKey}) = ${normalizedRepo}`,
         ),
       )
       .limit(1);
@@ -818,6 +827,11 @@ export class TimeEntriesService {
     projectId: string,
     issueKey: string,
   ): Promise<{ taskId: string } | null> {
+    const normalizedIssueKey = normalizeGitHubIssueExternalKey(issueKey);
+    if (!normalizedIssueKey) {
+      return null;
+    }
+
     const [existingRef] = await db
       .select({ taskId: taskExternalRefs.taskId })
       .from(taskExternalRefs)
@@ -827,7 +841,7 @@ export class TimeEntriesService {
           eq(taskExternalRefs.projectId, projectId),
           eq(taskExternalRefs.provider, 'github'),
           eq(taskExternalRefs.externalType, 'issue'),
-          eq(taskExternalRefs.externalKey, issueKey),
+          sql`lower(${taskExternalRefs.externalKey}) = ${normalizedIssueKey}`,
         ),
       )
       .limit(1);

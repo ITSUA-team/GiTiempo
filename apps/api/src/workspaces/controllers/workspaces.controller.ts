@@ -14,6 +14,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -119,6 +120,10 @@ export class WorkspacesController {
     description:
       'The organization cannot be added until the GitHub connection or GitHub App access issue is resolved',
     type: WorkspaceGitHubOrganizationRecoveryErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description:
+      'Existing GitHub-backed workspace mappings for this organization must be reconciled before it can be allowed',
   })
   @ApiForbiddenResponse({ description: 'Admin role required' })
   @ApiServiceUnavailableResponse({

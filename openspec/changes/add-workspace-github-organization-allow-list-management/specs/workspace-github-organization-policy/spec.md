@@ -15,6 +15,12 @@ The system SHALL maintain a workspace-owned allow-list of GitHub organization lo
 - **THEN** no GitHub organization is treated as allowed
 - **AND** personal GitHub account scope is not disabled by the empty organization policy
 
+#### Scenario: Allowing an organization reconciles existing GitHub-backed workspace refs
+- **GIVEN** the workspace already contains GitHub-backed local project or task refs for repositories in an organization being allowed
+- **WHEN** an admin adds that organization to the workspace policy
+- **THEN** the system verifies those existing refs do not map the same normalized repository or issue to different local records
+- **AND** the system backfills canonical organization-login GitHub refs for the existing local records when they are unambiguous
+
 ### Requirement: GitHub Organization Policy Is A Filter Only
 The system MUST treat the workspace GitHub organization allow-list as a GiTiempo visibility policy layered on top of each user's connected GitHub account permissions.
 
@@ -44,4 +50,3 @@ The system SHALL compare GitHub organization logins case-insensitively while pre
 - **GIVEN** a workspace allows GitHub organization login `Octo-Org`
 - **WHEN** a GitHub browsing request targets owner `octo-org`
 - **THEN** the system treats the owner as allowed for that workspace
-
