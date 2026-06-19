@@ -123,13 +123,6 @@ The system SHALL allow connected users to list real GitHub issues contained in a
 - **THEN** the system SHALL return normalized issue items matching the search query within the requested Project V2 when GitHub provides matching issue content
 - **AND** the response SHALL preserve skipped counts for non-issue or inaccessible items
 
-#### Scenario: Project issue items still honor workspace organization policy
-- **GIVEN** a connected user requests issues for a GitHub Project V2 that the workspace allows
-- **AND** the project contains issue items whose repository owners include both allowed and disallowed organizations
-- **WHEN** the system normalizes the Project V2 issue response
-- **THEN** the system SHALL omit issue items whose repository owner is outside the workspace policy
-- **AND** personal-owner issue items for the connected GitHub account remain visible
-
 #### Scenario: Project contains non-issue items
 - **GIVEN** a GitHub Project V2 contains pull requests, draft issues, redacted items, or unknown item content
 - **WHEN** the system normalizes Project V2 items

@@ -271,12 +271,6 @@ The backend MUST provide a Chrome Extension-facing endpoint that starts a timer 
 - **THEN** the backend reuses the existing project and task records
 - **AND** creates a running time entry for the authenticated user
 
-#### Scenario: Extension reuses existing GitHub mapping regardless of repository casing
-- **GIVEN** local provider references already map the submitted GitHub issue using a different repository-name or owner casing variant
-- **WHEN** the extension starts a timer for that same GitHub issue
-- **THEN** the backend reuses the existing project and task records
-- **AND** does not create duplicate GitHub provider references for the casing variant
-
 #### Scenario: Extension cannot start timer for closed mapped task
 - **GIVEN** local provider references already map the submitted GitHub issue to a closed task
 - **WHEN** the extension starts a timer for that issue

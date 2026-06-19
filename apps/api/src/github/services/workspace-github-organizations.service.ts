@@ -37,10 +37,6 @@ type QueryExecutor = Pick<DrizzleDB, 'select' | 'insert'>;
 type ProjectExternalRefRow = typeof projectExternalRefs.$inferSelect;
 type TaskExternalRefRow = typeof taskExternalRefs.$inferSelect;
 
-function normalizeOrganizationLogin(login: string): string {
-  return normalizeGitHubLogin(login);
-}
-
 function buildRecoveryPayload(
   organizationLogin: string,
   reason: WorkspaceGitHubOrganizationRecoveryReason,
@@ -165,7 +161,7 @@ export class WorkspaceGitHubOrganizationsService {
     user: AuthUser,
     input: AddWorkspaceGitHubOrganizationInput,
   ): Promise<WorkspaceGitHubOrganizationResponse> {
-    const normalizedLogin = normalizeOrganizationLogin(input.organizationLogin);
+    const normalizedLogin = normalizeGitHubLogin(input.organizationLogin);
     const existing = await this.findByNormalizedLogin(
       user.workspaceId,
       normalizedLogin,
@@ -238,7 +234,7 @@ export class WorkspaceGitHubOrganizationsService {
   ): Promise<boolean> {
     const row = await this.findByNormalizedLogin(
       workspaceId,
-      normalizeOrganizationLogin(organizationLogin),
+      normalizeGitHubLogin(organizationLogin),
     );
     return row !== undefined;
   }
@@ -298,7 +294,7 @@ export class WorkspaceGitHubOrganizationsService {
           eq(projectExternalRefs.workspaceId, workspaceId),
           eq(projectExternalRefs.provider, 'github'),
           eq(projectExternalRefs.externalType, 'repository'),
-          sql`lower(split_part(${projectExternalRefs.externalKey}, '/', 1)) = ${normalizeOrganizationLogin(organizationLogin)}`,
+          sql`lower(split_part(${projectExternalRefs.externalKey}, '/', 1)) = ${normalizeGitHubLogin(organizationLogin)}`,
         ),
       );
 
@@ -362,7 +358,7 @@ export class WorkspaceGitHubOrganizationsService {
           eq(taskExternalRefs.workspaceId, workspaceId),
           eq(taskExternalRefs.provider, 'github'),
           eq(taskExternalRefs.externalType, 'issue'),
-          sql`lower(split_part(split_part(${taskExternalRefs.externalKey}, '#', 1), '/', 1)) = ${normalizeOrganizationLogin(organizationLogin)}`,
+          sql`lower(split_part(split_part(${taskExternalRefs.externalKey}, '#', 1), '/', 1)) = ${normalizeGitHubLogin(organizationLogin)}`,
         ),
       );
 
@@ -486,9 +482,9 @@ export class WorkspaceGitHubOrganizationsService {
     } catch (error) {
       throw this.toValidationFailure(error, input.organizationLogin);
     }
-    const normalizedLogin = normalizeOrganizationLogin(input.organizationLogin);
+    const normalizedLogin = normalizeGitHubLogin(input.organizationLogin);
     const matchedOwner = owners.items.find(
-      (owner) => normalizeOrganizationLogin(owner.login) === normalizedLogin,
+      (owner) => normalizeGitHubLogin(owner.login) === normalizedLogin,
     );
 
     if (matchedOwner) {
@@ -508,7 +504,7 @@ export class WorkspaceGitHubOrganizationsService {
     if (
       membership &&
       membership.state === 'active' &&
-      normalizeOrganizationLogin(membership.login) === normalizedLogin
+      normalizeGitHubLogin(membership.login) === normalizedLogin
     ) {
       return membership.login;
     }
@@ -521,7 +517,7 @@ export class WorkspaceGitHubOrganizationsService {
       throw this.toValidationFailure(error, input.organizationLogin);
     }
     const matchedMembership = memberships.items.find(
-      (owner) => normalizeOrganizationLogin(owner.login) === normalizedLogin,
+      (owner) => normalizeGitHubLogin(owner.login) === normalizedLogin,
     );
 
     if (!matchedMembership) {

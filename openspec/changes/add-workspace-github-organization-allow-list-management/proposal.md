@@ -23,6 +23,7 @@ Workspace admins need a product-level way to control which GitHub organizations 
 - `data-model`: Persist workspace-owned GitHub organization allow-list records with uniqueness and audit fields.
 - `contracts`: Add shared Zod request and response contracts for workspace GitHub organization policy endpoints.
 - `github-data-browsing-api`: Apply the workspace organization allow-list to organization-scoped GitHub browsing.
+- `time-tracking-api`: Preserve canonical GitHub provider mappings when starting timers from GitHub issues with repository casing variants.
 - `workspace-management`: Expose admin-only API behavior for reading and mutating the workspace GitHub organization allow-list.
 - `admin-pages`: Make the Settings page GitHub Workspace Access card interactive against the policy API and guide admins through GitHub App install/approval/reconnect recovery when provider-side access blocks validation.
 
@@ -32,5 +33,5 @@ Workspace admins need a product-level way to control which GitHub organizations 
 - Shared contracts: `packages/shared/src/contracts` for policy request/response shapes.
 - Admin frontend: `apps/admin-web` Settings page data loading, validation, mutation, toasts, and tests.
 - Admin frontend: blocked-organization GitHub App access recovery cards with response-derived instructions, external GitHub install/settings links, internal reconnect link, retry action, and focused tests.
-- Existing GitHub browsing and task-picker flows gain policy filtering but retain the connected-user permission boundary.
+- Existing GitHub browsing, task-picker, and start-from-GitHub flows gain policy filtering or canonical mapping reuse while retaining the connected-user permission boundary.
 - No new external dependency and no shared organization GitHub credential.

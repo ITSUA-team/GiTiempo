@@ -28,6 +28,7 @@
 - [x] 3.4 Apply the same policy filter to GitHub-backed task-picker option loading when that provider surface exists in the implementation.
 - [x] 3.5 Add focused GitHub service/controller tests proving allowed, disallowed, empty-policy, and personal-owner behavior.
 - [x] 3.6 Confirm historical GitHub-backed local refs remain readable after policy removal while removed organizations stay unavailable for new GitHub browsing and selection flows.
+- [x] 3.7 Capture start-from-GitHub casing reuse behavior in the active time-tracking API delta spec instead of editing the canonical spec before archive.
 
 ## 4. Admin Settings UI
 
