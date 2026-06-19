@@ -5,29 +5,35 @@
 Define the admin Members management page behavior in `admin-web`.
 ## Requirements
 ### Requirement: Members Page Header And Stat Counters
-
-The admin Members page SHALL render a page header and three stat counters that reflect current workspace membership and invite state.
+The admin Members page SHALL render current workspace membership and invite counters while locating the invite entry point in the members table header.
 
 #### Scenario: Header and stats render current data
 
 - **GIVEN** an admin opens the Members page
 - **WHEN** the page renders
-- **THEN** the header shows title, description, and a primary `Invite Member` action
-- **AND** the stat row shows Active Members, Pending Invites, and PMs Assigned counts from loaded member and invite data
+- **THEN** the stat row shows Active Members, Pending Invites, and PMs Assigned counts from loaded member and invite data
 - **AND** the page reuses the shared stats header and stat card patterns instead of app-local copies
+- **AND** the page does not render a separate stats-header text `Invite Member` action.
 
 ### Requirement: Invite Member Dialog
 
-The admin Members page MUST provide an `Invite Member` dialog that creates a pending workspace invite.
+The admin Members page MUST provide an `Invite Member` dialog that creates a pending workspace invite and follows the shared non-destructive popup footer pattern.
 
 #### Scenario: Dialog validates and creates invite
 
 - **GIVEN** the admin opens the invite dialog
 - **WHEN** the dialog renders
-- **THEN** it shows email and role fields with Cancel and Send Invite actions
+- **THEN** it shows email and role fields with `Send Invite` as the only footer action
+- **AND** the dialog footer does not show a `Cancel` dismissal button
 - **AND** invalid email or missing role shows field-level validation without sending a request
 - **AND** successful invite creation closes the dialog, shows success notification, and updates the pending invite count
 - **AND** backend errors keep the dialog open and show the rejection reason
+
+#### Scenario: Invite dialog dismissal uses popup close control
+
+- **GIVEN** the invite dialog is open and not submitting
+- **WHEN** the user activates the built-in dialog close control or existing non-destructive mask dismissal
+- **THEN** the dialog closes without creating an invite
 
 ### Requirement: Members Table Columns And Data
 
@@ -37,22 +43,22 @@ The Members page MUST render workspace members using the documented management t
 
 - **GIVEN** the workspace member list has loaded
 - **WHEN** the table renders
-- **THEN** it shows Member, Role, Projects Assigned, Last Active, and Actions columns
+- **THEN** it shows Member, Role, Projects Assigned, and Last Active columns
 - **AND** the Member cell shows avatar, display name, and email
 - **AND** assignment count and last-active values come from the workspace member contract
 - **AND** the table uses the shared management table chrome instead of a parallel app-local copy
 
 ### Requirement: Members Table Discovery Filters
-
 The Members page MUST render report-style table discovery controls that filter loaded member rows locally without changing backend scope.
 
-#### Scenario: Members table exposes search and column filters
+#### Scenario: Members table exposes search, invite action, and column filters
 
 - **WHEN** workspace member, invite, and project membership data have loaded
 - **THEN** the table card header exposes a global search control with placeholder `Search members`
+- **AND** the table card header exposes a primary icon-only `Invite member` action next to the search control with explicit tooltip and accessible label copy `Invite member`
 - **AND** the desktop table renders a filter row directly below the column header with controls for member name/email, role, assigned projects, and last active
-- **AND** the Actions column does not render a filter control
-- **AND** the mobile card list renders equivalent search and filter controls above the cards
+- **AND** no row-actions column or row-action filter control is rendered
+- **AND** the mobile card list renders equivalent search and filter controls above the cards.
 
 #### Scenario: Members project filters require loaded project membership data
 
@@ -61,7 +67,7 @@ The Members page MUST render report-style table discovery controls that filter l
 - **WHEN** the Members page is still completing its initial load
 - **THEN** the page keeps the initial loading surface instead of rendering the Members table with empty assigned-project filter options
 - **AND** if project membership data fails during initial load, the page renders the retryable Members request-error surface
-- **AND** the table does not imply that loaded members have no assigned projects only because project data is unavailable
+- **AND** the table does not imply that loaded members have no assigned projects only because project data is unavailable.
 
 #### Scenario: Members filters narrow loaded rows locally
 
@@ -74,13 +80,13 @@ The Members page MUST render report-style table discovery controls that filter l
 - **AND** `Active this week` includes valid `lastActiveAt` values from browser-local Monday `00:00` through the current time
 - **AND** `No activity` includes members with missing or invalid `lastActiveAt`
 - **AND** clearing active filters restores all loaded members allowed by the page's role scope
-- **AND** no member-list API request is required solely for table filtering
+- **AND** no member-list API request is required solely for table filtering.
 
-#### Scenario: Members filtering preserves management actions
+#### Scenario: Members filtering preserves management entry points
 
 - **WHEN** a filtered member row is visible
-- **THEN** existing Assign PM, Edit, and Remove actions keep their accessibility labels, confirmation behavior, inline expansion behavior, and refresh events
-- **AND** if an expanded row becomes excluded by filters, the expanded state does not remain visible for a hidden row
+- **THEN** the member-name edit entry point keeps its accessibility label, inline expansion behavior, confirmation behavior, and refresh events
+- **AND** if an expanded row becomes excluded by filters, the expanded state does not remain visible for a hidden row.
 
 ### Requirement: Members Table Is A Dumb Presentational Table
 

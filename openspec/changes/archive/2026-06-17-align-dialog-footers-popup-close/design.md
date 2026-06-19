@@ -12,7 +12,7 @@ Current implementation scan found these relevant surfaces:
 - `apps/admin-web/src/components/MembersTable.vue` and `apps/admin-web/src/components/ProjectsTable.vue` still had separate row action columns even though `docs/ui/pages-admin.md` defines the member/project names as the edit entry points and places destructive or status-specific actions inside inline settings.
 - `apps/admin-web/src/components/PendingInvitationsCard.vue` intentionally keeps its pending-invite `Actions` column because `docs/ui/pages-admin.md` and the issue acceptance criteria preserve row actions such as `Cancel invite`.
 
-The relevant app instructions are `apps/user-web/AGENTS.md` and `apps/admin-web/AGENTS.md`; both require `docs/ui/INDEX.md`, the smallest relevant `docs/ui/*` files, and the approved `.pen` frame before implementation. `GITiempo.pen` exists in the repo, but the current Pencil API session could not inspect it because the file was not open in the editor, so implementation must reopen or otherwise inspect the affected approved frames before editing.
+The relevant app instructions are `apps/user-web/AGENTS.md` and `apps/admin-web/AGENTS.md`; both require `docs/ui/INDEX.md`, the smallest relevant `docs/ui/*` files, and the approved `.pen` frame before implementation. The Pencil editor API could not inspect `GITiempo.pen` because no file was open in the editor, so the final parity review inspected the checked-in `.pen` JSON directly. Relevant frames reviewed include `Task Dialog`, `Time Entries` dialog content, `Top-Bar Timer Task Picker`, `Admin Invoices`, `Admin Members`, and `Admin Projects`.
 
 ## Goals / Non-Goals
 
@@ -64,9 +64,15 @@ Update focused Vue tests for affected dialog components to assert the absence of
 
 Alternative considered: rely only on manual visual checks. This would miss regressions in event wiring and stale test expectations around footer order, especially for mobile timer footer behavior.
 
+### Decision: Docs Override Older Invite Dialog Mock Footer
+
+The checked-in `GITiempo.pen` JSON still shows the `Invite Member` popup with a footer `Cancel` next to `Send Invite`, while `docs/ui/patterns.md` requires non-destructive form dialogs to rely on the built-in close control and keep only the primary action. The implementation follows the docs and active spec by rendering only `Send Invite` for this popup.
+
+Alternative considered: preserve the `.pen` invite footer `Cancel`. That would contradict the shared popup pattern and keep this admin dialog inconsistent with the other affected non-destructive popups.
+
 ## Risks / Trade-offs
 
 - Users accustomed to footer `Cancel` may look for a secondary button. Mitigation: keep PrimeVue's visible top-right close control enabled whenever the dialog is not in a protected saving/submitting state, and preserve mask dismissal where currently allowed.
 - Tests may use broad text assertions for `Cancel` and fail because unrelated exclusions still contain `Cancel`. Mitigation: scope test assertions to the affected dialog footer or specific component under test, and add regression checks for excluded destructive/non-popup/row actions separately.
 - The admin invoice dialog may not yet be implemented on the current branch. Mitigation: make the task an audit-and-update step; if still scaffolded, record no code change is needed there and ensure any new invoice dialog implementation follows the spec.
-- Pencil design parity cannot be verified from the current API session unless `GITiempo.pen` is opened. Mitigation: implementation must inspect the affected frames before code changes and document any PrimeVue-only deviations in the final review.
+- The Pencil editor API cannot inspect `GITiempo.pen` unless the file is open in the editor. Mitigation: the parity review inspected the checked-in `.pen` JSON directly and recorded the only docs-vs-design exception above.

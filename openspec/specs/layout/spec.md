@@ -3,9 +3,7 @@
 ## Purpose
 
 Define shared SPA shell behavior for top-level layout, navigation, and responsive shell adjustments across user-web and admin-web.
-
 ## Requirements
-
 ### Requirement: Shared Application Shell
 
 The user and admin SPAs SHALL use the same top-level shell pattern with top bar, sidebar, and main content region.
@@ -35,31 +33,35 @@ The shared application shell MUST allow route-level 403 and 404 pages in `user-w
 
 ### Requirement: User-Web Top-Bar Timer Center Region
 
-The authenticated user-web shell MUST reserve the top-bar center region for the compact timer surface on tablet and desktop, and MUST render the approved mobile timer strip inside shell chrome below the mobile top row while preserving the shared shell pattern and keeping admin-web unaffected.
+The authenticated user-web shell MUST reserve the top-bar center region for the compact timer surface on tablet and desktop, and MUST render the approved mobile timer strip inside shell chrome below the mobile top row while preserving the shared shell pattern and keeping admin-web unaffected. Shell chrome MUST expose timer actions only through the compact timer popup entry point, not as separate header-visible Start, Stop, or Change task buttons.
 
 #### Scenario: User-web top bar shows compact timer center content
 
 - GIVEN the authenticated user-web shell is rendered at tablet or desktop width
 - WHEN the top bar is shown
 - THEN the left side displays the product identity and workspace name
-- AND the center region displays the compact top-bar timer surface
-- AND the right side displays the header-owned identity/profile controls defined by the active shell requirements
+- AND the center region displays the compact two-line top-bar timer surface at content width
+- AND the compact timer surface is aligned toward the right avatar/profile side rather than centered across the full header
+- AND the right side displays an avatar-only user-web profile trigger without visible member-name text
+- AND the top bar does not render separate visible timer Start, Stop, or Change task action buttons outside the timer popup flow
 
 #### Scenario: User-web mobile shell shows selected timer strip
 
 - GIVEN the authenticated user-web shell is rendered below the mobile breakpoint
 - WHEN the top bar is shown
-- THEN the product identity and user identity controls remain in the mobile top row
+- THEN the product identity and avatar-only user identity controls remain in the mobile top row
 - AND the timer renders as a full-width shell strip below that top row using the approved `GITiempo.pen` mobile timer design
-- AND the timer Start or Stop action and Change task action remain reachable outside the top-right identity/avatar control area
+- AND the strip exposes a single `Task & timer` popup opener on the left
+- AND the strip shows compact task metadata and running or idle timer status to the right of that opener
+- AND the strip does not render separate visible timer Start, Stop, or Change task action buttons outside the timer popup flow
 
-#### Scenario: Mobile timer actions remain usable beside the right identity/profile region
+#### Scenario: Mobile timer opener remains usable beside the right identity/profile region
 
 - GIVEN the authenticated user-web shell is rendered below the mobile breakpoint
-- AND the shell renders the top-right identity/avatar region
+- AND the shell renders the top-right avatar/profile region
 - WHEN the mobile timer strip is visible and the right identity/profile region occupies the top-right shell area
-- THEN the timer Start or Stop action remains visible and actionable
-- AND the Change task action remains visible and actionable
+- THEN the `Task & timer` opener remains visible and actionable
+- AND the running or idle timer status remains visible enough to identify the current timer state
 - AND this scenario does not require a profile menu overlay to exist
 
 #### Scenario: Mobile timer remains compatible with separately specified profile menu overlay
@@ -67,8 +69,8 @@ The authenticated user-web shell MUST reserve the top-bar center region for the 
 - GIVEN active header or profile-menu requirements specify a header-owned profile menu overlay opened from the top-right identity/avatar trigger
 - AND the authenticated user-web shell is rendered below the mobile breakpoint
 - WHEN that profile menu overlay is open while the mobile timer strip is visible
-- THEN the timer Start or Stop action remains visible and actionable
-- AND the Change task action remains visible and actionable
+- THEN the `Task & timer` opener remains visible and actionable
+- AND the running or idle timer status remains visible enough to identify the current timer state
 - AND any overlap from the profile menu overlay is limited to non-critical task metadata
 - AND this mobile timer requirement does not create a new profile menu owner or move profile/menu action ownership into the timer
 
@@ -84,7 +86,7 @@ The authenticated user-web shell MUST reserve the top-bar center region for the 
 - GIVEN the user-web top bar uses the documented `h-16` shell height on tablet and desktop
 - WHEN the compact timer renders in running, idle, loading, error, or disabled state
 - THEN the timer surface remains compact enough to fit the top bar
-- AND smaller tablet and desktop widths truncate task context text before removing the elapsed time value or timer action
+- AND smaller tablet and desktop widths truncate task context text before removing the elapsed time value or popup entry affordance
 
 #### Scenario: Mobile timer strip remains compatible with bottom navigation
 
@@ -96,7 +98,7 @@ The authenticated user-web shell MUST reserve the top-bar center region for the 
 
 ### Requirement: Top-Bar Profile Dropdown Menu
 
-The authenticated user-web and admin-web shells SHALL expose profile actions through a dropdown menu anchored to the top-bar profile/avatar trigger.
+The authenticated user-web and admin-web shells SHALL expose profile actions through a dropdown menu anchored to the top-bar profile/avatar trigger, while allowing app-specific closed-trigger identity text visibility.
 
 #### Scenario: User-web profile menu opens from header identity trigger
 
@@ -107,10 +109,11 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 - **AND** the dropdown remains pinned to the sticky header so it stays visible with the header while the page scrolls
 - **AND** the dropdown includes a small caret/pointer aligned to the profile avatar circle
 - **AND** the profile/avatar trigger shows the rounded border active state only while the dropdown is open
+- **AND** the closed and open user-web profile trigger remain avatar-only without visible display-name or member-name text
 - **AND** the menu contains `Admin workspace`, `Profile`, and `Sign out` actions in that order
 - **AND** the shell navigation does not render a duplicate `Profile` item
 - **AND** the `Profile` action uses the same profile icon family as the user-web profile navigation item
-- **AND** the existing user-web top-bar timer remains visible
+- **AND** the existing user-web compact top-bar timer remains visible
 - **AND** the user Profile page does not render a duplicate page-content `Sign out` action
 
 #### Scenario: Admin-web profile menu opens from header identity trigger
@@ -165,7 +168,7 @@ The authenticated user-web and admin-web shells SHALL expose profile actions thr
 #### Scenario: Profile menu remains available on narrow layouts
 
 - **GIVEN** the authenticated shell is rendered below desktop width
-- **WHEN** optional top-bar identity text is hidden for space
+- **WHEN** optional top-bar identity text is hidden for space or by app-specific configuration
 - **THEN** the avatar/profile trigger remains available
 - **AND** activating it still opens the same app-owned profile/settings action and `Sign out` menu
 
