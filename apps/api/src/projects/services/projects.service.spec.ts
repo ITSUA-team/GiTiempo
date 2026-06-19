@@ -53,6 +53,27 @@ const projectResponseRow = {
   ],
 };
 
+type UpdateCountExecutorMock = {
+  execute: (query: unknown) => Promise<{ rowCount?: number | null }>;
+};
+
+type ProjectBackfillTestHarness = {
+  updateProjectTasksBillableDefault(
+    db: UpdateCountExecutorMock,
+    workspaceId: string,
+    projectId: string,
+    isBillable: boolean,
+    updatedAt: Date,
+  ): Promise<number>;
+  updateProjectTimeEntriesBillableDefault(
+    db: UpdateCountExecutorMock,
+    workspaceId: string,
+    projectId: string,
+    isBillable: boolean,
+    updatedAt: Date,
+  ): Promise<number>;
+};
+
 function selectRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
@@ -323,7 +344,7 @@ describe('ProjectsService', () => {
       execute: vi
         .fn()
         .mockResolvedValueOnce({ rowCount: 2 })
-        .mockResolvedValueOnce({ rows: [{ updatedCount: '1' }] }),
+        .mockResolvedValueOnce({ rowCount: 1 }),
     };
     const db = { transaction: vi.fn((callback) => callback(tx)) };
     const members = {
@@ -345,6 +366,44 @@ describe('ProjectsService', () => {
 
     expect(result).toEqual({ tasksUpdated: 2, timeEntriesUpdated: 1 });
     expect(tx.execute).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns the updated task count from the tasks billable backfill', async () => {
+    const db = { execute: vi.fn().mockResolvedValue({ rowCount: 2 }) };
+    const service = new ProjectsService(
+      {} as never,
+      {} as never,
+    ) as unknown as ProjectBackfillTestHarness;
+
+    const result = await service.updateProjectTasksBillableDefault(
+      db,
+      adminUser.workspaceId,
+      projectRow.id,
+      false,
+      new Date('2026-01-02T00:00:00.000Z'),
+    );
+
+    expect(result).toBe(2);
+    expect(db.execute).toHaveBeenCalledOnce();
+  });
+
+  it('returns the updated entry count from the time entry billable backfill', async () => {
+    const db = { execute: vi.fn().mockResolvedValue({ rowCount: 1 }) };
+    const service = new ProjectsService(
+      {} as never,
+      {} as never,
+    ) as unknown as ProjectBackfillTestHarness;
+
+    const result = await service.updateProjectTimeEntriesBillableDefault(
+      db,
+      adminUser.workspaceId,
+      projectRow.id,
+      false,
+      new Date('2026-01-02T00:00:00.000Z'),
+    );
+
+    expect(result).toBe(1);
+    expect(db.execute).toHaveBeenCalledOnce();
   });
 
   it('uses the provided selector when checking project visibility', async () => {

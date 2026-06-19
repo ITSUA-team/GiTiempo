@@ -48,7 +48,6 @@ type ProjectAssignmentRow = Omit<ProjectAssignmentResponse, 'assignedAt'> & {
   assignedAt: Date;
 };
 type UpdateCountExecutor = Pick<DrizzleDB, 'execute'>;
-type UpdateCountRow = { updatedCount: number | string | null };
 
 @Injectable()
 export class ProjectsService {
@@ -627,25 +626,19 @@ export class ProjectsService {
     isBillable: boolean,
     updatedAt: Date,
   ): Promise<number> {
-    const result = await db.execute<UpdateCountRow>(sql`
-      WITH updated AS (
-        UPDATE "time_entries"
-        SET
-          "is_billable" = ${isBillable},
-          "updated_at" = ${updatedAt}
-        WHERE "workspace_id" = ${workspaceId}
-          AND "task_id" IN (
-            SELECT "id"
-            FROM "tasks"
-            WHERE "workspace_id" = ${workspaceId}
-              AND "project_id" = ${projectId}
-          )
-        RETURNING 1
-      )
-      SELECT COUNT(*)::integer AS "updatedCount" FROM updated
+    const result = await db.execute(sql`
+      UPDATE "time_entries" te
+      SET
+        "is_billable" = ${isBillable},
+        "updated_at" = ${updatedAt}
+      FROM "tasks" t
+      WHERE te."workspace_id" = ${workspaceId}
+        AND te."task_id" = t."id"
+        AND t."workspace_id" = ${workspaceId}
+        AND t."project_id" = ${projectId}
     `);
 
-    return toNumber(result.rows[0]?.updatedCount);
+    return result.rowCount ?? 0;
   }
 
   private visibleNonAdminProjectCondition(userId: string): SQL {
