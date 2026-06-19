@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import {
@@ -44,7 +45,12 @@ export class RefreshTokenRepository {
         expiresAt: input.expiresAt,
       })
       .returning();
-    if (!row) throw new Error('Failed to insert refresh token');
+    if (!row) {
+      throw DomainError.internal(
+        'refresh_token_create_failed',
+        'Failed to insert refresh token',
+      );
+    }
     return row;
   }
 

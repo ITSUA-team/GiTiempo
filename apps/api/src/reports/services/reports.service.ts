@@ -25,6 +25,7 @@ import type {
 } from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { startOfNextUtcMonth, startOfUtcMonth } from '../../common/time';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
@@ -428,21 +429,30 @@ function toAggregateTiming(row: AggregateRow) {
 
 function requireProject(row: AggregateRow) {
   if (!row.projectId || !row.projectName) {
-    throw new Error('Report project row is missing project context');
+    throw DomainError.internal(
+      'report_project_context_missing',
+      'Report project row is missing project context',
+    );
   }
   return { id: row.projectId, name: row.projectName };
 }
 
 function requireTask(row: AggregateRow) {
   if (!row.taskId || !row.taskTitle) {
-    throw new Error('Report task row is missing task context');
+    throw DomainError.internal(
+      'report_task_context_missing',
+      'Report task row is missing task context',
+    );
   }
   return { id: row.taskId, title: row.taskTitle };
 }
 
 function requireUser(row: AggregateRow) {
   if (!row.userId || !row.userEmail) {
-    throw new Error('Report user row is missing user context');
+    throw DomainError.internal(
+      'report_user_context_missing',
+      'Report user row is missing user context',
+    );
   }
   return {
     id: row.userId,

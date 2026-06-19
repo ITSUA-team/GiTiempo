@@ -30,6 +30,7 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { DomainError } from '../../commons/errors/domain-error';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
@@ -145,7 +146,12 @@ export class TimeEntriesService {
           source: 'manual',
         })
         .returning({ id: timeEntries.id });
-      if (!row) throw new Error('Failed to create time entry');
+      if (!row) {
+        throw DomainError.internal(
+          'time_entry_create_failed',
+          'Failed to create time entry',
+        );
+      }
       return row.id;
     });
 
@@ -218,7 +224,12 @@ export class TimeEntriesService {
           })
           .where(and(eq(timeEntries.id, row.id), isNull(timeEntries.endedAt)))
           .returning({ id: timeEntries.id });
-        if (!updated) throw new Error('Failed to update time entry');
+        if (!updated) {
+          throw DomainError.internal(
+            'time_entry_update_failed',
+            'Failed to update time entry',
+          );
+        }
         return updated.id;
       }
 
@@ -257,7 +268,12 @@ export class TimeEntriesService {
         })
         .where(eq(timeEntries.id, row.id))
         .returning({ id: timeEntries.id });
-      if (!updated) throw new Error('Failed to update time entry');
+      if (!updated) {
+        throw DomainError.internal(
+          'time_entry_update_failed',
+          'Failed to update time entry',
+        );
+      }
       return updated.id;
     });
 
@@ -382,7 +398,12 @@ export class TimeEntriesService {
             source: 'extension',
           })
           .returning({ id: timeEntries.id });
-        if (!entry) throw new Error('Failed to start timer');
+        if (!entry) {
+          throw DomainError.internal(
+            'timer_start_failed',
+            'Failed to start timer',
+          );
+        }
         return entry.id;
       });
 
@@ -422,7 +443,9 @@ export class TimeEntriesService {
         })
         .where(eq(timeEntries.id, row.id))
         .returning({ id: timeEntries.id });
-      if (!updated) throw new Error('Failed to stop timer');
+      if (!updated) {
+        throw DomainError.internal('timer_stop_failed', 'Failed to stop timer');
+      }
       return updated.id;
     });
 
@@ -456,7 +479,12 @@ export class TimeEntriesService {
             source,
           })
           .returning({ id: timeEntries.id });
-        if (!row) throw new Error('Failed to start timer');
+        if (!row) {
+          throw DomainError.internal(
+            'timer_start_failed',
+            'Failed to start timer',
+          );
+        }
         return row.id;
       });
 
@@ -711,7 +739,12 @@ export class TimeEntriesService {
         user.workspaceId,
         githubRepo,
       );
-      if (!winningRef) throw new Error('Failed to load GitHub project mapping');
+      if (!winningRef) {
+        throw DomainError.internal(
+          'github_project_mapping_missing',
+          'Failed to load GitHub project mapping',
+        );
+      }
 
       const winningProject = await this.requireProjectRow(
         db,
@@ -757,7 +790,12 @@ export class TimeEntriesService {
         defaultBillableForTimeEntries,
       })
       .returning();
-    if (!task) throw new Error('Failed to create GitHub task');
+    if (!task) {
+      throw DomainError.internal(
+        'github_task_create_failed',
+        'Failed to create GitHub task',
+      );
+    }
 
     const [repo, issueNumber] = issueKey.split('#');
     const [createdRef] = await db

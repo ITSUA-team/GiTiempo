@@ -17,6 +17,7 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { DomainError } from '../../commons/errors/domain-error';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
@@ -96,7 +97,9 @@ export class TasksService {
           project.defaultBillableForTasks,
       })
       .returning();
-    if (!row) throw new Error('Failed to create task');
+    if (!row) {
+      throw DomainError.internal('task_create_failed', 'Failed to create task');
+    }
     return this.toResponse(row, null);
   }
 

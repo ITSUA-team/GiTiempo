@@ -27,6 +27,7 @@ import type {
 import { projectMemberSchema } from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { startOfUtcIsoWeek, startOfUtcMonth } from '../../common/time';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
@@ -215,7 +216,12 @@ export class ProjectsService {
         user.workspaceId,
         row.id,
       );
-      if (!response) throw new Error('Failed to fetch created project');
+      if (!response) {
+        throw DomainError.internal(
+          'project_create_response_missing',
+          'Failed to fetch created project',
+        );
+      }
       return this.toProjectResponse(response);
     }
 
@@ -238,7 +244,12 @@ export class ProjectsService {
       user.workspaceId,
       row.id,
     );
-    if (!response) throw new Error('Failed to fetch created project');
+    if (!response) {
+      throw DomainError.internal(
+        'project_create_response_missing',
+        'Failed to fetch created project',
+      );
+    }
     return this.toProjectResponse(response);
   }
 
@@ -471,7 +482,12 @@ export class ProjectsService {
         .where(eq(projectAssignments.id, created.id))
         .limit(1);
 
-      if (!row) throw new Error('Failed to load project assignment');
+      if (!row) {
+        throw DomainError.internal(
+          'project_assignment_response_missing',
+          'Failed to load project assignment',
+        );
+      }
       return this.toAssignmentResponse(row);
     });
   }
@@ -645,7 +661,12 @@ export class ProjectsService {
       eq(projects.visibility, 'public'),
       eq(projectAssignments.userId, userId),
     );
-    if (!condition) throw new Error('Failed to build project visibility scope');
+    if (!condition) {
+      throw DomainError.internal(
+        'project_visibility_scope_missing',
+        'Failed to build project visibility scope',
+      );
+    }
     return condition;
   }
 

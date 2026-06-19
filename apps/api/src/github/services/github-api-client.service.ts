@@ -509,7 +509,9 @@ export class GithubApiClientService {
       const parsed = JSON.parse(
         Buffer.from(value, 'base64url').toString('utf8'),
       ) as PageToken;
-      if (parsed.kind !== kind) throw new Error('token kind mismatch');
+      if (parsed.kind !== kind) {
+        throw new BadRequestException('Invalid pageToken');
+      }
       if (kind === 'rest-page' && 'page' in parsed) return parsed.page;
       if (kind === 'rest-cursor' && 'after' in parsed) return parsed.after;
       if (kind === 'graphql-cursor' && 'cursor' in parsed) {

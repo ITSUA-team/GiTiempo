@@ -13,6 +13,7 @@ import { sql } from 'drizzle-orm';
 import type { RegisterRequest } from '@gitiempo/shared';
 import type { Env } from '../../config/env.validation';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
@@ -132,7 +133,10 @@ function parseDurationMs(input: string): number {
   const trimmed = input.trim();
   const match = /^(\d+)\s*([smhd]?)$/i.exec(trimmed);
   if (!match) {
-    throw new Error(`Invalid duration: "${input}"`);
+    throw DomainError.internal(
+      'invalid_duration_config',
+      `Invalid duration: "${input}"`,
+    );
   }
   const value = Number.parseInt(match[1]!, 10);
   const unit = match[2]?.toLowerCase() || 's';
