@@ -31,7 +31,7 @@ import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
+import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
@@ -47,7 +47,7 @@ type ProjectResponseRow = ProjectRow & {
 type ProjectAssignmentRow = Omit<ProjectAssignmentResponse, 'assignedAt'> & {
   assignedAt: Date;
 };
-type UpdateCountExecutor = Pick<DrizzleDB, 'execute'>;
+type UpdateCountExecutor = Pick<DrizzleDB, 'update'>;
 
 @Injectable()
 export class ProjectsService {
@@ -607,14 +607,12 @@ export class ProjectsService {
     isBillable: boolean,
     updatedAt: Date,
   ): Promise<number> {
-    const result = await db.execute(sql`
-      UPDATE "tasks"
-      SET
-        "default_time_entry_billable" = ${isBillable},
-        "updated_at" = ${updatedAt}
-      WHERE "workspace_id" = ${workspaceId}
-        AND "project_id" = ${projectId}
-    `);
+    const result = await db
+      .update(tasks)
+      .set({ defaultBillableForTimeEntries: isBillable, updatedAt })
+      .where(
+        and(eq(tasks.workspaceId, workspaceId), eq(tasks.projectId, projectId)),
+      );
 
     return result.rowCount ?? 0;
   }
@@ -626,17 +624,18 @@ export class ProjectsService {
     isBillable: boolean,
     updatedAt: Date,
   ): Promise<number> {
-    const result = await db.execute(sql`
-      UPDATE "time_entries" te
-      SET
-        "is_billable" = ${isBillable},
-        "updated_at" = ${updatedAt}
-      FROM "tasks" t
-      WHERE te."workspace_id" = ${workspaceId}
-        AND te."task_id" = t."id"
-        AND t."workspace_id" = ${workspaceId}
-        AND t."project_id" = ${projectId}
-    `);
+    const result = await db
+      .update(timeEntries)
+      .set({ isBillable, updatedAt })
+      .from(tasks)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, workspaceId),
+          eq(timeEntries.taskId, tasks.id),
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.projectId, projectId),
+        ),
+      );
 
     return result.rowCount ?? 0;
   }
@@ -771,12 +770,12 @@ export class ProjectsService {
         >`MAX(${timeEntries.startedAt})`,
       })
       .from(timeEntries)
-      .innerJoin(tasksTable, eq(tasksTable.id, timeEntries.taskId))
+      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
       .where(
         and(
           eq(timeEntries.workspaceId, workspaceId),
-          eq(tasksTable.workspaceId, workspaceId),
-          eq(tasksTable.projectId, projectId),
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.projectId, projectId),
           isNotNull(timeEntries.durationSeconds),
         ),
       );

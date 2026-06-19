@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { tasks } from '../../tasks/schemas/tasks.schema';
+import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projects } from '../schemas/projects.schema';
 import { ProjectsService } from './projects.service';
@@ -54,7 +56,7 @@ const projectResponseRow = {
 };
 
 type UpdateCountExecutorMock = {
-  execute: (query: unknown) => Promise<{ rowCount?: number | null }>;
+  update: ReturnType<typeof vi.fn>;
 };
 
 type ProjectBackfillTestHarness = {
@@ -87,6 +89,14 @@ function selectJoinedRows(rows: unknown[]) {
   const leftJoin = vi.fn().mockReturnValue({ where });
   const from = vi.fn().mockReturnValue({ leftJoin });
   return { from };
+}
+
+function updateRowCount(rowCount: number | null) {
+  const where = vi.fn().mockResolvedValue({ rowCount });
+  const from = vi.fn().mockReturnValue({ where });
+  const set = vi.fn().mockReturnValue({ from, where });
+
+  return { query: { set }, set, from, where };
 }
 
 function collectDateParams(value: unknown): string[] {
@@ -340,11 +350,13 @@ describe('ProjectsService', () => {
   });
 
   it('backfills selected project downstream billable defaults', async () => {
+    const taskUpdate = updateRowCount(2);
+    const timeEntryUpdate = updateRowCount(1);
     const tx = {
-      execute: vi
+      update: vi
         .fn()
-        .mockResolvedValueOnce({ rowCount: 2 })
-        .mockResolvedValueOnce({ rowCount: 1 }),
+        .mockReturnValueOnce(taskUpdate.query)
+        .mockReturnValueOnce(timeEntryUpdate.query),
     };
     const db = { transaction: vi.fn((callback) => callback(tx)) };
     const members = {
@@ -365,11 +377,23 @@ describe('ProjectsService', () => {
     );
 
     expect(result).toEqual({ tasksUpdated: 2, timeEntriesUpdated: 1 });
-    expect(tx.execute).toHaveBeenCalledTimes(2);
+    expect(tx.update).toHaveBeenNthCalledWith(1, tasks);
+    expect(taskUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultBillableForTimeEntries: false }),
+    );
+    expect(taskUpdate.where).toHaveBeenCalledOnce();
+    expect(tx.update).toHaveBeenNthCalledWith(2, timeEntries);
+    expect(timeEntryUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({ isBillable: false }),
+    );
+    expect(timeEntryUpdate.from).toHaveBeenCalledWith(tasks);
+    expect(timeEntryUpdate.where).toHaveBeenCalledOnce();
   });
 
   it('returns the updated task count from the tasks billable backfill', async () => {
-    const db = { execute: vi.fn().mockResolvedValue({ rowCount: 2 }) };
+    const updatedAt = new Date('2026-01-02T00:00:00.000Z');
+    const taskUpdate = updateRowCount(2);
+    const db = { update: vi.fn().mockReturnValue(taskUpdate.query) };
     const service = new ProjectsService(
       {} as never,
       {} as never,
@@ -380,15 +404,22 @@ describe('ProjectsService', () => {
       adminUser.workspaceId,
       projectRow.id,
       false,
-      new Date('2026-01-02T00:00:00.000Z'),
+      updatedAt,
     );
 
     expect(result).toBe(2);
-    expect(db.execute).toHaveBeenCalledOnce();
+    expect(db.update).toHaveBeenCalledWith(tasks);
+    expect(taskUpdate.set).toHaveBeenCalledWith({
+      defaultBillableForTimeEntries: false,
+      updatedAt,
+    });
+    expect(taskUpdate.where).toHaveBeenCalledOnce();
   });
 
   it('returns the updated entry count from the time entry billable backfill', async () => {
-    const db = { execute: vi.fn().mockResolvedValue({ rowCount: 1 }) };
+    const updatedAt = new Date('2026-01-02T00:00:00.000Z');
+    const timeEntryUpdate = updateRowCount(1);
+    const db = { update: vi.fn().mockReturnValue(timeEntryUpdate.query) };
     const service = new ProjectsService(
       {} as never,
       {} as never,
@@ -399,11 +430,17 @@ describe('ProjectsService', () => {
       adminUser.workspaceId,
       projectRow.id,
       false,
-      new Date('2026-01-02T00:00:00.000Z'),
+      updatedAt,
     );
 
     expect(result).toBe(1);
-    expect(db.execute).toHaveBeenCalledOnce();
+    expect(db.update).toHaveBeenCalledWith(timeEntries);
+    expect(timeEntryUpdate.set).toHaveBeenCalledWith({
+      isBillable: false,
+      updatedAt,
+    });
+    expect(timeEntryUpdate.from).toHaveBeenCalledWith(tasks);
+    expect(timeEntryUpdate.where).toHaveBeenCalledOnce();
   });
 
   it('uses the provided selector when checking project visibility', async () => {
