@@ -201,6 +201,7 @@ function formatSentInviteTime(createdAt: string): string {
         v-else-if="props.pendingInvites.length > 0"
         :columns="columns"
         data-key="id"
+        :header-class="pendingInvitesHeaderClass"
         :loading="false"
         shell-class="border-divider overflow-x-auto rounded-[6px] border"
         single-scroll

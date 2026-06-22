@@ -42,6 +42,8 @@ const columns = [
   { key: "updated", label: "Updated", width: 170 },
 ] satisfies ManagementTableColumn[];
 
+const projectTasksTableHeaderClass = `${managementTableHeaderClass} min-w-[740px]`;
+
 function formatTaskCount(count: number): string {
   return `${count} active task${count === 1 ? "" : "s"}`;
 }
@@ -129,11 +131,12 @@ function getStatusPt(task: TaskResponse) {
       :body-row-class="managementTableBodyRowClass"
       :columns="columns"
       data-key="id"
-      :header-class="managementTableHeaderClass"
+      :header-class="projectTasksTableHeaderClass"
       :loading="false"
-      shell-class="border-divider overflow-hidden rounded-lg border bg-surface-primary"
+      shell-class="border-divider overflow-x-auto rounded-lg border bg-surface-primary"
+      single-scroll
       table-class="min-w-[740px] w-full table-fixed border-collapse"
-      table-container-class="overflow-auto rounded-none border-none"
+      table-container-class="overflow-visible rounded-none border-none"
       :value="props.tasks"
     >
       <template #empty>
