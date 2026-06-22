@@ -187,6 +187,25 @@ describe('workspaceGitHubOrganizationRecoveryPayloadSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('rejects unknown recovery step fields', () => {
+    const result = workspaceGitHubOrganizationRecoveryPayloadSchema.safeParse({
+      organizationLogin: 'My-test-org-for-clock',
+      reason: 'workspace_github_organization_not_visible',
+      steps: [
+        {
+          id: 'install',
+          status: 'action_required',
+          providerDetails: 'raw provider detail',
+        },
+        { id: 'approve', status: 'action_required' },
+        { id: 'reconnect', status: 'complete' },
+        { id: 'retry', status: 'blocked' },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('rejects recovery payloads that do not keep the ordered step contract', () => {
     const result = workspaceGitHubOrganizationRecoveryPayloadSchema.safeParse({
       organizationLogin: 'My-test-org-for-clock',

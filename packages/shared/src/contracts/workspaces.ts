@@ -87,10 +87,12 @@ export const workspaceGitHubOrganizationRecoveryStepStatusSchema = z.enum(
   workspaceGitHubOrganizationRecoveryStepStatusValues,
 );
 
-export const workspaceGitHubOrganizationRecoveryStepSchema = z.object({
-  id: workspaceGitHubOrganizationRecoveryStepIdSchema,
-  status: workspaceGitHubOrganizationRecoveryStepStatusSchema,
-});
+export const workspaceGitHubOrganizationRecoveryStepSchema = z
+  .object({
+    id: workspaceGitHubOrganizationRecoveryStepIdSchema,
+    status: workspaceGitHubOrganizationRecoveryStepStatusSchema,
+  })
+  .strict();
 
 export const workspaceGitHubOrganizationRecoveryStepsSchema = z.tuple([
   workspaceGitHubOrganizationRecoveryStepSchema.extend({
