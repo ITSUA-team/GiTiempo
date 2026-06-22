@@ -49,6 +49,7 @@
 - [x] 5.2a Run shared contract verification after adding recovery payload schemas.
 - [x] 5.3 Run backend verification with `pnpm --filter @gitiempo/api lint`, `pnpm --filter @gitiempo/api typecheck`, and `pnpm --filter @gitiempo/api test`.
 - [x] 5.3a Run backend verification after adding recovery payload status mapping.
+- [x] 5.3b Add an exception-filter or HTTP-boundary backend test proving recoverable add-organization failures preserve the `recovery` payload through the normalized API error envelope.
 - [x] 5.4 Run admin frontend verification with `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test`.
 - [x] 5.4a Run admin frontend verification after rendering response-driven recovery cards.
 - [x] 5.5 Run targeted manual or browser verification for the Settings card add/remove flow, including disconnected GitHub account and backend rejection states.

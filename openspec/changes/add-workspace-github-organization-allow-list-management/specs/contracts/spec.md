@@ -33,7 +33,9 @@ The shared API contract SHALL expose stable, frontend-safe recovery payloads for
 #### Scenario: Add organization rejection exposes recovery payload
 - **GIVEN** the backend rejects an add allowed GitHub organization request for a recoverable GitHub connection or provider access reason
 - **WHEN** frontend code consumes the error payload
-- **THEN** the payload includes a stable recovery reason category
+- **THEN** the payload matches the standard API error envelope with `statusCode`, `error`, `message`, optional `code`, optional `requestId`, and optional `details`
+- **AND** the payload includes a required `recovery` object
+- **AND** the `code` field includes a stable recovery reason category
 - **AND** the reason can represent missing GitHub connection, organization not visible, GitHub App blocked or needing approval, and retryable provider failure
 - **AND** the payload includes the rejected organization login when available
 - **AND** the payload includes ordered GitHub App access recovery steps with stable step identifiers and status values
