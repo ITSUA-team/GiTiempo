@@ -29,6 +29,8 @@ export interface ApiErrorResponse {
   requestId?: string;
   /** Detailed validation issues (when applicable). */
   details?: unknown;
+  /** Structured recovery instructions for recoverable failures. */
+  recovery?: unknown;
   /** Stack trace — included only in non-production. */
   stack?: string;
 }
@@ -160,10 +162,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
         typeof res === 'object' && res !== null && 'details' in res
           ? (res as { details: unknown }).details
           : undefined;
+      const recovery =
+        typeof res === 'object' && res !== null && 'recovery' in res
+          ? (res as { recovery: unknown }).recovery
+          : undefined;
       return {
         statusCode: status,
         ...(code ? { code } : {}),
         ...(details === undefined ? {} : { details }),
+        ...(recovery === undefined ? {} : { recovery }),
         error: errorName,
         message,
         requestId,

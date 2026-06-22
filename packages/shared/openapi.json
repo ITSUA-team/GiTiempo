@@ -520,6 +520,9 @@
           "403": {
             "description": "Admin role required"
           },
+          "409": {
+            "description": "Existing GitHub-backed workspace mappings for this organization must be reconciled before it can be allowed"
+          },
           "503": {
             "description": "GitHub organization validation is temporarily unavailable",
             "content": {
@@ -3246,6 +3249,11 @@
       "WorkspaceGitHubOrganizationRecoveryErrorResponseDto": {
         "type": "object",
         "properties": {
+          "statusCode": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
           "code": {
             "type": "string",
             "enum": [
@@ -3388,9 +3396,14 @@
               "steps"
             ],
             "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
+          "statusCode",
           "code",
           "error",
           "message",

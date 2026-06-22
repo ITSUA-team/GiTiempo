@@ -280,6 +280,7 @@ describe('buildWorkspaceGitHubOrganizationRecoveryPayload', () => {
 describe('workspaceGitHubOrganizationRecoveryErrorSchema', () => {
   it('accepts recovery error payloads without raw provider details', () => {
     const result = workspaceGitHubOrganizationRecoveryErrorSchema.parse({
+      statusCode: 503,
       code: 'workspace_github_organization_provider_retryable',
       error: 'ServiceUnavailable',
       message:
@@ -294,8 +295,10 @@ describe('workspaceGitHubOrganizationRecoveryErrorSchema', () => {
           { id: 'retry', status: 'ready' },
         ],
       },
+      requestId: 'request-1',
     });
 
+    expect(result.statusCode).toBe(503);
     expect(result.recovery.steps[3]?.status).toBe('ready');
   });
 });

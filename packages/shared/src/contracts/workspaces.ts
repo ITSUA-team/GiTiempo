@@ -117,10 +117,12 @@ export const workspaceGitHubOrganizationRecoveryPayloadSchema = z
 
 export const workspaceGitHubOrganizationRecoveryErrorSchema = z
   .object({
+    statusCode: z.number().int().positive(),
     code: workspaceGitHubOrganizationRecoveryReasonSchema,
     error: z.string().min(1),
     message: z.string().min(1),
     recovery: workspaceGitHubOrganizationRecoveryPayloadSchema,
+    requestId: z.string().min(1).optional(),
   })
   .strict();
 

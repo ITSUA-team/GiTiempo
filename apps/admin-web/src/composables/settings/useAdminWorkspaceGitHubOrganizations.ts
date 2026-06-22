@@ -1,11 +1,8 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
 import {
   addWorkspaceGitHubOrganizationSchema,
-  buildWorkspaceGitHubOrganizationRecoveryPayload,
   workspaceGitHubOrganizationRecoveryPayloadSchema,
-  workspaceGitHubOrganizationRecoveryReasonSchema,
   type WorkspaceGitHubOrganizationRecoveryPayload,
-  type WorkspaceGitHubOrganizationRecoveryReason,
   type WorkspaceGitHubOrganizationResponse,
 } from '@gitiempo/shared';
 import {
@@ -78,39 +75,6 @@ function getRecoveryPayload(
   }
 
   return null;
-}
-
-function getRecoveryReason(
-  error: unknown,
-): WorkspaceGitHubOrganizationRecoveryReason | null {
-  if (
-    !error ||
-    typeof error !== 'object' ||
-    !('code' in error) ||
-    typeof error.code !== 'string'
-  ) {
-    return null;
-  }
-
-  const parsed = workspaceGitHubOrganizationRecoveryReasonSchema.safeParse(
-    error.code,
-  );
-  return parsed.success ? parsed.data : null;
-}
-
-function getRecoverableAddFailure(
-  error: unknown,
-  organizationLogin: string,
-): WorkspaceGitHubOrganizationRecoveryPayload | null {
-  const payload = getRecoveryPayload(error);
-  if (payload) {
-    return payload;
-  }
-
-  const reason = getRecoveryReason(error);
-  return reason
-    ? buildWorkspaceGitHubOrganizationRecoveryPayload(organizationLogin, reason)
-    : null;
 }
 
 export function useAdminWorkspaceGitHubOrganizations({
@@ -203,10 +167,7 @@ export function useAdminWorkspaceGitHubOrganizations({
         'add-workspace-github-organization',
       );
     } catch (error) {
-      recovery.value = getRecoverableAddFailure(
-        error,
-        parsed.data.organizationLogin,
-      );
+      recovery.value = getRecoveryPayload(error);
       onError?.(
         getErrorMessage(error),
         error,

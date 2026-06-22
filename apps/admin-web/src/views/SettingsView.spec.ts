@@ -181,17 +181,6 @@ function createRecoveryError(
   return error;
 }
 
-function createLegacyRecoveryError(
-  message: string,
-  code: WorkspaceGitHubOrganizationRecoveryPayload['reason'],
-): Error & { code: WorkspaceGitHubOrganizationRecoveryPayload['reason'] } {
-  const error = new Error(message) as Error & {
-    code: WorkspaceGitHubOrganizationRecoveryPayload['reason'];
-  };
-  error.code = code;
-  return error;
-}
-
 function createRecoveryPayload(
   reason: WorkspaceGitHubOrganizationRecoveryPayload['reason'],
   organizationLogin = 'My-test-org-for-clock',
@@ -729,33 +718,6 @@ describe('SettingsView', () => {
     expect(wrapper.text()).not.toContain('Installed');
     expect(wrapper.text()).not.toContain('Blocked');
     expect(wrapper.text()).not.toContain('Reconnect needed');
-    expect(wrapper.text()).toContain('Retry check');
-  });
-
-  it('shows a blocked GitHub App recovery checklist for legacy reason-only errors', async () => {
-    testMocks.addWorkspaceGitHubOrganization.mockRejectedValueOnce(
-      createLegacyRecoveryError(
-        'GitHub organization blocks this GitHub App',
-        'workspace_github_organization_app_access_blocked',
-      ),
-    );
-
-    const wrapper = mountSettingsView();
-    await flushPromises();
-    await addOrganization(wrapper);
-
-    expect(
-      wrapper
-        .get('[data-testid="settings-github-recovery-step-install"]')
-        .text(),
-    ).toContain('GiTiempo is already installed for this organization');
-    expect(
-      wrapper
-        .get('[data-testid="settings-github-recovery-step-approve"]')
-        .text(),
-    ).toContain('unblock or approve the installed GiTiempo app');
-    expect(wrapper.text()).not.toContain('Installed');
-    expect(wrapper.text()).not.toContain('Blocked');
     expect(wrapper.text()).toContain('Retry check');
   });
 
