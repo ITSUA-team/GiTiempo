@@ -117,7 +117,14 @@ const columns: ManagementTableColumn[] = [
   { key: 'lastActive', label: 'Last Active', width: 140 },
 ];
 
+const membersTableBodyRowClass = 'h-[56px] transition-colors hover:bg-app-bg';
 const membersTableHeaderClass = `${managementTableHeaderClass} min-w-[780px]`;
+
+function getRoleClass(role: WorkspaceRole): string {
+  return role === 'pm'
+    ? 'text-brand text-[13px] font-semibold'
+    : 'text-text-dark text-[13px] font-medium';
+}
 </script>
 
 <template>
@@ -364,6 +371,7 @@ const membersTableHeaderClass = `${managementTableHeaderClass} min-w-[780px]`;
     :columns="columns"
     :value="rows"
     :loading="loading"
+    :body-row-class="membersTableBodyRowClass"
     data-key="id"
     :header-class="membersTableHeaderClass"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
@@ -479,7 +487,10 @@ const membersTableHeaderClass = `${managementTableHeaderClass} min-w-[780px]`;
       :pt="managementTableColumnPt"
     >
       <template #body="{ data }">
-        <span class="text-text-dark text-[13px] font-bold">{{
+        <span
+          :class="getRoleClass(data.member.role)"
+          :data-testid="`member-role-${data.id}`"
+        >{{
           data.roleLabel
         }}</span>
       </template>

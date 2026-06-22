@@ -282,8 +282,9 @@ describe('TimeEntriesDaySection', () => {
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
     expect(wrapper.text()).toContain('Task');
     expect(wrapper.text()).toContain('Project');
-    expect(wrapper.text()).toContain('Time');
+    expect(wrapper.text()).toContain('Range');
     expect(wrapper.text()).toContain('Duration');
+    expect(wrapper.text()).not.toContain('Time');
     expect(wrapper.text()).not.toContain('Actions');
     expect(wrapper.text()).not.toContain('Stop from the top bar');
   });
