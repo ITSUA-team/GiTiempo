@@ -10,6 +10,7 @@ import {
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
   managementTableFilterSelectPt,
+  managementTableHeaderClass,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -73,6 +74,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'hours', label: 'Hours', width: 140, align: 'end' },
   { key: 'billable', label: 'Billable', width: 140, align: 'end' },
 ];
+
+const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[720px]`;
 
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
@@ -344,7 +347,7 @@ const searchAutoCompletePt = {
       :value="rows"
       :loading="loading"
       data-key="id"
-      header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[720px] items-center border-b font-sans text-[13px] font-semibold"
+      :header-class="reportTableHeaderClass"
       shell-class="border-divider overflow-x-auto rounded-[6px] border"
       single-scroll
       table-class="min-w-[720px] w-full table-fixed border-collapse"

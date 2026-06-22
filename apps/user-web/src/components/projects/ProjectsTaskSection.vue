@@ -8,7 +8,9 @@ import {
   ManagementTableEmptyState,
   ManagementTableShell,
   MobileRecordCard,
+  managementTableBodyRowClass,
   managementTableColumnPt,
+  managementTableHeaderClass,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
@@ -124,10 +126,10 @@ function getStatusPt(task: TaskResponse) {
 
     <ManagementTableShell
       v-else
-      body-row-class="h-[52px] bg-transparent hover:bg-app-bg"
+      :body-row-class="managementTableBodyRowClass"
       :columns="columns"
       data-key="id"
-      header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
+      :header-class="managementTableHeaderClass"
       :loading="false"
       shell-class="border-divider overflow-hidden rounded-lg border bg-surface-primary"
       table-class="min-w-[740px] w-full table-fixed border-collapse"

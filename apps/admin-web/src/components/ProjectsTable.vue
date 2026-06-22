@@ -13,6 +13,7 @@ import {
   managementTableFilterAutoCompletePt,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
+  managementTableHeaderClass,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import AutoComplete from 'primevue/autocomplete';
@@ -115,6 +116,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'hours', label: 'Hours', width: 120 },
   { key: 'visibility', label: 'Visibility', width: 120 },
 ];
+
+const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
 </script>
 
 <template>
@@ -374,7 +377,7 @@ const columns: ManagementTableColumn[] = [
     :value="rows"
     :loading="loading"
     data-key="id"
-    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[860px] items-center border-b font-sans text-[13px] font-semibold"
+    :header-class="projectsTableHeaderClass"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll
     table-class="min-w-[860px] w-full table-fixed border-collapse"

@@ -8,6 +8,7 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   managementTableColumnPt,
+  managementTableHeaderClass,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
@@ -41,6 +42,7 @@ const isMobileViewport = useIsMobileViewport();
 const projectColumnWidth = '12rem';
 const timeColumnWidth = '10rem';
 const durationColumnWidth = '7rem';
+const timeEntriesTableBodyRowClass = 'h-12 transition-colors';
 
 const columns = [
   { key: 'task', label: 'Task', width: 'fill' },
@@ -205,10 +207,10 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 
     <ManagementTableShell
       v-else
-      body-row-class="h-[52px]"
+      :body-row-class="timeEntriesTableBodyRowClass"
       :columns="columns"
       data-key="id"
-      header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
+      :header-class="managementTableHeaderClass"
       :loading="false"
       :row-class="(entry) => getEntryRowClass(entry as TimeEntryResponse)"
       shell-class="border-divider overflow-hidden rounded-lg border bg-surface-primary"
