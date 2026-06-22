@@ -17,6 +17,7 @@ import {
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import AutoComplete from 'primevue/autocomplete';
+import Button from 'primevue/button';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -307,16 +308,23 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <h3>
-              <button
+              <Button
                 type="button"
-                class="focus-visible:outline-brand max-w-full truncate text-left text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-                :class="row.nameClass"
+                variant="link"
                 :aria-label="`Edit project ${row.name}`"
                 :data-testid="`project-mobile-name-${row.id}`"
+                :pt="{
+                  root: {
+                    class: [
+                      'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[15px] font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                      row.nameClass,
+                    ],
+                  },
+                }"
                 @click="emit('edit-project', row.project)"
               >
                 {{ row.name }}
-              </button>
+              </Button>
             </h3>
             <p class="text-text-muted text-[13px]">
               {{ row.sourceLabel }}
@@ -462,16 +470,23 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
 
     <Column :pt="managementTableColumnPt">
       <template #body="{ data }">
-        <button
+        <Button
           type="button"
-          class="focus-visible:outline-brand max-w-full truncate text-left text-[14px] leading-none font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-          :class="data.nameClass"
+          variant="link"
           :aria-label="`Edit project ${data.name}`"
           :data-testid="`project-name-${data.id}`"
+          :pt="{
+            root: {
+              class: [
+                'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[14px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                data.nameClass,
+              ],
+            },
+          }"
           @click="emit('edit-project', data.project)"
         >
           {{ data.name }}
-        </button>
+        </Button>
       </template>
     </Column>
 

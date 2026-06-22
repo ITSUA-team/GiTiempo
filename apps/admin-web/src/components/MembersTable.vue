@@ -21,6 +21,7 @@ import {
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import AutoComplete from 'primevue/autocomplete';
 import Avatar from 'primevue/avatar';
+import Button from 'primevue/button';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -313,16 +314,22 @@ function getRoleClass(role: WorkspaceRole): string {
           />
           <div class="min-w-0 flex-1">
             <h3>
-              <button
+              <Button
                 v-if="row.canManage"
                 type="button"
-                class="text-brand focus-visible:outline-brand max-w-full truncate text-left text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                variant="link"
                 :aria-label="`Edit member ${row.primaryLabel}`"
                 :data-testid="`member-mobile-name-${row.id}`"
+                :pt="{
+                  root: {
+                    class:
+                      'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[15px] font-semibold text-brand shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                  },
+                }"
                 @click="emit('edit-member', row.member)"
               >
                 {{ row.primaryLabel }}
-              </button>
+              </Button>
               <span
                 v-else
                 class="text-brand block truncate text-[15px] font-semibold"
@@ -456,16 +463,22 @@ function getRoleClass(role: WorkspaceRole): string {
             }"
           />
           <div class="flex min-w-0 flex-col">
-            <button
+            <Button
               v-if="data.canManage"
               type="button"
-              class="text-brand focus-visible:outline-brand max-w-full truncate text-left text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              variant="link"
               :aria-label="`Edit member ${data.primaryLabel}`"
               :data-testid="`member-name-${data.id}`"
+              :pt="{
+                root: {
+                  class:
+                    'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[14px] font-semibold text-brand shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                },
+              }"
               @click="emit('edit-member', data.member)"
             >
               {{ data.primaryLabel }}
-            </button>
+            </Button>
             <span
               v-else
               class="text-brand truncate text-[14px] font-semibold"
