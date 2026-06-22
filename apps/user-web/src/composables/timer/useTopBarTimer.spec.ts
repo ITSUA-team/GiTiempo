@@ -318,6 +318,8 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
+    expect(client.listOwnEntries).toHaveBeenCalledWith({ limit: 1 });
     expect(topBarTimer.selectedContext.value).toEqual({
       githubIssue: null,
       projectId: TEST_IDS.project,
@@ -327,22 +329,33 @@ describe('useTopBarTimer', () => {
     });
   });
 
-  it('keeps no eligible task context when the last tracked task is hidden', async () => {
+  it('keeps no eligible task context when the latest tracked task is hidden', async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, 'Project Orion'),
     ]);
-    client.listOwnEntries.mockResolvedValueOnce(
-      createOwnEntriesResponse([
-        createCompletedEntry({
-          project: { id: TEST_IDS.hiddenProject, name: 'Hidden Project' },
-          projectId: TEST_IDS.hiddenProject,
-          task: { id: TEST_IDS.hiddenTask, title: 'Hidden Task' },
-          taskId: TEST_IDS.hiddenTask,
-        }),
-      ]),
-    );
+    client.listOwnEntries
+      .mockResolvedValueOnce(
+        createOwnEntriesResponse(
+          [
+            createCompletedEntry({
+              task: { id: TEST_IDS.hiddenTask, title: 'Hidden Task' },
+              taskId: TEST_IDS.hiddenTask,
+            }),
+          ],
+          { limit: 1, page: 1, total: 2, totalPages: 2 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        createOwnEntriesResponse(
+          [createCompletedEntry()],
+          { limit: 1, page: 2, total: 2, totalPages: 2 },
+        ),
+      );
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
 
     const mounted = mountTopBarTimer({ client });
 
@@ -353,6 +366,8 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(topBarTimer.selectedContext.value).toBeNull();
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
+    expect(client.listOwnEntries).toHaveBeenCalledWith({ limit: 1 });
   });
 
   it('ignores closed tasks when resolving the idle timer context', async () => {
