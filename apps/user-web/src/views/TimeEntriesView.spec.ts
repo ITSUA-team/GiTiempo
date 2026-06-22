@@ -352,7 +352,18 @@ async function mountView(
           emits: ["page"],
           template: '<button data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
         },
-        ProgressSpinner: { template: "<div />" },
+        Skeleton: {
+          props: ["height", "shape", "size", "width"],
+          template: `
+            <span
+              :data-height="height ?? ''"
+              :data-shape="shape ?? ''"
+              :data-size="size ?? ''"
+              :data-width="width ?? ''"
+              data-testid="time-entries-skeleton"
+            />
+          `,
+        },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
           emits: ["createForDay", "editEntry", "openActiveTimer", "startTimer", "stopTimer"],
@@ -482,6 +493,28 @@ describe("TimeEntriesView", () => {
     clientRef.current = null;
     vi.restoreAllMocks();
     vi.useRealTimers();
+  });
+
+  it("renders a structured skeleton while initial entries load", async () => {
+    const client = createClientMock();
+
+    client.listOwnEntries.mockReturnValue(
+      new Promise<TimeEntryListResponse>(() => undefined),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="time-entries-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entries-loading-filters"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entries-loading-groups"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="time-entries-loading-day"]')).toHaveLength(2);
+    expect(wrapper.find('[data-testid="time-entries-loading-pagination"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="time-entries-skeleton"]').length).toBeGreaterThan(20);
+    expect(wrapper.find('[data-testid="date-range-filter"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="time-entries-groups"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("Loading your time entries.");
   });
 
   it("loads initial data, groups entries by day, and updates running durations", async () => {
