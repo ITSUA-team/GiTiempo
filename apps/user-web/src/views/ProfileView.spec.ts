@@ -2,7 +2,16 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { computed, ref, shallowRef } from "vue";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import type * as VueRouterModule from "vue-router";
 import type {
   GitHubConnectionStatusResponse,
@@ -148,18 +157,12 @@ async function mountProfileView() {
             />
           `,
         },
-        ProfileGithubConnectionCard: {
-          props: ["status", "value"],
-          template: `
-            <section data-testid="profile-github-connection-card">
-              <h2>GitHub Connection</h2>
-              <p v-if="value?.account?.connectedAt">{{ value.account.connectedAt }}</p>
-              <p v-if="value?.account?.updatedAt">{{ value.account.updatedAt }}</p>
-              <p>{{ status }}</p>
-            </section>
-          `,
-        },
+        Skeleton: { template: '<div data-testid="profile-skeleton" />' },
         SurfaceCard: { template: "<section><slot /></section>" },
+        Tag: {
+          props: ["value"],
+          template: "<span>{{ value }}</span>",
+        },
       },
     },
   });
@@ -215,18 +218,20 @@ describe("ProfileView", () => {
   it(
     "wires the identity form and GitHub surface without a duplicate sign-out action",
     async () => {
-    const { wrapper } = await mountProfileView();
+      const { wrapper } = await mountProfileView();
+      const text = wrapper.text();
 
-    expect(wrapper.text()).not.toContain("Manage your personal settings and session access.");
-    expect(wrapper.text()).toContain("GitHub Connection");
-    expect(wrapper.get('[data-testid="profile-github-connection-card"]').text()).toContain(
-      "2026-05-01T10:15:00.000Z",
-    );
-    expect(wrapper.get('[data-testid="profile-github-connection-card"]').text()).toContain(
-      "2026-05-04T08:45:00.000Z",
-    );
-    expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);
-  },
+      expect(text).not.toContain("Manage your personal settings and session access.");
+      expect(text).toContain("GitHub Connection");
+      expect(text).toContain("Connected at");
+      expect(text).toContain("May 1, 2026, 13:15");
+      expect(text).toContain("Updated at");
+      expect(text).toContain("May 4, 2026, 11:45");
+      expect(text).not.toContain("2026-05-01T10:15:00.000Z");
+      expect(text).not.toContain("2026-05-04T08:45:00.000Z");
+      expect(text).not.toContain("Avatar");
+      expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);
+    },
     20_000,
   );
 
