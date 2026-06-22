@@ -8,6 +8,7 @@ import { computed, ref, watch } from "vue";
 
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
 import ProfileGithubConnectionCard from "@/components/profile/ProfileGithubConnectionCard.vue";
+import ProfileLoadingState from "@/components/profile/ProfileLoadingState.vue";
 import { useProfileGithubConnection } from "@/composables/profile/useProfileGithubConnection";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue/usetoast";
@@ -37,6 +38,9 @@ const isProfileDirty = computed(
 );
 const isSaveDisabled = computed(
   () => isSavingProfile.value || !isProfileDirty.value,
+);
+const isInitialProfilePageLoading = computed(
+  () => githubConnectionState.value === "loading",
 );
 
 watch(
@@ -95,7 +99,12 @@ async function handleSaveProfile(): Promise<void> {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <div class="flex max-w-[620px] flex-col gap-6">
+    <ProfileLoadingState v-if="isInitialProfilePageLoading" />
+
+    <div
+      v-else
+      class="flex max-w-[620px] flex-col gap-6"
+    >
       <SurfaceCard body-class="flex flex-col gap-4">
         <div class="flex items-center gap-4">
           <Avatar

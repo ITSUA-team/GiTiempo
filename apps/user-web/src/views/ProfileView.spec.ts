@@ -165,6 +165,22 @@ describe("ProfileView", () => {
     githubRequestErrorMessage.value = null;
   });
 
+  it("renders profile form and GitHub skeletons during the initial load", async () => {
+    githubState.value = "loading";
+    githubConnection.value = null;
+
+    const { wrapper } = await mountProfileView();
+
+    expect(wrapper.find('[data-testid="profile-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-form-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-github-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-display-name-input"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="profile-email-input"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("Alexey Tsukanov");
+    expect(wrapper.text()).not.toContain("GitHub Connection");
+    expect(wrapper.text()).not.toContain("Connect GitHub");
+  });
+
   it("wires the identity form and GitHub surface without a duplicate sign-out action", async () => {
     const { wrapper } = await mountProfileView();
     const connectedAt = new Date("2026-05-01T10:15:00.000Z");
