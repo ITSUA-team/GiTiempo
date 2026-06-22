@@ -1,6 +1,7 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
 import {
   addWorkspaceGitHubOrganizationSchema,
+  buildWorkspaceGitHubOrganizationRecoveryPayload,
   workspaceGitHubOrganizationRecoveryPayloadSchema,
   workspaceGitHubOrganizationRecoveryReasonSchema,
   type WorkspaceGitHubOrganizationRecoveryPayload,
@@ -97,59 +98,6 @@ function getRecoveryReason(
   return parsed.success ? parsed.data : null;
 }
 
-function createFallbackRecoveryPayload(
-  organizationLogin: string,
-  reason: WorkspaceGitHubOrganizationRecoveryReason,
-): WorkspaceGitHubOrganizationRecoveryPayload {
-  switch (reason) {
-    case 'workspace_github_organization_connection_required':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install', status: 'unknown' },
-          { id: 'approve', status: 'action_required' },
-          { id: 'reconnect', status: 'disconnected' },
-          { id: 'retry', status: 'blocked' },
-        ],
-      };
-    case 'workspace_github_organization_app_access_blocked':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install', status: 'complete' },
-          { id: 'approve', status: 'blocked' },
-          { id: 'reconnect', status: 'action_required' },
-          { id: 'retry', status: 'blocked' },
-        ],
-      };
-    case 'workspace_github_organization_provider_retryable':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install', status: 'unknown' },
-          { id: 'approve', status: 'action_required' },
-          { id: 'reconnect', status: 'complete' },
-          { id: 'retry', status: 'ready' },
-        ],
-      };
-    case 'workspace_github_organization_not_visible':
-    default:
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install', status: 'action_required' },
-          { id: 'approve', status: 'action_required' },
-          { id: 'reconnect', status: 'complete' },
-          { id: 'retry', status: 'blocked' },
-        ],
-      };
-  }
-}
-
 function getRecoverableAddFailure(
   error: unknown,
   organizationLogin: string,
@@ -160,7 +108,9 @@ function getRecoverableAddFailure(
   }
 
   const reason = getRecoveryReason(error);
-  return reason ? createFallbackRecoveryPayload(organizationLogin, reason) : null;
+  return reason
+    ? buildWorkspaceGitHubOrganizationRecoveryPayload(organizationLogin, reason)
+    : null;
 }
 
 export function useAdminWorkspaceGitHubOrganizations({

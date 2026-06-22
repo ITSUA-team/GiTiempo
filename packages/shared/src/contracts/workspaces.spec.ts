@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   addWorkspaceGitHubOrganizationSchema,
+  buildWorkspaceGitHubOrganizationRecoveryPayload,
   workspaceGitHubOrganizationRecoveryErrorSchema,
   updateWorkspaceSettingsSchema,
   workspaceGitHubOrganizationRecoveryPayloadSchema,
@@ -199,6 +200,80 @@ describe('workspaceGitHubOrganizationRecoveryPayloadSchema', () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe('buildWorkspaceGitHubOrganizationRecoveryPayload', () => {
+  it('builds the canonical GitHub App access recovery matrix for every reason', () => {
+    expect(
+      ([
+        'workspace_github_organization_connection_required',
+        'workspace_github_organization_app_access_blocked',
+        'workspace_github_organization_provider_retryable',
+        'workspace_github_organization_not_visible',
+      ] as const).map((reason) =>
+        buildWorkspaceGitHubOrganizationRecoveryPayload(
+          'My-test-org-for-clock',
+          reason,
+        ),
+      ),
+    ).toEqual([
+      {
+        organizationLogin: 'My-test-org-for-clock',
+        reason: 'workspace_github_organization_connection_required',
+        steps: [
+          { id: 'install', status: 'unknown' },
+          { id: 'approve', status: 'action_required' },
+          { id: 'reconnect', status: 'disconnected' },
+          { id: 'retry', status: 'blocked' },
+        ],
+      },
+      {
+        organizationLogin: 'My-test-org-for-clock',
+        reason: 'workspace_github_organization_app_access_blocked',
+        steps: [
+          { id: 'install', status: 'complete' },
+          { id: 'approve', status: 'blocked' },
+          { id: 'reconnect', status: 'action_required' },
+          { id: 'retry', status: 'blocked' },
+        ],
+      },
+      {
+        organizationLogin: 'My-test-org-for-clock',
+        reason: 'workspace_github_organization_provider_retryable',
+        steps: [
+          { id: 'install', status: 'unknown' },
+          { id: 'approve', status: 'action_required' },
+          { id: 'reconnect', status: 'complete' },
+          { id: 'retry', status: 'ready' },
+        ],
+      },
+      {
+        organizationLogin: 'My-test-org-for-clock',
+        reason: 'workspace_github_organization_not_visible',
+        steps: [
+          { id: 'install', status: 'action_required' },
+          { id: 'approve', status: 'action_required' },
+          { id: 'reconnect', status: 'complete' },
+          { id: 'retry', status: 'blocked' },
+        ],
+      },
+    ]);
+  });
+
+  it('returns independent payload instances', () => {
+    const first = buildWorkspaceGitHubOrganizationRecoveryPayload(
+      'My-test-org-for-clock',
+      'workspace_github_organization_not_visible',
+    );
+    const second = buildWorkspaceGitHubOrganizationRecoveryPayload(
+      'My-test-org-for-clock',
+      'workspace_github_organization_not_visible',
+    );
+
+    first.steps[0].status = 'unknown';
+
+    expect(second.steps[0].status).toBe('action_required');
   });
 });
 

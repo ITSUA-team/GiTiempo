@@ -198,3 +198,46 @@ export type WorkspaceGitHubOrganizationRecoveryError = z.infer<
 export type UpdateWorkspaceSettingsInput = z.infer<
   typeof updateWorkspaceSettingsSchema
 >;
+
+const workspaceGitHubOrganizationRecoveryStepsByReason = {
+  workspace_github_organization_connection_required: [
+    { id: 'install', status: 'unknown' },
+    { id: 'approve', status: 'action_required' },
+    { id: 'reconnect', status: 'disconnected' },
+    { id: 'retry', status: 'blocked' },
+  ],
+  workspace_github_organization_app_access_blocked: [
+    { id: 'install', status: 'complete' },
+    { id: 'approve', status: 'blocked' },
+    { id: 'reconnect', status: 'action_required' },
+    { id: 'retry', status: 'blocked' },
+  ],
+  workspace_github_organization_provider_retryable: [
+    { id: 'install', status: 'unknown' },
+    { id: 'approve', status: 'action_required' },
+    { id: 'reconnect', status: 'complete' },
+    { id: 'retry', status: 'ready' },
+  ],
+  workspace_github_organization_not_visible: [
+    { id: 'install', status: 'action_required' },
+    { id: 'approve', status: 'action_required' },
+    { id: 'reconnect', status: 'complete' },
+    { id: 'retry', status: 'blocked' },
+  ],
+} satisfies Record<
+  WorkspaceGitHubOrganizationRecoveryReason,
+  WorkspaceGitHubOrganizationRecoveryPayload['steps']
+>;
+
+export function buildWorkspaceGitHubOrganizationRecoveryPayload(
+  organizationLogin: string,
+  reason: WorkspaceGitHubOrganizationRecoveryReason,
+): WorkspaceGitHubOrganizationRecoveryPayload {
+  return {
+    organizationLogin,
+    reason,
+    steps: workspaceGitHubOrganizationRecoveryStepsByReason[reason].map(
+      (step) => ({ ...step }),
+    ) as WorkspaceGitHubOrganizationRecoveryPayload['steps'],
+  };
+}

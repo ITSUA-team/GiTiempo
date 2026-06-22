@@ -8,12 +8,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import type {
-  AddWorkspaceGitHubOrganizationInput,
-  WorkspaceGitHubOrganizationRecoveryPayload,
-  WorkspaceGitHubOrganizationRecoveryReason,
-  WorkspaceGitHubOrganizationListResponse,
-  WorkspaceGitHubOrganizationResponse,
+import {
+  buildWorkspaceGitHubOrganizationRecoveryPayload,
+  type AddWorkspaceGitHubOrganizationInput,
+  type WorkspaceGitHubOrganizationRecoveryReason,
+  type WorkspaceGitHubOrganizationListResponse,
+  type WorkspaceGitHubOrganizationResponse,
 } from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DRIZZLE } from '../../db/db.constants';
@@ -37,59 +37,6 @@ type QueryExecutor = Pick<DrizzleDB, 'select' | 'insert'>;
 type ProjectExternalRefRow = typeof projectExternalRefs.$inferSelect;
 type TaskExternalRefRow = typeof taskExternalRefs.$inferSelect;
 
-function buildRecoveryPayload(
-  organizationLogin: string,
-  reason: WorkspaceGitHubOrganizationRecoveryReason,
-): WorkspaceGitHubOrganizationRecoveryPayload {
-  switch (reason) {
-    case 'workspace_github_organization_connection_required':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install', status: 'unknown' },
-          { id: 'approve', status: 'action_required' },
-          { id: 'reconnect', status: 'disconnected' },
-          { id: 'retry', status: 'blocked' },
-        ],
-      };
-    case 'workspace_github_organization_app_access_blocked':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install', status: 'complete' },
-          { id: 'approve', status: 'blocked' },
-          { id: 'reconnect', status: 'action_required' },
-          { id: 'retry', status: 'blocked' },
-        ],
-      };
-    case 'workspace_github_organization_provider_retryable':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install', status: 'unknown' },
-          { id: 'approve', status: 'action_required' },
-          { id: 'reconnect', status: 'complete' },
-          { id: 'retry', status: 'ready' },
-        ],
-      };
-    case 'workspace_github_organization_not_visible':
-    default:
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install', status: 'action_required' },
-          { id: 'approve', status: 'action_required' },
-          { id: 'reconnect', status: 'complete' },
-          { id: 'retry', status: 'blocked' },
-        ],
-      };
-  }
-}
-
 function createGitHubOrganizationBadRequest(
   code: WorkspaceGitHubOrganizationRecoveryReason,
   message: string,
@@ -99,7 +46,10 @@ function createGitHubOrganizationBadRequest(
     code,
     error: 'BadRequest',
     message,
-    recovery: buildRecoveryPayload(organizationLogin, code),
+    recovery: buildWorkspaceGitHubOrganizationRecoveryPayload(
+      organizationLogin,
+      code,
+    ),
   });
 }
 
@@ -113,7 +63,10 @@ function createGitHubOrganizationRetryableFailure(
     code,
     error: 'ServiceUnavailable',
     message,
-    recovery: buildRecoveryPayload(organizationLogin, code),
+    recovery: buildWorkspaceGitHubOrganizationRecoveryPayload(
+      organizationLogin,
+      code,
+    ),
   });
 }
 

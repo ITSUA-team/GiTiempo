@@ -1,7 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
-import type { WorkspaceGitHubOrganizationRecoveryPayload } from '@gitiempo/shared';
+import {
+  buildWorkspaceGitHubOrganizationRecoveryPayload,
+  type WorkspaceGitHubOrganizationRecoveryPayload,
+} from '@gitiempo/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
@@ -193,53 +196,10 @@ function createRecoveryPayload(
   reason: WorkspaceGitHubOrganizationRecoveryPayload['reason'],
   organizationLogin = 'My-test-org-for-clock',
 ): WorkspaceGitHubOrganizationRecoveryPayload {
-  switch (reason) {
-    case 'workspace_github_organization_connection_required':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install' as const, status: 'unknown' },
-          { id: 'approve' as const, status: 'action_required' },
-          { id: 'reconnect' as const, status: 'disconnected' },
-          { id: 'retry' as const, status: 'blocked' },
-        ],
-      };
-    case 'workspace_github_organization_app_access_blocked':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install' as const, status: 'complete' },
-          { id: 'approve' as const, status: 'blocked' },
-          { id: 'reconnect' as const, status: 'action_required' },
-          { id: 'retry' as const, status: 'blocked' },
-        ],
-      };
-    case 'workspace_github_organization_provider_retryable':
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install' as const, status: 'unknown' },
-          { id: 'approve' as const, status: 'action_required' },
-          { id: 'reconnect' as const, status: 'complete' },
-          { id: 'retry' as const, status: 'ready' },
-        ],
-      };
-    case 'workspace_github_organization_not_visible':
-    default:
-      return {
-        organizationLogin,
-        reason,
-        steps: [
-          { id: 'install' as const, status: 'action_required' },
-          { id: 'approve' as const, status: 'action_required' },
-          { id: 'reconnect' as const, status: 'complete' },
-          { id: 'retry' as const, status: 'blocked' },
-        ],
-      };
-  }
+  return buildWorkspaceGitHubOrganizationRecoveryPayload(
+    organizationLogin,
+    reason,
+  );
 }
 
 async function addOrganization(
