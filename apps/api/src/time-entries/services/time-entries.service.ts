@@ -29,6 +29,10 @@ import type {
 } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import {
+  getPostgresError,
+  POSTGRES_UNIQUE_VIOLATION,
+} from '../../db/postgres-errors';
 import type { AuthUser } from '../../auth/types/auth-user';
 import {
   normalizeGitHubIssueExternalKey,
@@ -914,28 +918,12 @@ export class TimeEntriesService {
   private handleRunningTimerConflict(error: unknown): void {
     const pgError = getPostgresError(error);
     if (
-      pgError?.code === '23505' &&
+      pgError?.code === POSTGRES_UNIQUE_VIOLATION &&
       pgError.constraint === 'time_entries_running_unique'
     ) {
       throw new ConflictException('A timer is already running');
     }
   }
-}
-
-function getPostgresError(error: unknown): {
-  code?: unknown;
-  constraint?: unknown;
-} | null {
-  if (typeof error !== 'object' || error === null) return null;
-  const candidate = error as {
-    code?: unknown;
-    constraint?: unknown;
-    cause?: unknown;
-  };
-  if (candidate.code !== undefined || candidate.constraint !== undefined) {
-    return candidate;
-  }
-  return getPostgresError(candidate.cause);
 }
 
 function escapeLikePattern(value: string): string {

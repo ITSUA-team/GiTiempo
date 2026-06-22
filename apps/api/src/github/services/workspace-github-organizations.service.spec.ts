@@ -45,16 +45,23 @@ function createSelectOrderBy(rows: unknown[]) {
 
 function createAddDb({
   existingRows = [],
+  existingRowsByCall,
   projectRows = [],
   taskRows = [],
   insertedRows = [storedRow],
+  insertError,
 }: {
   existingRows?: unknown[];
+  existingRowsByCall?: unknown[][];
   projectRows?: unknown[];
   taskRows?: unknown[];
   insertedRows?: unknown[];
+  insertError?: unknown;
 }) {
-  const insertReturning = vi.fn().mockResolvedValue(insertedRows);
+  let workspaceOrganizationSelectCount = 0;
+  const insertReturning = insertError
+    ? vi.fn().mockRejectedValue(insertError)
+    : vi.fn().mockResolvedValue(insertedRows);
   const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
   const insertManyValues = vi.fn().mockResolvedValue(undefined);
   const select = vi.fn().mockImplementation(() => ({
@@ -62,7 +69,13 @@ function createAddDb({
       if (table === workspaceGitHubOrganizations) {
         return {
           where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue(existingRows),
+            limit: vi.fn().mockImplementation(() => {
+              const rows =
+                existingRowsByCall?.[workspaceOrganizationSelectCount] ??
+                existingRows;
+              workspaceOrganizationSelectCount += 1;
+              return Promise.resolve(rows);
+            }),
           }),
         };
       }
@@ -320,6 +333,55 @@ describe('WorkspaceGitHubOrganizationsService', () => {
     });
 
     expect(db.insert).not.toHaveBeenCalled();
+    expect(result.id).toBe('row-1');
+  });
+
+  it('returns the existing row when a concurrent duplicate insert wins the race', async () => {
+    const { db, insertValues } = createAddDb({
+      existingRowsByCall: [[], [storedRow]],
+      insertError: {
+        code: '23505',
+        constraint:
+          'workspace_github_organizations_workspace_id_normalized_login_unique',
+      },
+    });
+    const service = new WorkspaceGitHubOrganizationsService(
+      db as never,
+      {
+        status: vi.fn().mockResolvedValue({
+          status: 'connected',
+          account: {
+            githubUserId: '123',
+            login: 'octocat',
+            avatarUrl: null,
+            connectedAt: '2026-06-18T00:00:00.000Z',
+            updatedAt: '2026-06-18T00:00:00.000Z',
+          },
+        }),
+        getValidAccessToken: vi.fn().mockResolvedValue('ghu_token'),
+      } as never,
+      {
+        listOwners: vi.fn().mockResolvedValue({
+          items: [
+            {
+              login: 'Octo-Org',
+              label: 'Octo-Org',
+              type: 'organization',
+              avatarUrl: null,
+              url: 'https://github.com/Octo-Org',
+            },
+          ],
+        }),
+      } as never,
+    );
+
+    const result = await service.add(user, {
+      organizationLogin: 'octo-org',
+    });
+
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ normalizedLogin: 'octo-org' }),
+    );
     expect(result.id).toBe('row-1');
   });
 

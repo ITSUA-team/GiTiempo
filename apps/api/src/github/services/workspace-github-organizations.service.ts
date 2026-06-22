@@ -18,6 +18,10 @@ import {
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import {
+  getPostgresError,
+  POSTGRES_UNIQUE_VIOLATION,
+} from '../../db/postgres-errors';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
 import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
 import {
@@ -88,6 +92,15 @@ function getExceptionCode(error: unknown): string | null {
   return null;
 }
 
+function isDuplicateWorkspaceGitHubOrganizationError(error: unknown): boolean {
+  const pgError = getPostgresError(error);
+  return (
+    pgError?.code === POSTGRES_UNIQUE_VIOLATION &&
+    pgError.constraint ===
+      'workspace_github_organizations_workspace_id_normalized_login_unique'
+  );
+}
+
 @Injectable()
 export class WorkspaceGitHubOrganizationsService {
   constructor(
@@ -129,33 +142,49 @@ export class WorkspaceGitHubOrganizationsService {
       input,
     );
 
-    const row = await this.db.transaction(async (tx) => {
-      const [createdRow] = await tx
-        .insert(workspaceGitHubOrganizations)
-        .values({
-          workspaceId: user.workspaceId,
-          organizationLogin,
-          normalizedLogin,
-          createdByUserId: user.sub,
-        })
-        .returning();
+    try {
+      const row = await this.db.transaction(async (tx) => {
+        const [createdRow] = await tx
+          .insert(workspaceGitHubOrganizations)
+          .values({
+            workspaceId: user.workspaceId,
+            organizationLogin,
+            normalizedLogin,
+            createdByUserId: user.sub,
+          })
+          .returning();
 
-      if (!createdRow) {
-        throw new BadRequestException(
-          'GitHub organization could not be saved for this workspace',
+        if (!createdRow) {
+          throw new BadRequestException(
+            'GitHub organization could not be saved for this workspace',
+          );
+        }
+
+        await this.reconcileExistingGitHubRefs(
+          tx,
+          user.workspaceId,
+          organizationLogin,
         );
+
+        return createdRow;
+      });
+
+      return this.toResponse(row);
+    } catch (error) {
+      if (!isDuplicateWorkspaceGitHubOrganizationError(error)) {
+        throw error;
       }
 
-      await this.reconcileExistingGitHubRefs(
-        tx,
+      const duplicate = await this.findByNormalizedLogin(
         user.workspaceId,
-        organizationLogin,
+        normalizedLogin,
       );
+      if (duplicate) {
+        return this.toResponse(duplicate);
+      }
 
-      return createdRow;
-    });
-
-    return this.toResponse(row);
+      throw error;
+    }
   }
 
   async remove(workspaceId: string, organizationId: string): Promise<void> {
