@@ -67,21 +67,25 @@ The user dashboard SHALL provide an authenticated overview page focused on weekl
 
 ### Requirement: Global Top-Bar Timer
 
-The user-web authenticated shell MUST expose timer start, stop, and task-context selection through a compact top-bar timer surface on tablet and desktop, and through the approved mobile timer strip on mobile authenticated member pages.
+The user-web authenticated shell MUST expose timer state and task-context selection through a compact top-bar timer surface on tablet and desktop, and through the approved mobile timer strip on mobile authenticated member pages. Timer Start, Stop, and task-change controls MUST be owned by the task-picker popup flow rather than separate header-visible shell action buttons.
 
 #### Scenario: Running timer shown in authenticated top bar
 
 - **GIVEN** the authenticated user has a running timer
 - **WHEN** any authenticated user-web page renders at tablet or desktop width
-- **THEN** the top bar shows a compact running timer surface with live `HH:MM:SS`, current `Project / Task`, a clickable task information field, and one stop action
+- **THEN** the top bar shows a compact running timer surface with live `HH:MM:SS` and current `Project / Task` in the same two-line surface
+- **AND** activating the compact timer surface opens the top-bar timer task picker
+- **AND** the top bar does not render a separate visible stop action outside the task-picker popup
 - **AND** the elapsed display advances while the timer remains active without requiring a page refresh
 
 #### Scenario: Running timer shown in mobile timer strip
 
 - **GIVEN** the authenticated user has a running timer
 - **WHEN** any authenticated user-web page renders below the mobile breakpoint
-- **THEN** the mobile timer strip shows live `HH:MM:SS`, current `Project / Task`, a task-change affordance, and one stop action
-- **AND** the stop action and task-change affordance remain available even if the profile menu opens from the top-right identity control
+- **THEN** the mobile timer strip shows a `Task & timer` opener, live `HH:MM:SS`, and current `Project / Task`
+- **AND** activating the `Task & timer` opener opens the top-bar timer task picker
+- **AND** the strip does not render separate visible stop or task-change actions outside the task-picker popup
+- **AND** the opener and elapsed timer state remain available even if the profile menu opens from the top-right identity control
 - **AND** the elapsed display advances while the timer remains active without requiring a page refresh
 
 #### Scenario: Idle top-bar timer uses eligible last tracked task
@@ -90,7 +94,8 @@ The user-web authenticated shell MUST expose timer start, stop, and task-context
 - **AND** the user has a most recent own time entry whose task and parent project are still visible and active
 - **WHEN** any authenticated user-web page renders
 - **THEN** the timer surface shows that last tracked `Project / Task` context
-- **AND** the start action creates a fresh running time entry for that task
+- **AND** activating the compact timer surface or mobile `Task & timer` opener opens the task-picker popup with that context available
+- **AND** the popup-owned `Start timer` action creates a fresh running time entry for that task
 - **AND** the previous time entry record is not resumed or mutated
 
 #### Scenario: No eligible task keeps picker available
@@ -99,56 +104,96 @@ The user-web authenticated shell MUST expose timer start, stop, and task-context
 - **AND** no recent own time entry resolves to a currently visible active project and active task
 - **WHEN** the timer surface renders
 - **THEN** the timer surface keeps a no-eligible-task state visible
-- **AND** the task information or task-change affordance remains clickable
-- **AND** the start action is disabled until a valid task context is selected
+- **AND** the compact timer surface or mobile `Task & timer` opener remains clickable
+- **AND** the popup-owned `Start timer` action is disabled until a valid task context is selected
 
 #### Scenario: Timer summary load failure stays compact
 
 - **WHEN** current timer or timer-summary data fails to load in the authenticated shell
 - **THEN** the timer surface keeps the same compact desktop or mobile strip shape visible
-- **AND** the start or stop action is disabled while the state is not actionable
+- **AND** popup-owned start, stop, and task-change actions are unavailable while the state is not actionable
 - **AND** the failure is surfaced through standard toast feedback
 
-#### Scenario: Task information opens picker dialog
+#### Scenario: Compact timer surface opens picker dialog
 
-- **WHEN** the user activates the timer task information field or mobile task-change affordance
+- **WHEN** the user activates the desktop compact timer surface or mobile `Task & timer` opener
 - **THEN** a centered task-picker dialog opens
-- **AND** the dialog uses visible Project -> Task selection plus an optional Description field
+- **AND** the dialog uses visible Project -> Task selection only
 - **AND** the dialog does not include manual interval entry controls
+- **AND** visible timer Start, Stop, and task-change controls are rendered inside the dialog flow rather than beside the compact shell surface
 
 ### Requirement: Top-Bar Timer Task Picker
 
-The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context, add an optional time-entry description, or create a new task inside the selected visible project, and MUST remain usable from the mobile timer strip.
+The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context, add an optional time-entry description, or create a new task inside the selected visible project; MUST remain usable from the mobile timer strip; MUST support popup-owned timer Start and Stop actions; MUST support reassigning the task and description of the currently running timer; and MUST rely on popup dismissal controls instead of a footer `Cancel` button.
 
 #### Scenario: Existing task and description selected for idle timer context
 
-- **GIVEN** the top-bar timer task picker is open while the timer is idle
+- **GIVEN** the top-bar timer task picker is open
+- **AND** no timer is currently running
 - **WHEN** the user selects a visible project, one of that project's tasks, and enters a description
-- **THEN** the dialog allows confirmation with `Use selected task`
+- **THEN** the dialog allows starting a fresh timer for the selected task with `Start timer`
 - **AND** the top-bar timer context updates to the selected `Project / Task`
-- **AND** a subsequent idle start action starts a fresh timer for that task with the submitted description
-- **AND** the previous time entry record is not resumed or mutated
+- **AND** the start action starts a fresh timer for that task with the submitted description
 
 #### Scenario: Idle timer can start with no description
 
 - **GIVEN** the top-bar timer task picker is open while the timer is idle
 - **WHEN** the user selects a visible project and task and leaves Description empty
-- **THEN** the dialog allows confirmation with `Use selected task`
-- **AND** a subsequent idle start action starts a fresh timer for that task with no description
+- **THEN** the dialog allows starting a fresh timer for the selected task with `Start timer`
+- **AND** the start action starts a fresh timer for that task with no description
 
-#### Scenario: Running timer task and description are updated without stopping
+#### Scenario: Running timer task is preselected
 
-- **GIVEN** the top-bar timer task picker is open while a timer is running
-- **WHEN** the user selects a visible project, one of that project's tasks, changes Description, and confirms with `Use selected task`
-- **THEN** the app updates the running entry's task and description
-- **AND** the timer remains running
-- **AND** the top-bar timer context updates from the authoritative response
+- **GIVEN** the authenticated user has a running timer
+- **WHEN** the user opens the top-bar timer task picker
+- **THEN** the dialog preselects the running timer's current project and task
+- **AND** the dialog pre-fills the running timer's current description when one exists
+- **AND** loading task options does not clear that preselected task unless the user selects a different project
+- **AND** the dialog exposes the running timer's popup-owned `Stop timer` action
+
+#### Scenario: Running timer task and description are reassigned
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open
+- **WHEN** the user selects a different visible active task, changes Description, and confirms the selection with the popup-owned task-change action
+- **THEN** the app updates the running time entry to that task and description without stopping the timer
+- **AND** the timer surface refreshes from the authoritative current timer state
+- **AND** the dialog closes after the refreshed timer state is applied
 
 #### Scenario: Running timer description can be cleared
 
 - **GIVEN** the top-bar timer task picker is open while a running timer has a description
-- **WHEN** the user clears Description and confirms with `Use selected task`
+- **WHEN** the user clears Description and confirms with the popup-owned task-change action
 - **THEN** the app clears the running entry description without stopping the timer
+- **AND** the timer surface refreshes from the authoritative current timer state
+
+#### Scenario: Running timer stops before task reassignment completes
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open
+- **WHEN** the timer stops before the selected task update completes successfully
+- **THEN** the app treats the task update as a successful correction to the same time entry
+- **AND** the timer surface refreshes from the authoritative current timer state
+- **AND** the dialog closes even when the refreshed timer state shows no running timer
+
+#### Scenario: Current running task confirmation does not update
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open with the running timer's current task selected
+- **WHEN** the user confirms the selected running task
+- **THEN** the app does not send a running-entry task update
+- **AND** the dialog closes without changing the visible timer context
+
+#### Scenario: Running timer task update failure keeps picker open
+
+- **GIVEN** the authenticated user has a running timer
+- **AND** the top-bar timer task picker is open
+- **WHEN** the user selects a different task or changes Description and the running-entry update fails
+- **THEN** the dialog remains open
+- **AND** the dialog shows inline error feedback
+- **AND** the visible current task does not switch to the failed selection
+- **AND** the dialog inputs remain available for retry unless the refreshed state makes the selection invalid
+- **AND** not-found, authorization, validation, visibility, or conflict responses refresh the authoritative timer summary
 
 #### Scenario: New task created inside selected project
 
@@ -156,7 +201,7 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **WHEN** the user submits a valid new task title
 - **THEN** the app creates the task inside the selected project
 - **AND** the dialog remains open with the newly created task selected
-- **AND** the user can confirm the context with `Use selected task`
+- **AND** the user can start an idle timer with `Start timer` or confirm a running timer task change through the popup-owned action
 
 #### Scenario: Task picker states remain distinct
 
@@ -164,33 +209,56 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **THEN** the dialog renders a state specific to that condition
 - **AND** failed requests are not collapsed into empty-data messaging
 
-#### Scenario: Running update failure keeps dialog retryable
-
-- **GIVEN** the top-bar timer task picker is open while a timer is running
-- **WHEN** the running task or description update fails
-- **THEN** the failure is surfaced through standard toast feedback
-- **AND** the app refreshes authoritative timer state when the failure indicates timer-state conflict
-- **AND** the dialog inputs remain available for retry unless the refreshed state makes the selection invalid
-
 #### Scenario: Mobile task picker keeps full-width actions usable
 
-- **GIVEN** the authenticated user opens the task picker from the mobile timer strip Change affordance
+- **GIVEN** the authenticated user opens the task picker from the mobile timer strip `Task & timer` opener
 - **WHEN** the task-picker dialog renders below the mobile breakpoint
 - **THEN** the dialog uses a near-full-width mobile layout with scrollable content
-- **AND** the footer actions render as full-width stacked buttons
-- **AND** `Use selected task` renders before `Cancel` in the mobile stacked button and keyboard order
+- **AND** the footer renders the state-appropriate primary action as a full-width button
+- **AND** the footer does not render a `Cancel` dismissal button
+- **AND** any running-timer `Change task` action remains a secondary full-width domain action rather than a dismissal action
 - **AND** the dialog still separates existing task selection and Description from creating a new task inside the selected visible project
 
-### Requirement: Time Entries Page Record Management
+#### Scenario: Task picker dismissal uses popup close control
 
+- **GIVEN** the top-bar timer task picker is open and no primary action is submitted
+- **WHEN** the user activates the built-in dialog close control or existing non-destructive mask dismissal
+- **THEN** the dialog closes without changing the selected task context, creating a task, starting a timer, stopping a timer, or updating a running entry
+
+### Requirement: Time Entry Popup Footers
+
+The user-web Time Entries create and edit popups SHALL follow the shared non-destructive popup footer pattern while preserving manual entry save behavior.
+
+#### Scenario: Time-entry create popup footer uses save action only
+
+- **WHEN** the user opens the manual time-entry dialog in create mode from the page-level or day-level create action
+- **THEN** the dialog footer shows the primary create-mode save action
+- **AND** the dialog footer does not show a `Cancel` dismissal button
+
+#### Scenario: Time-entry edit popup footer uses save action only
+
+- **GIVEN** the user views a completed time entry in the Time Entries page
+- **WHEN** they open the edit dialog for that entry
+- **THEN** the dialog footer shows the primary `Save changes` action
+- **AND** the dialog footer does not show a `Cancel` dismissal button
+
+#### Scenario: Time-entry popup dismissal uses dialog controls
+
+- **GIVEN** a time-entry create or edit dialog is open
+- **WHEN** the user activates the built-in dialog close control or existing non-destructive mask dismissal
+- **THEN** the dialog closes without creating or updating a time entry
+- **AND** failed save attempts still keep the dialog open with pending values available for retry
+
+### Requirement: Time Entries Page Record Management
 The Time Entries page MUST allow authenticated users to review, filter, create, edit, and delete their own time entries while keeping manual completed-entry creation out of the global top-bar timer surface.
 
 #### Scenario: Page renders approved record-management shell
 
 - **WHEN** an authenticated user opens the Time Entries page
 - **THEN** the page renders inside the authenticated shell
-- **AND** the header shows the Time Entries title, descriptive subtitle, and a primary `+ New time entry` action
+- **AND** the top-bar breadcrumb identifies the Time Entries page
 - **AND** the page renders date-range, single-project, and task lookup filters above the grouped results region
+- **AND** the page does not render a separate page-content text `+ New time entry` opener when the approved design relies on contextual group actions.
 
 #### Scenario: User filters own entries
 
@@ -198,15 +266,15 @@ The Time Entries page MUST allow authenticated users to review, filter, create, 
 - **WHEN** the user applies date range, project, task search, selected task, or pagination controls
 - **THEN** the page requests `GET /time-entries` with the matching shared list query fields
 - **AND** task-title search filters the server-side paginated result set through `search`
-- **AND** selecting a concrete task option may additionally filter by that task's `taskId`
+- **AND** selecting a concrete task option may additionally filter by that task's `taskId`.
 
 #### Scenario: Entries render grouped by day
 
 - **GIVEN** the own-entry list request succeeds with entries across multiple dates
 - **WHEN** the page renders results
 - **THEN** entries are grouped by their started-at day
-- **AND** each day group shows a day heading and a day-level `+ New time entry` action
-- **AND** each entry row shows task, project, time range, duration, edit, and delete affordances according to entry state
+- **AND** each day group shows a day heading and a primary icon-only `New time entry` action with explicit tooltip and accessible label copy `New time entry`
+- **AND** each entry row shows task, project, time range, duration, edit, and delete affordances according to entry state.
 
 #### Scenario: Running entries stay visible but not editable
 
@@ -215,26 +283,21 @@ The Time Entries page MUST allow authenticated users to review, filter, create, 
 - **THEN** the row is visually highlighted as running
 - **AND** the row displays running duration in `HH:MM:SS` format
 - **AND** the page does not allow editing or deleting it as a completed manual interval before it is stopped
-- **AND** timer stop remains owned by the global top-bar timer
-
-#### Scenario: Header create opens manual-entry dialog
-
-- **WHEN** the user activates the page-level `+ New time entry` action
-- **THEN** the page opens a PrimeVue dialog in create mode without a preset day
-- **AND** the dialog creates a completed manual time entry instead of starting or resuming a running timer
+- **AND** timer stop remains owned by the global top-bar timer.
 
 #### Scenario: Day create opens manual-entry dialog with day preset
 
-- **WHEN** the user activates a day-level `+ New time entry` action
+- **WHEN** the user activates a day-level primary icon-only `New time entry` action
 - **THEN** the page opens the same PrimeVue dialog in create mode
 - **AND** the dialog pre-fills the selected day in the started-at and ended-at fields while allowing the user to adjust times
+- **AND** the dialog submit action copy remains unchanged.
 
 #### Scenario: Pagination reflects backend metadata
 
 - **GIVEN** the own-entry list response includes pagination metadata
 - **WHEN** the page renders pagination
 - **THEN** it uses the backend total and current page metadata for the PrimeVue paginator
-- **AND** changing page requests the corresponding server-side page without discarding active filters
+- **AND** changing page requests the corresponding server-side page without discarding active filters.
 
 ### Requirement: Time Entries Editing Flow
 
@@ -610,3 +673,96 @@ Member-facing `user-web` pages SHALL use the authenticated user's current browse
 - **THEN** it formats those contract timestamps as user-facing labels in the authenticated user's current browser-local timezone
 - **AND** it does not render the raw ISO strings directly in the connected account metadata view
 
+### Requirement: User Task Dialog Applies Billable Defaults
+The user Projects page task dialog MUST initialize and save task-level default billable state according to the selected project's default and the selected task's current value.
+
+#### Scenario: Task create initializes from project default
+- **GIVEN** the user opens the task dialog in create mode for a project
+- **AND** the project has `defaultBillableForTasks: false`
+- **WHEN** the dialog renders
+- **THEN** `Default billable for time entries` is initialized unchecked
+
+#### Scenario: Task create sends selected task default
+- **GIVEN** the user opens the task dialog in create mode
+- **WHEN** the user saves a valid new task
+- **THEN** the page sends the selected `defaultBillableForTimeEntries` value with the task create request
+
+#### Scenario: Task edit initializes from task default
+- **GIVEN** the user opens the task dialog in update mode for an existing task
+- **WHEN** the dialog renders
+- **THEN** `Default billable for time entries` is initialized from the task's `defaultBillableForTimeEntries` value
+
+#### Scenario: Task default edit saves future default immediately
+- **GIVEN** the user changes `Default billable for time entries` in task update mode
+- **WHEN** the user saves the task dialog
+- **THEN** the page sends the new default in the task update request
+- **AND** it treats the returned task as the authoritative future-default state
+
+### Requirement: User Task Dialog Prompts For Existing Time Entry Backfill
+The user Projects page task dialog MUST show the approved follow-up popup only after a task default billable value has changed and the task already has existing time entries.
+
+#### Scenario: Task follow-up popup appears after saved default change with existing entries
+- **GIVEN** a task default billable save succeeds
+- **AND** the saved default differs from the previous value
+- **AND** the task has existing time entries
+- **WHEN** the save flow settles
+- **THEN** the page opens a PrimeVue Dialog titled `Update task billable default?`
+- **AND** the popup explains that the future default is already saved
+
+#### Scenario: Task follow-up popup offers only time-entry backfill
+- **GIVEN** the task follow-up popup is open
+- **WHEN** the popup renders
+- **THEN** it offers a checkbox choice for updating existing time entries for the task
+- **AND** it renders a primary action labeled `Update existing records`
+- **AND** it does not render a separate `keep future defaults only` action
+
+#### Scenario: Dismissing task follow-up leaves existing entries unchanged
+- **GIVEN** the task follow-up popup is open after the future default was saved
+- **WHEN** the user dismisses the popup without choosing the primary action
+- **THEN** the page sends no task backfill request
+- **AND** existing time entries remain unchanged
+
+#### Scenario: Confirming task follow-up requests time-entry backfill
+- **GIVEN** the task follow-up popup is open
+- **WHEN** the user selects the existing time-entry choice and activates `Update existing records`
+- **THEN** the page calls the task billable-default backfill endpoint
+- **AND** success feedback uses the returned update count
+- **AND** failure feedback keeps the saved future default visible and does not imply existing entries were updated
+
+### Requirement: User Time Entry Create Uses Task Billable Default
+The user Time Entries page manual create dialog MUST initialize new entry billable state from the selected task default while preserving explicit user override before save.
+
+#### Scenario: Manual create initializes from selected task default
+- **GIVEN** the user opens the time-entry dialog in create mode
+- **AND** the user selects a task with `defaultBillableForTimeEntries: false`
+- **WHEN** the task selection becomes active
+- **THEN** the `isBillable` checkbox is initialized unchecked
+
+#### Scenario: Manual create allows billable override
+- **GIVEN** the time-entry dialog is open in create mode
+- **AND** the selected task default initialized `isBillable` unchecked
+- **WHEN** the user checks `isBillable` and saves the entry
+- **THEN** the page sends `isBillable: true` in the manual time-entry create request
+
+#### Scenario: Time entry edit preserves entry billable value
+- **GIVEN** the user opens the time-entry dialog in edit mode
+- **WHEN** the selected entry has an existing `isBillable` value
+- **THEN** the dialog initializes from the entry value
+- **AND** it does not reset the checkbox from the selected task's current default
+
+### Requirement: Top-Bar Timer Uses Task Billable Defaults
+The user top-bar timer task picker MUST preserve the project and task default inheritance chain when creating a task from the picker and when starting a timer.
+
+#### Scenario: Timer new task inherits selected project default
+- **GIVEN** the top-bar timer task picker is open
+- **AND** the user selects a project with `defaultBillableForTasks: false`
+- **WHEN** the user creates a new task from the picker
+- **THEN** the task create request omits an override or sends `defaultBillableForTimeEntries: false`
+- **AND** the created task remains selected in the picker
+
+#### Scenario: Timer start uses selected task default
+- **GIVEN** the top-bar timer task picker is open while the timer is idle
+- **AND** the selected task has `defaultBillableForTimeEntries: false`
+- **WHEN** the user starts the timer
+- **THEN** the timer start request does not send an entry-level billable override
+- **AND** the returned running entry reflects the backend-inherited `isBillable: false` value
