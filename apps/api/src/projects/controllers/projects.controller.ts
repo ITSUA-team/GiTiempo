@@ -23,10 +23,12 @@ import {
 import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { BackfillProjectBillableDefaultDto } from '../dto/backfill-project-billable-default.dto';
 import { CreateProjectAssignmentDto } from '../dto/create-project-assignment.dto';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { ManagementProjectSummaryResponseDto } from '../dto/management-project-summary-response.dto';
 import { MyProjectSummaryResponseDto } from '../dto/my-project-summary-response.dto';
+import { ProjectBillableDefaultBackfillResponseDto } from '../dto/project-billable-default-backfill-response.dto';
 import { ProjectAssignmentListResponseDto } from '../dto/project-assignment-list-response.dto';
 import { ProjectAssignmentResponseDto } from '../dto/project-assignment-response.dto';
 import { ProjectDetailResponseDto } from '../dto/project-detail-response.dto';
@@ -112,6 +114,21 @@ export class ProjectsController {
     @Body() body: UpdateProjectDto,
   ): Promise<ProjectResponseDto> {
     return this.projects.updateProject(user, id, body);
+  }
+
+  @Post(':id/billable-default/backfill')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Backfill a project billable default' })
+  @ApiOkResponse({ type: ProjectBillableDefaultBackfillResponseDto })
+  @ApiForbiddenResponse({ description: 'Project update forbidden' })
+  @ApiNotFoundResponse({ description: 'Project not found' })
+  @ZodSerializerDto(ProjectBillableDefaultBackfillResponseDto)
+  backfillBillableDefault(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: BackfillProjectBillableDefaultDto,
+  ): Promise<ProjectBillableDefaultBackfillResponseDto> {
+    return this.projects.backfillBillableDefault(user, id, body);
   }
 
   @Get(':id/assignments')

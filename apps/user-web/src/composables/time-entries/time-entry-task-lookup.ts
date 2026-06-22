@@ -1,8 +1,10 @@
 import type { TaskResponse, TimeEntryResponse } from "@gitiempo/shared";
+import { filterAutocompleteOptions } from "@gitiempo/web-shared";
 
 export type TaskLookupValue = string | TaskLookupOption | null;
 
 export interface TaskLookupOption {
+  defaultBillableForTimeEntries?: boolean;
   id: string;
   isActive: boolean;
   projectId: string;
@@ -15,6 +17,7 @@ export function isTaskLookupOption(value: TaskLookupValue): value is TaskLookupO
 
 export function toTaskLookupOption(task: TaskResponse): TaskLookupOption {
   return {
+    defaultBillableForTimeEntries: task.defaultBillableForTimeEntries,
     id: task.id,
     isActive: task.isActive,
     projectId: task.projectId,
@@ -26,11 +29,7 @@ export function buildTaskLookupSuggestions(
   query: string,
   options: TaskLookupOption[],
 ): TaskLookupOption[] {
-  const normalized = query.trim().toLowerCase();
-
-  return normalized.length === 0
-    ? [...options]
-    : options.filter((task) => task.title.toLowerCase().includes(normalized));
+  return filterAutocompleteOptions(options, query, (task) => task.title);
 }
 
 export function toEntryTaskOption(entry: TimeEntryResponse): TaskLookupOption {

@@ -420,6 +420,7 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.pageState.value).toBe("ready");
     expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
       durationLabel: "01:00:00",
+      githubIssue: null,
       id: TEST_IDS.startedEntry,
       isHighlighted: true,
       projectName: "Project Orion",
@@ -478,6 +479,7 @@ describe("useDashboardOverview", () => {
 
     expect(dashboardOverview.recentEntryRows.value[0]).toEqual({
       durationLabel: "30m",
+      githubIssue: null,
       id: TEST_IDS.runningEntry,
       isHighlighted: false,
       projectName: "Project Orion",

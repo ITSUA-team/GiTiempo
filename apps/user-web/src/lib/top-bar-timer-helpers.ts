@@ -1,12 +1,15 @@
-import type { TimeEntryResponse } from '@gitiempo/shared';
+import type { SyncedGitHubIssue, TimeEntryResponse } from '@gitiempo/shared';
 import { formatRunningDuration } from '@gitiempo/web-shared/time';
 
 export interface SelectedTaskContext {
+  githubIssue: SyncedGitHubIssue | null;
   projectId: string;
   projectName: string;
   taskId: string;
   taskTitle: string;
 }
+
+export const TOP_BAR_TIMER_NEW_TASK_ID = "__top-bar-timer-new-task__";
 
 export function formatElapsedTime(
   startedAt: string | null,
@@ -37,6 +40,7 @@ export function toSelectedTaskContext(
   timer: TimeEntryResponse,
 ): SelectedTaskContext {
   return {
+    githubIssue: timer.githubIssue,
     projectId: timer.project.id,
     projectName: timer.project.name,
     taskId: timer.task.id,

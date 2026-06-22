@@ -26,6 +26,27 @@ export const logoutRequestSchema = z
   })
   .strict();
 
+/** Body for `POST /auth/register`. */
+export const registerRequestSchema = z
+  .object({
+    email: z.string().trim().pipe(z.email()),
+    fullName: z.string().trim().min(1),
+    workspaceName: z.string().trim().min(1).max(255),
+    password: z.string().min(8),
+    ownerAcknowledgement: z.literal(true),
+  })
+  .strict();
+
+/** Stable frontend-visible registration error identifiers. */
+export const registrationErrorCodeSchema = z.enum([
+  "duplicate_email",
+  "weak_password",
+  "invalid_workspace_name",
+  "workspace_name_unavailable",
+  "rate_limited",
+  "registration_service_unavailable",
+]);
+
 /**
  * Response shape for `/auth/login` and `/auth/refresh`.
  *
@@ -41,4 +62,6 @@ export const tokenPairResponseSchema = z.object({
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
 export type LogoutRequest = z.infer<typeof logoutRequestSchema>;
+export type RegisterRequest = z.infer<typeof registerRequestSchema>;
+export type RegistrationErrorCode = z.infer<typeof registrationErrorCodeSchema>;
 export type TokenPairResponse = z.infer<typeof tokenPairResponseSchema>;

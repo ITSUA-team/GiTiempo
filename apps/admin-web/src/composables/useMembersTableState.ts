@@ -14,10 +14,8 @@ import {
   isWithinLocalIsoWeekToDate,
 } from '@gitiempo/web-shared/time';
 import type {
-  MemberExpansionMode,
   MemberLastActiveFilter,
   MembersTableExpandedRows,
-  MembersTableExpansionModes,
   MembersTableFilterOption,
   MembersTableFilterUpdate,
   MembersTableFilters,
@@ -64,12 +62,14 @@ function getInitials(member: WorkspaceMemberResponse): string {
   return parts.join('') || '??';
 }
 
-function getProjectsAssignedCount(member: WorkspaceMemberResponse): number {
-  return member.projectsAssignedCount;
+function isMemberAssignedToProject(
+  project: ProjectListResponse[number],
+  member: WorkspaceMemberResponse,
+): boolean {
+  return project.members.some((projectMember) => projectMember.userId === member.userId);
 }
 
-function formatProjectsAssigned(member: WorkspaceMemberResponse): string {
-  const count = getProjectsAssignedCount(member);
+function formatProjectsAssigned(count: number): string {
   return `${count} project${count === 1 ? '' : 's'}`;
 }
 
@@ -88,7 +88,6 @@ export function useMembersTableState({
 }: UseMembersTableStateOptions) {
   const filters = reactive<MembersTableFilters>(createDefaultFilters());
   const expandedRows = ref<MembersTableExpandedRows>({});
-  const expansionMode = ref<MembersTableExpansionModes>({});
 
   function updateFilters(update: MembersTableFilterUpdate): void {
     if ('global' in update) {
@@ -118,10 +117,14 @@ export function useMembersTableState({
     member: WorkspaceMemberResponse,
   ): MembersTableFilterOption[] {
     return projects.value
-      .filter((project) =>
-        project.members.some((projectMember) => projectMember.userId === member.userId),
-      )
+      .filter((project) => isMemberAssignedToProject(project, member))
       .map((project) => ({ label: project.name, value: project.id }));
+  }
+
+  function getActiveProjectsAssignedCount(member: WorkspaceMemberResponse): number {
+    return projects.value.filter(
+      (project) => project.isActive && isMemberAssignedToProject(project, member),
+    ).length;
   }
 
   function matchesLastActiveFilter(member: WorkspaceMemberResponse): boolean {
@@ -175,11 +178,12 @@ export function useMembersTableState({
     }
 
     const projectLabels = getMemberProjectOptions(member).map((project) => project.label);
+    const activeProjectsAssignedCount = getActiveProjectsAssignedCount(member);
     const haystack = [
       getMemberDisplayName(member),
       member.email,
       formatWorkspaceRole(member.role),
-      formatProjectsAssigned(member),
+      formatProjectsAssigned(activeProjectsAssignedCount),
       formatLocalCalendarDate(member.lastActiveAt),
       ...projectLabels,
     ].join(' ');
@@ -194,6 +198,7 @@ export function useMembersTableState({
 
   function createRow(member: WorkspaceMemberResponse): MembersTableRow {
     const self = isSelf(member);
+    const activeProjectsAssignedCount = getActiveProjectsAssignedCount(member);
 
     return {
       avatarImage: member.avatarUrl ?? undefined,
@@ -205,7 +210,7 @@ export function useMembersTableState({
       lastActiveLabel: formatLocalCalendarDate(member.lastActiveAt),
       member,
       primaryLabel: member.displayName ?? member.email,
-      projectsAssignedLabel: formatProjectsAssigned(member),
+      projectsAssignedLabel: formatProjectsAssigned(activeProjectsAssignedCount),
       roleLabel: formatWorkspaceRole(member.role),
       secondaryLabel: member.displayName ? member.email : null,
     };
@@ -234,47 +239,27 @@ export function useMembersTableState({
     expandedRows.value = Object.fromEntries(
       Object.entries(expandedRows.value).filter(([id]) => visibleMemberIds.has(id)),
     );
-    expansionMode.value = Object.fromEntries(
-      Object.entries(expansionMode.value).filter(([id]) => visibleMemberIds.has(id)),
-    );
   }
 
   function setExpandedRows(nextRows: MembersTableExpandedRows | undefined): void {
     expandedRows.value = nextRows ?? {};
-    const expandedMemberIds = new Set(
-      Object.entries(expandedRows.value)
-        .filter(([, expanded]) => expanded)
-        .map(([id]) => id),
-    );
-
-    expansionMode.value = Object.fromEntries(
-      Object.entries(expansionMode.value).filter(([id]) => expandedMemberIds.has(id)),
-    );
   }
 
-  function toggleExpansion(
-    member: WorkspaceMemberResponse,
-    mode: MemberExpansionMode,
-  ): void {
-    if (expandedRows.value[member.id] && expansionMode.value[member.id] === mode) {
+  function toggleExpansion(member: WorkspaceMemberResponse): void {
+    if (expandedRows.value[member.id]) {
       expandedRows.value = {};
-      expansionMode.value = {};
       return;
     }
 
-    expansionMode.value = { [member.id]: mode };
     expandedRows.value = { [member.id]: true };
   }
 
   function collapseRow(member: WorkspaceMemberResponse): void {
     const nextExpandedRows = { ...expandedRows.value };
-    const nextExpansionMode = { ...expansionMode.value };
 
     delete nextExpandedRows[member.id];
-    delete nextExpansionMode[member.id];
 
     expandedRows.value = nextExpandedRows;
-    expansionMode.value = nextExpansionMode;
   }
 
   watch(visibleMembers, (nextMembers) => {
@@ -292,7 +277,6 @@ export function useMembersTableState({
     collapseRow,
     emptyDescription,
     expandedRows,
-    expansionMode,
     filters,
     lastActiveFilterOptions,
     projectFilterOptions,

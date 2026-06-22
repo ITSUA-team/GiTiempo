@@ -16,7 +16,7 @@
 - The section-level `View all` action remains available in both desktop/table and mobile-card layouts.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
-- Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar only.
+- Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar. The Time Entries page is the only MVP page-content exception for direct row-level timer starts from existing entries.
 
 ## Global Top-Bar Timer
 
@@ -31,7 +31,7 @@
 - The task-picker dialog includes visible `Project -> Task` selection plus an optional time-entry `Description` field under `Task`.
 - The `Task` select lists visible tasks first and appends `New task` as the last option.
 - When `Task = New task`, the created task inherits the selected project's default `isBillable` value.
-- When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description.
+- When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description. Time Entries completed rows may also start a fresh timer directly for that row's task without opening the task-picker popup.
 - The fresh running time entry initializes `isBillable` from the selected task's default billable value before any per-entry override.
 - When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
 - The authenticated user-web profile trigger is avatar-only in the top bar; visible member-name text does not appear beside the avatar.
@@ -50,17 +50,17 @@
 ## Time Entries Page
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, filters, grouped entry cards, and pagination region.
-- Filter bar uses PrimeVue `<DatePicker>` for the date range, PrimeVue `<AutoComplete dropdown forceSelection>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. Date range selections map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
+- Filter bar uses PrimeVue `<DatePicker showIcon>` for the date range, PrimeVue `<AutoComplete dropdown forceSelection>` for the single project filter, and PrimeVue `<AutoComplete>` for task lookup. The date range is empty by default, and user-selected date ranges map to browser-local day-start and next-browser-local-day-start ISO boundaries before the API request is sent.
 - The task lookup placeholder copy is `Search tasks`.
-- The task lookup filters the paginated API result set with backend task-title `search`; a selected concrete task may also apply exact `taskId` filtering.
+- The task lookup filters the paginated API result set with backend task-title `search`; suggestions come from the currently loaded filtered entries so hints follow the active date/project/list filters, and a selected concrete task may also apply exact `taskId` filtering.
 - Entries are grouped by the entry started-at day in the user's current browser-local timezone.
 - Each day heading row includes its own primary icon-only PrimeVue `<Button>` with a `plus` icon beside the date title. It opens the same manual time-entry `<Dialog>` with that day prefilled in the form and uses tooltip/accessibility copy `New time entry`.
 - Day-level create uses the rendered local day as the preset calendar day for `startedAt` and `endedAt`.
 - At and above `640px`, each day group keeps the existing table layout for entries.
 - Below `640px`, each day group renders stacked mobile cards instead of the fixed-width desktop table.
-- Entry row/card content includes a clickable task name, project, time range, and duration. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the task name that opens the source issue in a new browser tab. Time-range labels use the user's current browser-local timezone.
+- Entry row/card content includes a first-column icon-only `Start timer` action for completed entries, a matching icon-only `Stop timer` action for the active running entry, a clickable task name, project, time range, and duration. The start action starts a fresh running timer for the same task without opening the task-picker popup and uses task-specific tooltip/accessibility copy such as `Start timer for Improve reports filters`. The stop action stops the current running timer without opening the task-picker popup and uses task-specific tooltip/accessibility copy such as `Stop timer for Improve reports filters`. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the task name that opens the source issue in a new browser tab. Time-range labels use the user's current browser-local timezone.
 - Running entry highlighted with `bg-accent-tint`.
-- Running-entry mobile cards keep the same highlight treatment and do not expose edit/delete actions; stopping remains owned by the global top-bar timer.
+- Running-entry mobile cards keep the same highlight treatment and expose the same direct `Stop timer` action as the desktop row; edit/delete actions remain unavailable for running entries.
 - Clicking the task name opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
 - Edit mode uses the same field order and visual structure as create mode, but it pre-fills the selected entry values.
 - The shared time-entry dialog uses these fields in both create and edit modes: project `<AutoComplete dropdown forceSelection>`, task `<AutoComplete>`, `startedAt` `<DatePicker showTime>`, `endedAt` `<DatePicker showTime>`, optional description `<Textarea>`, and `isBillable` `<Checkbox binary>`.
@@ -75,15 +75,15 @@
 
 - Initial page load uses a skeleton matching the top-bar breadcrumb state, the search row, and grouped project sections.
 - The page uses the same high-level structure as Time Entries: top-bar breadcrumb, grouped content sections, and a card/table shell for each group.
-- A lightweight filter row above the grouped project sections uses a combined PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<AutoComplete dropdown forceSelection>` controls.
-- Search suggestions include both project names and task names from the currently loaded visible data set, and project suggestions render their main label in bold so they stand apart from task suggestions.
+- A lightweight filter row above the grouped project sections uses a combined standard PrimeVue `<AutoComplete>` search with placeholder copy `Search projects or tasks`, plus `Status` and `Updated` PrimeVue `<Select>` controls.
+- Search suggestions include both project names and task names from the currently loaded visible data set; project suggestions render their main label in bold and task suggestions render regular weight.
 - The combined search and the structured filters operate on already loaded visible projects and tasks on the frontend. Do not document them as backend free-text or backend filter endpoints.
 - Project-name matches keep the full matching project group visible.
 - Task-name matches keep the parent project visible and narrow visible task rows to the matching tasks.
 - `Status` options are `All statuses`, `Open`, and `Closed`.
 - `Updated` options are `Any time`, `Today`, `Last 7 days`, and `Older`.
 - `Status` and `Updated` filters narrow task rows and only keep project groups that still contain at least one matching task.
-- Clearing the search and resetting the predictive single-selects restores the full grouped project list.
+- Clearing the search and resetting the status and updated selects restores the full grouped project list.
 - Content is grouped by visible project instead of by day.
 - Each project section header shows the project name on the left and a primary icon-only PrimeVue `<Button>` with a `plus` icon on the right. The action uses tooltip/accessibility copy `Add task`.
 - Tasks for that project render beneath the project header inside the same section card.
@@ -95,6 +95,7 @@
 - The project-level add-task icon action opens the same dialog in create mode with that project already selected.
 - Create mode includes `Default billable for time entries` and initializes it from the selected project's default billable value.
 - Update mode pre-fills the selected project, task title, and editable task fields, including the task-level default billable value.
+- Update mode uses PrimeVue `<Select>` for the fixed task status choice `Open`/`Closed`; this is a page-specific fixed-choice exception to the predictive single-select default.
 - If a task default billable value changes after time entries already exist for that task, save the new default immediately for future entries, then show a follow-up popup that asks only whether existing time entries for that task should also be updated.
 - The task dialog must ship as a true popup dialog overlay. Do not render create or update forms inline inside the Projects page layout.
 - Delete is triggered from inside the task edit dialog and uses the shared confirmation dialog pattern before permanently removing the task.
@@ -120,6 +121,42 @@
 - When `avatarUrl` is `null`, do not render the avatar row in the GitHub connection card.
 - Disconnect confirmation and callback notifications should use standard PrimeVue `<ConfirmDialog>` and `<Toast>` components; do not invent custom dialog or toast patterns for this page.
 - Sign out is owned by the shared header profile dropdown; do not render a duplicate sign-out action in the Profile page content.
+
+## Login Page
+
+- `/login` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
+- The login page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- Use the approved `Login Page` `.pen` screen as the desktop parity source.
+- The left brand panel keeps the existing product value copy and workspace-management summary cards.
+- The main panel title is `Sign in` with email/password fields ordered `Email`, then `Password`.
+- The primary action is `Sign in`.
+- `Continue with Google` remains a secondary sign-in action below the primary action.
+- Add a secondary outlined `Create workspace` action below `Continue with Google`. It links to `/register` and opens the register new workflow without changing the login form state.
+- Keep the register action visually secondary to both sign-in actions. Do not render it as a second filled primary button.
+- Keep the existing invite/help text below the action stack so users joining an existing workspace still understand they need an invitation.
+- Login errors stay scoped to the sign-in attempt. Navigating to `/register` must not reuse or display stale login submission errors.
+
+## Register New Workflow Page
+
+- `/register` renders as a standalone unauthenticated route-level page outside the authenticated app shell.
+- The register page does not render the sidebar, top-bar timer surface, or in-shell workspace navigation.
+- Use the approved `Register New Workflow` `.pen` screen as the desktop parity source and `Register New Workflow Mobile` as the mobile parity source.
+- The page creates the first workspace owner account for a new workspace only after an approved backend/API registration contract exists. It does not replace invite acceptance for members joining an existing workspace.
+- The left desktop brand panel explains the new-workspace flow: create owner account, name the workspace, continue to dashboard.
+- The mobile layout keeps the same content hierarchy while stacking the brand header, fields, owner acknowledgement, and actions in one column.
+- The main panel title is `Create workspace` with helper copy explaining that the account becomes the initial workspace owner after registration succeeds.
+- The default form fields are ordered `Work email`, `Full name`, `Workspace name`, `Password`, then `Confirm password`.
+- Password fields use PrimeVue `<Password>` controls with feedback disabled unless a later approved password-strength requirement adds explicit feedback behavior.
+- The owner acknowledgement checkbox follows the password fields and must be checked before submission. Desktop copy is `I agree to receive workspace email and accept the workspace owner responsibility.`
+- The primary action is `Create workspace`.
+- The secondary account action is an inline `Sign in` link for existing users. It navigates to `/login` and does not compete visually with the primary action.
+- Do not add Google sign-up, invite acceptance, or password setup actions to this page unless docs, specs, and design are updated together.
+- Registration implementation must use a shared contract-facing validation schema and a typed frontend API client once the backend/API contract exists. Do not create an ad hoc route-local fetch path for this workflow.
+- The page must not ship as a disabled placeholder. If the registration backend is unavailable, the route should remain unregistered or intentionally gated until the approved contract exists.
+- While registration is submitting, keep the panel shape stable, show loading on `Create workspace`, and prevent duplicate submissions.
+- Successful registration should establish the normal app session from the approved registration response and redirect to the dashboard.
+- Registration errors stay inline in the panel and should also use toast feedback for failed submission. Required mapped cases once backend support exists: duplicate email, weak password, invalid workspace name, workspace name unavailable, rate limiting, and registration service unavailable.
+- Query and form tests should cover default render, required-field validation, owner acknowledgement validation, duplicate-submit prevention, successful dashboard redirect, existing-account navigation, and each mapped backend error once implementation begins.
 
 ## Invite Accept Page
 

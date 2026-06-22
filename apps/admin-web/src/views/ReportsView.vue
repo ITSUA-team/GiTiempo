@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from 'vue';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
-import { SectionHeader, StatCard, SurfaceCard } from '@gitiempo/web-shared';
+import { StatCard, SurfaceCard } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
 import Button from 'primevue/button';
 
@@ -139,46 +139,6 @@ async function handleExport(): Promise<void> {
     </template>
 
     <template v-else>
-      <SectionHeader
-        title="Reports"
-        description="Live project and member reporting within the current PM scope."
-        variant="stats"
-      >
-        <template #actions>
-          <Button
-            label="Export CSV"
-            data-testid="export-reports-csv"
-            :disabled="exportDisabled"
-            :loading="exporting"
-            @click="handleExport"
-          />
-        </template>
-        <template #stats>
-          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              label="Tracked Hours"
-              :value="totalHoursLabel"
-              :description="trackedHoursDescription"
-            />
-            <StatCard
-              label="Billable"
-              :value="billableShareLabel"
-              description="Within PM scope"
-            />
-            <StatCard
-              label="Avg per Member"
-              :value="avgPerMemberLabel"
-              description="Weekly average"
-            />
-            <StatCard
-              label="Top Project"
-              :value="summary.topProjectName"
-              :description="topProjectDescription"
-            />
-          </div>
-        </template>
-      </SectionHeader>
-
       <ReportsFilterForm
         v-model:project-id="reportProjectId"
         v-model:member-id="reportMemberId"
@@ -187,7 +147,41 @@ async function handleExport(): Promise<void> {
         :project-options="projectOptions"
         :member-options="memberOptions"
         :disabled="loading"
-      />
+      >
+        <template #actions>
+          <Button
+            label="Export CSV"
+            data-testid="export-reports-csv"
+            class="h-[38px] w-full lg:w-auto"
+            :disabled="exportDisabled"
+            :loading="exporting"
+            @click="handleExport"
+          />
+        </template>
+      </ReportsFilterForm>
+
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Tracked Hours"
+          :value="totalHoursLabel"
+          :description="trackedHoursDescription"
+        />
+        <StatCard
+          label="Billable"
+          :value="billableShareLabel"
+          description="Within PM scope"
+        />
+        <StatCard
+          label="Avg per Member"
+          :value="avgPerMemberLabel"
+          description="Weekly average"
+        />
+        <StatCard
+          label="Top Project"
+          :value="summary.topProjectName"
+          :description="topProjectDescription"
+        />
+      </div>
 
       <SurfaceCard padding-class="p-5">
         <ReportsTable

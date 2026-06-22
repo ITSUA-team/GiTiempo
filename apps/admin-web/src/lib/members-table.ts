@@ -4,7 +4,6 @@ import type {
 } from '@gitiempo/shared';
 
 export type MemberLastActiveFilter = 'any' | 'today' | 'thisWeek' | 'inactive';
-export type MemberExpansionMode = 'assign' | 'edit';
 
 export interface MembersTableFilters {
   global: string;
@@ -43,4 +42,3 @@ export interface MembersTableRow {
 }
 
 export type MembersTableExpandedRows = Record<string, boolean>;
-export type MembersTableExpansionModes = Record<string, MemberExpansionMode>;

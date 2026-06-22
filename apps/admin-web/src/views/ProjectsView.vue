@@ -8,13 +8,12 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import {
-  SectionHeader,
+  BillableDefaultBackfillDialog,
   StatCard,
   SurfaceCard,
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ProjectEditFormInput } from '@gitiempo/web-shared';
-import Button from 'primevue/button';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
@@ -45,6 +44,16 @@ const loading = ref(true);
 const loadError = ref<string | null>(null);
 const initialLoaded = ref(false);
 const savingProjectEditId = ref<string | null>(null);
+const submittingProjectBackfill = ref(false);
+
+const projectBackfillDialog = ref<{
+  hasTasks: boolean;
+  hasTimeEntries: boolean;
+  projectId: string;
+  projectName: string;
+  updateTasks: boolean;
+  updateTimeEntries: boolean;
+} | null>(null);
 
 const {
   collapseRow: collapseProjectRow,
@@ -117,13 +126,15 @@ async function refresh(): Promise<void> {
   loading.value = true;
 
   try {
-    const [projectsData, summaryData] = await Promise.all([
+    const [projectsData, summaryData, membersData] = await Promise.all([
       adminProjectsClient.listProjects(),
       adminProjectsClient.getManagementSummary(),
+      adminMembersClient.listMembers(),
     ]);
 
     projects.value = sortProjects(projectsData);
     summary.value = summaryData;
+    members.value = membersData;
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
       error: err,
@@ -131,6 +142,87 @@ async function refresh(): Promise<void> {
     });
   } finally {
     loading.value = false;
+  }
+}
+
+async function openProjectBackfillDialogIfNeeded(
+  project: ProjectResponse,
+): Promise<void> {
+  try {
+    const [tasksData, timeEntriesData] = await Promise.all([
+      adminProjectsClient.listProjectTasks(project.id, { includeInactive: true }),
+      adminProjectsClient.listProjectTimeEntries(project.id, { limit: 1 }),
+    ]);
+    const hasTasks = tasksData.length > 0;
+    const hasTimeEntries = timeEntriesData.meta.total > 0;
+
+    if (!hasTasks && !hasTimeEntries) {
+      return;
+    }
+
+    projectBackfillDialog.value = {
+      hasTasks,
+      hasTimeEntries,
+      projectId: project.id,
+      projectName: project.name,
+      updateTasks: hasTasks,
+      updateTimeEntries: hasTimeEntries,
+    };
+  } catch (err) {
+    errorToast(
+      err instanceof Error
+        ? err.message
+        : 'Failed to check existing project records',
+      {
+        error: err,
+        logContext: { action: 'check-project-backfill', feature: 'projects' },
+      },
+    );
+  }
+}
+
+function closeProjectBackfillDialog(): void {
+  if (submittingProjectBackfill.value) {
+    return;
+  }
+
+  projectBackfillDialog.value = null;
+}
+
+async function handleProjectBackfillSubmitted(): Promise<void> {
+  const dialog = projectBackfillDialog.value;
+
+  if (!dialog) {
+    return;
+  }
+
+  submittingProjectBackfill.value = true;
+
+  try {
+    const result = await adminProjectsClient.backfillProjectBillableDefault(
+      dialog.projectId,
+      {
+        updateTasks: dialog.updateTasks,
+        updateTimeEntries: dialog.updateTimeEntries,
+      },
+    );
+    const updatedCount = result.tasksUpdated + result.timeEntriesUpdated;
+
+    successToast(
+      `${updatedCount} existing ${updatedCount === 1 ? 'record has' : 'records have'} been updated.`,
+    );
+    projectBackfillDialog.value = null;
+    await refresh();
+  } catch (err) {
+    errorToast(
+      err instanceof Error ? err.message : 'Failed to update existing records',
+      {
+        error: err,
+        logContext: { action: 'backfill-project-default', feature: 'projects' },
+      },
+    );
+  } finally {
+    submittingProjectBackfill.value = false;
   }
 }
 
@@ -158,11 +250,13 @@ async function handleProjectEditSubmitted(
   const memberIdsToRemove = project.members
     .map((member) => member.userId)
     .filter((id) => !nextMemberIds.has(id));
+  let savedProject: ProjectResponse | null = null;
 
   savingProjectEditId.value = project.id;
 
   try {
-    await adminProjectsClient.updateProject(project.id, {
+    savedProject = await adminProjectsClient.updateProject(project.id, {
+      defaultBillableForTasks: input.defaultBillableForTasks,
       visibility: input.visibility,
     });
 
@@ -176,11 +270,22 @@ async function handleProjectEditSubmitted(
     successToast(`${project.name} has been updated.`);
     collapseProjectRow(project);
     await refresh();
+
+    if (savedProject.defaultBillableForTasks !== project.defaultBillableForTasks) {
+      await openProjectBackfillDialogIfNeeded(savedProject);
+    }
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to save project', {
       error: err,
       logContext: { action: 'update-project', feature: 'projects' },
     });
+
+    if (
+      savedProject &&
+      savedProject.defaultBillableForTasks !== project.defaultBillableForTasks
+    ) {
+      await openProjectBackfillDialogIfNeeded(savedProject);
+    }
   } finally {
     savingProjectEditId.value = null;
   }
@@ -198,6 +303,7 @@ async function archiveProject(project: ProjectResponse): Promise<void> {
       isActive: false,
     });
     successToast(`${project.name} has been archived.`);
+    collapseProjectRow(project);
     await refresh();
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to archive project', {
@@ -228,6 +334,7 @@ async function handleUnarchive(project: ProjectResponse): Promise<void> {
       isActive: true,
     });
     successToast(`${project.name} is now active.`);
+    collapseProjectRow(project);
     await refresh();
   } catch (err) {
     errorToast(err instanceof Error ? err.message : 'Failed to unarchive project', {
@@ -255,19 +362,6 @@ onMounted(fetchAll);
     </template>
 
     <template v-else>
-      <SectionHeader
-        title="Projects"
-        description="Manage project visibility, member assignments, and manual project creation."
-        variant="page"
-      >
-        <template #actions>
-          <Button
-            label="New Project"
-            @click="handleNewProject"
-          />
-        </template>
-      </SectionHeader>
-
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Active Projects"
@@ -295,9 +389,8 @@ onMounted(fetchAll);
           :rows="projectTableRows"
           :source-filter-options="sourceFilterOptions"
           :visibility-filter-options="visibilityFilterOptions"
-          @archive="handleArchive"
           @edit-project="handleEditProject"
-          @unarchive="handleUnarchive"
+          @new-project="handleNewProject"
           @update:expanded-rows="setProjectTableExpandedRows"
           @update:filters="updateProjectTableFilters"
         >
@@ -307,12 +400,28 @@ onMounted(fetchAll);
               :project="row.project"
               :all-members="members"
               :saving="savingProjectEditId === row.id"
+              @archive="handleArchive(row.project)"
               @save="handleProjectEditSubmitted(row.project, $event)"
+              @unarchive="handleUnarchive(row.project)"
               @cancelled="collapseProjectRow(row.project)"
             />
           </template>
         </ProjectsTable>
       </SurfaceCard>
+
+      <BillableDefaultBackfillDialog
+        v-if="projectBackfillDialog"
+        v-model:update-tasks="projectBackfillDialog.updateTasks"
+        v-model:update-time-entries="projectBackfillDialog.updateTimeEntries"
+        :entity-name="projectBackfillDialog.projectName"
+        :has-tasks="projectBackfillDialog.hasTasks"
+        :has-time-entries="projectBackfillDialog.hasTimeEntries"
+        :is-open="true"
+        :is-submitting="submittingProjectBackfill"
+        variant="project"
+        @close="closeProjectBackfillDialog"
+        @submit="handleProjectBackfillSubmitted"
+      />
     </template>
   </div>
 </template>

@@ -3,9 +3,7 @@
 ## Purpose
 
 Define admin and project-manager SPA behavior for the admin-facing product pages in `admin-web`.
-
 ## Requirements
-
 ### Requirement: Admin Login Entry Page
 
 The `admin-web` app MUST provide a dedicated login page that offers the supported authentication methods and keeps the admin product visually distinct while following the shared auth direction.
@@ -32,6 +30,46 @@ Each admin-facing product page in `admin-web` MUST assume an authenticated shell
 - **WHEN** an authenticated user reaches an admin-web route-level 403 or 404 page
 - **THEN** the page remains part of the authenticated route tree
 - **AND** the page may render as a standalone error surface without shared shell chrome
+
+### Requirement: Role-Aware Admin Shell Navigation
+
+The authenticated `admin-web` shell MUST render navigation affordances only for product routes available to the current user's workspace role.
+
+#### Scenario: Member denial stays outside admin shell navigation
+
+- **WHEN** an authenticated user with workspace role `member` reaches an allowed admin-web surface such as the standalone `/403` route
+- **THEN** the standalone route-level page renders without admin shell chrome
+- **AND** the user is not offered sidebar, mobile navigation, or profile-menu route actions that would open admin-only or PM-only product routes
+
+#### Scenario: Member forbidden recovery does not loop
+
+- **WHEN** an authenticated user with workspace role `member` reaches the standalone admin-web `/403` route
+- **THEN** the primary recovery action switches to the configured user workspace destination
+- **AND** the page does not render `Back to dashboard` as the primary recovery action for the member role
+
+#### Scenario: Admin and PM forbidden recovery can return to dashboard
+
+- **WHEN** an authenticated user with workspace role `admin` or `pm` reaches the standalone admin-web `/403` route
+- **THEN** the page may render `Back to dashboard` as the primary recovery action
+- **AND** that primary action targets an admin product route available to the current role
+
+#### Scenario: PM sees only PM-allowed product navigation
+
+- **WHEN** an authenticated user with workspace role `pm` renders the admin-web shell
+- **THEN** the shell shows navigation entries for admin product routes available to PM users
+- **AND** the shell omits navigation entries and profile-menu route actions that open admin-only pages
+
+#### Scenario: Admin sees the full current admin navigation
+
+- **WHEN** an authenticated user with workspace role `admin` renders the admin-web shell
+- **THEN** the shell shows the current documented admin navigation entries for available admin product pages
+- **AND** the profile settings entry remains available to the admin user
+
+#### Scenario: Direct URL denial remains distinct from hidden navigation
+
+- **WHEN** a user's workspace role does not allow a hidden admin-web navigation destination and the user enters that destination URL directly
+- **THEN** route-level authorization redirects the user to `/403`
+- **AND** the shell does not rely on hidden navigation as the only access control mechanism
 
 ### Requirement: Admin Dashboard Summary
 
@@ -134,28 +172,27 @@ The reports page MUST support report setup controls for backend CSV export, scop
 - **AND** summary totals remain based on the loaded report data rather than the table-only filters
 
 ### Requirement: Invoice Creation Workflow
+The invoices page UI SHALL remain hidden until an invoice API/contract exists.
 
-The invoices page SHALL provide invoice creation through a modal workflow.
+#### Scenario: Deferred invoice route renders no temporary invoice section
 
-#### Scenario: Create invoice from dialog
-
-- GIVEN a user opens the invoice creation flow
-- WHEN the dialog is rendered
-- THEN the dialog exposes project, date range, rate, discount, and total amount inputs
+- **GIVEN** a user opens the invoices page
+- **WHEN** the route content renders
+- **THEN** the page does not render an invoice table, search control, create action, or modal dialog
+- **AND** the admin shell navigation does not expose an Invoices entry while the invoice UI is deferred.
 
 ### Requirement: Administrative Management Pages
-
 The members, projects, and settings pages MUST support the documented administrative management flows.
 
 #### Scenario: Members management view
 
 - GIVEN an admin opens the members page
 - WHEN the page renders
-- THEN it shows a stats header with title, description, and a primary `Invite Member` action
-- AND it shows stat cards covering active members, pending invites, and assigned PMs
-- AND it shows a members table with member identity, role, project assignment count, last activity, and actions
-- AND it exposes inline PM assignment only for non-admin member rows
-- AND it exposes inline edit and confirmed removal flows through the members table action column
+- THEN it shows stat cards covering active members, pending invites, and assigned PMs
+- AND it shows a members table with member identity, role, project assignment count, and last activity without a separate row action column
+- AND the members table header exposes a search control plus a primary icon-only `Invite member` action with explicit tooltip and accessible label copy `Invite member`
+- AND member names open inline settings that expose page-owned inline PM assignment only for non-admin member rows
+- AND member names open inline settings that expose page-owned inline edit and confirmed removal flows.
 
 #### Scenario: Workspace settings view
 
@@ -164,7 +201,7 @@ The members, projects, and settings pages MUST support the documented administra
 - THEN workspace settings are shown in a grouped single-column form layout
 - AND the form includes workspace name, currency, default hourly rate, and time zone fields
 - AND the time zone field is an editable selector populated with contract-valid time-zone options, including `UTC` and IANA time-zone names, the current persisted time-zone value, and the current draft/form time-zone value
-- AND save actions remain discoverable at section level or page bottom
+- AND save actions remain discoverable at section level or page bottom.
 
 #### Scenario: Workspace settings time zone save
 
@@ -172,14 +209,39 @@ The members, projects, and settings pages MUST support the documented administra
 - WHEN the admin saves settings
 - THEN the page submits the changed `timeZone` through the existing workspace settings update boundary
 - AND the saved form reconciles from the authoritative workspace settings response
-- AND unchanged workspace settings fields are not sent only to satisfy schemas
+- AND unchanged workspace settings fields are not sent only to satisfy schemas.
 
 #### Scenario: Workspace settings time zone validation
 
 - GIVEN an invalid time-zone value is represented in the Settings form state
 - WHEN the admin attempts to save settings
 - THEN the page shows field-level validation feedback for Time zone
-- AND no workspace settings update request is sent
+- AND no workspace settings update request is sent.
+
+### Requirement: Members Management Table Actions
+
+The admin Members page SHALL use the member name as the inline settings entry point and SHALL NOT render a separate action column for the main members table.
+
+#### Scenario: Member settings open from the member name
+
+- **GIVEN** a manageable member row is rendered
+- **WHEN** the user activates the member name
+- **THEN** the inline member settings section opens
+- **AND** the main members table does not render a separate `Actions` column with edit or remove icons
+- **AND** the inline settings section keeps the role, project assignment, and `Remove member` controls available according to the member permissions
+
+### Requirement: Projects Management Table Actions
+
+The admin Projects page SHALL use the project name as the inline settings entry point and SHALL NOT render a separate row action column.
+
+#### Scenario: Project settings own status-specific actions
+
+- **GIVEN** a project row is rendered
+- **WHEN** the user activates the project name
+- **THEN** the inline project settings section opens
+- **AND** the projects table does not render a separate `Actions` column with edit, archive, or unarchive icons
+- **AND** active projects expose `Archive project` inside the inline settings section
+- **AND** archived projects expose `Unarchive project` inside the inline settings section
 
 ### Requirement: Projects Navigation Item Is Active On Project Subpages
 

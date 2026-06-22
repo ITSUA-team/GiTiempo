@@ -11,6 +11,7 @@ import {
 import { createProtectedRouter } from '@gitiempo/web-shared/router';
 
 import AdminAppShell from '@/components/layout/AdminAppShell.vue';
+import { routeNames } from '@/constants/routes';
 import LoginView from '@/views/LoginView.vue';
 import { pinia } from '@/stores';
 import { useAuthStore } from '@/stores/auth';
@@ -24,19 +25,6 @@ const NotFoundView = () => import('@/views/NotFoundView.vue');
 const ProjectsView = () => import('@/views/ProjectsView.vue');
 const ReportsView = () => import('@/views/ReportsView.vue');
 const SettingsView = () => import('@/views/SettingsView.vue');
-
-export const routeNames = {
-  addProject: 'admin-add-project',
-  dashboard: 'admin-dashboard',
-  forbidden: 'admin-forbidden',
-  invoices: 'admin-invoices',
-  login: 'admin-login',
-  members: 'admin-members',
-  notFound: 'admin-not-found',
-  projects: 'admin-projects',
-  reports: 'admin-reports',
-  settings: 'admin-settings',
-} as const;
 
 type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
 type AdminNonProductRouteName =
@@ -81,6 +69,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: DashboardView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.dashboard],
+      pageName: 'Dashboard',
     },
   },
   {
@@ -89,6 +78,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: ReportsView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.reports],
+      pageName: 'Reports',
     },
   },
   {
@@ -97,6 +87,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: InvoicesView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.invoices],
+      pageName: 'Invoices',
     },
   },
   {
@@ -105,6 +96,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: MembersView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.members],
+      pageName: 'Members',
     },
   },
   {
@@ -113,6 +105,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: ProjectsView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.projects],
+      pageName: 'Projects',
     },
   },
   {
@@ -121,6 +114,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: AddProjectMockView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.addProject],
+      pageName: 'New Project',
     },
   },
   {
@@ -129,6 +123,7 @@ const protectedRoutes: RouteRecordRaw[] = [
     component: SettingsView,
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.settings],
+      pageName: 'Settings',
     },
   },
 ];
@@ -180,3 +175,5 @@ export function createAppRouter(options?: {
 }
 
 export const router = createAppRouter();
+
+export { routeNames };

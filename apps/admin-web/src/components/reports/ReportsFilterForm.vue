@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
 import {
   normalizeReportDateRangeValue,
+  filterAutocompleteOptions,
   reportFilterFormSchema,
   type ReportDatePickerRangeValue,
   type ReportFilterFormValues,
 } from '@gitiempo/web-shared';
+import AutoComplete from 'primevue/autocomplete';
 import DatePicker from 'primevue/datepicker';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
@@ -34,14 +36,16 @@ const groupByOptions: { label: string; value: TimeReportGroupBy }[] = [
   { label: 'Member', value: 'user' },
 ];
 
-const projectGenerationOptions = computed(() => [
-  { label: 'All projects', value: null },
-  ...props.projectOptions,
-]);
-const memberGenerationOptions = computed(() => [
-  { label: 'All assigned members', value: null },
-  ...props.memberOptions,
-]);
+const projectSuggestions = ref<ReportFilterOption[]>([]);
+const memberSuggestions = ref<ReportFilterOption[]>([]);
+const selectedProjectOption = computed(
+  () =>
+    props.projectOptions.find((option) => option.value === projectId.value) ?? null,
+);
+const selectedMemberOption = computed(
+  () =>
+    props.memberOptions.find((option) => option.value === memberId.value) ?? null,
+);
 
 const initialValues = computed<ReportFilterFormValues>(() => ({
   projectId: projectId.value,
@@ -52,12 +56,44 @@ const initialValues = computed<ReportFilterFormValues>(() => ({
 
 const resolver = zodResolver(reportFilterFormSchema);
 
-function handleProjectUpdate(value: string | null): void {
-  projectId.value = value;
+function handleProjectComplete(event: { query: string }): void {
+  projectSuggestions.value = filterAutocompleteOptions(
+    props.projectOptions,
+    event.query,
+    (option) => option.label,
+  );
 }
 
-function handleMemberUpdate(value: string | null): void {
-  memberId.value = value;
+function handleMemberComplete(event: { query: string }): void {
+  memberSuggestions.value = filterAutocompleteOptions(
+    props.memberOptions,
+    event.query,
+    (option) => option.label,
+  );
+}
+
+function handleProjectUpdate(value: ReportFilterOption | string | null): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      projectId.value = null;
+    }
+
+    return;
+  }
+
+  projectId.value = value?.value ?? null;
+}
+
+function handleMemberUpdate(value: ReportFilterOption | string | null): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      memberId.value = null;
+    }
+
+    return;
+  }
+
+  memberId.value = value?.value ?? null;
 }
 
 function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
@@ -67,6 +103,19 @@ function handleDateRangeUpdate(value: ReportDatePickerRangeValue): void {
 function handleGroupByUpdate(value: TimeReportGroupBy): void {
   groupBy.value = value;
 }
+
+const autoCompletePt = {
+  root: {
+    class: 'w-full',
+  },
+  pcInputText: {
+    root: {
+      class:
+        'border-divider bg-surface-primary h-[38px] rounded-l-[6px] rounded-r-none border px-3 text-[14px] font-medium text-text-dark shadow-none',
+    },
+  },
+  dropdown: { class: 'w-9 text-text-muted' },
+} as const;
 
 const selectPt = {
   root: {
@@ -98,23 +147,29 @@ const datePickerPt = {
     :resolver="resolver"
     :validate-on-mount="true"
     :validate-on-value-update="true"
-    class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]"
+    class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px_auto]"
   >
     <div class="flex flex-col gap-1.5">
       <label
         for="reports-project"
         class="text-text-dark text-[13px] font-medium"
       >Project</label>
-      <Select
+      <AutoComplete
         input-id="reports-project"
         name="projectId"
-        :model-value="projectId"
-        :options="projectGenerationOptions"
+        :model-value="selectedProjectOption"
+        :suggestions="projectSuggestions"
+        complete-on-focus
+        dropdown
+        dropdown-mode="blank"
+        force-selection
+        :min-length="0"
         option-label="label"
-        option-value="value"
         placeholder="All projects"
+        show-clear
         :disabled="disabled"
-        :pt="selectPt"
+        :pt="autoCompletePt"
+        @complete="handleProjectComplete"
         @update:model-value="handleProjectUpdate"
       />
     </div>
@@ -124,16 +179,22 @@ const datePickerPt = {
         for="reports-member"
         class="text-text-dark text-[13px] font-medium"
       >Member</label>
-      <Select
+      <AutoComplete
         input-id="reports-member"
         name="memberId"
-        :model-value="memberId"
-        :options="memberGenerationOptions"
+        :model-value="selectedMemberOption"
+        :suggestions="memberSuggestions"
+        complete-on-focus
+        dropdown
+        dropdown-mode="blank"
+        force-selection
+        :min-length="0"
         option-label="label"
-        option-value="value"
         placeholder="All assigned members"
+        show-clear
         :disabled="disabled"
-        :pt="selectPt"
+        :pt="autoCompletePt"
+        @complete="handleMemberComplete"
         @update:model-value="handleMemberUpdate"
       />
     </div>
@@ -184,6 +245,17 @@ const datePickerPt = {
         :pt="selectPt"
         @update:model-value="handleGroupByUpdate"
       />
+    </div>
+
+    <div
+      v-if="$slots.actions"
+      class="flex flex-col gap-1.5 lg:min-w-[110px]"
+    >
+      <span
+        aria-hidden="true"
+        class="hidden h-[19px] lg:block"
+      />
+      <slot name="actions" />
     </div>
   </Form>
 </template>

@@ -87,18 +87,19 @@ export class InvitesService {
     if (!workspace) throw new UnauthorizedException('Unauthorized');
 
     const token = randomBytes(32).toString('base64url');
-    const [row] = await this.db
-      .insert(invites)
-      .values({
-        workspaceId,
-        email,
-        token,
-        invitedBy,
-        role: input.role,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      })
-      .returning();
-    if (!row) throw new Error('Failed to create invite');
+    const row = (
+      await this.db
+        .insert(invites)
+        .values({
+          workspaceId,
+          email,
+          token,
+          invitedBy,
+          role: input.role,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        })
+        .returning()
+    )[0]!;
 
     try {
       await this.deliverInvite({

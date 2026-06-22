@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import {
   AuthIntroPanel,
   AuthSignInForm,
+  StandaloneSplitPage,
   type EmailPasswordSignInInput,
 } from "@gitiempo/web-shared";
 import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
@@ -83,8 +84,8 @@ async function handleGoogleSignIn(): Promise<void> {
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
-    <div class="mx-auto flex min-h-screen max-w-[1280px] flex-col lg:flex-row">
+  <StandaloneSplitPage>
+    <template #left>
       <AuthIntroPanel
         workspace-label="Admin workspace access"
         hero-title="Manage reporting, members, and projects in one workspace."
@@ -96,7 +97,9 @@ async function handleGoogleSignIn(): Promise<void> {
         counterpart-prompt="Need time tracking? Open"
         product-tagline="GiTiempo"
       />
+    </template>
 
+    <template #right>
       <section
         class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-12 lg:py-12"
       >
@@ -110,6 +113,6 @@ async function handleGoogleSignIn(): Promise<void> {
           @submit-google="handleGoogleSignIn"
         />
       </section>
-    </div>
-  </div>
+    </template>
+  </StandaloneSplitPage>
 </template>

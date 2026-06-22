@@ -1,0 +1,36 @@
+## 1. Source Review And Audit
+
+- [x] 1.1 Re-read `docs/ui/INDEX.md`, `docs/ui/patterns.md`, `apps/user-web/AGENTS.md`, and `apps/admin-web/AGENTS.md` before frontend edits.
+- [x] 1.2 Inspect `GITiempo.pen` for the affected popup frames covering task create/update, time-entry create/edit, admin create-invoice, member invite, admin inline settings, and top-bar timer task-picker parity. Completed from the checked-in `.pen` JSON because the Pencil editor API could not inspect the file without an open editor file; see `design.md`.
+- [x] 1.3 Audit current PrimeVue popup dialogs in `apps/user-web` and `apps/admin-web` for footer/body `Cancel` buttons, and classify each as in-scope non-destructive popup, destructive confirmation, non-popup reset form, or row action.
+
+## 2. User-Web Dialog Updates
+
+- [x] 2.1 Update `ProjectTaskDialog` so task create/update popup footers render only the primary `Create task` or `Save changes` action while preserving close-control and mask dismissal when not saving.
+- [x] 2.2 Update `TimeEntryDialog` so create/edit popup footers render only the primary save action while preserving close-control and mask dismissal behavior.
+- [x] 2.3 Update `TopBarTimerTaskDialog` so desktop and mobile footers remove the `Cancel` dismissal button, keep the state-appropriate primary action, and preserve the running-timer `Change task` domain action where applicable.
+- [x] 2.4 Ensure user-web dialog save/loading/disabled states and request-error retry behavior are unchanged after footer updates.
+
+## 3. Admin-Web Dialog Updates
+
+- [x] 3.1 Audit `InvoicesView` and any create-invoice dialog implementation on the current branch; if the dialog exists, make its footer primary-action-only with `Save Invoice`, otherwise document that the route remains scaffolded and no invoice code change is needed.
+- [x] 3.2 Update `MemberInviteDialog` if still a non-destructive popup form so its footer/body renders only `Send Invite` and Dialog close/mask dismissal replaces the old footer `Cancel` path.
+- [x] 3.3 Preserve invite form reset/cleanup behavior when `MemberInviteDialog` is dismissed through the built-in Dialog close control or mask.
+- [x] 3.4 Confirm destructive admin confirmation dialogs, Settings form `Cancel`, inline member/project form `Cancel`, and pending-invite `Cancel invite` row actions remain present.
+- [x] 3.5 Remove separate admin Members and Projects table action columns project-wide: make member/project names the edit entry points, move member removal and project archive/unarchive controls into inline settings, and keep the documented pending-invite row action column exception.
+
+## 4. Tests And Manual Checks
+
+- [x] 4.1 Update `ProjectTaskDialog` tests to cover create/update primary actions, absence of footer `Cancel`, close dismissal, and save emission.
+- [x] 4.2 Update `TimeEntryDialog` tests to cover create/edit primary actions, absence of footer `Cancel`, close dismissal, and save emission.
+- [x] 4.3 Update `TopBarTimerTaskDialog` tests for desktop and mobile footer behavior, including no dismissal `Cancel`, full-width mobile primary action, retained running `Change task`, close dismissal, and primary action emission.
+- [x] 4.4 Update admin dialog tests for any changed admin popup, including `MemberInviteDialog` close/reset behavior, absence of popup `Cancel`, and submit behavior.
+- [x] 4.5 Add or update regression checks that excluded actions remain: destructive confirmation safe/reject actions, non-popup Profile/Settings reset `Cancel` actions, and pending-invite `Cancel invite` row actions.
+- [x] 4.6 Update admin management-table tests so Members and Projects no longer expect row action columns, and verify inline settings still expose removal/archive/unarchive behaviors.
+
+## 5. Verification
+
+- [x] 5.1 Run `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `pnpm --filter user-web test`.
+- [x] 5.2 Run `pnpm --filter admin-web lint`, `pnpm --filter admin-web typecheck`, and `pnpm --filter admin-web test` if any admin-web implementation or test files changed.
+- [x] 5.3 Perform targeted browser/manual checks for opening, dismissing via top-right close or allowed mask, and saving each affected popup; include mobile footer checks for the timer task-picker.
+- [x] 5.4 Complete a final design parity review against `GITiempo.pen` and `docs/ui/patterns.md`, and document any PrimeVue-only compromise explicitly. The final review used the checked-in `.pen` JSON plus `docs/ui/patterns.md`; no PrimeVue-only compromise was identified, and the remaining mismatch is the documented docs-over-design invite-dialog `Cancel` exception in `design.md`.

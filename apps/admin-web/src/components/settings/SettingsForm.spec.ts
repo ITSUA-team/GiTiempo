@@ -3,10 +3,47 @@ import { describe, expect, it } from 'vitest';
 
 import SettingsForm from './SettingsForm.vue';
 
+const AutoCompleteStub = {
+	props: [
+		'completeOnFocus',
+		'dropdown',
+		'forceSelection',
+		'inputId',
+		'invalid',
+		'minLength',
+		'modelValue',
+		'optionLabel',
+		'suggestions',
+	],
+	emits: ['complete', 'update:modelValue'],
+	template: `
+		<div>
+			<input
+				:id="inputId"
+				:aria-invalid="invalid ? 'true' : undefined"
+				:class="$attrs.class"
+				:data-complete-on-focus="completeOnFocus === false || completeOnFocus === undefined ? 'false' : 'true'"
+				:data-force-selection="forceSelection === false || forceSelection === undefined ? 'false' : 'true'"
+				:data-min-length="String(minLength)"
+				:value="modelValue?.[optionLabel] ?? ''"
+				@focus="$emit('complete', { query: '' })"
+			/>
+			<button
+				v-for="option in suggestions"
+				:key="option.value"
+				:data-testid="inputId + '-option-' + option.value"
+				type="button"
+				@click="$emit('update:modelValue', option)"
+			>
+				{{ option[optionLabel] }}
+			</button>
+		</div>
+	`,
+};
+
 const SelectStub = {
 	emits: ['update:modelValue'],
 	props: [
-		'filter',
 		'inputId',
 		'invalid',
 		'modelValue',
@@ -18,7 +55,7 @@ const SelectStub = {
 		<select
 			:id="inputId"
 			:aria-invalid="invalid ? 'true' : undefined"
-			:data-filter="filter === false || filter === undefined ? 'false' : 'true'"
+			:class="$attrs.class"
 			:value="modelValue"
 			@change="$emit('update:modelValue', $event.target.value)"
 		>
@@ -59,6 +96,7 @@ const stubs = {
 	InputNumber: InputNumberStub,
 	InputText: InputTextStub,
 	Message: { template: '<small><slot /></small>' },
+	AutoComplete: AutoCompleteStub,
 	Select: SelectStub,
 	SurfaceCard: { template: '<section><slot /></section>' },
 };
@@ -86,13 +124,15 @@ function createProps(overrides: Record<string, unknown> = {}) {
 }
 
 describe('SettingsForm', () => {
-	it('renders the time zone selector below the rate and currency row', () => {
+	it('renders the time zone selector below the rate and currency row', async () => {
 		const wrapper = mount(SettingsForm, {
 			global: { stubs },
 			props: createProps(),
 		});
 
-		const timeZone = wrapper.get<HTMLSelectElement>('#settings-time-zone');
+		const timeZone = wrapper.get<HTMLInputElement>('#settings-time-zone');
+
+		await timeZone.trigger('focus');
 
 		expect(wrapper.get('label[for="settings-time-zone"]').text()).toBe(
 			'Time zone',
@@ -100,9 +140,10 @@ describe('SettingsForm', () => {
 		expect(timeZone.classes()).toEqual(
 			expect.arrayContaining(['h-[38px]', 'w-full']),
 		);
-		expect(timeZone.attributes('data-filter')).toBe('true');
-		expect(timeZone.text()).toContain('UTC');
-		expect(timeZone.text()).toContain('Europe/Kyiv');
+		expect(timeZone.attributes('data-force-selection')).toBe('true');
+		expect(timeZone.attributes('data-complete-on-focus')).toBe('true');
+		expect(wrapper.text()).toContain('UTC');
+		expect(wrapper.text()).toContain('Europe/Kyiv');
 	});
 
 	it('emits time zone updates from the selector', async () => {
@@ -111,7 +152,10 @@ describe('SettingsForm', () => {
 			props: createProps(),
 		});
 
-		await wrapper.get('#settings-time-zone').setValue('Europe/Kyiv');
+		await wrapper.get('#settings-time-zone').trigger('focus');
+		await wrapper
+			.get('[data-testid="settings-time-zone-option-Europe/Kyiv"]')
+			.trigger('click');
 
 		expect(wrapper.emitted('update:timeZone')).toEqual([['Europe/Kyiv']]);
 	});

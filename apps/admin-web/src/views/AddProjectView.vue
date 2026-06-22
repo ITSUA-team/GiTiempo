@@ -11,6 +11,7 @@ import {
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import { createProjectFormSchema, type CreateProjectFormInput } from '@gitiempo/web-shared';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 
@@ -37,6 +38,7 @@ const visibilityOptions = [
 const resolver = zodResolver(createProjectFormSchema);
 
 const initialValues: CreateProjectFormInput = {
+  defaultBillableForTasks: true,
   name: '',
   visibility: 'private',
   managerUserId: null,
@@ -85,13 +87,19 @@ async function handleSubmit({
     return;
   }
 
-  const { name, visibility, managerUserId } = values as CreateProjectFormInput;
+  const {
+    defaultBillableForTasks,
+    name,
+    visibility,
+    managerUserId,
+  } = values as CreateProjectFormInput;
 
   isSubmitting.value = true;
 
   try {
     const trimmedName = name.trim();
     const project = await adminProjectsClient.createProject({
+      defaultBillableForTasks,
       name: trimmedName,
       visibility,
     });
@@ -120,7 +128,7 @@ onMounted(loadMembers);
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="flex min-w-0 flex-col gap-5">
     <div>
       <Button
         label="← Back to projects"
@@ -140,8 +148,8 @@ onMounted(loadMembers);
       </p>
     </div>
 
-    <div class="flex gap-5">
-      <div class="bg-surface-primary flex flex-1 flex-col gap-3 rounded-lg p-4">
+    <div class="flex min-w-0 flex-col gap-5 md:flex-row">
+      <div class="bg-surface-primary flex min-w-0 flex-1 flex-col gap-3 rounded-lg p-4">
         <h2 class="text-text-dark text-lg font-semibold">
           Add Project Manually
         </h2>
@@ -176,7 +184,7 @@ onMounted(loadMembers);
               </small>
             </div>
 
-            <div class="flex gap-3">
+            <div class="flex flex-col gap-3 sm:flex-row">
               <div class="flex flex-1 flex-col gap-1.5">
                 <label class="text-text-dark text-[13px] font-medium">
                   Source
@@ -186,7 +194,7 @@ onMounted(loadMembers);
                 </div>
               </div>
 
-              <div class="flex w-40 flex-col gap-1.5">
+              <div class="flex w-full flex-col gap-1.5 sm:w-40">
                 <label
                   for="project-manager"
                   class="text-text-dark text-[13px] font-medium"
@@ -236,6 +244,29 @@ onMounted(loadMembers);
                 }"
               />
             </div>
+
+            <div class="flex flex-col gap-1.5">
+              <span class="text-text-dark text-[13px] font-medium">
+                Default billable for new tasks
+              </span>
+              <label
+                for="default-billable-for-tasks"
+                class="border-divider bg-surface-primary flex h-[34px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
+              >
+                <Checkbox
+                  input-id="default-billable-for-tasks"
+                  name="defaultBillableForTasks"
+                  binary
+                  :disabled="isSubmitting"
+                />
+                <span class="text-text-dark text-[14px] font-medium">
+                  Billable by default
+                </span>
+              </label>
+              <small class="text-text-muted text-xs">
+                New tasks in this project inherit this value unless changed later.
+              </small>
+            </div>
           </div>
 
           <div class="mt-3 flex items-center justify-end gap-2.5">
@@ -256,7 +287,7 @@ onMounted(loadMembers);
         </Form>
       </div>
 
-      <div class="shadow-card bg-surface-primary flex w-80 shrink-0 flex-col gap-3.5 rounded-lg p-5">
+      <div class="shadow-card bg-surface-primary flex w-full flex-col gap-3.5 rounded-lg p-5 md:w-80 md:shrink-0">
         <h2 class="text-text-dark text-lg font-semibold">
           Project Source
         </h2>

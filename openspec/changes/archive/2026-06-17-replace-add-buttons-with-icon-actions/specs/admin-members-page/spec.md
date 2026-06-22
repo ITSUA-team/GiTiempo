@@ -1,0 +1,52 @@
+## MODIFIED Requirements
+
+### Requirement: Members Page Header And Stat Counters
+The admin Members page SHALL render current workspace membership and invite counters while locating the invite entry point in the members table header.
+
+#### Scenario: Header and stats render current data
+
+- **GIVEN** an admin opens the Members page
+- **WHEN** the page renders
+- **THEN** the stat row shows Active Members, Pending Invites, and PMs Assigned counts from loaded member and invite data
+- **AND** the page reuses the shared stats header and stat card patterns instead of app-local copies
+- **AND** the page does not render a separate stats-header text `Invite Member` action.
+
+### Requirement: Members Table Discovery Filters
+The Members page MUST render report-style table discovery controls that filter loaded member rows locally without changing backend scope.
+
+#### Scenario: Members table exposes search, invite action, and column filters
+
+- **WHEN** workspace member, invite, and project membership data have loaded
+- **THEN** the table card header exposes a global search control with placeholder `Search members`
+- **AND** the table card header exposes a primary icon-only `Invite member` action next to the search control with explicit tooltip and accessible label copy `Invite member`
+- **AND** the desktop table renders a filter row directly below the column header with controls for member name/email, role, assigned projects, and last active
+- **AND** no row-actions column or row-action filter control is rendered
+- **AND** the mobile card list renders equivalent search and filter controls above the cards.
+
+#### Scenario: Members project filters require loaded project membership data
+
+- **GIVEN** workspace member data has loaded
+- **AND** project membership data is still loading
+- **WHEN** the Members page is still completing its initial load
+- **THEN** the page keeps the initial loading surface instead of rendering the Members table with empty assigned-project filter options
+- **AND** if project membership data fails during initial load, the page renders the retryable Members request-error surface
+- **AND** the table does not imply that loaded members have no assigned projects only because project data is unavailable.
+
+#### Scenario: Members filters narrow loaded rows locally
+
+- **WHEN** the user enters global search text or selects role, assigned-project, or last-active filters
+- **THEN** visible member rows and mobile cards are limited to loaded members matching all active filters
+- **AND** global search matches member display name, email, formatted role, assigned project labels or counts, and formatted last-active text
+- **AND** assigned project labels come from the loaded project membership data used by the Members page
+- **AND** last-active filter options are `Any activity`, `Active today`, `Active this week`, and `No activity`
+- **AND** `Active today` uses the current browser-local calendar day
+- **AND** `Active this week` includes valid `lastActiveAt` values from browser-local Monday `00:00` through the current time
+- **AND** `No activity` includes members with missing or invalid `lastActiveAt`
+- **AND** clearing active filters restores all loaded members allowed by the page's role scope
+- **AND** no member-list API request is required solely for table filtering.
+
+#### Scenario: Members filtering preserves management entry points
+
+- **WHEN** a filtered member row is visible
+- **THEN** the member-name edit entry point keeps its accessibility label, inline expansion behavior, confirmation behavior, and refresh events
+- **AND** if an expanded row becomes excluded by filters, the expanded state does not remain visible for a hidden row.

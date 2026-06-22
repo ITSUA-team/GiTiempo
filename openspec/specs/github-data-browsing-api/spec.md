@@ -145,4 +145,3 @@ The system SHALL keep GitHub browsing separate from local GiTiempo project, task
 - **THEN** the system MUST NOT create local projects
 - **AND** the system MUST NOT create local tasks
 - **AND** the system MUST NOT start, stop, or update timers
-

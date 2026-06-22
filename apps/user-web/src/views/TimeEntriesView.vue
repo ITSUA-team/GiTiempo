@@ -1,30 +1,44 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
-import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
-import Select from "primevue/select";
-import type { TimeEntryResponse } from "@gitiempo/shared";
+import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
+  EntryActionButton,
+  getErrorMessage,
+  RequestStateCard,
   SurfaceCard,
+  filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
-import { computed, onBeforeUnmount, onMounted } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
+import { PlusIcon } from "@heroicons/vue/24/outline";
 
-import PageHeader from "@/components/layout/PageHeader.vue";
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
-import type { TaskLookupValue } from "@/composables/time-entries/time-entry-task-lookup";
+import {
+  toEntryTaskOption,
+  type TaskLookupOption,
+  type TaskLookupValue,
+} from "@/composables/time-entries/time-entry-task-lookup";
+import {
+  useCurrentTimerQuery,
+  useStartTimerMutation,
+  useStopTimerMutation,
+} from "@/composables/query";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
+import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { timerKeys } from "@/lib/query-keys";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
 
@@ -34,6 +48,8 @@ const confirm = useConfirm();
 const toast = useToast();
 const appConfirm = createAppConfirm(confirm);
 const appToast = createAppToast(toast);
+const topBarTimerDialogController = useTopBarTimerDialogController();
+const queryClient = useQueryClient();
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
@@ -66,6 +82,21 @@ const data = useTimeEntriesData({
   setIntervalFn: setInterval,
 });
 const taskOptions = useTimeEntryTaskOptions({ client });
+const currentTimerGuardQuery = useCurrentTimerQuery({
+  accessToken,
+  client,
+  scope,
+});
+const startTimerMutation = useStartTimerMutation({
+  accessToken,
+  client,
+  scope,
+});
+const stopTimerMutation = useStopTimerMutation({
+  accessToken,
+  client,
+  scope,
+});
 const mutations = useTimeEntryMutations({
   accessToken,
   client,
@@ -99,8 +130,6 @@ const {
 const {
   currentPage,
   filterTaskSuggestions,
-  filterTasksErrorMessage,
-  isLoadingFilterTasks,
   pageSize,
   selectedDateRange,
   selectedProjectId,
@@ -119,9 +148,49 @@ const {
   visibleProjects,
 } = data;
 const { isDeletingEntry, isSavingDialog } = mutations;
+const isDeletingDialogEntry = computed(() => {
+  const entry = dialog.editingEntry.value;
 
-async function loadFilterProjectTasks(projectId: string) {
-  return taskOptions.loadTargetProjectTaskOptions(projectId, filters);
+  return !!entry && isDeletingEntry.value === entry.id;
+});
+const filterAutoCompleteOverlayClass = "max-w-[calc(100vw-2rem)]";
+const filterAutoCompletePt = {
+  listContainer: { class: "max-w-full overflow-x-hidden" },
+  option: { class: "max-w-full min-w-0 truncate" },
+  overlay: { class: "max-w-[calc(100vw-2rem)] overflow-hidden" },
+  pcInputText: { root: { class: "truncate" } },
+  root: { class: "max-w-full min-w-0" },
+} as const;
+const projectFilterSuggestions = ref<ProjectResponse[]>([]);
+const startingTimerEntryId = shallowRef<string | null>(null);
+const stoppingTimerEntryId = shallowRef<string | null>(null);
+const isDirectStartBlockedByCurrentTimer = computed(() =>
+  currentTimerGuardQuery.isFetching.value ||
+  currentTimerGuardQuery.data.value?.timeEntry?.endedAt === null,
+);
+const selectedProjectFilterOption = computed(
+  () =>
+    visibleProjects.value.find((project) => project.id === selectedProjectId.value) ??
+    null,
+);
+const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
+  const optionsByTaskId = new Map<string, TaskLookupOption>();
+
+  for (const entry of entries.value) {
+    if (!optionsByTaskId.has(entry.task.id)) {
+      optionsByTaskId.set(entry.task.id, toEntryTaskOption(entry));
+    }
+  }
+
+  return [...optionsByTaskId.values()];
+});
+
+function handleProjectFilterComplete(event: { query: string }): void {
+  projectFilterSuggestions.value = filterAutocompleteOptions(
+    visibleProjects.value,
+    event.query,
+    (project) => project.name,
+  );
 }
 
 async function loadDialogProjectTasks(projectId: string) {
@@ -142,19 +211,21 @@ async function setDateRange(range: Date[] | null): Promise<void> {
 
 async function setSelectedProjectId(projectId: string | null): Promise<void> {
   filters.setProjectId(projectId);
+  await applyFilters();
+}
 
-  if (!projectId) {
-    await applyFilters();
+async function setSelectedProjectFilterValue(
+  value: ProjectResponse | string | null,
+): Promise<void> {
+  if (typeof value === "string") {
+    if (value.trim().length === 0) {
+      await setSelectedProjectId(null);
+    }
+
     return;
   }
 
-  try {
-    await loadFilterProjectTasks(projectId);
-  } catch {
-    // Filter task request error remains visible in the filter helper copy.
-  }
-
-  await applyFilters();
+  await setSelectedProjectId(value?.id ?? null);
 }
 
 async function setSelectedTaskFilter(value: TaskLookupValue): Promise<void> {
@@ -163,11 +234,7 @@ async function setSelectedTaskFilter(value: TaskLookupValue): Promise<void> {
 }
 
 function handleFilterTaskSearch(query: string): void {
-  const source = filters.selectedProjectId.value
-    ? filters.filterTaskOptions.value
-    : taskOptions.cachedTaskOptions.value;
-
-  filters.updateTaskSuggestions(query, source);
+  filters.updateTaskSuggestions(query, filteredEntryTaskOptions.value);
 }
 
 async function setPage(page: number): Promise<void> {
@@ -249,13 +316,119 @@ async function saveDialog(): Promise<void> {
   dialog.closeDialog();
 }
 
-function requestDeleteEntry(entry: TimeEntryResponse): void {
+function requestDeleteEntry(
+  entry: TimeEntryResponse,
+  options: { closeDialogOnSuccess?: boolean } = {},
+): void {
   appConfirm.confirmDestructive({
-    accept: async () => mutations.deleteEntry(entry),
+    accept: async () => {
+      const wasDeleted = await mutations.deleteEntry(entry);
+
+      if (
+        wasDeleted &&
+        options.closeDialogOnSuccess === true &&
+        dialog.editingEntry.value?.id === entry.id
+      ) {
+        dialog.closeDialog();
+      }
+    },
     acceptLabel: "Delete",
     header: "Delete entry?",
     message: "This time entry will be permanently deleted.",
   });
+}
+
+function requestDeleteDialogEntry(): void {
+  const entry = dialog.editingEntry.value;
+
+  if (!entry || dialog.dialogMode.value !== "edit") {
+    return;
+  }
+
+  requestDeleteEntry(entry, { closeDialogOnSuccess: true });
+}
+
+function openActiveTimerDialog(): void {
+  topBarTimerDialogController.requestOpen();
+}
+
+async function startTimerForEntry(entry: TimeEntryResponse): Promise<void> {
+  if (
+    entry.endedAt === null ||
+    startingTimerEntryId.value !== null ||
+    isDirectStartBlockedByCurrentTimer.value
+  ) {
+    return;
+  }
+
+  startingTimerEntryId.value = entry.id;
+
+  try {
+    await startTimerMutation.mutateAsync({ taskId: entry.taskId });
+    appToast.showSuccessToast(
+      "Timer started",
+      `Tracking ${entry.task.title}.`,
+    );
+  } catch (error) {
+    appToast.showErrorToast({
+      detail: getErrorMessage(error),
+      error,
+      logContext: { action: "start-timer-from-entry", feature: "time-entries" },
+      summary: "Could not start timer",
+    });
+
+    await queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) });
+  } finally {
+    startingTimerEntryId.value = null;
+  }
+}
+
+async function refreshTimerAndEntries(): Promise<void> {
+  await Promise.allSettled([
+    queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) }),
+    data.loadEntries(),
+  ]);
+}
+
+async function stopTimerForEntry(entry: TimeEntryResponse): Promise<void> {
+  if (entry.endedAt !== null || stoppingTimerEntryId.value !== null) {
+    return;
+  }
+
+  stoppingTimerEntryId.value = entry.id;
+
+  try {
+    const currentTimerResult = await currentTimerGuardQuery.refetch({
+      throwOnError: true,
+    });
+    const currentTimer = currentTimerResult.data?.timeEntry ?? null;
+
+    if (currentTimer?.id !== entry.id) {
+      await refreshTimerAndEntries();
+      appToast.showInfoToast(
+        "Timer status refreshed",
+        "The running timer changed. Please try again.",
+      );
+      return;
+    }
+
+    await stopTimerMutation.mutateAsync();
+    appToast.showSuccessToast(
+      "Timer stopped",
+      `Stopped tracking ${entry.task.title}.`,
+    );
+  } catch (error) {
+    appToast.showErrorToast({
+      detail: getErrorMessage(error),
+      error,
+      logContext: { action: "stop-timer-from-entry", feature: "time-entries" },
+      summary: "Could not stop timer",
+    });
+
+    await queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) });
+  } finally {
+    stoppingTimerEntryId.value = null;
+  }
 }
 
 async function retryLoadEntries(): Promise<void> {
@@ -273,19 +446,6 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <PageHeader
-      subtitle="Review tracked time, add manual entries, and edit entries in a shared dialog."
-      title="Time Entries"
-    >
-      <template #actions>
-        <Button
-          data-testid="time-entries-header-create"
-          label="+ New time entry"
-          @click="void openCreateDialog()"
-        />
-      </template>
-    </PageHeader>
-
     <SurfaceCard
       body-class="flex flex-col gap-3"
       padding-class="p-4"
@@ -299,11 +459,13 @@ onBeforeUnmount(() => {
             Date range
           </label>
           <DatePicker
+            date-format="M d, yy"
             input-id="time-entries-date-range"
             :manual-input="false"
             :model-value="selectedDateRange"
             selection-mode="range"
             fluid
+            show-icon
             @update:model-value="(value) => void setDateRange(value as Date[] | null)"
           />
         </div>
@@ -315,19 +477,25 @@ onBeforeUnmount(() => {
           >
             Project
           </label>
-          <Select
+          <AutoComplete
             input-id="time-entries-project-filter"
             option-label="name"
-            option-value="id"
             placeholder="All projects"
+            :suggestions="projectFilterSuggestions"
+            complete-on-focus
             :disabled="isLoadingProjects"
+            dropdown
+            dropdown-mode="blank"
+            force-selection
             :loading="isLoadingProjects"
-            :model-value="selectedProjectId"
-            :options="visibleProjects"
+            :min-length="0"
+            :model-value="selectedProjectFilterOption"
+            :overlay-class="filterAutoCompleteOverlayClass"
+            :pt="filterAutoCompletePt"
             fluid
-            filter
             show-clear
-            @update:model-value="(value) => void setSelectedProjectId(value ?? null)"
+            @complete="handleProjectFilterComplete"
+            @update:model-value="(value) => void setSelectedProjectFilterValue((value ?? null) as ProjectResponse | string | null)"
           />
         </div>
 
@@ -342,22 +510,26 @@ onBeforeUnmount(() => {
             input-id="time-entries-task-filter"
             option-label="title"
             placeholder="Search tasks"
-            :loading="isLoadingFilterTasks"
             :model-value="selectedTaskFilter"
             :suggestions="filterTaskSuggestions"
+            complete-on-focus
             dropdown
+            dropdown-mode="blank"
             fluid
-            @complete="handleFilterTaskSearch($event.query)"
+            :min-length="0"
+            :overlay-class="filterAutoCompleteOverlayClass"
+            :pt="filterAutoCompletePt"
+            @complete="(event) => void handleFilterTaskSearch(event.query)"
             @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
           />
         </div>
       </div>
 
       <p
-        v-if="projectsErrorMessage || filterTasksErrorMessage"
+        v-if="projectsErrorMessage"
         class="text-destructive text-xs"
       >
-        {{ projectsErrorMessage ?? filterTasksErrorMessage }}
+        {{ projectsErrorMessage }}
       </p>
     </SurfaceCard>
 
@@ -374,45 +546,29 @@ onBeforeUnmount(() => {
       </p>
     </SurfaceCard>
 
-    <SurfaceCard
+    <RequestStateCard
       v-else-if="pageState === 'request-error'"
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
       data-testid="time-entries-request-error"
-    >
-      <div class="flex flex-col gap-1">
-        <h2 class="text-text-dark text-lg font-semibold">
-          Could not load time entries
-        </h2>
-        <p class="text-text-muted text-sm">
-          {{ requestErrorMessage }}
-        </p>
-      </div>
-      <Button
-        label="Retry"
-        severity="secondary"
-        variant="outlined"
-        @click="void retryLoadEntries()"
-      />
-    </SurfaceCard>
+      :description="requestErrorMessage"
+      retry-label="Retry"
+      title="Could not load time entries"
+      @retry="void retryLoadEntries()"
+    />
 
-    <SurfaceCard
+    <RequestStateCard
       v-else-if="pageState === 'empty'"
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3 text-center"
       data-testid="time-entries-empty-state"
+      description="Add a new time entry or adjust the current filters."
+      title="No time entries match these filters"
     >
-      <div class="flex flex-col gap-1">
-        <h2 class="text-text-dark text-lg font-semibold">
-          No time entries match these filters
-        </h2>
-        <p class="text-text-muted text-sm">
-          Add a new time entry or adjust the current filters.
-        </p>
-      </div>
-      <Button
-        label="+ New time entry"
-        @click="void openCreateDialog()"
-      />
-    </SurfaceCard>
+      <template #actions>
+        <EntryActionButton
+          :icon="PlusIcon"
+          label="New time entry"
+          @click="void openCreateDialog()"
+        />
+      </template>
+    </RequestStateCard>
 
     <div
       v-else
@@ -425,11 +581,15 @@ onBeforeUnmount(() => {
         :format-duration="formatDuration"
         :format-time-range="formatTimeRange"
         :group="group"
-        :is-deleting-entry="isDeletingEntry"
+        :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
         :show-header="groupIndex === 0"
+        :starting-timer-entry-id="startingTimerEntryId"
+        :stopping-timer-entry-id="stoppingTimerEntryId"
         @create-for-day="(day) => void openCreateDialog(day)"
-        @delete-entry="requestDeleteEntry"
         @edit-entry="(entry) => void openEditDialog(entry)"
+        @open-active-timer="openActiveTimerDialog"
+        @start-timer="(entry) => void startTimerForEntry(entry)"
+        @stop-timer="(entry) => void stopTimerForEntry(entry)"
       />
 
       <SurfaceCard
@@ -456,6 +616,7 @@ onBeforeUnmount(() => {
       :dialog-error-message="dialogRequestErrorMessage"
       :ended-at="dialogEndedAt"
       :errors="dialogErrors"
+      :is-deleting="isDeletingDialogEntry"
       :is-loading-projects="isLoadingProjects"
       :is-loading-tasks="isLoadingDialogTasks"
       :is-open="isDialogOpen"
@@ -474,6 +635,7 @@ onBeforeUnmount(() => {
       :value-description="dialogDescription"
       :value-is-billable="dialogIsBillable"
       @close="closeDialog"
+      @delete-entry="requestDeleteDialogEntry"
       @save="void saveDialog()"
       @task-search="handleDialogTaskSearch"
       @update:description="setDialogDescription"

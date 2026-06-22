@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
-import Button from "primevue/button";
+import { PlusIcon } from "@heroicons/vue/24/outline";
 import Column from "primevue/column";
 
 import type { TimeEntryResponse } from "@gitiempo/shared";
 import {
-  ManagementTableRowAction,
+  EntryActionButton,
   ManagementTableShell,
   MobileRecordCard,
   managementTableColumnPt,
@@ -14,6 +13,9 @@ import {
 } from "@gitiempo/web-shared";
 
 import type { TimeEntriesDayGroup } from "@/lib/time-entry-display";
+import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
+import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
+import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 
 const props = defineProps<{
   // eslint-disable-next-line no-unused-vars
@@ -21,32 +23,91 @@ const props = defineProps<{
   // eslint-disable-next-line no-unused-vars
   formatTimeRange: (entry: TimeEntryResponse) => string;
   group: TimeEntriesDayGroup;
-  isDeletingEntry: string | null;
+  isStartTimerDisabled?: boolean;
   showHeader: boolean;
+  startingTimerEntryId?: string | null;
+  stoppingTimerEntryId?: string | null;
 }>();
 
 const emit = defineEmits<{
   createForDay: [day: string];
-  deleteEntry: [entry: TimeEntryResponse];
   editEntry: [entry: TimeEntryResponse];
+  openActiveTimer: [];
+  startTimer: [entry: TimeEntryResponse];
+  stopTimer: [entry: TimeEntryResponse];
 }>();
 const isMobileViewport = useIsMobileViewport();
 
 const projectColumnWidth = '12rem';
 const timeColumnWidth = '10rem';
 const durationColumnWidth = '7rem';
-const actionsColumnWidth = '7rem';
 
 const columns = [
   { key: 'task', label: 'Task', width: 'fill' },
   { key: 'project', label: 'Project', width: 192 },
   { key: 'time', label: 'Time', width: 160 },
   { key: 'duration', label: 'Duration', width: 112 },
-  { key: 'actions', label: 'Actions', width: 112, align: 'end' },
 ] satisfies ManagementTableColumn[];
 
 function getEntryRowClass(entry: TimeEntryResponse): string {
   return entry.endedAt === null ? "bg-accent-tint" : "bg-surface-primary hover:bg-app-bg";
+}
+
+function getEntryTaskOpenLabel(entry: TimeEntryResponse): string {
+  return entry.endedAt === null
+    ? `Update active timer for ${entry.task.title}`
+    : `Edit time entry for ${entry.task.title}`;
+}
+
+function getEntryTaskTestId(
+  entry: TimeEntryResponse,
+  prefix: "time-entry" | "time-entry-mobile",
+): string {
+  return entry.endedAt === null
+    ? `${prefix}-open-timer-${entry.id}`
+    : `${prefix}-edit-${entry.id}`;
+}
+
+function isStartTimerPending(entry: TimeEntryResponse): boolean {
+  return props.startingTimerEntryId === entry.id;
+}
+
+function isStopTimerPending(entry: TimeEntryResponse): boolean {
+  return props.stoppingTimerEntryId === entry.id;
+}
+
+function isDirectStartDisabled(): boolean {
+  return props.isStartTimerDisabled === true ||
+    (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined);
+}
+
+function isStopTimerDisabled(): boolean {
+  return props.stoppingTimerEntryId !== null && props.stoppingTimerEntryId !== undefined;
+}
+
+function handleStopTimer(entry: TimeEntryResponse): void {
+  if (entry.endedAt !== null || isStopTimerDisabled()) {
+    return;
+  }
+
+  emit("stopTimer", entry);
+}
+
+function handleEntryTaskOpen(entry: TimeEntryResponse): void {
+  if (entry.endedAt === null) {
+    emit("openActiveTimer");
+    return;
+  }
+
+  emit("editEntry", entry);
+}
+
+function handleStartTimer(entry: TimeEntryResponse): void {
+  if (entry.endedAt === null || isDirectStartDisabled()) {
+    return;
+  }
+
+  emit("startTimer", entry);
 }
 </script>
 
@@ -56,11 +117,10 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
       <h2 class="text-text-dark text-base font-semibold">
         {{ props.group.heading }}
       </h2>
-      <Button
+      <EntryActionButton
         :data-testid="`time-entries-day-create-${props.group.dateKey}`"
-        label="+ New time entry"
-        severity="secondary"
-        variant="outlined"
+        :icon="PlusIcon"
+        label="New time entry"
         @click="emit('createForDay', props.group.dateKey)"
       />
     </div>
@@ -75,16 +135,47 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
         data-testid="time-entry-mobile-card"
         :tone="entry.endedAt === null ? 'highlighted' : 'default'"
       >
-        <div class="flex min-w-0 flex-col gap-1">
-          <p class="text-text-dark truncate text-sm font-medium">
-            {{ entry.task.title }}
-          </p>
-          <p
-            v-if="entry.description"
-            class="text-text-muted truncate text-xs"
-          >
-            {{ entry.description }}
-          </p>
+        <div class="flex min-w-0 items-start gap-3">
+          <TimeEntryTimerAction
+            v-if="entry.endedAt !== null"
+            action="start"
+            :disabled="isDirectStartDisabled()"
+            :entry="entry"
+            :is-loading="isStartTimerPending(entry)"
+            test-id-prefix="time-entry-mobile"
+            @trigger="handleStartTimer"
+          />
+          <TimeEntryTimerAction
+            v-else
+            action="stop"
+            :disabled="isStopTimerDisabled()"
+            :entry="entry"
+            :is-loading="isStopTimerPending(entry)"
+            test-id-prefix="time-entry-mobile"
+            @trigger="handleStopTimer"
+          />
+
+          <div class="flex min-w-0 flex-col gap-1">
+            <div class="flex max-w-full min-w-0 items-center gap-1">
+              <TaskNameLink
+                :label="entry.task.title"
+                :open-label="getEntryTaskOpenLabel(entry)"
+                :test-id="getEntryTaskTestId(entry, 'time-entry-mobile')"
+                @open="handleEntryTaskOpen(entry)"
+              />
+              <TaskGitHubIssueLink
+                v-if="entry.githubIssue"
+                :issue="entry.githubIssue"
+                :test-id="`time-entry-mobile-github-${entry.id}`"
+              />
+            </div>
+            <p
+              v-if="entry.description"
+              class="text-text-muted truncate text-xs"
+            >
+              {{ entry.description }}
+            </p>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -109,33 +200,6 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
             </span>
           </div>
         </div>
-
-        <p
-          v-if="entry.endedAt === null"
-          class="text-text-muted text-xs"
-        >
-          Stop from the top bar
-        </p>
-
-        <template
-          v-if="entry.endedAt !== null"
-          #actions
-        >
-          <ManagementTableRowAction
-            :data-testid="`time-entry-mobile-edit-${entry.id}`"
-            :icon="PencilSquareIcon"
-            label="Edit"
-            @click="emit('editEntry', entry)"
-          />
-          <ManagementTableRowAction
-            :data-testid="`time-entry-mobile-delete-${entry.id}`"
-            :icon="TrashIcon"
-            label="Delete"
-            :loading="props.isDeletingEntry === entry.id"
-            tone="destructive"
-            @click="emit('deleteEntry', entry)"
-          />
-        </template>
       </MobileRecordCard>
     </div>
 
@@ -155,16 +219,47 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
     >
       <Column :pt="managementTableColumnPt">
         <template #body="{ data: entry }">
-          <div class="flex min-w-0 flex-col">
-            <p class="text-text-dark truncate text-sm font-medium">
-              {{ entry.task.title }}
-            </p>
-            <p
-              v-if="entry.description"
-              class="text-text-muted truncate text-xs"
-            >
-              {{ entry.description }}
-            </p>
+          <div class="flex min-w-0 items-center gap-2">
+            <TimeEntryTimerAction
+              v-if="entry.endedAt !== null"
+              action="start"
+              :disabled="isDirectStartDisabled()"
+              :entry="entry"
+              :is-loading="isStartTimerPending(entry)"
+              test-id-prefix="time-entry"
+              @trigger="handleStartTimer"
+            />
+            <TimeEntryTimerAction
+              v-else
+              action="stop"
+              :disabled="isStopTimerDisabled()"
+              :entry="entry"
+              :is-loading="isStopTimerPending(entry)"
+              test-id-prefix="time-entry"
+              @trigger="handleStopTimer"
+            />
+
+            <div class="flex min-w-0 flex-col">
+              <div class="flex max-w-full min-w-0 items-center gap-1">
+                <TaskNameLink
+                  :label="entry.task.title"
+                  :open-label="getEntryTaskOpenLabel(entry)"
+                  :test-id="getEntryTaskTestId(entry, 'time-entry')"
+                  @open="handleEntryTaskOpen(entry)"
+                />
+                <TaskGitHubIssueLink
+                  v-if="entry.githubIssue"
+                  :issue="entry.githubIssue"
+                  :test-id="`time-entry-github-${entry.id}`"
+                />
+              </div>
+              <p
+                v-if="entry.description"
+                class="text-text-muted truncate text-xs"
+              >
+                {{ entry.description }}
+              </p>
+            </div>
           </div>
         </template>
       </Column>
@@ -199,38 +294,6 @@ function getEntryRowClass(entry: TimeEntryResponse): string {
           <p class="text-text-dark text-sm font-medium tabular-nums">
             {{ props.formatDuration(entry) }}
           </p>
-        </template>
-      </Column>
-
-      <Column
-        :pt="managementTableColumnPt"
-        :style="{ width: actionsColumnWidth }"
-      >
-        <template #body="{ data: entry }">
-          <div class="flex items-center justify-end gap-2">
-            <p
-              v-if="entry.endedAt === null"
-              class="text-text-muted text-xs"
-            >
-              Stop from the top bar
-            </p>
-            <template v-else>
-              <ManagementTableRowAction
-                :data-testid="`time-entry-edit-${entry.id}`"
-                :icon="PencilSquareIcon"
-                label="Edit"
-                @click="emit('editEntry', entry)"
-              />
-              <ManagementTableRowAction
-                :data-testid="`time-entry-delete-${entry.id}`"
-                :icon="TrashIcon"
-                label="Delete"
-                :loading="props.isDeletingEntry === entry.id"
-                tone="destructive"
-                @click="emit('deleteEntry', entry)"
-              />
-            </template>
-          </div>
         </template>
       </Column>
     </ManagementTableShell>

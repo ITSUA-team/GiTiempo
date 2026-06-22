@@ -76,6 +76,15 @@ export const githubOwnerScopeSchema = z.enum(["personal", "organization"]);
 
 export const githubIssueStateSchema = z.enum(["open", "closed", "all"]);
 
+export const syncedGitHubIssueSchema = z.object({
+  githubRepo: z
+    .string()
+    .min(3)
+    .max(200)
+    .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+  issueNumber: z.number().int().positive(),
+});
+
 export const githubBrowsingPaginationSchema = z.object({
   limit: z.number().int().min(1).max(100),
   hasNextPage: z.boolean(),
@@ -197,6 +206,7 @@ export type GitHubAuthUrlResponse = z.infer<typeof githubAuthUrlResponseSchema>;
 export type GitHubOwnerType = z.infer<typeof githubOwnerTypeSchema>;
 export type GitHubOwnerScope = z.infer<typeof githubOwnerScopeSchema>;
 export type GitHubIssueState = z.infer<typeof githubIssueStateSchema>;
+export type SyncedGitHubIssue = z.infer<typeof syncedGitHubIssueSchema>;
 export type GitHubBrowsingPagination = z.infer<
   typeof githubBrowsingPaginationSchema
 >;

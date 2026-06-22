@@ -98,7 +98,11 @@ export function useTopBarTaskPicker() {
   }
 
   function validateCreateTaskInput() {
-    const parsed = createTaskSchema.safeParse({ title: createTaskTitle.value.trim() });
+    const parsed = createTaskSchema.safeParse({
+      defaultBillableForTimeEntries:
+        selectedProject.value?.defaultBillableForTasks ?? true,
+      title: createTaskTitle.value.trim(),
+    });
 
     if (!parsed.success) {
       createTaskErrorMessage.value = parsed.error.issues[0]?.message ?? "Task title is invalid.";
@@ -115,6 +119,7 @@ export function useTopBarTaskPicker() {
     }
 
     return {
+      githubIssue: selectedTask.value.githubIssue,
       projectId: selectedProject.value.id,
       projectName: selectedProject.value.name,
       taskId: selectedTask.value.id,

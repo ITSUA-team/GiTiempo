@@ -1,6 +1,5 @@
 import type { TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
-import { computed } from "vue";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -28,12 +27,6 @@ export function useTimeEntryTaskOptions({
   client,
 }: UseTimeEntryTaskOptionsOptions) {
   const taskCache = new Map<string, TaskResponse[]>();
-  const cachedTaskOptions = computed(() =>
-    Array.from(taskCache.values())
-      .flat()
-      .filter((task) => task.isActive)
-      .map(toTaskLookupOption),
-  );
 
   async function loadProjectTaskOptions(
     projectId: string,
@@ -87,7 +80,6 @@ export function useTimeEntryTaskOptions({
   }
 
   return {
-    cachedTaskOptions,
     loadProjectTaskOptions,
     loadTargetProjectTaskOptions,
   };

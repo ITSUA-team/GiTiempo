@@ -12,6 +12,7 @@ import { defineComponent, h } from 'vue';
 
 import { useTopBarTimer } from './useTopBarTimer';
 import { timeEntriesKeys } from '@/lib/query-keys';
+import { TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 import {
@@ -40,10 +41,12 @@ function createProject(
   id: string,
   name: string,
   isActive = true,
+  defaultBillableForTasks = true,
 ): ProjectResponse {
   return {
     color: null,
     createdAt: '2026-04-20T12:00:00.000Z',
+    defaultBillableForTasks,
     description: null,
     id,
     isActive,
@@ -63,9 +66,12 @@ function createTask(
   title: string,
   isActive = true,
   status: TaskResponse['status'] = 'open',
+  defaultBillableForTimeEntries = true,
 ): TaskResponse {
   return {
     createdAt: '2026-04-20T12:00:00.000Z',
+    defaultBillableForTimeEntries,
+    githubIssue: null,
     id,
     isActive,
     projectId,
@@ -140,6 +146,9 @@ function createOwnEntriesResponse(
 }
 
 function createClientMock(): TimeEntriesClient & {
+  backfillTaskBillableDefault: ReturnType<
+    typeof vi.fn<TimeEntriesClient['backfillTaskBillableDefault']>
+  >;
   createManualEntry: ReturnType<
     typeof vi.fn<TimeEntriesClient['createManualEntry']>
   >;
@@ -150,6 +159,9 @@ function createClientMock(): TimeEntriesClient & {
     typeof vi.fn<TimeEntriesClient['getCurrentTimer']>
   >;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient['listOwnEntries']>>;
+  listProjectTimeEntries: ReturnType<
+    typeof vi.fn<TimeEntriesClient['listProjectTimeEntries']>
+  >;
   listProjectTasks: ReturnType<
     typeof vi.fn<TimeEntriesClient['listProjectTasks']>
   >;
@@ -162,14 +174,25 @@ function createClientMock(): TimeEntriesClient & {
   updateTask: ReturnType<typeof vi.fn<TimeEntriesClient['updateTask']>>;
 } {
   return {
+    backfillTaskBillableDefault: vi.fn(async () => ({
+      timeEntriesUpdated: 0,
+    })),
     createManualEntry: vi.fn(async () => createCompletedEntry()),
     createTask: vi.fn(async (projectId, input) =>
-      createTask(TEST_IDS.taskNew, projectId, input.title),
+      createTask(
+        TEST_IDS.taskNew,
+        projectId,
+        input.title,
+        true,
+        'open',
+        input.defaultBillableForTimeEntries ?? true,
+      ),
     ),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
+    listProjectTimeEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTasks: vi.fn(async () => []),
     listVisibleProjects: vi.fn(async () => []),
     startTimer: vi.fn(async () => createRunningEntry()),
@@ -246,7 +269,12 @@ describe('useTopBarTimer', () => {
     const client = createClientMock();
 
     client.getCurrentTimer.mockResolvedValueOnce({
-      timeEntry: createRunningEntry(),
+      timeEntry: createRunningEntry({
+        githubIssue: {
+          githubRepo: 'octo/repo',
+          issueNumber: 184,
+        },
+      }),
     });
 
     const mounted = mountTopBarTimer({ client });
@@ -262,6 +290,10 @@ describe('useTopBarTimer', () => {
       'Improve reports filters',
     );
     expect(topBarTimer.selectedContext.value?.taskId).toBe(TEST_IDS.task);
+    expect(topBarTimer.timerGitHubIssue.value).toEqual({
+      githubRepo: 'octo/repo',
+      issueNumber: 184,
+    });
   });
 
   it('resolves the last eligible tracked task when idle', async () => {
@@ -287,6 +319,7 @@ describe('useTopBarTimer', () => {
 
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
       taskId: TEST_IDS.task,
@@ -360,7 +393,7 @@ describe('useTopBarTimer', () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject('project-1', 'Project Orion'),
+      createProject('project-1', 'Project Orion', true, false),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask('task-1', 'project-1', 'Improve reports filters'),
@@ -381,6 +414,7 @@ describe('useTopBarTimer', () => {
 
     expect(topBarTimer.isDialogOpen.value).toBe(false);
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: 'project-1',
       projectName: 'Project Orion',
       taskId: 'task-1',
@@ -393,7 +427,7 @@ describe('useTopBarTimer', () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject('project-1', 'Project Orion'),
+      createProject('project-1', 'Project Orion', true, false),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask('task-1', 'project-1', 'Improve reports filters'),
@@ -429,7 +463,7 @@ describe('useTopBarTimer', () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject('project-1', 'Project Orion'),
+      createProject('project-1', 'Project Orion', true, false),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask('task-1', 'project-1', 'Improve reports filters'),
@@ -496,6 +530,7 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: 'project-2',
       projectName: 'Project Atlas',
       taskId: 'task-2',
@@ -511,7 +546,7 @@ describe('useTopBarTimer', () => {
     const toast = { add: vi.fn() };
 
     client.listVisibleProjects.mockResolvedValue([
-      createProject('project-1', 'Project Orion'),
+      createProject('project-1', 'Project Orion', true, false),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask('task-1', 'project-1', 'Improve reports filters'),
@@ -532,6 +567,7 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(client.createTask).toHaveBeenCalledWith('project-1', {
+      defaultBillableForTimeEntries: false,
       title: 'Write release checklist',
     });
     expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
@@ -545,6 +581,83 @@ describe('useTopBarTimer', () => {
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'success', summary: 'Task created' }),
     );
+  });
+
+  it('creates an inline New task before starting from the dialog', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    topBarTimer.setCreateTaskTitle('Write release checklist');
+    await flushPromises();
+
+    expect(topBarTimer.isDialogPrimaryActionDisabled.value).toBe(false);
+
+    await topBarTimer.handleDialogPrimaryAction();
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith('project-1', {
+      defaultBillableForTimeEntries: true,
+      title: 'Write release checklist',
+    });
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+  });
+
+  it('creates an inline New task before updating a running timer task', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+
+    client.getCurrentTimer.mockResolvedValue({ timeEntry: createRunningEntry() });
+    client.listVisibleProjects.mockResolvedValue([
+      createProject(TEST_IDS.project, 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    topBarTimer.setCreateTaskTitle('Write release checklist');
+    await flushPromises();
+
+    expect(topBarTimer.isConfirmSelectionDisabled.value).toBe(false);
+
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith(TEST_IDS.project, {
+      defaultBillableForTimeEntries: true,
+      title: 'Write release checklist',
+    });
+    expect(client.updateEntry).not.toHaveBeenCalled();
+    expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
   });
 
   it('keeps create-task errors scoped to the picker', async () => {
@@ -901,6 +1014,7 @@ describe('useTopBarTimer', () => {
     await topBarTimer.confirmSelectedTask();
 
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
       taskId: TEST_IDS.task,
@@ -977,6 +1091,7 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.currentTimer.value).toBeNull();
     expect(topBarTimer.primaryActionLabel.value).toBe('Start');
     expect(topBarTimer.selectedContext.value).toEqual({
+      githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
       taskId: TEST_IDS.task,

@@ -20,7 +20,7 @@ function createMembers(): WorkspaceMemberListResponse {
       id: 'member-1',
       joinedAt: '2026-05-01T10:00:00.000Z',
       lastActiveAt: now.toISOString(),
-      projectsAssignedCount: 1,
+      projectsAssignedCount: 17,
       role: 'pm',
       userId: 'user-2',
       workspaceId: 'workspace-1',
@@ -57,6 +57,7 @@ function createProjects(): ProjectListResponse {
     {
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
+      defaultBillableForTasks: true,
       description: null,
       id: 'project-1',
       isActive: true,
@@ -86,6 +87,7 @@ function createProjects(): ProjectListResponse {
     {
       color: null,
       createdAt: '2026-05-01T10:00:00.000Z',
+      defaultBillableForTasks: true,
       description: null,
       id: 'project-2',
       isActive: true,
@@ -101,6 +103,29 @@ function createProjects(): ProjectListResponse {
       name: 'Billing API',
       source: 'manual',
       totalSeconds: 28800,
+      updatedAt: '2026-05-01T10:00:00.000Z',
+      visibility: 'private',
+      workspaceId: 'workspace-1',
+    },
+    {
+      color: null,
+      createdAt: '2026-05-01T10:00:00.000Z',
+      defaultBillableForTasks: true,
+      description: null,
+      id: 'project-3',
+      isActive: false,
+      members: [
+        {
+          avatarUrl: null,
+          displayName: 'Pat PM',
+          email: 'pat@example.com',
+          role: 'pm',
+          userId: 'user-2',
+        },
+      ],
+      name: 'Legacy Migration',
+      source: 'manual',
+      totalSeconds: 7200,
       updatedAt: '2026-05-01T10:00:00.000Z',
       visibility: 'private',
       workspaceId: 'workspace-1',
@@ -146,6 +171,7 @@ describe('useMembersTableState', () => {
     });
     expect(state.projectFilterOptions.value).toEqual([
       { label: 'Billing API', value: 'project-2' },
+      { label: 'Legacy Migration', value: 'project-3' },
       { label: 'Project Orion', value: 'project-1' },
     ]);
     expect(state.emptyDescription.value).toBe('No members match the current filters.');
@@ -217,35 +243,32 @@ describe('useMembersTableState', () => {
     const { state } = createState();
     const member = state.rows.value[0]!.member;
 
-    state.toggleExpansion(member, 'assign');
+    state.toggleExpansion(member);
     expect(state.expandedRows.value).toEqual({ 'member-1': true });
-    expect(state.expansionMode.value).toEqual({ 'member-1': 'assign' });
 
-    state.toggleExpansion(member, 'edit');
-    expect(state.expandedRows.value).toEqual({ 'member-1': true });
-    expect(state.expansionMode.value).toEqual({ 'member-1': 'edit' });
+    state.toggleExpansion(member);
+    expect(state.expandedRows.value).toEqual({});
+
+    state.toggleExpansion(member);
 
     state.updateFilters({ memberQuery: 'nina' });
     await nextTick();
 
     expect(state.expandedRows.value).toEqual({});
-    expect(state.expansionMode.value).toEqual({});
   });
 
-  it('collapses rows and drops expansion mode after parent expanded-row updates', () => {
+  it('collapses rows after parent expanded-row updates', () => {
     const { state } = createState();
     const member = state.rows.value[0]!.member;
 
-    state.toggleExpansion(member, 'assign');
+    state.toggleExpansion(member);
     state.setExpandedRows({});
 
     expect(state.expandedRows.value).toEqual({});
-    expect(state.expansionMode.value).toEqual({});
 
-    state.toggleExpansion(member, 'assign');
+    state.toggleExpansion(member);
     state.collapseRow(member);
 
     expect(state.expandedRows.value).toEqual({});
-    expect(state.expansionMode.value).toEqual({});
   });
 });

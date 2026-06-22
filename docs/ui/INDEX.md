@@ -40,6 +40,7 @@ Read this file first. Load only the linked section files needed for the task.
 | App Background | `bg-app-bg` | `#F4F4F5` | Main app canvas |
 | Text Dark | `text-text-dark` | `#1A1A1A` | Headings, primary body text |
 | Text Muted | `text-text-muted` | `#666666` | Secondary metadata |
+| Text Subtle | `text-text-subtle` | `#999999` | Low-emphasis separators and tertiary chrome |
 | Text Inverse | `text-text-inverse` / `text-text-inverse-muted` | `#FFFFFF` / `rgba(255,255,255,0.7)` | Text on brand/destructive/dark surfaces |
 | Divider | `border-divider` | `#EEEEEE` | Borders and separators |
 | Destructive | `text-destructive`, `border-destructive` | `#D32F2F` | Delete and disconnect actions |
@@ -69,7 +70,7 @@ Read this file first. Load only the linked section files needed for the task.
 - `components.md`: Design tokens, component conventions, shared component-level rules.
 - `layout.md`: App shell, sidebar navigation, breakpoints, top-bar breadcrumb pattern.
 - `pages-user.md`: Dashboard, timer, time entries, projects, profile.
-- `pages-admin.md`: Dashboard, reports, invoices, members, projects, settings.
+- `pages-admin.md`: Dashboard, reports, deferred invoices, members, projects, settings.
 - `chrome-ext.md`: Popup dimensions, injected page control states, and extension UI constraints.
 - `patterns.md`: Dialogs, toasts, confirms, date pickers, selectors, duration format.
 - `accessibility.md`: Required accessibility rules and what PrimeVue already covers.

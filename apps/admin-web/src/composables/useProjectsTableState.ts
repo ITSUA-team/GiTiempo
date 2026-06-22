@@ -167,7 +167,7 @@ export function useProjectsTableState({ members, projects }: UseProjectsTableSta
       id: project.id,
       isActive: project.isActive,
       name: project.name,
-      nameClass: project.isActive ? 'text-text-dark' : 'text-text-muted',
+      nameClass: 'text-brand',
       project,
       sourceLabel: formatSource(project.source),
       visibility: project.visibility,

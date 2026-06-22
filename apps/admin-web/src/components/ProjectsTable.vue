@@ -1,22 +1,21 @@
 <script setup lang="ts">
-import {
-  ArchiveBoxIcon,
-  ArrowUturnLeftIcon,
-  PencilSquareIcon,
-} from '@heroicons/vue/24/outline';
+import { computed, ref } from 'vue';
+import { FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
-  ManagementTableRowAction,
+  EntryActionButton,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
+  filterAutocompleteStrings,
   managementTableColumnPt,
-  managementTableFilterInputClass,
+  managementTableFilterAutoCompletePt,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
+import AutoComplete from 'primevue/autocomplete';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -36,7 +35,11 @@ import type {
   ProjectsTableRow,
 } from '@/lib/projects-table';
 
-defineProps<{
+interface AutoCompleteCompleteEvent {
+  query: string;
+}
+
+const props = defineProps<{
   emptyDescription: string;
   expandedRows: ProjectsTableExpandedRows;
   filters: ProjectsTableFilters;
@@ -49,10 +52,22 @@ defineProps<{
   visibilityFilterOptions: ProjectsTableFilterOption<ProjectResponse['visibility']>[];
 }>();
 
+const projectQuerySuggestions = ref<string[]>([]);
+
+const projectQueryOptions = computed(() =>
+  [...new Set(props.rows.map((row) => row.name))].sort((a, b) => a.localeCompare(b)),
+);
+
+function handleProjectQueryComplete(event: AutoCompleteCompleteEvent): void {
+  projectQuerySuggestions.value = filterAutocompleteStrings(
+    projectQueryOptions.value,
+    event.query,
+  );
+}
+
 const emit = defineEmits<{
   'edit-project': [project: ProjectResponse];
-  archive: [project: ProjectResponse];
-  unarchive: [project: ProjectResponse];
+  'new-project': [];
   'update:expandedRows': [expandedRows: ProjectsTableExpandedRows | undefined];
   'update:filters': [filters: ProjectsTableFilterUpdate];
 }>();
@@ -65,12 +80,12 @@ function updateGlobalFilter(value: string | undefined): void {
   updateFilters({ global: value });
 }
 
-function updateProjectQueryFilter(value: string | undefined): void {
-  updateFilters({ projectQuery: value });
+function updateProjectQueryFilter(value: string | null | undefined): void {
+  updateFilters({ projectQuery: value ?? '' });
 }
 
-function updateMemberIdsFilter(value: string[] | undefined): void {
-  updateFilters({ memberIds: value });
+function updateMemberIdsFilter(value: string[] | null | undefined): void {
+  updateFilters({ memberIds: value ?? [] });
 }
 
 function updateSourceFilter(
@@ -99,7 +114,6 @@ const columns: ManagementTableColumn[] = [
   { key: 'members', label: 'Assigned members', width: 220 },
   { key: 'hours', label: 'Hours', width: 120 },
   { key: 'visibility', label: 'Visibility', width: 120 },
-  { key: 'actions', label: 'Actions', width: 150, align: 'end' },
 ];
 </script>
 
@@ -107,16 +121,24 @@ const columns: ManagementTableColumn[] = [
   <div class="mb-4">
     <SectionHeader title="Projects Table">
       <template #actions>
-        <IconField class="w-full sm:w-[260px]">
-          <InputIcon class="pi pi-search text-text-muted" />
-          <InputText
-            :model-value="filters.global"
-            aria-label="Search projects"
-            class="h-[38px] w-full rounded-[6px] text-[14px]"
-            placeholder="Search projects"
-            @update:model-value="updateGlobalFilter"
+        <div class="flex w-full items-center gap-3 sm:w-auto">
+          <IconField class="w-full sm:w-[260px]">
+            <InputIcon class="pi pi-search text-text-muted" />
+            <InputText
+              :model-value="filters.global"
+              aria-label="Search projects"
+              class="h-[38px] w-full rounded-[6px] text-[14px]"
+              placeholder="Search projects"
+              @update:model-value="updateGlobalFilter"
+            />
+          </IconField>
+          <EntryActionButton
+            data-testid="projects-table-new-project"
+            :icon="FolderPlusIcon"
+            label="New project"
+            @click="emit('new-project')"
           />
-        </IconField>
+        </div>
       </template>
     </SectionHeader>
   </div>
@@ -130,11 +152,17 @@ const columns: ManagementTableColumn[] = [
         for="mobile-project-name-filter"
         class="text-text-muted text-[12px] font-medium"
       >Project</label>
-      <InputText
-        id="mobile-project-name-filter"
+      <AutoComplete
+        input-id="mobile-project-name-filter"
         :model-value="filters.projectQuery"
-        class="h-[38px] w-full rounded-[6px] text-[14px]"
+        :suggestions="projectQuerySuggestions"
+        complete-on-focus
+        dropdown
+        dropdown-mode="blank"
+        :min-length="0"
         placeholder="Filter project"
+        :pt="managementTableFilterAutoCompletePt"
+        @complete="handleProjectQueryComplete"
         @update:model-value="updateProjectQueryFilter"
       />
     </div>
@@ -200,7 +228,7 @@ const columns: ManagementTableColumn[] = [
           class="text-text-muted text-[12px] font-medium"
         >Assigned members</label>
         <MultiSelect
-          id="mobile-project-members-filter"
+          input-id="mobile-project-members-filter"
           :model-value="filters.memberIds"
           :options="memberFilterOptions"
           display="chip"
@@ -209,8 +237,6 @@ const columns: ManagementTableColumn[] = [
           option-value="value"
           placeholder="All members"
           show-clear
-          :max-selected-labels="1"
-          selected-items-label="{0} members"
           :pt="managementTableFilterMultiSelectPt"
           @update:model-value="updateMemberIdsFilter"
         />
@@ -277,11 +303,17 @@ const columns: ManagementTableColumn[] = [
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <h3
-              class="truncate text-[15px] font-semibold"
-              :class="row.nameClass"
-            >
-              {{ row.name }}
+            <h3>
+              <button
+                type="button"
+                class="focus-visible:outline-brand max-w-full truncate text-left text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                :class="row.nameClass"
+                :aria-label="`Edit project ${row.name}`"
+                :data-testid="`project-mobile-name-${row.id}`"
+                @click="emit('edit-project', row.project)"
+              >
+                {{ row.name }}
+              </button>
             </h3>
             <p class="text-text-muted text-[13px]">
               {{ row.sourceLabel }}
@@ -321,32 +353,6 @@ const columns: ManagementTableColumn[] = [
           ]"
         />
 
-        <template #actions>
-          <template v-if="row.isActive">
-            <ManagementTableRowAction
-              :data-testid="`project-mobile-edit-${row.id}`"
-              :icon="PencilSquareIcon"
-              label="Edit"
-              @click="emit('edit-project', row.project)"
-            />
-            <ManagementTableRowAction
-              :data-testid="`project-mobile-archive-${row.id}`"
-              :icon="ArchiveBoxIcon"
-              label="Archive"
-              tone="destructive"
-              @click="emit('archive', row.project)"
-            />
-          </template>
-          <ManagementTableRowAction
-            v-else
-            :data-testid="`project-mobile-unarchive-${row.id}`"
-            :icon="ArrowUturnLeftIcon"
-            label="Unarchive"
-            tone="muted"
-            @click="emit('unarchive', row.project)"
-          />
-        </template>
-
         <slot
           name="row-expansion"
           :row="row"
@@ -368,21 +374,27 @@ const columns: ManagementTableColumn[] = [
     :value="rows"
     :loading="loading"
     data-key="id"
-    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[1010px] items-center border-b font-sans text-[13px] font-semibold"
+    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[860px] items-center border-b font-sans text-[13px] font-semibold"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll
-    table-class="min-w-[1010px] w-full table-fixed border-collapse"
+    table-class="min-w-[860px] w-full table-fixed border-collapse"
     table-container-class="overflow-visible rounded-none border-none"
     @update:expanded-rows="updateExpandedRows"
   >
     <template #filters>
-      <div class="flex min-w-[1010px] flex-1 items-center">
+      <div class="flex min-w-[860px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
-          <InputText
+          <AutoComplete
             :model-value="filters.projectQuery"
+            :suggestions="projectQuerySuggestions"
             aria-label="Filter projects by name"
-            :class="managementTableFilterInputClass"
+            complete-on-focus
+            dropdown
+            dropdown-mode="blank"
+            :min-length="0"
             placeholder="Filter project"
+            :pt="managementTableFilterAutoCompletePt"
+            @complete="handleProjectQueryComplete"
             @update:model-value="updateProjectQueryFilter"
           />
         </div>
@@ -412,8 +424,6 @@ const columns: ManagementTableColumn[] = [
             option-value="value"
             placeholder="All members"
             show-clear
-            :max-selected-labels="1"
-            selected-items-label="{0} members"
             :pt="managementTableFilterMultiSelectPt"
             @update:model-value="updateMemberIdsFilter"
           />
@@ -444,17 +454,21 @@ const columns: ManagementTableColumn[] = [
             @update:model-value="updateVisibilityFilter"
           />
         </div>
-
-        <div class="w-[150px] px-3" />
       </div>
     </template>
 
     <Column :pt="managementTableColumnPt">
       <template #body="{ data }">
-        <span
-          class="text-[14px] leading-none font-semibold"
+        <button
+          type="button"
+          class="focus-visible:outline-brand max-w-full truncate text-left text-[14px] leading-none font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
           :class="data.nameClass"
-        >{{ data.name }}</span>
+          :aria-label="`Edit project ${data.name}`"
+          :data-testid="`project-name-${data.id}`"
+          @click="emit('edit-project', data.project)"
+        >
+          {{ data.name }}
+        </button>
       </template>
     </Column>
 
@@ -516,40 +530,6 @@ const columns: ManagementTableColumn[] = [
             label: 'text-text-muted',
           }"
         />
-      </template>
-    </Column>
-
-    <Column
-      style="width: 150px"
-      :pt="managementTableColumnPt"
-    >
-      <template #body="{ data }">
-        <div class="flex items-center justify-end gap-2">
-          <template v-if="data.isActive">
-            <ManagementTableRowAction
-              :data-testid="`project-edit-${data.id}`"
-              :icon="PencilSquareIcon"
-              label="Edit"
-              @click="emit('edit-project', data.project)"
-            />
-            <ManagementTableRowAction
-              :data-testid="`project-archive-${data.id}`"
-              :icon="ArchiveBoxIcon"
-              label="Archive"
-              tone="destructive"
-              @click="emit('archive', data.project)"
-            />
-          </template>
-          <template v-else>
-            <ManagementTableRowAction
-              :data-testid="`project-unarchive-${data.id}`"
-              :icon="ArrowUturnLeftIcon"
-              label="Unarchive"
-              tone="muted"
-              @click="emit('unarchive', data.project)"
-            />
-          </template>
-        </div>
       </template>
     </Column>
 

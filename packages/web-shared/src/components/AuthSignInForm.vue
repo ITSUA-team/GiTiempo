@@ -73,7 +73,7 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
             Email
           </label>
           <InputText
-            input-id="sign-in-email"
+            id="sign-in-email"
             name="email"
             type="email"
             autocomplete="email"
@@ -152,6 +152,8 @@ function handleSubmit(event: { valid: boolean; values: Record<string, unknown> }
             data-testid="sign-in-google"
             @click="emit('submitGoogle')"
           />
+
+          <slot name="secondary-actions" />
         </div>
       </Form>
 

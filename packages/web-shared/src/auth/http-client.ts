@@ -1,6 +1,8 @@
 import {
   loginRequestSchema,
+  registerRequestSchema,
   refreshRequestSchema,
+  type RegisterRequest,
   tokenPairResponseSchema,
   type TokenPairResponse,
 } from "@gitiempo/shared";
@@ -21,6 +23,7 @@ interface AuthHttpClientOptions {
 export interface AuthHttpClient {
   loginWithFirebaseToken(firebaseIdToken: string): Promise<TokenPairResponse>;
   logoutAuthSession(accessToken: string, refreshToken: string): Promise<void>;
+  registerWorkspaceOwner(input: RegisterRequest): Promise<TokenPairResponse>;
   refreshAuthSession(refreshToken: string): Promise<TokenPairResponse>;
 }
 
@@ -54,6 +57,16 @@ export function createAuthHttpClient({
       if (!response.ok) {
         throw await createResponseError(response);
       }
+    },
+    registerWorkspaceOwner(input) {
+      return requestJson({
+        apiBaseUrl,
+        body: registerRequestSchema.parse(input),
+        fetchFn,
+        method: "POST",
+        path: "/auth/register",
+        responseSchema: tokenPairResponseSchema,
+      });
     },
     refreshAuthSession(refreshToken) {
       return requestJson({

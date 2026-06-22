@@ -82,6 +82,11 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
       refreshToken: "refresh-token-next",
     }),
     logoutSession: async () => undefined,
+    registerWorkspaceOwner: async () => ({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    }),
     refreshSession: async () => ({
       accessToken: "restored-access-token",
       accessTokenExpiresIn: 900,
@@ -177,7 +182,7 @@ describe("ProfileView", () => {
         minute: "2-digit",
       });
 
-    expect(wrapper.text()).toContain("Profile");
+    expect(wrapper.text()).not.toContain("Manage your personal settings and session access.");
     expect(wrapper.text()).toContain("GitHub Connection");
     expect(wrapper.text()).toContain(`${formatDate(connectedAt)}, ${formatTime(connectedAt)}`);
     expect(wrapper.text()).toContain(`${formatDate(updatedAt)}, ${formatTime(updatedAt)}`);

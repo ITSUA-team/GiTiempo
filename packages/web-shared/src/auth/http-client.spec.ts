@@ -56,6 +56,45 @@ describe("createAuthHttpClient", () => {
     });
   });
 
+  it("posts workspace registration payloads to the register endpoint", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        accessToken: "registered-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "registered-refresh-token",
+      }),
+    );
+    const client = createAuthHttpClient({
+      apiBaseUrl: "https://api.example.test/",
+      fetchFn,
+    });
+
+    await expect(
+      client.registerWorkspaceOwner({
+        email: "owner@example.com",
+        fullName: "Owner Name",
+        ownerAcknowledgement: true,
+        password: "password123",
+        workspaceName: "Workspace Alpha",
+      }),
+    ).resolves.toEqual({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    });
+    expect(fetchFn).toHaveBeenCalledWith("https://api.example.test/auth/register", {
+      body: JSON.stringify({
+        email: "owner@example.com",
+        fullName: "Owner Name",
+        workspaceName: "Workspace Alpha",
+        password: "password123",
+        ownerAcknowledgement: true,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+  });
+
   it("posts logout requests with auth headers and payload", async () => {
     const fetchFn = vi.fn(async () => jsonResponse({}));
     const client = createAuthHttpClient({ fetchFn });
@@ -92,6 +131,32 @@ describe("createAuthHttpClient", () => {
     await expect(client.refreshAuthSession("refresh-token")).rejects.toThrow(
       "network down",
     );
+  });
+
+  it("surfaces backend registration errors", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse(
+        {
+          code: "workspace_name_unavailable",
+          message: "Workspace name is already in use",
+        },
+        { status: 409 },
+      ),
+    );
+    const client = createAuthHttpClient({ fetchFn });
+
+    await expect(
+      client.registerWorkspaceOwner({
+        email: "owner@example.com",
+        fullName: "Owner Name",
+        ownerAcknowledgement: true,
+        password: "password123",
+        workspaceName: "Workspace Alpha",
+      }),
+    ).rejects.toMatchObject({
+      code: "workspace_name_unavailable",
+      message: "Workspace name is already in use",
+    });
   });
 });
 

@@ -45,6 +45,11 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
       refreshToken: "refresh-token-next",
     }),
     logoutSession: async () => undefined,
+    registerWorkspaceOwner: async () => ({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    }),
     refreshSession: async () => ({
       accessToken: "restored-access-token",
       accessTokenExpiresIn: 900,

@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type {
   WorkspaceMemberListResponse,
   WorkspaceRole,
 } from '@gitiempo/shared';
 import { ManagementTableShell } from '@gitiempo/web-shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
-import PrimeVue from 'primevue/config';
+import AutoComplete from 'primevue/autocomplete';
 import MultiSelect from 'primevue/multiselect';
+import PrimeVue from 'primevue/config';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -151,21 +153,28 @@ describe('MembersTable', () => {
     mockMatchMedia();
   });
 
-  it('renders supplied rows with icon-only assign, edit, and remove actions', () => {
+  it('uses member name as the edit entry point without an actions column', async () => {
+    const row = createRows()[0]!;
     const wrapper = mountMembersTable({ rows: [createRows()[0]!] });
 
-    const assignButton = wrapper.get('[data-testid="member-assign-pm-member-1"]');
-    const editButton = wrapper.get('[data-testid="member-edit-member-1"]');
-    const removeButton = wrapper.get('[data-testid="member-remove-member-1"]');
+    expect(
+      wrapper
+        .getComponent(ManagementTableShell)
+        .props('columns')
+        .map((column) => column.label),
+    ).toEqual(['Member', 'Role', 'Projects Assigned', 'Last Active']);
 
-    expect(assignButton.attributes('aria-label')).toBe('Assign PM');
-    expect(assignButton.attributes('data-tooltip')).toBe('Assign PM');
-    expect(assignButton.text()).toBe('');
-    expect(editButton.attributes('aria-label')).toBe('Edit');
-    expect(editButton.text()).toBe('');
-    expect(removeButton.attributes('aria-label')).toBe('Remove');
-    expect(removeButton.text()).toBe('');
+    const nameButton = wrapper.get('[data-testid="member-name-member-1"]');
+
+    expect(nameButton.attributes('aria-label')).toBe('Edit member Pat PM');
+    expect(wrapper.find('[data-testid="member-assign-pm-member-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-edit-member-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-remove-member-1"]').exists()).toBe(false);
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);
+
+    await nameButton.trigger('click');
+
+    expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
   });
 
   it('emits filter updates without deriving or mutating the supplied rows', async () => {
@@ -178,27 +187,60 @@ describe('MembersTable', () => {
       wrapper.get('input[aria-label="Filter members by name or email"]').attributes('placeholder'),
     ).toBe('Filter name or email');
     expect(wrapper.text()).toContain('All roles');
-    expect(wrapper.text()).toContain('All projects');
     expect(wrapper.text()).toContain('Any activity');
 
+    const autoCompleteFilters = wrapper.findAllComponents(AutoComplete);
+    const memberQueryFilter = autoCompleteFilters[0]!;
+    const projectFilter = wrapper.getComponent(MultiSelect);
+
+    expect(autoCompleteFilters).toHaveLength(1);
+    expect(memberQueryFilter.props('dropdown')).toBe(true);
+    expect(memberQueryFilter.props('completeOnFocus')).toBe(true);
+    expect(projectFilter.props('display')).toBe('chip');
+    expect(projectFilter.props('filter')).toBe(true);
+    expect(projectFilter.props('modelValue')).toEqual([]);
+    expect(projectFilter.props('placeholder')).toBe('All projects');
+
+    memberQueryFilter.vm.$emit('complete', { query: 'pat' });
+    await nextTick();
+
+    expect(wrapper.getComponent(AutoComplete).props('suggestions')).toEqual(
+      expect.arrayContaining(['Pat PM', 'pat@example.com']),
+    );
+
     await wrapper.get('input[aria-label="Search members"]').setValue('orion');
-    await wrapper.get('input[aria-label="Filter members by name or email"]').setValue('pat');
+    memberQueryFilter.vm.$emit('update:modelValue', 'pat');
 
     const selectFilters = wrapper.findAllComponents(Select);
     await selectFilters[0]!.vm.$emit('update:modelValue', 'admin');
     await selectFilters[1]!.vm.$emit('update:modelValue', 'inactive');
-    await wrapper.findComponent(MultiSelect).vm.$emit('update:modelValue', ['project-1']);
+    await projectFilter.vm.$emit('update:modelValue', ['project-1', 'project-2']);
 
     expect(wrapper.emitted('update:filters')).toEqual([
       [{ global: 'orion' }],
       [{ memberQuery: 'pat' }],
       [{ role: 'admin' }],
       [{ lastActive: 'inactive' }],
-      [{ projectIds: ['project-1'] }],
+      [{ projectIds: ['project-1', 'project-2'] }],
     ]);
     expect(
       wrapper.getComponent(ManagementTableShell).props('value'),
     ).toEqual(createRows());
+  });
+
+  it('places the invite action in the table header beside search', async () => {
+    const wrapper = mountMembersTable();
+    const search = wrapper.get('input[aria-label="Search members"]');
+    const inviteButton = wrapper.get('[data-testid="members-table-invite"]');
+
+    expect(inviteButton.attributes('aria-label')).toBe('Invite member');
+    expect(inviteButton.attributes('data-tooltip')).toBe('Invite member');
+    expect(inviteButton.text()).toBe('');
+    expect(inviteButton.element.parentElement?.contains(search.element)).toBe(true);
+
+    await inviteButton.trigger('click');
+
+    expect(wrapper.emitted('invite-member')).toEqual([[]]);
   });
 
   it('emits expanded row updates from the table shell contract', async () => {
@@ -211,19 +253,33 @@ describe('MembersTable', () => {
     expect(wrapper.emitted('update:expandedRows')).toEqual([[{ 'member-1': true }]]);
   });
 
-  it('renders mobile loading cards only on mobile viewports', () => {
+  it('renders mobile loading cards only on mobile viewports', async () => {
     const wrapper = mountMembersTable({
       isMobileViewport: true,
       loading: true,
       rows: [createRows()[0]!],
     });
 
+    const autoCompleteFilters = wrapper.findAllComponents(AutoComplete);
+    const memberQueryFilter = autoCompleteFilters[0]!;
+    const projectFilter = wrapper.getComponent(MultiSelect);
+
+    expect(memberQueryFilter.props('placeholder')).toBe('Filter name or email');
+    expect(projectFilter.props('placeholder')).toBe('All projects');
+
+    await memberQueryFilter.vm.$emit('update:modelValue', 'alex');
+    await projectFilter.vm.$emit('update:modelValue', ['project-2', 'project-1']);
+
+    expect(wrapper.emitted('update:filters')).toEqual([
+      [{ memberQuery: 'alex' }],
+      [{ projectIds: ['project-2', 'project-1'] }],
+    ]);
     expect(wrapper.findAll('[data-testid="members-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-testid="member-edit-member-1"]')).toHaveLength(0);
   });
 
-  it('renders supplied mobile card fields, actions, and expansion slot content', async () => {
+  it('renders supplied mobile card fields, name edit entry point, and expansion slot content', async () => {
     const row = createRows([createMembers()[0]!])[0]!;
     const wrapper = mountMembersTable({
       isMobileViewport: true,
@@ -243,33 +299,31 @@ describe('MembersTable', () => {
     expect(mobileCards[0]?.text()).toContain('May 2, 2026');
     expect(wrapper.get('[data-testid="row-expansion"]').text()).toBe('Pat PM');
 
-    await wrapper.get('[data-testid="member-mobile-assign-pm-member-1"]').trigger('click');
-    await wrapper.get('[data-testid="member-mobile-edit-member-1"]').trigger('click');
-    await wrapper.get('[data-testid="member-mobile-remove-member-1"]').trigger('click');
+    expect(wrapper.find('[data-testid="member-mobile-assign-pm-member-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-mobile-edit-member-1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="member-mobile-remove-member-1"]').exists()).toBe(false);
 
-    expect(wrapper.emitted('assign-member')).toEqual([[row.member]]);
+    await wrapper.get('[data-testid="member-mobile-name-member-1"]').trigger('click');
+
     expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
-    expect(wrapper.emitted('remove-member')).toEqual([[row.member]]);
   });
 
-  it('emits desktop row action intents without opening local panels', async () => {
+  it('emits desktop edit intent from the member name without opening local panels', async () => {
     const row = createRows()[0]!;
     const wrapper = mountMembersTable({ rows: [row] });
 
-    await wrapper.get('[data-testid="member-assign-pm-member-1"]').trigger('click');
-    await wrapper.get('[data-testid="member-edit-member-1"]').trigger('click');
-    await wrapper.get('[data-testid="member-remove-member-1"]').trigger('click');
+    await wrapper.get('[data-testid="member-name-member-1"]').trigger('click');
 
-    expect(wrapper.emitted('assign-member')).toEqual([[row.member]]);
     expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
-    expect(wrapper.emitted('remove-member')).toEqual([[row.member]]);
     expect(wrapper.find('[data-testid="assign-panel"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="edit-panel"]').exists()).toBe(false);
   });
 
-  it('hides actions when the supplied row is not manageable', () => {
+  it('renders unmanaged rows with static names and no row actions', () => {
     const wrapper = mountMembersTable({ rows: [createRows()[1]!] });
 
+    expect(wrapper.find('[data-testid="member-name-member-2"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Alex Admin');
     expect(wrapper.find('[data-testid="member-assign-pm-member-2"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-edit-member-2"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-remove-member-2"]').exists()).toBe(false);

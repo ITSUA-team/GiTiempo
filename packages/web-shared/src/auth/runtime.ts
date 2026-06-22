@@ -15,6 +15,7 @@ export interface AuthRuntime {
   getCurrentUser: CurrentUserClient["getCurrentUser"];
   loginWithFirebaseToken: AuthHttpClient["loginWithFirebaseToken"];
   logoutSession: AuthHttpClient["logoutAuthSession"];
+  registerWorkspaceOwner: AuthHttpClient["registerWorkspaceOwner"];
   refreshSession: AuthHttpClient["refreshAuthSession"];
   signInWithEmailPassword(email: string, password: string): Promise<string>;
   signInWithGoogle(): Promise<string>;
@@ -70,6 +71,7 @@ export function createDefaultAuthRuntime({
     getCurrentUser: currentUserClient.getCurrentUser,
     loginWithFirebaseToken: authClient.loginWithFirebaseToken,
     logoutSession: authClient.logoutAuthSession,
+    registerWorkspaceOwner: authClient.registerWorkspaceOwner,
     refreshSession: authClient.refreshAuthSession,
     signInWithEmailPassword,
     signInWithGoogle,

@@ -19,6 +19,7 @@ const projectRow = {
   name: 'Project',
   color: null,
   visibility: 'private' as const,
+  defaultBillableForTasks: true,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -30,6 +31,7 @@ const taskRow = {
   projectId: 'project-1',
   title: 'Task',
   status: 'open' as const,
+  defaultBillableForTimeEntries: true,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -50,7 +52,116 @@ function selectRowsForUpdate(rows: unknown[]) {
   return { from };
 }
 
+function collectSqlParamValues(value: unknown): unknown[] {
+  const values: unknown[] = [];
+  const seen = new WeakSet<object>();
+
+  const visit = (candidate: unknown): void => {
+    if (candidate === null || candidate === undefined) return;
+    if (typeof candidate !== 'object') {
+      values.push(candidate);
+      return;
+    }
+    if (seen.has(candidate)) return;
+
+    seen.add(candidate);
+    if (Array.isArray(candidate)) {
+      for (const item of candidate) visit(item);
+      return;
+    }
+    if ('queryChunks' in candidate) {
+      visit((candidate as { queryChunks: unknown }).queryChunks);
+      return;
+    }
+    if ('value' in candidate) {
+      visit((candidate as { value: unknown }).value);
+    }
+  };
+
+  visit(value);
+
+  return values;
+}
+
 describe('TasksService', () => {
+  it('includes synced github issue linkage in project task lists', async () => {
+    const listRows = [
+      {
+        ...taskRow,
+        githubIssueExternalKey: 'octo/repo#184',
+      },
+      {
+        ...taskRow,
+        id: 'task-2',
+        githubIssueExternalKey: null,
+      },
+    ];
+    const where = vi.fn().mockResolvedValue(listRows);
+    const leftJoin = vi.fn().mockReturnValue({ where });
+    const from = vi.fn().mockReturnValue({ leftJoin });
+    const db = {
+      select: vi.fn().mockReturnValue({ from }),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.listProjectTasks(user, projectRow.id);
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: taskRow.id,
+        githubIssue: {
+          githubRepo: 'octo/repo',
+          issueNumber: 184,
+        },
+      }),
+      expect.objectContaining({
+        id: 'task-2',
+        githubIssue: null,
+      }),
+    ]);
+    expect(projects.requireVisibleProject).toHaveBeenCalledWith(
+      user,
+      projectRow.id,
+    );
+    expect(collectSqlParamValues(where.mock.calls[0]?.[0])).toEqual(
+      expect.arrayContaining([user.workspaceId, projectRow.id]),
+    );
+    expect(collectSqlParamValues(where.mock.calls[0]?.[0])).toContain(true);
+  });
+
+  it('can include inactive historical tasks for backfill detection', async () => {
+    const listRows = [
+      {
+        ...taskRow,
+        githubIssueExternalKey: null,
+        isActive: false,
+      },
+    ];
+    const where = vi.fn().mockResolvedValue(listRows);
+    const leftJoin = vi.fn().mockReturnValue({ where });
+    const from = vi.fn().mockReturnValue({ leftJoin });
+    const db = {
+      select: vi.fn().mockReturnValue({ from }),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.listProjectTasks(user, projectRow.id, {
+      includeInactive: true,
+    });
+
+    expect(result[0]?.isActive).toBe(false);
+    expect(collectSqlParamValues(where.mock.calls[0]?.[0])).toEqual(
+      expect.arrayContaining([user.workspaceId, projectRow.id]),
+    );
+    expect(collectSqlParamValues(where.mock.calls[0]?.[0])).not.toContain(true);
+  });
+
   it('rejects task creation in an inactive project', async () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue({
@@ -65,6 +176,60 @@ describe('TasksService', () => {
       service.createTask(user, projectRow.id, { title: 'Task' }),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
     expect(db.insert).not.toHaveBeenCalled();
+  });
+
+  it('inherits the project billable default when creating a task', async () => {
+    const returning = vi.fn().mockResolvedValue([
+      {
+        ...taskRow,
+        defaultBillableForTimeEntries: false,
+      },
+    ]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const db = { insert: vi.fn().mockReturnValue({ values }) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue({
+        ...projectRow,
+        defaultBillableForTasks: false,
+      }),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.createTask(user, projectRow.id, {
+      title: 'Task',
+    });
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTimeEntries: false,
+      }),
+    );
+    expect(result.defaultBillableForTimeEntries).toBe(false);
+  });
+
+  it('allows task creates to override the inherited billable default', async () => {
+    const returning = vi.fn().mockResolvedValue([taskRow]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const db = { insert: vi.fn().mockReturnValue({ values }) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue({
+        ...projectRow,
+        defaultBillableForTasks: false,
+      }),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.createTask(user, projectRow.id, {
+      title: 'Task',
+      defaultBillableForTimeEntries: true,
+    });
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTimeEntries: true,
+      }),
+    );
+    expect(result.defaultBillableForTimeEntries).toBe(true);
   });
 
   it('checks project visibility before updating a task', async () => {
@@ -92,6 +257,7 @@ describe('TasksService', () => {
     expect(projects.requireVisibleProject).toHaveBeenCalledWith(
       user,
       taskRow.projectId,
+      db,
     );
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -99,6 +265,74 @@ describe('TasksService', () => {
       }),
     );
     expect(result.title).toBe('Renamed');
+  });
+
+  it('saves task billable defaults without backfilling time entries', async () => {
+    const updatedTask = {
+      ...taskRow,
+      defaultBillableForTimeEntries: false,
+      updatedAt: new Date('2026-01-02T00:00:00Z'),
+    };
+    const returning = vi.fn().mockResolvedValue([updatedTask]);
+    const whereUpdate = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where: whereUpdate });
+    const db = {
+      select: vi.fn().mockReturnValue(selectRows([taskRow])),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.updateTask(user, taskRow.id, {
+      defaultBillableForTimeEntries: false,
+    });
+
+    expect(db.update).toHaveBeenCalledWith(tasks);
+    expect(db.update).not.toHaveBeenCalledWith(timeEntries);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultBillableForTimeEntries: false,
+      }),
+    );
+    expect(result.defaultBillableForTimeEntries).toBe(false);
+  });
+
+  it('backfills a task billable default to existing time entries', async () => {
+    const updatedEntries = [{ id: 'entry-1' }, { id: 'entry-2' }];
+    const returning = vi.fn().mockResolvedValue(updatedEntries);
+    const set = vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({ returning }),
+    });
+    const tx = {
+      select: vi.fn().mockReturnValue(
+        selectRows([
+          {
+            ...taskRow,
+            defaultBillableForTimeEntries: false,
+          },
+        ]),
+      ),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    const result = await service.backfillBillableDefault(user, taskRow.id, {
+      updateTimeEntries: true,
+    });
+
+    expect(result).toEqual({ timeEntriesUpdated: 2 });
+    expect(tx.update).toHaveBeenCalledWith(timeEntries);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isBillable: false,
+      }),
+    );
   });
 
   it('rejects task updates in an inactive project', async () => {

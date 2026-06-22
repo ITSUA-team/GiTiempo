@@ -7,6 +7,7 @@ import type {
   ProjectResponse,
   TimeReportResponse,
   TimeReportUserRow,
+  WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 
 import { createTestQueryPlugin } from '@/test/query-client';
@@ -17,6 +18,7 @@ const projectOrionId = '11111111-1111-4111-8111-111111111111';
 const projectBillingId = '11111111-1111-4111-8111-111111111112';
 const alexId = '33333333-3333-4333-8333-333333333333';
 const ninaId = '33333333-3333-4333-8333-333333333334';
+const zoeId = '33333333-3333-4333-8333-333333333335';
 
 function createProject(
   id: string,
@@ -38,6 +40,7 @@ function createProject(
     visibility: 'public',
     workspaceId,
     ...overrides,
+    defaultBillableForTasks: overrides.defaultBillableForTasks ?? true,
   };
 }
 
@@ -129,6 +132,45 @@ const projects: ProjectListResponse = [
   ]),
 ];
 
+const workspaceMembers: WorkspaceMemberListResponse = [
+  {
+    avatarUrl: null,
+    displayName: 'Alex Admin',
+    email: 'alex@example.com',
+    id: '55555555-5555-4555-8555-555555555551',
+    joinedAt: '2026-05-01T10:00:00.000Z',
+    lastActiveAt: null,
+    projectsAssignedCount: 1,
+    role: 'admin',
+    userId: alexId,
+    workspaceId,
+  },
+  {
+    avatarUrl: null,
+    displayName: 'Nina PM',
+    email: 'nina@example.com',
+    id: '55555555-5555-4555-8555-555555555552',
+    joinedAt: '2026-05-01T10:00:00.000Z',
+    lastActiveAt: null,
+    projectsAssignedCount: 2,
+    role: 'pm',
+    userId: ninaId,
+    workspaceId,
+  },
+  {
+    avatarUrl: null,
+    displayName: 'Zoe Analyst',
+    email: 'zoe@example.com',
+    id: '55555555-5555-4555-8555-555555555553',
+    joinedAt: '2026-05-01T10:00:00.000Z',
+    lastActiveAt: null,
+    projectsAssignedCount: 0,
+    role: 'member',
+    userId: zoeId,
+    workspaceId,
+  },
+];
+
 const reportRowsByProject = new Map<string, TimeReportUserRow[]>([
   [
     projectOrionId,
@@ -183,6 +225,12 @@ function createReportsClientMocks() {
   };
 }
 
+function createMembersClientMocks(members = workspaceMembers) {
+  return {
+    listMembers: vi.fn().mockResolvedValue(members),
+  };
+}
+
 describe('useReportsData', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -193,9 +241,9 @@ describe('useReportsData', () => {
     vi.useRealTimers();
   });
 
-  function createScope() {
+  function createScope(role: 'admin' | 'pm' = 'admin') {
     return shallowRef({
-      role: 'admin' as const,
+      role,
       userId: 'user-1',
       workspaceId: 'workspace-1',
     });
@@ -204,6 +252,7 @@ describe('useReportsData', () => {
   it('loads backend-generated project-member report rows', async () => {
     const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
+    const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     let reports!: ReturnType<typeof useReportsData>;
 
@@ -212,6 +261,7 @@ describe('useReportsData', () => {
         setup() {
           reports = useReportsData({
             accessToken,
+            membersClient,
             projectsClient: { listProjects },
             reportsClient,
             scope: createScope(),
@@ -224,6 +274,12 @@ describe('useReportsData', () => {
     await flushPromises();
 
     expect(reportsClient.getTimeReport).toHaveBeenCalledTimes(2);
+    expect(membersClient.listMembers).toHaveBeenCalledTimes(1);
+    expect(reports.memberOptions.value).toEqual([
+      { label: 'Alex Admin', value: alexId },
+      { label: 'Nina PM', value: ninaId },
+      { label: 'Zoe Analyst', value: zoeId },
+    ]);
     expect(reports.rows.value).toEqual([
       expect.objectContaining({
         memberName: 'Nina PM',
@@ -273,6 +329,7 @@ describe('useReportsData', () => {
       ),
     ];
     const listProjects = vi.fn().mockResolvedValue(scopedProjects);
+    const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     let reports!: ReturnType<typeof useReportsData>;
 
@@ -281,9 +338,10 @@ describe('useReportsData', () => {
         setup() {
           reports = useReportsData({
             accessToken,
+            membersClient,
             projectsClient: { listProjects },
             reportsClient,
-            scope: createScope(),
+            scope: createScope('pm'),
           });
           return () => null;
         },
@@ -292,9 +350,14 @@ describe('useReportsData', () => {
 
     await flushPromises();
 
+    expect(membersClient.listMembers).not.toHaveBeenCalled();
     expect(reports.projectOptions.value).toEqual([
       { label: 'Private Assigned', value: projectBillingId },
       { label: 'Public Roadmap', value: projectOrionId },
+    ]);
+    expect(reports.memberOptions.value).toEqual([
+      { label: 'Alex Admin', value: alexId },
+      { label: 'Nina PM', value: ninaId },
     ]);
     expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: projectOrionId }),
@@ -307,6 +370,7 @@ describe('useReportsData', () => {
   it('debounces project/date table refreshes without applying export group-by to the table', async () => {
     const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
+    const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     let reports!: ReturnType<typeof useReportsData>;
 
@@ -315,6 +379,7 @@ describe('useReportsData', () => {
         setup() {
           reports = useReportsData({
             accessToken,
+            membersClient,
             projectsClient: { listProjects },
             reportsClient,
             scope: createScope(),
@@ -356,6 +421,7 @@ describe('useReportsData', () => {
   it('exports through the reports API using explicit export setup controls', async () => {
     const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
+    const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     reportsClient.exportTimeReport.mockResolvedValue({
       blob: new Blob(['csv'], { type: 'text/csv' }),
@@ -368,6 +434,7 @@ describe('useReportsData', () => {
         setup() {
           reports = useReportsData({
             accessToken,
+            membersClient,
             projectsClient: { listProjects },
             reportsClient,
             scope: createScope(),
@@ -401,6 +468,7 @@ describe('useReportsData', () => {
   it('blocks invalid table date ranges before refresh and export requests', async () => {
     const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
+    const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     let reports!: ReturnType<typeof useReportsData>;
 
@@ -409,6 +477,7 @@ describe('useReportsData', () => {
         setup() {
           reports = useReportsData({
             accessToken,
+            membersClient,
             projectsClient: { listProjects },
             reportsClient,
             scope: createScope(),
@@ -441,9 +510,47 @@ describe('useReportsData', () => {
     expect(reportsClient.exportTimeReport).not.toHaveBeenCalled();
   });
 
+  it('keeps admin reports in request-error state when workspace member options fail', async () => {
+    const accessToken = ref<string | null>('access-token');
+    const listProjects = vi.fn().mockResolvedValue(projects);
+    const membersClient = {
+      listMembers: vi.fn().mockRejectedValue(new Error('Members unavailable')),
+    };
+    const reportsClient = createReportsClientMocks();
+    const onError = vi.fn();
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mountWithQuery(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            accessToken,
+            membersClient,
+            onError,
+            projectsClient: { listProjects },
+            reportsClient,
+            scope: createScope(),
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+
+    expect(reports.loadError.value).toBe('Members unavailable');
+    expect(reports.isEmpty.value).toBe(false);
+    expect(onError).toHaveBeenCalledWith(
+      'Members unavailable',
+      expect.any(Error),
+      'load-reports',
+    );
+  });
+
   it('keeps request errors distinct from empty report results', async () => {
     const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects.slice(0, 1));
+    const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
     reportsClient.getTimeReport.mockRejectedValue(new Error('No scope'));
     const onError = vi.fn();
@@ -454,6 +561,7 @@ describe('useReportsData', () => {
         setup() {
           reports = useReportsData({
             accessToken,
+            membersClient,
             onError,
             projectsClient: { listProjects },
             reportsClient,

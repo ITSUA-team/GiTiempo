@@ -11,11 +11,19 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | Method | Path            | Auth | Role | Description                                              |
 | ------ | --------------- | ---- | ---- | -------------------------------------------------------- |
 | POST   | `/auth/login`   | None | —    | Exchange Firebase ID token for JWT access/refresh tokens |
+| POST   | `/auth/register`| None | —    | Register the first workspace owner and issue API tokens  |
 | POST   | `/auth/refresh` | None | —    | Exchange refresh token for new access/refresh pair       |
 | POST   | `/auth/logout`  | JWT  | Any  | Invalidate current refresh token                         |
 
 **POST /auth/login** body: `{ firebaseIdToken: string }`
+**POST /auth/register** body: `{ email: string, fullName: string, workspaceName: string, password: string, ownerAcknowledgement: true }`
 **POST /auth/refresh** body: `{ refreshToken: string }`
+
+`POST /auth/register` is the only public first-workspace-owner registration path. It creates the Firebase identity, local user, workspace, owner membership, and returns the normal token pair. Existing-workspace member onboarding remains invite-only; the User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation.
+
+Successful registration returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`.
+
+Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`. These are returned in the standard error response `code` field; `error` remains the HTTP-category label.
 
 ---
 
@@ -127,6 +135,7 @@ Assignments grant non-admin access to private projects and to any assigned activ
 **POST /time-entries** body: `{ taskId: string, startedAt: string, endedAt: string, description?: string | null, isBillable?: boolean }`
 
 - Creates a completed manual time entry, not a running timer.
+- `taskId` must reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`, while invisible private work remains `404 Not Found`.
 - `startedAt` and `endedAt` are ISO 8601 datetimes.
 - `endedAt` must be later than `startedAt`.
 - `isBillable` defaults to `true` when omitted.
@@ -135,11 +144,14 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 - Completed entries may update `taskId`, `startedAt`, `endedAt`, `description`, and `isBillable`.
 - Running entries may update `taskId` and `description` only; `startedAt`, `endedAt`, and `isBillable` still require stopping the timer first.
-- `taskId` may be changed to move the entry to another visible active task.
+- `taskId` may be changed to move the entry to another visible active open task; closed or inactive targets are rejected with `422 Unprocessable Entity`, while invisible private targets remain `404 Not Found`.
 - If both `startedAt` and `endedAt` are provided, `endedAt` must be later than `startedAt`.
 
 **POST /time-entries/timer/start** body: `{ taskId: string, description?: string | null }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string }`
+
+- `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
+- `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
 
 **GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`, `search?`
 
@@ -242,8 +254,12 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 ```json
 {
-  "statusCode": 401,
-  "error": "Unauthorized",
-  "message": "Access token expired"
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "An account already exists for that email.",
+  "code": "duplicate_email",
+  "requestId": "req_123"
 }
 ```
+
+`code` is optional unless an endpoint defines stable machine-readable error identifiers. When present, clients should branch on `code` and treat `message` as display text rather than as the parsing contract.

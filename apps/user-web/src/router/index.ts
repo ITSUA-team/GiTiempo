@@ -7,7 +7,9 @@ import type { Pinia } from "pinia";
 import { createProtectedRouter } from "@gitiempo/web-shared/router";
 
 import AppShell from "@/components/layout/AppShell.vue";
+import { routeNames } from "@/constants/routes";
 import LoginView from "@/views/LoginView.vue";
+import RegisterView from "@/views/RegisterView.vue";
 import { pinia } from "@/stores";
 import { useAuthStore } from "@/stores/auth";
 
@@ -20,18 +22,6 @@ const NotFoundView = () => import("@/views/NotFoundView.vue");
 const ProfileView = () => import("@/views/ProfileView.vue");
 const ProjectView = () => import("@/views/ProjectView.vue");
 const TimeEntriesView = () => import("@/views/TimeEntriesView.vue");
-
-export const routeNames = {
-  dashboard: "dashboard",
-  forbidden: "forbidden",
-  inviteAccept: "invite-accept",
-  invitePasswordSetup: "invite-password-setup",
-  login: "login",
-  notFound: "not-found",
-  profile: "profile",
-  project: "project",
-  timeEntries: "time-entries",
-} as const;
 
 const publicRoutes: RouteRecordRaw[] = [
   {
@@ -58,6 +48,14 @@ const publicRoutes: RouteRecordRaw[] = [
       guestOnly: true,
     },
   },
+  {
+    path: "/register",
+    name: routeNames.register,
+    component: RegisterView,
+    meta: {
+      guestOnly: true,
+    },
+  },
 ];
 
 const protectedRoutes: RouteRecordRaw[] = [
@@ -65,21 +63,33 @@ const protectedRoutes: RouteRecordRaw[] = [
     path: "",
     name: routeNames.dashboard,
     component: DashboardView,
+    meta: {
+      pageName: "Dashboard",
+    },
   },
   {
     path: "time-entries",
     name: routeNames.timeEntries,
     component: TimeEntriesView,
+    meta: {
+      pageName: "Time Entries",
+    },
   },
   {
     path: "projects",
     name: routeNames.project,
     component: ProjectView,
+    meta: {
+      pageName: "Projects",
+    },
   },
   {
     path: "profile",
     name: routeNames.profile,
     component: ProfileView,
+    meta: {
+      pageName: "Profile",
+    },
   },
 ];
 
@@ -127,3 +137,5 @@ export function createAppRouter(options?: {
 }
 
 export const router = createAppRouter();
+
+export { routeNames };

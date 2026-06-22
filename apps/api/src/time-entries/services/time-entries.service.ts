@@ -30,6 +30,7 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
 import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
@@ -131,7 +132,7 @@ export class TimeEntriesService {
           endedAt,
           durationSeconds,
           description: input.description ?? null,
-          isBillable: input.isBillable ?? true,
+          isBillable: input.isBillable ?? task.defaultBillableForTimeEntries,
           source: 'manual',
         })
         .returning({ id: timeEntries.id });
@@ -346,6 +347,7 @@ export class TimeEntriesService {
           project.id,
           issueKey,
           input.issueTitle,
+          project.defaultBillableForTasks,
         );
         const lockedTask = await this.requireTaskRowForUpdate(
           tx,
@@ -366,6 +368,7 @@ export class TimeEntriesService {
             workspaceId: user.workspaceId,
             taskId: lockedTask.id,
             userId: user.sub,
+            isBillable: lockedTask.defaultBillableForTimeEntries,
             startedAt: new Date(),
             source: 'extension',
           })
@@ -419,32 +422,6 @@ export class TimeEntriesService {
     return result;
   }
 
-  private parseGitHubIssueExternalKey(
-    externalKey: string | null,
-  ): TimeEntryResponse['githubIssue'] {
-    if (!externalKey) {
-      return null;
-    }
-
-    const separatorIndex = externalKey.lastIndexOf('#');
-
-    if (separatorIndex <= 0 || separatorIndex === externalKey.length - 1) {
-      return null;
-    }
-
-    const githubRepo = externalKey.slice(0, separatorIndex);
-    const issueNumber = Number(externalKey.slice(separatorIndex + 1));
-
-    if (!githubRepo || !Number.isInteger(issueNumber) || issueNumber <= 0) {
-      return null;
-    }
-
-    return {
-      githubRepo,
-      issueNumber,
-    };
-  }
-
   private async createRunningEntry(
     user: AuthUser,
     taskId: string,
@@ -465,6 +442,7 @@ export class TimeEntriesService {
             workspaceId: user.workspaceId,
             taskId: task.id,
             userId: user.sub,
+            isBillable: task.defaultBillableForTimeEntries,
             startedAt: new Date(),
             source,
           })
@@ -659,7 +637,7 @@ export class TimeEntriesService {
         displayName: row.userDisplayName,
         avatarUrl: row.userAvatarUrl,
       },
-      githubIssue: this.parseGitHubIssueExternalKey(row.githubIssueExternalKey),
+      githubIssue: parseGitHubIssueExternalKey(row.githubIssueExternalKey),
     };
   }
 
@@ -683,15 +661,16 @@ export class TimeEntriesService {
       return { project, created: false };
     }
 
-    const [project] = await db
-      .insert(projectsTable)
-      .values({
-        workspaceId: user.workspaceId,
-        name: githubRepo,
-        color: null,
-      })
-      .returning();
-    if (!project) throw new Error('Failed to create GitHub project');
+    const project = (
+      await db
+        .insert(projectsTable)
+        .values({
+          workspaceId: user.workspaceId,
+          name: githubRepo,
+          color: null,
+        })
+        .returning()
+    )[0]!;
 
     const [createdRef] = await db
       .insert(projectExternalRefs)
@@ -742,6 +721,7 @@ export class TimeEntriesService {
     projectId: string,
     issueKey: string,
     issueTitle: string,
+    defaultBillableForTimeEntries: boolean,
   ): Promise<TaskRow> {
     const existingRef = await this.findGitHubTaskRef(
       db,
@@ -765,6 +745,7 @@ export class TimeEntriesService {
         workspaceId,
         projectId,
         title: issueTitle,
+        defaultBillableForTimeEntries,
       })
       .returning();
     if (!task) throw new Error('Failed to create GitHub task');
