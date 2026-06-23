@@ -264,8 +264,12 @@ describe('ReportsService', () => {
       conditions: [],
     };
     const buildQueryContext = vi.fn().mockResolvedValue(context);
-    const getRows = vi.fn().mockResolvedValue([
+    const getDetailedRows = vi.fn().mockResolvedValue([
       {
+        projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9005',
+        projectName: 'Project Orion',
+        taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9006',
+        taskTitle: 'Improve reports filters',
         userId: pmUser.sub,
         userEmail: pmUser.email,
         userDisplayName: 'PM User',
@@ -281,7 +285,9 @@ describe('ReportsService', () => {
     Object.defineProperty(service, 'buildQueryContext', {
       value: buildQueryContext,
     });
-    Object.defineProperty(service, 'getRows', { value: getRows });
+    Object.defineProperty(service, 'getDetailedRows', {
+      value: getDetailedRows,
+    });
 
     const result = await service.exportTimeReport(pmUser, {
       groupBy: 'user',
@@ -294,14 +300,72 @@ describe('ReportsService', () => {
       sortBy: 'totalSeconds',
       sortOrder: 'desc',
     });
-    expect(getRows).toHaveBeenCalledWith(
+    expect(getDetailedRows).toHaveBeenCalledWith(
       context,
       'totalSeconds',
       'desc',
-      undefined,
-      undefined,
     );
     expect(result.filename).toBe('time-report-2026-05-01_2026-06-01.csv');
+    const csvRows = result.content.split('\n');
+    const dataCells = csvRows[1]!.split(',');
+
+    expect(dataCells[0]).toBe('user');
+    expect(dataCells[1]).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9005');
+    expect(dataCells[2]).toBe('Project Orion');
+    expect(dataCells[3]).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9006');
+    expect(dataCells[4]).toBe('Improve reports filters');
     expect(result.content).toContain(pmUser.email);
+  });
+
+  it('exports project-group CSV rows with task and user context', async () => {
+    const { service } = createService('admin');
+    const context = {
+      groupBy: 'project' as const,
+      scopeUserId: adminUser.sub,
+      dateRange: {
+        dateFrom: '2026-05-01T00:00:00.000Z',
+        dateTo: '2026-06-01T00:00:00.000Z',
+      },
+      conditions: [],
+    };
+    const getDetailedRows = vi.fn().mockResolvedValue([
+      {
+        projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9005',
+        projectName: 'Project Orion',
+        taskId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9006',
+        taskTitle: 'Improve reports filters',
+        userId: adminUser.sub,
+        userEmail: adminUser.email,
+        userDisplayName: 'Admin User',
+        userAvatarUrl: null,
+        totalSeconds: 3600,
+        billableSeconds: 1800,
+        nonBillableSeconds: 1800,
+        entryCount: 1,
+        firstStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+        lastStartedAt: new Date('2026-05-01T10:00:00.000Z'),
+      },
+    ]);
+
+    Object.defineProperty(service, 'buildQueryContext', {
+      value: vi.fn().mockResolvedValue(context),
+    });
+    Object.defineProperty(service, 'getDetailedRows', {
+      value: getDetailedRows,
+    });
+
+    const result = await service.exportTimeReport(adminUser, {
+      groupBy: 'project',
+      sortBy: 'totalSeconds',
+      sortOrder: 'desc',
+    });
+
+    const csvRows = result.content.split('\n');
+    const dataCells = csvRows[1]!.split(',');
+
+    expect(dataCells[0]).toBe('project');
+    expect(dataCells[3]).toBe('018f08cc-7f7f-7f7f-8f8f-9f9f9f9006');
+    expect(dataCells[5]).toBe(adminUser.sub);
+    expect(dataCells[6]).toBe(adminUser.email);
   });
 });
