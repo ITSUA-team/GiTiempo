@@ -317,13 +317,13 @@ function getRoleClass(role: WorkspaceRole): string {
               <Button
                 v-if="row.canManage"
                 type="button"
-                variant="link"
+                unstyled
                 :aria-label="`Edit member ${row.primaryLabel}`"
                 :data-testid="`member-mobile-name-${row.id}`"
                 :pt="{
                   root: {
                     class:
-                      'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[15px] font-semibold text-brand shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                      'max-w-full cursor-pointer truncate rounded-none border-0 bg-transparent p-0 text-left font-sans text-[15px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                   },
                 }"
                 @click="emit('edit-member', row.member)"
@@ -466,13 +466,13 @@ function getRoleClass(role: WorkspaceRole): string {
             <Button
               v-if="data.canManage"
               type="button"
-              variant="link"
+              unstyled
               :aria-label="`Edit member ${data.primaryLabel}`"
               :data-testid="`member-name-${data.id}`"
               :pt="{
                 root: {
                   class:
-                    'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[14px] font-semibold text-brand shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                    'max-w-full cursor-pointer truncate rounded-none border-0 bg-transparent p-0 text-left font-sans text-[14px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                 },
               }"
               @click="emit('edit-member', data.member)"
