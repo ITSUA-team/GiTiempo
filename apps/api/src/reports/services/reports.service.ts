@@ -108,16 +108,12 @@ export class ReportsService {
     query: TimeReportExportQuery,
   ): Promise<ExportResult> {
     const context = await this.buildQueryContext(user, query);
-    const rows = await this.getRows(
+    const rows = await this.getDetailedRows(
       context,
       query.sortBy,
       query.sortOrder,
-      undefined,
-      undefined,
     );
-    const content = toCsv(
-      rows.map((row) => this.toReportRow(context.groupBy, row)),
-    );
+    const content = toCsv(context.groupBy, rows);
     const filename = `time-report-${dateForFilename(context.dateRange.dateFrom)}_${dateForFilename(context.dateRange.dateTo)}.csv`;
 
     return { content, filename };
@@ -227,6 +223,16 @@ export class ReportsService {
     return query;
   }
 
+  private async getDetailedRows(
+    context: QueryContext,
+    sortBy: TimeReportSortBy,
+    sortOrder: TimeReportSortOrder,
+  ): Promise<AggregateRow[]> {
+    return this.detailedRowsQuery(context).orderBy(
+      getOrderBy(sortBy, sortOrder),
+    );
+  }
+
   private groupedRowsQuery(context: QueryContext) {
     const selection = this.groupSelection(context.groupBy);
 
@@ -244,6 +250,21 @@ export class ReportsService {
       .groupBy(...this.groupByColumns(context.groupBy));
   }
 
+  private detailedRowsQuery(context: QueryContext) {
+    return this.db
+      .select(this.detailedSelection())
+      .from(timeEntries)
+      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .innerJoin(users, eq(users.id, timeEntries.userId))
+      .leftJoin(
+        projectAssignments,
+        this.scopeAssignmentJoinCondition(context.scopeUserId),
+      )
+      .where(and(...context.conditions))
+      .groupBy(...this.detailedGroupByColumns());
+  }
+
   private groupedSubquery(context: QueryContext) {
     return this.groupedRowsQuery(context).as('report_rows');
   }
@@ -255,8 +276,8 @@ export class ReportsService {
     )!;
   }
 
-  private groupSelection(groupBy: TimeReportGroupBy) {
-    const aggregateSelection = {
+  private aggregateSelection() {
+    return {
       totalSeconds:
         sql<number>`COALESCE(SUM(${timeEntries.durationSeconds}), 0)`.as(
           'total_seconds',
@@ -277,6 +298,28 @@ export class ReportsService {
         Date | string | null
       >`MAX(${timeEntries.startedAt})`.as('last_started_at'),
     };
+  }
+
+  private detailedSelection() {
+    return {
+      groupId:
+        sql<string>`CONCAT(${projects.id}, ':', ${tasks.id}, ':', ${users.id})`.as(
+          'group_id',
+        ),
+      projectId: projects.id,
+      projectName: projects.name,
+      taskId: tasks.id,
+      taskTitle: tasks.title,
+      userId: users.id,
+      userEmail: users.email,
+      userDisplayName: users.displayName,
+      userAvatarUrl: users.avatarUrl,
+      ...this.aggregateSelection(),
+    };
+  }
+
+  private groupSelection(groupBy: TimeReportGroupBy) {
+    const aggregateSelection = this.aggregateSelection();
 
     if (groupBy === 'task') {
       return {
@@ -325,6 +368,19 @@ export class ReportsService {
     if (groupBy === 'task') return [tasks.id, projects.id];
     if (groupBy === 'user') return [users.id];
     return [projects.id];
+  }
+
+  private detailedGroupByColumns() {
+    return [
+      projects.id,
+      projects.name,
+      tasks.id,
+      tasks.title,
+      users.id,
+      users.email,
+      users.displayName,
+      users.avatarUrl,
+    ];
   }
 
   private toReportRow(
@@ -462,7 +518,7 @@ function requireUser(row: AggregateRow) {
   };
 }
 
-function toCsv(rows: TimeReportRow[]): string {
+function toCsv(groupBy: TimeReportGroupBy, rows: AggregateRow[]): string {
   const header = [
     'Group By',
     'Project ID',
@@ -479,22 +535,26 @@ function toCsv(rows: TimeReportRow[]): string {
     'First Started At',
     'Last Started At',
   ];
-  const lines = rows.map((row) => [
-    row.groupBy,
-    row.project?.id ?? '',
-    row.project?.name ?? '',
-    row.task?.id ?? '',
-    row.task?.title ?? '',
-    row.user?.id ?? '',
-    row.user?.email ?? '',
-    row.user?.displayName ?? '',
-    row.totalSeconds,
-    row.billableSeconds,
-    row.nonBillableSeconds,
-    row.entryCount,
-    row.firstStartedAt ?? '',
-    row.lastStartedAt ?? '',
-  ]);
+  const lines = rows.map((row) => {
+    const timing = toAggregateTiming(row);
+
+    return [
+      groupBy,
+      row.projectId ?? '',
+      row.projectName ?? '',
+      row.taskId ?? '',
+      row.taskTitle ?? '',
+      row.userId ?? '',
+      row.userEmail ?? '',
+      row.userDisplayName ?? '',
+      timing.totalSeconds,
+      timing.billableSeconds,
+      timing.nonBillableSeconds,
+      timing.entryCount,
+      timing.firstStartedAt ?? '',
+      timing.lastStartedAt ?? '',
+    ];
+  });
 
   return [header, ...lines]
     .map((line) => line.map(csvCell).join(','))

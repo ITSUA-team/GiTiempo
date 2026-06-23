@@ -255,38 +255,13 @@ The backend MUST allow an authenticated user to stop their current running timer
 - **THEN** the backend responds with 404 Not Found
 
 ### Requirement: Chrome Extension Can Start Timer From GitHub Issue
-The backend MUST provide a Chrome Extension-facing endpoint that starts a timer from GitHub issue data and lazily creates local project/task records when necessary, but it MUST NOT start a timer for an existing closed local task mapping.
+The backend MUST preserve canonical GitHub provider mappings when starting timers from GitHub issues so existing workspace records are reused instead of duplicated by repository owner or name casing drift.
 
-#### Scenario: Extension starts timer for new GitHub issue
-- **GIVEN** an authenticated user has no running timer
-- **AND** no local project/task mapping exists for the submitted GitHub issue
-- **WHEN** the extension submits GitHub repository, issue number, and issue title
-- **THEN** the backend creates a provider-neutral project and task
-- **AND** stores GitHub provider references outside the core project and task rows
-- **AND** creates a running time entry with source `extension`
-
-#### Scenario: Extension reuses existing GitHub issue mapping
-- **GIVEN** local provider references already map the submitted GitHub issue to an active open task
-- **WHEN** the extension starts a timer for that issue
+#### Scenario: Extension reuses existing GitHub mapping regardless of repository casing
+- **GIVEN** local provider references already map the submitted GitHub issue using a different repository-name or owner casing variant
+- **WHEN** the extension starts a timer for that same GitHub issue
 - **THEN** the backend reuses the existing project and task records
-- **AND** creates a running time entry for the authenticated user
-
-#### Scenario: Extension cannot start timer for closed mapped task
-- **GIVEN** local provider references already map the submitted GitHub issue to a closed task
-- **WHEN** the extension starts a timer for that issue
-- **THEN** the backend rejects the request with 422 Unprocessable Entity
-- **AND** the backend does not create a running time entry
-
-#### Scenario: Extension start preserves non-admin visibility
-- **GIVEN** an authenticated non-admin user starts a timer for a newly created GitHub project
-- **WHEN** the backend creates the local project
-- **THEN** the backend ensures the acting user has project visibility for that project
-
-#### Scenario: Extension start validates local request shape only
-- **GIVEN** the extension submits GitHub issue data
-- **WHEN** the backend processes the request in this change
-- **THEN** the backend validates the local request shape
-- **AND** does not call GitHub APIs or require a connected GitHub account
+- **AND** does not create duplicate GitHub provider references for the casing variant
 
 ### Requirement: Project Time Entries Can Be Listed Read Only
 The backend MUST allow authenticated users to list time entries for visible projects without allowing mutation of other users' entries, including task-title search within the visible project list.
@@ -358,3 +333,4 @@ The backend MUST initialize new time-entry billable state from the selected task
 - **WHEN** the backend lazily creates the task under a project with `defaultBillableForTasks: false`
 - **THEN** the created task has `defaultBillableForTimeEntries: false`
 - **AND** the created running time entry has `isBillable: false`
+
