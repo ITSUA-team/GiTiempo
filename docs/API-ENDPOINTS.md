@@ -220,6 +220,9 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | PATCH  | `/workspace`          | JWT  | Admin | Update workspace settings (name)                        |
 | GET    | `/workspace/settings` | JWT  | Admin | Get workspace settings (currency, default hourly rate, time zone)  |
 | PATCH  | `/workspace/settings` | JWT  | Admin | Update workspace settings (currency, defaultHourlyRate, timeZone) |
+| GET    | `/workspace/github/organizations` | JWT | Admin | List workspace allowed GitHub organizations |
+| POST   | `/workspace/github/organizations` | JWT | Admin | Add an allowed GitHub organization after validating it through the admin's connected GitHub account |
+| DELETE | `/workspace/github/organizations/:organizationId` | JWT | Admin | Remove an allowed GitHub organization policy row |
 
 **GET /workspace/settings** response includes `{ id, workspaceId, currency, defaultHourlyRate, timeZone, createdAt, updatedAt }`.
 
@@ -227,6 +230,12 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 - `timeZone` must be a valid IANA time-zone identifier such as `UTC` or `Europe/Kyiv`.
 - `defaultHourlyRate` is a nullable workspace billing default for invoice creation; invoice records store their own hourly-rate snapshot after creation.
+
+**GET /workspace/github/organizations** response: `{ items: Array<{ id, workspaceId, organizationLogin, createdAt, createdByUserId }> }`.
+
+**POST /workspace/github/organizations** body: `{ organizationLogin: string }`. The backend validates the organization through the requesting admin's connected GitHub account before saving it. Recoverable GitHub connection or provider-access failures return a stable `code` and structured `recovery` payload for the admin Settings GitHub App access cards without exposing GitHub token material.
+
+**DELETE /workspace/github/organizations/:organizationId** returns `204 No Content` on success and scopes removal to the current workspace.
 
 ---
 

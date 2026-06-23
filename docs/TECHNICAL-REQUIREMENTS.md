@@ -146,6 +146,14 @@ Frontend callback handling must treat only those documented `github` values as s
 - The backend maintains a local cache. Stale data is refreshed on the next request.
 - No background jobs or webhooks for sync in MVP — the user's action triggers the refresh.
 
+**Workspace organization policy:**
+
+- Workspace admins can maintain a workspace-level allow-list of GitHub organization logins from the admin app.
+- This allow-list is a GiTiempo visibility policy layered on top of user-to-server GitHub auth. A workspace member only sees GitHub repositories, projects, and issues that match both the workspace policy and that member's own GitHub access.
+- Organization logins are validated through the requesting admin's connected GitHub account before they are saved to the workspace policy.
+- The policy does not create a shared workspace GitHub token, does not expose GitHub token material to the frontend, and does not change the user-to-server authentication model.
+- A validated organization login does not guarantee access to every private resource in that organization; GitHub-side GitHub App approval or installation may still be required for some organization resources.
+
 ### 2.4 Role-Based Access Control
 
 Three roles: `admin`, `pm`, `member`.

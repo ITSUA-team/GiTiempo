@@ -14,6 +14,7 @@ import {
   setAuthRuntimeForTesting,
   type AuthRuntime,
 } from "@/services/auth-runtime";
+import LoginView from "./LoginView.vue";
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   const currentUser: UserResponse = {
@@ -64,7 +65,6 @@ async function mountLoginView(initialPath = "/login") {
   });
   await router.push(initialPath);
   await router.isReady();
-  const LoginView = (await import("./LoginView.vue")).default;
 
   return {
     router,

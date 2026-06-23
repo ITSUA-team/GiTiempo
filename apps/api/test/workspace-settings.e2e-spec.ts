@@ -1,13 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
+import { GithubApiClientService } from '../src/github/services/github-api-client.service';
+import { GithubConnectionsService } from '../src/github/services/github-connections.service';
 import {
+  workspaceGitHubOrganizations,
   users,
   workspaceMembers,
   workspaceSettings,
@@ -16,6 +27,17 @@ import {
 import { bearer, login } from './helpers/auth';
 
 describe('Workspace settings (e2e)', () => {
+  const githubApiClient = {
+    getAuthenticatedUserOrganizationMembership: vi.fn(),
+    getProjectOwner: vi.fn(),
+    listActiveOrganizationMemberships: vi.fn(),
+    listOwners: vi.fn(),
+    listProjectIssues: vi.fn(),
+    listProjects: vi.fn(),
+    listRepositories: vi.fn(),
+    listRepositoryIssues: vi.fn(),
+  };
+
   let app: INestApplication;
   let db: DrizzleDB;
   let adminToken: string;
@@ -25,11 +47,15 @@ describe('Workspace settings (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(GithubApiClientService)
+      .useValue(githubApiClient)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
     db = app.get<DrizzleDB>(DRIZZLE);
+    const githubConnections = app.get(GithubConnectionsService);
 
     const suffix = randomUUID();
     const adminUid = `workspace-settings-admin-${suffix}`;
@@ -65,12 +91,37 @@ describe('Workspace settings (e2e)', () => {
       defaultHourlyRate: 100,
       timeZone: 'UTC',
     });
+    await githubConnections.upsertConnected(
+      adminUserId,
+      {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+      },
+      {
+        accessToken: 'ghu_access_token',
+        refreshToken: 'ghr_refresh_token',
+        tokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    );
 
     const tokens = await login(
       app,
       `test:${adminUid}:${adminEmail}:Workspace Settings Admin`,
     );
     adminToken = tokens.accessToken;
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    githubApiClient.listOwners.mockResolvedValue({ items: [] });
+    githubApiClient.getAuthenticatedUserOrganizationMembership.mockResolvedValue(
+      null,
+    );
+    githubApiClient.listActiveOrganizationMemberships.mockResolvedValue({
+      items: [],
+    });
   });
 
   afterAll(async () => {
@@ -116,6 +167,132 @@ describe('Workspace settings (e2e)', () => {
       expect(res.body.currency).toBe('USD');
       expect(res.body.defaultHourlyRate).toBe(100);
       expect(res.body.timeZone).toBe('UTC');
+    });
+  });
+
+  describe('GET /workspace/github/organizations', () => {
+    it('returns an empty policy list when the workspace has no allowed organizations', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/workspace/github/organizations')
+        .set('Authorization', bearer(adminToken));
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ items: [] });
+
+      const rows = await db
+        .select()
+        .from(workspaceGitHubOrganizations)
+        .where(eq(workspaceGitHubOrganizations.workspaceId, workspaceId));
+      expect(rows).toEqual([]);
+    });
+  });
+
+  describe('POST /workspace/github/organizations', () => {
+    it('creates an allowed organization and persists the saved row', async () => {
+      githubApiClient.listOwners.mockResolvedValue({
+        items: [
+          {
+            login: 'Octo-Org',
+            label: 'Octo-Org',
+            type: 'organization',
+            avatarUrl: null,
+            url: 'https://github.com/Octo-Org',
+          },
+        ],
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/workspace/github/organizations')
+        .set('Authorization', bearer(adminToken))
+        .send({ organizationLogin: 'octo-org' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.organizationLogin).toBe('Octo-Org');
+      expect(res.body.workspaceId).toBe(workspaceId);
+      expect(typeof res.body.id).toBe('string');
+      expect(githubApiClient.listOwners).toHaveBeenCalledWith(
+        'ghu_access_token',
+        {
+          login: 'octocat',
+          avatarUrl: null,
+        },
+        'organization',
+      );
+
+      const rows = await db
+        .select()
+        .from(workspaceGitHubOrganizations)
+        .where(eq(workspaceGitHubOrganizations.workspaceId, workspaceId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.organizationLogin).toBe('Octo-Org');
+      expect(rows[0]?.normalizedLogin).toBe('octo-org');
+      expect(rows[0]?.createdByUserId).toBe(adminUserId);
+    });
+  });
+
+  describe('DELETE /workspace/github/organizations/:organizationId', () => {
+    it('removes only the targeted workspace organization row', async () => {
+      const [otherWorkspace] = await db
+        .insert(workspaces)
+        .values({ name: `Other Workspace ${randomUUID()}` })
+        .returning();
+      if (!otherWorkspace) {
+        throw new Error('Failed to create other workspace');
+      }
+
+      try {
+        const [targetRow] = await db
+          .insert(workspaceGitHubOrganizations)
+          .values({
+            workspaceId,
+            organizationLogin: 'Delete-Me',
+            normalizedLogin: 'delete-me',
+            createdByUserId: adminUserId,
+          })
+          .returning();
+        const [otherRow] = await db
+          .insert(workspaceGitHubOrganizations)
+          .values({
+            workspaceId: otherWorkspace.id,
+            organizationLogin: 'Keep-Me',
+            normalizedLogin: 'keep-me',
+            createdByUserId: adminUserId,
+          })
+          .returning();
+        if (!targetRow || !otherRow) {
+          throw new Error(
+            'Failed to create workspace GitHub organization rows',
+          );
+        }
+
+        const res = await request(app.getHttpServer())
+          .delete(`/workspace/github/organizations/${targetRow.id}`)
+          .set('Authorization', bearer(adminToken));
+
+        expect(res.status).toBe(204);
+        expect(res.text).toBe('');
+
+        const workspaceRows = await db
+          .select()
+          .from(workspaceGitHubOrganizations)
+          .where(eq(workspaceGitHubOrganizations.workspaceId, workspaceId));
+        expect(workspaceRows.map((row) => row.id)).not.toContain(targetRow.id);
+
+        const otherWorkspaceRows = await db
+          .select()
+          .from(workspaceGitHubOrganizations)
+          .where(
+            eq(workspaceGitHubOrganizations.workspaceId, otherWorkspace.id),
+          );
+        expect(otherWorkspaceRows.map((row) => row.id)).toContain(otherRow.id);
+      } finally {
+        await db
+          .delete(workspaceGitHubOrganizations)
+          .where(
+            eq(workspaceGitHubOrganizations.workspaceId, otherWorkspace.id),
+          );
+        await db.delete(workspaces).where(eq(workspaces.id, otherWorkspace.id));
+      }
     });
   });
 
