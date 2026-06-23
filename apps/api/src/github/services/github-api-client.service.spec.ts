@@ -57,6 +57,98 @@ describe('GithubApiClientService', () => {
     expect(JSON.stringify(result)).not.toContain(accessToken);
   });
 
+  it('lists active organization memberships for authenticated users', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse([
+        {
+          state: 'active',
+          organization: {
+            login: 'My-test-org-for-clock',
+            avatar_url: 'https://avatars.githubusercontent.com/u/2',
+            html_url: 'https://github.com/My-test-org-for-clock',
+          },
+        },
+        {
+          state: 'pending',
+          organization: {
+            login: 'Pending-Org',
+            avatar_url: null,
+            html_url: 'https://github.com/Pending-Org',
+          },
+        },
+      ]),
+    );
+
+    const result = await service.listActiveOrganizationMemberships(accessToken);
+
+    const requestUrl = new URL(fetchMock.mock.calls[0]![0] as URL);
+    expect(requestUrl.pathname).toBe('/user/memberships/orgs');
+    expect(requestUrl.searchParams.get('state')).toBe('active');
+    expect(result.items.map((owner) => owner.login)).toEqual([
+      'My-test-org-for-clock',
+    ]);
+  });
+
+  it('gets the authenticated user membership for a single organization', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        state: 'active',
+        organization: {
+          login: 'My-test-org-for-clock',
+          avatar_url: 'https://avatars.githubusercontent.com/u/2',
+          html_url: 'https://github.com/My-test-org-for-clock',
+        },
+      }),
+    );
+
+    const result = await service.getAuthenticatedUserOrganizationMembership(
+      accessToken,
+      'My-test-org-for-clock',
+    );
+
+    const requestUrl = new URL(fetchMock.mock.calls[0]![0] as URL);
+    expect(requestUrl.pathname).toBe(
+      '/user/memberships/orgs/My-test-org-for-clock',
+    );
+    expect(result).toEqual({
+      login: 'My-test-org-for-clock',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/2',
+      url: 'https://github.com/My-test-org-for-clock',
+      state: 'active',
+    });
+  });
+
+  it('returns null when the authenticated user is not affiliated with the organization', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ message: 'Not Found' }, { status: 404 }),
+    );
+
+    await expect(
+      service.getAuthenticatedUserOrganizationMembership(
+        accessToken,
+        'missing-org',
+      ),
+    ).resolves.toBeNull();
+  });
+
+  it('surfaces blocked organizations for authenticated user membership checks', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ message: 'Forbidden' }, { status: 403 }),
+    );
+
+    await expect(
+      service.getAuthenticatedUserOrganizationMembership(
+        accessToken,
+        'blocked-org',
+      ),
+    ).rejects.toMatchObject({
+      message: 'GitHub organization blocks this GitHub App',
+      response: expect.objectContaining({
+        code: 'github_app_access_blocked',
+      }),
+    });
+  });
+
   it('normalizes repositories and returns opaque next page token', async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(

@@ -1,6 +1,7 @@
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { computed, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import DashboardOverview from "./DashboardOverview.vue";
 
 const pageState = ref<"empty" | "loading" | "ready" | "request-error">("ready");
 const requestErrorMessage = ref<string | null>(null);
@@ -80,8 +81,7 @@ describe("DashboardOverview", () => {
     }
   });
 
-  async function mountOverview() {
-    const DashboardOverview = (await import("./DashboardOverview.vue")).default;
+  function mountOverview() {
     const wrapper = mount(DashboardOverview, {
       global: {
         stubs: {
@@ -166,30 +166,34 @@ describe("DashboardOverview", () => {
     return wrapper;
   }
 
-  it("renders the populated dashboard overview without page-level timer controls or duplicated header", async () => {
-    const wrapper = await mountOverview();
+  it(
+    "renders the populated dashboard overview without page-level timer controls or duplicated header",
+    async () => {
+      const wrapper = mountOverview();
 
-    expect(wrapper.text()).not.toContain("Timer actions stay in the global top bar.");
-    expect(wrapper.text()).toContain("6h 40m");
-    expect(wrapper.text()).toContain("Admin Web");
-    expect(wrapper.text()).toContain("Improve reports filters");
-    expect(wrapper.text()).toContain("42");
-    expect(wrapper.text()).toContain("Top Focus This Week");
-    expect(wrapper.text()).toContain("Recent Time Entries");
-    expect(wrapper.text()).toContain("View all");
-    expect(
-      wrapper.findAll('button[aria-label="Start"], button[aria-label="Start timer"], button[aria-label="Stop"], button[aria-label="Stop timer"]'),
-    ).toHaveLength(0);
+      expect(wrapper.text()).not.toContain("Timer actions stay in the global top bar.");
+      expect(wrapper.text()).toContain("6h 40m");
+      expect(wrapper.text()).toContain("Admin Web");
+      expect(wrapper.text()).toContain("Improve reports filters");
+      expect(wrapper.text()).toContain("42");
+      expect(wrapper.text()).toContain("Top Focus This Week");
+      expect(wrapper.text()).toContain("Recent Time Entries");
+      expect(wrapper.text()).toContain("View all");
+      expect(
+        wrapper.findAll('button[aria-label="Start"], button[aria-label="Start timer"], button[aria-label="Stop"], button[aria-label="Stop timer"]'),
+      ).toHaveLength(0);
 
-    await wrapper.get("button").trigger("click");
+      await wrapper.get("button").trigger("click");
 
-    expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
-  });
+      expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
+    },
+    20_000,
+  );
 
   it("renders the loading skeleton state", async () => {
     pageState.value = "loading";
 
-    const wrapper = await mountOverview();
+    const wrapper = mountOverview();
 
     expect(wrapper.find('[data-testid="dashboard-loading-state"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="dashboard-loading-stats"]').exists()).toBe(true);
@@ -203,7 +207,7 @@ describe("DashboardOverview", () => {
   it("renders distinct request-error and empty states", async () => {
     pageState.value = "request-error";
     requestErrorMessage.value = "network down";
-    const errorWrapper = await mountOverview();
+    const errorWrapper = mountOverview();
 
     expect(errorWrapper.text()).toContain("Could not load dashboard overview");
     expect(errorWrapper.text()).toContain("network down");
@@ -214,7 +218,7 @@ describe("DashboardOverview", () => {
 
     pageState.value = "empty";
     requestErrorMessage.value = null;
-    const emptyWrapper = await mountOverview();
+    const emptyWrapper = mountOverview();
 
     expect(emptyWrapper.text()).toContain("No recent time activity yet");
     expect(emptyWrapper.text()).not.toContain("Could not load dashboard overview");

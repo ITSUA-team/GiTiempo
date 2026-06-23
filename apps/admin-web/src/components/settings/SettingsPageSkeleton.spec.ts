@@ -59,4 +59,19 @@ describe('SettingsPageSkeleton', () => {
     );
     expect(timeZoneRow.findAll('[data-testid="skeleton"]')).toHaveLength(2);
   });
+
+  it('includes the GitHub workspace access skeleton card', () => {
+    const wrapper = mount(SettingsPageSkeleton, {
+      global: {
+        stubs: {
+          Skeleton: { template: '<div data-testid="skeleton" />' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+    });
+
+    const githubPolicy = wrapper.get('[data-testid="settings-skeleton-github-policy"]');
+
+    expect(githubPolicy.findAll('[data-testid="skeleton"]').length).toBeGreaterThan(2);
+  });
 });
