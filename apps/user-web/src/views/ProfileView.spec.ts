@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { computed, ref, shallowRef } from "vue";
+import { computed, ref, shallowRef, type Component } from "vue";
 import {
   afterAll,
   afterEach,
@@ -28,7 +28,7 @@ import { useAuthStore } from "@/stores/auth";
 const replaceSpy = vi.fn(async () => undefined);
 const toastAddSpy = vi.fn();
 const mountedWrappers: Array<{ unmount: () => void }> = [];
-let ProfileView: Awaited<typeof import("./ProfileView.vue")>["default"];
+let ProfileView: Component;
 
 const githubState = ref<
   "connected" | "connecting" | "disconnected" | "loading" | "request-error"
