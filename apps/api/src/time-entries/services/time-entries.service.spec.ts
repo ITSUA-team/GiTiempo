@@ -784,4 +784,43 @@ describe('TimeEntriesService', () => {
     ).rejects.toThrow('Task is closed');
     expect(tx.insert).not.toHaveBeenCalled();
   });
+
+  it('matches GitHub project refs case-insensitively', async () => {
+    const select = selectRows([{ projectId: 'project-1' }]);
+    const service = new TimeEntriesService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+    );
+
+    const result = await service['findGitHubProjectRef'](
+      { select: vi.fn().mockReturnValue({ from: select.from }) } as never,
+      user.workspaceId,
+      'gitiempo-test/mixed-case',
+    );
+
+    expect(result).toEqual({ projectId: 'project-1' });
+  });
+
+  it('matches GitHub task refs case-insensitively', async () => {
+    const select = selectRows([{ taskId: 'task-1' }]);
+    const service = new TimeEntriesService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+    );
+
+    const result = await service['findGitHubTaskRef'](
+      { select: vi.fn().mockReturnValue({ from: select.from }) } as never,
+      user.workspaceId,
+      'project-1',
+      'gitiempo-test/mixed-case#123',
+    );
+
+    expect(result).toEqual({ taskId: 'task-1' });
+  });
 });

@@ -815,6 +815,66 @@ describe('Time entries (e2e)', () => {
     expect(started.body.isBillable).toBe(false);
   });
 
+  it('reuses existing GitHub refs when repository casing differs', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const storedGitHubRepo = `gitiempo-test/Mixed-Case-${suffix}`;
+    const requestedGitHubRepo = storedGitHubRepo.toLowerCase();
+    const issueNumber = 778;
+
+    await createGitHubRefs(storedGitHubRepo, issueNumber, platformTaskId);
+
+    const started = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', bearer(memberToken))
+      .send({
+        githubRepo: requestedGitHubRepo,
+        issueNumber,
+        issueTitle: 'Mixed case issue',
+      });
+
+    expect(started.status).toBe(201);
+    expect(started.body.projectId).toBe(platformProjectId);
+    expect(started.body.taskId).toBe(platformTaskId);
+
+    const projectRefs = await db
+      .select({ externalKey: projectExternalRefs.externalKey })
+      .from(projectExternalRefs)
+      .where(
+        and(
+          eq(projectExternalRefs.workspaceId, workspaceId),
+          eq(projectExternalRefs.provider, 'github'),
+          eq(projectExternalRefs.externalType, 'repository'),
+          or(
+            eq(projectExternalRefs.externalKey, storedGitHubRepo),
+            eq(projectExternalRefs.externalKey, requestedGitHubRepo),
+          ),
+        ),
+      );
+    expect(projectRefs).toHaveLength(1);
+
+    const taskRefs = await db
+      .select({ externalKey: taskExternalRefs.externalKey })
+      .from(taskExternalRefs)
+      .where(
+        and(
+          eq(taskExternalRefs.workspaceId, workspaceId),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+          or(
+            eq(
+              taskExternalRefs.externalKey,
+              `${storedGitHubRepo}#${issueNumber}`,
+            ),
+            eq(
+              taskExternalRefs.externalKey,
+              `${requestedGitHubRepo}#${issueNumber}`,
+            ),
+          ),
+        ),
+      );
+    expect(taskRefs).toHaveLength(1);
+  });
+
   it('creates GitHub issue tasks from the project billable default', async () => {
     const suffix = randomUUID().slice(0, 8);
     const githubRepo = `gitiempo-test/lazy-billable-${suffix}`;
