@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Start Timer From GitHub Issue
+### Requirement: Chrome Extension Can Start Timer From GitHub Issue
 The backend MUST preserve canonical GitHub provider mappings when starting timers from GitHub issues so existing workspace records are reused instead of duplicated by repository owner or name casing drift.
 
 #### Scenario: Extension reuses existing GitHub mapping regardless of repository casing
