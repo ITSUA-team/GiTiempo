@@ -61,7 +61,7 @@ export const updateTaskSchema = z
 
 export const backfillTaskBillableDefaultSchema = z
   .object({
-    updateTimeEntries: z.literal(true),
+    updateTimeEntries: z.boolean(),
   })
   .strict();
 
