@@ -1,6 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import PrimeVue from "primevue/config";
 import { computed, ref, shallowRef } from "vue";
 import {
   afterAll,
@@ -18,7 +17,6 @@ import type {
   UpdateUserInput,
   UserResponse,
 } from "@gitiempo/shared";
-import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import {
   resetAuthRuntimeForTesting,
@@ -30,6 +28,7 @@ import { useAuthStore } from "@/stores/auth";
 const replaceSpy = vi.fn(async () => undefined);
 const toastAddSpy = vi.fn();
 const mountedWrappers: Array<{ unmount: () => void }> = [];
+let ProfileView: Awaited<typeof import("./ProfileView.vue")>["default"];
 
 const githubState = ref<
   "connected" | "connecting" | "disconnected" | "loading" | "request-error"
@@ -129,11 +128,9 @@ async function mountProfileView() {
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
 
-  const ProfileView = (await import("./ProfileView.vue")).default;
-
   const wrapper = mount(ProfileView, {
     global: {
-      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [pinia],
       stubs: {
         Avatar: {
           props: ["label"],
@@ -176,9 +173,10 @@ async function mountProfileView() {
 }
 
 describe("ProfileView", () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     vi.stubEnv("TZ", "Europe/Kiev");
-  });
+    ProfileView = (await import("./ProfileView.vue")).default;
+  }, 20_000);
 
   afterAll(() => {
     vi.unstubAllEnvs();
