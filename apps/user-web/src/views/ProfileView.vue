@@ -40,7 +40,7 @@ const isSaveDisabled = computed(
   () => isSavingProfile.value || !isProfileDirty.value,
 );
 const isInitialProfilePageLoading = computed(
-  () => githubConnectionState.value === "loading",
+  () => authStore.profile === null,
 );
 
 watch(

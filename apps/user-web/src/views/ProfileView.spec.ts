@@ -46,6 +46,18 @@ const githubActions = {
   requestDisconnect: vi.fn(),
 };
 
+function createUserProfile(): UserResponse {
+  return {
+    avatarUrl: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    displayName: "Alexey Tsukanov",
+    email: "alexey@example.com",
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    role: "member",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+}
+
 vi.mock("vue-router", async (importOriginal) => {
   const actual = (await importOriginal()) as typeof VueRouterModule;
 
@@ -73,15 +85,7 @@ vi.mock("@/composables/profile/useProfileGithubConnection", () => ({
 }));
 
 function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
-  const currentUser: UserResponse = {
-    avatarUrl: null,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    displayName: "Alexey Tsukanov",
-    email: "alexey@example.com",
-    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-    role: "member",
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  };
+  const currentUser = createUserProfile();
 
   return {
     getCurrentUser: async () => currentUser,
@@ -113,20 +117,14 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   };
 }
 
-async function mountProfileView() {
+async function mountProfileView(options: { profile?: UserResponse | null } = {}) {
   const pinia = createPinia();
   setActivePinia(pinia);
   const authStore = useAuthStore();
   authStore.accessToken = "access-token";
-  authStore.profile = {
-    avatarUrl: null,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    displayName: "Alexey Tsukanov",
-    email: "alexey@example.com",
-    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-    role: "member",
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  };
+  authStore.profile = "profile" in options
+    ? options.profile ?? null
+    : createUserProfile();
 
   const wrapper = mount(ProfileView, {
     global: {
@@ -213,11 +211,8 @@ describe("ProfileView", () => {
     }
   });
 
-  it("renders profile form and GitHub skeletons during the initial load", async () => {
-    githubState.value = "loading";
-    githubConnection.value = null;
-
-    const { wrapper } = await mountProfileView();
+  it("renders full profile skeletons while the profile prerequisite loads", async () => {
+    const { wrapper } = await mountProfileView({ profile: null });
 
     expect(wrapper.find('[data-testid="profile-loading"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="profile-form-loading"]').exists()).toBe(true);
@@ -226,6 +221,19 @@ describe("ProfileView", () => {
     expect(wrapper.find('[data-testid="profile-email-input"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain("Alexey Tsukanov");
     expect(wrapper.text()).not.toContain("GitHub Connection");
+  });
+
+  it("keeps the profile form rendered while only the GitHub card loads", async () => {
+    githubState.value = "loading";
+    githubConnection.value = null;
+
+    const { wrapper } = await mountProfileView();
+
+    expect(wrapper.find('[data-testid="profile-loading"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="profile-display-name-input"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-email-input"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain("Alexey Tsukanov");
+    expect(wrapper.text()).toContain("GitHub Connection");
     expect(wrapper.text()).not.toContain("Connect GitHub");
   });
 
