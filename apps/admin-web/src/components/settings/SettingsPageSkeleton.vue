@@ -144,6 +144,97 @@ import Skeleton from 'primevue/skeleton';
         </div>
       </SurfaceCard>
 
+      <SurfaceCard
+        class="w-full"
+        padding-class="p-5"
+      >
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-1.5">
+            <Skeleton
+              width="11rem"
+              height="1.375rem"
+              border-radius="6px"
+            />
+            <Skeleton
+              width="22rem"
+              height="0.875rem"
+              border-radius="4px"
+            />
+            <Skeleton
+              width="24rem"
+              height="0.875rem"
+              border-radius="4px"
+            />
+          </div>
+
+          <div
+            data-testid="settings-skeleton-github-policy"
+            class="flex flex-col gap-3"
+          >
+            <Skeleton
+              width="9rem"
+              height="1.125rem"
+              border-radius="4px"
+            />
+            <div
+              v-for="index in 2"
+              :key="index"
+              class="flex items-center justify-between gap-4 rounded-lg border border-transparent p-3.5"
+            >
+              <div class="flex min-w-0 flex-1 flex-col gap-2">
+                <Skeleton
+                  width="8rem"
+                  height="0.875rem"
+                  border-radius="4px"
+                />
+                <Skeleton
+                  width="10rem"
+                  height="0.75rem"
+                  border-radius="4px"
+                />
+              </div>
+              <Skeleton
+                width="4.5rem"
+                height="2.25rem"
+                border-radius="6px"
+              />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2.5">
+            <Skeleton
+              width="8rem"
+              height="1.125rem"
+              border-radius="4px"
+            />
+            <Skeleton
+              width="16rem"
+              height="0.875rem"
+              border-radius="4px"
+            />
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                <Skeleton
+                  width="7.5rem"
+                  height="0.875rem"
+                  border-radius="4px"
+                />
+                <Skeleton
+                  height="38px"
+                  border-radius="6px"
+                />
+              </div>
+              <div class="w-full sm:w-[10rem]">
+                <Skeleton
+                  height="2.75rem"
+                  border-radius="6px"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </SurfaceCard>
+
       <div
         data-testid="settings-skeleton-actions"
         class="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:justify-end"

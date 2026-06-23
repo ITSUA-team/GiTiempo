@@ -23,8 +23,13 @@ describe('GithubService', () => {
     listOwners: vi.fn(),
     listRepositories: vi.fn(),
     listProjects: vi.fn(),
+    getProjectOwner: vi.fn(),
     listRepositoryIssues: vi.fn(),
     listProjectIssues: vi.fn(),
+  };
+  const workspaceGitHubOrganizations = {
+    listAllowedOrganizationLogins: vi.fn(),
+    assertOrganizationAllowed: vi.fn(),
   };
   const user = {
     sub: 'user-1',
@@ -44,6 +49,7 @@ describe('GithubService', () => {
       oauthClient as never,
       connections as never,
       apiClient as never,
+      workspaceGitHubOrganizations as never,
     );
   }
 
@@ -154,6 +160,16 @@ describe('GithubService', () => {
   });
 
   it('uses valid token path for repository issue browsing', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
     connections.getValidAccessToken.mockResolvedValue('ghu_token');
     apiClient.listRepositoryIssues.mockResolvedValue({
       items: [],
@@ -175,5 +191,281 @@ describe('GithubService', () => {
       limit: 30,
       pageToken: undefined,
     });
+  });
+
+  it('filters owner lists through the workspace allow-list while preserving personal scope', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.listOwners.mockResolvedValue({
+      items: [
+        {
+          login: 'octocat',
+          label: 'octocat',
+          type: 'personal',
+          avatarUrl: null,
+          url: 'https://github.com/octocat',
+        },
+        {
+          login: 'Octo-Org',
+          label: 'Octo-Org',
+          type: 'organization',
+          avatarUrl: null,
+          url: 'https://github.com/Octo-Org',
+        },
+        {
+          login: 'Other-Org',
+          label: 'Other-Org',
+          type: 'organization',
+          avatarUrl: null,
+          url: 'https://github.com/Other-Org',
+        },
+      ],
+    });
+    workspaceGitHubOrganizations.listAllowedOrganizationLogins.mockResolvedValue(
+      ['octo-org'],
+    );
+
+    const result = await service().listOwners(user, { type: 'all' });
+
+    expect(result.items.map((owner) => owner.login)).toEqual([
+      'octocat',
+      'Octo-Org',
+    ]);
+  });
+
+  it('rejects organization-scoped repository browsing when the owner is not allowed', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    workspaceGitHubOrganizations.assertOrganizationAllowed.mockRejectedValue(
+      new Error('blocked'),
+    );
+
+    await expect(
+      service().listRepositories(user, {
+        ownerType: 'organization',
+        owner: 'octo-org',
+        limit: 30,
+      }),
+    ).rejects.toThrow('blocked');
+    expect(apiClient.listRepositories).not.toHaveBeenCalled();
+  });
+
+  it('rejects organization-scoped project browsing when the owner is not allowed', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    workspaceGitHubOrganizations.assertOrganizationAllowed.mockRejectedValue(
+      new Error('blocked'),
+    );
+
+    await expect(
+      service().listProjects(user, {
+        ownerType: 'organization',
+        owner: 'octo-org',
+        limit: 30,
+      }),
+    ).rejects.toThrow('blocked');
+    expect(apiClient.listProjects).not.toHaveBeenCalled();
+  });
+
+  it('rejects organization repository issues when the owner is not allowed', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    workspaceGitHubOrganizations.assertOrganizationAllowed.mockRejectedValue(
+      new Error('blocked'),
+    );
+
+    await expect(
+      service().listRepositoryIssues(user, 'octo-org', 'repo', {
+        state: 'all',
+        limit: 30,
+      }),
+    ).rejects.toThrow('blocked');
+    expect(apiClient.listRepositoryIssues).not.toHaveBeenCalled();
+  });
+
+  it('allows personal repository issues without checking the workspace organization policy', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.listRepositoryIssues.mockResolvedValue({
+      items: [],
+      pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
+    });
+
+    await service().listRepositoryIssues(user, 'octocat', 'repo', {
+      state: 'all',
+      limit: 30,
+    });
+
+    expect(
+      workspaceGitHubOrganizations.assertOrganizationAllowed,
+    ).not.toHaveBeenCalled();
+    expect(apiClient.listRepositoryIssues).toHaveBeenCalled();
+  });
+
+  it('fails closed for project issue browsing when project ownership cannot be verified as allowed', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.getProjectOwner.mockResolvedValue({
+      type: 'organization',
+      login: null,
+    });
+
+    await expect(
+      service().listProjectIssues(user, 'PVT_kwDO', {
+        state: 'open',
+        limit: 30,
+      }),
+    ).rejects.toThrow('could not be verified');
+    expect(apiClient.listProjectIssues).not.toHaveBeenCalled();
+  });
+
+  it('filters Project V2 issue items whose repository owners are outside the workspace allow-list', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.getProjectOwner.mockResolvedValue({
+      type: 'personal',
+      login: 'octocat',
+    });
+    apiClient.listProjectIssues.mockResolvedValue({
+      items: [
+        {
+          projectItemId: 'item-1',
+          isArchived: false,
+          issue: {
+            id: 'issue-1',
+            nodeId: 'issue-1',
+            repository: {
+              owner: 'octocat',
+              name: 'personal-repo',
+              fullName: 'octocat/personal-repo',
+            },
+            number: 1,
+            title: 'Personal issue',
+            state: 'open',
+            url: 'https://github.com/octocat/personal-repo/issues/1',
+            updatedAt: '2026-05-14T12:00:00.000Z',
+          },
+        },
+        {
+          projectItemId: 'item-2',
+          isArchived: false,
+          issue: {
+            id: 'issue-2',
+            nodeId: 'issue-2',
+            repository: {
+              owner: 'Octo-Org',
+              name: 'allowed-repo',
+              fullName: 'Octo-Org/allowed-repo',
+            },
+            number: 2,
+            title: 'Allowed org issue',
+            state: 'open',
+            url: 'https://github.com/Octo-Org/allowed-repo/issues/2',
+            updatedAt: '2026-05-14T12:00:00.000Z',
+          },
+        },
+        {
+          projectItemId: 'item-3',
+          isArchived: false,
+          issue: {
+            id: 'issue-3',
+            nodeId: 'issue-3',
+            repository: {
+              owner: 'Other-Org',
+              name: 'blocked-repo',
+              fullName: 'Other-Org/blocked-repo',
+            },
+            number: 3,
+            title: 'Blocked org issue',
+            state: 'open',
+            url: 'https://github.com/Other-Org/blocked-repo/issues/3',
+            updatedAt: '2026-05-14T12:00:00.000Z',
+          },
+        },
+      ],
+      pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
+      skipped: {
+        pullRequests: 0,
+        draftIssues: 0,
+        redacted: 0,
+        unknown: 0,
+      },
+    });
+    workspaceGitHubOrganizations.listAllowedOrganizationLogins.mockResolvedValue(
+      ['octo-org'],
+    );
+
+    const result = await service().listProjectIssues(user, 'PVT_kwDO', {
+      state: 'all',
+      limit: 30,
+    });
+
+    expect(result.items.map((item) => item.projectItemId)).toEqual([
+      'item-1',
+      'item-2',
+    ]);
   });
 });
