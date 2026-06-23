@@ -11,6 +11,7 @@ describe('GithubController', () => {
     listOwners: vi.fn(),
     listRepositories: vi.fn(),
     listProjects: vi.fn(),
+    getProjectOwner: vi.fn(),
     listRepositoryIssues: vi.fn(),
     listProjectIssues: vi.fn(),
     completeCallback: vi.fn(),

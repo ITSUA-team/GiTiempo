@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { defineComponent } from 'vue';
 import { describe, expect, it } from 'vitest';
 
 import SettingsForm from './SettingsForm.vue';
@@ -91,8 +92,23 @@ const ButtonStub = {
 		'<button :disabled="disabled" :type="type || \'button\'" @click="$emit(\'click\', $event)">{{ label }}</button>',
 };
 
+const FormStub = defineComponent({
+	emits: ['submit'],
+	setup(_, { emit, expose }) {
+		function submit(): void {
+			emit('submit', { valid: true, values: {} });
+		}
+
+		expose({ submit });
+
+		return { submit };
+	},
+	template: '<form @submit.prevent="submit"><slot /></form>',
+});
+
 const stubs = {
 	Button: ButtonStub,
+	Form: FormStub,
 	InputNumber: InputNumberStub,
 	InputText: InputTextStub,
 	Message: { template: '<small><slot /></small>' },
@@ -193,5 +209,29 @@ describe('SettingsForm', () => {
 
 		expect(wrapper.emitted('cancel')).toHaveLength(1);
 		expect(wrapper.emitted('save')).toHaveLength(1);
+	});
+
+	it('submits workspace settings through the form wrapper', async () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps(),
+		});
+
+		await wrapper.get('form').trigger('submit');
+
+		expect(wrapper.emitted('save')).toHaveLength(1);
+	});
+
+	it('keeps projected cards outside the workspace settings form', () => {
+		const wrapper = mount(SettingsForm, {
+			global: { stubs },
+			props: createProps(),
+			slots: {
+				'after-card': '<section data-testid="after-card">GitHub card</section>',
+			},
+		});
+
+		expect(wrapper.get('#settings-workspace-name').element.closest('form')).not.toBeNull();
+		expect(wrapper.get('[data-testid="after-card"]').element.closest('form')).toBeNull();
 	});
 });
