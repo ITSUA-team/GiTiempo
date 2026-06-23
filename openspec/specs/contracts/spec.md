@@ -34,7 +34,7 @@ The shared contracts SHALL define validation rules for current-user profile upda
 
 ### Requirement: Shared Auth Request Contracts
 
-The shared contracts MUST define request payload schemas for the authentication flow so that backend validation and frontend clients use the same shapes.
+The shared contracts MUST define request payload schemas for authentication and registration flows so that backend validation and frontend clients use the same shapes.
 
 #### Scenario: Login request schema
 
@@ -53,8 +53,16 @@ The shared contracts MUST define request payload schemas for the authentication 
 #### Scenario: Logout request schema
 
 - **GIVEN** a client constructs a logout request
-- **WHEN** the request payload is validated against the shared logout schema
+- **WHEN** the shared schema validates the payload
 - **THEN** the payload requires a non-empty refresh token field
+- **AND** the payload rejects unknown additional fields
+
+#### Scenario: Registration request schema
+
+- **GIVEN** a client constructs a first-owner registration request
+- **WHEN** the request payload is validated against the shared registration schema
+- **THEN** the payload requires `email`, `fullName`, `workspaceName`, `password`, and `ownerAcknowledgement`
+- **AND** `ownerAcknowledgement` must be `true`
 - **AND** the payload rejects unknown additional fields
 
 ### Requirement: Shared Token Pair Response Contract
@@ -73,6 +81,13 @@ The shared contracts MUST define a single response shape for endpoints that issu
 - **GIVEN** the backend has rotated an API session via refresh
 - **WHEN** the response is produced
 - **THEN** the response matches the shared token pair response contract
+
+#### Scenario: Successful registration response
+
+- **GIVEN** the backend has issued a new API session after first-owner registration
+- **WHEN** the response is produced
+- **THEN** the response matches the shared token pair response contract
+- **AND** frontend consumers can use the same token storage path as login
 
 ### Requirement: Shared Frontend App Identity Contract
 
@@ -613,3 +628,67 @@ The shared time-entry contracts MUST keep manual entry billable overrides explic
 - **GIVEN** a client constructs a timer start request
 - **WHEN** the payload includes `isBillable`
 - **THEN** the shared schema rejects the payload as containing an unknown additional field
+
+### Requirement: Shared Registration Error Contract
+The shared contracts SHALL define stable registration error identifiers for frontend error mapping.
+
+#### Scenario: Registration errors use shared identifiers
+- **WHEN** registration fails for an expected user-correctable or retryable reason
+- **THEN** the frontend can map the failure to one of `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, or `registration_service_unavailable`
+- **AND** the API response does not require the frontend to parse provider-specific error messages
+
+#### Scenario: Registration errors use the standard API envelope
+- **WHEN** the backend returns a mapped registration failure
+- **THEN** the response body includes the standard API error fields `statusCode`, `error`, and `message`
+- **AND** the stable frontend-visible registration identifier is carried in `code`
+- **AND** `error` remains the HTTP-category label rather than the registration-specific identifier
+
+### Requirement: Shared Workspace GitHub Organization Policy Contracts
+The shared contracts SHALL define stable request and response shapes for workspace GitHub organization allow-list management.
+
+#### Scenario: Allowed organization response uses shared schema
+- **GIVEN** the backend returns a workspace allowed GitHub organization
+- **WHEN** frontend or backend code consumes the response
+- **THEN** the payload matches the shared allowed organization contract
+- **AND** the payload includes an identifier, workspace identifier, organization login, created timestamp, and creating user identifier when available
+- **AND** the payload excludes GitHub token material
+
+#### Scenario: Organization list response uses shared schema
+- **GIVEN** the backend returns the workspace GitHub organization policy list
+- **WHEN** frontend or backend code consumes the response
+- **THEN** the payload matches the shared organization list response contract
+- **AND** the payload contains an array of allowed organization items
+
+#### Scenario: Add organization request validates login
+- **GIVEN** a client constructs an add allowed GitHub organization request
+- **WHEN** the payload is validated against the shared schema
+- **THEN** the payload requires a non-empty GitHub organization login
+- **AND** the payload rejects unknown additional fields
+
+#### Scenario: Invalid organization login is rejected by shared schema
+- **GIVEN** a client constructs an add allowed GitHub organization request with an empty or whitespace-only login
+- **WHEN** the payload is validated against the shared schema
+- **THEN** the payload is rejected as invalid
+
+### Requirement: Workspace GitHub Organization Rejections Are Frontend-Safe
+The shared API contract SHALL expose stable, frontend-safe recovery payloads for add-organization failures that the admin Settings page can map to GitHub App access recovery cards.
+
+#### Scenario: Add organization rejection exposes recovery payload
+- **GIVEN** the backend rejects an add allowed GitHub organization request for a recoverable GitHub connection or provider access reason
+- **WHEN** frontend code consumes the error payload
+- **THEN** the payload matches the standard API error envelope with `statusCode`, `error`, `message`, optional `code`, optional `requestId`, and optional `details`
+- **AND** the payload includes a required `recovery` object
+- **AND** the `code` field includes a stable recovery reason category
+- **AND** the reason can represent missing GitHub connection, organization not visible, GitHub App blocked or needing approval, and retryable provider failure
+- **AND** the payload includes the rejected organization login when available
+- **AND** the payload includes ordered GitHub App access recovery steps with stable step identifiers and status values
+- **AND** the step identifiers can represent install GitHub App, approve or unblock organization access, reconnect GitHub account, and retry allow-list check
+- **AND** the payload excludes GitHub token material and raw provider secrets
+
+#### Scenario: Recovery step statuses use shared schema
+- **GIVEN** frontend or backend code consumes a GitHub App access recovery step
+- **WHEN** the payload is validated against the shared schema
+- **THEN** each step includes a stable id and status
+- **AND** unknown step ids or status values are rejected
+- **AND** the schema carries no UI copy, external URLs, token material, or raw provider response data
+
