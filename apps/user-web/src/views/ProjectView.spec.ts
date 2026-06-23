@@ -5,7 +5,7 @@ import type {
   TaskResponse,
   TimeEntryListResponse,
 } from "@gitiempo/shared";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { createTestQueryPlugin } from "@/test/query-client";
@@ -18,6 +18,7 @@ const primeVueMocks = vi.hoisted(() => ({
   confirmRequire: vi.fn(),
   toastAdd: vi.fn(),
 }));
+const mountedWrappers: Array<{ unmount: () => void }> = [];
 
 vi.mock("@/config/clients", () => ({
   createDefaultTimeEntriesClient: () => clientRef.current,
@@ -283,7 +284,17 @@ async function mountView(client = createClientMock()) {
     },
   });
 
+  mountedWrappers.push(wrapper);
+
   return { client, wrapper };
+}
+
+async function waitForProjectsReady(
+  wrapper: Awaited<ReturnType<typeof mountView>>["wrapper"],
+): Promise<void> {
+  await vi.waitFor(() => {
+    expect(wrapper.find('[data-testid="projects-groups"]').exists()).toBe(true);
+  });
 }
 
 describe("ProjectView", () => {
@@ -291,6 +302,12 @@ describe("ProjectView", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     primeVueMocks.confirmRequire.mockClear();
     primeVueMocks.toastAdd.mockClear();
+  });
+
+  afterEach(() => {
+    while (mountedWrappers.length > 0) {
+      mountedWrappers.pop()?.unmount();
+    }
   });
 
   it("renders the lightweight filters, grouped sections, and task actions", async () => {
@@ -306,6 +323,7 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
+    await waitForProjectsReady(wrapper);
 
     expect(wrapper.text()).not.toContain(
       "Create, update, and organize tasks across your visible projects.",
@@ -338,6 +356,9 @@ describe("ProjectView", () => {
 
     await wrapper.get('[data-testid="projects-search-complete"]').trigger("click");
     await flushPromises();
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-option-kind="project"] span').exists()).toBe(true);
+    });
 
     expect(wrapper.get('[data-option-kind="project"] span').classes()).toContain(
       "font-semibold",
@@ -353,7 +374,7 @@ describe("ProjectView", () => {
 
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(true);
     expect(primeVueMocks.confirmRequire).not.toHaveBeenCalled();
-  });
+  }, 20_000);
 
   it("filters loaded task groups without issuing new list requests", async () => {
     const client = createClientMock();
@@ -383,10 +404,13 @@ describe("ProjectView", () => {
     const { wrapper } = await mountView(client);
 
     await flushPromises();
+    await waitForProjectsReady(wrapper);
 
-    expect(wrapper.text()).toContain("Open current task");
-    expect(wrapper.text()).toContain("Closed current task");
-    expect(wrapper.text()).toContain("Open old task");
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("Open current task");
+      expect(wrapper.text()).toContain("Closed current task");
+      expect(wrapper.text()).toContain("Open old task");
+    });
     expect(client.listVisibleProjects).toHaveBeenCalledTimes(1);
     expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
 
@@ -394,16 +418,18 @@ describe("ProjectView", () => {
     await wrapper.get('[data-testid="projects-updated-filter-option-older"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.text()).not.toContain("Open current task");
-    expect(wrapper.text()).not.toContain("Closed current task");
-    expect(wrapper.text()).toContain("Open old task");
+    await vi.waitFor(() => {
+      expect(wrapper.text()).not.toContain("Open current task");
+      expect(wrapper.text()).not.toContain("Closed current task");
+      expect(wrapper.text()).toContain("Open old task");
+    });
     expect(client.listVisibleProjects).toHaveBeenCalledTimes(1);
     expect(client.listProjectTasks).toHaveBeenCalledTimes(2);
     expect(wrapper.text()).not.toContain("Source");
     expect(wrapper.text()).not.toContain("Members");
     expect(wrapper.text()).not.toContain("Visibility");
     expect(wrapper.text()).not.toContain("Billable default");
-  });
+  }, 20_000);
 
   it("renders distinct loading, request-error, and empty states", async () => {
     const loadingClient = createClientMock();

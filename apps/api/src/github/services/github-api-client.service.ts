@@ -39,6 +39,18 @@ type GitHubOrgRest = {
   html_url?: string | null;
 };
 
+type GitHubOrgMembershipRest = {
+  state?: string;
+  organization?: GitHubOrgRest | null;
+};
+
+type GitHubOrganizationMembershipLookup = {
+  login: string;
+  avatarUrl: string | null;
+  url: string;
+  state: string;
+};
+
 type GitHubRepoRest = {
   id?: number | string;
   node_id?: string | null;
@@ -117,6 +129,18 @@ type ProjectIssueGraphqlResponse = {
   errors?: unknown[];
 };
 
+type ProjectOwnerGraphqlResponse = {
+  data?: {
+    node?: {
+      owner?: {
+        __typename?: 'Organization' | 'User';
+        login?: string;
+      } | null;
+    } | null;
+  };
+  errors?: unknown[];
+};
+
 @Injectable()
 export class GithubApiClientService {
   private readonly logger = new Logger(GithubApiClientService.name);
@@ -155,6 +179,99 @@ export class GithubApiClientService {
       }
     }
     return { items };
+  }
+
+  async listActiveOrganizationMemberships(
+    accessToken: string,
+  ): Promise<GitHubOwnerListResponse> {
+    const items: GitHubOwner[] = [];
+    let page = 1;
+
+    while (true) {
+      const result = await this.rest<GitHubOrgMembershipRest[]>(
+        accessToken,
+        '/user/memberships/orgs',
+        { state: 'active', per_page: '100', page: String(page) },
+        'rest-page',
+      );
+
+      for (const membership of result.body) {
+        if (membership.state !== 'active') continue;
+
+        const organization = membership.organization;
+        if (!organization?.login) continue;
+
+        items.push({
+          login: organization.login,
+          label: organization.login,
+          type: 'organization',
+          avatarUrl: organization.avatar_url ?? null,
+          url:
+            organization.html_url ?? `https://github.com/${organization.login}`,
+        });
+      }
+
+      const nextPage = this.decodePage(
+        result.pagination.nextPageToken ?? undefined,
+        'rest-page',
+      );
+      if (!nextPage) break;
+
+      page = nextPage;
+    }
+
+    return { items };
+  }
+
+  async getAuthenticatedUserOrganizationMembership(
+    accessToken: string,
+    organizationLogin: string,
+  ): Promise<GitHubOrganizationMembershipLookup | null> {
+    const path = `/user/memberships/orgs/${encodeURIComponent(
+      organizationLogin,
+    )}`;
+    const url = new URL(path, GITHUB_API);
+    const response = await fetch(url, {
+      headers: this.headers(accessToken),
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    const body = (await this.readJson(response)) as GitHubOrgMembershipRest;
+    if (response.status === 403) {
+      this.logger.warn({
+        event: 'github.api.organization_membership_blocked',
+        path,
+      });
+      throw new BadRequestException({
+        code: 'github_app_access_blocked',
+        error: 'BadRequest',
+        message: 'GitHub organization blocks this GitHub App',
+      });
+    }
+
+    if (!response.ok) {
+      this.logger.warn({
+        event: 'github.api.request_failed',
+        status: response.status,
+        path,
+      });
+      throw new ServiceUnavailableException('GitHub API request failed');
+    }
+
+    const organization = body.organization;
+    if (!body.state || !organization?.login) {
+      throw new ServiceUnavailableException('GitHub API returned invalid data');
+    }
+
+    return {
+      login: organization.login,
+      avatarUrl: organization.avatar_url ?? null,
+      url: organization.html_url ?? `https://github.com/${organization.login}`,
+      state: body.state,
+    };
   }
 
   async listRepositories(input: {
@@ -338,6 +455,39 @@ export class GithubApiClientService {
             : null,
       },
       skipped,
+    };
+  }
+
+  async getProjectOwner(input: {
+    accessToken: string;
+    projectId: string;
+  }): Promise<{ type: 'personal' | 'organization'; login: string | null }> {
+    const query = `
+      query($id: ID!) {
+        node(id: $id) {
+          ... on ProjectV2 {
+            owner {
+              __typename
+              ... on Organization { login }
+              ... on User { login }
+            }
+          }
+        }
+      }
+    `;
+    const body = await this.graphql<ProjectOwnerGraphqlResponse>(
+      input.accessToken,
+      query,
+      { id: input.projectId },
+    );
+    const owner = body.data?.node?.owner;
+    if (!owner?.__typename) {
+      return { type: 'organization', login: null };
+    }
+
+    return {
+      type: owner.__typename === 'User' ? 'personal' : 'organization',
+      login: owner.login ?? null,
     };
   }
 

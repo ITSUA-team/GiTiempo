@@ -16,6 +16,10 @@ import type {
 } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import {
+  getPostgresError,
+  POSTGRES_FOREIGN_KEY_VIOLATION,
+} from '../../db/postgres-errors';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
@@ -410,26 +414,10 @@ export class TasksService {
   private handleTimeEntryReferenceConflict(error: unknown): void {
     const pgError = getPostgresError(error);
     if (
-      pgError?.code === '23503' &&
+      pgError?.code === POSTGRES_FOREIGN_KEY_VIOLATION &&
       pgError.constraint === 'time_entries_task_id_tasks_id_fk'
     ) {
       throw new ConflictException('Task has related time entries');
     }
   }
-}
-
-function getPostgresError(error: unknown): {
-  code?: unknown;
-  constraint?: unknown;
-} | null {
-  if (typeof error !== 'object' || error === null) return null;
-  const candidate = error as {
-    code?: unknown;
-    constraint?: unknown;
-    cause?: unknown;
-  };
-  if (candidate.code !== undefined || candidate.constraint !== undefined) {
-    return candidate;
-  }
-  return getPostgresError(candidate.cause);
 }

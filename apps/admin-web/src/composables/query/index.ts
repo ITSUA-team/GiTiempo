@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type {
+  AddWorkspaceGitHubOrganizationInput,
   ManagementProjectSummaryResponse,
   ProjectListResponse,
   TimeReportExportQuery,
@@ -7,6 +8,8 @@ import type {
   TimeReportResponse,
   UpdateWorkspaceInput,
   UpdateWorkspaceSettingsInput,
+  WorkspaceGitHubOrganizationListResponse,
+  WorkspaceGitHubOrganizationResponse,
   WorkspaceInviteListResponse,
   WorkspaceMemberListResponse,
   WorkspaceResponse,
@@ -79,6 +82,14 @@ interface WorkspaceMembersClient {
 interface WorkspaceSettingsClient {
   getWorkspaceSettings(): Promise<WorkspaceSettingsResponse>;
 }
+
+interface WorkspaceGitHubOrganizationsClient {
+  addWorkspaceGitHubOrganization(
+    input: AddWorkspaceGitHubOrganizationInput,
+  ): Promise<WorkspaceGitHubOrganizationResponse>;
+  listWorkspaceGitHubOrganizations(): Promise<WorkspaceGitHubOrganizationListResponse>;
+  removeWorkspaceGitHubOrganization(organizationId: string): Promise<void>;
+}
 /* eslint-enable no-unused-vars */
 
 interface AdminScopedQueryOptions extends QueryAccessOptions {
@@ -111,6 +122,11 @@ interface UseUpdateWorkspaceMutationOptions extends AdminScopedMutationOptions {
   client: UpdateWorkspaceClient;
 }
 
+interface UseAddWorkspaceGitHubOrganizationMutationOptions
+  extends AdminScopedMutationOptions {
+  client: WorkspaceGitHubOrganizationsClient;
+}
+
 interface UseUpdateWorkspaceSettingsMutationOptions extends AdminScopedMutationOptions {
   client: UpdateWorkspaceSettingsClient;
 }
@@ -127,8 +143,18 @@ interface UseWorkspaceQueryOptions extends AdminScopedQueryOptions {
   client: WorkspaceClient;
 }
 
+interface UseWorkspaceGitHubOrganizationsQueryOptions
+  extends AdminScopedQueryOptions {
+  client: WorkspaceGitHubOrganizationsClient;
+}
+
 interface UseWorkspaceSettingsQueryOptions extends AdminScopedQueryOptions {
   client: WorkspaceSettingsClient;
+}
+
+interface UseRemoveWorkspaceGitHubOrganizationMutationOptions
+  extends AdminScopedMutationOptions {
+  client: WorkspaceGitHubOrganizationsClient;
 }
 
 async function invalidateQueryKeys(
@@ -154,6 +180,23 @@ export const useExportTimeReportMutation = (
     mutationFn: (query: Partial<TimeReportExportQuery>) =>
       options.client.exportTimeReport(query),
   });
+
+export const useAddWorkspaceGitHubOrganizationMutation = (
+  options: UseAddWorkspaceGitHubOrganizationMutationOptions,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: AddWorkspaceGitHubOrganizationInput) =>
+      options.client.addWorkspaceGitHubOrganization(input),
+    onSuccess: async () => {
+      await invalidateQueryKeys(
+        queryClient,
+        adminMutationInvalidationKeys.afterSettingsSave(toValue(options.scope)),
+      );
+    },
+  });
+};
 
 export const useManagementProjectSummaryQuery = (
   options: UseManagementProjectSummaryQueryOptions,
@@ -207,6 +250,23 @@ export const useUpdateWorkspaceSettingsMutation = (
   });
 };
 
+export const useRemoveWorkspaceGitHubOrganizationMutation = (
+  options: UseRemoveWorkspaceGitHubOrganizationMutationOptions,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (organizationId: string) =>
+      options.client.removeWorkspaceGitHubOrganization(organizationId),
+    onSuccess: async () => {
+      await invalidateQueryKeys(
+        queryClient,
+        adminMutationInvalidationKeys.afterSettingsSave(toValue(options.scope)),
+      );
+    },
+  });
+};
+
 export const useWorkspaceInvitesQuery = (options: UseWorkspaceInvitesQueryOptions) =>
   useQuery({
     queryKey: computed(() => adminMembersKeys.invites(toValue(options.scope))),
@@ -226,6 +286,17 @@ export const useWorkspaceQuery = (options: UseWorkspaceQueryOptions) =>
     queryKey: computed(() => adminSettingsKeys.workspace(toValue(options.scope))),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () => options.client.getWorkspace(),
+  });
+
+export const useWorkspaceGitHubOrganizationsQuery = (
+  options: UseWorkspaceGitHubOrganizationsQueryOptions,
+) =>
+  useQuery({
+    queryKey: computed(() =>
+      adminSettingsKeys.workspaceGitHubOrganizations(toValue(options.scope)),
+    ),
+    enabled: computed(() => isQueryEnabled(options)),
+    queryFn: () => options.client.listWorkspaceGitHubOrganizations(),
   });
 
 export const useWorkspaceSettingsQuery = (

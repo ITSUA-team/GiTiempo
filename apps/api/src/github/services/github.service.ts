@@ -19,6 +19,7 @@ import { GithubApiClientService } from './github-api-client.service';
 import { GithubConnectionsService } from './github-connections.service';
 import { GithubOauthClientService } from './github-oauth-client.service';
 import { GithubOauthStateService } from './github-oauth-state.service';
+import { WorkspaceGitHubOrganizationsService } from './workspace-github-organizations.service';
 
 export type GithubCallbackError =
   | 'github_denied'
@@ -35,6 +36,7 @@ export class GithubService {
     private readonly oauthClient: GithubOauthClientService,
     private readonly connections: GithubConnectionsService,
     private readonly apiClient: GithubApiClientService,
+    private readonly workspaceGitHubOrganizations: WorkspaceGitHubOrganizationsService,
   ) {}
 
   connectionStatus(user: AuthUser): Promise<GitHubConnectionStatusResponse> {
@@ -57,11 +59,28 @@ export class GithubService {
     query: GitHubOwnerListQuery,
   ): Promise<GitHubOwnerListResponse> {
     const connection = await this.connectedConnection(user.sub);
-    return this.apiClient.listOwners(
+    const response = await this.apiClient.listOwners(
       connection.accessToken,
       connection.account,
       query.type,
     );
+    if (query.type === 'personal') {
+      return response;
+    }
+
+    const allowedOrganizations = await this.workspaceGitHubOrganizations
+      .listAllowedOrganizationLogins(user.workspaceId)
+      .then((items) => new Set(items.map((item) => this.normalizeLogin(item))));
+
+    return {
+      items: response.items.filter((owner) => {
+        if (owner.type === 'personal') {
+          return true;
+        }
+
+        return allowedOrganizations.has(this.normalizeLogin(owner.login));
+      }),
+    };
   }
 
   async listRepositories(
@@ -69,6 +88,11 @@ export class GithubService {
     query: GitHubRepositoryListQuery,
   ): Promise<GitHubRepositoryListResponse> {
     const connection = await this.connectedConnection(user.sub);
+    await this.assertOrganizationScopeAllowed(
+      user.workspaceId,
+      query.ownerType,
+      query.owner,
+    );
     return this.apiClient.listRepositories({
       accessToken: connection.accessToken,
       ownerType: query.ownerType,
@@ -87,6 +111,11 @@ export class GithubService {
     query: GitHubProjectListQuery,
   ): Promise<GitHubProjectListResponse> {
     const connection = await this.connectedConnection(user.sub);
+    await this.assertOrganizationScopeAllowed(
+      user.workspaceId,
+      query.ownerType,
+      query.owner,
+    );
     return this.apiClient.listProjects({
       accessToken: connection.accessToken,
       ownerType: query.ownerType,
@@ -106,9 +135,14 @@ export class GithubService {
     repo: string,
     query: GitHubIssueListQuery,
   ): Promise<GitHubRepositoryIssueListResponse> {
-    const accessToken = await this.connections.getValidAccessToken(user.sub);
+    const connection = await this.connectedConnection(user.sub);
+    await this.assertRepositoryOwnerAllowed(
+      user.workspaceId,
+      owner,
+      connection,
+    );
     return this.apiClient.listRepositoryIssues({
-      accessToken,
+      accessToken: connection.accessToken,
       owner,
       repo,
       state: query.state,
@@ -123,15 +157,40 @@ export class GithubService {
     projectId: string,
     query: GitHubIssueListQuery,
   ): Promise<GitHubProjectIssueListResponse> {
-    const accessToken = await this.connections.getValidAccessToken(user.sub);
-    return this.apiClient.listProjectIssues({
-      accessToken,
+    const connection = await this.connectedConnection(user.sub);
+    const projectOwner = await this.apiClient.getProjectOwner({
+      accessToken: connection.accessToken,
+      projectId,
+    });
+    await this.assertProjectOwnerAllowed(
+      user.workspaceId,
+      projectOwner,
+      connection.account.login,
+    );
+
+    const response = await this.apiClient.listProjectIssues({
+      accessToken: connection.accessToken,
       projectId,
       state: query.state,
       q: query.q,
       limit: query.limit,
       pageToken: query.pageToken,
     });
+
+    const allowedOrganizations = await this.workspaceGitHubOrganizations
+      .listAllowedOrganizationLogins(user.workspaceId)
+      .then((items) => new Set(items.map((item) => this.normalizeLogin(item))));
+
+    return {
+      ...response,
+      items: response.items.filter((item) =>
+        this.isProjectIssueOwnerAllowed(
+          item.issue.repository.owner,
+          connection.account.login,
+          allowedOrganizations,
+        ),
+      ),
+    };
   }
 
   async completeCallback(query: {
@@ -204,5 +263,87 @@ export class GithubService {
     personalLogin: string,
   ): string {
     return ownerType === 'personal' ? personalLogin : owner!;
+  }
+
+  private async assertOrganizationScopeAllowed(
+    workspaceId: string,
+    ownerType: 'personal' | 'organization',
+    owner: string | undefined,
+  ): Promise<void> {
+    if (ownerType === 'personal') {
+      return;
+    }
+
+    await this.workspaceGitHubOrganizations.assertOrganizationAllowed(
+      workspaceId,
+      owner!,
+    );
+  }
+
+  private async assertRepositoryOwnerAllowed(
+    workspaceId: string,
+    owner: string,
+    connection: {
+      accessToken: string;
+      account: { login: string; avatarUrl: string | null };
+    },
+  ): Promise<void> {
+    if (
+      this.normalizeLogin(owner) ===
+      this.normalizeLogin(connection.account.login)
+    ) {
+      return;
+    }
+
+    await this.workspaceGitHubOrganizations.assertOrganizationAllowed(
+      workspaceId,
+      owner,
+    );
+  }
+
+  private async assertProjectOwnerAllowed(
+    workspaceId: string,
+    owner: { type: 'personal' | 'organization'; login: string | null },
+    personalLogin: string,
+  ): Promise<void> {
+    if (!owner.login) {
+      throw new NotFoundException(
+        'GitHub project owner could not be verified for this workspace',
+      );
+    }
+
+    if (owner.type === 'personal') {
+      if (
+        this.normalizeLogin(owner.login) === this.normalizeLogin(personalLogin)
+      ) {
+        return;
+      }
+
+      throw new NotFoundException(
+        'GitHub project owner could not be verified for this workspace',
+      );
+    }
+
+    await this.workspaceGitHubOrganizations.assertOrganizationAllowed(
+      workspaceId,
+      owner.login,
+    );
+  }
+
+  private isProjectIssueOwnerAllowed(
+    owner: string,
+    personalLogin: string,
+    allowedOrganizations: Set<string>,
+  ): boolean {
+    const normalizedOwner = this.normalizeLogin(owner);
+
+    return (
+      normalizedOwner === this.normalizeLogin(personalLogin) ||
+      allowedOrganizations.has(normalizedOwner)
+    );
+  }
+
+  private normalizeLogin(login: string): string {
+    return login.trim().toLowerCase();
   }
 }

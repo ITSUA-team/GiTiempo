@@ -6,6 +6,7 @@ import { GithubEncryptionService } from './services/github-encryption.service';
 import { GithubOauthClientService } from './services/github-oauth-client.service';
 import { GithubOauthStateService } from './services/github-oauth-state.service';
 import { GithubService } from './services/github.service';
+import { WorkspaceGitHubOrganizationsService } from './services/workspace-github-organizations.service';
 
 @Module({
   controllers: [GithubController],
@@ -16,7 +17,8 @@ import { GithubService } from './services/github.service';
     GithubOauthClientService,
     GithubOauthStateService,
     GithubService,
+    WorkspaceGitHubOrganizationsService,
   ],
-  exports: [GithubConnectionsService],
+  exports: [GithubConnectionsService, WorkspaceGitHubOrganizationsService],
 })
 export class GithubModule {}

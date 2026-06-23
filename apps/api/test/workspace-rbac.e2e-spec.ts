@@ -205,6 +205,65 @@ describe('Workspace RBAC (e2e)', () => {
     );
   });
 
+  describe('GET /workspace/github/organizations', () => {
+    it(
+      'returns 403 for member token',
+      sendAs(
+        'get',
+        () => '/workspace/github/organizations',
+        () => memberToken,
+      ),
+    );
+    it(
+      'returns 401 without token',
+      sendAs(
+        'get',
+        () => '/workspace/github/organizations',
+        () => null,
+      ),
+    );
+  });
+
+  describe('POST /workspace/github/organizations', () => {
+    it(
+      'returns 403 for member token',
+      sendAs(
+        'post',
+        () => '/workspace/github/organizations',
+        () => memberToken,
+        { organizationLogin: 'octo-org' },
+      ),
+    );
+    it(
+      'returns 401 without token',
+      sendAs(
+        'post',
+        () => '/workspace/github/organizations',
+        () => null,
+        { organizationLogin: 'octo-org' },
+      ),
+    );
+  });
+
+  describe('DELETE /workspace/github/organizations/:organizationId', () => {
+    it(
+      'returns 403 for member token',
+      sendAs(
+        'delete',
+        () => '/workspace/github/organizations/row-1',
+        () => memberToken,
+      ),
+    );
+    it(
+      'returns 401 without token',
+      sendAs(
+        'delete',
+        () => '/workspace/github/organizations/row-1',
+        () => null,
+      ),
+    );
+  });
+
   describe('GET /members', () => {
     it(
       'returns 403 for member token',

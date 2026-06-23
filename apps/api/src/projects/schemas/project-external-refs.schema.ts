@@ -57,3 +57,18 @@ export const projectExternalRefs = pgTable(
       .where(sql`${table.externalId} IS NOT NULL`),
   ],
 );
+
+export const projectExternalRefRowSelection = {
+  id: projectExternalRefs.id,
+  workspaceId: projectExternalRefs.workspaceId,
+  projectId: projectExternalRefs.projectId,
+  provider: projectExternalRefs.provider,
+  externalType: projectExternalRefs.externalType,
+  externalId: projectExternalRefs.externalId,
+  externalKey: projectExternalRefs.externalKey,
+  externalUrl: projectExternalRefs.externalUrl,
+  metadata: projectExternalRefs.metadata,
+  syncedAt: projectExternalRefs.syncedAt,
+  createdAt: projectExternalRefs.createdAt,
+  updatedAt: projectExternalRefs.updatedAt,
+};

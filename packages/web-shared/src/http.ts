@@ -56,18 +56,21 @@ export function getRequestUrl(apiBaseUrl: string | undefined, path: string): str
 }
 
 export class ApiError extends Error {
+  readonly body: unknown | null;
   readonly code: string | null;
   readonly status: number;
 
   constructor(
     message: string,
     options: {
+      body?: unknown;
       code?: string | null;
       status: number;
     },
   ) {
     super(message);
     this.name = "ApiError";
+    this.body = options.body ?? null;
     this.code = options.code ?? null;
     this.status = options.status;
   }
@@ -122,7 +125,7 @@ export async function createResponseError(response: Response): Promise<ApiError>
     const body = await response.json();
     const { code, message } = getResponseErrorDetails(body, response.status);
 
-    return new ApiError(message, { code, status: response.status });
+    return new ApiError(message, { body, code, status: response.status });
   } catch {
     return new ApiError(`Request failed with ${response.status}`, {
       status: response.status,
