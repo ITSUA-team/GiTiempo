@@ -167,10 +167,10 @@ Assignments grant non-admin access to private projects and to any assigned activ
 
 ## 10. Reports
 
-| Method | Path                   | Auth | Role     | Description                                                                                                   |
-| ------ | ---------------------- | ---- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| GET    | `/reports/time`        | JWT  | Admin/PM | Aggregated time report. Filters: `projectId`, `userId`, `dateFrom`, `dateTo`. PM sees assigned projects only. |
-| GET    | `/reports/time/export` | JWT  | Admin/PM | Export report as CSV                                                                                          |
+| Method | Path                   | Auth | Role     | Description                                                                                                                                                                |
+| ------ | ---------------------- | ---- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/reports/time`        | JWT  | Admin/PM | Aggregated time report. Filters: `projectId`, `userId`, `dateFrom`, `dateTo`. PM sees assigned projects only.                                                              |
+| GET    | `/reports/time/export` | JWT  | Admin/PM | Export detailed CSV rows for matching report data. Uses the same filters, sorting parameters, and scope as `/reports/time`, but rows aggregate by project, task, and user. |
 
 ---
 
