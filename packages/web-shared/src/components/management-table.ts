@@ -21,7 +21,7 @@ const actionToneClassByTone = {
 export type ManagementTableActionTone = keyof typeof actionToneClassByTone;
 
 export const managementTableHeaderClass =
-  'border-divider bg-app-bg text-text-dark flex h-[44px] items-center border-b font-sans text-[13px] font-semibold';
+  'border-divider bg-app-bg text-text-dark flex h-[44px] items-center border-b font-sans text-[13px] font-medium uppercase tracking-wide';
 
 export const managementTableBodyRowClass =
   'h-12 transition-colors hover:bg-app-bg';

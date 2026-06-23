@@ -32,9 +32,10 @@ describe('ManagementTableShell', () => {
     const bodyRowClass = wrapper.get('[data-testid="body-row-class"]').text();
 
     expect(headerClass).toContain('text-text-dark');
-    expect(headerClass).toContain('font-semibold');
-    expect(headerClass).not.toContain('uppercase');
-    expect(headerClass).not.toContain('tracking-wide');
+    expect(headerClass).toContain('font-medium');
+    expect(headerClass).toContain('uppercase');
+    expect(headerClass).toContain('tracking-wide');
+    expect(headerClass).not.toContain('font-semibold');
     expect(bodyRowClass).toContain('h-12');
     expect(bodyRowClass).toContain('hover:bg-app-bg');
   });
