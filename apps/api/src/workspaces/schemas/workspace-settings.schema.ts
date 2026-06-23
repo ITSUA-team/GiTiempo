@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import {
   numeric,
   pgTable,
@@ -34,12 +35,4 @@ export const workspaceSettings = pgTable(
   ],
 );
 
-export const workspaceSettingsRowSelection = {
-  id: workspaceSettings.id,
-  workspaceId: workspaceSettings.workspaceId,
-  currency: workspaceSettings.currency,
-  defaultHourlyRate: workspaceSettings.defaultHourlyRate,
-  timeZone: workspaceSettings.timeZone,
-  createdAt: workspaceSettings.createdAt,
-  updatedAt: workspaceSettings.updatedAt,
-};
+export const workspaceSettingsRowSelection = getTableColumns(workspaceSettings);

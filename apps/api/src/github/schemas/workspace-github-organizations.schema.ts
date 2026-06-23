@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import {
   index,
   pgTable,
@@ -38,12 +39,6 @@ export const workspaceGitHubOrganizations = pgTable(
   ],
 );
 
-export const workspaceGitHubOrganizationRowSelection = {
-  id: workspaceGitHubOrganizations.id,
-  workspaceId: workspaceGitHubOrganizations.workspaceId,
-  organizationLogin: workspaceGitHubOrganizations.organizationLogin,
-  normalizedLogin: workspaceGitHubOrganizations.normalizedLogin,
-  createdByUserId: workspaceGitHubOrganizations.createdByUserId,
-  createdAt: workspaceGitHubOrganizations.createdAt,
-  updatedAt: workspaceGitHubOrganizations.updatedAt,
-};
+export const workspaceGitHubOrganizationRowSelection = getTableColumns(
+  workspaceGitHubOrganizations,
+);

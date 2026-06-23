@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import {
   index,
   pgTable,
@@ -50,14 +51,4 @@ export const invites = pgTable(
   ],
 );
 
-export const inviteRowSelection = {
-  id: invites.id,
-  workspaceId: invites.workspaceId,
-  email: invites.email,
-  token: invites.token,
-  invitedBy: invites.invitedBy,
-  role: invites.role,
-  status: invites.status,
-  expiresAt: invites.expiresAt,
-  createdAt: invites.createdAt,
-};
+export const inviteRowSelection = getTableColumns(invites);

@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { getTableColumns, sql } from 'drizzle-orm';
 import {
   index,
   jsonb,
@@ -62,18 +62,4 @@ export const taskExternalRefs = pgTable(
   ],
 );
 
-export const taskExternalRefRowSelection = {
-  id: taskExternalRefs.id,
-  workspaceId: taskExternalRefs.workspaceId,
-  projectId: taskExternalRefs.projectId,
-  taskId: taskExternalRefs.taskId,
-  provider: taskExternalRefs.provider,
-  externalType: taskExternalRefs.externalType,
-  externalId: taskExternalRefs.externalId,
-  externalKey: taskExternalRefs.externalKey,
-  externalUrl: taskExternalRefs.externalUrl,
-  metadata: taskExternalRefs.metadata,
-  syncedAt: taskExternalRefs.syncedAt,
-  createdAt: taskExternalRefs.createdAt,
-  updatedAt: taskExternalRefs.updatedAt,
-};
+export const taskExternalRefRowSelection = getTableColumns(taskExternalRefs);

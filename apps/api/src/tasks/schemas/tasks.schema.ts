@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -48,14 +49,4 @@ export const tasks = pgTable(
   ],
 );
 
-export const taskRowSelection = {
-  id: tasks.id,
-  projectId: tasks.projectId,
-  workspaceId: tasks.workspaceId,
-  title: tasks.title,
-  status: tasks.status,
-  defaultBillableForTimeEntries: tasks.defaultBillableForTimeEntries,
-  isActive: tasks.isActive,
-  createdAt: tasks.createdAt,
-  updatedAt: tasks.updatedAt,
-};
+export const taskRowSelection = getTableColumns(tasks);

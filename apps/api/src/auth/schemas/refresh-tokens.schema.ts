@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import {
   pgTable,
   uuid,
@@ -45,13 +46,4 @@ export const refreshTokens = pgTable(
   ],
 );
 
-export const refreshTokenRowSelection = {
-  id: refreshTokens.id,
-  userId: refreshTokens.userId,
-  familyId: refreshTokens.familyId,
-  tokenHash: refreshTokens.tokenHash,
-  replacedBy: refreshTokens.replacedBy,
-  revokedAt: refreshTokens.revokedAt,
-  expiresAt: refreshTokens.expiresAt,
-  createdAt: refreshTokens.createdAt,
-};
+export const refreshTokenRowSelection = getTableColumns(refreshTokens);

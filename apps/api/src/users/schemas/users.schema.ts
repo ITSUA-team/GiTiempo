@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { getTableColumns, sql } from 'drizzle-orm';
 import {
   pgTable,
   text,
@@ -31,13 +31,4 @@ export const users = pgTable(
   ],
 );
 
-export const userRowSelection = {
-  id: users.id,
-  firebaseUid: users.firebaseUid,
-  email: users.email,
-  displayName: users.displayName,
-  avatarUrl: users.avatarUrl,
-  createdAt: users.createdAt,
-  updatedAt: users.updatedAt,
-  lastActiveAt: users.lastActiveAt,
-};
+export const userRowSelection = getTableColumns(users);
