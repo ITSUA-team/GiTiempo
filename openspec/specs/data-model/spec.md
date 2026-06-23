@@ -6,9 +6,9 @@ Define the observable backend data-model behavior that the API and future change
 ## Requirements
 ### Requirement: Single-Tenant Workspace Ownership
 
-The system SHALL operate as a single-tenant MVP with one seeded default workspace that owns operational records.
+The system SHALL model workspaces as first-class owned containers for operational records while still supporting a seeded default workspace for bootstrap and local development.
 
-#### Scenario: Seeded workspace foundation exists for initial deployment
+#### Scenario: Seeded workspace foundation exists for bootstrap environments
 
 - GIVEN the application is initialized for the first time
 - WHEN seed data is applied
@@ -17,6 +17,13 @@ The system SHALL operate as a single-tenant MVP with one seeded default workspac
 - AND the default workspace settings record includes a non-null time-zone value of `UTC`
 - AND an initial admin membership exists in that workspace
 - AND operational records attach to that workspace context
+
+#### Scenario: Additional workspaces can be created after bootstrap
+
+- GIVEN a new customer completes first-owner registration
+- WHEN the backend persists the registration workflow
+- THEN a new workspace can be created in addition to any seeded bootstrap workspace
+- AND workspace-owned records attach to the created workspace context
 
 ### Requirement: Workspace Settings Persist Calendar Time Zone
 
@@ -240,17 +247,23 @@ Invoices MUST keep snapshot totals that are not automatically recalculated by la
 
 ### Requirement: Single Workspace Membership Per Application User
 
-The system MUST model workspace membership separately from user identity in the single-tenant MVP.
+The system MUST model workspace membership separately from user identity so that API access resolves through a membership record for the active workspace context.
 
 #### Scenario: Application user has workspace membership
 
-- **GIVEN** a user has been onboarded into the application workspace
+- **GIVEN** a user has been onboarded into a workspace
 - **WHEN** the backend resolves application access for that user
 - **THEN** it uses a workspace membership record associated with that user and workspace
 
+#### Scenario: Application user can hold memberships for different workspaces
+
+- **GIVEN** a user has been onboarded into more than one workspace over time
+- **WHEN** the backend stores workspace access state
+- **THEN** each workspace access relationship is represented by its own membership record
+
 ### Requirement: Invite-Backed Membership Creation
 
-The system SHALL create new application membership through the invite-acceptance flow after the initial seeded admin.
+The system SHALL create new membership for existing workspaces through the invite-acceptance flow after the initial owner membership exists.
 
 #### Scenario: Invited user joins workspace
 
@@ -385,3 +398,32 @@ The backend data model MUST persist default billable values on project and task 
 - **WHEN** project or task default billable values exist
 - **THEN** the time entry row still stores its own non-null billable value
 - **AND** the time entry row does not derive billable state dynamically from the current project or task default
+
+### Requirement: Workspace GitHub Organization Policy Persistence
+The backend data model SHALL persist allowed GitHub organization logins as workspace-owned records.
+
+#### Scenario: Allowed organization row stores workspace policy data
+- **GIVEN** a GitHub organization login is allowed for a workspace
+- **WHEN** the policy record is stored
+- **THEN** the row references the workspace
+- **AND** the row stores the organization login, a normalized login for comparisons, the creating user, and timestamps
+
+#### Scenario: Organization policy rows are workspace-scoped
+- **GIVEN** two workspaces store the same GitHub organization login
+- **WHEN** the rows are persisted
+- **THEN** each workspace owns an independent policy record
+
+#### Scenario: Duplicate organization policy row is prevented
+- **GIVEN** a workspace already stores an allowed GitHub organization login
+- **WHEN** the same login is stored again with different casing
+- **THEN** the backend prevents a duplicate row for that workspace
+
+### Requirement: Empty Workspace Organization Policy Is Representable
+The backend data model MUST represent a workspace with no allowed GitHub organizations without requiring a placeholder row.
+
+#### Scenario: New workspace has no organization policy rows
+- **GIVEN** a workspace is created or seeded
+- **WHEN** no GitHub organizations have been allowed for that workspace
+- **THEN** the data model contains no placeholder organization policy row
+- **AND** policy reads return an empty organization list for that workspace
+

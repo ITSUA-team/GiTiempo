@@ -13,19 +13,22 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe("createAuthenticatedApiClient", () => {
   it("preserves response status and code on requestJson failures", async () => {
+    const body = {
+      code: "time_entry_conflict",
+      message: "Stop the timer before updating it",
+    };
+
     await expect(
       requestJson({
         fetchFn: vi.fn(async () =>
-          jsonResponse(
-            { code: "time_entry_conflict", message: "Stop the timer before updating it" },
-            409,
-          ),
+          jsonResponse(body, 409),
         ),
         method: "PATCH",
         path: "/time-entries/entry-1",
         responseSchema: z.object({ ok: z.boolean() }),
       }),
     ).rejects.toMatchObject({
+      body,
       code: "time_entry_conflict",
       message: "Stop the timer before updating it",
       name: "ApiError",

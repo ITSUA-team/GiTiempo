@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Workspace Ownership And Bootstrap Foundation
+### Requirement: Single-Tenant Workspace Ownership
 
 The system SHALL model workspaces as first-class owned containers for operational records while still supporting a seeded default workspace for bootstrap and local development.
 
@@ -21,7 +21,7 @@ The system SHALL model workspaces as first-class owned containers for operationa
 - THEN a new workspace can be created in addition to any seeded bootstrap workspace
 - AND workspace-owned records attach to the created workspace context
 
-### Requirement: Workspace Membership Resolves Access Context
+### Requirement: Single Workspace Membership Per Application User
 
 The system MUST model workspace membership separately from user identity so that API access resolves through a membership record for the active workspace context.
 
@@ -37,7 +37,7 @@ The system MUST model workspace membership separately from user identity so that
 - **WHEN** the backend stores workspace access state
 - **THEN** each workspace access relationship is represented by its own membership record
 
-### Requirement: Invite-Backed Existing-Workspace Membership Creation
+### Requirement: Invite-Backed Membership Creation
 
 The system SHALL create new membership for existing workspaces through the invite-acceptance flow after the initial owner membership exists.
 

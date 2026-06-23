@@ -97,6 +97,8 @@ export const reportsKeys = {
 export const adminSettingsKeys = {
   all: (scope?: AdminServerStateScope) =>
     ['admin-web', normalizeScope(scope), 'settings'] as const,
+  workspaceGitHubOrganizations: (scope: AdminServerStateScope) =>
+    [...adminSettingsKeys.all(scope), 'workspace-github-organizations'] as const,
   workspace: (scope: AdminServerStateScope) =>
     [...adminSettingsKeys.all(scope), 'workspace'] as const,
   workspaceSettings: (scope: AdminServerStateScope) =>

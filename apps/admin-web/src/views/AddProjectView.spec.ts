@@ -149,6 +149,8 @@ describe('AddProjectView', () => {
 
     await flushPromises();
 
+    expect(wrapper.find('h1').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Create a project manually now');
     expect(wrapper.text()).toContain('Default billable for new tasks');
     expect(wrapper.text()).toContain('Billable by default');
     expect(wrapper.find('input[name="defaultBillableForTasks"]').exists()).toBe(true);

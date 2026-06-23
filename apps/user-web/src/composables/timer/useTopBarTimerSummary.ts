@@ -1,8 +1,4 @@
-import type {
-  TaskResponse,
-  TimeEntryListResponse,
-  TimeEntryResponse,
-} from "@gitiempo/shared";
+import type { TimeEntryResponse } from "@gitiempo/shared";
 import { createAppToast, getErrorMessage, type ToastLike } from "@gitiempo/web-shared";
 import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 import { useQuery } from "@tanstack/vue-query";
@@ -78,67 +74,42 @@ export function useTopBarTimerSummary({
         : null;
   }
 
-  async function loadOwnEntriesPage(page: number): Promise<TimeEntryListResponse> {
-    return client.listOwnEntries({ limit: 10, page });
-  }
-
   async function loadEligibleLastTrackedContext(): Promise<SelectedTaskContext | null> {
-    const visibleProjects = await client.listVisibleProjects();
+    const latestEntryResponse = await client.listOwnEntries({ limit: 1 });
+    const latestEntry = latestEntryResponse.items[0];
 
-    const activeProjectMap = new Map(
-      visibleProjects
-        .filter((project) => project.isActive)
-        .map((project) => [project.id, project]),
-    );
-    const taskCache = new Map<string, TaskResponse[]>();
-
-    if (activeProjectMap.size === 0) {
+    if (!latestEntry) {
       return null;
     }
 
-    for (let page = 1; page <= 3; page += 1) {
-      const response = await loadOwnEntriesPage(page);
+    const visibleProjects = await client.listVisibleProjects();
+    const project = visibleProjects.find(
+      (candidate) => candidate.id === latestEntry.project.id && candidate.isActive,
+    );
 
-      for (const entry of response.items) {
-        const project = activeProjectMap.get(entry.project.id);
-
-        if (!project) {
-          continue;
-        }
-
-        let projectTasks = taskCache.get(project.id);
-
-        if (!projectTasks) {
-          projectTasks = await client.listProjectTasks(project.id);
-          taskCache.set(project.id, projectTasks);
-        }
-
-        const task = projectTasks.find(
-          (candidate) =>
-            candidate.id === entry.task.id &&
-            candidate.isActive &&
-            candidate.status === "open",
-        );
-
-        if (!task) {
-          continue;
-        }
-
-        return {
-          githubIssue: task.githubIssue,
-          projectId: project.id,
-          projectName: project.name,
-          taskId: task.id,
-          taskTitle: task.title,
-        };
-      }
-
-      if (page >= response.meta.totalPages) {
-        break;
-      }
+    if (!project) {
+      return null;
     }
 
-    return null;
+    const projectTasks = await client.listProjectTasks(project.id);
+    const task = projectTasks.find(
+      (candidate) =>
+        candidate.id === latestEntry.task.id &&
+        candidate.isActive &&
+        candidate.status === "open",
+    );
+
+    if (!task) {
+      return null;
+    }
+
+    return {
+      githubIssue: task.githubIssue,
+      projectId: project.id,
+      projectName: project.name,
+      taskId: task.id,
+      taskTitle: task.title,
+    };
   }
 
   const summaryQuery = useQuery({
