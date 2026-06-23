@@ -59,6 +59,18 @@ const isMobileViewport = useIsMobileViewport();
 const showsElapsedTime = computed(
   () => !isLoadingSummary.value && isTimerRunning.value,
 );
+const isTimerOpenerDisabled = computed(() => summaryErrorMessage.value !== null);
+const timerOpenerAriaLabel = computed(() =>
+  isTimerOpenerDisabled.value ? "Timer summary unavailable" : "Open task and timer",
+);
+
+function handleOpenDialogRequest(): void {
+  if (isTimerOpenerDisabled.value) {
+    return;
+  }
+
+  void openDialog();
+}
 
 watch(
   () => props.openRequestId,
@@ -67,7 +79,7 @@ watch(
       return;
     }
 
-    void openDialog();
+    handleOpenDialogRequest();
   },
 );
 </script>
@@ -80,11 +92,15 @@ watch(
     <Button
       unstyled
       type="button"
-      aria-label="Open task and timer"
-      class="focus-visible:outline-brand flex h-full min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+      :aria-label="timerOpenerAriaLabel"
+      :class="[
+        'focus-visible:outline-brand flex h-full min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-2',
+        isTimerOpenerDisabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer',
+      ]"
       data-layout="desktop"
       data-testid="top-bar-timer"
-      @click="openDialog"
+      :disabled="isTimerOpenerDisabled"
+      @click="handleOpenDialogRequest"
     >
       <span
         class="flex min-w-0 flex-1 flex-col gap-0.5"
@@ -125,9 +141,14 @@ watch(
     <Button
       unstyled
       type="button"
-      class="ring-divider bg-surface-primary text-brand focus-visible:outline-brand hover:bg-app-bg z-10 flex h-[38px] w-[132px] shrink-0 items-center justify-center gap-[5px] rounded-sm px-2.5 text-xs leading-[14px] font-semibold ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2"
+      :aria-label="timerOpenerAriaLabel"
+      :class="[
+        'ring-divider bg-surface-primary text-brand focus-visible:outline-brand z-10 flex h-[38px] w-[132px] shrink-0 items-center justify-center gap-[5px] rounded-sm px-2.5 text-xs leading-[14px] font-semibold ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2',
+        isTimerOpenerDisabled ? 'cursor-not-allowed opacity-70' : 'hover:bg-app-bg cursor-pointer',
+      ]"
       data-testid="top-bar-timer-mobile-opener"
-      @click="openDialog"
+      :disabled="isTimerOpenerDisabled"
+      @click="handleOpenDialogRequest"
     >
       <svg
         aria-hidden="true"
