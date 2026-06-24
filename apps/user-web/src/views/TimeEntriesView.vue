@@ -2,7 +2,11 @@
 import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
-import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
+import {
+  createManualTimeEntrySchema,
+  type ProjectResponse,
+  type TimeEntryResponse,
+} from "@gitiempo/shared";
 import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
   createAppConfirm,
@@ -24,23 +28,29 @@ import TimeEntriesLoadingState from "@/components/time-entries/TimeEntriesLoadin
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
 import {
   isGitHubIssueTaskLookupOption,
-  toTaskLookupOption,
+  isNewTaskLookupOption,
   toEntryTaskOption,
+  toTaskLookupOption,
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
 import {
   useCurrentTimerQuery,
+  useCreateTaskMutation,
   useStartTimerMutation,
   useStopTimerMutation,
 } from "@/composables/query";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
-import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
+import {
+  useTimeEntryDialog,
+  type ValidatedTimeEntryDialogInput,
+} from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { validateInlineNewTaskInput } from "@/lib/inline-new-task";
 import { timerKeys } from "@/lib/query-keys";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
@@ -90,6 +100,11 @@ const taskOptions = useTimeEntryTaskOptions({
     return data.visibleProjects.value.find((project) => project.id === projectId) ?? null;
   },
 });
+const createTaskMutation = useCreateTaskMutation({
+  accessToken,
+  client,
+  scope,
+});
 const currentTimerGuardQuery = useCurrentTimerQuery({
   accessToken,
   client,
@@ -119,6 +134,7 @@ const {
   dialogErrors,
   dialogIsBillable,
   dialogMode,
+  dialogNewTaskTitle,
   dialogProjectId,
   dialogRequestErrorMessage,
   dialogSaveLabel,
@@ -133,8 +149,9 @@ const {
   setDescription: setDialogDescription,
   setEndedAt: setDialogEndedAt,
   setIsBillable: setDialogIsBillable,
+  setNewTaskTitle: setDialogNewTaskTitle,
   setStartedAt: setDialogStartedAt,
-  setTaskValue: setDialogTaskValue,
+  setTaskValue: setRawDialogTaskValue,
 } = dialog;
 const {
   currentPage,
@@ -157,6 +174,9 @@ const {
   visibleProjects,
 } = data;
 const { isDeletingEntry, isSavingDialog } = mutations;
+const isSavingDialogFlow = computed(
+  () => isSavingDialog.value || createTaskMutation.isPending.value,
+);
 const isDeletingDialogEntry = computed(() => {
   const entry = dialog.editingEntry.value;
 
@@ -185,6 +205,13 @@ const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
 
   return [...optionsByTaskId.values()];
 });
+
+function getProjectDefaultBillable(projectId: string | null): boolean {
+  return (
+    visibleProjects.value.find((project) => project.id === projectId)
+      ?.defaultBillableForTasks ?? true
+  );
+}
 
 function handleProjectFilterComplete(event: { query: string }): void {
   projectFilterSuggestions.value = filterAutocompleteOptions(
@@ -261,8 +288,71 @@ async function setDialogProjectId(projectId: string | null): Promise<void> {
   }
 }
 
+function setDialogTaskValue(value: TaskLookupValue): void {
+  setRawDialogTaskValue(value);
+
+  if (dialog.dialogMode.value === "create" && isNewTaskLookupOption(value)) {
+    setDialogIsBillable(getProjectDefaultBillable(dialog.dialogProjectId.value));
+  }
+}
+
 function handleDialogTaskSearch(query: string): void {
   dialog.updateTaskSuggestions(query);
+}
+
+async function createDialogTaskFromSelection(
+  taskTitle: string,
+): Promise<TaskLookupOption | null> {
+  const projectId = dialog.dialogProjectId.value;
+
+  if (!projectId) {
+    return null;
+  }
+
+  const parsedTaskInput = validateInlineNewTaskInput({
+    defaultBillableForTimeEntries: getProjectDefaultBillable(projectId),
+    title: taskTitle,
+  });
+
+  if (!parsedTaskInput.success) {
+    dialog.setNewTaskTitleError(
+      parsedTaskInput.error.flatten().fieldErrors.title?.[0] ??
+        "Task title is invalid.",
+    );
+    return null;
+  }
+
+  try {
+    const task = await createTaskMutation.mutateAsync({
+      input: parsedTaskInput.data,
+      projectId,
+    });
+    const options = taskOptions.upsertProjectTask(task, { trackableOnly: true });
+    const taskOption = toTaskLookupOption(task);
+
+    dialog.setTaskOptions(options);
+    dialog.setTaskValue(taskOption);
+    dialog.updateTaskSuggestions("", options);
+    dialog.setNewTaskTitle("");
+    appToast.showSuccessToast(
+      "Task created",
+      "The new task is ready to use for time entries.",
+    );
+
+    return taskOption;
+  } catch (error) {
+    const message = getErrorMessage(error);
+
+    dialog.setNewTaskTitleError(message);
+    appToast.showErrorToast({
+      detail: "Please review the task title and try again.",
+      error,
+      logContext: { action: "create-task", feature: "time-entries" },
+      summary: "Could not create the task",
+    });
+
+    return null;
+  }
 }
 
 async function openCreateDialog(day: string | null = null): Promise<void> {
@@ -296,13 +386,42 @@ async function openEditDialog(entry: TimeEntryResponse): Promise<void> {
 }
 
 async function saveDialog(): Promise<void> {
-  const validInput = dialog.validateDialog();
+  const validationResult = dialog.validateDialog();
 
-  if (!validInput) {
+  if (!validationResult) {
     return;
   }
 
   dialog.setRequestError(null);
+  let validInput: ValidatedTimeEntryDialogInput;
+
+  if (validationResult.kind === "new-task") {
+    const createdTask = await createDialogTaskFromSelection(
+      validationResult.taskTitle,
+    );
+
+    if (!createdTask) {
+      return;
+    }
+
+    const parsedEntryInput = createManualTimeEntrySchema.safeParse({
+      ...validationResult.draftInput,
+      taskId: createdTask.id,
+    });
+
+    if (!parsedEntryInput.success) {
+      dialog.setRequestError("Time entry values are invalid.");
+      return;
+    }
+
+    validInput = {
+      ...parsedEntryInput.data,
+      isBillable: validationResult.draftInput.isBillable,
+    };
+  } else {
+    validInput = validationResult.input;
+  }
+
   const result = await mutations.saveDialogEntry({
     editingEntry: dialog.editingEntry.value,
     input: validInput,
@@ -479,6 +598,7 @@ onBeforeUnmount(() => {
               selection-mode="range"
               fluid
               show-icon
+              show-clear
               @update:model-value="(value) => void setDateRange(value as Date[] | null)"
             />
           </div>
@@ -623,8 +743,9 @@ onBeforeUnmount(() => {
       :is-loading-projects="isLoadingProjects"
       :is-loading-tasks="isLoadingDialogTasks"
       :is-open="isDialogOpen"
-      :is-saving="isSavingDialog"
+      :is-saving="isSavingDialogFlow"
       :mode="dialogMode"
+      :new-task-title="dialogNewTaskTitle"
       :project-id="dialogProjectId"
       :projects="visibleProjects"
       :projects-error-message="projectsErrorMessage"
@@ -644,6 +765,7 @@ onBeforeUnmount(() => {
       @update:description="setDialogDescription"
       @update:ended-at="setDialogEndedAt"
       @update:is-billable="setDialogIsBillable"
+      @update:new-task-title="setDialogNewTaskTitle"
       @update:project-id="(value) => void setDialogProjectId(value)"
       @update:started-at="setDialogStartedAt"
       @update:task-value="setDialogTaskValue"

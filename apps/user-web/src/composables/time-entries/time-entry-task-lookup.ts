@@ -6,13 +6,21 @@ import type {
 import { filterAutocompleteOptions } from "@gitiempo/web-shared";
 
 import { getGitHubIssueTaskOptionId } from "@/lib/top-bar-timer-helpers";
+import {
+  createInlineNewTaskOption,
+  INLINE_NEW_TASK_ID,
+  isInlineNewTaskOption,
+} from "@/lib/inline-new-task";
 
 export type TaskLookupValue = string | TaskLookupOption | null;
+
+export const TIME_ENTRY_NEW_TASK_ID = INLINE_NEW_TASK_ID;
 
 interface BaseTaskLookupOption {
   defaultBillableForTimeEntries?: boolean;
   id: string;
   isActive: boolean;
+  isNewTask?: boolean;
   projectId: string;
   title: string;
 }
@@ -40,6 +48,19 @@ export function isGitHubIssueTaskLookupOption(
   value: TaskLookupOption | null,
 ): value is GitHubIssueTaskLookupOption {
   return value?.isGitHubIssueOption === true;
+}
+
+export function isNewTaskLookupOption(
+  value: TaskLookupValue,
+): value is TaskLookupOption & { isNewTask: true } {
+  return isTaskLookupOption(value) && isInlineNewTaskOption(value);
+}
+
+export function createNewTaskLookupOption(projectId: string): TaskLookupOption {
+  return createInlineNewTaskOption({
+    isActive: true,
+    projectId,
+  });
 }
 
 export function toTaskLookupOption(task: TaskResponse): TaskLookupOption {
@@ -74,8 +95,15 @@ export function toGitHubIssueTaskLookupOption(input: {
 export function buildTaskLookupSuggestions(
   query: string,
   options: TaskLookupOption[],
+  newTaskProjectId: string | null = null,
 ): TaskLookupOption[] {
-  return filterAutocompleteOptions(options, query, (task) => task.title);
+  const suggestions = filterAutocompleteOptions(options, query, (task) => task.title);
+
+  if (!newTaskProjectId) {
+    return suggestions;
+  }
+
+  return [...suggestions, createNewTaskLookupOption(newTaskProjectId)];
 }
 
 export function toEntryTaskOption(entry: TimeEntryResponse): TaskLookupOption {

@@ -47,6 +47,18 @@ export function useTimeEntryTaskOptions({
 }: UseTimeEntryTaskOptionsOptions) {
   const taskCache = new Map<string, CachedProjectTaskOptions>();
 
+  function toVisibleTaskOptions(
+    tasks: TaskResponse[],
+    options: LoadTaskOptionsOptions = {},
+  ): TaskLookupOption[] {
+    return tasks
+      .filter(
+        (task) =>
+          task.isActive && (!options.trackableOnly || task.status === "open"),
+      )
+      .map(toTaskLookupOption);
+  }
+
   async function loadProjectTaskOptions(
     projectId: string,
     options: LoadTaskOptionsOptions = {},
@@ -82,6 +94,30 @@ export function useTimeEntryTaskOptions({
     }
 
     return result;
+  }
+
+  function upsertProjectTask(
+    task: TaskResponse,
+    options: LoadTaskOptionsOptions = {},
+  ): TaskLookupOption[] {
+    const cached = taskCache.get(task.projectId) ?? {
+      githubIssueOptions: [],
+      localTasks: [],
+    };
+    const nextLocalTasks = [
+      ...cached.localTasks.filter((cachedTask) => cachedTask.id !== task.id),
+      task,
+    ];
+
+    taskCache.set(task.projectId, {
+      githubIssueOptions: cached.githubIssueOptions,
+      localTasks: nextLocalTasks,
+    });
+    return buildTaskOptions(
+      nextLocalTasks,
+      cached.githubIssueOptions,
+      options.trackableOnly,
+    );
   }
 
   async function loadTargetProjectTaskOptions(
@@ -128,6 +164,7 @@ export function useTimeEntryTaskOptions({
     invalidateProjectTaskOptions,
     loadProjectTaskOptions,
     loadTargetProjectTaskOptions,
+    upsertProjectTask,
   };
 
   function buildLocalTaskOptions(
