@@ -139,11 +139,41 @@ describe("useTimeEntryDialog", () => {
     dialog.setNewTaskTitle("Write release checklist");
 
     expect(dialog.validateDialog()).toEqual({
-      description: null,
-      endedAt: "2026-04-21T10:00:00.000Z",
-      isBillable: false,
-      startedAt: "2026-04-21T09:00:00.000Z",
-      taskId: TIME_ENTRY_NEW_TASK_ID,
+      draftInput: {
+        description: null,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        isBillable: false,
+        startedAt: "2026-04-21T09:00:00.000Z",
+      },
+      kind: "new-task",
+      taskTitle: "Write release checklist",
+    });
+  });
+
+  it("returns a contract-safe input only after selecting an existing task", () => {
+    const dialog = useTimeEntryDialog();
+
+    dialog.openCreateDialogState();
+    dialog.setProjectId(TEST_PROJECT_ID);
+    dialog.setTaskValue({
+      defaultBillableForTimeEntries: true,
+      id: TEST_TASK_ID,
+      isActive: true,
+      projectId: TEST_PROJECT_ID,
+      title: "Improve reports filters",
+    });
+    dialog.setStartedAt(new Date("2026-04-21T09:00:00.000Z"));
+    dialog.setEndedAt(new Date("2026-04-21T10:00:00.000Z"));
+
+    expect(dialog.validateDialog()).toEqual({
+      input: {
+        description: null,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        isBillable: true,
+        startedAt: "2026-04-21T09:00:00.000Z",
+        taskId: TEST_TASK_ID,
+      },
+      kind: "existing-task",
     });
   });
 });

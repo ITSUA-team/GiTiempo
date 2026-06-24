@@ -33,6 +33,17 @@ export type ValidatedTimeEntryDialogInput = {
   taskId: string;
 };
 
+export type ValidatedTimeEntryDialogResult =
+  | {
+      input: ValidatedTimeEntryDialogInput;
+      kind: "existing-task";
+    }
+  | {
+      draftInput: Omit<ValidatedTimeEntryDialogInput, "taskId">;
+      kind: "new-task";
+      taskTitle: string;
+    };
+
 function defaultFormErrors(): TimeEntryFormErrors {
   return {
     description: null,
@@ -256,10 +267,11 @@ export function useTimeEntryDialog() {
     dialogErrors.value.newTaskTitle = message;
   }
 
-  function validateDialog(): ValidatedTimeEntryDialogInput | null {
+  function validateDialog(): ValidatedTimeEntryDialogResult | null {
     const nextErrors = defaultFormErrors();
     const selectedTask = activeDialogTask.value;
     const isCreatingNewTask = isNewTaskLookupOption(selectedTask);
+    let newTaskTitle: string | null = null;
 
     if (!dialogProjectId.value) {
       nextErrors.projectId = "Select a project.";
@@ -278,6 +290,8 @@ export function useTimeEntryDialog() {
         nextErrors.newTaskTitle =
           parsedTaskInput.error.flatten().fieldErrors.title?.[0] ??
           "Task title is invalid.";
+      } else {
+        newTaskTitle = parsedTaskInput.data.title;
       }
     }
 
@@ -301,10 +315,10 @@ export function useTimeEntryDialog() {
       return null;
     }
 
-    const validatedTaskId = isCreatingNewTask
+    const taskIdForSchemaValidation = isCreatingNewTask
       ? dialogProjectId.value
       : selectedTask.id;
-    const input = {
+    const draftInput = {
       description:
         dialogDescription.value.trim().length > 0
           ? dialogDescription.value.trim()
@@ -312,9 +326,11 @@ export function useTimeEntryDialog() {
       endedAt: dialogEndedAt.value.toISOString(),
       isBillable: dialogIsBillable.value,
       startedAt: dialogStartedAt.value.toISOString(),
-      taskId: validatedTaskId,
     };
-    const parsed = createManualTimeEntrySchema.safeParse(input);
+    const parsed = createManualTimeEntrySchema.safeParse({
+      ...draftInput,
+      taskId: taskIdForSchemaValidation,
+    });
 
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
@@ -330,9 +346,24 @@ export function useTimeEntryDialog() {
       return null;
     }
 
+    if (isCreatingNewTask) {
+      if (!newTaskTitle) {
+        return null;
+      }
+
+      return {
+        draftInput,
+        kind: "new-task",
+        taskTitle: newTaskTitle,
+      };
+    }
+
     return {
-      ...input,
-      taskId: selectedTask.id,
+      input: {
+        ...draftInput,
+        taskId: selectedTask.id,
+      },
+      kind: "existing-task",
     };
   }
 

@@ -39,7 +39,10 @@ import {
   useStopTimerMutation,
 } from "@/composables/query";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
-import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
+import {
+  useTimeEntryDialog,
+  type ValidatedTimeEntryDialogInput,
+} from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
@@ -134,7 +137,6 @@ const {
   dialogTitle,
   isDialogOpen,
   isLoadingDialogTasks,
-  isNewTaskSelected,
   setDescription: setDialogDescription,
   setEndedAt: setDialogEndedAt,
   setIsBillable: setDialogIsBillable,
@@ -297,7 +299,9 @@ function handleDialogTaskSearch(query: string): void {
   dialog.updateTaskSuggestions(query);
 }
 
-async function createDialogTaskFromSelection(): Promise<TaskLookupOption | null> {
+async function createDialogTaskFromSelection(
+  taskTitle: string,
+): Promise<TaskLookupOption | null> {
   const projectId = dialog.dialogProjectId.value;
 
   if (!projectId) {
@@ -306,7 +310,7 @@ async function createDialogTaskFromSelection(): Promise<TaskLookupOption | null>
 
   const parsedTaskInput = createTaskSchema.safeParse({
     defaultBillableForTimeEntries: getProjectDefaultBillable(projectId),
-    title: dialog.dialogNewTaskTitle.value.trim(),
+    title: taskTitle,
   });
 
   if (!parsedTaskInput.success) {
@@ -381,26 +385,30 @@ async function openEditDialog(entry: TimeEntryResponse): Promise<void> {
 }
 
 async function saveDialog(): Promise<void> {
-  let validInput = dialog.validateDialog();
+  const validationResult = dialog.validateDialog();
 
-  if (!validInput) {
+  if (!validationResult) {
     return;
   }
 
   dialog.setRequestError(null);
+  let validInput: ValidatedTimeEntryDialogInput;
 
-  if (isNewTaskSelected.value) {
-    const createdTask = await createDialogTaskFromSelection();
+  if (validationResult.kind === "new-task") {
+    const createdTask = await createDialogTaskFromSelection(
+      validationResult.taskTitle,
+    );
 
     if (!createdTask) {
       return;
     }
 
-    validInput = dialog.validateDialog();
-
-    if (!validInput) {
-      return;
-    }
+    validInput = {
+      ...validationResult.draftInput,
+      taskId: createdTask.id,
+    };
+  } else {
+    validInput = validationResult.input;
   }
 
   const errorMessage = await mutations.saveDialogEntry({
