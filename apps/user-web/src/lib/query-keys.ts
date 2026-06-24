@@ -1,4 +1,8 @@
-import type { TimeEntryListQuery } from "@gitiempo/shared";
+import type {
+  GitHubIssueListQuery,
+  GitHubOwnerType,
+  TimeEntryListQuery,
+} from "@gitiempo/shared";
 
 export interface UserServerStateScope {
   userId?: string | null;
@@ -30,6 +34,17 @@ export function normalizeTimeEntryListQuery(
     projectId: query.projectId ?? null,
     search: query.search ?? null,
     taskId: query.taskId ?? null,
+  };
+}
+
+export function normalizeGitHubIssueListQuery(
+  query: Partial<GitHubIssueListQuery> = {},
+) {
+  return {
+    limit: query.limit ?? null,
+    pageToken: query.pageToken ?? null,
+    q: query.q ?? null,
+    state: query.state ?? null,
   };
 }
 
@@ -81,6 +96,29 @@ export const timerKeys = {
     [...timerKeys.all(scope), "project-tasks", normalizeString(projectId)] as const,
   visibleProjects: (scope: UserServerStateScope) =>
     [...timerKeys.all(scope), "visible-projects"] as const,
+};
+
+export const githubBrowsingKeys = {
+  all: (scope?: UserServerStateScope) =>
+    ["user-web", normalizeScope(scope), "github-browsing"] as const,
+  owners: (
+    scope: UserServerStateScope,
+    type: GitHubOwnerType | null | undefined,
+  ) => [
+    ...githubBrowsingKeys.all(scope),
+    "owners",
+    normalizeString(type),
+  ] as const,
+  repositoryIssues: (
+    scope: UserServerStateScope,
+    repositoryFullName: string | null | undefined,
+    query?: Partial<GitHubIssueListQuery>,
+  ) => [
+    ...githubBrowsingKeys.all(scope),
+    "repository-issues",
+    normalizeString(repositoryFullName),
+    normalizeGitHubIssueListQuery(query),
+  ] as const,
 };
 
 export const userProjectsKeys = {

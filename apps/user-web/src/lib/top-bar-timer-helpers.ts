@@ -10,6 +10,21 @@ export interface SelectedTaskContext {
 }
 
 export const TOP_BAR_TIMER_NEW_TASK_ID = "__top-bar-timer-new-task__";
+export const TOP_BAR_TIMER_GITHUB_PROPOSAL_ID_PREFIX =
+  "__top-bar-timer-github-issue__";
+
+export function createTopBarTimerGitHubProposalId(
+  githubRepo: string,
+  issueNumber: number,
+): string {
+  return `${TOP_BAR_TIMER_GITHUB_PROPOSAL_ID_PREFIX}${githubRepo}#${issueNumber}`;
+}
+
+export function isTopBarTimerGitHubProposalId(
+  taskId: string | null,
+): boolean {
+  return taskId?.startsWith(TOP_BAR_TIMER_GITHUB_PROPOSAL_ID_PREFIX) ?? false;
+}
 
 export function formatElapsedTime(
   startedAt: string | null,

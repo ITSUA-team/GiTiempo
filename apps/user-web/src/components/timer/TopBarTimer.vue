@@ -23,12 +23,15 @@ const {
   createTaskTitle,
   elapsedTimeLabel,
   handleDialogPrimaryAction,
+  gitHubIssueProposals,
+  gitHubProposalErrorMessage,
   isConfirmingSelection,
   isCreateTaskDisabled,
   isCreatingTask,
   isDialogPrimaryActionDisabled,
   isDialogOpen,
   isDialogSecondaryActionDisabled,
+  isLoadingGitHubTaskProposals,
   isLoadingProjects,
   isLoadingSummary,
   isLoadingTasks,
@@ -207,12 +210,15 @@ watch(
     :is-confirming-selection="isConfirmingSelection"
     :is-create-task-disabled="isCreateTaskDisabled"
     :is-creating-task="isCreatingTask"
+    :is-loading-git-hub-task-proposals="isLoadingGitHubTaskProposals"
     :is-loading-projects="isLoadingProjects"
     :is-loading-tasks="isLoadingTasks"
     :is-open="isDialogOpen"
     :is-primary-action-disabled="isDialogPrimaryActionDisabled"
     :is-primary-action-pending="isPrimaryActionPending"
     :primary-action-label="primaryActionLabel"
+    :git-hub-issue-proposals="gitHubIssueProposals"
+    :git-hub-proposal-error-message="gitHubProposalErrorMessage"
     :project-options="projectOptions"
     :projects-error-message="projectsErrorMessage ?? summaryErrorMessage"
     :selected-description="selectedDescription"

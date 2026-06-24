@@ -1,6 +1,9 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import type {
+  GitHubIssue,
+  GitHubOwnerListResponse,
+  GitHubRepositoryIssueListResponse,
   ProjectResponse,
   TaskResponse,
   TimeEntryListResponse,
@@ -11,8 +14,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 
 import { useTopBarTimer } from './useTopBarTimer';
-import { timeEntriesKeys } from '@/lib/query-keys';
+import { githubBrowsingKeys, timeEntriesKeys } from '@/lib/query-keys';
 import { TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/top-bar-timer-helpers';
+import type { GitHubBrowsingClient } from '@/services/github-browsing-client';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 import {
@@ -42,6 +46,7 @@ function createProject(
   name: string,
   isActive = true,
   defaultBillableForTasks = true,
+  source: ProjectResponse['source'] = 'manual',
 ): ProjectResponse {
   return {
     color: null,
@@ -52,7 +57,7 @@ function createProject(
     isActive,
     members: [],
     name,
-    source: 'manual',
+    source,
     totalSeconds: 43200,
     updatedAt: '2026-04-20T12:00:00.000Z',
     visibility: 'public',
@@ -67,6 +72,7 @@ function createTask(
   isActive = true,
   status: TaskResponse['status'] = 'open',
   defaultBillableForTimeEntries = true,
+  overrides: Partial<TaskResponse> = {},
 ): TaskResponse {
   return {
     createdAt: '2026-04-20T12:00:00.000Z',
@@ -79,6 +85,52 @@ function createTask(
     title,
     updatedAt: '2026-04-20T12:00:00.000Z',
     workspaceId: TEST_IDS.workspace,
+    ...overrides,
+  };
+}
+
+function createGitHubIssue(overrides: Partial<GitHubIssue> = {}): GitHubIssue {
+  return {
+    id: 'github-issue-184',
+    nodeId: null,
+    number: 184,
+    repository: {
+      fullName: 'octo/repo',
+      name: 'repo',
+      owner: 'octo',
+    },
+    state: 'open',
+    title: 'Write release checklist',
+    updatedAt: '2026-04-21T10:00:00.000Z',
+    url: 'https://github.com/octo/repo/issues/184',
+    ...overrides,
+  };
+}
+
+function createGitHubIssueResponse(
+  items: GitHubIssue[],
+): GitHubRepositoryIssueListResponse {
+  return {
+    items,
+    pagination: {
+      hasNextPage: false,
+      limit: 10,
+      nextPageToken: null,
+    },
+  };
+}
+
+function createGitHubOwnerResponse(
+  logins: string[] = ['octo'],
+): GitHubOwnerListResponse {
+  return {
+    items: logins.map((login) => ({
+      avatarUrl: null,
+      label: login,
+      login,
+      type: 'organization',
+      url: `https://github.com/${login}`,
+    })),
   };
 }
 
@@ -204,8 +256,23 @@ function createClientMock(): TimeEntriesClient & {
   };
 }
 
+function createGitHubClientMock(): GitHubBrowsingClient & {
+  listOwners: ReturnType<
+    typeof vi.fn<GitHubBrowsingClient['listOwners']>
+  >;
+  listRepositoryIssues: ReturnType<
+    typeof vi.fn<GitHubBrowsingClient['listRepositoryIssues']>
+  >;
+} {
+  return {
+    listOwners: vi.fn(async () => createGitHubOwnerResponse()),
+    listRepositoryIssues: vi.fn(async () => createGitHubIssueResponse([])),
+  };
+}
+
 function mountTopBarTimer(options?: {
   client?: ReturnType<typeof createClientMock>;
+  githubClient?: ReturnType<typeof createGitHubClientMock>;
   toast?: { add: ReturnType<typeof vi.fn> };
 }) {
   const pinia = createPinia();
@@ -216,6 +283,7 @@ function mountTopBarTimer(options?: {
 
   authStore.accessToken = 'access-token';
   const client = options?.client ?? createClientMock();
+  const githubClient = options?.githubClient ?? createGitHubClientMock();
   const queryClient = createTestQueryClient();
   const toast = options?.toast ?? { add: vi.fn() };
   let topBarTimer!: ReturnType<typeof useTopBarTimer>;
@@ -223,6 +291,7 @@ function mountTopBarTimer(options?: {
     setup() {
       topBarTimer = useTopBarTimer({
         client,
+        githubClient,
         toast: toast as never,
       });
 
@@ -236,7 +305,7 @@ function mountTopBarTimer(options?: {
     },
   });
 
-  return { client, queryClient, topBarTimer, toast, wrapper };
+  return { client, githubClient, queryClient, topBarTimer, toast, wrapper };
 }
 
 async function startTimerFromSeededDialog(
@@ -596,6 +665,308 @@ describe('useTopBarTimer', () => {
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'success', summary: 'Task created' }),
     );
+  });
+
+  it('loads GitHub issue proposals and seeds local task creation', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+    const toast = { add: vi.fn() };
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'octo/repo', true, false, 'github'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+    ]);
+    githubClient.listRepositoryIssues.mockResolvedValueOnce(
+      createGitHubIssueResponse([createGitHubIssue()]),
+    );
+
+    const mounted = mountTopBarTimer({ client, githubClient, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(githubClient.listOwners).toHaveBeenCalledWith({ type: 'all' });
+    expect(githubClient.listRepositoryIssues).toHaveBeenCalledWith(
+      'octo',
+      'repo',
+      { limit: 10, state: 'open' },
+    );
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([
+      expect.objectContaining({
+        repositoryLabel: 'octo/repo',
+        title: 'Write release checklist',
+      }),
+    ]);
+
+    const proposal = topBarTimer.gitHubIssueProposals.value[0];
+
+    if (!proposal) {
+      throw new Error('Expected a GitHub issue proposal');
+    }
+
+    topBarTimer.setSelectedTaskId(proposal.id);
+
+    expect(topBarTimer.createTaskTitle.value).toBe('Write release checklist');
+    expect(topBarTimer.isDialogPrimaryActionDisabled.value).toBe(false);
+
+    await topBarTimer.handleDialogPrimaryAction();
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith('project-1', {
+      defaultBillableForTimeEntries: false,
+      title: 'Write release checklist',
+    });
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+  });
+
+  it('keeps GitHub issue proposals out of manual projects', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+    ]);
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(githubClient.listRepositoryIssues).not.toHaveBeenCalled();
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
+  });
+
+  it('handles GitHub proposal failures without blocking local task selection', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+    const toast = { add: vi.fn() };
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'octo/repo', true, true, 'github'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+    ]);
+    githubClient.listRepositoryIssues.mockRejectedValueOnce(
+      new Error('GitHub connection required'),
+    );
+
+    const mounted = mountTopBarTimer({ client, githubClient, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(topBarTimer.gitHubProposalErrorMessage.value).toBe(
+      'GitHub connection required',
+    );
+    expect(topBarTimer.taskOptions.value).toEqual([
+      expect.objectContaining({ id: 'task-1' }),
+    ]);
+
+    topBarTimer.setSelectedTaskId('task-1');
+
+    expect(topBarTimer.isDialogPrimaryActionDisabled.value).toBe(false);
+    expect(toast.add).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        summary: 'Could not load GitHub issue suggestions',
+      }),
+    );
+  });
+
+  it('skips GitHub repository issue loading when a fresh owner lookup excludes the owner', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+    const toast = { add: vi.fn() };
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'ITSUA-team/GiTiempo', true, true, 'github'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+    ]);
+    githubClient.listOwners.mockResolvedValueOnce(createGitHubOwnerResponse(['octo']));
+
+    const mounted = mountTopBarTimer({ client, githubClient, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { queryClient, topBarTimer } = mounted;
+
+    queryClient.setQueryData(
+      githubBrowsingKeys.owners(TEST_SCOPE, 'all'),
+      createGitHubOwnerResponse(['ITSUA-team']),
+    );
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(githubClient.listOwners).toHaveBeenCalledWith({ type: 'all' });
+    expect(githubClient.listRepositoryIssues).not.toHaveBeenCalled();
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
+    expect(topBarTimer.gitHubProposalErrorMessage.value).toBeNull();
+    expect(toast.add).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        summary: 'Could not load GitHub issue suggestions',
+      }),
+    );
+  });
+
+  it('does not propose GitHub issues that already have a local linked task', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'octo/repo', true, true, 'github'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask(
+        'task-1',
+        'project-1',
+        'Write release checklist',
+        true,
+        'open',
+        true,
+        { githubIssue: { githubRepo: 'octo/repo', issueNumber: 184 } },
+      ),
+    ]);
+    githubClient.listRepositoryIssues.mockResolvedValueOnce(
+      createGitHubIssueResponse([createGitHubIssue()]),
+    );
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
+  });
+
+  it('re-filters cached GitHub proposals against the selected project tasks', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'octo/repo', true, true, 'github'),
+      createProject('project-2', 'octo/repo', true, true, 'github'),
+    ]);
+    client.listProjectTasks.mockImplementation(async (projectId) => {
+      if (projectId === 'project-2') {
+        return [
+          createTask(
+            'task-2',
+            'project-2',
+            'Write release checklist',
+            true,
+            'open',
+            true,
+            { githubIssue: { githubRepo: 'octo/repo', issueNumber: 184 } },
+          ),
+        ];
+      }
+
+      return [];
+    });
+    githubClient.listRepositoryIssues.mockResolvedValueOnce(
+      createGitHubIssueResponse([createGitHubIssue()]),
+    );
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([
+      expect.objectContaining({ title: 'Write release checklist' }),
+    ]);
+
+    topBarTimer.setSelectedProjectId('project-2');
+    await flushPromises();
+
+    expect(githubClient.listRepositoryIssues).toHaveBeenCalledTimes(1);
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
+  });
+
+  it('clears GitHub proposal loading when switching to a non-GitHub project', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+    let resolveIssues = (
+      response: GitHubRepositoryIssueListResponse | PromiseLike<GitHubRepositoryIssueListResponse>,
+    ) => {
+      void response;
+    };
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'octo/repo', true, true, 'github'),
+      createProject('project-2', 'Project Orion'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([]);
+    githubClient.listRepositoryIssues.mockReturnValueOnce(
+      new Promise<GitHubRepositoryIssueListResponse>((resolve) => {
+        resolveIssues = resolve;
+      }),
+    );
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(topBarTimer.isLoadingGitHubTaskProposals.value).toBe(true);
+
+    topBarTimer.setSelectedProjectId('project-2');
+    await flushPromises();
+
+    expect(topBarTimer.isLoadingGitHubTaskProposals.value).toBe(false);
+
+    resolveIssues(createGitHubIssueResponse([createGitHubIssue()]));
+    await flushPromises();
+
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
   });
 
   it('creates an inline New task before starting from the dialog', async () => {

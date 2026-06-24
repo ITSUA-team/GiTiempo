@@ -1,12 +1,27 @@
-import { createTaskSchema, type ProjectResponse, type TaskResponse } from "@gitiempo/shared";
+import {
+  createTaskSchema,
+  type GitHubIssue,
+  type ProjectResponse,
+  type TaskResponse,
+} from "@gitiempo/shared";
 import { computed, ref } from "vue";
 
 import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 
+export interface TopBarGitHubTaskProposal {
+  id: string;
+  isGitHubIssueProposal: true;
+  issue: GitHubIssue;
+  repositoryLabel: string;
+  title: string;
+}
+
 export function useTopBarTaskPicker() {
   const projects = ref<ProjectResponse[]>([]);
   const tasks = ref<TaskResponse[]>([]);
+  const gitHubIssueProposals = ref<TopBarGitHubTaskProposal[]>([]);
   const taskCache = new Map<string, TaskResponse[]>();
+  const gitHubIssueProposalCache = new Map<string, TopBarGitHubTaskProposal[]>();
   const isDialogOpen = ref(false);
   const selectedProjectId = ref<string | null>(null);
   const selectedTaskId = ref<string | null>(null);
@@ -14,6 +29,7 @@ export function useTopBarTaskPicker() {
   const createTaskTitle = ref("");
   const projectsErrorMessage = ref<string | null>(null);
   const tasksErrorMessage = ref<string | null>(null);
+  const gitHubProposalErrorMessage = ref<string | null>(null);
   const createTaskErrorMessage = ref<string | null>(null);
   const activeProjects = computed(() => projects.value.filter((project) => project.isActive));
   const activeTasks = computed(() =>
@@ -38,12 +54,31 @@ export function useTopBarTaskPicker() {
     tasks.value = nextTasks;
   }
 
+  function setGitHubIssueProposals(
+    nextProposals: TopBarGitHubTaskProposal[],
+  ): void {
+    gitHubIssueProposals.value = nextProposals;
+  }
+
   function getCachedTasks(projectId: string): TaskResponse[] | undefined {
     return taskCache.get(projectId);
   }
 
   function setCachedTasks(projectId: string, nextTasks: TaskResponse[]): void {
     taskCache.set(projectId, nextTasks);
+  }
+
+  function getCachedGitHubIssueProposals(
+    cacheKey: string,
+  ): TopBarGitHubTaskProposal[] | undefined {
+    return gitHubIssueProposalCache.get(cacheKey);
+  }
+
+  function setCachedGitHubIssueProposals(
+    cacheKey: string,
+    nextProposals: TopBarGitHubTaskProposal[],
+  ): void {
+    gitHubIssueProposalCache.set(cacheKey, nextProposals);
   }
 
   function openTaskPicker(
@@ -53,6 +88,7 @@ export function useTopBarTaskPicker() {
     createTaskErrorMessage.value = null;
     projectsErrorMessage.value = null;
     tasksErrorMessage.value = null;
+    gitHubProposalErrorMessage.value = null;
     selectedProjectId.value = context?.projectId ?? null;
     selectedTaskId.value = context?.taskId ?? null;
     selectedDescription.value = context?.description ?? "";
@@ -93,6 +129,10 @@ export function useTopBarTaskPicker() {
     tasksErrorMessage.value = message;
   }
 
+  function setGitHubProposalError(message: string | null): void {
+    gitHubProposalErrorMessage.value = message;
+  }
+
   function setCreateTaskError(message: string | null): void {
     createTaskErrorMessage.value = message;
   }
@@ -127,6 +167,16 @@ export function useTopBarTaskPicker() {
     };
   }
 
+  function getGitHubIssueProposal(
+    proposalId: string | null,
+  ): TopBarGitHubTaskProposal | null {
+    if (!proposalId) {
+      return null;
+    }
+
+    return gitHubIssueProposals.value.find((proposal) => proposal.id === proposalId) ?? null;
+  }
+
   function getNormalizedDescription(): string | null {
     return selectedDescription.value.trim() === "" ? null : selectedDescription.value;
   }
@@ -137,9 +187,13 @@ export function useTopBarTaskPicker() {
     closeDialog,
     createTaskErrorMessage,
     createTaskTitle,
+    getCachedGitHubIssueProposals,
     getCachedTasks,
+    getGitHubIssueProposal,
     getNormalizedDescription,
     getSelectedTaskContext,
+    gitHubIssueProposals,
+    gitHubProposalErrorMessage,
     isConfirmSelectionDisabled,
     isCreateTaskTitleEmpty,
     isDialogOpen,
@@ -151,9 +205,12 @@ export function useTopBarTaskPicker() {
     selectedProjectId,
     selectedTask,
     selectedTaskId,
+    setCachedGitHubIssueProposals,
     setCachedTasks,
     setCreateTaskError,
     setCreateTaskTitle,
+    setGitHubIssueProposals,
+    setGitHubProposalError,
     setProjects,
     setProjectsError,
     setSelectedDescription,

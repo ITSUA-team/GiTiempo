@@ -23,6 +23,8 @@ const composableState = {
   createTaskErrorMessage: ref<string | null>(null),
   createTaskTitle: ref(""),
   elapsedTimeLabel: ref("01:00:00"),
+  gitHubIssueProposals: shallowRef([]),
+  gitHubProposalErrorMessage: ref<string | null>(null),
   handleDialogPrimaryAction,
   isConfirmingSelection: ref(false),
   isCreateTaskDisabled: computed(() => false),
@@ -30,6 +32,7 @@ const composableState = {
   isDialogOpen: ref(false),
   isDialogPrimaryActionDisabled: computed(() => false),
   isDialogSecondaryActionDisabled: computed(() => false),
+  isLoadingGitHubTaskProposals: ref(false),
   isLoadingProjects: ref(false),
   isLoadingSummary: ref(false),
   isLoadingTasks: ref(false),
@@ -67,12 +70,15 @@ const TopBarTimerTaskDialogStub = defineComponent({
     isConfirmingSelection: { type: Boolean, required: true },
     isCreateTaskDisabled: { type: Boolean, required: true },
     isCreatingTask: { type: Boolean, required: true },
+    isLoadingGitHubTaskProposals: { type: Boolean, required: true },
     isLoadingProjects: { type: Boolean, required: true },
     isLoadingTasks: { type: Boolean, required: true },
     isOpen: { type: Boolean, required: true },
     isPrimaryActionDisabled: { type: Boolean, required: true },
     isPrimaryActionPending: { type: Boolean, required: true },
     primaryActionLabel: { type: String, required: true },
+    gitHubIssueProposals: { type: Array, required: true },
+    gitHubProposalErrorMessage: { type: String, default: null },
     projectOptions: { type: Array, required: true },
     projectsErrorMessage: { type: String, default: null },
     selectedDescription: { type: String, default: "" },
@@ -136,8 +142,11 @@ describe("TopBarTimer", () => {
     composableState.createTaskErrorMessage.value = null;
     composableState.createTaskTitle.value = "";
     composableState.elapsedTimeLabel.value = "01:00:00";
+    composableState.gitHubIssueProposals.value = [];
+    composableState.gitHubProposalErrorMessage.value = null;
     composableState.isConfirmingSelection.value = false;
     composableState.isDialogOpen.value = false;
+    composableState.isLoadingGitHubTaskProposals.value = false;
     composableState.isLoadingProjects.value = false;
     composableState.isLoadingSummary.value = false;
     composableState.isLoadingTasks.value = false;
@@ -383,6 +392,7 @@ describe("TopBarTimer", () => {
     const dialog = wrapper.getComponent(TopBarTimerTaskDialogStub);
 
     expect(dialog.props("primaryActionLabel")).toBe("Start");
+    expect(dialog.props("gitHubIssueProposals")).toEqual([]);
     expect(dialog.props("selectedDescription")).toBe("Investigate release blocker");
 
     dialog.vm.$emit("primaryAction");

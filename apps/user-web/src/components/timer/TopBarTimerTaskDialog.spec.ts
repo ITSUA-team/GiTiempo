@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
-import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
+import type { TopBarGitHubTaskProposal } from "@/composables/timer/useTopBarTaskPicker";
+import {
+  createTopBarTimerGitHubProposalId,
+  TOP_BAR_TIMER_NEW_TASK_ID,
+} from "@/lib/top-bar-timer-helpers";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
 const projectOrion = {
@@ -49,6 +53,27 @@ const alertTask = {
   title: "Fix alert routing",
 } satisfies TaskResponse;
 
+const githubProposal = {
+  id: createTopBarTimerGitHubProposalId("octo/repo", 184),
+  isGitHubIssueProposal: true,
+  issue: {
+    id: "github-issue-184",
+    nodeId: null,
+    number: 184,
+    repository: {
+      fullName: "octo/repo",
+      name: "repo",
+      owner: "octo",
+    },
+    state: "open",
+    title: "Write release checklist",
+    updatedAt: "2026-04-21T10:00:00.000Z",
+    url: "https://github.com/octo/repo/issues/184",
+  },
+  repositoryLabel: "octo/repo",
+  title: "Write release checklist",
+} satisfies TopBarGitHubTaskProposal;
+
 type DialogProps = Partial<InstanceType<typeof TopBarTimerTaskDialog>["$props"]>;
 
 function mountDialog(overrides: DialogProps = {}) {
@@ -60,12 +85,15 @@ function mountDialog(overrides: DialogProps = {}) {
       isConfirmingSelection: false,
       isCreateTaskDisabled: false,
       isCreatingTask: false,
+      isLoadingGitHubTaskProposals: false,
       isLoadingProjects: false,
       isLoadingTasks: false,
       isOpen: true,
       isPrimaryActionDisabled: false,
       isPrimaryActionPending: false,
       primaryActionLabel: "Start",
+      gitHubIssueProposals: [],
+      gitHubProposalErrorMessage: null,
       projectOptions: [projectOrion],
       projectsErrorMessage: null,
       selectedDescription: "",
@@ -89,9 +117,11 @@ function mountDialog(overrides: DialogProps = {}) {
             "dropdownMode",
             "fluid",
             "forceSelection",
+            "loading",
             "inputClass",
             "minLength",
             "modelValue",
+            "optionLabel",
             "overlayClass",
             "pt",
             "suggestions",
@@ -105,7 +135,7 @@ function mountDialog(overrides: DialogProps = {}) {
             },
           },
           template:
-            '<input :class="$attrs.class" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-overlay-class="overlayClass" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<div :class="$attrs.class" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading)" :data-overlay-class="overlayClass"><input :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" /><div data-testid="autocomplete-options"><div v-for="option in suggestions" :key="option.id" data-testid="autocomplete-option"><slot name="option" :option="option">{{ option.name ?? option.title }}</slot></div></div></div>',
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "variant"],
@@ -193,7 +223,7 @@ describe("TopBarTimerTaskDialog", () => {
     ]);
     expect(taskSuggestions.at(-1)?.id).toBe(TOP_BAR_TIMER_NEW_TASK_ID);
     expect(wrapper.text()).toContain(
-      "Visible tasks are listed first. New task is the last option.",
+      "Visible tasks are listed first. GitHub suggestions can prefill a local task. New task is the last option.",
     );
     expect(wrapper.find("#top-bar-timer-new-task-title").exists()).toBe(true);
     expect(wrapper.text()).toContain("New task title");
@@ -215,6 +245,7 @@ describe("TopBarTimerTaskDialog", () => {
 
   it("emits selected project, task, and New task option ids", async () => {
     const wrapper = mountDialog({
+      gitHubIssueProposals: [githubProposal],
       projectOptions: [projectOrion, internalOpsProject],
       taskOptions: [reportsTask, alertTask],
     });
@@ -242,6 +273,50 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.emitted("update:selectedTaskId")?.[1]).toEqual([
       TOP_BAR_TIMER_NEW_TASK_ID,
     ]);
+
+    await autoCompletes[1]?.vm.$emit("update:modelValue", githubProposal);
+
+    expect(wrapper.emitted("update:selectedTaskId")?.[2]).toEqual([
+      githubProposal.id,
+    ]);
+  });
+
+  it("renders highlighted GitHub proposal options before New task", () => {
+    const wrapper = mountDialog({ gitHubIssueProposals: [githubProposal] });
+    const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
+    const taskSuggestions = autoCompletes[1]?.props("suggestions") as Array<{
+      id: string;
+      title: string;
+    }>;
+    const proposalOption = wrapper.get(
+      '[data-testid="top-bar-timer-github-proposal-option"]',
+    );
+
+    expect(taskSuggestions.map((task) => task.title)).toEqual([
+      "Improve reports filters",
+      "Write release checklist",
+      "New task",
+    ]);
+    expect(taskSuggestions.at(-1)?.id).toBe(TOP_BAR_TIMER_NEW_TASK_ID);
+    expect(proposalOption.text()).toContain("GitHub");
+    expect(proposalOption.text()).toContain("octo/repo #184");
+    expect(proposalOption.text()).toContain("Write release checklist");
+  });
+
+  it("shows the local task title input when a GitHub proposal is selected", () => {
+    const wrapper = mountDialog({
+      createTaskTitle: githubProposal.title,
+      gitHubIssueProposals: [githubProposal],
+      selectedTaskId: githubProposal.id,
+    });
+
+    expect(wrapper.find("#top-bar-timer-new-task-title").exists()).toBe(true);
+    expect(
+      (wrapper.get("#top-bar-timer-new-task-title").element as HTMLInputElement).value,
+    ).toBe("Write release checklist");
+    expect(wrapper.text()).toContain(
+      "GitHub issue #184 from octo/repo prefills a local task title in Project Orion",
+    );
   });
 
   it("disables selection actions while autocomplete text is not a selected option", async () => {
@@ -340,6 +415,24 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.find('[data-testid="spinner"]').exists()).toBe(true);
     expect(wrapper.text()).not.toContain("No existing active tasks in this project.");
     expect(wrapper.text()).not.toContain("Could not load tasks for this project.");
+  });
+
+  it("renders GitHub proposal loading and request-error hints separately", () => {
+    const loadingWrapper = mountDialog({ isLoadingGitHubTaskProposals: true });
+
+    expect(loadingWrapper.text()).toContain("Loading GitHub issue suggestions...");
+    expect(
+      loadingWrapper.findAllComponents({ name: "AutoComplete" })[1]?.attributes("data-loading"),
+    ).toBe("true");
+
+    const errorWrapper = mountDialog({
+      gitHubProposalErrorMessage: "GitHub connection required",
+    });
+
+    expect(errorWrapper.text()).toContain(
+      "GitHub issue suggestions are unavailable: GitHub connection required",
+    );
+    expect(errorWrapper.text()).not.toContain("Could not load tasks for this project.");
   });
 
   it("renders a distinct project request-error state", () => {
