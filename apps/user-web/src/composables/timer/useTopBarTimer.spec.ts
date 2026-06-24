@@ -325,9 +325,10 @@ describe('useTopBarTimer', () => {
       taskId: TEST_IDS.task,
       taskTitle: 'Improve reports filters',
     });
+    expect(client.listOwnEntries).toHaveBeenCalledWith({ limit: 1 });
   });
 
-  it('keeps no eligible task context when the last tracked task is hidden', async () => {
+  it('keeps no eligible context when the single most recent entry is hidden', async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
@@ -341,7 +342,12 @@ describe('useTopBarTimer', () => {
           task: { id: TEST_IDS.hiddenTask, title: 'Hidden Task' },
           taskId: TEST_IDS.hiddenTask,
         }),
-      ]),
+      ], {
+        limit: 1,
+        page: 1,
+        total: 4,
+        totalPages: 4,
+      }),
     );
 
     const mounted = mountTopBarTimer({ client });
@@ -353,6 +359,9 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(topBarTimer.selectedContext.value).toBeNull();
+    expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
+    expect(client.listOwnEntries).toHaveBeenCalledWith({ limit: 1 });
+    expect(client.listProjectTasks).not.toHaveBeenCalled();
   });
 
   it('ignores closed tasks when resolving the idle timer context', async () => {
