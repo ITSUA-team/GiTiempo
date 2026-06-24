@@ -28,6 +28,18 @@ export function useTimeEntryTaskOptions({
 }: UseTimeEntryTaskOptionsOptions) {
   const taskCache = new Map<string, TaskResponse[]>();
 
+  function toVisibleTaskOptions(
+    tasks: TaskResponse[],
+    options: LoadTaskOptionsOptions = {},
+  ): TaskLookupOption[] {
+    return tasks
+      .filter(
+        (task) =>
+          task.isActive && (!options.trackableOnly || task.status === "open"),
+      )
+      .map(toTaskLookupOption);
+  }
+
   async function loadProjectTaskOptions(
     projectId: string,
     options: LoadTaskOptionsOptions = {},
@@ -39,12 +51,21 @@ export function useTimeEntryTaskOptions({
       taskCache.set(projectId, tasks);
     }
 
-    return tasks
-      .filter(
-        (task) =>
-          task.isActive && (!options.trackableOnly || task.status === "open"),
-      )
-      .map(toTaskLookupOption);
+    return toVisibleTaskOptions(tasks, options);
+  }
+
+  function upsertProjectTask(
+    task: TaskResponse,
+    options: LoadTaskOptionsOptions = {},
+  ): TaskLookupOption[] {
+    const cachedTasks = taskCache.get(task.projectId) ?? [];
+    const nextTasks = [
+      ...cachedTasks.filter((cachedTask) => cachedTask.id !== task.id),
+      task,
+    ];
+
+    taskCache.set(task.projectId, nextTasks);
+    return toVisibleTaskOptions(nextTasks, options);
   }
 
   async function loadTargetProjectTaskOptions(
@@ -82,5 +103,6 @@ export function useTimeEntryTaskOptions({
   return {
     loadProjectTaskOptions,
     loadTargetProjectTaskOptions,
+    upsertProjectTask,
   };
 }

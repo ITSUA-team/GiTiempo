@@ -3,7 +3,11 @@ import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
-import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
+import {
+  createTaskSchema,
+  type ProjectResponse,
+  type TimeEntryResponse,
+} from "@gitiempo/shared";
 import {
   createAppConfirm,
   createAppToast,
@@ -22,12 +26,15 @@ import { PlusIcon } from "@heroicons/vue/24/outline";
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
 import {
+  isNewTaskLookupOption,
   toEntryTaskOption,
+  toTaskLookupOption,
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
 import {
   useCurrentTimerQuery,
+  useCreateTaskMutation,
   useStartTimerMutation,
   useStopTimerMutation,
 } from "@/composables/query";
@@ -82,6 +89,11 @@ const data = useTimeEntriesData({
   setIntervalFn: setInterval,
 });
 const taskOptions = useTimeEntryTaskOptions({ client });
+const createTaskMutation = useCreateTaskMutation({
+  accessToken,
+  client,
+  scope,
+});
 const currentTimerGuardQuery = useCurrentTimerQuery({
   accessToken,
   client,
@@ -110,6 +122,7 @@ const {
   dialogErrors,
   dialogIsBillable,
   dialogMode,
+  dialogNewTaskTitle,
   dialogProjectId,
   dialogRequestErrorMessage,
   dialogSaveLabel,
@@ -121,11 +134,13 @@ const {
   dialogTitle,
   isDialogOpen,
   isLoadingDialogTasks,
+  isNewTaskSelected,
   setDescription: setDialogDescription,
   setEndedAt: setDialogEndedAt,
   setIsBillable: setDialogIsBillable,
+  setNewTaskTitle: setDialogNewTaskTitle,
   setStartedAt: setDialogStartedAt,
-  setTaskValue: setDialogTaskValue,
+  setTaskValue: setRawDialogTaskValue,
 } = dialog;
 const {
   currentPage,
@@ -148,6 +163,9 @@ const {
   visibleProjects,
 } = data;
 const { isDeletingEntry, isSavingDialog } = mutations;
+const isSavingDialogFlow = computed(
+  () => isSavingDialog.value || createTaskMutation.isPending.value,
+);
 const isDeletingDialogEntry = computed(() => {
   const entry = dialog.editingEntry.value;
 
@@ -184,6 +202,13 @@ const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
 
   return [...optionsByTaskId.values()];
 });
+
+function getProjectDefaultBillable(projectId: string | null): boolean {
+  return (
+    visibleProjects.value.find((project) => project.id === projectId)
+      ?.defaultBillableForTasks ?? true
+  );
+}
 
 function handleProjectFilterComplete(event: { query: string }): void {
   projectFilterSuggestions.value = filterAutocompleteOptions(
@@ -260,8 +285,69 @@ async function setDialogProjectId(projectId: string | null): Promise<void> {
   }
 }
 
+function setDialogTaskValue(value: TaskLookupValue): void {
+  setRawDialogTaskValue(value);
+
+  if (dialog.dialogMode.value === "create" && isNewTaskLookupOption(value)) {
+    setDialogIsBillable(getProjectDefaultBillable(dialog.dialogProjectId.value));
+  }
+}
+
 function handleDialogTaskSearch(query: string): void {
   dialog.updateTaskSuggestions(query);
+}
+
+async function createDialogTaskFromSelection(): Promise<TaskLookupOption | null> {
+  const projectId = dialog.dialogProjectId.value;
+
+  if (!projectId) {
+    return null;
+  }
+
+  const parsedTaskInput = createTaskSchema.safeParse({
+    defaultBillableForTimeEntries: getProjectDefaultBillable(projectId),
+    title: dialog.dialogNewTaskTitle.value.trim(),
+  });
+
+  if (!parsedTaskInput.success) {
+    dialog.setNewTaskTitleError(
+      parsedTaskInput.error.flatten().fieldErrors.title?.[0] ??
+        "Task title is invalid.",
+    );
+    return null;
+  }
+
+  try {
+    const task = await createTaskMutation.mutateAsync({
+      input: parsedTaskInput.data,
+      projectId,
+    });
+    const options = taskOptions.upsertProjectTask(task, { trackableOnly: true });
+    const taskOption = toTaskLookupOption(task);
+
+    dialog.setTaskOptions(options);
+    dialog.setTaskValue(taskOption);
+    dialog.updateTaskSuggestions("", options);
+    dialog.setNewTaskTitle("");
+    appToast.showSuccessToast(
+      "Task created",
+      "The new task is ready to use for time entries.",
+    );
+
+    return taskOption;
+  } catch (error) {
+    const message = getErrorMessage(error);
+
+    dialog.setNewTaskTitleError(message);
+    appToast.showErrorToast({
+      detail: "Please review the task title and try again.",
+      error,
+      logContext: { action: "create-task", feature: "time-entries" },
+      summary: "Could not create the task",
+    });
+
+    return null;
+  }
 }
 
 async function openCreateDialog(day: string | null = null): Promise<void> {
@@ -295,13 +381,28 @@ async function openEditDialog(entry: TimeEntryResponse): Promise<void> {
 }
 
 async function saveDialog(): Promise<void> {
-  const validInput = dialog.validateDialog();
+  let validInput = dialog.validateDialog();
 
   if (!validInput) {
     return;
   }
 
   dialog.setRequestError(null);
+
+  if (isNewTaskSelected.value) {
+    const createdTask = await createDialogTaskFromSelection();
+
+    if (!createdTask) {
+      return;
+    }
+
+    validInput = dialog.validateDialog();
+
+    if (!validInput) {
+      return;
+    }
+  }
+
   const errorMessage = await mutations.saveDialogEntry({
     editingEntry: dialog.editingEntry.value,
     input: validInput,
@@ -620,8 +721,9 @@ onBeforeUnmount(() => {
       :is-loading-projects="isLoadingProjects"
       :is-loading-tasks="isLoadingDialogTasks"
       :is-open="isDialogOpen"
-      :is-saving="isSavingDialog"
+      :is-saving="isSavingDialogFlow"
       :mode="dialogMode"
+      :new-task-title="dialogNewTaskTitle"
       :project-id="dialogProjectId"
       :projects="visibleProjects"
       :projects-error-message="projectsErrorMessage"
@@ -641,6 +743,7 @@ onBeforeUnmount(() => {
       @update:description="setDialogDescription"
       @update:ended-at="setDialogEndedAt"
       @update:is-billable="setDialogIsBillable"
+      @update:new-task-title="setDialogNewTaskTitle"
       @update:project-id="(value) => void setDialogProjectId(value)"
       @update:started-at="setDialogStartedAt"
       @update:task-value="setDialogTaskValue"
