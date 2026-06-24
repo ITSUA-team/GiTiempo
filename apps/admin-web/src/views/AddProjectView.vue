@@ -138,16 +138,6 @@ onMounted(loadMembers);
       />
     </div>
 
-    <div class="flex flex-col gap-1.5">
-      <h1 class="text-text-dark text-[28px] leading-tight font-semibold">
-        Add Project
-      </h1>
-      <p class="text-text-muted text-sm font-normal">
-        Create a project manually now, with the flexibility to add workspace
-        imports alongside it.
-      </p>
-    </div>
-
     <div class="flex min-w-0 flex-col gap-5 md:flex-row">
       <div class="bg-surface-primary flex min-w-0 flex-1 flex-col gap-3 rounded-lg p-4">
         <h2 class="text-text-dark text-lg font-semibold">

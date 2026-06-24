@@ -74,26 +74,18 @@ export function useTopBarTimerSummary({
         : null;
   }
 
-  async function loadMostRecentOwnEntry(): Promise<TimeEntryResponse | null> {
-    const response = await client.listOwnEntries({ limit: 1 });
-
-    return response.items[0] ?? null;
-  }
-
   async function loadEligibleLastTrackedContext(): Promise<SelectedTaskContext | null> {
-    const entry = await loadMostRecentOwnEntry();
+    const latestEntryResponse = await client.listOwnEntries({ limit: 1 });
+    const latestEntry = latestEntryResponse.items[0];
 
-    if (!entry) {
+    if (!latestEntry) {
       return null;
     }
 
     const visibleProjects = await client.listVisibleProjects();
-    const activeProjectMap = new Map(
-      visibleProjects
-        .filter((project) => project.isActive)
-        .map((project) => [project.id, project]),
+    const project = visibleProjects.find(
+      (candidate) => candidate.id === latestEntry.project.id && candidate.isActive,
     );
-    const project = activeProjectMap.get(entry.project.id);
 
     if (!project) {
       return null;
@@ -102,7 +94,7 @@ export function useTopBarTimerSummary({
     const projectTasks = await client.listProjectTasks(project.id);
     const task = projectTasks.find(
       (candidate) =>
-        candidate.id === entry.task.id &&
+        candidate.id === latestEntry.task.id &&
         candidate.isActive &&
         candidate.status === "open",
     );

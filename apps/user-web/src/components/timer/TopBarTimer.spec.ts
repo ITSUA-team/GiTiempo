@@ -241,16 +241,24 @@ describe("TopBarTimer", () => {
     expect(wrapper.text()).not.toContain("01:00:00");
   });
 
-  it("keeps the compact surface visible after a summary failure", () => {
+  it("keeps the compact surface visible and disabled after a summary failure", async () => {
     composableState.summaryErrorMessage.value = "network down";
     composableState.timerProjectLabel.value = "No eligible task";
     composableState.timerTaskLabel.value = "Choose a visible project and task.";
 
     const wrapper = mountTopBarTimer();
+    const surface = wrapper.get('[data-testid="top-bar-timer"]');
 
-    expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(true);
+    expect(surface.attributes("disabled")).toBeDefined();
+    expect(surface.attributes("aria-label")).toBe("Timer summary unavailable");
+    expect(surface.classes()).toContain("cursor-not-allowed");
     expect(wrapper.text()).toContain("No eligible task");
     expect(wrapper.text()).toContain("Choose a visible project and task.");
+
+    await surface.trigger("click");
+    await wrapper.setProps({ openRequestId: 1 });
+
+    expect(openDialog).not.toHaveBeenCalled();
   });
 
   it("renders the live elapsed label only in the running state", async () => {
@@ -303,6 +311,27 @@ describe("TopBarTimer", () => {
     await wrapper.get('[data-testid="top-bar-timer-mobile-opener"]').trigger("click");
 
     expect(openDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the mobile summary failure opener as a disabled fallback", async () => {
+    mockMatchMedia(true);
+    composableState.summaryErrorMessage.value = "network down";
+    composableState.timerProjectLabel.value = "No eligible task";
+    composableState.timerTaskLabel.value = "Choose a visible project and task.";
+
+    const wrapper = mountTopBarTimer();
+    const opener = wrapper.get('[data-testid="top-bar-timer-mobile-opener"]');
+
+    expect(opener.attributes("disabled")).toBeDefined();
+    expect(opener.attributes("aria-label")).toBe("Timer summary unavailable");
+    expect(opener.classes()).toContain("cursor-not-allowed");
+    expect(wrapper.get('[data-testid="top-bar-timer-mobile-metadata"]').text()).toContain(
+      "No eligible task",
+    );
+
+    await opener.trigger("click");
+
+    expect(openDialog).not.toHaveBeenCalled();
   });
 
   it("does not open task selection from mobile timer metadata", async () => {
