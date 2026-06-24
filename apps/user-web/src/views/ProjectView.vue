@@ -2,7 +2,7 @@
 import AutoComplete from "primevue/autocomplete";
 import Select from "primevue/select";
 import Skeleton from "primevue/skeleton";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import {
@@ -16,9 +16,13 @@ import ProjectTaskDialog from "@/components/projects/ProjectTaskDialog.vue";
 import ProjectsTaskSection from "@/components/projects/ProjectsTaskSection.vue";
 import { useProjectsData } from "@/composables/projects/useProjectsData";
 import { useProjectsSearch } from "@/composables/projects/useProjectsSearch";
+import { useProjectGitHubIssueSuggestions } from "@/composables/projects/useProjectGitHubIssueSuggestions";
 import { useProjectTaskDialog } from "@/composables/projects/useProjectTaskDialog";
 import { useProjectTaskMutations } from "@/composables/projects/useProjectTaskMutations";
-import { createDefaultTimeEntriesClient } from "@/config/clients";
+import {
+  createDefaultGitHubBrowsingClient,
+  createDefaultTimeEntriesClient,
+} from "@/config/clients";
 import { resolveDataPageState } from "@/lib/page-state";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import {
@@ -31,6 +35,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
 const client = createDefaultTimeEntriesClient();
+const githubClient = createDefaultGitHubBrowsingClient();
 const confirm = useConfirm();
 const toast = useToast();
 const appConfirm = createAppConfirm(confirm);
@@ -60,6 +65,17 @@ const data = useProjectsData({
 });
 const search = useProjectsSearch(data.visibleProjects, data.tasksByProjectId);
 const dialog = useProjectTaskDialog();
+const {
+  clearGitHubIssueSuggestions,
+  gitHubIssueSuggestionErrorMessage,
+  gitHubIssueSuggestions,
+  isLoadingGitHubIssueSuggestions,
+  loadGitHubIssueSuggestionsForProject,
+} = useProjectGitHubIssueSuggestions({
+  accessToken,
+  githubClient,
+  scope,
+});
 const mutations = useProjectTaskMutations({
   accessToken,
   client,
@@ -102,6 +118,7 @@ const {
 } = search;
 const { isDeletingTaskId, isSavingDialog } = mutations;
 const { requestErrorMessage, visibleProjects } = data;
+const selectedGitHubIssueSuggestionId = ref<string | null>(null);
 const submittingTaskBackfill = ref(false);
 const taskBackfillDialog = ref<{
   taskId: string;
@@ -120,6 +137,17 @@ const pageState = computed(() =>
     isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
   }),
 );
+const selectedDialogProject = computed(
+  () =>
+    visibleProjects.value.find((project) => project.id === dialogProjectId.value) ?? null,
+);
+const selectedDialogTasks = computed(() => {
+  if (!dialogProjectId.value) {
+    return [];
+  }
+
+  return data.tasksByProjectId.value[dialogProjectId.value] ?? [];
+});
 
 function getProjectDefaultBillable(projectId: string | null): boolean {
   return (
@@ -129,16 +157,29 @@ function getProjectDefaultBillable(projectId: string | null): boolean {
 }
 
 function openTaskCreateDialog(projectId: string | null = null): void {
+  selectedGitHubIssueSuggestionId.value = null;
   dialog.openCreateDialog(projectId, getProjectDefaultBillable(projectId));
 }
 
 function setDialogProjectId(value: string | null): void {
+  selectedGitHubIssueSuggestionId.value = null;
   setDialogProjectIdValue(value);
 
   if (dialog.dialogMode.value === "create") {
     dialog.setDialogDefaultBillableForTimeEntries(
       getProjectDefaultBillable(value),
     );
+  }
+}
+
+function setSelectedGitHubIssueSuggestionId(value: string | null): void {
+  selectedGitHubIssueSuggestionId.value = value;
+  const suggestion = gitHubIssueSuggestions.value.find(
+    (issueSuggestion) => issueSuggestion.id === value,
+  );
+
+  if (suggestion) {
+    setDialogTaskTitle(suggestion.title);
   }
 }
 
@@ -280,6 +321,20 @@ function requestDeleteDialogTask(): void {
 async function retryLoadPage(): Promise<void> {
   await data.loadPage();
 }
+
+watch(
+  [dialogMode, selectedDialogProject, selectedDialogTasks],
+  ([mode, project, tasks]) => {
+    selectedGitHubIssueSuggestionId.value = null;
+
+    if (mode !== "create") {
+      clearGitHubIssueSuggestions();
+      return;
+    }
+
+    void loadGitHubIssueSuggestionsForProject(project, tasks);
+  },
+);
 
 </script>
 
@@ -480,7 +535,10 @@ async function retryLoadPage(): Promise<void> {
     <ProjectTaskDialog
       :errors="dialogErrors"
       :default-billable-for-time-entries="dialogDefaultBillableForTimeEntries"
+      :git-hub-issue-suggestion-error-message="gitHubIssueSuggestionErrorMessage"
+      :git-hub-issue-suggestions="gitHubIssueSuggestions"
       :is-deleting="isDeletingDialogTask"
+      :is-loading-git-hub-issue-suggestions="isLoadingGitHubIssueSuggestions"
       :is-open="isDialogOpen"
       :is-saving="isSavingDialog"
       :mode="dialogMode"
@@ -488,6 +546,7 @@ async function retryLoadPage(): Promise<void> {
       :projects="visibleProjects"
       :request-error-message="dialogRequestErrorMessage"
       :save-label="dialogSaveLabel"
+      :selected-git-hub-issue-suggestion-id="selectedGitHubIssueSuggestionId"
       :status="dialogTaskStatus"
       :subtitle="dialogSubtitle"
       :title="dialogTitle"
@@ -496,6 +555,7 @@ async function retryLoadPage(): Promise<void> {
       @delete-task="requestDeleteDialogTask"
       @save="void saveDialog()"
       @update:default-billable-for-time-entries="setDialogDefaultBillableForTimeEntries"
+      @update:selected-git-hub-issue-suggestion-id="setSelectedGitHubIssueSuggestionId"
       @update:project-id="setDialogProjectId"
       @update:status="setDialogTaskStatus"
       @update:title="setDialogTaskTitle"

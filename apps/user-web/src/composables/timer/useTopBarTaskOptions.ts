@@ -1,7 +1,4 @@
 import type {
-  GitHubIssue,
-  GitHubIssueListQuery,
-  GitHubOwnerListQuery,
   ProjectResponse,
   TaskResponse,
 } from "@gitiempo/shared";
@@ -10,11 +7,19 @@ import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
 import {
+  GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
+  GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
+  buildGitHubIssueTaskSuggestionCacheKey,
+  filterGitHubIssueTaskSuggestions,
+  isBrowseableGitHubOwner,
+  readGitHubRepositoryContext,
+  toGitHubIssueTaskSuggestion,
+} from "@/lib/github-issue-task-suggestions";
+import {
   githubBrowsingKeys,
   timerKeys,
   type UserServerStateScope,
 } from "@/lib/query-keys";
-import { createTopBarTimerGitHubProposalId } from "@/lib/top-bar-timer-helpers";
 import type { GitHubBrowsingClient } from "@/services/github-browsing-client";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -22,21 +27,6 @@ import type {
   TopBarGitHubTaskProposal,
   TopBarTaskPicker,
 } from "./useTopBarTaskPicker";
-
-const GITHUB_REPO_PATTERN = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/;
-const GITHUB_PROPOSAL_QUERY = {
-  limit: 10,
-  state: "open",
-} satisfies Partial<GitHubIssueListQuery>;
-const GITHUB_OWNER_QUERY = {
-  type: "all",
-} satisfies Partial<GitHubOwnerListQuery>;
-
-interface GitHubRepositoryContext {
-  fullName: string;
-  owner: string;
-  repo: string;
-}
 
 interface UseTopBarTaskOptionsOptions {
   accessToken: ComputedRef<string | null>;
@@ -153,7 +143,9 @@ export function useTopBarTaskOptions({
         throw new Error("Authentication is required to load GitHub issue suggestions.");
       }
 
-      const owners = await githubClient.listOwners(GITHUB_OWNER_QUERY);
+      const owners = await githubClient.listOwners(
+        GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
+      );
 
       if (!isBrowseableGitHubOwner(repository.owner, owners.items)) {
         picker.setGitHubIssueProposals([]);
@@ -161,11 +153,14 @@ export function useTopBarTaskOptions({
         return [];
       }
 
-      const cacheKey = buildGitHubProposalCacheKey(repository.fullName);
+      const cacheKey = buildGitHubIssueTaskSuggestionCacheKey(
+        scope.value,
+        repository.fullName,
+      );
       const cachedProposals = picker.getCachedGitHubIssueProposals(cacheKey);
 
       if (cachedProposals) {
-        const proposals = filterGitHubTaskProposals(
+        const proposals = filterGitHubIssueTaskSuggestions(
           cachedProposals,
           picker.activeTasks.value,
         );
@@ -178,17 +173,17 @@ export function useTopBarTaskOptions({
         queryKey: githubBrowsingKeys.repositoryIssues(
           scope.value,
           repository.fullName,
-          GITHUB_PROPOSAL_QUERY,
+          GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
         ),
         queryFn: () =>
           githubClient.listRepositoryIssues(
             repository.owner,
             repository.repo,
-            GITHUB_PROPOSAL_QUERY,
+            GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
           ),
       });
-      const fetchedProposals = response.items.map(toGitHubTaskProposal);
-      const proposals = filterGitHubTaskProposals(
+      const fetchedProposals = response.items.map(toGitHubIssueTaskSuggestion);
+      const proposals = filterGitHubIssueTaskSuggestions(
         fetchedProposals,
         picker.activeTasks.value,
       );
@@ -212,85 +207,6 @@ export function useTopBarTaskOptions({
         isLoadingGitHubTaskProposals.value = false;
       }
     }
-  }
-
-  function readGitHubRepositoryContext(
-    project: ProjectResponse | null,
-  ): GitHubRepositoryContext | null {
-    if (!project || project.source !== "github") {
-      return null;
-    }
-
-    const match = project.name.trim().match(GITHUB_REPO_PATTERN);
-
-    if (!match) {
-      return null;
-    }
-
-    const [, owner, repo] = match;
-
-    if (!owner || !repo) {
-      return null;
-    }
-
-    return {
-      fullName: `${owner}/${repo}`,
-      owner,
-      repo,
-    };
-  }
-
-  function hasExistingGitHubTask(
-    issue: GitHubIssue,
-    tasks: TaskResponse[],
-  ): boolean {
-    return tasks.some((task) => {
-      const taskIssue = task.githubIssue;
-
-      return (
-        taskIssue !== null &&
-        taskIssue.githubRepo.toLowerCase() === issue.repository.fullName.toLowerCase() &&
-        taskIssue.issueNumber === issue.number
-      );
-    });
-  }
-
-  function filterGitHubTaskProposals(
-    proposals: TopBarGitHubTaskProposal[],
-    tasks: TaskResponse[],
-  ): TopBarGitHubTaskProposal[] {
-    return proposals.filter(
-      (proposal) => !hasExistingGitHubTask(proposal.issue, tasks),
-    );
-  }
-
-  function isBrowseableGitHubOwner(
-    ownerLogin: string,
-    owners: Array<{ login: string }>,
-  ): boolean {
-    const normalizedOwner = ownerLogin.toLowerCase();
-
-    return owners.some((owner) => owner.login.toLowerCase() === normalizedOwner);
-  }
-
-  function toGitHubTaskProposal(issue: GitHubIssue): TopBarGitHubTaskProposal {
-    const repositoryLabel = issue.repository.fullName;
-
-    return {
-      id: createTopBarTimerGitHubProposalId(repositoryLabel, issue.number),
-      isGitHubIssueProposal: true,
-      issue,
-      repositoryLabel,
-      title: issue.title,
-    };
-  }
-
-  function buildGitHubProposalCacheKey(repositoryFullName: string): string {
-    return [
-      scope.value.userId ?? "anonymous-user",
-      scope.value.workspaceId ?? "anonymous-workspace",
-      repositoryFullName.toLowerCase(),
-    ].join(":");
   }
 
   return {

@@ -1,7 +1,9 @@
 import { mount } from "@vue/test-utils";
+import type { ProjectResponse } from "@gitiempo/shared";
 import { describe, expect, it } from "vitest";
 
 import ProjectTaskDialog from "./ProjectTaskDialog.vue";
+import type { GitHubIssueTaskSuggestion } from "@/lib/github-issue-task-suggestions";
 
 function findButtonByLabel(
   wrapper: ReturnType<typeof mountDialog>,
@@ -21,7 +23,10 @@ function mountDialog(
         title: null,
       },
       defaultBillableForTimeEntries: true,
+      gitHubIssueSuggestionErrorMessage: null,
+      gitHubIssueSuggestions: [],
       isDeleting: false,
+      isLoadingGitHubIssueSuggestions: false,
       isOpen: true,
       isSaving: false,
       mode: "create",
@@ -60,6 +65,7 @@ function mountDialog(
       ],
       requestErrorMessage: null,
       saveLabel: "Create task",
+      selectedGitHubIssueSuggestionId: null,
       status: "open",
       subtitle: "Create a task in one of your visible projects.",
       title: "New task",
@@ -72,15 +78,18 @@ function mountDialog(
           name: "AutoComplete",
           props: [
             "completeOnFocus",
+            "appendTo",
             "dataKey",
             "disabled",
             "dropdown",
             "dropdownMode",
             "forceSelection",
             "inputId",
+            "loading",
             "minLength",
             "modelValue",
             "optionLabel",
+            "overlayClass",
             "suggestions",
           ],
           emits: ["complete", "update:modelValue"],
@@ -95,10 +104,13 @@ function mountDialog(
             <div :data-testid="inputId">
               <input
                 :data-complete-on-focus="String(completeOnFocus === true || completeOnFocus === '')"
+                :data-append-to="appendTo ?? ''"
                 :data-dropdown="String(dropdown !== undefined && dropdown !== false)"
                 :data-dropdown-mode="dropdownMode ?? ''"
                 :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)"
+                :data-loading="String(loading)"
                 :data-min-length="String(minLength)"
+                :data-overlay-class="overlayClass ?? ''"
                 :disabled="disabled"
                 :value="displayValue"
                 @input="$emit('update:modelValue', $event.target.value)"
@@ -111,7 +123,11 @@ function mountDialog(
                 :data-testid="inputId + '-option-' + suggestion[dataKey]"
                 type="button"
                 @click="$emit('update:modelValue', suggestion)"
-              >{{ suggestion[optionLabel] }}</button>
+              >
+                <slot name="option" :option="suggestion">
+                  {{ suggestion[optionLabel] }}
+                </slot>
+              </button>
             </div>
           `,
         },
@@ -151,6 +167,42 @@ function mountDialog(
 }
 
 describe("ProjectTaskDialog", () => {
+  const githubProject = {
+    color: null,
+    createdAt: "2026-04-20T12:00:00.000Z",
+    defaultBillableForTasks: true,
+    description: null,
+    id: "project-github",
+    isActive: true,
+    members: [],
+    name: "octo/repo",
+    source: "github",
+    totalSeconds: 3600,
+    updatedAt: "2026-04-20T12:00:00.000Z",
+    visibility: "public",
+    workspaceId: "workspace-1",
+  } satisfies ProjectResponse;
+  const githubIssueSuggestion = {
+    id: "github-issue-octo-repo-184",
+    isGitHubIssueProposal: true,
+    issue: {
+      id: "github-issue-184",
+      nodeId: null,
+      number: 184,
+      repository: {
+        fullName: "octo/repo",
+        name: "repo",
+        owner: "octo",
+      },
+      state: "open",
+      title: "Write release checklist",
+      updatedAt: "2026-04-21T10:00:00.000Z",
+      url: "https://github.com/octo/repo/issues/184",
+    },
+    repositoryLabel: "octo/repo",
+    title: "Write release checklist",
+  } satisfies GitHubIssueTaskSuggestion;
+
   it("renders the create form and emits project and title updates", async () => {
     const wrapper = mountDialog();
     const titleInput = wrapper.findAll("input")[1]!;
@@ -165,6 +217,7 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.text()).toContain("Create task");
     expect(wrapper.text()).toContain("Default billable for time entries");
     expect(wrapper.text()).toContain("New time entries for this task inherit this value.");
+    expect(wrapper.text()).not.toContain("GitHub issue");
     expect(wrapper.text()).not.toContain("Cancel");
   });
 
@@ -217,7 +270,72 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.text()).toContain("Project Orion");
     expect(wrapper.text()).toContain("Delete task");
     expect(wrapper.text()).toContain("Save changes");
+    expect(wrapper.text()).not.toContain("GitHub issue");
     expect(wrapper.text()).not.toContain("Cancel");
+  });
+
+  it("renders GitHub issue suggestions in create mode for GitHub projects", async () => {
+    const wrapper = mountDialog({
+      gitHubIssueSuggestions: [githubIssueSuggestion],
+      projectId: "project-github",
+      projects: [githubProject],
+      selectedGitHubIssueSuggestionId: null,
+    });
+    const githubAutoComplete = wrapper.get('[data-testid="project-task-github-issue"]');
+
+    expect(wrapper.text()).toContain("GitHub issue");
+    expect(githubAutoComplete.get("input").attributes("data-dropdown")).toBe("true");
+    expect(githubAutoComplete.get("input").attributes("data-force-selection")).toBe("true");
+    expect(githubAutoComplete.get("input").attributes("data-append-to")).toBe("self");
+    expect(githubAutoComplete.get("input").attributes("data-overlay-class")).toBe(
+      "w-full max-w-full",
+    );
+    expect(wrapper.text()).toContain("Select an issue to prefill the local task title.");
+    expect(wrapper.text()).toContain("octo/repo #184");
+    expect(wrapper.text()).toContain("Write release checklist");
+
+    await wrapper
+      .get('[data-testid="project-task-github-issue-option-github-issue-octo-repo-184"]')
+      .trigger("click");
+
+    expect(wrapper.emitted("update:selectedGitHubIssueSuggestionId")?.[0]).toEqual([
+      "github-issue-octo-repo-184",
+    ]);
+  });
+
+  it("renders GitHub issue suggestion loading, error, and empty helper states", () => {
+    const loadingWrapper = mountDialog({
+      isLoadingGitHubIssueSuggestions: true,
+      projectId: "project-github",
+      projects: [githubProject],
+    });
+
+    expect(loadingWrapper.text()).toContain("Loading GitHub issue suggestions...");
+    expect(
+      loadingWrapper
+        .get('[data-testid="project-task-github-issue"]')
+        .get("input")
+        .attributes("data-loading"),
+    ).toBe("true");
+
+    const errorWrapper = mountDialog({
+      gitHubIssueSuggestionErrorMessage: "GitHub connection required",
+      projectId: "project-github",
+      projects: [githubProject],
+    });
+
+    expect(errorWrapper.text()).toContain(
+      "GitHub issue suggestions are unavailable: GitHub connection required",
+    );
+
+    const emptyWrapper = mountDialog({
+      projectId: "project-github",
+      projects: [githubProject],
+    });
+
+    expect(emptyWrapper.text()).toContain(
+      "No open GitHub issues are available for this project.",
+    );
   });
 
   it("renders create mode without the edit-only delete action", () => {

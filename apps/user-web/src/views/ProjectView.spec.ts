@@ -1,17 +1,24 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import type {
+  GitHubIssue,
+  GitHubOwnerListResponse,
+  GitHubRepositoryIssueListResponse,
   ProjectResponse,
   TaskResponse,
   TimeEntryListResponse,
 } from "@gitiempo/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { GitHubBrowsingClient } from "@/services/github-browsing-client";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { createTestQueryPlugin } from "@/test/query-client";
 import { useAuthStore } from "@/stores/auth";
 
 const clientRef = vi.hoisted(() => ({
+  current: null as unknown,
+}));
+const githubClientRef = vi.hoisted(() => ({
   current: null as unknown,
 }));
 const primeVueMocks = vi.hoisted(() => ({
@@ -21,6 +28,7 @@ const primeVueMocks = vi.hoisted(() => ({
 const mountedWrappers: Array<{ unmount: () => void }> = [];
 
 vi.mock("@/config/clients", () => ({
+  createDefaultGitHubBrowsingClient: () => githubClientRef.current,
   createDefaultTimeEntriesClient: () => clientRef.current,
 }));
 
@@ -37,6 +45,7 @@ function createProject(
   name: string,
   isActive = true,
   defaultBillableForTasks = true,
+  source: ProjectResponse["source"] = "manual",
 ): ProjectResponse {
   return {
     color: null,
@@ -47,11 +56,54 @@ function createProject(
     isActive,
     members: [],
     name,
-    source: "manual",
+    source,
     totalSeconds: 43200,
     updatedAt: "2026-04-20T12:00:00.000Z",
     visibility: "public",
     workspaceId: "workspace-1",
+  };
+}
+
+function createGitHubIssue(overrides: Partial<GitHubIssue> = {}): GitHubIssue {
+  return {
+    id: "github-issue-184",
+    nodeId: null,
+    number: 184,
+    repository: {
+      fullName: "octo/repo",
+      name: "repo",
+      owner: "octo",
+    },
+    state: "open",
+    title: "Write release checklist",
+    updatedAt: "2026-04-21T10:00:00.000Z",
+    url: "https://github.com/octo/repo/issues/184",
+    ...overrides,
+  };
+}
+
+function createGitHubIssueResponse(
+  items: GitHubIssue[],
+): GitHubRepositoryIssueListResponse {
+  return {
+    items,
+    pagination: {
+      hasNextPage: false,
+      limit: 10,
+      nextPageToken: null,
+    },
+  };
+}
+
+function createGitHubOwnerResponse(logins = ["octo"]): GitHubOwnerListResponse {
+  return {
+    items: logins.map((login) => ({
+      avatarUrl: null,
+      label: login,
+      login,
+      type: "organization",
+      url: `https://github.com/${login}`,
+    })),
   };
 }
 
@@ -137,12 +189,28 @@ function createClientMock(): TimeEntriesClient & {
   };
 }
 
-async function mountView(client = createClientMock()) {
+function createGitHubClientMock(): GitHubBrowsingClient & {
+  listOwners: ReturnType<typeof vi.fn<GitHubBrowsingClient["listOwners"]>>;
+  listRepositoryIssues: ReturnType<
+    typeof vi.fn<GitHubBrowsingClient["listRepositoryIssues"]>
+  >;
+} {
+  return {
+    listOwners: vi.fn(async () => createGitHubOwnerResponse()),
+    listRepositoryIssues: vi.fn(async () => createGitHubIssueResponse([])),
+  };
+}
+
+async function mountView(
+  client = createClientMock(),
+  githubClient = createGitHubClientMock(),
+) {
   const pinia = createPinia();
 
   setActivePinia(pinia);
   useAuthStore().accessToken = "access-token";
   clientRef.current = client;
+  githubClientRef.current = githubClient;
 
   const ProjectView = (await import("./ProjectView.vue")).default;
   const wrapper = mount(ProjectView, {
@@ -219,22 +287,37 @@ async function mountView(client = createClientMock()) {
             "deleteTask",
             "save",
             "update:defaultBillableForTimeEntries",
+            "update:selectedGitHubIssueSuggestionId",
             "update:projectId",
             "update:status",
             "update:title",
           ],
           props: [
             "defaultBillableForTimeEntries",
+            "gitHubIssueSuggestionErrorMessage",
+            "gitHubIssueSuggestions",
             "isDeleting",
+            "isLoadingGitHubIssueSuggestions",
             "isOpen",
             "requestErrorMessage",
+            "selectedGitHubIssueSuggestionId",
             "valueTitle",
           ],
           template: `
             <div v-if="isOpen" data-testid="project-task-dialog">
               <p data-testid="dialog-title-value">{{ valueTitle }}</p>
               <p data-testid="dialog-default-billable">{{ String(defaultBillableForTimeEntries) }}</p>
+              <p data-testid="dialog-github-loading">{{ String(isLoadingGitHubIssueSuggestions) }}</p>
+              <p data-testid="dialog-github-error">{{ gitHubIssueSuggestionErrorMessage }}</p>
               <p data-testid="dialog-request-error">{{ requestErrorMessage }}</p>
+              <button
+                v-if="gitHubIssueSuggestions?.[0]"
+                data-testid="dialog-github-issue"
+                type="button"
+                @click="$emit('update:selectedGitHubIssueSuggestionId', gitHubIssueSuggestions[0].id)"
+              >
+                {{ gitHubIssueSuggestions[0].title }}
+              </button>
               <button data-testid="dialog-title-input" type="button" @click="$emit('update:title', 'Write release checklist')">Title</button>
               <button data-testid="dialog-edit-title-input" type="button" @click="$emit('update:title', 'Updated task')">Edit title</button>
               <button data-testid="dialog-default-false" type="button" @click="$emit('update:defaultBillableForTimeEntries', false)">Default false</button>
@@ -286,7 +369,7 @@ async function mountView(client = createClientMock()) {
 
   mountedWrappers.push(wrapper);
 
-  return { client, wrapper };
+  return { client, githubClient, wrapper };
 }
 
 async function waitForProjectsReady(
@@ -484,6 +567,52 @@ describe("ProjectView", () => {
       title: "Write release checklist",
     });
     expect(wrapper.text()).toContain("Write release checklist");
+    expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
+  });
+
+  it("prefills project task creation from a GitHub issue suggestion", async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject("project-1", "octo/repo", true, false, "github"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([]);
+    githubClient.listRepositoryIssues.mockResolvedValueOnce(
+      createGitHubIssueResponse([createGitHubIssue()]),
+    );
+
+    const { wrapper } = await mountView(client, githubClient);
+
+    await flushPromises();
+    await waitForProjectsReady(wrapper);
+    await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+    await flushPromises();
+
+    expect(githubClient.listOwners).toHaveBeenCalledWith({ type: "all" });
+    expect(githubClient.listRepositoryIssues).toHaveBeenCalledWith(
+      "octo",
+      "repo",
+      { limit: 10, state: "open" },
+    );
+    expect(wrapper.get('[data-testid="dialog-github-issue"]').text()).toBe(
+      "Write release checklist",
+    );
+
+    await wrapper.get('[data-testid="dialog-github-issue"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-title-value"]').text()).toBe(
+      "Write release checklist",
+    );
+
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith("project-1", {
+      defaultBillableForTimeEntries: false,
+      title: "Write release checklist",
+    });
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
   });
 

@@ -81,20 +81,23 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **AND** the dialog remains open with the newly created task selected
 - **AND** the user can start an idle timer with `Start timer` or confirm a running timer task change through the popup-owned action
 
-#### Scenario: GitHub issue suggestions appear for browseable GitHub-backed projects
+#### Scenario: GitHub issue suggestions appear for GitHub-backed New task flow
 
 - **GIVEN** the top-bar timer task picker is open with a visible GitHub-backed project selected
+- **AND** the user selects `New task` from the local task dropdown
 - **AND** the project's repository owner is browseable in the current workspace
 - **AND** the repository has open GitHub issues without matching existing local linked tasks
 - **WHEN** task options finish loading
-- **THEN** the dialog includes GitHub issue suggestions after existing local tasks and before the `New task` option
+- **THEN** the main `Task` dropdown lists existing local tasks first and `New task` last
+- **AND** the New task section includes a dedicated `GitHub issue` dropdown with eligible issue suggestions
 - **AND** each suggestion identifies the issue title and repository context without exposing GitHub token material
 
 #### Scenario: GitHub issue suggestion selection seeds local task creation
 
 - **GIVEN** the top-bar timer task picker shows a GitHub issue suggestion
 - **WHEN** the user selects the suggestion
-- **THEN** the dialog pre-fills the new local task title from the GitHub issue title
+- **THEN** the dialog keeps `Task = New task`
+- **AND** pre-fills the new local task title from the GitHub issue title
 - **AND** the primary action creates a local task in the selected project before any timer can be started with that task
 - **AND** selecting the suggestion does not mutate GitHub data
 
@@ -114,6 +117,35 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **THEN** the dialog keeps existing local task options available
 - **AND** failed GitHub issue suggestions are not rendered as local task empty-state content
 - **AND** the user can still select an existing local task or create a new local task inside the selected project
+
+### Requirement: Projects Page Task Creation
+
+The user-web Projects page task creation dialog MUST allow the user to create a local task inside a visible project; and, for GitHub-backed visible projects, SHALL expose eligible GitHub issue suggestions as optional inputs that prefill the local task title without mutating GitHub data.
+
+#### Scenario: Project task creation shows GitHub issue suggestions
+
+- **GIVEN** the user opens the Projects page task creation dialog for a visible GitHub-backed project
+- **AND** the project's repository owner is browseable in the current workspace
+- **AND** the repository has open GitHub issues without matching existing local linked tasks
+- **WHEN** issue suggestion loading completes
+- **THEN** the dialog includes a dedicated `GitHub issue` dropdown
+- **AND** each suggestion identifies the issue title and repository context without exposing GitHub token material
+
+#### Scenario: Project task creation suggestion pre-fills local title
+
+- **GIVEN** the Projects page task creation dialog shows a GitHub issue suggestion
+- **WHEN** the user selects the suggestion
+- **THEN** the dialog pre-fills the local task title from the GitHub issue title
+- **AND** saving the dialog creates a normal local task in the selected project
+- **AND** selecting the suggestion does not mutate GitHub data
+
+#### Scenario: Project task creation suggestion failures do not block local creation
+
+- **GIVEN** the Projects page task creation dialog is open for a visible GitHub-backed project
+- **WHEN** GitHub issue suggestion loading fails or the owner is not browseable
+- **THEN** the dialog keeps the normal local task title and billable-default controls available
+- **AND** failed GitHub issue suggestions are not rendered as local task empty-state content
+- **AND** the user can still create a local task inside the selected project
 
 #### Scenario: Task picker states remain distinct
 

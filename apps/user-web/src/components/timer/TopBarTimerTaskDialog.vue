@@ -14,10 +14,8 @@ import {
 import { computed, shallowRef, watch } from "vue";
 
 import type { TopBarGitHubTaskProposal } from "@/composables/timer/useTopBarTaskPicker";
-import {
-  isTopBarTimerGitHubProposalId,
-  TOP_BAR_TIMER_NEW_TASK_ID,
-} from "@/lib/top-bar-timer-helpers";
+import { readGitHubRepositoryContext } from "@/lib/github-issue-task-suggestions";
+import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
 
 type ProjectAutoCompleteValue = ProjectResponse | string | null;
 
@@ -27,8 +25,9 @@ interface NewTaskOption {
   title: "New task";
 }
 
-type TaskPickerOption = TaskResponse | NewTaskOption | TopBarGitHubTaskProposal;
+type TaskPickerOption = TaskResponse | NewTaskOption;
 type TaskAutoCompleteValue = TaskPickerOption | string | null;
+type GitHubIssueAutoCompleteValue = TopBarGitHubTaskProposal | string | null;
 
 interface AutoCompleteCompleteEvent {
   query: string;
@@ -97,7 +96,7 @@ const dialogDescription = computed(() =>
 const primaryButtonLabel = computed(() =>
   props.primaryActionLabel === "Stop" ? "Stop timer" : "Start timer",
 );
-const taskSelectOverlayClass = "max-w-[calc(100vw-2rem)]";
+const taskSelectOverlayClass = "w-full max-w-full";
 const newTaskOption: NewTaskOption = {
   id: TOP_BAR_TIMER_NEW_TASK_ID,
   isNewTask: true,
@@ -105,23 +104,19 @@ const newTaskOption: NewTaskOption = {
 };
 const taskPickerOptions = computed<TaskPickerOption[]>(() => [
   ...props.taskOptions,
-  ...props.gitHubIssueProposals,
   newTaskOption,
 ]);
 const mobileProjectModel = shallowRef<ProjectAutoCompleteValue>(null);
 const mobileTaskModel = shallowRef<TaskAutoCompleteValue>(null);
+const gitHubIssueModel = shallowRef<GitHubIssueAutoCompleteValue>(null);
 const projectSuggestions = shallowRef<ProjectResponse[]>([]);
 const taskSuggestions = shallowRef<TaskPickerOption[]>([]);
-const selectedGitHubProposal = computed(
-  () =>
-    props.gitHubIssueProposals.find(
-      (proposal) => proposal.id === props.selectedTaskId,
-    ) ?? null,
+const gitHubIssueSuggestions = shallowRef<TopBarGitHubTaskProposal[]>([]);
+const selectedGitHubProposal = computed(() =>
+  isGitHubProposalOption(gitHubIssueModel.value) ? gitHubIssueModel.value : null,
 );
 const isNewTaskSelected = computed(
-  () =>
-    props.selectedTaskId === TOP_BAR_TIMER_NEW_TASK_ID ||
-    isTopBarTimerGitHubProposalId(props.selectedTaskId),
+  () => props.selectedTaskId === TOP_BAR_TIMER_NEW_TASK_ID,
 );
 const hasSelectedProjectOption = computed(() =>
   isProjectOption(mobileProjectModel.value),
@@ -152,6 +147,13 @@ const isConfirmButtonDisabled = computed(
 );
 const selectedProjectName = computed(
   () => findProjectOption(props.selectedProjectId)?.name ?? null,
+);
+const selectedProject = computed(() => findProjectOption(props.selectedProjectId));
+const selectedProjectRepository = computed(() =>
+  readGitHubRepositoryContext(selectedProject.value),
+);
+const shouldShowGitHubIssueSelector = computed(
+  () => isNewTaskSelected.value && selectedProjectRepository.value !== null,
 );
 const newTaskHint = computed(() => {
   const projectName = selectedProjectName.value ?? "the selected project";
@@ -191,12 +193,6 @@ function findTaskOption(taskId: string | null): TaskPickerOption | null {
     return newTaskOption;
   }
 
-  const proposal = props.gitHubIssueProposals.find((option) => option.id === taskId);
-
-  if (proposal) {
-    return proposal;
-  }
-
   return props.taskOptions.find((task) => task.id === taskId) ?? null;
 }
 
@@ -217,9 +213,13 @@ function isNewTaskOption(option: TaskPickerOption): option is NewTaskOption {
 }
 
 function isGitHubProposalOption(
-  option: TaskPickerOption,
+  option: GitHubIssueAutoCompleteValue | undefined,
 ): option is TopBarGitHubTaskProposal {
-  return "isGitHubIssueProposal" in option;
+  return (
+    typeof option === "object" &&
+    option !== null &&
+    "isGitHubIssueProposal" in option
+  );
 }
 
 function handleMobileProjectUpdate(
@@ -265,14 +265,26 @@ function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
       event.query,
       (task) => task.title,
     ),
-    ...filterAutocompleteOptions(
-      props.gitHubIssueProposals,
-      event.query,
-      (proposal) =>
-        `${proposal.title} ${proposal.repositoryLabel} #${proposal.issue.number}`,
-    ),
     newTaskOption,
   ];
+}
+
+function handleGitHubIssueComplete(event: AutoCompleteCompleteEvent): void {
+  gitHubIssueSuggestions.value = filterAutocompleteOptions(
+    props.gitHubIssueProposals,
+    event.query,
+    (proposal) => `${proposal.title} ${proposal.repositoryLabel} #${proposal.issue.number}`,
+  );
+}
+
+function handleGitHubIssueUpdate(
+  value: GitHubIssueAutoCompleteValue | undefined,
+): void {
+  gitHubIssueModel.value = value ?? null;
+
+  if (isGitHubProposalOption(value)) {
+    emit("update:createTaskTitle", value.title);
+  }
 }
 
 watch(
@@ -291,6 +303,32 @@ watch(
     taskSuggestions.value = taskPickerOptions.value;
   },
   { immediate: true },
+);
+
+watch(
+  () => props.gitHubIssueProposals,
+  () => {
+    gitHubIssueSuggestions.value = props.gitHubIssueProposals;
+    const selectedIssue = gitHubIssueModel.value;
+
+    if (
+      isGitHubProposalOption(selectedIssue) &&
+      !props.gitHubIssueProposals.some(
+        (proposal) => proposal.id === selectedIssue.id,
+      )
+    ) {
+      gitHubIssueModel.value = null;
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  [() => props.selectedProjectId, isNewTaskSelected],
+  () => {
+    gitHubIssueModel.value = null;
+    gitHubIssueSuggestions.value = props.gitHubIssueProposals;
+  },
 );
 </script>
 
@@ -347,6 +385,7 @@ watch(
         </label>
         <div class="relative">
           <AutoComplete
+            append-to="self"
             class="w-full max-w-full min-w-0"
             complete-on-focus
             data-key="id"
@@ -378,6 +417,7 @@ watch(
         </label>
         <div class="relative">
           <AutoComplete
+            append-to="self"
             class="w-full max-w-full min-w-0"
             complete-on-focus
             data-key="id"
@@ -389,7 +429,7 @@ watch(
             :min-length="0"
             option-label="title"
             :disabled="isTaskAutoCompleteDisabled"
-            :loading="props.isLoadingTasks || props.isLoadingGitHubTaskProposals"
+            :loading="props.isLoadingTasks"
             :model-value="mobileTaskModel"
             :overlay-class="taskSelectOverlayClass"
             placeholder="Search tasks"
@@ -399,25 +439,7 @@ watch(
           >
             <template #option="{ option }">
               <div
-                v-if="isGitHubProposalOption(option)"
-                class="border-brand/20 bg-accent-tint/70 flex min-w-0 flex-col gap-1 rounded-md border px-2 py-2"
-                data-testid="top-bar-timer-github-proposal-option"
-              >
-                <div class="flex min-w-0 items-center gap-2 text-xs">
-                  <span class="bg-brand text-text-inverse rounded-sm px-1.5 py-0.5 text-[11px] leading-none font-semibold">
-                    GitHub
-                  </span>
-                  <span class="text-text-muted min-w-0 truncate">
-                    {{ option.repositoryLabel }} #{{ option.issue.number }}
-                  </span>
-                </div>
-                <span class="text-text-dark truncate text-sm font-medium">
-                  {{ option.title }}
-                </span>
-              </div>
-
-              <div
-                v-else-if="isNewTaskOption(option)"
+                v-if="isNewTaskOption(option)"
                 class="flex min-w-0 flex-col gap-0.5 px-1 py-1"
               >
                 <span class="text-text-dark truncate text-sm font-medium">
@@ -438,55 +460,121 @@ watch(
           </AutoComplete>
         </div>
         <small class="text-text-muted text-xs">
-          Visible tasks are listed first. GitHub suggestions can prefill a local task. New task is the last option.
-        </small>
-        <small
-          v-if="props.isLoadingGitHubTaskProposals"
-          class="text-text-muted text-xs"
-        >
-          Loading GitHub issue suggestions...
-        </small>
-        <small
-          v-else-if="props.gitHubProposalErrorMessage"
-          class="text-text-muted text-xs"
-        >
-          GitHub issue suggestions are unavailable: {{ props.gitHubProposalErrorMessage }}
+          Visible tasks are listed first. New task is the last option.
         </small>
 
         <div
           v-if="isNewTaskSelected"
-          class="mt-1 flex flex-col gap-1"
+          class="mt-1 flex flex-col gap-3"
         >
-          <label
-            for="top-bar-timer-new-task-title"
-            class="text-text-dark text-[13px] font-medium"
+          <div
+            v-if="shouldShowGitHubIssueSelector"
+            class="flex flex-col gap-1"
           >
-            New task title
-          </label>
-          <div class="relative">
-            <InputText
-              id="top-bar-timer-new-task-title"
-              v-model="createTaskTitleModel"
-              class="text-text-muted h-[38px] w-full pr-20 text-sm font-medium"
-              :disabled="isNewTaskTitleInputDisabled"
-              :invalid="!!props.createTaskErrorMessage"
-            />
-            <span class="text-text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium">
-              Required
-            </span>
+            <label
+              for="top-bar-timer-github-issue"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              GitHub issue
+            </label>
+            <AutoComplete
+              append-to="self"
+              class="w-full max-w-full min-w-0"
+              complete-on-focus
+              data-key="id"
+              dropdown
+              dropdown-mode="blank"
+              fluid
+              force-selection
+              input-id="top-bar-timer-github-issue"
+              :min-length="0"
+              option-label="title"
+              :disabled="props.isCreatingTask || props.isConfirmingSelection"
+              :loading="props.isLoadingGitHubTaskProposals"
+              :model-value="gitHubIssueModel"
+              :overlay-class="taskSelectOverlayClass"
+              placeholder="Select GitHub issue"
+              :suggestions="gitHubIssueSuggestions"
+              @complete="handleGitHubIssueComplete"
+              @update:model-value="handleGitHubIssueUpdate"
+            >
+              <template #option="{ option }">
+                <div
+                  class="border-brand/20 bg-accent-tint/70 flex min-w-0 flex-col gap-1 rounded-md border px-2 py-2"
+                  data-testid="top-bar-timer-github-proposal-option"
+                >
+                  <div class="flex min-w-0 items-center gap-2 text-xs">
+                    <span class="bg-brand text-text-inverse rounded-sm px-1.5 py-0.5 text-[11px] leading-none font-semibold">
+                      GitHub
+                    </span>
+                    <span class="text-text-muted min-w-0 truncate">
+                      {{ option.repositoryLabel }} #{{ option.issue.number }}
+                    </span>
+                  </div>
+                  <span class="text-text-dark truncate text-sm font-medium">
+                    {{ option.title }}
+                  </span>
+                </div>
+              </template>
+            </AutoComplete>
+            <small
+              v-if="props.isLoadingGitHubTaskProposals"
+              class="text-text-muted text-xs"
+            >
+              Loading GitHub issue suggestions...
+            </small>
+            <small
+              v-else-if="props.gitHubProposalErrorMessage"
+              class="text-text-muted text-xs"
+            >
+              GitHub issue suggestions are unavailable: {{ props.gitHubProposalErrorMessage }}
+            </small>
+            <small
+              v-else-if="props.gitHubIssueProposals.length === 0"
+              class="text-text-muted text-xs"
+            >
+              No open GitHub issues are available for this project.
+            </small>
+            <small
+              v-else
+              class="text-text-muted text-xs"
+            >
+              Select an issue to prefill the local task title.
+            </small>
           </div>
-          <small
-            v-if="props.createTaskErrorMessage"
-            class="text-destructive text-xs"
-          >
-            {{ props.createTaskErrorMessage }}
-          </small>
-          <small
-            v-else
-            class="text-text-muted text-xs"
-          >
-            {{ newTaskHint }}
-          </small>
+
+          <div class="flex flex-col gap-1">
+            <label
+              for="top-bar-timer-new-task-title"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              New task title
+            </label>
+            <div class="relative">
+              <InputText
+                id="top-bar-timer-new-task-title"
+                v-model="createTaskTitleModel"
+                class="text-text-muted h-[38px] w-full pr-20 text-sm font-medium"
+                :disabled="isNewTaskTitleInputDisabled"
+                :invalid="!!props.createTaskErrorMessage"
+              />
+              <span class="text-text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium">
+                Required
+              </span>
+            </div>
+            <small
+              v-if="props.createTaskErrorMessage"
+              class="text-destructive text-xs"
+            >
+              {{ props.createTaskErrorMessage }}
+            </small>
+            <small
+              v-else
+              class="text-text-muted text-xs"
+            >
+              {{ newTaskHint }}
+            </small>
+          </div>
         </div>
       </div>
 

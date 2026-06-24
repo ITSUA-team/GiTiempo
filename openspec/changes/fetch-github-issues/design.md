@@ -1,8 +1,8 @@
 ## Context
 
-GitHub browsing already exists as read-only backend API behavior. The backend stores GitHub token material server-side, applies the workspace GitHub organization allow-list to organization-scoped browsing, and exposes normalized repository issue responses. The user-web top-bar timer task picker already owns project/task selection, local task creation, and timer start/change/stop actions.
+GitHub browsing already exists as read-only backend API behavior. The backend stores GitHub token material server-side, applies the workspace GitHub organization allow-list to organization-scoped browsing, and exposes normalized repository issue responses. The user-web top-bar timer task picker already owns project/task selection, local task creation, and timer start/change/stop actions. The Projects page task dialog already owns normal task creation and update flows.
 
-The missing product bridge is a safe issue-suggestion flow inside the existing top-bar timer picker. A connected GitHub account is not sufficient by itself: organization-owned issues are available only when the connected account can access the organization and the current workspace allows that organization. The admin-web Settings page already owns allow-list management and recovery steps when GitHub App access is blocked.
+The missing product bridge is a safe issue-suggestion flow inside the existing task creation surfaces. A connected GitHub account is not sufficient by itself: organization-owned issues are available only when the connected account can access the organization and the current workspace allows that organization. The admin-web Settings page already owns allow-list management and recovery steps when GitHub App access is blocked.
 
 Affected app instructions:
 - `apps/user-web/AGENTS.md`: use the documented user UI requirements, PrimeVue controls, approved timer design constraints, and focused user-web verification.
@@ -13,7 +13,7 @@ Affected app instructions:
 
 **Goals:**
 
-- Add GitHub issue suggestions to the existing user-web top-bar timer task picker for GitHub-backed visible projects.
+- Add GitHub issue suggestions to the existing user-web Projects task creation dialog and top-bar timer New task flow for GitHub-backed visible projects.
 - Keep the local task picker usable when issue suggestions are unavailable, empty, blocked, or fail to load.
 - Avoid noisy failing repository issue requests for organization owners that are not browseable in the current workspace.
 - Reuse existing repository issue browsing and workspace organization policy behavior instead of adding a parallel provider integration.
@@ -29,9 +29,9 @@ Affected app instructions:
 
 ## Decisions
 
-1. Use repository issue browsing as optional task-picker suggestions.
+1. Use repository issue browsing as optional task-title suggestions.
 
-   The top-bar task picker will load issues for visible projects whose source is GitHub and whose project name can be resolved to an `owner/repo` repository key. Suggestions appear after local tasks and before the local `New task` option. Selecting a suggestion seeds the existing local task creation flow.
+   Task creation surfaces will load issues for visible projects whose source is GitHub and whose project name can be resolved to an `owner/repo` repository key. Suggestions appear in a dedicated `GitHub issue` dropdown that prefills the local task title. The main timer `Task` dropdown remains local-task-only and keeps `New task` as the last option.
 
    Alternative considered: call a timer-specific `start from GitHub issue` mutation from user-web. Rejected because browsing is read-only, the approved top-bar timer flow is local project/task based, and current task creation cannot safely attach provider metadata without a separate contract change.
 
@@ -43,13 +43,13 @@ Affected app instructions:
 
 3. Keep proposal failures local and non-blocking.
 
-   GitHub issue suggestion loading is enhancement data. Failures clear suggestions and may show local inline helper text, but they must not block existing project/task selection, new task creation, or timer actions.
+   GitHub issue suggestion loading is enhancement data. Failures clear suggestions and may show local inline helper text, but they must not block existing project/task selection, normal task creation, new task creation, or timer actions.
 
    Alternative considered: treat GitHub proposal failures as task loading failures. Rejected because local tasks remain authoritative and available even when provider browsing is unavailable.
 
 4. Keep admin recovery out of the timer dialog.
 
-   The timer dialog can indicate that suggestions are unavailable, but the concrete install/approve/reconnect/retry path remains in admin-web Settings GitHub Workspace Access. This keeps member timer UI compact and avoids mixing admin-only workspace policy mutation into user-web.
+   The user-web dialogs can indicate that suggestions are unavailable, but the concrete install/approve/reconnect/retry path remains in admin-web Settings GitHub Workspace Access. This keeps member UI compact and avoids mixing admin-only workspace policy mutation into user-web.
 
    Alternative considered: add admin recovery links in user-web. Rejected because not every member is a workspace admin, and the existing admin Settings card already owns structured recovery for blocked GitHub App access.
 

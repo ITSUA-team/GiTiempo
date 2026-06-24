@@ -5,10 +5,8 @@ import { nextTick } from "vue";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 import type { TopBarGitHubTaskProposal } from "@/composables/timer/useTopBarTaskPicker";
-import {
-  createTopBarTimerGitHubProposalId,
-  TOP_BAR_TIMER_NEW_TASK_ID,
-} from "@/lib/top-bar-timer-helpers";
+import { createGitHubIssueTaskSuggestionId } from "@/lib/github-issue-task-suggestions";
+import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
 const projectOrion = {
@@ -33,6 +31,12 @@ const internalOpsProject = {
   name: "Internal Ops",
 } satisfies ProjectResponse;
 
+const githubProject = {
+  ...projectOrion,
+  name: "octo/repo",
+  source: "github",
+} satisfies ProjectResponse;
+
 const reportsTask = {
   createdAt: "2026-04-20T12:00:00.000Z",
   defaultBillableForTimeEntries: true,
@@ -54,7 +58,7 @@ const alertTask = {
 } satisfies TaskResponse;
 
 const githubProposal = {
-  id: createTopBarTimerGitHubProposalId("octo/repo", 184),
+  id: createGitHubIssueTaskSuggestionId("octo/repo", 184),
   isGitHubIssueProposal: true,
   issue: {
     id: "github-issue-184",
@@ -111,12 +115,15 @@ function mountDialog(overrides: DialogProps = {}) {
           name: "AutoComplete",
           props: [
             "completeOnFocus",
+            "appendTo",
+            "dataKey",
             "disabled",
             "dropdown",
             "dropdownClass",
             "dropdownMode",
             "fluid",
             "forceSelection",
+            "inputId",
             "loading",
             "inputClass",
             "minLength",
@@ -135,7 +142,7 @@ function mountDialog(overrides: DialogProps = {}) {
             },
           },
           template:
-            '<div :class="$attrs.class" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading)" :data-overlay-class="overlayClass"><input :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" /><div data-testid="autocomplete-options"><div v-for="option in suggestions" :key="option.id" data-testid="autocomplete-option"><slot name="option" :option="option">{{ option.name ?? option.title }}</slot></div></div></div>',
+            '<div :class="$attrs.class" :data-append-to="appendTo" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading)" :data-overlay-class="overlayClass" :data-testid="inputId"><input :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" /><div data-testid="autocomplete-options"><div v-for="option in suggestions" :key="option.id" data-testid="autocomplete-option"><slot name="option" :option="option">{{ option.name ?? option.title }}</slot></div></div></div>',
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "variant"],
@@ -212,9 +219,8 @@ describe("TopBarTimerTaskDialog", () => {
       expect(autoComplete.attributes("data-dropdown")).toBe("true");
       expect(autoComplete.attributes("data-fluid")).toBe("true");
       expect(autoComplete.attributes("data-force-selection")).toBe("true");
-      expect(autoComplete.attributes("data-overlay-class")).toBe(
-        "max-w-[calc(100vw-2rem)]",
-      );
+      expect(autoComplete.attributes("data-append-to")).toBe("self");
+      expect(autoComplete.attributes("data-overlay-class")).toBe("w-full max-w-full");
     }
     expect(wrapper.text()).not.toContain("AutoComplete");
     expect(taskSuggestions.map((task) => task.title)).toEqual([
@@ -223,7 +229,7 @@ describe("TopBarTimerTaskDialog", () => {
     ]);
     expect(taskSuggestions.at(-1)?.id).toBe(TOP_BAR_TIMER_NEW_TASK_ID);
     expect(wrapper.text()).toContain(
-      "Visible tasks are listed first. GitHub suggestions can prefill a local task. New task is the last option.",
+      "Visible tasks are listed first. New task is the last option.",
     );
     expect(wrapper.find("#top-bar-timer-new-task-title").exists()).toBe(true);
     expect(wrapper.text()).toContain("New task title");
@@ -273,16 +279,14 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.emitted("update:selectedTaskId")?.[1]).toEqual([
       TOP_BAR_TIMER_NEW_TASK_ID,
     ]);
-
-    await autoCompletes[1]?.vm.$emit("update:modelValue", githubProposal);
-
-    expect(wrapper.emitted("update:selectedTaskId")?.[2]).toEqual([
-      githubProposal.id,
-    ]);
   });
 
-  it("renders highlighted GitHub proposal options before New task", () => {
-    const wrapper = mountDialog({ gitHubIssueProposals: [githubProposal] });
+  it("renders highlighted GitHub issue options inside the New task form", () => {
+    const wrapper = mountDialog({
+      gitHubIssueProposals: [githubProposal],
+      projectOptions: [githubProject],
+      selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID,
+    });
     const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
     const taskSuggestions = autoCompletes[1]?.props("suggestions") as Array<{
       id: string;
@@ -294,28 +298,34 @@ describe("TopBarTimerTaskDialog", () => {
 
     expect(taskSuggestions.map((task) => task.title)).toEqual([
       "Improve reports filters",
-      "Write release checklist",
       "New task",
     ]);
     expect(taskSuggestions.at(-1)?.id).toBe(TOP_BAR_TIMER_NEW_TASK_ID);
+    expect(autoCompletes).toHaveLength(3);
+    expect(autoCompletes[2]?.props("suggestions")).toEqual([githubProposal]);
     expect(proposalOption.text()).toContain("GitHub");
     expect(proposalOption.text()).toContain("octo/repo #184");
     expect(proposalOption.text()).toContain("Write release checklist");
   });
 
-  it("shows the local task title input when a GitHub proposal is selected", () => {
+  it("prefills the local task title when a GitHub issue is selected", async () => {
     const wrapper = mountDialog({
-      createTaskTitle: githubProposal.title,
+      createTaskTitle: "",
       gitHubIssueProposals: [githubProposal],
-      selectedTaskId: githubProposal.id,
+      projectOptions: [githubProject],
+      selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID,
     });
+    const githubAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[2];
+
+    await githubAutoComplete?.vm.$emit("update:modelValue", githubProposal);
+    await nextTick();
 
     expect(wrapper.find("#top-bar-timer-new-task-title").exists()).toBe(true);
-    expect(
-      (wrapper.get("#top-bar-timer-new-task-title").element as HTMLInputElement).value,
-    ).toBe("Write release checklist");
+    expect(wrapper.emitted("update:createTaskTitle")?.[0]).toEqual([
+      "Write release checklist",
+    ]);
     expect(wrapper.text()).toContain(
-      "GitHub issue #184 from octo/repo prefills a local task title in Project Orion",
+      "GitHub issue #184 from octo/repo prefills a local task title in octo/repo",
     );
   });
 
@@ -418,15 +428,21 @@ describe("TopBarTimerTaskDialog", () => {
   });
 
   it("renders GitHub proposal loading and request-error hints separately", () => {
-    const loadingWrapper = mountDialog({ isLoadingGitHubTaskProposals: true });
+    const loadingWrapper = mountDialog({
+      isLoadingGitHubTaskProposals: true,
+      projectOptions: [githubProject],
+      selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID,
+    });
 
     expect(loadingWrapper.text()).toContain("Loading GitHub issue suggestions...");
     expect(
-      loadingWrapper.findAllComponents({ name: "AutoComplete" })[1]?.attributes("data-loading"),
+      loadingWrapper.findAllComponents({ name: "AutoComplete" })[2]?.attributes("data-loading"),
     ).toBe("true");
 
     const errorWrapper = mountDialog({
       gitHubProposalErrorMessage: "GitHub connection required",
+      projectOptions: [githubProject],
+      selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID,
     });
 
     expect(errorWrapper.text()).toContain(
@@ -517,6 +533,23 @@ describe("TopBarTimerTaskDialog", () => {
     expect(labels).toEqual(["Project", "Task", "New task title", "Description"]);
   });
 
+  it("renders the GitHub issue selector before New task title for GitHub New task", () => {
+    const wrapper = mountDialog({
+      gitHubIssueProposals: [githubProposal],
+      projectOptions: [githubProject],
+      selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID,
+    });
+    const labels = wrapper.findAll("label").map((label) => label.text().trim());
+
+    expect(labels).toEqual([
+      "Project",
+      "Task",
+      "GitHub issue",
+      "New task title",
+      "Description",
+    ]);
+  });
+
   it("uses the fixed description input height from the popup design", () => {
     const wrapper = mountDialog();
     const description = wrapper.get("#top-bar-timer-description");
@@ -558,9 +591,8 @@ describe("TopBarTimerTaskDialog", () => {
       expect(predictiveField.attributes("data-dropdown")).toBe("true");
       expect(predictiveField.attributes("data-fluid")).toBe("true");
       expect(predictiveField.attributes("data-force-selection")).toBe("true");
-      expect(predictiveField.attributes("data-overlay-class")).toBe(
-        "max-w-[calc(100vw-2rem)]",
-      );
+      expect(predictiveField.attributes("data-append-to")).toBe("self");
+      expect(predictiveField.attributes("data-overlay-class")).toBe("w-full max-w-full");
     }
   });
 

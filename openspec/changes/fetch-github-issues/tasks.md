@@ -31,3 +31,12 @@
 - [x] 5.3 Run focused user-web tests for the GitHub browsing client, timer composables, and timer picker components.
 - [x] 5.4 Run `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `git diff --check`.
 - [x] 5.5 Manually confirm that an empty workspace GitHub organization allow-list does not trigger `/github/repos/:owner/:repo/issues` for an organization-owned project and that admin-web Settings remains the recovery path for blocked GitHub App access.
+
+## 6. Follow-up Task Creation Dropdowns
+
+- [x] 6.1 Refactor repository parsing, owner preflight, issue mapping, and linked-task filtering into shared user-web helpers used by both task creation surfaces.
+- [x] 6.2 Add a GitHub issue dropdown to the Projects page task creation dialog for GitHub-backed visible projects.
+- [x] 6.3 Change the top-bar timer flow so GitHub issues appear in a dedicated New task dropdown while the main Task dropdown stays local-task-only.
+- [x] 6.4 Keep GitHub issue dropdown overlays constrained to the autocomplete input width.
+- [x] 6.5 Add focused component and Projects page integration tests for GitHub issue prefill behavior.
+- [x] 6.6 Run focused user-web tests, `pnpm --filter user-web lint`, `pnpm --filter user-web typecheck`, and `git diff --check`.

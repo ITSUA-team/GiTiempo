@@ -9,6 +9,11 @@ import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
 import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
+import {
+  readGitHubRepositoryContext,
+  type GitHubIssueTaskSuggestion,
+} from "@/lib/github-issue-task-suggestions";
+
 const props = defineProps<{
   errors: {
     projectId: string | null;
@@ -16,7 +21,10 @@ const props = defineProps<{
     title: string | null;
   };
   defaultBillableForTimeEntries: boolean;
+  gitHubIssueSuggestionErrorMessage: string | null;
+  gitHubIssueSuggestions: GitHubIssueTaskSuggestion[];
   isDeleting: boolean;
+  isLoadingGitHubIssueSuggestions: boolean;
   isOpen: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
@@ -24,6 +32,7 @@ const props = defineProps<{
   projects: ProjectResponse[];
   requestErrorMessage: string | null;
   saveLabel: string;
+  selectedGitHubIssueSuggestionId: string | null;
   status: TaskStatus;
   subtitle: string;
   title: string;
@@ -35,6 +44,7 @@ const emit = defineEmits<{
   deleteTask: [];
   save: [];
   "update:defaultBillableForTimeEntries": [value: boolean];
+  "update:selectedGitHubIssueSuggestionId": [value: string | null];
   "update:projectId": [value: string | null];
   "update:status": [value: TaskStatus];
   "update:title": [value: string];
@@ -53,6 +63,8 @@ const selectedProject = computed(() =>
 );
 const projectSearchValue = shallowRef<string | null>(null);
 const projectSearchQuery = shallowRef("");
+const gitHubIssueSearchValue = shallowRef<string | null>(null);
+const gitHubIssueSearchQuery = shallowRef("");
 const projectSuggestions = computed(() => {
   return filterAutocompleteOptions(
     props.projects,
@@ -73,6 +85,33 @@ const projectModel = computed({
     projectSearchValue.value = null;
     projectSearchQuery.value = "";
     emit("update:projectId", value?.id ?? null);
+  },
+});
+const selectedGitHubIssueSuggestion = computed(
+  () =>
+    props.gitHubIssueSuggestions.find(
+      (suggestion) => suggestion.id === props.selectedGitHubIssueSuggestionId,
+    ) ?? null,
+);
+const gitHubIssueSuggestions = computed(() => {
+  return filterAutocompleteOptions(
+    props.gitHubIssueSuggestions,
+    gitHubIssueSearchQuery.value,
+    (suggestion) => `${suggestion.title} ${suggestion.repositoryLabel} #${suggestion.issue.number}`,
+  );
+});
+const gitHubIssueModel = computed({
+  get: () => gitHubIssueSearchValue.value ?? selectedGitHubIssueSuggestion.value,
+  set: (value: GitHubIssueTaskSuggestion | string | null | undefined) => {
+    if (typeof value === "string") {
+      gitHubIssueSearchValue.value = value;
+      gitHubIssueSearchQuery.value = value;
+      return;
+    }
+
+    gitHubIssueSearchValue.value = null;
+    gitHubIssueSearchQuery.value = "";
+    emit("update:selectedGitHubIssueSuggestionId", value?.id ?? null);
   },
 });
 
@@ -98,17 +137,28 @@ const defaultBillableModel = computed({
 });
 
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
+const shouldShowGitHubIssueSuggestions = computed(
+  () =>
+    props.mode === "create" &&
+    readGitHubRepositoryContext(selectedProject.value) !== null,
+);
 
 watch(
   [() => props.isOpen, () => props.mode, () => props.projectId],
   () => {
     projectSearchValue.value = null;
     projectSearchQuery.value = "";
+    gitHubIssueSearchValue.value = null;
+    gitHubIssueSearchQuery.value = "";
   },
 );
 
 function handleProjectComplete(event: { query: string }): void {
   projectSearchQuery.value = event.query;
+}
+
+function handleGitHubIssueComplete(event: { query: string }): void {
+  gitHubIssueSearchQuery.value = event.query;
 }
 </script>
 
@@ -189,6 +239,80 @@ function handleProjectComplete(event: { query: string }): void {
           class="text-destructive text-xs"
         >
           {{ props.errors.projectId }}
+        </small>
+      </div>
+
+      <div
+        v-if="shouldShowGitHubIssueSuggestions"
+        class="flex flex-col gap-1"
+      >
+        <label
+          for="project-task-github-issue"
+          class="text-text-dark text-[13px] font-medium"
+        >
+          GitHub issue
+        </label>
+        <AutoComplete
+          v-model="gitHubIssueModel"
+          append-to="self"
+          complete-on-focus
+          data-key="id"
+          dropdown
+          dropdown-mode="blank"
+          fluid
+          force-selection
+          input-id="project-task-github-issue"
+          :min-length="0"
+          option-label="title"
+          overlay-class="w-full max-w-full"
+          placeholder="Select GitHub issue"
+          :disabled="isDialogMutating"
+          :loading="props.isLoadingGitHubIssueSuggestions"
+          :suggestions="gitHubIssueSuggestions"
+          @complete="handleGitHubIssueComplete"
+        >
+          <template #option="{ option }">
+            <div
+              class="border-brand/20 bg-accent-tint/70 flex min-w-0 flex-col gap-1 rounded-md border px-2 py-2"
+              data-testid="project-task-github-issue-option"
+            >
+              <div class="flex min-w-0 items-center gap-2 text-xs">
+                <span class="bg-brand text-text-inverse rounded-sm px-1.5 py-0.5 text-[11px] leading-none font-semibold">
+                  GitHub
+                </span>
+                <span class="text-text-muted min-w-0 truncate">
+                  {{ option.repositoryLabel }} #{{ option.issue.number }}
+                </span>
+              </div>
+              <span class="text-text-dark truncate text-sm font-medium">
+                {{ option.title }}
+              </span>
+            </div>
+          </template>
+        </AutoComplete>
+        <small
+          v-if="props.isLoadingGitHubIssueSuggestions"
+          class="text-text-muted text-xs"
+        >
+          Loading GitHub issue suggestions...
+        </small>
+        <small
+          v-else-if="props.gitHubIssueSuggestionErrorMessage"
+          class="text-text-muted text-xs"
+        >
+          GitHub issue suggestions are unavailable: {{ props.gitHubIssueSuggestionErrorMessage }}
+        </small>
+        <small
+          v-else-if="props.gitHubIssueSuggestions.length === 0"
+          class="text-text-muted text-xs"
+        >
+          No open GitHub issues are available for this project.
+        </small>
+        <small
+          v-else
+          class="text-text-muted text-xs"
+        >
+          Select an issue to prefill the local task title.
         </small>
       </div>
 

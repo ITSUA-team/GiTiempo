@@ -13,7 +13,6 @@ import {
 } from '@/config/clients';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
 import {
-  isTopBarTimerGitHubProposalId,
   isRunningTimer,
   TOP_BAR_TIMER_NEW_TASK_ID,
 } from '@/lib/top-bar-timer-helpers';
@@ -148,9 +147,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isTimerRunning.value ? 'Stop' : 'Start',
   );
   const isNewTaskSelected = computed(
-    () =>
-      picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID ||
-      isTopBarTimerGitHubProposalId(picker.selectedTaskId.value),
+    () => picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID,
   );
   const isCreateTaskDisabled = computed(() => {
     return (
@@ -260,11 +257,13 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     timerActions.clearTimerActionError();
     const proposal = picker.getGitHubIssueProposal(taskId);
 
-    picker.setSelectedTaskId(taskId);
-
     if (proposal) {
+      picker.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
       picker.setCreateTaskTitle(proposal.title);
+      return;
     }
+
+    picker.setSelectedTaskId(taskId);
   }
 
   function setSelectedDescription(description: string): void {

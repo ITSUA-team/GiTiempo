@@ -1,20 +1,14 @@
 import {
   createTaskSchema,
-  type GitHubIssue,
   type ProjectResponse,
   type TaskResponse,
 } from "@gitiempo/shared";
 import { computed, ref } from "vue";
 
+import type { GitHubIssueTaskSuggestion } from "@/lib/github-issue-task-suggestions";
 import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 
-export interface TopBarGitHubTaskProposal {
-  id: string;
-  isGitHubIssueProposal: true;
-  issue: GitHubIssue;
-  repositoryLabel: string;
-  title: string;
-}
+export type TopBarGitHubTaskProposal = GitHubIssueTaskSuggestion;
 
 export function useTopBarTaskPicker() {
   const projects = ref<ProjectResponse[]>([]);
