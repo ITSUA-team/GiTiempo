@@ -8,19 +8,9 @@ import { ref, type ComputedRef } from "vue";
 
 import {
   GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
-  GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
-  GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
-  buildGitHubIssueTaskSuggestionCacheKey,
-  filterGitHubIssueTaskSuggestions,
-  isBrowseableGitHubOwner,
-  readGitHubRepositoryContext,
-  toGitHubIssueTaskSuggestion,
 } from "@/lib/github-issue-task-suggestions";
-import {
-  githubBrowsingKeys,
-  timerKeys,
-  type UserServerStateScope,
-} from "@/lib/query-keys";
+import { loadGitHubIssueTaskSuggestions } from "@/lib/github-issue-task-suggestion-loader";
+import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { GitHubBrowsingClient } from "@/services/github-browsing-client";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -137,12 +127,6 @@ export function useTopBarTaskOptions({
     project: ProjectResponse | null,
   ): Promise<TopBarGitHubTaskProposal[]> {
     const requestId = ++gitHubProposalRequestId;
-    const repository = readGitHubRepositoryContext(project);
-
-    if (!repository) {
-      clearGitHubIssueProposals();
-      return [];
-    }
 
     isLoadingGitHubTaskProposals.value = true;
     picker.setGitHubProposalError(null);
@@ -151,19 +135,32 @@ export function useTopBarTaskOptions({
     );
 
     try {
-      if (!accessToken.value) {
-        throw new Error("Authentication is required to load GitHub issue suggestions.");
-      }
-
-      const owners = await githubClient.listOwners(
-        GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
-      );
+      const result = await loadGitHubIssueTaskSuggestions({
+        accessToken: accessToken.value,
+        getCachedSuggestions: picker.getCachedGitHubIssueProposals,
+        githubClient,
+        isStale: () => requestId !== gitHubProposalRequestId,
+        project,
+        queryClient,
+        scope: scope.value,
+        setCachedSuggestions: picker.setCachedGitHubIssueProposals,
+        tasks: picker.activeTasks.value,
+      });
 
       if (requestId !== gitHubProposalRequestId) {
         return picker.gitHubIssueProposals.value;
       }
 
-      if (!isBrowseableGitHubOwner(repository.owner, owners.items)) {
+      if (result.status === "stale") {
+        return picker.gitHubIssueProposals.value;
+      }
+
+      if (result.status === "noRepository") {
+        clearGitHubIssueProposals();
+        return [];
+      }
+
+      if (result.status === "ownerNotBrowseable") {
         picker.setGitHubIssueProposals([]);
         picker.setGitHubProposalError(null);
         picker.setGitHubIssueSuggestionAvailability(
@@ -172,58 +169,17 @@ export function useTopBarTaskOptions({
         return [];
       }
 
-      const cacheKey = buildGitHubIssueTaskSuggestionCacheKey(
-        scope.value,
-        repository.fullName,
-      );
-      const cachedProposals = picker.getCachedGitHubIssueProposals(cacheKey);
-
-      if (cachedProposals) {
-        const proposals = filterGitHubIssueTaskSuggestions(
-          cachedProposals,
-          picker.activeTasks.value,
-        );
-
-        picker.setGitHubIssueProposals(proposals);
-        return proposals;
-      }
-
-      const response = await queryClient.ensureQueryData({
-        queryKey: githubBrowsingKeys.repositoryIssues(
-          scope.value,
-          repository.fullName,
-          GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
-        ),
-        queryFn: () =>
-          githubClient.listRepositoryIssues(
-            repository.owner,
-            repository.repo,
-            GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
-          ),
-      });
-      const fetchedProposals = response.items.map(toGitHubIssueTaskSuggestion);
-      const proposals = filterGitHubIssueTaskSuggestions(
-        fetchedProposals,
-        picker.activeTasks.value,
-      );
-
-      if (requestId !== gitHubProposalRequestId) {
-        return picker.gitHubIssueProposals.value;
-      }
-
-      picker.setCachedGitHubIssueProposals(cacheKey, fetchedProposals);
-      picker.setGitHubIssueProposals(proposals);
-      return proposals;
-    } catch (error) {
-      if (requestId === gitHubProposalRequestId) {
+      if (result.status === "failed") {
         picker.setGitHubIssueProposals([]);
-        picker.setGitHubProposalError(getErrorMessage(error));
+        picker.setGitHubProposalError(result.errorMessage);
         picker.setGitHubIssueSuggestionAvailability(
           GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
         );
+        return [];
       }
 
-      return [];
+      picker.setGitHubIssueProposals(result.suggestions);
+      return result.suggestions;
     } finally {
       if (requestId === gitHubProposalRequestId) {
         isLoadingGitHubTaskProposals.value = false;

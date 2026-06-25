@@ -1,20 +1,14 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { getErrorMessage } from "@gitiempo/web-shared";
 import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
 import {
   GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
-  GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
-  GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
-  filterGitHubIssueTaskSuggestions,
-  isBrowseableGitHubOwner,
-  readGitHubRepositoryContext,
-  toGitHubIssueTaskSuggestion,
   type GitHubIssueSuggestionAvailability,
   type GitHubIssueTaskSuggestion,
 } from "@/lib/github-issue-task-suggestions";
-import { githubBrowsingKeys, type UserServerStateScope } from "@/lib/query-keys";
+import { loadGitHubIssueTaskSuggestions } from "@/lib/github-issue-task-suggestion-loader";
+import type { UserServerStateScope } from "@/lib/query-keys";
 import type { GitHubBrowsingClient } from "@/services/github-browsing-client";
 
 interface UseProjectGitHubIssueSuggestionsOptions {
@@ -51,12 +45,6 @@ export function useProjectGitHubIssueSuggestions({
     tasks: TaskResponse[],
   ): Promise<void> {
     const currentRequestId = ++requestId;
-    const repository = readGitHubRepositoryContext(project);
-
-    if (!repository) {
-      clearGitHubIssueSuggestions();
-      return;
-    }
 
     isLoadingGitHubIssueSuggestions.value = true;
     gitHubIssueSuggestionAvailability.value =
@@ -64,53 +52,44 @@ export function useProjectGitHubIssueSuggestions({
     gitHubIssueSuggestionErrorMessage.value = null;
 
     try {
-      if (!accessToken.value) {
-        throw new Error("Authentication is required to load GitHub issue suggestions.");
+      const result = await loadGitHubIssueTaskSuggestions({
+        accessToken: accessToken.value,
+        githubClient,
+        isStale: () => currentRequestId !== requestId,
+        project,
+        queryClient,
+        scope: scope.value,
+        tasks,
+      });
+
+      if (currentRequestId !== requestId || result.status === "stale") {
+        return;
       }
 
-      const owners = await githubClient.listOwners(
-        GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
-      );
+      if (result.status === "noRepository") {
+        clearGitHubIssueSuggestions();
+        return;
+      }
 
-      if (!isBrowseableGitHubOwner(repository.owner, owners.items)) {
-        if (currentRequestId === requestId) {
-          gitHubIssueSuggestions.value = [];
-          gitHubIssueSuggestionAvailability.value =
-            GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE;
-          gitHubIssueSuggestionErrorMessage.value = null;
-        }
+      if (result.status === "ownerNotBrowseable") {
+        gitHubIssueSuggestions.value = [];
+        gitHubIssueSuggestionAvailability.value =
+          GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE;
+        gitHubIssueSuggestionErrorMessage.value = null;
 
         return;
       }
 
-      const response = await queryClient.ensureQueryData({
-        queryKey: githubBrowsingKeys.repositoryIssues(
-          scope.value,
-          repository.fullName,
-          GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
-        ),
-        queryFn: () =>
-          githubClient.listRepositoryIssues(
-            repository.owner,
-            repository.repo,
-            GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
-          ),
-      });
-      const nextSuggestions = filterGitHubIssueTaskSuggestions(
-        response.items.map(toGitHubIssueTaskSuggestion),
-        tasks,
-      );
-
-      if (currentRequestId === requestId) {
-        gitHubIssueSuggestions.value = nextSuggestions;
-      }
-    } catch (error) {
-      if (currentRequestId === requestId) {
+      if (result.status === "failed") {
         gitHubIssueSuggestions.value = [];
         gitHubIssueSuggestionAvailability.value =
           GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE;
-        gitHubIssueSuggestionErrorMessage.value = getErrorMessage(error);
+        gitHubIssueSuggestionErrorMessage.value = result.errorMessage;
+
+        return;
       }
+
+      gitHubIssueSuggestions.value = result.suggestions;
     } finally {
       if (currentRequestId === requestId) {
         isLoadingGitHubIssueSuggestions.value = false;
