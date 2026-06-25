@@ -15,7 +15,7 @@ import { defineComponent, h } from 'vue';
 
 import { useTopBarTimer } from './useTopBarTimer';
 import { GITHUB_ISSUE_SUGGESTION_AVAILABILITY } from '@/lib/github-issue-task-suggestions';
-import { githubBrowsingKeys, timeEntriesKeys } from '@/lib/query-keys';
+import { timeEntriesKeys } from '@/lib/query-keys';
 import { TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/top-bar-timer-helpers';
 import type { GitHubBrowsingClient } from '@/services/github-browsing-client';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
@@ -41,6 +41,15 @@ const TEST_SCOPE = {
   userId: null,
   workspaceId: null,
 };
+
+// Test-only legacy key used to seed stale owner data without endorsing owner caching.
+const STALE_GITHUB_OWNER_QUERY_KEY = [
+  'user-web',
+  TEST_SCOPE,
+  'github-browsing',
+  'owners',
+  'all',
+] as const;
 
 function createProject(
   id: string,
@@ -869,7 +878,7 @@ describe('useTopBarTimer', () => {
     const { queryClient, topBarTimer } = mounted;
 
     queryClient.setQueryData(
-      githubBrowsingKeys.owners(TEST_SCOPE, 'all'),
+      STALE_GITHUB_OWNER_QUERY_KEY,
       createGitHubOwnerResponse(['ITSUA-team']),
     );
 

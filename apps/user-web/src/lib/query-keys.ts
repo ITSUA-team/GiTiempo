@@ -1,6 +1,5 @@
 import type {
   GitHubIssueListQuery,
-  GitHubOwnerType,
   TimeEntryListQuery,
 } from "@gitiempo/shared";
 
@@ -101,14 +100,6 @@ export const timerKeys = {
 export const githubBrowsingKeys = {
   all: (scope?: UserServerStateScope) =>
     ["user-web", normalizeScope(scope), "github-browsing"] as const,
-  owners: (
-    scope: UserServerStateScope,
-    type: GitHubOwnerType | null | undefined,
-  ) => [
-    ...githubBrowsingKeys.all(scope),
-    "owners",
-    normalizeString(type),
-  ] as const,
   repositoryIssues: (
     scope: UserServerStateScope,
     repositoryFullName: string | null | undefined,
