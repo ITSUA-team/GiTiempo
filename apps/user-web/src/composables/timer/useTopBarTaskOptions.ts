@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
 import {
+  GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
   GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
   GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
   buildGitHubIssueTaskSuggestionCacheKey,
@@ -132,11 +133,17 @@ export function useTopBarTaskOptions({
       isLoadingGitHubTaskProposals.value = false;
       picker.setGitHubIssueProposals([]);
       picker.setGitHubProposalError(null);
+      picker.setGitHubIssueSuggestionAvailability(
+        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+      );
       return [];
     }
 
     isLoadingGitHubTaskProposals.value = true;
     picker.setGitHubProposalError(null);
+    picker.setGitHubIssueSuggestionAvailability(
+      GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+    );
 
     try {
       if (!accessToken.value) {
@@ -147,9 +154,16 @@ export function useTopBarTaskOptions({
         GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
       );
 
+      if (requestId !== gitHubProposalRequestId) {
+        return picker.gitHubIssueProposals.value;
+      }
+
       if (!isBrowseableGitHubOwner(repository.owner, owners.items)) {
         picker.setGitHubIssueProposals([]);
         picker.setGitHubProposalError(null);
+        picker.setGitHubIssueSuggestionAvailability(
+          GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE,
+        );
         return [];
       }
 
@@ -199,6 +213,9 @@ export function useTopBarTaskOptions({
       if (requestId === gitHubProposalRequestId) {
         picker.setGitHubIssueProposals([]);
         picker.setGitHubProposalError(getErrorMessage(error));
+        picker.setGitHubIssueSuggestionAvailability(
+          GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+        );
       }
 
       return [];

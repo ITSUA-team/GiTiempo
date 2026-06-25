@@ -11,6 +11,7 @@ import {
   createDefaultGitHubBrowsingClient,
   createDefaultTimeEntriesClient,
 } from '@/config/clients';
+import { GITHUB_ISSUE_SUGGESTION_AVAILABILITY } from '@/lib/github-issue-task-suggestions';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
 import {
   isRunningTimer,
@@ -249,6 +250,9 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       picker.setSelectedTaskId(null);
       picker.setGitHubIssueProposals([]);
       picker.setGitHubProposalError(null);
+      picker.setGitHubIssueSuggestionAvailability(
+        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+      );
     }
   }
 
@@ -403,6 +407,9 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
       picker.setTasksError(null);
       picker.setGitHubIssueProposals([]);
       picker.setGitHubProposalError(null);
+      picker.setGitHubIssueSuggestionAvailability(
+        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+      );
       picker.setSelectedTaskId(null);
       return;
     }
@@ -448,6 +455,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isTimerRunning,
     openDialog,
     primaryActionLabel,
+    gitHubIssueSuggestionAvailability: picker.gitHubIssueSuggestionAvailability,
     gitHubIssueProposals: picker.gitHubIssueProposals,
     gitHubProposalErrorMessage: picker.gitHubProposalErrorMessage,
     projectsErrorMessage: picker.projectsErrorMessage,

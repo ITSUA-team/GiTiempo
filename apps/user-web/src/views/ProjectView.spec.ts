@@ -10,6 +10,7 @@ import type {
 } from "@gitiempo/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { GITHUB_ISSUE_SUGGESTION_AVAILABILITY } from "@/lib/github-issue-task-suggestions";
 import type { GitHubBrowsingClient } from "@/services/github-browsing-client";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { createTestQueryPlugin } from "@/test/query-client";
@@ -294,6 +295,7 @@ async function mountView(
           ],
           props: [
             "defaultBillableForTimeEntries",
+            "gitHubIssueSuggestionAvailability",
             "gitHubIssueSuggestionErrorMessage",
             "gitHubIssueSuggestions",
             "isDeleting",
@@ -307,6 +309,7 @@ async function mountView(
             <div v-if="isOpen" data-testid="project-task-dialog">
               <p data-testid="dialog-title-value">{{ valueTitle }}</p>
               <p data-testid="dialog-default-billable">{{ String(defaultBillableForTimeEntries) }}</p>
+              <p data-testid="dialog-github-availability">{{ gitHubIssueSuggestionAvailability }}</p>
               <p data-testid="dialog-github-loading">{{ String(isLoadingGitHubIssueSuggestions) }}</p>
               <p data-testid="dialog-github-error">{{ gitHubIssueSuggestionErrorMessage }}</p>
               <p data-testid="dialog-request-error">{{ requestErrorMessage }}</p>
@@ -614,6 +617,31 @@ describe("ProjectView", () => {
       title: "Write release checklist",
     });
     expect(wrapper.find('[data-testid="project-task-dialog"]').exists()).toBe(false);
+  });
+
+  it("marks GitHub issue suggestions unavailable when owner preflight excludes the owner", async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject("project-1", "ITSUA-team/GiTiempo", true, false, "github"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([]);
+    githubClient.listOwners.mockResolvedValueOnce(createGitHubOwnerResponse(["octo"]));
+
+    const { wrapper } = await mountView(client, githubClient);
+
+    await flushPromises();
+    await waitForProjectsReady(wrapper);
+    await wrapper.get('[data-testid="project-section-add"]').trigger("click");
+    await flushPromises();
+
+    expect(githubClient.listOwners).toHaveBeenCalledWith({ type: "all" });
+    expect(githubClient.listRepositoryIssues).not.toHaveBeenCalled();
+    expect(wrapper.get('[data-testid="dialog-github-availability"]').text()).toBe(
+      GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE,
+    );
+    expect(wrapper.get('[data-testid="dialog-github-error"]').text()).toBe("");
   });
 
   it("updates existing entries only after an edited task default changes and the follow-up is submitted", async () => {

@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 
 import { useTopBarTimer } from './useTopBarTimer';
+import { GITHUB_ISSUE_SUGGESTION_AVAILABILITY } from '@/lib/github-issue-task-suggestions';
 import { githubBrowsingKeys, timeEntriesKeys } from '@/lib/query-keys';
 import { TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/top-bar-timer-helpers';
 import type { GitHubBrowsingClient } from '@/services/github-browsing-client';
@@ -831,6 +832,9 @@ describe('useTopBarTimer', () => {
     expect(githubClient.listRepositoryIssues).not.toHaveBeenCalled();
     expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
     expect(topBarTimer.gitHubProposalErrorMessage.value).toBeNull();
+    expect(topBarTimer.gitHubIssueSuggestionAvailability.value).toBe(
+      GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE,
+    );
     expect(toast.add).not.toHaveBeenCalledWith(
       expect.objectContaining({
         summary: 'Could not load GitHub issue suggestions',

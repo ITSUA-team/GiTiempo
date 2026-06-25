@@ -5,7 +5,11 @@ import {
 } from "@gitiempo/shared";
 import { computed, ref } from "vue";
 
-import type { GitHubIssueTaskSuggestion } from "@/lib/github-issue-task-suggestions";
+import {
+  GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
+  type GitHubIssueSuggestionAvailability,
+  type GitHubIssueTaskSuggestion,
+} from "@/lib/github-issue-task-suggestions";
 import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 
 export type TopBarGitHubTaskProposal = GitHubIssueTaskSuggestion;
@@ -14,6 +18,9 @@ export function useTopBarTaskPicker() {
   const projects = ref<ProjectResponse[]>([]);
   const tasks = ref<TaskResponse[]>([]);
   const gitHubIssueProposals = ref<TopBarGitHubTaskProposal[]>([]);
+  const gitHubIssueSuggestionAvailability = ref<GitHubIssueSuggestionAvailability>(
+    GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+  );
   const taskCache = new Map<string, TaskResponse[]>();
   const gitHubIssueProposalCache = new Map<string, TopBarGitHubTaskProposal[]>();
   const isDialogOpen = ref(false);
@@ -54,6 +61,12 @@ export function useTopBarTaskPicker() {
     gitHubIssueProposals.value = nextProposals;
   }
 
+  function setGitHubIssueSuggestionAvailability(
+    availability: GitHubIssueSuggestionAvailability,
+  ): void {
+    gitHubIssueSuggestionAvailability.value = availability;
+  }
+
   function getCachedTasks(projectId: string): TaskResponse[] | undefined {
     return taskCache.get(projectId);
   }
@@ -83,6 +96,8 @@ export function useTopBarTaskPicker() {
     projectsErrorMessage.value = null;
     tasksErrorMessage.value = null;
     gitHubProposalErrorMessage.value = null;
+    gitHubIssueSuggestionAvailability.value =
+      GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE;
     selectedProjectId.value = context?.projectId ?? null;
     selectedTaskId.value = context?.taskId ?? null;
     selectedDescription.value = context?.description ?? "";
@@ -186,6 +201,7 @@ export function useTopBarTaskPicker() {
     getGitHubIssueProposal,
     getNormalizedDescription,
     getSelectedTaskContext,
+    gitHubIssueSuggestionAvailability,
     gitHubIssueProposals,
     gitHubProposalErrorMessage,
     isConfirmSelectionDisabled,
@@ -203,6 +219,7 @@ export function useTopBarTaskPicker() {
     setCachedTasks,
     setCreateTaskError,
     setCreateTaskTitle,
+    setGitHubIssueSuggestionAvailability,
     setGitHubIssueProposals,
     setGitHubProposalError,
     setProjects,

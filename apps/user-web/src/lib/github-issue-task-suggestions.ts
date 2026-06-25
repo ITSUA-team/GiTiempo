@@ -35,6 +35,14 @@ export interface GitHubIssueTaskSuggestion {
   title: string;
 }
 
+export const GITHUB_ISSUE_SUGGESTION_AVAILABILITY = {
+  AVAILABLE: "available",
+  OWNER_UNAVAILABLE: "owner-unavailable",
+} as const;
+
+export type GitHubIssueSuggestionAvailability =
+  (typeof GITHUB_ISSUE_SUGGESTION_AVAILABILITY)[keyof typeof GITHUB_ISSUE_SUGGESTION_AVAILABILITY];
+
 export function readGitHubRepositoryContext(
   project: ProjectResponse | null,
 ): GitHubRepositoryContext | null {

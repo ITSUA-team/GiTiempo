@@ -10,7 +10,9 @@ import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-s
 import { computed, shallowRef, watch } from "vue";
 
 import {
+  GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
   readGitHubRepositoryContext,
+  type GitHubIssueSuggestionAvailability,
   type GitHubIssueTaskSuggestion,
 } from "@/lib/github-issue-task-suggestions";
 
@@ -21,6 +23,7 @@ const props = defineProps<{
     title: string | null;
   };
   defaultBillableForTimeEntries: boolean;
+  gitHubIssueSuggestionAvailability: GitHubIssueSuggestionAvailability;
   gitHubIssueSuggestionErrorMessage: string | null;
   gitHubIssueSuggestions: GitHubIssueTaskSuggestion[];
   isDeleting: boolean;
@@ -141,6 +144,11 @@ const shouldShowGitHubIssueSuggestions = computed(
   () =>
     props.mode === "create" &&
     readGitHubRepositoryContext(selectedProject.value) !== null,
+);
+const isGitHubIssueOwnerUnavailable = computed(
+  () =>
+    props.gitHubIssueSuggestionAvailability ===
+    GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE,
 );
 
 watch(
@@ -301,6 +309,12 @@ function handleGitHubIssueComplete(event: { query: string }): void {
           class="text-text-muted text-xs"
         >
           GitHub issue suggestions are unavailable: {{ props.gitHubIssueSuggestionErrorMessage }}
+        </small>
+        <small
+          v-else-if="isGitHubIssueOwnerUnavailable"
+          class="text-text-muted text-xs"
+        >
+          GitHub issue suggestions are unavailable for this repository owner in this workspace. You can still create a local task.
         </small>
         <small
           v-else-if="props.gitHubIssueSuggestions.length === 0"

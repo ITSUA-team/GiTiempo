@@ -5,7 +5,10 @@ import { nextTick } from "vue";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 import type { TopBarGitHubTaskProposal } from "@/composables/timer/useTopBarTaskPicker";
-import { createGitHubIssueTaskSuggestionId } from "@/lib/github-issue-task-suggestions";
+import {
+  GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
+  createGitHubIssueTaskSuggestionId,
+} from "@/lib/github-issue-task-suggestions";
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
 import { mockMatchMedia } from "@/test/mockMatchMedia";
 
@@ -96,6 +99,8 @@ function mountDialog(overrides: DialogProps = {}) {
       isPrimaryActionDisabled: false,
       isPrimaryActionPending: false,
       primaryActionLabel: "Start",
+      gitHubIssueSuggestionAvailability:
+        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
       gitHubIssueProposals: [],
       gitHubProposalErrorMessage: null,
       projectOptions: [projectOrion],
@@ -449,6 +454,23 @@ describe("TopBarTimerTaskDialog", () => {
       "GitHub issue suggestions are unavailable: GitHub connection required",
     );
     expect(errorWrapper.text()).not.toContain("Could not load tasks for this project.");
+  });
+
+  it("renders owner-unavailable GitHub proposal copy separately from empty results", () => {
+    const wrapper = mountDialog({
+      gitHubIssueSuggestionAvailability:
+        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE,
+      projectOptions: [githubProject],
+      selectedTaskId: TOP_BAR_TIMER_NEW_TASK_ID,
+    });
+
+    expect(wrapper.text()).toContain(
+      "GitHub issue suggestions are unavailable for this repository owner in this workspace.",
+    );
+    expect(wrapper.text()).toContain("You can still create a local task.");
+    expect(wrapper.text()).not.toContain(
+      "No open GitHub issues are available for this project.",
+    );
   });
 
   it("renders a distinct project request-error state", () => {

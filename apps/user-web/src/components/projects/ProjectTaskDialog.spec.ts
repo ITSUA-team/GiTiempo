@@ -3,7 +3,10 @@ import type { ProjectResponse } from "@gitiempo/shared";
 import { describe, expect, it } from "vitest";
 
 import ProjectTaskDialog from "./ProjectTaskDialog.vue";
-import type { GitHubIssueTaskSuggestion } from "@/lib/github-issue-task-suggestions";
+import {
+  GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
+  type GitHubIssueTaskSuggestion,
+} from "@/lib/github-issue-task-suggestions";
 
 function findButtonByLabel(
   wrapper: ReturnType<typeof mountDialog>,
@@ -23,6 +26,8 @@ function mountDialog(
         title: null,
       },
       defaultBillableForTimeEntries: true,
+      gitHubIssueSuggestionAvailability:
+        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
       gitHubIssueSuggestionErrorMessage: null,
       gitHubIssueSuggestions: [],
       isDeleting: false,
@@ -334,6 +339,23 @@ describe("ProjectTaskDialog", () => {
     });
 
     expect(emptyWrapper.text()).toContain(
+      "No open GitHub issues are available for this project.",
+    );
+  });
+
+  it("renders owner-unavailable GitHub issue copy separately from empty results", () => {
+    const wrapper = mountDialog({
+      gitHubIssueSuggestionAvailability:
+        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE,
+      projectId: "project-github",
+      projects: [githubProject],
+    });
+
+    expect(wrapper.text()).toContain(
+      "GitHub issue suggestions are unavailable for this repository owner in this workspace.",
+    );
+    expect(wrapper.text()).toContain("You can still create a local task.");
+    expect(wrapper.text()).not.toContain(
       "No open GitHub issues are available for this project.",
     );
   });

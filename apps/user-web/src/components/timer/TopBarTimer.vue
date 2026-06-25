@@ -23,6 +23,7 @@ const {
   createTaskTitle,
   elapsedTimeLabel,
   handleDialogPrimaryAction,
+  gitHubIssueSuggestionAvailability,
   gitHubIssueProposals,
   gitHubProposalErrorMessage,
   isConfirmingSelection,
@@ -217,6 +218,7 @@ watch(
     :is-primary-action-disabled="isDialogPrimaryActionDisabled"
     :is-primary-action-pending="isPrimaryActionPending"
     :primary-action-label="primaryActionLabel"
+    :git-hub-issue-suggestion-availability="gitHubIssueSuggestionAvailability"
     :git-hub-issue-proposals="gitHubIssueProposals"
     :git-hub-proposal-error-message="gitHubProposalErrorMessage"
     :project-options="projectOptions"

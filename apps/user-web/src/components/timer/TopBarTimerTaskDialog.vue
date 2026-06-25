@@ -14,7 +14,11 @@ import {
 import { computed, shallowRef, watch } from "vue";
 
 import type { TopBarGitHubTaskProposal } from "@/composables/timer/useTopBarTaskPicker";
-import { readGitHubRepositoryContext } from "@/lib/github-issue-task-suggestions";
+import {
+  GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
+  readGitHubRepositoryContext,
+  type GitHubIssueSuggestionAvailability,
+} from "@/lib/github-issue-task-suggestions";
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
 
 type ProjectAutoCompleteValue = ProjectResponse | string | null;
@@ -47,6 +51,7 @@ const props = defineProps<{
   isPrimaryActionDisabled: boolean;
   isPrimaryActionPending: boolean;
   primaryActionLabel: string;
+  gitHubIssueSuggestionAvailability: GitHubIssueSuggestionAvailability;
   gitHubIssueProposals: TopBarGitHubTaskProposal[];
   gitHubProposalErrorMessage: string | null;
   projectOptions: ProjectResponse[];
@@ -154,6 +159,11 @@ const selectedProjectRepository = computed(() =>
 );
 const shouldShowGitHubIssueSelector = computed(
   () => isNewTaskSelected.value && selectedProjectRepository.value !== null,
+);
+const isGitHubIssueOwnerUnavailable = computed(
+  () =>
+    props.gitHubIssueSuggestionAvailability ===
+    GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE,
 );
 const newTaskHint = computed(() => {
   const projectName = selectedProjectName.value ?? "the selected project";
@@ -528,6 +538,12 @@ watch(
               class="text-text-muted text-xs"
             >
               GitHub issue suggestions are unavailable: {{ props.gitHubProposalErrorMessage }}
+            </small>
+            <small
+              v-else-if="isGitHubIssueOwnerUnavailable"
+              class="text-text-muted text-xs"
+            >
+              GitHub issue suggestions are unavailable for this repository owner in this workspace. You can still create a local task.
             </small>
             <small
               v-else-if="props.gitHubIssueProposals.length === 0"

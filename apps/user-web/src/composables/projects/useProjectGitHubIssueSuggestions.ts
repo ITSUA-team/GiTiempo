@@ -4,12 +4,14 @@ import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
 import {
+  GITHUB_ISSUE_SUGGESTION_AVAILABILITY,
   GITHUB_ISSUE_TASK_SUGGESTION_OWNER_QUERY,
   GITHUB_ISSUE_TASK_SUGGESTION_QUERY,
   filterGitHubIssueTaskSuggestions,
   isBrowseableGitHubOwner,
   readGitHubRepositoryContext,
   toGitHubIssueTaskSuggestion,
+  type GitHubIssueSuggestionAvailability,
   type GitHubIssueTaskSuggestion,
 } from "@/lib/github-issue-task-suggestions";
 import { githubBrowsingKeys, type UserServerStateScope } from "@/lib/query-keys";
@@ -28,6 +30,9 @@ export function useProjectGitHubIssueSuggestions({
 }: UseProjectGitHubIssueSuggestionsOptions) {
   const queryClient = useQueryClient();
   const gitHubIssueSuggestions = ref<GitHubIssueTaskSuggestion[]>([]);
+  const gitHubIssueSuggestionAvailability = ref<GitHubIssueSuggestionAvailability>(
+    GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+  );
   const gitHubIssueSuggestionErrorMessage = ref<string | null>(null);
   const isLoadingGitHubIssueSuggestions = ref(false);
   let requestId = 0;
@@ -35,6 +40,8 @@ export function useProjectGitHubIssueSuggestions({
   function clearGitHubIssueSuggestions(): void {
     requestId += 1;
     gitHubIssueSuggestions.value = [];
+    gitHubIssueSuggestionAvailability.value =
+      GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE;
     gitHubIssueSuggestionErrorMessage.value = null;
     isLoadingGitHubIssueSuggestions.value = false;
   }
@@ -52,6 +59,8 @@ export function useProjectGitHubIssueSuggestions({
     }
 
     isLoadingGitHubIssueSuggestions.value = true;
+    gitHubIssueSuggestionAvailability.value =
+      GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE;
     gitHubIssueSuggestionErrorMessage.value = null;
 
     try {
@@ -66,6 +75,8 @@ export function useProjectGitHubIssueSuggestions({
       if (!isBrowseableGitHubOwner(repository.owner, owners.items)) {
         if (currentRequestId === requestId) {
           gitHubIssueSuggestions.value = [];
+          gitHubIssueSuggestionAvailability.value =
+            GITHUB_ISSUE_SUGGESTION_AVAILABILITY.OWNER_UNAVAILABLE;
           gitHubIssueSuggestionErrorMessage.value = null;
         }
 
@@ -96,6 +107,8 @@ export function useProjectGitHubIssueSuggestions({
     } catch (error) {
       if (currentRequestId === requestId) {
         gitHubIssueSuggestions.value = [];
+        gitHubIssueSuggestionAvailability.value =
+          GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE;
         gitHubIssueSuggestionErrorMessage.value = getErrorMessage(error);
       }
     } finally {
@@ -107,6 +120,7 @@ export function useProjectGitHubIssueSuggestions({
 
   return {
     clearGitHubIssueSuggestions,
+    gitHubIssueSuggestionAvailability,
     gitHubIssueSuggestionErrorMessage,
     gitHubIssueSuggestions,
     isLoadingGitHubIssueSuggestions,

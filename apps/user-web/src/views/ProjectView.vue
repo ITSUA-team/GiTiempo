@@ -67,6 +67,7 @@ const search = useProjectsSearch(data.visibleProjects, data.tasksByProjectId);
 const dialog = useProjectTaskDialog();
 const {
   clearGitHubIssueSuggestions,
+  gitHubIssueSuggestionAvailability,
   gitHubIssueSuggestionErrorMessage,
   gitHubIssueSuggestions,
   isLoadingGitHubIssueSuggestions,
@@ -535,6 +536,7 @@ watch(
     <ProjectTaskDialog
       :errors="dialogErrors"
       :default-billable-for-time-entries="dialogDefaultBillableForTimeEntries"
+      :git-hub-issue-suggestion-availability="gitHubIssueSuggestionAvailability"
       :git-hub-issue-suggestion-error-message="gitHubIssueSuggestionErrorMessage"
       :git-hub-issue-suggestions="gitHubIssueSuggestions"
       :is-deleting="isDeletingDialogTask"
