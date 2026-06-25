@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import {
   index,
   pgTable,
@@ -36,4 +37,8 @@ export const workspaceGitHubOrganizations = pgTable(
       'workspace_github_organizations_workspace_id_normalized_login_unique',
     ).on(table.workspaceId, table.normalizedLogin),
   ],
+);
+
+export const workspaceGitHubOrganizationRowSelection = getTableColumns(
+  workspaceGitHubOrganizations,
 );

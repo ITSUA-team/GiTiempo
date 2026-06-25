@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
 import {
@@ -91,7 +95,9 @@ export class FakeFirebaseAdminService implements FirebaseAdminService {
   async deleteUser(uid: string): Promise<void> {
     const email = this.registeredUserEmailsByUid.get(uid);
     if (!email) {
-      throw new Error('Failed to delete Firebase registration user');
+      throw new ServiceUnavailableException(
+        'Failed to delete Firebase registration user',
+      );
     }
 
     this.registeredUserEmailsByUid.delete(uid);

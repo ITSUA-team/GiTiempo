@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { getTableColumns, sql } from 'drizzle-orm';
 import {
   pgTable,
   text,
@@ -30,3 +30,5 @@ export const users = pgTable(
     ),
   ],
 );
+
+export const userRowSelection = getTableColumns(users);

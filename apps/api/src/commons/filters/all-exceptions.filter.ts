@@ -143,6 +143,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const httpEx = exception as HttpException;
       const status = httpEx.getStatus();
       const res = httpEx.getResponse();
+      const isPrivateServerErrorResponse =
+        isProduction && status >= HttpStatus.INTERNAL_SERVER_ERROR;
       const errorName =
         typeof res === 'object' && res !== null && 'error' in res
           ? String((res as { error: unknown }).error)
@@ -168,11 +170,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
           : undefined;
       return {
         statusCode: status,
-        ...(code ? { code } : {}),
-        ...(details === undefined ? {} : { details }),
-        ...(recovery === undefined ? {} : { recovery }),
-        error: errorName,
-        message,
+        ...(!isPrivateServerErrorResponse && code ? { code } : {}),
+        ...(!isPrivateServerErrorResponse && details !== undefined
+          ? { details }
+          : {}),
+        ...(!isPrivateServerErrorResponse && recovery !== undefined
+          ? { recovery }
+          : {}),
+        error: isPrivateServerErrorResponse ? 'InternalServerError' : errorName,
+        message: isPrivateServerErrorResponse
+          ? 'Internal server error'
+          : message,
         requestId,
       };
     }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   addWorkspaceGitHubOrganizationSchema,
@@ -22,6 +22,33 @@ const settingsResponse = {
   createdAt: '2026-05-01T00:00:00.000Z',
   updatedAt: '2026-05-01T00:00:00.000Z',
 };
+
+const originalSupportedValuesOf = Intl.supportedValuesOf;
+
+function stubSupportedValuesOf(value: typeof Intl.supportedValuesOf | undefined): void {
+  if (!value) {
+    Reflect.deleteProperty(Intl, 'supportedValuesOf');
+    return;
+  }
+
+  Object.defineProperty(Intl, 'supportedValuesOf', {
+    configurable: true,
+    value,
+  });
+}
+
+afterEach(() => {
+  if (originalSupportedValuesOf) {
+    Object.defineProperty(Intl, 'supportedValuesOf', {
+      configurable: true,
+      value: originalSupportedValuesOf,
+    });
+  } else {
+    Reflect.deleteProperty(Intl, 'supportedValuesOf');
+  }
+
+  vi.restoreAllMocks();
+});
 
 describe('workspaceSettingsResponseSchema', () => {
   it('accepts valid workspace settings with a time zone', () => {
@@ -48,6 +75,28 @@ describe('updateWorkspaceSettingsSchema', () => {
     });
 
     expect(result.timeZone).toBe('Europe/Kyiv');
+  });
+
+  it('accepts constructor-valid time zones omitted by supportedValuesOf', () => {
+    const supportedValuesOf = vi.fn().mockReturnValue(['Europe/Kyiv']);
+    stubSupportedValuesOf(supportedValuesOf);
+
+    const result = updateWorkspaceSettingsSchema.parse({
+      timeZone: 'Pacific/Chatham',
+    });
+
+    expect(result.timeZone).toBe('Pacific/Chatham');
+    expect(supportedValuesOf).toHaveBeenCalledWith('timeZone');
+  });
+
+  it('accepts constructor-valid time zones without supportedValuesOf', () => {
+    stubSupportedValuesOf(undefined);
+
+    const result = updateWorkspaceSettingsSchema.parse({
+      timeZone: 'Pacific/Chatham',
+    });
+
+    expect(result.timeZone).toBe('Pacific/Chatham');
   });
 
   it('rejects invalid time zone updates', () => {
