@@ -69,4 +69,18 @@ describe('validate', () => {
       ).INVITES_EMAIL_CONSOLE_FALLBACK_SHOW_SECRETS,
     ).toBe(true);
   });
+
+  it('parses Chrome extension origins in the CORS allowlist', () => {
+    expect(
+      validate(
+        makeBaseEnv({
+          ALLOWED_ORIGINS:
+            'https://app.example.com,chrome-extension://jecefpocaddielfbclbfgnepokjlabed',
+        }),
+      ).ALLOWED_ORIGINS,
+    ).toEqual([
+      'https://app.example.com',
+      'chrome-extension://jecefpocaddielfbclbfgnepokjlabed',
+    ]);
+  });
 });

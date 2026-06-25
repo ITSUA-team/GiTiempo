@@ -23,7 +23,7 @@ Use **JWT access/refresh token pair** instead of session cookies:
 5. When the access token expires, the frontend calls `POST /auth/refresh` with the refresh token to obtain a new pair.
 6. Refresh tokens are rotated on each use (old token invalidated).
 
-Backend configures CORS via `ALLOWED_ORIGINS` environment variable.
+Backend configures CORS via the `ALLOWED_ORIGINS` environment variable. Chrome extension popup and background-worker requests use the `chrome-extension://<extension-id>` origin, so deployed extension IDs must be included alongside the web app origins.
 
 ## Consequences
 
