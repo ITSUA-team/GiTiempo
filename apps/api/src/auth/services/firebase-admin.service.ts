@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAuth, type UserRecord } from 'firebase-admin/auth';
@@ -67,7 +71,9 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
     try {
       await getAuth(this.getApp()).deleteUser(uid);
     } catch {
-      throw new Error('Failed to delete Firebase registration user');
+      throw new ServiceUnavailableException(
+        'Failed to delete Firebase registration user',
+      );
     }
   }
 
@@ -81,7 +87,9 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
       return this.toInvitedUser(user, true);
     } catch (error) {
       if (!isFirebaseAuthError(error, 'auth/user-not-found')) {
-        throw new Error('Failed to provision invited Firebase user');
+        throw new ServiceUnavailableException(
+          'Failed to provision invited Firebase user',
+        );
       }
     }
 
@@ -94,11 +102,15 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
           const user = await auth.getUserByEmail(email);
           return this.toInvitedUser(user, true);
         } catch {
-          throw new Error('Failed to provision invited Firebase user');
+          throw new ServiceUnavailableException(
+            'Failed to provision invited Firebase user',
+          );
         }
       }
 
-      throw new Error('Failed to provision invited Firebase user');
+      throw new ServiceUnavailableException(
+        'Failed to provision invited Firebase user',
+      );
     }
   }
 
@@ -114,7 +126,9 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
 
       return this.buildPasswordSetupUrl(resetLink, continueUrl);
     } catch {
-      throw new Error('Failed to generate Firebase password setup link');
+      throw new ServiceUnavailableException(
+        'Failed to generate Firebase password setup link',
+      );
     }
   }
 
@@ -161,7 +175,7 @@ export class RealFirebaseAdminService implements FirebaseAdminService {
       infer: true,
     });
     if (!projectId || !clientEmail || !privateKey) {
-      throw new Error(
+      throw new ServiceUnavailableException(
         'Firebase Admin credentials are not configured. ' +
           'Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.',
       );

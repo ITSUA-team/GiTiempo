@@ -22,8 +22,14 @@ import {
   getPostgresError,
   POSTGRES_UNIQUE_VIOLATION,
 } from '../../db/postgres-errors';
-import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
-import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
+import {
+  projectExternalRefRowSelection,
+  projectExternalRefs,
+} from '../../projects/schemas/project-external-refs.schema';
+import {
+  taskExternalRefRowSelection,
+  taskExternalRefs,
+} from '../../tasks/schemas/task-external-refs.schema';
 import {
   normalizeGitHubIssueExternalKey,
   normalizeGitHubLogin,
@@ -31,7 +37,10 @@ import {
   rewriteGitHubIssueOwner,
   rewriteGitHubRepoOwner,
 } from '../github-repo-key';
-import { workspaceGitHubOrganizations } from '../schemas/workspace-github-organizations.schema';
+import {
+  workspaceGitHubOrganizationRowSelection,
+  workspaceGitHubOrganizations,
+} from '../schemas/workspace-github-organizations.schema';
 import { GithubApiClientService } from './github-api-client.service';
 import { GithubConnectionsService } from './github-connections.service';
 
@@ -113,7 +122,7 @@ export class WorkspaceGitHubOrganizationsService {
     workspaceId: string,
   ): Promise<WorkspaceGitHubOrganizationListResponse> {
     const rows = await this.db
-      .select()
+      .select(workspaceGitHubOrganizationRowSelection)
       .from(workspaceGitHubOrganizations)
       .where(eq(workspaceGitHubOrganizations.workspaceId, workspaceId))
       .orderBy(asc(workspaceGitHubOrganizations.organizationLogin));
@@ -241,7 +250,7 @@ export class WorkspaceGitHubOrganizationsService {
     normalizedLogin: string,
   ): Promise<WorkspaceGitHubOrganizationRow | undefined> {
     const [row] = await this.db
-      .select()
+      .select(workspaceGitHubOrganizationRowSelection)
       .from(workspaceGitHubOrganizations)
       .where(
         and(
@@ -269,7 +278,7 @@ export class WorkspaceGitHubOrganizationsService {
     organizationLogin: string,
   ): Promise<void> {
     const rows = await db
-      .select()
+      .select(projectExternalRefRowSelection)
       .from(projectExternalRefs)
       .where(
         and(
@@ -333,7 +342,7 @@ export class WorkspaceGitHubOrganizationsService {
     organizationLogin: string,
   ): Promise<void> {
     const rows = await db
-      .select()
+      .select(taskExternalRefRowSelection)
       .from(taskExternalRefs)
       .where(
         and(

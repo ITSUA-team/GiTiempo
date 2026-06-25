@@ -12,6 +12,7 @@ import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
 } from '@gitiempo/shared';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { users } from '../../users/schemas/users.schema';
@@ -140,7 +141,7 @@ export class MembersService {
   ): Promise<WorkspaceMemberResponse> {
     return this.db.transaction(async (tx) => {
       const [target] = await tx
-        .select()
+        .select({ role: workspaceMembers.role })
         .from(workspaceMembers)
         .where(
           and(
@@ -163,7 +164,12 @@ export class MembersService {
         .set({ role: input.role })
         .where(eq(workspaceMembers.id, memberId))
         .returning();
-      if (!updated) throw new Error('Failed to update member role');
+      if (!updated) {
+        throw DomainError.internal(
+          'member_role_update_failed',
+          'Failed to update member role',
+        );
+      }
 
       const assignedCount = sql<number>`(
         SELECT COUNT(*)::int FROM project_assignments pa
@@ -189,7 +195,12 @@ export class MembersService {
         .where(eq(workspaceMembers.id, updated.id))
         .limit(1);
 
-      if (!row) throw new Error('Failed to load updated member');
+      if (!row) {
+        throw DomainError.internal(
+          'member_update_response_missing',
+          'Failed to load updated member',
+        );
+      }
       return {
         ...row,
         joinedAt: row.joinedAt.toISOString(),
@@ -202,7 +213,7 @@ export class MembersService {
   async removeMember(workspaceId: string, memberId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
       const [target] = await tx
-        .select()
+        .select({ role: workspaceMembers.role })
         .from(workspaceMembers)
         .where(
           and(

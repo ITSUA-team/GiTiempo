@@ -1,8 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
-import { refreshTokens } from '../schemas/refresh-tokens.schema';
+import {
+  refreshTokenRowSelection,
+  refreshTokens,
+} from '../schemas/refresh-tokens.schema';
 
 export interface RotateIfActiveResult {
   newRow: RefreshTokenRow;
@@ -41,7 +45,12 @@ export class RefreshTokenRepository {
         expiresAt: input.expiresAt,
       })
       .returning();
-    if (!row) throw new Error('Failed to insert refresh token');
+    if (!row) {
+      throw DomainError.internal(
+        'refresh_token_create_failed',
+        'Failed to insert refresh token',
+      );
+    }
     return row;
   }
 
@@ -51,7 +60,7 @@ export class RefreshTokenRepository {
    */
   async findActiveByHash(tokenHash: string): Promise<RefreshTokenRow | null> {
     const [row] = await this.db
-      .select()
+      .select(refreshTokenRowSelection)
       .from(refreshTokens)
       .where(
         and(
@@ -72,7 +81,7 @@ export class RefreshTokenRepository {
     tokenHash: string,
   ): Promise<RefreshTokenRow | null> {
     const [row] = await this.db
-      .select()
+      .select(refreshTokenRowSelection)
       .from(refreshTokens)
       .where(eq(refreshTokens.tokenHash, tokenHash))
       .limit(1);
@@ -81,7 +90,7 @@ export class RefreshTokenRepository {
 
   async findById(id: string): Promise<RefreshTokenRow | null> {
     const [row] = await this.db
-      .select()
+      .select(refreshTokenRowSelection)
       .from(refreshTokens)
       .where(eq(refreshTokens.id, id))
       .limit(1);
