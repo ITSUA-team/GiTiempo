@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { getTableColumns, sql } from 'drizzle-orm';
 import {
   index,
   jsonb,
@@ -61,3 +61,5 @@ export const taskExternalRefs = pgTable(
       .where(sql`${table.externalId} IS NOT NULL`),
   ],
 );
+
+export const taskExternalRefRowSelection = getTableColumns(taskExternalRefs);

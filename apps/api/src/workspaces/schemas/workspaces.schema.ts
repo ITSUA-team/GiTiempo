@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { getTableColumns, sql } from 'drizzle-orm';
 import {
   pgTable,
   timestamp,
@@ -25,3 +25,5 @@ export const workspaces = pgTable(
     ),
   ],
 );
+
+export const workspaceRowSelection = getTableColumns(workspaces);

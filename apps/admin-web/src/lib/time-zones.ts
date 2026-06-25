@@ -57,6 +57,16 @@ function getRuntimeTimeZones(): string[] | null {
 	}
 }
 
+export function getRuntimeDefaultTimeZone(): string {
+	try {
+		const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone?.trim();
+
+		return timeZone && isValidTimeZoneName(timeZone) ? timeZone : 'UTC';
+	} catch {
+		return 'UTC';
+	}
+}
+
 function compareTimeZones(a: string, b: string): number {
 	if (a === b) return 0;
 	if (a === 'UTC') return -1;

@@ -2,15 +2,35 @@ import { z } from 'zod';
 
 const timeZoneNamePattern = /^(?:UTC|[A-Za-z_]+(?:\/[A-Za-z0-9_+.-]+)+)$/;
 
-function isValidTimeZone(timeZone: string): boolean {
-  if (!timeZoneNamePattern.test(timeZone)) return false;
+function isSupportedRuntimeTimeZone(timeZone: string): boolean {
+  const supportedValuesOf = Intl.supportedValuesOf;
+
+  if (typeof supportedValuesOf !== 'function') return false;
 
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date(0));
+    return supportedValuesOf('timeZone').includes(timeZone);
+  } catch {
+    return false;
+  }
+}
+
+function isConstructorValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone });
+
     return true;
   } catch {
     return false;
   }
+}
+
+function isValidTimeZone(timeZone: string): boolean {
+  if (!timeZoneNamePattern.test(timeZone)) return false;
+  if (timeZone === 'UTC') return true;
+
+  return (
+    isSupportedRuntimeTimeZone(timeZone) || isConstructorValidTimeZone(timeZone)
+  );
 }
 
 const timeZoneSchema = z
