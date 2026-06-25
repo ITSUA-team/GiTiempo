@@ -105,12 +105,12 @@ describe("backfillTaskBillableDefaultSchema", () => {
     expect(result.updateTimeEntries).toBe(true);
   });
 
-  it("accepts unselected time-entry backfill", () => {
-    const result = backfillTaskBillableDefaultSchema.parse({
+  it("rejects unselected time-entry backfill", () => {
+    const result = backfillTaskBillableDefaultSchema.safeParse({
       updateTimeEntries: false,
     });
 
-    expect(result.updateTimeEntries).toBe(false);
+    expect(result.success).toBe(false);
   });
 
   it("accepts backfill response count", () => {

@@ -185,11 +185,16 @@ async function handleTaskBackfillSubmitted(): Promise<void> {
     return;
   }
 
+  if (!dialogState.updateTimeEntries) {
+    taskBackfillDialog.value = null;
+    return;
+  }
+
   submittingTaskBackfill.value = true;
 
   try {
     const result = await client.backfillTaskBillableDefault(dialogState.taskId, {
-      updateTimeEntries: dialogState.updateTimeEntries,
+      updateTimeEntries: true,
     });
 
     appToast.showSuccessToast(

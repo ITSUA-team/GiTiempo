@@ -4815,7 +4815,10 @@
         "type": "object",
         "properties": {
           "updateTimeEntries": {
-            "type": "boolean"
+            "type": "boolean",
+            "enum": [
+              true
+            ]
           }
         },
         "required": [
