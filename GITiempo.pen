@@ -11640,7 +11640,7 @@
       "name": "Admin Settings",
       "clip": true,
       "width": 1280,
-      "height": 1841,
+      "height": 2166,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -11780,7 +11780,7 @@
           "id": "tzdAb",
           "name": "main",
           "width": "fill_container",
-          "height": "fill_container",
+          "height": 2102,
           "children": [
             {
               "type": "frame",
@@ -11951,7 +11951,7 @@
               "id": "CTUf2",
               "name": "content",
               "width": "fill_container",
-              "height": "fill_container",
+              "height": 2102,
               "fill": "$color-app-bg",
               "layout": "vertical",
               "gap": 24,
@@ -13130,6 +13130,283 @@
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "600"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WBgw0",
+                      "name": "Additional Approved States",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uZVta",
+                          "name": "Add Header",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Usx49",
+                              "name": "Add Title",
+                              "fill": "#1A1A1A",
+                              "content": "Additional approved states",
+                              "fontFamily": "Inter",
+                              "fontSize": 16,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "OkJCA",
+                              "name": "Add Description",
+                              "fill": "#666666",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Reference these states when implementing or reviewing GitHub Workspace Access.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "diKw9",
+                              "name": "Add Hint",
+                              "fill": "#666666",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "These compact annotations cover the loading, empty, and request-error variants without duplicating the entire page.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "FixRf",
+                          "name": "State Reference Cards",
+                          "width": 580,
+                          "layout": "vertical",
+                          "gap": "$spacing-md",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "bqKz3",
+                              "name": "Loading State Card",
+                              "width": "fill_container",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": "$spacing-xs",
+                              "padding": 12,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "EtAEq",
+                                  "name": "Loading State Card Header",
+                                  "width": "fill_container",
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "RrFql",
+                                      "name": "Loading State Card Title",
+                                      "fill": "$color-text-dark",
+                                      "content": "Initial load",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "qkIAJ",
+                                      "name": "Loading State Card Badge",
+                                      "fill": "$color-accent-tint",
+                                      "cornerRadius": "$radius-sm",
+                                      "padding": [
+                                        4,
+                                        8
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "P45RW",
+                                          "name": "Loading State Card Badge Text",
+                                          "fill": "$color-brand",
+                                          "content": "Skeleton",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "J2tI6I",
+                                  "name": "Loading State Card Description",
+                                  "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Show structured skeleton rows that mirror the card header, organization rows, and action row before data resolves.",
+                                  "lineHeight": 1.4,
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "v56PH",
+                              "name": "Empty State Card",
+                              "width": "fill_container",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": "$spacing-xs",
+                              "padding": 12,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "yw8CG",
+                                  "name": "Empty State Card Header",
+                                  "width": "fill_container",
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "rGmZf",
+                                      "name": "Empty State Card Title",
+                                      "fill": "$color-text-dark",
+                                      "content": "Empty policy",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "C4cYu2",
+                                      "name": "Empty State Card Badge",
+                                      "fill": "$color-status-warn-bg",
+                                      "cornerRadius": "$radius-sm",
+                                      "padding": [
+                                        4,
+                                        8
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "aFFGh",
+                                          "name": "Empty State Card Badge Text",
+                                          "fill": "$color-status-warn-text",
+                                          "content": "Empty",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "a4FDM0",
+                                  "name": "Empty State Card Description",
+                                  "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Render the allowed-organizations area as an explicit empty state with the Add organization section still available underneath.",
+                                  "lineHeight": 1.4,
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Tu35D",
+                              "name": "Request Error State Card",
+                              "width": "fill_container",
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-md",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": "$spacing-xs",
+                              "padding": 12,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "OGePO",
+                                  "name": "Request Error State Card Header",
+                                  "width": "fill_container",
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "GKDVn",
+                                      "name": "Request Error State Card Title",
+                                      "fill": "$color-text-dark",
+                                      "content": "Request error",
+                                      "fontFamily": "$font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "RDKAz",
+                                      "name": "Request Error State Card Badge",
+                                      "fill": "$color-status-error-bg",
+                                      "cornerRadius": "$radius-sm",
+                                      "padding": [
+                                        4,
+                                        8
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Bj3kd",
+                                          "name": "Request Error State Card Badge Text",
+                                          "fill": "$color-status-error-text",
+                                          "content": "Retry",
+                                          "fontFamily": "$font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "B8Hi9",
+                                  "name": "Request Error State Card Description",
+                                  "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Keep the card in place and show a retryable request-error surface instead of defaulting to an empty allow-list after a failed load.",
+                                  "lineHeight": 1.4,
+                                  "fontFamily": "$font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
