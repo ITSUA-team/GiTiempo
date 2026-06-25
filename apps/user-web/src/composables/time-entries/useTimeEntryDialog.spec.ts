@@ -150,6 +150,30 @@ describe("useTimeEntryDialog", () => {
     });
   });
 
+  it("validates new-task drafts without using project id as a task id", () => {
+    const dialog = useTimeEntryDialog();
+    const projectId = "selected-project";
+
+    dialog.openCreateDialogState();
+    dialog.setProjectId(projectId);
+    dialog.setTaskValue(createNewTaskLookupOption(projectId));
+    dialog.setNewTaskTitle("Write release checklist");
+    dialog.setStartedAt(new Date("2026-04-21T09:00:00.000Z"));
+    dialog.setEndedAt(new Date("2026-04-21T10:00:00.000Z"));
+
+    expect(dialog.validateDialog()).toEqual({
+      draftInput: {
+        description: null,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        isBillable: false,
+        startedAt: "2026-04-21T09:00:00.000Z",
+      },
+      kind: "new-task",
+      taskTitle: "Write release checklist",
+    });
+    expect(dialog.dialogErrors.value.taskId).toBeNull();
+  });
+
   it("returns a contract-safe input only after selecting an existing task", () => {
     const dialog = useTimeEntryDialog();
 

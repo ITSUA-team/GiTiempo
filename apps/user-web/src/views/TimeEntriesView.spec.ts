@@ -1268,6 +1268,44 @@ describe("TimeEntriesView", () => {
     );
   });
 
+  it("validates the final new-task entry payload after task creation", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    const createdTask = createTask({
+      defaultBillableForTimeEntries: false,
+      id: "created-task",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Write release checklist",
+    });
+
+    client.createTask.mockResolvedValueOnce(createdTask);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-new"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-new-task-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-started"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-ended"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith(
+      TEST_IDS.projectAdmin,
+      expect.objectContaining({ title: "Write release checklist" }),
+    );
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="dialog-request-error"]').text()).toBe(
+      "Time entry values are invalid.",
+    );
+  });
+
   it("keeps new task creation failures visible without saving the entry", async () => {
     const client = createClientMock({
       entriesResponse: createEntryListResponse([createEntry()]),

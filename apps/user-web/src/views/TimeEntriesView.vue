@@ -4,6 +4,7 @@ import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
 import {
+  createManualTimeEntrySchema,
   createTaskSchema,
   type ProjectResponse,
   type TimeEntryResponse,
@@ -403,9 +404,19 @@ async function saveDialog(): Promise<void> {
       return;
     }
 
-    validInput = {
+    const parsedEntryInput = createManualTimeEntrySchema.safeParse({
       ...validationResult.draftInput,
       taskId: createdTask.id,
+    });
+
+    if (!parsedEntryInput.success) {
+      dialog.setRequestError("Time entry values are invalid.");
+      return;
+    }
+
+    validInput = {
+      ...parsedEntryInput.data,
+      isBillable: validationResult.draftInput.isBillable,
     };
   } else {
     validInput = validationResult.input;

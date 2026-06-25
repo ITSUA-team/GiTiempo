@@ -1,4 +1,5 @@
 import {
+  createManualTimeEntryDraftSchema,
   createManualTimeEntrySchema,
   createTaskSchema,
   type TimeEntryResponse,
@@ -315,9 +316,6 @@ export function useTimeEntryDialog() {
       return null;
     }
 
-    const taskIdForSchemaValidation = isCreatingNewTask
-      ? dialogProjectId.value
-      : selectedTask.id;
     const draftInput = {
       description:
         dialogDescription.value.trim().length > 0
@@ -327,13 +325,19 @@ export function useTimeEntryDialog() {
       isBillable: dialogIsBillable.value,
       startedAt: dialogStartedAt.value.toISOString(),
     };
-    const parsed = createManualTimeEntrySchema.safeParse({
-      ...draftInput,
-      taskId: taskIdForSchemaValidation,
-    });
+    const parsed = isCreatingNewTask
+      ? createManualTimeEntryDraftSchema.safeParse(draftInput)
+      : createManualTimeEntrySchema.safeParse({
+          ...draftInput,
+          taskId: selectedTask.id,
+        });
 
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
+      const taskIdError = isCreatingNewTask
+        ? nextErrors.taskId
+        : (fieldErrors as { taskId?: string[] }).taskId?.[0] ??
+          nextErrors.taskId;
 
       dialogErrors.value = {
         description: fieldErrors.description?.[0] ?? nextErrors.description,
@@ -341,7 +345,7 @@ export function useTimeEntryDialog() {
         newTaskTitle: nextErrors.newTaskTitle,
         projectId: nextErrors.projectId,
         startedAt: fieldErrors.startedAt?.[0] ?? nextErrors.startedAt,
-        taskId: fieldErrors.taskId?.[0] ?? nextErrors.taskId,
+        taskId: taskIdError,
       };
       return null;
     }
