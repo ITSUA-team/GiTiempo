@@ -143,12 +143,14 @@ function handleMemberFilterUpdate(
 }
 
 const searchAutoCompletePt = {
-  root: { class: 'h-[38px] w-full' },
+  root: { class: 'relative h-[38px] w-full max-w-full min-w-0' },
   pcInputText: {
     root: { class: 'h-[38px] w-full rounded-l-[6px] rounded-r-none pl-9 text-[14px]' },
   },
   dropdown: { class: 'h-[38px] w-9 text-text-muted' },
-  option: { class: 'text-[13px]' },
+  listContainer: { class: 'max-w-full overflow-x-hidden' },
+  option: { class: 'max-w-full min-w-0 truncate text-[13px]' },
+  overlay: { class: 'w-full max-w-full overflow-hidden' },
 } as const;
 </script>
 
@@ -160,6 +162,7 @@ const searchAutoCompletePt = {
           <IconField class="w-full sm:w-[280px]">
             <InputIcon class="pi pi-search text-text-muted" />
             <AutoComplete
+              append-to="self"
               :model-value="filters.global"
               :suggestions="globalSearchSuggestions"
               aria-label="Search report rows"
@@ -185,6 +188,7 @@ const searchAutoCompletePt = {
             class="text-text-muted text-[12px] font-medium"
           >Project</label>
           <AutoComplete
+            append-to="self"
             input-id="mobile-report-project-filter"
             :model-value="selectedProjectFilterOption"
             :suggestions="projectFilterSuggestions"
@@ -208,6 +212,7 @@ const searchAutoCompletePt = {
             class="text-text-muted text-[12px] font-medium"
           >Member</label>
           <AutoComplete
+            append-to="self"
             input-id="mobile-report-member-filter"
             :model-value="selectedMemberFilterOption"
             :suggestions="memberFilterSuggestions"
@@ -354,6 +359,7 @@ const searchAutoCompletePt = {
         <div class="flex min-w-[720px] flex-1 items-center">
           <div class="min-w-0 flex-1 px-3">
             <AutoComplete
+              append-to="self"
               :model-value="selectedProjectFilterOption"
               :suggestions="projectFilterSuggestions"
               aria-label="Filter report rows by project"
@@ -373,6 +379,7 @@ const searchAutoCompletePt = {
 
           <div class="w-[180px] px-3">
             <AutoComplete
+              append-to="self"
               :model-value="selectedMemberFilterOption"
               :suggestions="memberFilterSuggestions"
               aria-label="Filter report rows by member"

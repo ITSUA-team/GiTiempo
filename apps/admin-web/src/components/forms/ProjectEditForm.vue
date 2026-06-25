@@ -38,7 +38,7 @@ const visibilityOptions = [
 ];
 
 const memberAutoCompletePt = {
-  root: { class: 'min-h-[42px] w-full' },
+  root: { class: 'relative min-h-[42px] w-full max-w-full min-w-0' },
   pcInputText: {
     root: {
       class: 'min-h-[42px] w-full rounded-[6px] font-sans text-[14px] font-medium',
@@ -48,7 +48,9 @@ const memberAutoCompletePt = {
     class: 'min-h-[42px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
   },
   chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
-  option: { class: 'font-sans text-[14px]' },
+  listContainer: { class: 'max-w-full overflow-x-hidden' },
+  option: { class: 'max-w-full min-w-0 truncate font-sans text-[14px]' },
+  overlay: { class: 'w-full max-w-full overflow-hidden' },
 } as const;
 
 interface AutoCompleteCompleteEvent {
@@ -108,6 +110,7 @@ function handleSave({
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
           >Select members</label>
           <AutoComplete
+            append-to="self"
             input-id="edit-members"
             name="memberIds"
             :suggestions="memberSuggestions"

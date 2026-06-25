@@ -277,8 +277,6 @@ async function mountView(
             "inputId",
             "minLength",
             "optionLabel",
-            "overlayClass",
-            "overlayStyle",
             "pt",
             "suggestions",
           ],
@@ -287,14 +285,7 @@ async function mountView(
               :data-append-to="appendTo ?? ''"
               :data-complete-on-focus="String(completeOnFocus === true || completeOnFocus === '')"
               :data-dropdown-mode="dropdownMode ?? ''"
-              :data-input-pt-class="pt?.pcInputText?.root?.class ?? ''"
-              :data-list-container-pt-class="pt?.listContainer?.class ?? ''"
               :data-min-length="String(minLength)"
-              :data-option-pt-class="pt?.option?.class ?? ''"
-              :data-overlay-class="overlayClass ?? ''"
-              :data-overlay-pt-class="pt?.overlay?.class ?? ''"
-              :data-overlay-style-width="overlayStyle?.width ?? ''"
-              :data-root-pt-class="pt?.root?.class ?? ''"
               :data-testid="inputId === 'time-entries-project-filter' ? 'project-filter-autocomplete' : inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'"
             >
               <p v-for="suggestion in suggestions" :key="suggestion.id">
@@ -979,24 +970,7 @@ describe("TimeEntriesView", () => {
     expect(filterSuggestions.attributes("data-complete-on-focus")).toBe("true");
     expect(filterSuggestions.attributes("data-append-to")).toBe("self");
     expect(filterSuggestions.attributes("data-dropdown-mode")).toBe("blank");
-    expect(filterSuggestions.attributes("data-input-pt-class")).toBe("truncate");
-    expect(filterSuggestions.attributes("data-list-container-pt-class")).toBe(
-      "max-w-full overflow-x-hidden",
-    );
     expect(filterSuggestions.attributes("data-min-length")).toBe("0");
-    expect(filterSuggestions.attributes("data-option-pt-class")).toBe(
-      "max-w-full min-w-0 truncate",
-    );
-    expect(filterSuggestions.attributes("data-overlay-class")).toBe(
-      "w-full max-w-full overflow-hidden",
-    );
-    expect(filterSuggestions.attributes("data-overlay-pt-class")).toBe(
-      "w-full max-w-full overflow-hidden",
-    );
-    expect(filterSuggestions.attributes("data-overlay-style-width")).toBe("100%");
-    expect(filterSuggestions.attributes("data-root-pt-class")).toBe(
-      "relative w-full max-w-full min-w-0",
-    );
     expect(client.listProjectTasks).not.toHaveBeenCalled();
     expect(filterSuggestions.text()).toContain("Ship admin polish");
     expect(filterSuggestions.text()).not.toContain("Improve reports filters");

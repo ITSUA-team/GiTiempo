@@ -229,6 +229,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           Project
         </label>
         <AutoComplete
+          append-to="self"
           complete-on-focus
           data-key="id"
           dropdown
@@ -264,6 +265,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           Task
         </label>
         <AutoComplete
+          append-to="self"
           complete-on-focus
           dropdown
           dropdown-mode="blank"

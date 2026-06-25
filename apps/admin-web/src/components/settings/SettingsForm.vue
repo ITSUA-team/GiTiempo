@@ -221,6 +221,7 @@ function submitWorkspaceForm(): void {
                 Time zone
               </label>
               <AutoComplete
+                append-to="self"
                 input-id="settings-time-zone"
                 name="timeZone"
                 :model-value="selectedTimeZoneOption"

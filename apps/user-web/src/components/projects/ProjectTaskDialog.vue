@@ -169,6 +169,7 @@ function handleProjectComplete(event: { query: string }): void {
         <AutoComplete
           v-else
           v-model="projectModel"
+          append-to="self"
           complete-on-focus
           data-key="id"
           dropdown

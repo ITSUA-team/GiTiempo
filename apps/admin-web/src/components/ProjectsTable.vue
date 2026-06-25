@@ -153,6 +153,7 @@ const columns: ManagementTableColumn[] = [
         class="text-text-muted text-[12px] font-medium"
       >Project</label>
       <AutoComplete
+        append-to="self"
         input-id="mobile-project-name-filter"
         :model-value="filters.projectQuery"
         :suggestions="projectQuerySuggestions"
@@ -385,6 +386,7 @@ const columns: ManagementTableColumn[] = [
       <div class="flex min-w-[860px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
           <AutoComplete
+            append-to="self"
             :model-value="filters.projectQuery"
             :suggestions="projectQuerySuggestions"
             aria-label="Filter projects by name"

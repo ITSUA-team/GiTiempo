@@ -106,7 +106,7 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
 
 const autoCompletePt = {
   root: {
-    class: 'w-full',
+    class: 'relative w-full max-w-full min-w-0',
   },
   pcInputText: {
     root: {
@@ -115,6 +115,9 @@ const autoCompletePt = {
     },
   },
   dropdown: { class: 'w-9 text-text-muted' },
+  listContainer: { class: 'max-w-full overflow-x-hidden' },
+  option: { class: 'max-w-full min-w-0 truncate' },
+  overlay: { class: 'w-full max-w-full overflow-hidden' },
 } as const;
 
 const selectPt = {
@@ -155,6 +158,7 @@ const datePickerPt = {
         class="text-text-dark text-[13px] font-medium"
       >Project</label>
       <AutoComplete
+        append-to="self"
         input-id="reports-project"
         name="projectId"
         :model-value="selectedProjectOption"
@@ -180,6 +184,7 @@ const datePickerPt = {
         class="text-text-dark text-[13px] font-medium"
       >Member</label>
       <AutoComplete
+        append-to="self"
         input-id="reports-member"
         name="memberId"
         :model-value="selectedMemberOption"

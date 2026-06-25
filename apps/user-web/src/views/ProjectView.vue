@@ -370,6 +370,7 @@ async function retryLoadPage(): Promise<void> {
             Search
           </label>
           <AutoComplete
+            append-to="self"
             data-testid="projects-search-filter"
             input-id="projects-search"
             class="w-full"

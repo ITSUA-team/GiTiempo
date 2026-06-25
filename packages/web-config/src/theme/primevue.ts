@@ -1,6 +1,26 @@
 import { definePreset } from "@primeuix/themes";
 import Aura from "@primeuix/themes/aura";
 
+export const giTiempoAutoCompleteOverlayClass = "w-full max-w-full overflow-hidden";
+
+export const giTiempoAutoCompleteOverlayStyle = {
+  boxSizing: "border-box",
+  maxWidth: "100%",
+  minWidth: "100%",
+  width: "100%",
+} as const;
+
+export const giTiempoAutoCompletePt = {
+  listContainer: { class: "max-w-full overflow-x-hidden" },
+  option: { class: "max-w-full min-w-0 truncate" },
+  overlay: {
+    class: giTiempoAutoCompleteOverlayClass,
+    style: giTiempoAutoCompleteOverlayStyle,
+  },
+  pcInputText: { root: { class: "truncate" } },
+  root: { class: "relative w-full max-w-full min-w-0" },
+} as const;
+
 export const giTiempoThemePreset = definePreset(Aura, {
   semantic: {
     primary: {
@@ -53,6 +73,9 @@ export const giTiempoThemePreset = definePreset(Aura, {
 });
 
 export const giTiempoPrimeVueOptions = {
+  pt: {
+    autocomplete: giTiempoAutoCompletePt,
+  },
   theme: {
     preset: giTiempoThemePreset,
     options: {

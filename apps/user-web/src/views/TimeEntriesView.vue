@@ -153,20 +153,6 @@ const isDeletingDialogEntry = computed(() => {
 
   return !!entry && isDeletingEntry.value === entry.id;
 });
-const filterAutoCompleteOverlayClass = "w-full max-w-full overflow-hidden";
-const filterAutoCompleteOverlayStyle = {
-  boxSizing: "border-box",
-  maxWidth: "100%",
-  minWidth: "100%",
-  width: "100%",
-} as const;
-const filterAutoCompletePt = {
-  listContainer: { class: "max-w-full overflow-x-hidden" },
-  option: { class: "max-w-full min-w-0 truncate" },
-  overlay: { class: filterAutoCompleteOverlayClass },
-  pcInputText: { root: { class: "truncate" } },
-  root: { class: "relative w-full max-w-full min-w-0" },
-} as const;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
 const startingTimerEntryId = shallowRef<string | null>(null);
 const stoppingTimerEntryId = shallowRef<string | null>(null);
@@ -498,9 +484,6 @@ onBeforeUnmount(() => {
             :loading="isLoadingProjects"
             :min-length="0"
             :model-value="selectedProjectFilterOption"
-            :overlay-class="filterAutoCompleteOverlayClass"
-            :overlay-style="filterAutoCompleteOverlayStyle"
-            :pt="filterAutoCompletePt"
             fluid
             show-clear
             @complete="handleProjectFilterComplete"
@@ -528,9 +511,6 @@ onBeforeUnmount(() => {
             dropdown-mode="blank"
             fluid
             :min-length="0"
-            :overlay-class="filterAutoCompleteOverlayClass"
-            :overlay-style="filterAutoCompleteOverlayStyle"
-            :pt="filterAutoCompletePt"
             @complete="(event) => void handleFilterTaskSearch(event.query)"
             @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
           />
