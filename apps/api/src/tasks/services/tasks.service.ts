@@ -302,7 +302,9 @@ export class TasksService {
       }
 
       if (input.updateTimeEntries !== true) {
-        return { timeEntriesUpdated: 0 };
+        throw new UnprocessableEntityException(
+          'Task backfill requires selected time entries',
+        );
       }
 
       const updatedEntries = await tx

@@ -528,7 +528,7 @@ describe('TasksService', () => {
     );
   });
 
-  it('skips task billable default backfill when time entries are unselected', async () => {
+  it('rejects task billable default backfill when time entries are unselected', async () => {
     const tx = {
       select: vi.fn().mockReturnValue(selectRows([{ ...taskRow }])),
       update: vi.fn(),
@@ -539,11 +539,11 @@ describe('TasksService', () => {
     };
     const service = new TasksService(db as never, projects as never);
 
-    const result = await service.backfillBillableDefault(user, taskRow.id, {
-      updateTimeEntries: false,
-    });
-
-    expect(result).toEqual({ timeEntriesUpdated: 0 });
+    await expect(
+      service.backfillBillableDefault(user, taskRow.id, {
+        updateTimeEntries: false,
+      } as never),
+    ).rejects.toThrow('Task backfill requires selected time entries');
     expect(tx.update).not.toHaveBeenCalled();
   });
 

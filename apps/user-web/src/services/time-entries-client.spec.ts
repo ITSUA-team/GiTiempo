@@ -419,29 +419,17 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
-  it("posts skipped task billable-default backfills explicitly", async () => {
-    const fetchFn = vi.fn(async () =>
-      jsonResponse({ timeEntriesUpdated: 0 }),
-    );
+  it("rejects skipped task billable-default backfills before transport", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ timeEntriesUpdated: 0 }));
     const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
 
-    const result = await client.backfillTaskBillableDefault(
-      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
-      { updateTimeEntries: false },
-    );
-
-    expect(result.timeEntriesUpdated).toBe(0);
-    expect(fetchFn).toHaveBeenCalledWith(
-      "/tasks/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001/billable-default/backfill",
-      {
-        body: JSON.stringify({ updateTimeEntries: false }),
-        headers: {
-          Authorization: "Bearer access-token",
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      },
-    );
+    expect(() =>
+      client.backfillTaskBillableDefault(
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        { updateTimeEntries: false } as never,
+      ),
+    ).toThrow();
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it("handles task deletion with the no-content contract", async () => {

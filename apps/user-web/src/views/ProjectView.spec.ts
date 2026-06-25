@@ -586,9 +586,7 @@ describe("ProjectView", () => {
     await wrapper.get('[data-testid="task-backfill-submit"]').trigger("click");
     await flushPromises();
 
-    expect(client.backfillTaskBillableDefault).toHaveBeenCalledWith("task-1", {
-      updateTimeEntries: false,
-    });
+    expect(client.backfillTaskBillableDefault).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
   });
 
