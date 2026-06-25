@@ -77,6 +77,7 @@ jobs:
       PREBUILT_IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || '' }}
       PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
       API_DEPLOY_PATH: ${{ vars.API_DEPLOY_PATH }}
+      ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
       VPS_HOST: ${{ vars.VPS_HOST }}
       VPS_USER: ${{ vars.VPS_USER }}
 
@@ -168,6 +169,7 @@ jobs:
 
           require_env PUBLIC_API_URL
           require_env API_DEPLOY_PATH
+          require_env ALLOWED_ORIGINS
           require_env VPS_HOST
           require_env VPS_USER
           require_env VPS_SSH_KEY
@@ -207,7 +209,31 @@ jobs:
 
           remote_api_deploy_path="$(remote_quote "$API_DEPLOY_PATH")"
           remote_deploy_image="$(remote_quote "$DEPLOY_IMAGE")"
+          remote_allowed_origins="$(remote_quote "$ALLOWED_ORIGINS")"
           remote_ghcr_username="$(remote_quote "$GHCR_USERNAME")"
+
+          ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
+            "set -eu
+             cd $remote_api_deploy_path
+             if [ ! -f .env ]; then
+               cp .env.example .env
+             fi
+             tmp_env=\$(mktemp)
+             awk -v value=$remote_allowed_origins '
+               BEGIN { updated = 0 }
+               /^ALLOWED_ORIGINS=/ {
+                 print \"ALLOWED_ORIGINS=\" value
+                 updated = 1
+                 next
+               }
+               { print }
+               END {
+                 if (!updated) {
+                   print \"ALLOWED_ORIGINS=\" value
+                 }
+               }
+             ' .env > \"\$tmp_env\"
+             mv \"\$tmp_env\" .env"
 
           printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/gitiempo_api_deploy "$VPS_USER@$VPS_HOST" \
             "set -eu
