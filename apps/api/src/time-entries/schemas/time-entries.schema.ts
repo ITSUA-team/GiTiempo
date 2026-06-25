@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { getTableColumns, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
@@ -78,3 +78,5 @@ export const timeEntries = pgTable(
     ),
   ],
 );
+
+export const timeEntryRowSelection = getTableColumns(timeEntries);

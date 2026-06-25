@@ -8,7 +8,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { getTableColumns, sql } from 'drizzle-orm';
 import type { ProjectVisibility } from '@gitiempo/shared';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 
@@ -54,3 +54,5 @@ export const projects = pgTable(
     ),
   ],
 );
+
+export const projectRowSelection = getTableColumns(projects);

@@ -13,7 +13,7 @@ import type {
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { users } from '../schemas/users.schema';
+import { userRowSelection, users } from '../schemas/users.schema';
 
 type UserRow = typeof users.$inferSelect;
 
@@ -56,7 +56,7 @@ export class UsersService {
   /** Internal row lookup by local id. */
   async findRowById(id: string): Promise<UserRow | null> {
     const [row] = await this.db
-      .select()
+      .select(userRowSelection)
       .from(users)
       .where(eq(users.id, id))
       .limit(1);
@@ -65,7 +65,7 @@ export class UsersService {
 
   async findRowByFirebaseUid(firebaseUid: string): Promise<UserRow | null> {
     const [row] = await this.db
-      .select()
+      .select(userRowSelection)
       .from(users)
       .where(eq(users.firebaseUid, firebaseUid))
       .limit(1);
