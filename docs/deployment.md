@@ -170,6 +170,7 @@ GitHub Actions stores deploy credentials and environment-specific values.
 | `VITE_*` frontend values | GitHub Environment | Injected at frontend build time |
 | `PUBLIC_API_URL` | GitHub Environment variable | Public API base URL used for readiness checks |
 | `API_DEPLOY_PATH` | GitHub Environment variable | Remote VPS deploy directory |
+| `ALLOWED_ORIGINS` | GitHub Environment variable / VPS runtime env | Comma-separated CORS allow-list written into the VPS `.env`; include web app origins and exact Chrome extension origins such as `chrome-extension://<extension-id>` |
 | `VPS_HOST`, `VPS_USER` | GitHub Environment variables | SSH target used by API deploy workflow |
 | `VPS_SSH_KEY` | GitHub Environment secret | SSH private key used only by SSH validation/configuration steps |
 | `API_IMAGE` | VPS runtime env / workflow env | Selected GHCR image for Compose rollout and Compose interpolation |

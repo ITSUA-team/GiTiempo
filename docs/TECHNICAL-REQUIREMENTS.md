@@ -87,7 +87,7 @@ User → Firebase Auth (Google SSO or email/password) on frontend
 
 **Refresh flow:** When the access token expires, the frontend calls `POST /auth/refresh` with the refresh token. The backend validates the refresh token, rotates it (invalidates old, issues new), and returns a new access/refresh pair.
 
-**CORS:** The backend configures CORS with allowed origins from the `ALLOWED_ORIGINS` environment variable (comma-separated list of frontend URLs).
+**CORS:** The backend configures CORS with allowed origins from the `ALLOWED_ORIGINS` environment variable (comma-separated list of web app URLs and exact Chrome extension origins such as `chrome-extension://<extension-id>`).
 
 ### 2.3 GitHub Integration — GitHub App (User-to-Server)
 
@@ -404,7 +404,7 @@ The API requires the following environment variables:
 | Variable                   | Description                                                                                           |
 | -------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`             | PostgreSQL connection string                                                                          |
-| `ALLOWED_ORIGINS`          | Comma-separated list of allowed CORS origins (e.g. `https://app.tiempo.com,https://admin.tiempo.com`) |
+| `ALLOWED_ORIGINS`          | Comma-separated list of allowed CORS origins, including web app URLs and exact Chrome extension origins (e.g. `https://app.tiempo.com,https://admin.tiempo.com,chrome-extension://<extension-id>`) |
 | `JWT_ACCESS_SECRET`        | Secret for signing JWT access tokens                                                                  |
 | `JWT_REFRESH_SECRET`       | Secret for signing JWT refresh tokens                                                                 |
 | `FIREBASE_PROJECT_ID`      | Firebase project ID                                                                                   |
