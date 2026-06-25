@@ -35,7 +35,7 @@ export class GithubEncryptionService {
   decrypt(envelope: string): string {
     const [version, ivPart, tagPart, ciphertextPart] = envelope.split(':');
     if (version !== VERSION || !ivPart || !tagPart || !ciphertextPart) {
-      throw new Error('Invalid encrypted token envelope');
+      throw new ServiceUnavailableException('Invalid encrypted token envelope');
     }
     const decipher = createDecipheriv(
       ALGORITHM,

@@ -12,6 +12,7 @@ import { and, eq, isNotNull } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import {
+  githubConnectionRowSelection,
   githubConnections,
   type GithubConnectionRow,
 } from '../schemas/github-connections.schema';
@@ -162,7 +163,7 @@ export class GithubConnectionsService {
     userId: string,
   ): Promise<GithubConnectionRow | null> {
     const [row] = await this.db
-      .select()
+      .select(githubConnectionRowSelection)
       .from(githubConnections)
       .where(eq(githubConnections.userId, userId))
       .limit(1);
@@ -173,7 +174,7 @@ export class GithubConnectionsService {
     userId: string,
   ): Promise<GithubConnectionRow | null> {
     const [row] = await this.db
-      .select()
+      .select(githubConnectionRowSelection)
       .from(githubConnections)
       .where(
         and(

@@ -26,6 +26,7 @@ import {
   type AuthRuntime,
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
+import { formatLocalTimestampLabel } from "@/lib/time-formatters";
 
 const replaceSpy = vi.fn(async () => undefined);
 const toastAddSpy = vi.fn();
@@ -220,13 +221,15 @@ describe("ProfileView", () => {
     async () => {
       const { wrapper } = await mountProfileView();
       const text = wrapper.text();
+      const connectedAt = "2026-05-01T10:15:00.000Z";
+      const updatedAt = "2026-05-04T08:45:00.000Z";
 
       expect(text).not.toContain("Manage your personal settings and session access.");
       expect(text).toContain("GitHub Connection");
       expect(text).toContain("Connected at");
-      expect(text).toContain("May 1, 2026, 13:15");
+      expect(text).toContain(formatLocalTimestampLabel(connectedAt));
       expect(text).toContain("Updated at");
-      expect(text).toContain("May 4, 2026, 11:45");
+      expect(text).toContain(formatLocalTimestampLabel(updatedAt));
       expect(text).not.toContain("2026-05-01T10:15:00.000Z");
       expect(text).not.toContain("2026-05-04T08:45:00.000Z");
       expect(text).not.toContain("Avatar");

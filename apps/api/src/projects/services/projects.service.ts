@@ -27,16 +27,17 @@ import type {
 import { projectMemberSchema } from '@gitiempo/shared';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { startOfUtcIsoWeek, startOfUtcMonth } from '../../common/time';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
-import { tasks as tasksTable } from '../../tasks/schemas/tasks.schema';
+import { tasks } from '../../tasks/schemas/tasks.schema';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { users } from '../../users/schemas/users.schema';
 import { projectAssignments } from '../schemas/project-assignments.schema';
 import { projectExternalRefs } from '../schemas/project-external-refs.schema';
-import { projects } from '../schemas/projects.schema';
+import { projectRowSelection, projects } from '../schemas/projects.schema';
 
 export type ProjectRow = typeof projects.$inferSelect;
 type ProjectResponseRow = ProjectRow & {
@@ -47,8 +48,7 @@ type ProjectResponseRow = ProjectRow & {
 type ProjectAssignmentRow = Omit<ProjectAssignmentResponse, 'assignedAt'> & {
   assignedAt: Date;
 };
-type UpdateCountExecutor = Pick<DrizzleDB, 'execute'>;
-type UpdateCountRow = { updatedCount: number | string | null };
+type UpdateCountExecutor = Pick<DrizzleDB, 'update'>;
 
 @Injectable()
 export class ProjectsService {
@@ -216,7 +216,12 @@ export class ProjectsService {
         user.workspaceId,
         row.id,
       );
-      if (!response) throw new Error('Failed to fetch created project');
+      if (!response) {
+        throw DomainError.internal(
+          'project_create_response_missing',
+          'Failed to fetch created project',
+        );
+      }
       return this.toProjectResponse(response);
     }
 
@@ -239,7 +244,12 @@ export class ProjectsService {
       user.workspaceId,
       row.id,
     );
-    if (!response) throw new Error('Failed to fetch created project');
+    if (!response) {
+      throw DomainError.internal(
+        'project_create_response_missing',
+        'Failed to fetch created project',
+      );
+    }
     return this.toProjectResponse(response);
   }
 
@@ -472,7 +482,12 @@ export class ProjectsService {
         .where(eq(projectAssignments.id, created.id))
         .limit(1);
 
-      if (!row) throw new Error('Failed to load project assignment');
+      if (!row) {
+        throw DomainError.internal(
+          'project_assignment_response_missing',
+          'Failed to load project assignment',
+        );
+      }
       return this.toAssignmentResponse(row);
     });
   }
@@ -578,7 +593,7 @@ export class ProjectsService {
     db: Pick<DrizzleDB, 'select'>,
   ): Promise<ProjectRow | null> {
     const [row] = await db
-      .select()
+      .select(projectRowSelection)
       .from(projects)
       .where(
         and(eq(projects.id, projectId), eq(projects.workspaceId, workspaceId)),
@@ -608,20 +623,14 @@ export class ProjectsService {
     isBillable: boolean,
     updatedAt: Date,
   ): Promise<number> {
-    const result = await db.execute<UpdateCountRow>(sql`
-      WITH updated AS (
-        UPDATE "tasks"
-        SET
-          "default_time_entry_billable" = ${isBillable},
-          "updated_at" = ${updatedAt}
-        WHERE "workspace_id" = ${workspaceId}
-          AND "project_id" = ${projectId}
-        RETURNING 1
-      )
-      SELECT COUNT(*)::integer AS "updatedCount" FROM updated
-    `);
+    const result = await db
+      .update(tasks)
+      .set({ defaultBillableForTimeEntries: isBillable, updatedAt })
+      .where(
+        and(eq(tasks.workspaceId, workspaceId), eq(tasks.projectId, projectId)),
+      );
 
-    return toNumber(result.rows[0]?.updatedCount);
+    return result.rowCount ?? 0;
   }
 
   private async updateProjectTimeEntriesBillableDefault(
@@ -631,25 +640,20 @@ export class ProjectsService {
     isBillable: boolean,
     updatedAt: Date,
   ): Promise<number> {
-    const result = await db.execute<UpdateCountRow>(sql`
-      WITH updated AS (
-        UPDATE "time_entries"
-        SET
-          "is_billable" = ${isBillable},
-          "updated_at" = ${updatedAt}
-        WHERE "workspace_id" = ${workspaceId}
-          AND "task_id" IN (
-            SELECT "id"
-            FROM "tasks"
-            WHERE "workspace_id" = ${workspaceId}
-              AND "project_id" = ${projectId}
-          )
-        RETURNING 1
-      )
-      SELECT COUNT(*)::integer AS "updatedCount" FROM updated
-    `);
+    const result = await db
+      .update(timeEntries)
+      .set({ isBillable, updatedAt })
+      .from(tasks)
+      .where(
+        and(
+          eq(timeEntries.workspaceId, workspaceId),
+          eq(timeEntries.taskId, tasks.id),
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.projectId, projectId),
+        ),
+      );
 
-    return toNumber(result.rows[0]?.updatedCount);
+    return result.rowCount ?? 0;
   }
 
   private visibleNonAdminProjectCondition(userId: string): SQL {
@@ -657,7 +661,12 @@ export class ProjectsService {
       eq(projects.visibility, 'public'),
       eq(projectAssignments.userId, userId),
     );
-    if (!condition) throw new Error('Failed to build project visibility scope');
+    if (!condition) {
+      throw DomainError.internal(
+        'project_visibility_scope_missing',
+        'Failed to build project visibility scope',
+      );
+    }
     return condition;
   }
 
@@ -782,12 +791,12 @@ export class ProjectsService {
         >`MAX(${timeEntries.startedAt})`,
       })
       .from(timeEntries)
-      .innerJoin(tasksTable, eq(tasksTable.id, timeEntries.taskId))
+      .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
       .where(
         and(
           eq(timeEntries.workspaceId, workspaceId),
-          eq(tasksTable.workspaceId, workspaceId),
-          eq(tasksTable.projectId, projectId),
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.projectId, projectId),
           isNotNull(timeEntries.durationSeconds),
         ),
       );

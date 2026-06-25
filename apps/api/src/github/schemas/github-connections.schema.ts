@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -41,3 +42,5 @@ export const githubConnections = pgTable(
 );
 
 export type GithubConnectionRow = typeof githubConnections.$inferSelect;
+
+export const githubConnectionRowSelection = getTableColumns(githubConnections);

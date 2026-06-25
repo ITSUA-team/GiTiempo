@@ -21,12 +21,13 @@ import {
   POSTGRES_FOREIGN_KEY_VIOLATION,
 } from '../../db/postgres-errors';
 import type { AuthUser } from '../../auth/types/auth-user';
+import { DomainError } from '../../commons/errors/domain-error';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { taskExternalRefs } from '../schemas/task-external-refs.schema';
-import { tasks } from '../schemas/tasks.schema';
+import { taskRowSelection, tasks } from '../schemas/tasks.schema';
 
 export type TaskRow = typeof tasks.$inferSelect;
 type QueryExecutor = Pick<DrizzleDB, 'select' | 'update'>;
@@ -100,7 +101,9 @@ export class TasksService {
           project.defaultBillableForTasks,
       })
       .returning();
-    if (!row) throw new Error('Failed to create task');
+    if (!row) {
+      throw DomainError.internal('task_create_failed', 'Failed to create task');
+    }
     return this.toResponse(row, null);
   }
 
@@ -252,7 +255,7 @@ export class TasksService {
     db: Pick<DrizzleDB, 'select'> = this.db,
   ): Promise<{ task: TaskRow; project: ProjectRow }> {
     const [row] = await db
-      .select()
+      .select(taskRowSelection)
       .from(tasks)
       .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, user.workspaceId)))
       .limit(1);
@@ -387,7 +390,7 @@ export class TasksService {
     taskId: string,
   ): Promise<TaskRow> {
     const [task] = await db
-      .select()
+      .select(taskRowSelection)
       .from(tasks)
       .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
       .limit(1)

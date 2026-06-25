@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { Env } from '../../config/env.validation';
@@ -63,7 +63,7 @@ export class TokenService {
       audience: this.audience,
     });
     if (typeof decoded === 'string') {
-      throw new Error('Unexpected access token payload (string form)');
+      throw new UnauthorizedException('Unauthorized');
     }
     const { sub, email, firebaseUid, workspaceId, role, iss, aud, iat, exp } =
       decoded as Partial<JwtPayload>;
@@ -78,7 +78,7 @@ export class TokenService {
       typeof iat !== 'number' ||
       typeof exp !== 'number'
     ) {
-      throw new Error('Access token payload missing required claims');
+      throw new UnauthorizedException('Unauthorized');
     }
     return { sub, email, firebaseUid, workspaceId, role, iss, aud, iat, exp };
   }
