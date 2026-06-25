@@ -3390,6 +3390,29 @@
                                   "alignItems": "center",
                                   "children": [
                                     {
+                                      "type": "frame",
+                                      "id": "stopRun1",
+                                      "name": "stopTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "$color-brand",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "stopRunIcon1",
+                                          "name": "stopTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "square",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
+                                    {
                                       "type": "text",
                                       "id": "jhosY",
                                       "fill": "#5D2B85",
@@ -3507,6 +3530,29 @@
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "vS2ta",
+                                      "name": "startTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "aX9r2",
+                                          "name": "startTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "QrrEo",
@@ -3681,12 +3727,36 @@
                                   "name": "r3c1",
                                   "width": "fill_container",
                                   "height": "fill_container",
+                                  "gap": 8,
                                   "padding": [
                                     0,
                                     12
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "v1meT",
+                                      "name": "startTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "qA7WY",
+                                          "name": "startTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "6R6pX",
@@ -3795,6 +3865,29 @@
                                   ],
                                   "alignItems": "center",
                                   "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "LHJr4",
+                                      "name": "startTimerRowAction",
+                                      "width": 48,
+                                      "height": 32,
+                                      "fill": "#5D2B85",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "mP4oS",
+                                          "name": "startTimerRowActionIcon",
+                                          "width": 20,
+                                          "height": 20,
+                                          "icon": "play",
+                                          "library": "lucide",
+                                          "fill": "#FFFFFF"
+                                        }
+                                      ]
+                                    },
                                     {
                                       "type": "text",
                                       "id": "HMaIb",
@@ -8750,11 +8843,11 @@
                         },
                         {
                           "type": "frame",
-                          "id": "SbNSt",
+                          "id": "mLUwe",
                           "name": "expand",
                           "width": "fill_container",
-                          "fill": "$color-app-bg",
-                          "stroke": "$color-divider",
+                          "fill": "#F4F4F5",
+                          "stroke": "#EEEEEE",
                           "strokeWidth": {
                             "top": 1
                           },
@@ -8765,8 +8858,9 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "8fqnz",
-                              "fill": "$color-text-dark",
+                              "id": "T2YZl",
+                              "name": "Member settings title",
+                              "fill": "#1A1A1A",
                               "content": "Member settings",
                               "fontFamily": "Inter",
                               "fontSize": 13,
@@ -8774,135 +8868,188 @@
                             },
                             {
                               "type": "frame",
-                              "id": "HAUEF",
-                              "name": "checks",
+                              "id": "T2naQe",
+                              "name": "Assigned projects autocomplete multiselect field",
                               "width": "fill_container",
-                              "gap": 12,
+                              "layout": "vertical",
+                              "gap": 6,
                               "children": [
                                 {
+                                  "type": "text",
+                                  "id": "KtRhu",
+                                  "name": "Assigned projects label",
+                                  "fill": "#1A1A1A",
+                                  "content": "Assigned projects",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
                                   "type": "frame",
-                                  "id": "HsPoK",
-                                  "name": "check1",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
+                                  "id": "QNcVQ",
+                                  "name": "Project autocomplete multiselect input",
+                                  "width": "fill_container",
+                                  "height": 42,
+                                  "fill": "#FFFFFF",
+                                  "cornerRadius": 6,
+                                  "stroke": "#5D2B85",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
                                   "gap": 8,
                                   "padding": [
-                                    8,
-                                    12
+                                    0,
+                                    10
                                   ],
                                   "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "gN1wJ",
-                                      "name": "box1",
-                                      "width": 16,
-                                      "height": 16,
-                                      "fill": "$color-brand",
-                                      "cornerRadius": 4,
-                                      "justifyContent": "center",
+                                      "id": "tzPHL",
+                                      "name": "Selected project chips and search",
+                                      "width": "fill_container",
+                                      "gap": 6,
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "text",
-                                          "id": "hNh6Z",
-                                          "fill": "$color-surface",
-                                          "content": "✓",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 10,
-                                          "fontWeight": "600"
+                                          "type": "frame",
+                                          "id": "CZROh",
+                                          "name": "Project Orion selected chip",
+                                          "fill": "#E8E1F5",
+                                          "cornerRadius": 12,
+                                          "gap": 5,
+                                          "padding": [
+                                            4,
+                                            8
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "WC0lR",
+                                              "name": "Project Orion selected label",
+                                              "fill": "#5D2B85",
+                                              "content": "Project Orion",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "P8FEzU",
+                                              "name": "Project Orion remove",
+                                              "fill": "#5D2B85",
+                                              "content": "×",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "fEm5Q",
+                                          "name": "Workspace Ops selected chip",
+                                          "fill": "#E8E1F5",
+                                          "cornerRadius": 12,
+                                          "gap": 5,
+                                          "padding": [
+                                            4,
+                                            8
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "ejyuB",
+                                              "name": "Workspace Ops selected label",
+                                              "fill": "#5D2B85",
+                                              "content": "Workspace Ops",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "lbM5Q",
+                                              "name": "Workspace Ops remove",
+                                              "fill": "#5D2B85",
+                                              "content": "×",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "jXhct",
+                                          "name": "Project autocomplete search affordance",
+                                          "gap": 5,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "RAOuC",
+                                              "name": "Project search icon",
+                                              "width": 13,
+                                              "height": 13,
+                                              "icon": "search",
+                                              "library": "lucide",
+                                              "fill": "#666666"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "iI0WP",
+                                              "name": "Project search placeholder",
+                                              "fill": "#666666",
+                                              "content": "Search projects...",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 13,
+                                              "fontWeight": "500"
+                                            }
+                                          ]
                                         }
                                       ]
                                     },
                                     {
-                                      "type": "text",
-                                      "id": "S3Bpn",
-                                      "fill": "$color-text-dark",
-                                      "content": "Project Orion",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "500"
+                                      "type": "icon",
+                                      "id": "e9Kn5N",
+                                      "name": "Autocomplete dropdown chevron",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "#666666"
                                     }
                                   ]
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "Fa5O7",
-                                  "name": "check2",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "gap": 8,
-                                  "padding": [
-                                    8,
-                                    12
-                                  ],
+                                  "id": "OmLw0",
+                                  "name": "Autocomplete helper row",
+                                  "width": "fill_container",
+                                  "gap": 6,
                                   "alignItems": "center",
                                   "children": [
                                     {
-                                      "type": "frame",
-                                      "id": "El9Mr",
-                                      "width": 16,
-                                      "height": 16,
-                                      "fill": "$color-surface",
-                                      "cornerRadius": 4,
-                                      "stroke": "$color-divider",
-                                      "strokeWidth": 1,
-                                      "strokeAlignment": "inner"
+                                      "type": "icon",
+                                      "id": "tDZx9",
+                                      "name": "Autocomplete helper icon",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "sparkles",
+                                      "library": "lucide",
+                                      "fill": "#666666"
                                     },
                                     {
                                       "type": "text",
-                                      "id": "VJWIS",
-                                      "fill": "$color-text-dark",
-                                      "content": "Billing API",
+                                      "id": "Rlgma",
+                                      "name": "Autocomplete helper text",
+                                      "fill": "#666666",
+                                      "content": "Type to search active projects, then select multiple results.",
                                       "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "500"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "LZZXt",
-                                  "name": "check3",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "gap": 8,
-                                  "padding": [
-                                    8,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "HXhOs",
-                                      "name": "box3",
-                                      "width": 16,
-                                      "height": 16,
-                                      "fill": "$color-brand",
-                                      "cornerRadius": 4,
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "wTzI4",
-                                          "fill": "$color-surface",
-                                          "content": "✓",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 10,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "jx1Mc",
-                                      "fill": "$color-text-dark",
-                                      "content": "Workspace Ops",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "500"
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 }
@@ -8910,7 +9057,7 @@
                             },
                             {
                               "type": "frame",
-                              "id": "7FdUh",
+                              "id": "tWJmm",
                               "name": "expandActions",
                               "width": "fill_container",
                               "gap": 10,
@@ -8918,7 +9065,7 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "Y5hxe",
+                                  "id": "fJpA7",
                                   "name": "Remove memberButton",
                                   "fill": "#FFFFFF",
                                   "cornerRadius": 6,
@@ -8929,10 +9076,12 @@
                                     8,
                                     14
                                   ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "Ur2hJ",
+                                      "id": "DDvXn",
                                       "name": "Remove memberText",
                                       "fill": "#D32F2F",
                                       "content": "Remove member",
@@ -8944,21 +9093,25 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "6VBWA",
-                                  "fill": "$color-surface",
-                                  "cornerRadius": "$radius-sm",
-                                  "stroke": "$color-divider",
+                                  "id": "sr8Fm",
+                                  "name": "Cancel button",
+                                  "fill": "#FFFFFF",
+                                  "cornerRadius": 6,
+                                  "stroke": "#EEEEEE",
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
                                   "padding": [
                                     8,
                                     14
                                   ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "DT1ak",
-                                      "fill": "$color-text-dark",
+                                      "id": "Qtwsi",
+                                      "name": "Cancel text",
+                                      "fill": "#1A1A1A",
                                       "content": "Cancel",
                                       "fontFamily": "Inter",
                                       "fontSize": 13,
@@ -8968,18 +9121,22 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "gaZc3",
-                                  "fill": "$color-brand",
-                                  "cornerRadius": "$radius-sm",
+                                  "id": "CRmSo",
+                                  "name": "Save changes button",
+                                  "fill": "#5D2B85",
+                                  "cornerRadius": 6,
                                   "padding": [
                                     8,
                                     14
                                   ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "y3sLc",
-                                      "fill": "$color-surface",
+                                      "id": "Re3We",
+                                      "name": "Save changes text",
+                                      "fill": "#FFFFFF",
                                       "content": "Save changes",
                                       "fontFamily": "Inter",
                                       "fontSize": 13,
@@ -10820,16 +10977,17 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "SvnYS",
-                                  "name": "membersSelectWrap",
+                                  "id": "GyDBI",
+                                  "name": "membersAutocompleteWrap",
                                   "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "V98AA",
-                                      "fill": "$color-text-dark",
+                                      "id": "laLnP",
+                                      "name": "Select members label",
+                                      "fill": "#1A1A1A",
                                       "content": "Select members",
                                       "fontFamily": "Inter",
                                       "fontSize": 12,
@@ -10837,38 +10995,140 @@
                                     },
                                     {
                                       "type": "frame",
-                                      "id": "Wmytq",
-                                      "name": "membersSelect",
+                                      "id": "DQWCb",
+                                      "name": "Members autocomplete multiselect",
+                                      "width": "fill_container",
                                       "height": 38,
-                                      "fill": "$color-surface",
+                                      "fill": "#FFFFFF",
                                       "cornerRadius": 6,
-                                      "stroke": "$color-divider",
+                                      "stroke": "#5D2B85",
                                       "strokeWidth": 1,
                                       "strokeAlignment": "inner",
+                                      "gap": 8,
                                       "padding": [
                                         0,
-                                        12
+                                        10
                                       ],
-                                      "justifyContent": "space_between",
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "type": "text",
-                                          "id": "N1myyV",
-                                          "fill": "$color-text-dark",
-                                          "content": "Alexey T. (pm), Nina K. (member)",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 14,
-                                          "fontWeight": "500"
+                                          "type": "frame",
+                                          "id": "yKQgh",
+                                          "name": "Selected member chips and search",
+                                          "width": "fill_container",
+                                          "gap": 6,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "frame",
+                                              "id": "WYuOC",
+                                              "name": "Alexey T. selected chip",
+                                              "fill": "#E8E1F5",
+                                              "cornerRadius": 12,
+                                              "gap": 5,
+                                              "padding": [
+                                                3,
+                                                8
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "d7Skr",
+                                                  "name": "Alexey T. selected label",
+                                                  "fill": "#5D2B85",
+                                                  "content": "Alexey T.",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "600"
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "QApI8",
+                                                  "name": "Alexey T. remove",
+                                                  "fill": "#5D2B85",
+                                                  "content": "×",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "600"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "U55BZ",
+                                              "name": "Nina K. selected chip",
+                                              "fill": "#E8E1F5",
+                                              "cornerRadius": 12,
+                                              "gap": 5,
+                                              "padding": [
+                                                3,
+                                                8
+                                              ],
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "text",
+                                                  "id": "CbOQF",
+                                                  "name": "Nina K. selected label",
+                                                  "fill": "#5D2B85",
+                                                  "content": "Nina K.",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "600"
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "j5Nhx",
+                                                  "name": "Nina K. remove",
+                                                  "fill": "#5D2B85",
+                                                  "content": "×",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 12,
+                                                  "fontWeight": "600"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "type": "frame",
+                                              "id": "z829p",
+                                              "name": "Member autocomplete search affordance",
+                                              "gap": 5,
+                                              "alignItems": "center",
+                                              "children": [
+                                                {
+                                                  "type": "icon",
+                                                  "id": "h1vTz",
+                                                  "name": "Member search icon",
+                                                  "width": 13,
+                                                  "height": 13,
+                                                  "icon": "search",
+                                                  "library": "lucide",
+                                                  "fill": "#666666"
+                                                },
+                                                {
+                                                  "type": "text",
+                                                  "id": "hFoAp",
+                                                  "name": "Member search placeholder",
+                                                  "fill": "#666666",
+                                                  "content": "Search members...",
+                                                  "fontFamily": "Inter",
+                                                  "fontSize": 13,
+                                                  "fontWeight": "500"
+                                                }
+                                              ]
+                                            }
+                                          ]
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "Jp9kK",
-                                          "fill": "$color-text-muted",
-                                          "content": "v",
-                                          "fontFamily": "Inter",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
+                                          "type": "icon",
+                                          "id": "rFmpv",
+                                          "name": "Members autocomplete chevron",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "chevron-down",
+                                          "library": "lucide",
+                                          "fill": "#666666"
                                         }
                                       ]
                                     }
@@ -11380,7 +11640,7 @@
       "name": "Admin Settings",
       "clip": true,
       "width": 1280,
-      "height": 1948,
+      "height": 1841,
       "fill": "$color-surface",
       "layout": "vertical",
       "children": [
@@ -11520,7 +11780,7 @@
           "id": "tzdAb",
           "name": "main",
           "width": "fill_container",
-          "height": 1884,
+          "height": "fill_container",
           "children": [
             {
               "type": "frame",
@@ -11691,7 +11951,7 @@
               "id": "CTUf2",
               "name": "content",
               "width": "fill_container",
-              "height": 1820,
+              "height": "fill_container",
               "fill": "$color-app-bg",
               "layout": "vertical",
               "gap": 24,
@@ -12137,10 +12397,9 @@
                 },
                 {
                   "type": "frame",
-                  "id": "ebpKL",
-                  "name": "githubWorkspacePolicyCard",
+                  "id": "IjVC2",
+                  "name": "GitHub Workspace Access Card",
                   "width": 620,
-                  "height": 1060,
                   "fill": "#FFFFFF",
                   "cornerRadius": 10,
                   "effect": {
@@ -12159,113 +12418,104 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "S05CH3",
-                      "name": "policyHeader",
+                      "id": "GSfdn",
+                      "name": "Card Header",
                       "width": "fill_container",
-                      "height": 68,
                       "layout": "vertical",
                       "gap": 6,
                       "children": [
                         {
-                          "type": "frame",
-                          "id": "s0J3S",
-                          "name": "headerCopy",
+                          "type": "text",
+                          "id": "PcAtt",
+                          "name": "Card Title",
+                          "fill": "#1A1A1A",
+                          "content": "GitHub Workspace Access",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "aOkN4",
+                          "name": "Card Description",
+                          "fill": "#666666",
+                          "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "height": 68,
-                          "layout": "vertical",
-                          "gap": 6,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "EHA7B",
-                              "name": "policyTitle",
-                              "fill": "#1A1A1A",
-                              "content": "GitHub Workspace Access",
-                              "fontFamily": "Inter",
-                              "fontSize": 18,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "SWGU1",
-                              "name": "policyDescription",
-                              "fill": "#52525B",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Choose which GitHub organizations this workspace can use. Members still only see data their connected GitHub account can access.",
-                              "lineHeight": 1.45,
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            }
-                          ]
+                          "content": "Choose which GitHub organizations this workspace can use. Members still only see data their connected GitHub account can access.",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "cczJS",
-                      "name": "allowedOrganizationsSection",
+                      "id": "OIkbQ",
+                      "name": "Allowed Organizations Section",
                       "width": "fill_container",
                       "layout": "vertical",
                       "gap": 12,
                       "children": [
                         {
-                          "type": "text",
-                          "id": "OEgWA",
-                          "name": "allowedOrganizationsTitle",
-                          "fill": "#1A1A1A",
-                          "content": "Allowed organizations",
-                          "fontFamily": "Inter",
-                          "fontSize": 16,
-                          "fontWeight": "600"
-                        },
-                        {
-                          "type": "text",
-                          "id": "xGAy0",
-                          "name": "organizationsHelper",
-                          "fill": "#52525B",
-                          "textGrowth": "fixed-width",
+                          "type": "frame",
+                          "id": "QhmkM",
+                          "name": "Allowed Header",
                           "width": "fill_container",
-                          "content": "Workspace members can use only the GitHub organizations listed here when working inside this workspace.",
-                          "lineHeight": 1.45,
-                          "fontFamily": "Inter",
-                          "fontSize": 13,
-                          "fontWeight": "normal"
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "z00fRH",
+                              "name": "Allowed Title",
+                              "fill": "#1A1A1A",
+                              "content": "Allowed organizations",
+                              "fontFamily": "Inter",
+                              "fontSize": 16,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "M3B2Ea",
+                              "name": "Allowed Description",
+                              "fill": "#666666",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Workspace members can use only the GitHub organizations listed here when working inside this workspace.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
                           "type": "frame",
-                          "id": "KsxJR",
-                          "name": "ITSUA-teamRow",
+                          "id": "G6ujxx",
+                          "name": "Allowed Row ITSUA-team",
                           "width": "fill_container",
-                          "height": 63,
-                          "fill": "#FAFAFA",
+                          "fill": "#F4F4F5",
                           "cornerRadius": 8,
-                          "stroke": "#ECECF1",
+                          "stroke": "#EEEEEE",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": 10,
-                          "padding": [
-                            12,
-                            14
-                          ],
+                          "gap": 16,
+                          "padding": 14,
                           "justifyContent": "space_between",
                           "alignItems": "center",
                           "children": [
                             {
                               "type": "frame",
-                              "id": "b0UKqT",
-                              "name": "ITSUA-teamMeta",
+                              "id": "f1YdMJ",
+                              "name": "Row Text",
                               "width": "fill_container",
-                              "height": 36,
                               "layout": "vertical",
                               "gap": 2,
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "ttcgM",
-                                  "name": "ITSUA-teamName",
-                                  "fill": "#1F2937",
+                                  "id": "mzZkB",
+                                  "name": "Organization Login",
+                                  "fill": "#1A1A1A",
                                   "content": "ITSUA-team",
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
@@ -12273,9 +12523,9 @@
                                 },
                                 {
                                   "type": "text",
-                                  "id": "r8ylgr",
-                                  "name": "ITSUA-teamMetaCopy",
-                                  "fill": "#71717A",
+                                  "id": "hGTAy",
+                                  "name": "Organization Helper",
+                                  "fill": "#666666",
                                   "content": "Allowed for this workspace",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
@@ -12285,36 +12535,29 @@
                             },
                             {
                               "type": "frame",
-                              "id": "br1eH",
-                              "name": "ITSUA-teamActions",
+                              "id": "SvfGM",
+                              "name": "Remove Button",
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "frame",
-                                  "id": "pgOm4",
-                                  "name": "ITSUA-teamRemoveButton",
-                                  "fill": "#FFFFFF",
-                                  "cornerRadius": 6,
-                                  "stroke": "#E5E7EB",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "padding": [
-                                    8,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "CIYGk",
-                                      "name": "ITSUA-teamRemoveLabel",
-                                      "fill": "#374151",
-                                      "content": "Remove",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "500"
-                                    }
-                                  ]
+                                  "type": "text",
+                                  "id": "xnxoR",
+                                  "name": "Remove Label",
+                                  "fill": "#1A1A1A",
+                                  "content": "Remove",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
                                 }
                               ]
                             }
@@ -12322,46 +12565,42 @@
                         },
                         {
                           "type": "frame",
-                          "id": "qz45D",
-                          "name": "octo-orgRow",
+                          "id": "a7wLr",
+                          "name": "Allowed Row Client-Delivery",
                           "width": "fill_container",
-                          "height": 63,
-                          "fill": "#FFFFFF",
+                          "fill": "#F4F4F5",
                           "cornerRadius": 8,
-                          "stroke": "#ECECF1",
+                          "stroke": "#EEEEEE",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
-                          "gap": 10,
-                          "padding": [
-                            12,
-                            14
-                          ],
+                          "gap": 16,
+                          "padding": 14,
                           "justifyContent": "space_between",
                           "alignItems": "center",
                           "children": [
                             {
                               "type": "frame",
-                              "id": "iCIVZ",
-                              "name": "octo-orgMetaBox",
+                              "id": "OtAtI",
+                              "name": "Row Text",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 2,
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "fxDBu",
-                                  "name": "octo-orgName",
-                                  "fill": "#1F2937",
-                                  "content": "octo-org",
+                                  "id": "b791a6",
+                                  "name": "Organization Login",
+                                  "fill": "#1A1A1A",
+                                  "content": "Client-Delivery",
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "600"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "xLkl8",
-                                  "name": "octo-orgMetaCopy",
-                                  "fill": "#71717A",
+                                  "id": "eqPGV",
+                                  "name": "Organization Helper",
+                                  "fill": "#666666",
                                   "content": "Allowed for this workspace",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
@@ -12371,34 +12610,374 @@
                             },
                             {
                               "type": "frame",
-                              "id": "Pkhcj",
-                              "name": "ITSUA-teamActions",
+                              "id": "WIRAG",
+                              "name": "Remove Button",
+                              "fill": "#FFFFFF",
+                              "cornerRadius": 6,
+                              "stroke": "#EEEEEE",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
+                                  "type": "text",
+                                  "id": "ywVTx",
+                                  "name": "Remove Label",
+                                  "fill": "#1A1A1A",
+                                  "content": "Remove",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UYDuc",
+                      "name": "GitHub App Access Section",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Nuywm",
+                          "name": "Recovery Header",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "GrTDf",
+                              "name": "Recovery Title",
+                              "fill": "#1A1A1A",
+                              "content": "GitHub App access",
+                              "fontFamily": "Inter",
+                              "fontSize": 16,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "SKM3o",
+                              "name": "Recovery Description",
+                              "fill": "#666666",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Complete these steps when GiTiempo cannot validate the organization yet because GitHub access, app approval, or the current connection still needs attention.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "SwN4G",
+                          "name": "Install GitHub App for organization",
+                          "width": "fill_container",
+                          "fill": "#F4F4F5",
+                          "cornerRadius": 8,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "KvN3A",
+                              "name": "Step Title",
+                              "fill": "#1A1A1A",
+                              "content": "Install GitHub App for organization",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Bt1lK",
+                              "name": "Step Body",
+                              "width": "fill_container",
+                              "gap": 16,
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mpXfH",
+                                  "name": "Step Description",
+                                  "fill": "#666666",
+                                  "textGrowth": "fixed-width",
+                                  "width": 360,
+                                  "content": "GiTiempo is already installed for this organization. Continue to the organization access review step.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                },
+                                {
                                   "type": "frame",
-                                  "id": "XDg02",
-                                  "name": "ITSUA-teamRemoveButton",
+                                  "id": "eyKpm",
+                                  "name": "Step Action",
                                   "fill": "#FFFFFF",
                                   "cornerRadius": 6,
-                                  "stroke": "#E5E7EB",
+                                  "stroke": "#EEEEEE",
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
                                   "padding": [
-                                    8,
-                                    12
+                                    10,
+                                    16
                                   ],
+                                  "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "j40rV",
-                                      "name": "ITSUA-teamRemoveLabel",
-                                      "fill": "#374151",
-                                      "content": "Remove",
+                                      "id": "k8Ait8",
+                                      "name": "Step Action Label",
+                                      "fill": "#1A1A1A",
+                                      "content": "Open install",
                                       "fontFamily": "Inter",
-                                      "fontSize": 13,
-                                      "fontWeight": "500"
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "QIpJl",
+                          "name": "Approve or unblock organization access",
+                          "width": "fill_container",
+                          "fill": "#F4F4F5",
+                          "cornerRadius": 8,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "S1iRN",
+                              "name": "Step Title",
+                              "fill": "#1A1A1A",
+                              "content": "Approve or unblock organization access",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wsos7",
+                              "name": "Step Body",
+                              "width": "fill_container",
+                              "gap": 16,
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "f1Ir6",
+                                  "name": "Step Description",
+                                  "fill": "#666666",
+                                  "textGrowth": "fixed-width",
+                                  "width": 360,
+                                  "content": "Open organization settings and unblock or approve the installed GiTiempo app before retrying.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "nAqxL",
+                                  "name": "Step Action",
+                                  "fill": "#FFFFFF",
+                                  "cornerRadius": 6,
+                                  "stroke": "#EEEEEE",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    10,
+                                    16
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "z8nDW",
+                                      "name": "Step Action Label",
+                                      "fill": "#1A1A1A",
+                                      "content": "Review GitHub",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "H4YNS",
+                          "name": "Reconnect your GitHub account",
+                          "width": "fill_container",
+                          "fill": "#F4F4F5",
+                          "cornerRadius": 8,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xMYPp",
+                              "name": "Step Title",
+                              "fill": "#1A1A1A",
+                              "content": "Reconnect your GitHub account",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "k6Pwn",
+                              "name": "Step Body",
+                              "width": "fill_container",
+                              "gap": 16,
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "IXxN1",
+                                  "name": "Step Description",
+                                  "fill": "#666666",
+                                  "textGrowth": "fixed-width",
+                                  "width": 360,
+                                  "content": "Reconnect after GitHub-side approval so GiTiempo gets a fresh authorization.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Ml0nD",
+                                  "name": "Step Action",
+                                  "fill": "#FFFFFF",
+                                  "cornerRadius": 6,
+                                  "stroke": "#EEEEEE",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    10,
+                                    16
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "K3JCiv",
+                                      "name": "Step Action Label",
+                                      "fill": "#1A1A1A",
+                                      "content": "Reconnect",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kZ6k3",
+                          "name": "Retry workspace allow-list check",
+                          "width": "fill_container",
+                          "fill": "#F4F4F5",
+                          "cornerRadius": 8,
+                          "stroke": "#EEEEEE",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "RaGHK",
+                              "name": "Step Title",
+                              "fill": "#1A1A1A",
+                              "content": "Retry workspace allow-list check",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "t37Aw",
+                              "name": "Step Body",
+                              "width": "fill_container",
+                              "gap": 16,
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "u3DsOf",
+                                  "name": "Step Description",
+                                  "fill": "#666666",
+                                  "textGrowth": "fixed-width",
+                                  "width": 360,
+                                  "content": "Return to this Settings card and retry the same organization login after you finish the earlier steps.",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "b2phQl",
+                                  "name": "Step Action",
+                                  "fill": "#5D2B85",
+                                  "cornerRadius": 6,
+                                  "padding": [
+                                    10,
+                                    16
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "pYB2D",
+                                      "name": "Step Action Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Retry check",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 14,
+                                      "fontWeight": "600"
                                     }
                                   ]
                                 }
@@ -12410,321 +12989,77 @@
                     },
                     {
                       "type": "frame",
-                      "id": "Cc7dt",
-                      "name": "GitHub App Access Recovery",
-                      "width": 580,
-                      "layout": "vertical",
-                      "gap": 12,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "Ueob6",
-                          "name": "Recovery Header",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 6,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "B4c34E",
-                              "name": "Recovery Title",
-                              "fill": "#111827",
-                              "content": "GitHub App access",
-                              "fontFamily": "Inter",
-                              "fontSize": 17,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "TmfC9",
-                              "name": "Recovery Copy",
-                              "fill": "#6B7280",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Complete these steps when GitHub says the organization is not visible or blocks the GiTiempo app.",
-                              "lineHeight": 1.4,
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "OVBss",
-                          "name": "Install Recovery Card",
-                          "width": "fill_container",
-                          "fill": "#FFFFFF",
-                          "cornerRadius": 8,
-                          "stroke": "#E5E7EB",
-                          "padding": 12,
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "QQMnf",
-                              "name": "Install Copy",
-                              "fill": "#111827",
-                              "textGrowth": "fixed-width",
-                              "width": 388,
-                              "content": "Choose the organization, install GiTiempo, and select the required repositories.",
-                              "lineHeight": 1.4,
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "GrXmf",
-                              "name": "Install Action",
-                              "fill": "#EEE8FF",
-                              "cornerRadius": 6,
-                              "padding": [
-                                10,
-                                16
-                              ],
-                              "justifyContent": "center",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "YwzZz",
-                                  "name": "Install Label",
-                                  "fill": "#5B21B6",
-                                  "content": "Open install",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "pyICW",
-                          "name": "Approve Recovery Card",
-                          "width": "fill_container",
-                          "fill": "#FFFFFF",
-                          "cornerRadius": 8,
-                          "stroke": "#E5E7EB",
-                          "padding": 12,
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "s5Dr0i",
-                              "name": "Approve Copy",
-                              "fill": "#111827",
-                              "textGrowth": "fixed-width",
-                              "width": 388,
-                              "content": "Open organization settings and unblock or approve the installed GiTiempo app before retrying.",
-                              "lineHeight": 1.4,
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "mMUSw",
-                              "name": "Approve Action",
-                              "fill": "#EEE8FF",
-                              "cornerRadius": 6,
-                              "padding": [
-                                10,
-                                16
-                              ],
-                              "justifyContent": "center",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "UWtTx",
-                                  "name": "Approve Label",
-                                  "fill": "#5B21B6",
-                                  "content": "Review GitHub",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "wxddI",
-                          "name": "Reconnect Recovery Card",
-                          "width": "fill_container",
-                          "fill": "#FFFFFF",
-                          "cornerRadius": 8,
-                          "stroke": "#E5E7EB",
-                          "padding": 12,
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "DTJHi",
-                              "name": "Reconnect Copy",
-                              "fill": "#111827",
-                              "textGrowth": "fixed-width",
-                              "width": 388,
-                              "content": "Reconnect after GitHub-side approval so GiTiempo gets a fresh authorization.",
-                              "lineHeight": 1.4,
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "ikWzA",
-                              "name": "Reconnect Action",
-                              "fill": "#EEE8FF",
-                              "cornerRadius": 6,
-                              "padding": [
-                                10,
-                                16
-                              ],
-                              "justifyContent": "center",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "jf8Eq",
-                                  "name": "Reconnect Label",
-                                  "fill": "#5B21B6",
-                                  "content": "Reconnect",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "I5t3N",
-                          "name": "Retry Recovery Card",
-                          "width": "fill_container",
-                          "fill": "#FFFFFF",
-                          "cornerRadius": 8,
-                          "stroke": "#E5E7EB",
-                          "padding": 12,
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "ctjED",
-                              "name": "Retry Copy",
-                              "fill": "#111827",
-                              "textGrowth": "fixed-width",
-                              "width": 388,
-                              "content": "Return to this Settings card and retry the same organization login after you finish the earlier steps.",
-                              "lineHeight": 1.4,
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "pq5iR",
-                              "name": "Retry Action",
-                              "fill": "#6D28D9",
-                              "cornerRadius": 6,
-                              "padding": [
-                                10,
-                                16
-                              ],
-                              "justifyContent": "center",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "V2rM9",
-                                  "name": "Retry Label",
-                                  "fill": "#FFFFFF",
-                                  "content": "Retry check",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 13,
-                                  "fontWeight": "600"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "SHYDR",
-                      "name": "addOrganizationSection",
+                      "id": "L1WYci",
+                      "name": "Add Organization Section",
                       "width": "fill_container",
-                      "height": 143,
                       "layout": "vertical",
                       "gap": 10,
                       "children": [
                         {
-                          "type": "text",
-                          "id": "uP7l7",
-                          "name": "addOrganizationTitle",
-                          "fill": "#1A1A1A",
-                          "content": "Add organization",
-                          "fontFamily": "Inter",
-                          "fontSize": 16,
-                          "fontWeight": "600"
-                        },
-                        {
-                          "type": "text",
-                          "id": "JXIx1",
-                          "name": "addOrganizationDescription",
-                          "fill": "#52525B",
-                          "textGrowth": "fixed-width",
+                          "type": "frame",
+                          "id": "xFt8H",
+                          "name": "Add Header",
                           "width": "fill_container",
-                          "content": "Add another GitHub organization to the workspace allow-list.",
-                          "lineHeight": 1.45,
-                          "fontFamily": "Inter",
-                          "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "pV38i",
-                          "name": "addOrganizationHint",
-                          "fill": "#71717A",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "Use the GitHub organization login, for example `octo-org`.",
-                          "fontFamily": "Inter",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "H3cpX",
+                              "name": "Add Title",
+                              "fill": "#1A1A1A",
+                              "content": "Add organization",
+                              "fontFamily": "Inter",
+                              "fontSize": 16,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "gnRMG",
+                              "name": "Add Description",
+                              "fill": "#666666",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Add another GitHub organization to the workspace allow-list.",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "yVFf7",
+                              "name": "Add Hint",
+                              "fill": "#666666",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Use the GitHub organization login, for example octo-org.",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
                           "type": "frame",
-                          "id": "WIWAu",
-                          "name": "addOrganizationRow",
+                          "id": "a1yqB",
+                          "name": "Add Form Row",
                           "width": "fill_container",
-                          "height": 60,
                           "gap": 12,
                           "alignItems": "end",
                           "children": [
                             {
                               "type": "frame",
-                              "id": "w71z9",
-                              "name": "organizationLoginField",
+                              "id": "inirU",
+                              "name": "Organization Login Field",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 6,
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "pjdTI",
-                                  "name": "organizationLoginLabel",
-                                  "fill": "#3F3F46",
+                                  "id": "X3XRR",
+                                  "name": "Field Label",
+                                  "fill": "#1A1A1A",
                                   "content": "Organization login",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
@@ -12732,51 +13067,64 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "FQofo",
-                                  "name": "organizationLoginInput",
+                                  "id": "D1wkQ",
+                                  "name": "Field Input",
                                   "width": "fill_container",
                                   "height": 38,
                                   "fill": "#FFFFFF",
-                                  "cornerRadius": 8,
-                                  "stroke": "#D4D4D8",
+                                  "cornerRadius": 6,
+                                  "stroke": "#D32F2F",
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
                                   "padding": [
-                                    10,
+                                    0,
                                     12
                                   ],
                                   "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "B6KEI3",
-                                      "name": "organizationLoginValue",
-                                      "fill": "#18181B",
-                                      "content": "octo-org",
+                                      "id": "oeebf",
+                                      "name": "Field Value",
+                                      "fill": "#1A1A1A",
+                                      "content": "My-test-org-for-clock",
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
-                                      "fontWeight": "normal"
+                                      "fontWeight": "500"
                                     }
                                   ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "LJoFk",
+                                  "name": "Field Error",
+                                  "fill": "#D32F2F",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "GitHub organization blocks this GitHub App",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "EQjcK",
-                              "name": "addOrganizationButton",
+                              "id": "yW9D2",
+                              "name": "Add Button",
                               "fill": "#5D2B85",
-                              "cornerRadius": 8,
+                              "cornerRadius": 6,
                               "padding": [
                                 10,
                                 16
                               ],
+                              "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "VU6Z6",
-                                  "name": "addOrganizationButtonLabel",
+                                  "id": "D7zqN",
+                                  "name": "Add Button Label",
                                   "fill": "#FFFFFF",
                                   "content": "Add organization",
                                   "fontFamily": "Inter",
@@ -27365,7 +27713,6 @@
               "id": "MRaQW",
               "name": "Registration panel",
               "width": 500,
-              "height": 703,
               "fill": "$color-surface",
               "cornerRadius": 10,
               "stroke": "$color-divider",
@@ -27417,6 +27764,44 @@
                       "fontFamily": "$font-sans",
                       "fontSize": 14,
                       "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Y21YAm",
+                  "name": "Contract notice",
+                  "width": "fill_container",
+                  "fill": "$color-status-warn-bg",
+                  "cornerRadius": 6,
+                  "gap": 10,
+                  "padding": [
+                    12,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "gm4e4",
+                      "name": "Notice icon",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "shield-alert",
+                      "library": "lucide",
+                      "fill": "$color-status-warn-text"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WlmgI",
+                      "name": "Notice copy",
+                      "fill": "$color-status-warn-text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Registration requires the approved backend contract before implementation.",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
                     }
                   ]
                 },
@@ -27882,7 +28267,6 @@
           "id": "hyAoP",
           "name": "Mobile form area",
           "width": "fill_container",
-          "height": 530,
           "fill": "$color-app-bg",
           "layout": "vertical",
           "gap": 18,
@@ -27891,6 +28275,45 @@
             20
           ],
           "children": [
+            {
+              "type": "frame",
+              "id": "Aoygr",
+              "name": "Mobile contract notice",
+              "width": "fill_container",
+              "fill": "$color-status-warn-bg",
+              "cornerRadius": 6,
+              "gap": 8,
+              "padding": [
+                10,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "nambu",
+                  "name": "Mobile notice icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "shield-alert",
+                  "library": "lucide",
+                  "fill": "$color-status-warn-text"
+                },
+                {
+                  "type": "text",
+                  "id": "QyVH9",
+                  "name": "Mobile notice copy",
+                  "fill": "$color-status-warn-text",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Requires approved registration API support.",
+                  "lineHeight": 1.35,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
             {
               "type": "frame",
               "id": "D7P5E",
