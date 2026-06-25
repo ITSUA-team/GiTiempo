@@ -9,7 +9,6 @@ import { computed, ref, watch } from "vue";
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
 import ProfileGithubConnectionCard from "@/components/profile/ProfileGithubConnectionCard.vue";
 import ProfileLoadingState from "@/components/profile/ProfileLoadingState.vue";
-import { useProfileGithubConnection } from "@/composables/profile/useProfileGithubConnection";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "primevue/usetoast";
 
@@ -20,17 +19,6 @@ const appToast = createAppToast(toast);
 const displayNameDraft = ref(authStore.profile?.displayName ?? "");
 const displayNameErrorMessage = ref<string | null>(null);
 const isSavingProfile = ref(false);
-
-const {
-  connect,
-  connection,
-  isConnecting,
-  isDisconnecting,
-  refreshConnectionStatus,
-  requestDisconnect,
-  requestErrorMessage,
-  state: githubConnectionState,
-} = useProfileGithubConnection();
 
 const persistedDisplayName = computed(() => authStore.profile?.displayName ?? "");
 const isProfileDirty = computed(
@@ -191,16 +179,7 @@ async function handleSaveProfile(): Promise<void> {
         </div>
       </SurfaceCard>
 
-      <ProfileGithubConnectionCard
-        :is-connecting="isConnecting"
-        :is-disconnecting="isDisconnecting"
-        :request-error-message="requestErrorMessage"
-        :status="githubConnectionState"
-        :value="connection"
-        @connect="connect"
-        @disconnect="requestDisconnect"
-        @refresh="refreshConnectionStatus"
-      />
+      <ProfileGithubConnectionCard />
     </div>
   </section>
 </template>
