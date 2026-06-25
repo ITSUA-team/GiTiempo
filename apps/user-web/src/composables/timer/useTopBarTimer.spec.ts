@@ -694,6 +694,13 @@ describe('useTopBarTimer', () => {
     topBarTimer.setSelectedProjectId('project-1');
     await flushPromises();
 
+    expect(githubClient.listOwners).not.toHaveBeenCalled();
+    expect(githubClient.listRepositoryIssues).not.toHaveBeenCalled();
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
+
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    await flushPromises();
+
     expect(githubClient.listOwners).toHaveBeenCalledWith({ type: 'all' });
     expect(githubClient.listRepositoryIssues).toHaveBeenCalledWith(
       'octo',
@@ -728,6 +735,46 @@ describe('useTopBarTimer', () => {
     expect(client.startTimer).not.toHaveBeenCalled();
     expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
     expect(topBarTimer.isDialogOpen.value).toBe(true);
+  });
+
+  it('clears GitHub issue proposals when leaving New task selection', async () => {
+    const client = createClientMock();
+    const githubClient = createGitHubClientMock();
+
+    client.listVisibleProjects.mockResolvedValue([
+      createProject('project-1', 'octo/repo', true, false, 'github'),
+    ]);
+    client.listProjectTasks.mockResolvedValue([
+      createTask('task-1', 'project-1', 'Improve reports filters'),
+    ]);
+    githubClient.listRepositoryIssues.mockResolvedValueOnce(
+      createGitHubIssueResponse([createGitHubIssue()]),
+    );
+
+    const mounted = mountTopBarTimer({ client, githubClient });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    await flushPromises();
+
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([
+      expect.objectContaining({ title: 'Write release checklist' }),
+    ]);
+
+    topBarTimer.setSelectedTaskId('task-1');
+
+    expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
+    expect(topBarTimer.gitHubProposalErrorMessage.value).toBeNull();
+    expect(topBarTimer.gitHubIssueSuggestionAvailability.value).toBe(
+      GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+    );
   });
 
   it('keeps GitHub issue proposals out of manual projects', async () => {
@@ -782,6 +829,9 @@ describe('useTopBarTimer', () => {
     topBarTimer.setSelectedProjectId('project-1');
     await flushPromises();
 
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    await flushPromises();
+
     expect(topBarTimer.gitHubProposalErrorMessage.value).toBe(
       'GitHub connection required',
     );
@@ -826,6 +876,11 @@ describe('useTopBarTimer', () => {
     await flushPromises();
     await topBarTimer.openDialog();
     topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    expect(githubClient.listOwners).not.toHaveBeenCalled();
+
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
     await flushPromises();
 
     expect(githubClient.listOwners).toHaveBeenCalledWith({ type: 'all' });
@@ -875,6 +930,9 @@ describe('useTopBarTimer', () => {
     topBarTimer.setSelectedProjectId('project-1');
     await flushPromises();
 
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    await flushPromises();
+
     expect(topBarTimer.gitHubIssueProposals.value).toEqual([]);
   });
 
@@ -918,11 +976,17 @@ describe('useTopBarTimer', () => {
     topBarTimer.setSelectedProjectId('project-1');
     await flushPromises();
 
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
+    await flushPromises();
+
     expect(topBarTimer.gitHubIssueProposals.value).toEqual([
       expect.objectContaining({ title: 'Write release checklist' }),
     ]);
 
     topBarTimer.setSelectedProjectId('project-2');
+    await flushPromises();
+
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
     await flushPromises();
 
     expect(githubClient.listRepositoryIssues).toHaveBeenCalledTimes(1);
@@ -958,6 +1022,9 @@ describe('useTopBarTimer', () => {
     await flushPromises();
     await topBarTimer.openDialog();
     topBarTimer.setSelectedProjectId('project-1');
+    await flushPromises();
+
+    topBarTimer.setSelectedTaskId(TOP_BAR_TIMER_NEW_TASK_ID);
     await flushPromises();
 
     expect(topBarTimer.isLoadingGitHubTaskProposals.value).toBe(true);

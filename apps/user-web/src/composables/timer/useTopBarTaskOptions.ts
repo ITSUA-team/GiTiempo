@@ -123,6 +123,16 @@ export function useTopBarTaskOptions({
     }
   }
 
+  function clearGitHubIssueProposals(): void {
+    gitHubProposalRequestId += 1;
+    isLoadingGitHubTaskProposals.value = false;
+    picker.setGitHubIssueProposals([]);
+    picker.setGitHubProposalError(null);
+    picker.setGitHubIssueSuggestionAvailability(
+      GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
+    );
+  }
+
   async function loadGitHubIssueProposalsForProject(
     project: ProjectResponse | null,
   ): Promise<TopBarGitHubTaskProposal[]> {
@@ -130,12 +140,7 @@ export function useTopBarTaskOptions({
     const repository = readGitHubRepositoryContext(project);
 
     if (!repository) {
-      isLoadingGitHubTaskProposals.value = false;
-      picker.setGitHubIssueProposals([]);
-      picker.setGitHubProposalError(null);
-      picker.setGitHubIssueSuggestionAvailability(
-        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
-      );
+      clearGitHubIssueProposals();
       return [];
     }
 
@@ -227,6 +232,7 @@ export function useTopBarTaskOptions({
   }
 
   return {
+    clearGitHubIssueProposals,
     ensureProjectsLoaded,
     isLoadingGitHubTaskProposals,
     isLoadingProjects,

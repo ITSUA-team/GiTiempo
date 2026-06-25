@@ -11,7 +11,6 @@ import {
   createDefaultGitHubBrowsingClient,
   createDefaultTimeEntriesClient,
 } from '@/config/clients';
-import { GITHUB_ISSUE_SUGGESTION_AVAILABILITY } from '@/lib/github-issue-task-suggestions';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
 import {
   isRunningTimer,
@@ -215,12 +214,10 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
       if (picker.selectedProjectId.value) {
         await taskOptions.loadTasksForProject(picker.selectedProjectId.value);
-        await loadGitHubIssueProposalsForSelectedProject(
-          picker.selectedProjectId.value,
-        );
+        await refreshGitHubIssueProposalsForSelection();
       } else {
         picker.setTasks([]);
-        picker.setGitHubIssueProposals([]);
+        clearGitHubIssueProposals();
       }
     } catch (error) {
       appToast.showErrorToast({
@@ -248,11 +245,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
     if (shouldClearSelectedTask) {
       picker.setSelectedTaskId(null);
-      picker.setGitHubIssueProposals([]);
-      picker.setGitHubProposalError(null);
-      picker.setGitHubIssueSuggestionAvailability(
-        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
-      );
+      clearGitHubIssueProposals();
     }
   }
 
@@ -268,6 +261,13 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     }
 
     picker.setSelectedTaskId(taskId);
+
+    if (taskId === TOP_BAR_TIMER_NEW_TASK_ID) {
+      void refreshGitHubIssueProposalsForSelection();
+      return;
+    }
+
+    clearGitHubIssueProposals();
   }
 
   function setSelectedDescription(description: string): void {
@@ -397,6 +397,22 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     await taskOptions.loadGitHubIssueProposalsForProject(project);
   }
 
+  async function refreshGitHubIssueProposalsForSelection(): Promise<void> {
+    if (
+      picker.selectedTaskId.value !== TOP_BAR_TIMER_NEW_TASK_ID ||
+      !picker.selectedProjectId.value
+    ) {
+      clearGitHubIssueProposals();
+      return;
+    }
+
+    await loadGitHubIssueProposalsForSelectedProject(picker.selectedProjectId.value);
+  }
+
+  function clearGitHubIssueProposals(): void {
+    taskOptions.clearGitHubIssueProposals();
+  }
+
   watch(picker.selectedProjectId, async (nextProjectId, previousProjectId) => {
     if (!picker.isDialogOpen.value) {
       return;
@@ -405,11 +421,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     if (!nextProjectId) {
       picker.setTasks([]);
       picker.setTasksError(null);
-      picker.setGitHubIssueProposals([]);
-      picker.setGitHubProposalError(null);
-      picker.setGitHubIssueSuggestionAvailability(
-        GITHUB_ISSUE_SUGGESTION_AVAILABILITY.AVAILABLE,
-      );
+      clearGitHubIssueProposals();
       picker.setSelectedTaskId(null);
       return;
     }
@@ -420,7 +432,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
     try {
       await taskOptions.loadTasksForProject(nextProjectId);
-      await loadGitHubIssueProposalsForSelectedProject(nextProjectId);
+      await refreshGitHubIssueProposalsForSelection();
     } catch (error) {
       appToast.showErrorToast({
         detail: 'Refresh and try again.',
