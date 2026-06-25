@@ -510,10 +510,13 @@ describe("TimeEntriesView", () => {
     expect(wrapper.find('[data-testid="time-entries-loading-filters"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="time-entries-loading-groups"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="time-entries-loading-day"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-testid="time-entries-loading-entry-row"]')).toHaveLength(2);
     expect(wrapper.find('[data-testid="time-entries-loading-pagination"]').exists()).toBe(true);
     expect(wrapper.findAll('[data-testid="time-entries-skeleton"]').length).toBeGreaterThan(10);
     expect(wrapper.findAll('[data-testid="time-entries-skeleton"]').length).toBeLessThanOrEqual(20);
     expect(wrapper.find('[data-testid="date-range-filter"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="time-entries-loading-desktop-table"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="time-entries-loading-mobile-card"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="time-entries-groups"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain("Loading your time entries.");
   });

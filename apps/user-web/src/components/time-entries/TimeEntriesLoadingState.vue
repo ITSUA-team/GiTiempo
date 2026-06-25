@@ -1,6 +1,20 @@
 <script setup lang="ts">
 import Skeleton from "primevue/skeleton";
 import { SurfaceCard } from "@gitiempo/web-shared";
+
+const filterSkeletons = ["7rem", "4.5rem", "3rem"] as const;
+const groupSkeletons = [
+  {
+    headingWidth: "10rem",
+    primaryWidth: "70%",
+    secondaryWidth: "82%",
+  },
+  {
+    headingWidth: "11rem",
+    primaryWidth: "62%",
+    secondaryWidth: "76%",
+  },
+] as const;
 </script>
 
 <template>
@@ -14,7 +28,7 @@ import { SurfaceCard } from "@gitiempo/web-shared";
       padding-class="p-4"
     >
       <div
-        v-for="width in ['7rem', '4.5rem', '3rem']"
+        v-for="width in filterSkeletons"
         :key="width"
         class="flex flex-col gap-1.5"
       >
@@ -31,14 +45,14 @@ import { SurfaceCard } from "@gitiempo/web-shared";
       data-testid="time-entries-loading-groups"
     >
       <section
-        v-for="groupIndex in 2"
-        :key="groupIndex"
+        v-for="group in groupSkeletons"
+        :key="group.headingWidth"
         class="flex flex-col gap-3"
         data-testid="time-entries-loading-day"
       >
         <div class="flex items-center justify-between gap-3">
           <Skeleton
-            :width="groupIndex === 1 ? '10rem' : '11rem'"
+            :width="group.headingWidth"
             height="1.25rem"
           />
           <Skeleton
@@ -52,17 +66,20 @@ import { SurfaceCard } from "@gitiempo/web-shared";
           body-class="flex flex-col gap-3"
           padding-class="p-3 sm:p-4"
         >
-          <Skeleton
-            :width="groupIndex === 1 ? '70%' : '62%'"
-            height="1rem"
-          />
-          <Skeleton
-            height="3.25rem"
-          />
-          <Skeleton
-            :width="groupIndex === 1 ? '82%' : '76%'"
-            height="3.25rem"
-          />
+          <div
+            class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px_96px] sm:items-center"
+            data-testid="time-entries-loading-entry-row"
+          >
+            <Skeleton
+              :width="group.primaryWidth"
+              height="1rem"
+            />
+            <Skeleton height="3.25rem" />
+            <Skeleton
+              :width="group.secondaryWidth"
+              height="3.25rem"
+            />
+          </div>
         </SurfaceCard>
       </section>
     </div>
