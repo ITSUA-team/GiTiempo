@@ -8,8 +8,14 @@ import type {
 } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
-import { workspaceSettings } from '../schemas/workspace-settings.schema';
-import { workspaces } from '../schemas/workspaces.schema';
+import {
+  workspaceSettings,
+  workspaceSettingsRowSelection,
+} from '../schemas/workspace-settings.schema';
+import {
+  workspaceRowSelection,
+  workspaces,
+} from '../schemas/workspaces.schema';
 
 type WorkspaceRow = typeof workspaces.$inferSelect;
 type WorkspaceSettingsRow = typeof workspaceSettings.$inferSelect;
@@ -66,7 +72,7 @@ export class WorkspacesService {
 
   private async findWorkspace(workspaceId: string): Promise<WorkspaceRow> {
     const [row] = await this.db
-      .select()
+      .select(workspaceRowSelection)
       .from(workspaces)
       .where(eq(workspaces.id, workspaceId))
       .limit(1);
@@ -78,7 +84,7 @@ export class WorkspacesService {
     workspaceId: string,
   ): Promise<WorkspaceSettingsRow> {
     const [row] = await this.db
-      .select()
+      .select(workspaceSettingsRowSelection)
       .from(workspaceSettings)
       .where(eq(workspaceSettings.workspaceId, workspaceId))
       .limit(1);
