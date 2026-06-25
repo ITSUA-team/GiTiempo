@@ -153,13 +153,19 @@ const isDeletingDialogEntry = computed(() => {
 
   return !!entry && isDeletingEntry.value === entry.id;
 });
-const filterAutoCompleteOverlayClass = "max-w-[calc(100vw-2rem)]";
+const filterAutoCompleteOverlayClass = "w-full max-w-full overflow-hidden";
+const filterAutoCompleteOverlayStyle = {
+  boxSizing: "border-box",
+  maxWidth: "100%",
+  minWidth: "100%",
+  width: "100%",
+} as const;
 const filterAutoCompletePt = {
   listContainer: { class: "max-w-full overflow-x-hidden" },
   option: { class: "max-w-full min-w-0 truncate" },
-  overlay: { class: "max-w-[calc(100vw-2rem)] overflow-hidden" },
+  overlay: { class: filterAutoCompleteOverlayClass },
   pcInputText: { root: { class: "truncate" } },
-  root: { class: "max-w-full min-w-0" },
+  root: { class: "relative w-full max-w-full min-w-0" },
 } as const;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
 const startingTimerEntryId = shallowRef<string | null>(null);
@@ -478,6 +484,8 @@ onBeforeUnmount(() => {
             Project
           </label>
           <AutoComplete
+            append-to="self"
+            class="w-full max-w-full min-w-0"
             input-id="time-entries-project-filter"
             option-label="name"
             placeholder="All projects"
@@ -491,6 +499,7 @@ onBeforeUnmount(() => {
             :min-length="0"
             :model-value="selectedProjectFilterOption"
             :overlay-class="filterAutoCompleteOverlayClass"
+            :overlay-style="filterAutoCompleteOverlayStyle"
             :pt="filterAutoCompletePt"
             fluid
             show-clear
@@ -507,6 +516,8 @@ onBeforeUnmount(() => {
             Task
           </label>
           <AutoComplete
+            append-to="self"
+            class="w-full max-w-full min-w-0"
             input-id="time-entries-task-filter"
             option-label="title"
             placeholder="Search tasks"
@@ -518,6 +529,7 @@ onBeforeUnmount(() => {
             fluid
             :min-length="0"
             :overlay-class="filterAutoCompleteOverlayClass"
+            :overlay-style="filterAutoCompleteOverlayStyle"
             :pt="filterAutoCompletePt"
             @complete="(event) => void handleFilterTaskSearch(event.query)"
             @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
