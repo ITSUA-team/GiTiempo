@@ -3,18 +3,15 @@ import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
-import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
+import type { ProjectResponse } from "@gitiempo/shared";
 import {
-  createAppConfirm,
   createAppToast,
   EntryActionButton,
-  getErrorMessage,
   RequestStateCard,
   SurfaceCard,
   filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
-import { useQueryClient } from "@tanstack/vue-query";
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { PlusIcon } from "@heroicons/vue/24/outline";
@@ -26,19 +23,15 @@ import {
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
-import {
-  useCurrentTimerQuery,
-  useStartTimerMutation,
-  useStopTimerMutation,
-} from "@/composables/query";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
+import { useTimeEntryDialogWorkflow } from "@/composables/time-entries/useTimeEntryDialogWorkflow";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
+import { useTimeEntryDirectTimerActions } from "@/composables/time-entries/useTimeEntryDirectTimerActions";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
-import { timerKeys } from "@/lib/query-keys";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
 
@@ -46,10 +39,8 @@ const authStore = useAuthStore();
 const client = createDefaultTimeEntriesClient();
 const confirm = useConfirm();
 const toast = useToast();
-const appConfirm = createAppConfirm(confirm);
 const appToast = createAppToast(toast);
 const topBarTimerDialogController = useTopBarTimerDialogController();
-const queryClient = useQueryClient();
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
@@ -82,24 +73,23 @@ const data = useTimeEntriesData({
   setIntervalFn: setInterval,
 });
 const taskOptions = useTimeEntryTaskOptions({ client });
-const currentTimerGuardQuery = useCurrentTimerQuery({
-  accessToken,
-  client,
-  scope,
-});
-const startTimerMutation = useStartTimerMutation({
-  accessToken,
-  client,
-  scope,
-});
-const stopTimerMutation = useStopTimerMutation({
-  accessToken,
-  client,
-  scope,
-});
 const mutations = useTimeEntryMutations({
   accessToken,
   client,
+  scope,
+  toast,
+});
+const dialogWorkflow = useTimeEntryDialogWorkflow({
+  confirm,
+  dialog,
+  ensureProjectsLoaded: data.ensureProjectsLoaded,
+  mutations,
+  taskOptions,
+});
+const directTimerActions = useTimeEntryDirectTimerActions({
+  accessToken,
+  client,
+  loadEntries: data.loadEntries,
   scope,
   toast,
 });
@@ -147,12 +137,23 @@ const {
   totalRecords,
   visibleProjects,
 } = data;
-const { isDeletingEntry, isSavingDialog } = mutations;
-const isDeletingDialogEntry = computed(() => {
-  const entry = dialog.editingEntry.value;
-
-  return !!entry && isDeletingEntry.value === entry.id;
-});
+const { isSavingDialog } = mutations;
+const {
+  handleDialogTaskSearch,
+  isDeletingDialogEntry,
+  openCreateDialog,
+  openEditDialog,
+  requestDeleteDialogEntry,
+  saveDialog,
+  setDialogProjectId,
+} = dialogWorkflow;
+const {
+  isDirectStartBlockedByCurrentTimer,
+  startingTimerEntryId,
+  startTimerForEntry,
+  stoppingTimerEntryId,
+  stopTimerForEntry,
+} = directTimerActions;
 const filterAutoCompleteOverlayClass = "max-w-[calc(100vw-2rem)]";
 const filterAutoCompletePt = {
   listContainer: { class: "max-w-full overflow-x-hidden" },
@@ -162,12 +163,6 @@ const filterAutoCompletePt = {
   root: { class: "max-w-full min-w-0" },
 } as const;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
-const startingTimerEntryId = shallowRef<string | null>(null);
-const stoppingTimerEntryId = shallowRef<string | null>(null);
-const isDirectStartBlockedByCurrentTimer = computed(() =>
-  currentTimerGuardQuery.isFetching.value ||
-  currentTimerGuardQuery.data.value?.timeEntry?.endedAt === null,
-);
 const selectedProjectFilterOption = computed(
   () =>
     visibleProjects.value.find((project) => project.id === selectedProjectId.value) ??
@@ -191,12 +186,6 @@ function handleProjectFilterComplete(event: { query: string }): void {
     event.query,
     (project) => project.name,
   );
-}
-
-async function loadDialogProjectTasks(projectId: string) {
-  return taskOptions.loadTargetProjectTaskOptions(projectId, dialog, {
-    trackableOnly: true,
-  });
 }
 
 async function applyFilters(): Promise<void> {
@@ -242,193 +231,8 @@ async function setPage(page: number): Promise<void> {
   await data.loadEntries();
 }
 
-async function setDialogProjectId(projectId: string | null): Promise<void> {
-  dialog.setProjectId(projectId);
-
-  if (!projectId) {
-    return;
-  }
-
-  try {
-    const tasks = await loadDialogProjectTasks(projectId);
-
-    if (dialog.dialogProjectId.value === projectId) {
-      dialog.updateTaskSuggestions("", tasks);
-    }
-  } catch {
-    // Dialog keeps the request error visible for retryable correction.
-  }
-}
-
-function handleDialogTaskSearch(query: string): void {
-  dialog.updateTaskSuggestions(query);
-}
-
-async function openCreateDialog(day: string | null = null): Promise<void> {
-  dialog.openCreateDialogState(day);
-
-  try {
-    await data.ensureProjectsLoaded();
-  } catch {
-    // Create mode can still open with the visible request error state.
-  }
-}
-
-async function openEditDialog(entry: TimeEntryResponse): Promise<void> {
-  dialog.openEditDialogState(entry);
-
-  try {
-    await data.ensureProjectsLoaded();
-    const options = await loadDialogProjectTasks(entry.projectId);
-    dialog.setTaskValue(
-      options.find((task) => task.id === entry.taskId) ?? {
-        id: entry.task.id,
-        isActive: true,
-        projectId: entry.projectId,
-        title: entry.task.title,
-      },
-    );
-    dialog.updateTaskSuggestions("", options);
-  } catch {
-    dialog.setTaskFromEntryFallback(entry);
-  }
-}
-
-async function saveDialog(): Promise<void> {
-  const validInput = dialog.validateDialog();
-
-  if (!validInput) {
-    return;
-  }
-
-  dialog.setRequestError(null);
-  const errorMessage = await mutations.saveDialogEntry({
-    editingEntry: dialog.editingEntry.value,
-    input: validInput,
-    mode: dialog.dialogMode.value,
-  });
-
-  if (errorMessage) {
-    dialog.setRequestError(errorMessage);
-    return;
-  }
-
-  dialog.closeDialog();
-}
-
-function requestDeleteEntry(
-  entry: TimeEntryResponse,
-  options: { closeDialogOnSuccess?: boolean } = {},
-): void {
-  appConfirm.confirmDestructive({
-    accept: async () => {
-      const wasDeleted = await mutations.deleteEntry(entry);
-
-      if (
-        wasDeleted &&
-        options.closeDialogOnSuccess === true &&
-        dialog.editingEntry.value?.id === entry.id
-      ) {
-        dialog.closeDialog();
-      }
-    },
-    acceptLabel: "Delete",
-    header: "Delete entry?",
-    message: "This time entry will be permanently deleted.",
-  });
-}
-
-function requestDeleteDialogEntry(): void {
-  const entry = dialog.editingEntry.value;
-
-  if (!entry || dialog.dialogMode.value !== "edit") {
-    return;
-  }
-
-  requestDeleteEntry(entry, { closeDialogOnSuccess: true });
-}
-
 function openActiveTimerDialog(): void {
   topBarTimerDialogController.requestOpen();
-}
-
-async function startTimerForEntry(entry: TimeEntryResponse): Promise<void> {
-  if (
-    entry.endedAt === null ||
-    startingTimerEntryId.value !== null ||
-    isDirectStartBlockedByCurrentTimer.value
-  ) {
-    return;
-  }
-
-  startingTimerEntryId.value = entry.id;
-
-  try {
-    await startTimerMutation.mutateAsync({ taskId: entry.taskId });
-    appToast.showSuccessToast(
-      "Timer started",
-      `Tracking ${entry.task.title}.`,
-    );
-  } catch (error) {
-    appToast.showErrorToast({
-      detail: getErrorMessage(error),
-      error,
-      logContext: { action: "start-timer-from-entry", feature: "time-entries" },
-      summary: "Could not start timer",
-    });
-
-    await queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) });
-  } finally {
-    startingTimerEntryId.value = null;
-  }
-}
-
-async function refreshTimerAndEntries(): Promise<void> {
-  await Promise.allSettled([
-    queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) }),
-    data.loadEntries(),
-  ]);
-}
-
-async function stopTimerForEntry(entry: TimeEntryResponse): Promise<void> {
-  if (entry.endedAt !== null || stoppingTimerEntryId.value !== null) {
-    return;
-  }
-
-  stoppingTimerEntryId.value = entry.id;
-
-  try {
-    const currentTimerResult = await currentTimerGuardQuery.refetch({
-      throwOnError: true,
-    });
-    const currentTimer = currentTimerResult.data?.timeEntry ?? null;
-
-    if (currentTimer?.id !== entry.id) {
-      await refreshTimerAndEntries();
-      appToast.showInfoToast(
-        "Timer status refreshed",
-        "The running timer changed. Please try again.",
-      );
-      return;
-    }
-
-    await stopTimerMutation.mutateAsync();
-    appToast.showSuccessToast(
-      "Timer stopped",
-      `Stopped tracking ${entry.task.title}.`,
-    );
-  } catch (error) {
-    appToast.showErrorToast({
-      detail: getErrorMessage(error),
-      error,
-      logContext: { action: "stop-timer-from-entry", feature: "time-entries" },
-      summary: "Could not stop timer",
-    });
-
-    await queryClient.invalidateQueries({ queryKey: timerKeys.all(scope.value) });
-  } finally {
-    stoppingTimerEntryId.value = null;
-  }
 }
 
 async function retryLoadEntries(): Promise<void> {

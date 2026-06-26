@@ -2,18 +2,19 @@
 import AutoComplete from "primevue/autocomplete";
 import Select from "primevue/select";
 import Skeleton from "primevue/skeleton";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import {
   BillableDefaultBackfillDialog,
-  createAppConfirm,
   createAppToast,
   RequestStateCard,
 } from "@gitiempo/web-shared";
 
 import ProjectTaskDialog from "@/components/projects/ProjectTaskDialog.vue";
 import ProjectsTaskSection from "@/components/projects/ProjectsTaskSection.vue";
+import { useProjectTaskActions } from "@/composables/projects/useProjectTaskActions";
+import { useProjectTaskBackfillFlow } from "@/composables/projects/useProjectTaskBackfillFlow";
 import { useProjectsData } from "@/composables/projects/useProjectsData";
 import { useProjectsSearch } from "@/composables/projects/useProjectsSearch";
 import { useProjectTaskDialog } from "@/composables/projects/useProjectTaskDialog";
@@ -33,7 +34,6 @@ const authStore = useAuthStore();
 const client = createDefaultTimeEntriesClient();
 const confirm = useConfirm();
 const toast = useToast();
-const appConfirm = createAppConfirm(confirm);
 const appToast = createAppToast(toast);
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
@@ -68,6 +68,14 @@ const mutations = useProjectTaskMutations({
   scope,
   toast,
 });
+const taskBackfill = useProjectTaskBackfillFlow({ client, toast });
+const taskActions = useProjectTaskActions({
+  confirm,
+  dialog,
+  mutations,
+  onTaskBillableDefaultChanged: taskBackfill.openTaskBackfillDialogIfNeeded,
+  visibleProjects: data.visibleProjects,
+});
 const {
   closeDialog,
   dialogErrors,
@@ -83,7 +91,6 @@ const {
   isDialogOpen,
   openEditDialog,
   setDialogDefaultBillableForTimeEntries,
-  setDialogProjectId: setDialogProjectIdValue,
   setDialogTaskStatus,
   setDialogTaskTitle,
 } = dialog;
@@ -100,19 +107,21 @@ const {
   statusFilterOptions,
   updatedFilterOptions,
 } = search;
-const { isDeletingTaskId, isSavingDialog } = mutations;
+const { isSavingDialog } = mutations;
 const { requestErrorMessage, visibleProjects } = data;
-const submittingTaskBackfill = ref(false);
-const taskBackfillDialog = ref<{
-  taskId: string;
-  taskTitle: string;
-  updateTimeEntries: boolean;
-} | null>(null);
-const isDeletingDialogTask = computed(() => {
-  const task = dialog.editingTask.value;
-
-  return !!task && isDeletingTaskId.value === task.id;
-});
+const {
+  closeTaskBackfillDialog,
+  handleTaskBackfillSubmitted,
+  submittingTaskBackfill,
+  taskBackfillDialog,
+} = taskBackfill;
+const {
+  isDeletingDialogTask,
+  openTaskCreateDialog,
+  requestDeleteDialogTask,
+  saveDialog,
+  setDialogProjectId,
+} = taskActions;
 const pageState = computed(() =>
   resolveDataPageState({
     hasRequestError: data.requestErrorMessage.value !== null,
@@ -120,162 +129,6 @@ const pageState = computed(() =>
     isLoading: data.isLoadingProjects.value || data.isLoadingTasks.value,
   }),
 );
-
-function getProjectDefaultBillable(projectId: string | null): boolean {
-  return (
-    visibleProjects.value.find((project) => project.id === projectId)
-      ?.defaultBillableForTasks ?? true
-  );
-}
-
-function openTaskCreateDialog(projectId: string | null = null): void {
-  dialog.openCreateDialog(projectId, getProjectDefaultBillable(projectId));
-}
-
-function setDialogProjectId(value: string | null): void {
-  setDialogProjectIdValue(value);
-
-  if (dialog.dialogMode.value === "create") {
-    dialog.setDialogDefaultBillableForTimeEntries(
-      getProjectDefaultBillable(value),
-    );
-  }
-}
-
-async function openTaskBackfillDialogIfNeeded(
-  task: { id: string; projectId: string; title: string },
-): Promise<void> {
-  try {
-    const entries = await client.listProjectTimeEntries(task.projectId, {
-      limit: 1,
-      taskId: task.id,
-    });
-
-    if (entries.meta.total === 0) {
-      return;
-    }
-
-    taskBackfillDialog.value = {
-      taskId: task.id,
-      taskTitle: task.title,
-      updateTimeEntries: true,
-    };
-  } catch (error) {
-    appToast.showErrorToast({
-      detail: "The task default was saved for future entries.",
-      error,
-      logContext: { action: "check-task-backfill", feature: "projects-page" },
-      summary: "Could not check existing time entries",
-    });
-  }
-}
-
-function closeTaskBackfillDialog(): void {
-  if (submittingTaskBackfill.value) {
-    return;
-  }
-
-  taskBackfillDialog.value = null;
-}
-
-async function handleTaskBackfillSubmitted(): Promise<void> {
-  const dialogState = taskBackfillDialog.value;
-
-  if (!dialogState) {
-    return;
-  }
-
-  submittingTaskBackfill.value = true;
-
-  try {
-    const result = await client.backfillTaskBillableDefault(dialogState.taskId, {
-      updateTimeEntries: true,
-    });
-
-    appToast.showSuccessToast(
-      "Existing time entries updated",
-      `${result.timeEntriesUpdated} existing ${result.timeEntriesUpdated === 1 ? "entry has" : "entries have"} been updated.`,
-    );
-    taskBackfillDialog.value = null;
-  } catch (error) {
-    appToast.showErrorToast({
-      detail: "Please try again.",
-      error,
-      logContext: { action: "backfill-task-default", feature: "projects-page" },
-      summary: "Could not update existing time entries",
-    });
-  } finally {
-    submittingTaskBackfill.value = false;
-  }
-}
-
-async function saveDialog(): Promise<void> {
-  const validInput = dialog.validateDialog();
-
-  if (!validInput) {
-    return;
-  }
-
-  const editingTask = dialog.editingTask.value;
-  const shouldPromptForBackfill =
-    validInput.mode === "edit" &&
-    editingTask !== null &&
-    validInput.input.defaultBillableForTimeEntries !==
-      editingTask.defaultBillableForTimeEntries;
-  const backfillTask = editingTask
-    ? {
-        id: editingTask.id,
-        projectId: editingTask.projectId,
-        title: validInput.input.title ?? editingTask.title,
-      }
-    : null;
-
-  dialog.setDialogRequestError(null);
-  const errorMessage = await mutations.saveTask(validInput, dialog.editingTask.value);
-
-  if (errorMessage) {
-    dialog.setDialogRequestError(errorMessage);
-    return;
-  }
-
-  dialog.closeDialog();
-
-  if (shouldPromptForBackfill && backfillTask) {
-    await openTaskBackfillDialogIfNeeded(backfillTask);
-  }
-}
-
-function requestDeleteTask(
-  task: Parameters<typeof mutations.deleteTask>[0],
-  options: { closeDialogOnSuccess?: boolean } = {},
-): void {
-  appConfirm.confirmDestructive({
-    accept: async () => {
-      const wasDeleted = await mutations.deleteTask(task);
-
-      if (
-        wasDeleted &&
-        options.closeDialogOnSuccess === true &&
-        dialog.editingTask.value?.id === task.id
-      ) {
-        dialog.closeDialog();
-      }
-    },
-    acceptLabel: "Delete",
-    header: "Delete task?",
-    message: "This task will be permanently deleted.",
-  });
-}
-
-function requestDeleteDialogTask(): void {
-  const task = dialog.editingTask.value;
-
-  if (!task || dialog.dialogMode.value !== "edit") {
-    return;
-  }
-
-  requestDeleteTask(task, { closeDialogOnSuccess: true });
-}
 
 async function retryLoadPage(): Promise<void> {
   await data.loadPage();
