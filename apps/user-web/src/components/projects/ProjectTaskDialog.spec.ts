@@ -178,7 +178,7 @@ describe("ProjectTaskDialog", () => {
       true,
     );
 
-    await billableLabel.trigger("click");
+    await wrapper.get('input[type="checkbox"]').setValue(true);
 
     expect(wrapper.emitted("update:defaultBillableForTimeEntries")?.[0]).toEqual([
       true,

@@ -75,9 +75,23 @@ describe("BillableDefaultBackfillDialog", () => {
 
   it("emits selection updates, submit, and dismissal", async () => {
     const wrapper = mountDialog();
+    const checkboxes = wrapper.findAll('input[type="checkbox"]');
 
-    await wrapper.get('label[for="billable-default-update-tasks"]').trigger("click");
-    await wrapper.get('label[for="billable-default-update-time-entries"]').trigger("click");
+    expect(
+      wrapper
+        .get('label[for="billable-default-update-tasks"]')
+        .find("#billable-default-update-tasks")
+        .exists(),
+    ).toBe(true);
+    expect(
+      wrapper
+        .get('label[for="billable-default-update-time-entries"]')
+        .find("#billable-default-update-time-entries")
+        .exists(),
+    ).toBe(true);
+
+    await checkboxes[0]?.setValue(false);
+    await checkboxes[1]?.setValue(true);
     await wrapper.get("button[type='button']:not([data-testid])").trigger("click");
     await wrapper.get("[data-testid='dialog-close']").trigger("click");
 

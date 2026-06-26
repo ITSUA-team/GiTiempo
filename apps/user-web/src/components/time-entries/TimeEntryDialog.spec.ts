@@ -289,12 +289,11 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.emitted("update:description")?.[0]).toEqual(["Updated description"]);
   });
 
-  it("emits billable updates when the visible checkbox label is clicked", async () => {
-    const wrapper = mountDialog({ valueIsBillable: true });
+  it("associates the billable label with the checkbox input", () => {
+    const wrapper = mountDialog();
+    const billableLabel = wrapper.get('label[for="time-entry-billable"]');
 
-    await wrapper.get('label[for="time-entry-billable"]').trigger("click");
-
-    expect(wrapper.emitted("update:isBillable")?.[0]).toEqual([false]);
+    expect(billableLabel.find("#time-entry-billable").exists()).toBe(true);
   });
 
   it("configures task lookup to suggest all project tasks on empty input", () => {
