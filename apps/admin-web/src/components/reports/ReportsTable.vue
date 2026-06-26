@@ -361,7 +361,6 @@ const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompleteP
         <div class="flex min-w-[720px] flex-1 items-center">
           <div class="min-w-0 flex-1 px-3">
             <AutoComplete
-              append-to="self"
               :model-value="selectedProjectFilterOption"
               :suggestions="projectFilterSuggestions"
               aria-label="Filter report rows by project"
@@ -381,7 +380,6 @@ const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompleteP
 
           <div class="w-[180px] px-3">
             <AutoComplete
-              append-to="self"
               :model-value="selectedMemberFilterOption"
               :suggestions="memberFilterSuggestions"
               aria-label="Filter report rows by member"

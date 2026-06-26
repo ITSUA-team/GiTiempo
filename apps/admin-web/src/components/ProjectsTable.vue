@@ -391,7 +391,6 @@ const columns: ManagementTableColumn[] = [
       <div class="flex min-w-[860px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
           <AutoComplete
-            append-to="self"
             :model-value="filters.projectQuery"
             :suggestions="projectQuerySuggestions"
             aria-label="Filter projects by name"

@@ -379,7 +379,6 @@ const columns: ManagementTableColumn[] = [
       <div class="flex min-w-[780px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
           <AutoComplete
-            append-to="self"
             :model-value="filters.memberQuery"
             :suggestions="memberQuerySuggestions"
             aria-label="Filter members by name or email"
