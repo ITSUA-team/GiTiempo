@@ -136,4 +136,23 @@ describe("loadUnsyncedProjectGitHubIssues", () => {
       issues: [],
     });
   });
+
+  it("returns a request error without pretending the project has no GitHub issues", async () => {
+    const listProjectGitHubIssues = vi
+      .fn<TimeEntriesClient["listProjectGitHubIssues"]>()
+      .mockRejectedValue(new Error("GitHub is temporarily unavailable"));
+    const client = createClientMock(listProjectGitHubIssues);
+
+    const result = await loadUnsyncedProjectGitHubIssues({
+      client,
+      localTasks: [],
+      projectId: PROJECT_ID,
+    });
+
+    expect(listProjectGitHubIssues).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      errorMessage: "GitHub is temporarily unavailable",
+      issues: [],
+    });
+  });
 });

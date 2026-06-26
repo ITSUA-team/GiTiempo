@@ -448,6 +448,144 @@ describe('useTopBarTimer', () => {
     });
   });
 
+  it('keeps local task options visible and retries GitHub suggestions after a failed GitHub load', async () => {
+    const client = createClientMock();
+    const githubProject = {
+      ...createProject(TEST_IDS.project, 'My-test-org-for-clock/test-repo'),
+      source: 'github' as const,
+    };
+    const localTask = createTask(
+      TEST_IDS.task,
+      TEST_IDS.project,
+      'Improve reports filters',
+    );
+
+    client.listVisibleProjects.mockResolvedValue([githubProject]);
+    client.listProjectTasks.mockResolvedValue([localTask]);
+    client.listProjectGitHubIssues
+      .mockRejectedValueOnce(new Error('GitHub is temporarily unavailable'))
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'issue-2',
+            nodeId: 'node-2',
+            number: 2,
+            repository: {
+              fullName: 'My-test-org-for-clock/test-repo',
+              name: 'test-repo',
+              owner: 'My-test-org-for-clock',
+            },
+            state: 'open',
+            title: 'second test issue',
+            updatedAt: '2026-04-21T10:01:00.000Z',
+            url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+          },
+        ],
+        pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+      });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(topBarTimer.tasksErrorMessage.value).toBe(
+      'GitHub is temporarily unavailable',
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Improve reports filters',
+    ]);
+
+    topBarTimer.setSelectedProjectId(null);
+    await flushPromises();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledTimes(2);
+    expect(topBarTimer.tasksErrorMessage.value).toBeNull();
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Improve reports filters',
+      'second test issue',
+    ]);
+  });
+
+  it('keeps the dialog open and skips timer start when GitHub issue materialization fails', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    const githubProject = {
+      ...createProject(TEST_IDS.project, 'My-test-org-for-clock/test-repo'),
+      source: 'github' as const,
+    };
+
+    client.listVisibleProjects.mockResolvedValue([githubProject]);
+    client.listProjectTasks.mockResolvedValue([]);
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'second test issue',
+          updatedAt: '2026-04-21T10:01:00.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+    client.ensureGitHubIssueTask.mockRejectedValueOnce(
+      new ApiError('GitHub issue is closed', { status: 422 }),
+    );
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    const githubIssueOption = topBarTimer.taskOptions.value.find(
+      (task) => task.title === 'second test issue',
+    );
+    expect(githubIssueOption).toBeDefined();
+
+    topBarTimer.setSelectedTaskId(githubIssueOption!.id);
+    await topBarTimer.startTimerFromDialog();
+    await flushPromises();
+
+    expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
+      projectId: TEST_IDS.project,
+      issueNumber: 2,
+    });
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+    expect(topBarTimer.selectedTaskId.value).toBe(githubIssueOption!.id);
+    expect(topBarTimer.selectionUpdateErrorMessage.value).toBe(
+      'GitHub issue is closed',
+    );
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        summary: 'Could not prepare GitHub issue',
+      }),
+    );
+  });
+
   it('loads GitHub issues when updating a running timer from an existing GitHub task', async () => {
     const client = createClientMock();
     const githubProject = createProject(

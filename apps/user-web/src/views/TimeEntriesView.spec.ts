@@ -433,6 +433,7 @@ async function mountView(
             "isOpen",
             "startedAt",
             "taskSuggestions",
+            "tasksErrorMessage",
             "valueDescription",
           ],
           methods: {
@@ -446,6 +447,7 @@ async function mountView(
               <p data-testid="dialog-started-value">{{ formatDialogTime(startedAt) }}</p>
               <p data-testid="dialog-ended-value">{{ formatDialogTime(endedAt) }}</p>
               <p data-testid="dialog-request-error">{{ dialogErrorMessage }}</p>
+              <p data-testid="dialog-tasks-error">{{ tasksErrorMessage }}</p>
               <div data-testid="dialog-task-suggestions">
                 <p v-for="suggestion in taskSuggestions" :key="suggestion.id">{{ suggestion.title }}</p>
               </div>
@@ -1251,6 +1253,43 @@ describe("TimeEntriesView", () => {
     expect(dialogSuggestions.text().match(/some test issue/g)?.length ?? 0).toBe(1);
   });
 
+  it("keeps GitHub suggestion failures distinct from an empty manual-entry task state", async () => {
+    const githubProject = createProject({
+      id: TEST_IDS.githubProject,
+      name: "My-test-org-for-clock/test-repo",
+      source: "github",
+    });
+    const localTask = createTask({
+      id: TEST_IDS.githubTaskIssueOne,
+      projectId: TEST_IDS.githubProject,
+      title: "some test issue",
+    });
+    const client = createClientMock({
+      tasksByProject: {
+        [TEST_IDS.githubProject]: [localTask],
+      },
+      visibleProjects: [createProject(), githubProject],
+    });
+
+    client.listProjectGitHubIssues.mockRejectedValueOnce(
+      new Error("GitHub is temporarily unavailable"),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-github"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-tasks-error"]').text()).toBe(
+      "GitHub is temporarily unavailable",
+    );
+    expect(wrapper.get('[data-testid="dialog-task-suggestions"]').text()).toContain(
+      "some test issue",
+    );
+  });
+
   it("creates a manual entry and refreshes the current list page", async () => {
     const client = createClientMock({
       entriesResponse: createEntryListResponse([createEntry()], {
@@ -1454,6 +1493,66 @@ describe("TimeEntriesView", () => {
       TEST_IDS.completedEntry,
       expect.objectContaining({
         taskId: TEST_IDS.githubTaskIssueTwo,
+      }),
+    );
+  });
+
+  it("keeps the manual-entry dialog open and skips entry creation when GitHub issue materialization fails", async () => {
+    const githubProject = createProject({
+      id: TEST_IDS.githubProject,
+      name: "My-test-org-for-clock/test-repo",
+      source: "github",
+    });
+    const client = createClientMock({
+      visibleProjects: [createProject(), githubProject],
+    });
+
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: "issue-2",
+          nodeId: "node-2",
+          number: 2,
+          repository: {
+            fullName: "My-test-org-for-clock/test-repo",
+            name: "test-repo",
+            owner: "My-test-org-for-clock",
+          },
+          state: "open",
+          title: "second test issue",
+          updatedAt: "2026-04-21T10:01:00.000Z",
+          url: "https://github.com/My-test-org-for-clock/test-repo/issues/2",
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+    client.ensureGitHubIssueTask.mockRejectedValueOnce(
+      new Error("GitHub issue is closed"),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-github"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-github-issue"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
+      projectId: TEST_IDS.githubProject,
+      issueNumber: 2,
+    });
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="dialog-request-error"]').text()).toBe(
+      "GitHub issue is closed",
+    );
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "error",
+        summary: "Could not create time entry",
       }),
     );
   });
