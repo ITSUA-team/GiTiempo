@@ -124,7 +124,8 @@ Assignments grant non-admin access to private projects and to any assigned activ
 **POST /tasks/from-github** body: `{ projectId: string, issueNumber: number }`
 
 - Requires the project to be visible and GitHub-backed.
-- Verifies the selected issue through the caller's connected GitHub account before creating or reusing the local task mapping.
+- Verifies the selected open issue through the caller's connected GitHub account before creating or reusing the local task mapping.
+- Rejects closed GitHub issues instead of creating local tasks for work that cannot be tracked.
 - Uses provider data as the source of truth for the issue title and repository identity.
 
 ---

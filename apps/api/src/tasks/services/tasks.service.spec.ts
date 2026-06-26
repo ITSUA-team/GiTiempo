@@ -275,16 +275,12 @@ describe('TasksService', () => {
         name: 'Visible project',
       }),
     };
-    const service = createService(
-      {},
-      projects,
-      {
-        github,
-        githubTasks: {
-          findProjectRepoKey: vi.fn().mockResolvedValue('octo-org/repo-name'),
-        },
+    const service = createService({}, projects, {
+      github,
+      githubTasks: {
+        findProjectRepoKey: vi.fn().mockResolvedValue('octo-org/repo-name'),
       },
-    );
+    });
 
     const result = await service.listProjectGitHubIssues(user, projectRow.id, {
       limit: 30,
@@ -361,6 +357,46 @@ describe('TasksService', () => {
       githubRepo: 'octo-org/repo-name',
       issueNumber: 184,
     });
+  });
+
+  it('rejects closed github issues before creating a local task', async () => {
+    const github = {
+      getRepositoryIssue: vi.fn().mockResolvedValue({
+        id: 'issue-184',
+        nodeId: 'node-184',
+        repository: {
+          owner: 'octo-org',
+          name: 'repo-name',
+          fullName: 'octo-org/repo-name',
+        },
+        number: 184,
+        title: 'Closed provider issue',
+        state: 'closed',
+        url: 'https://github.com/octo-org/repo-name/issues/184',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    };
+    const githubTasks = {
+      findProjectRepoKey: vi.fn().mockResolvedValue('octo-org/repo-name'),
+      findOrCreateTaskForIssue: vi.fn(),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback({})),
+    };
+    const service = createService(db, projects, { github, githubTasks });
+
+    await expect(
+      service.ensureGitHubIssueTask(user, {
+        projectId: projectRow.id,
+        issueNumber: 184,
+      }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+
+    expect(githubTasks.findOrCreateTaskForIssue).not.toHaveBeenCalled();
+    expect(db.transaction).not.toHaveBeenCalled();
   });
 
   it('checks project visibility before updating a task', async () => {

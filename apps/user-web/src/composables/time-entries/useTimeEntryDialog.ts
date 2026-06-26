@@ -3,6 +3,7 @@ import {
   type TimeEntryResponse,
 } from "@gitiempo/shared";
 import { computed, ref, shallowRef } from "vue";
+import { z } from "zod";
 
 import {
   buildTaskLookupSuggestions,
@@ -31,7 +32,22 @@ export type ValidatedTimeEntryDialogInput = {
   taskId: string;
 };
 
-const GITHUB_ISSUE_TASK_VALIDATION_ID = "00000000-0000-4000-8000-000000000000";
+const githubIssueTimeEntryDraftSchema = z
+  .object({
+    description: z.string().max(2000).nullable().optional(),
+    endedAt: z.iso.datetime(),
+    isBillable: z.boolean().optional(),
+    startedAt: z.iso.datetime(),
+  })
+  .strict()
+  .refine(
+    (data) =>
+      new Date(data.endedAt).getTime() > new Date(data.startedAt).getTime(),
+    {
+      message: "endedAt must be later than startedAt",
+      path: ["endedAt"],
+    },
+  );
 
 function defaultFormErrors(): TimeEntryFormErrors {
   return {
@@ -271,15 +287,19 @@ export function useTimeEntryDialog() {
       startedAt: dialogStartedAt.value.toISOString(),
       taskId: selectedTask.id,
     };
-    const parsed = createManualTimeEntrySchema.safeParse({
-      ...input,
-      taskId: isGitHubIssueTaskLookupOption(selectedTask)
-        ? GITHUB_ISSUE_TASK_VALIDATION_ID
-        : input.taskId,
-    });
+    const parsed = isGitHubIssueTaskLookupOption(selectedTask)
+      ? githubIssueTimeEntryDraftSchema.safeParse({
+          description: input.description,
+          endedAt: input.endedAt,
+          isBillable: input.isBillable,
+          startedAt: input.startedAt,
+        })
+      : createManualTimeEntrySchema.safeParse(input);
 
     if (!parsed.success) {
-      const fieldErrors = parsed.error.flatten().fieldErrors;
+      const fieldErrors = parsed.error.flatten().fieldErrors as Partial<
+        Record<keyof TimeEntryFormErrors, string[]>
+      >;
 
       dialogErrors.value = {
         description: fieldErrors.description?.[0] ?? nextErrors.description,

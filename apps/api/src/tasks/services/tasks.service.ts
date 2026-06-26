@@ -153,7 +153,10 @@ export class TasksService {
     user: AuthUser,
     input: EnsureGitHubIssueTaskInput,
   ): Promise<TaskResponse> {
-    const project = await this.projects.requireVisibleProject(user, input.projectId);
+    const project = await this.projects.requireVisibleProject(
+      user,
+      input.projectId,
+    );
     if (!project.isActive) {
       throw new UnprocessableEntityException('Project is inactive');
     }
@@ -180,6 +183,10 @@ export class TasksService {
       repoParts.repo,
       input.issueNumber,
     );
+    if (issue.state !== 'open') {
+      throw new UnprocessableEntityException('GitHub issue is closed');
+    }
+
     const issueKey = `${issue.repository.fullName}#${issue.number}`;
 
     const task = await this.db.transaction(async (tx) => {
@@ -432,10 +439,15 @@ export class TasksService {
 
   private toResponse(
     row: TaskRow | TaskResponseRow,
-    githubIssueExternalKey: string | null = 'githubIssueExternalKey' in row
-      ? row.githubIssueExternalKey
-      : null,
+    githubIssueExternalKey?: string | null,
   ): TaskResponse {
+    const resolvedGitHubIssueExternalKey =
+      githubIssueExternalKey !== undefined
+        ? githubIssueExternalKey
+        : 'githubIssueExternalKey' in row
+          ? row.githubIssueExternalKey
+          : null;
+
     return {
       id: row.id,
       workspaceId: row.workspaceId,
@@ -444,7 +456,7 @@ export class TasksService {
       status: row.status,
       defaultBillableForTimeEntries: row.defaultBillableForTimeEntries,
       isActive: row.isActive,
-      githubIssue: parseGitHubIssueExternalKey(githubIssueExternalKey),
+      githubIssue: parseGitHubIssueExternalKey(resolvedGitHubIssueExternalKey),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

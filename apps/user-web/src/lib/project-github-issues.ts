@@ -1,7 +1,13 @@
-import type { SyncedGitHubIssue, TaskResponse } from "@gitiempo/shared";
+import type {
+  GitHubRepositoryIssueListResponse,
+  SyncedGitHubIssue,
+  TaskResponse,
+} from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
+
+const PROJECT_GITHUB_ISSUE_PAGE_SIZE = 30;
 
 export interface UnsyncedProjectGitHubIssue {
   githubIssue: SyncedGitHubIssue;
@@ -21,20 +27,35 @@ export async function loadUnsyncedProjectGitHubIssues(input: {
   projectId: string;
 }): Promise<UnsyncedProjectGitHubIssueResult> {
   try {
-    const response = await input.client.listProjectGitHubIssues(input.projectId, {
-      limit: 30,
-      state: "open",
-    });
+    const issues: GitHubRepositoryIssueListResponse["items"] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const response = await input.client.listProjectGitHubIssues(
+        input.projectId,
+        {
+          limit: PROJECT_GITHUB_ISSUE_PAGE_SIZE,
+          ...(pageToken ? { pageToken } : {}),
+          state: "open",
+        },
+      );
+
+      issues.push(...response.items);
+      pageToken = response.pagination.nextPageToken ?? undefined;
+    } while (pageToken);
+
     const syncedLocalIssues = new Set(
       input.localTasks
         .map((task) => task.githubIssue)
         .filter((issue) => issue !== null)
-        .map((issue) => `${issue.githubRepo.toLowerCase()}#${issue.issueNumber}`),
+        .map(
+          (issue) => `${issue.githubRepo.toLowerCase()}#${issue.issueNumber}`,
+        ),
     );
 
     return {
       errorMessage: null,
-      issues: response.items
+      issues: issues
         .filter(
           (issue) =>
             !syncedLocalIssues.has(
