@@ -5,6 +5,7 @@ import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
 } from '@gitiempo/shared';
+import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   EntryActionButton,
@@ -109,6 +110,10 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
   emit('update:expandedRows', value);
 }
 
+const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+
 const columns: ManagementTableColumn[] = [
   { key: 'member', label: 'Member', width: 'fill' },
   { key: 'role', label: 'Role', width: 120 },
@@ -162,7 +167,7 @@ const columns: ManagementTableColumn[] = [
         dropdown-mode="blank"
         :min-length="0"
         placeholder="Filter name or email"
-        :pt="managementTableFilterAutoCompletePt"
+        :pt="managementTableFilterAutoCompleteResolvedPt"
         @complete="handleMemberQueryComplete"
         @update:model-value="updateMemberQueryFilter"
       />
@@ -383,7 +388,7 @@ const columns: ManagementTableColumn[] = [
             dropdown-mode="blank"
             :min-length="0"
             placeholder="Filter name or email"
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableFilterAutoCompleteResolvedPt"
             @complete="handleMemberQueryComplete"
             @update:model-value="updateMemberQueryFilter"
           />

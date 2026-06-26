@@ -5,6 +5,7 @@ import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
+import { composeGiTiempoAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
   filterAutocompleteOptions,
   InlineRequestMessage,
@@ -97,11 +98,11 @@ const billableModel = computed({
 });
 
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
-const projectAutoCompletePt = {
+const projectAutoCompletePt = composeGiTiempoAutoCompletePt({
   dropdown: {
     onMousedown: handleProjectDropdownMouseDown,
   },
-};
+});
 
 watch(
   [() => props.isOpen, () => props.mode, () => props.projectId, () => props.projects],

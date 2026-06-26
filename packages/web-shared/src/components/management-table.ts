@@ -44,14 +44,12 @@ const managementTableFilterAutoCompleteInputClass =
   'h-[34px] w-full rounded-l-[6px] rounded-r-none text-[12px]';
 
 export const managementTableFilterAutoCompletePt = {
-  root: { class: 'relative h-[34px] w-full max-w-full min-w-0' },
+  root: { class: 'h-[34px]' },
   pcInputText: {
     root: { class: managementTableFilterAutoCompleteInputClass },
   },
   dropdown: { class: 'h-[34px] w-8 text-text-muted' },
-  listContainer: { class: 'max-w-full overflow-x-hidden' },
-  option: { class: 'max-w-full min-w-0 truncate text-[12px]' },
-  overlay: { class: 'w-full max-w-full overflow-hidden' },
+  option: { class: 'text-[12px]' },
 } satisfies AutoCompletePassThroughOptions;
 
 const managementTableFilterDropdownRootClass =

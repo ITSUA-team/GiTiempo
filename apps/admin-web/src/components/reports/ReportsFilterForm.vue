@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
+import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
 import {
   normalizeReportDateRangeValue,
   filterAutocompleteOptions,
@@ -104,10 +105,7 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
   groupBy.value = value;
 }
 
-const autoCompletePt = {
-  root: {
-    class: 'relative w-full max-w-full min-w-0',
-  },
+const autoCompletePt = composeGiTiempoAutoCompletePt({
   pcInputText: {
     root: {
       class:
@@ -115,10 +113,7 @@ const autoCompletePt = {
     },
   },
   dropdown: { class: 'w-9 text-text-muted' },
-  listContainer: { class: 'max-w-full overflow-x-hidden' },
-  option: { class: 'max-w-full min-w-0 truncate' },
-  overlay: { class: 'w-full max-w-full overflow-hidden' },
-} as const;
+});
 
 const selectPt = {
   root: {

@@ -21,6 +21,95 @@ export const giTiempoAutoCompletePt = {
   root: { class: "relative w-full max-w-full min-w-0" },
 } as const;
 
+type PrimeVuePtSection = {
+  class?: string;
+  style?: Readonly<Record<string, string>>;
+  [attribute: string]: unknown;
+};
+
+type AutoCompleteInputPt = {
+  root?: PrimeVuePtSection;
+};
+
+export type GiTiempoAutoCompletePt = {
+  chip?: PrimeVuePtSection;
+  dropdown?: PrimeVuePtSection;
+  inputMultiple?: PrimeVuePtSection;
+  listContainer?: PrimeVuePtSection;
+  option?: PrimeVuePtSection;
+  overlay?: PrimeVuePtSection;
+  pcInputText?: AutoCompleteInputPt;
+  root?: PrimeVuePtSection;
+};
+
+function mergeClassNames(
+  baseClass: string | undefined,
+  overrideClass: string | undefined,
+): string | undefined {
+  return [baseClass, overrideClass].filter(Boolean).join(" ") || undefined;
+}
+
+function mergeStyles(
+  baseStyle: Readonly<Record<string, string>> | undefined,
+  overrideStyle: Readonly<Record<string, string>> | undefined,
+): Readonly<Record<string, string>> | undefined {
+  const style = {
+    ...(baseStyle ?? {}),
+    ...(overrideStyle ?? {}),
+  };
+
+  return Object.keys(style).length > 0 ? style : undefined;
+}
+
+function mergePtSection(
+  base: PrimeVuePtSection | undefined,
+  override: PrimeVuePtSection | undefined,
+): PrimeVuePtSection | undefined {
+  if (!base) {
+    return override;
+  }
+
+  if (!override) {
+    return base;
+  }
+
+  return {
+    ...base,
+    ...override,
+    class: mergeClassNames(base.class, override.class),
+    style: mergeStyles(base.style, override.style),
+  };
+}
+
+export function composeGiTiempoAutoCompletePt(
+  override: GiTiempoAutoCompletePt = {},
+): GiTiempoAutoCompletePt {
+  const baseline = giTiempoAutoCompletePt as GiTiempoAutoCompletePt;
+
+  return {
+    ...baseline,
+    ...override,
+    chip: mergePtSection(baseline.chip, override.chip),
+    dropdown: mergePtSection(baseline.dropdown, override.dropdown),
+    inputMultiple: mergePtSection(baseline.inputMultiple, override.inputMultiple),
+    listContainer: mergePtSection(
+      baseline.listContainer,
+      override.listContainer,
+    ),
+    option: mergePtSection(baseline.option, override.option),
+    overlay: mergePtSection(baseline.overlay, override.overlay),
+    pcInputText: {
+      ...baseline.pcInputText,
+      ...override.pcInputText,
+      root: mergePtSection(
+        baseline.pcInputText?.root,
+        override.pcInputText?.root,
+      ),
+    },
+    root: mergePtSection(baseline.root, override.root),
+  };
+}
+
 export const giTiempoThemePreset = definePreset(Aura, {
   semantic: {
     primary: {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
+import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
 import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
@@ -37,8 +38,8 @@ const initialValues = computed<MemberAssignFormInput>(() => ({
     .map((project) => project.id),
 }));
 
-const projectAutoCompletePt = {
-  root: { class: 'relative min-h-[42px] w-full max-w-full min-w-0' },
+const projectAutoCompletePt = composeGiTiempoAutoCompletePt({
+  root: { class: 'min-h-[42px]' },
   pcInputText: {
     root: {
       class: 'min-h-[42px] w-full rounded-[6px] font-sans text-[14px] font-medium',
@@ -48,10 +49,8 @@ const projectAutoCompletePt = {
     class: 'min-h-[42px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
   },
   chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
-  listContainer: { class: 'max-w-full overflow-x-hidden' },
-  option: { class: 'max-w-full min-w-0 truncate font-sans text-[14px]' },
-  overlay: { class: 'w-full max-w-full overflow-hidden' },
-} as const;
+  option: { class: 'font-sans text-[14px]' },
+});
 
 interface AutoCompleteCompleteEvent {
   query: string;

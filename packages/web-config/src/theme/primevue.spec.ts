@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  composeGiTiempoAutoCompletePt,
   giTiempoAutoCompleteOverlayClass,
   giTiempoAutoCompleteOverlayStyle,
   giTiempoAutoCompletePt,
@@ -27,5 +28,24 @@ describe("giTiempoPrimeVueOptions", () => {
       root: { class: "relative w-full max-w-full min-w-0" },
     });
     expect(giTiempoPrimeVueOptions.pt.autocomplete).toBe(giTiempoAutoCompletePt);
+  });
+
+  it("composes autocomplete instance overrides with the shared baseline", () => {
+    expect(
+      composeGiTiempoAutoCompletePt({
+        option: { class: "text-[12px]" },
+        pcInputText: { root: { class: "h-[34px]" } },
+        root: { class: "h-[34px]" },
+      }),
+    ).toMatchObject({
+      listContainer: { class: "max-w-full overflow-x-hidden" },
+      option: { class: "max-w-full min-w-0 truncate text-[12px]" },
+      overlay: {
+        class: giTiempoAutoCompleteOverlayClass,
+        style: giTiempoAutoCompleteOverlayStyle,
+      },
+      pcInputText: { root: { class: "truncate h-[34px]" } },
+      root: { class: "relative w-full max-w-full min-w-0 h-[34px]" },
+    });
   });
 });

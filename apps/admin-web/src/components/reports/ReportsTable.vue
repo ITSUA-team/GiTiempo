@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   ManagementTableShell,
@@ -142,16 +143,17 @@ function handleMemberFilterUpdate(
   filters.value.memberId = value?.value ?? null;
 }
 
-const searchAutoCompletePt = {
-  root: { class: 'relative h-[38px] w-full max-w-full min-w-0' },
+const searchAutoCompletePt = composeGiTiempoAutoCompletePt({
+  root: { class: 'h-[38px]' },
   pcInputText: {
     root: { class: 'h-[38px] w-full rounded-l-[6px] rounded-r-none pl-9 text-[14px]' },
   },
   dropdown: { class: 'h-[38px] w-9 text-text-muted' },
-  listContainer: { class: 'max-w-full overflow-x-hidden' },
-  option: { class: 'max-w-full min-w-0 truncate text-[13px]' },
-  overlay: { class: 'w-full max-w-full overflow-hidden' },
-} as const;
+  option: { class: 'text-[13px]' },
+});
+const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
 </script>
 
 <template>
@@ -200,7 +202,7 @@ const searchAutoCompletePt = {
             option-label="label"
             placeholder="All projects"
             show-clear
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableFilterAutoCompleteResolvedPt"
             @complete="handleProjectFilterComplete"
             @update:model-value="handleProjectFilterUpdate"
           />
@@ -224,7 +226,7 @@ const searchAutoCompletePt = {
             option-label="label"
             placeholder="All members"
             show-clear
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableFilterAutoCompleteResolvedPt"
             @complete="handleMemberFilterComplete"
             @update:model-value="handleMemberFilterUpdate"
           />
@@ -371,7 +373,7 @@ const searchAutoCompletePt = {
               option-label="label"
               placeholder="All projects"
               show-clear
-              :pt="managementTableFilterAutoCompletePt"
+              :pt="managementTableFilterAutoCompleteResolvedPt"
               @complete="handleProjectFilterComplete"
               @update:model-value="handleProjectFilterUpdate"
             />
@@ -391,7 +393,7 @@ const searchAutoCompletePt = {
               option-label="label"
               placeholder="All members"
               show-clear
-              :pt="managementTableFilterAutoCompletePt"
+              :pt="managementTableFilterAutoCompleteResolvedPt"
               @complete="handleMemberFilterComplete"
               @update:model-value="handleMemberFilterUpdate"
             />
