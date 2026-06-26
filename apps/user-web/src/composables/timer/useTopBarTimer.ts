@@ -266,9 +266,8 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
     try {
       const task = await client.ensureGitHubIssueTask({
-        githubRepo: context.githubIssue.githubRepo,
+        projectId: context.projectId,
         issueNumber: context.githubIssue.issueNumber,
-        issueTitle: context.issueTitle,
       });
       const cachedTasks = picker.getCachedTasks(context.projectId) ?? picker.tasks.value;
       const nextTasks = replaceGitHubIssueOptionWithTask(

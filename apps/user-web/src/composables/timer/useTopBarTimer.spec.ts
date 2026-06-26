@@ -161,8 +161,8 @@ function createClientMock(): TimeEntriesClient & {
   getCurrentTimer: ReturnType<
     typeof vi.fn<TimeEntriesClient['getCurrentTimer']>
   >;
-  listGitHubRepositoryIssues: ReturnType<
-    typeof vi.fn<TimeEntriesClient['listGitHubRepositoryIssues']>
+  listProjectGitHubIssues: ReturnType<
+    typeof vi.fn<TimeEntriesClient['listProjectGitHubIssues']>
   >;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient['listOwnEntries']>>;
   listProjectTimeEntries: ReturnType<
@@ -200,7 +200,7 @@ function createClientMock(): TimeEntriesClient & {
       createTask(TEST_IDS.task, TEST_IDS.project, 'GitHub issue'),
     ),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
-    listGitHubRepositoryIssues: vi.fn(async () => ({
+    listProjectGitHubIssues: vi.fn(async () => ({
       items: [],
       pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
     })),
@@ -366,7 +366,7 @@ describe('useTopBarTimer', () => {
 
     client.listVisibleProjects.mockResolvedValue([githubProject]);
     client.listProjectTasks.mockResolvedValue([syncedTask]);
-    client.listGitHubRepositoryIssues.mockResolvedValue({
+    client.listProjectGitHubIssues.mockResolvedValue({
       items: [
         {
           id: 'issue-1',
@@ -421,9 +421,8 @@ describe('useTopBarTimer', () => {
     topBarTimer.setSelectedProjectId(TEST_IDS.project);
     await flushPromises();
 
-    expect(client.listGitHubRepositoryIssues).toHaveBeenCalledWith(
-      'My-test-org-for-clock',
-      'test-repo',
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.project,
       { limit: 30, state: 'open' },
     );
     expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
@@ -441,9 +440,8 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
-      githubRepo: 'My-test-org-for-clock/test-repo',
+      projectId: TEST_IDS.project,
       issueNumber: 2,
-      issueTitle: 'second test issue',
     });
     expect(client.startTimer).toHaveBeenCalledWith({
       taskId: TEST_IDS.taskAlt,

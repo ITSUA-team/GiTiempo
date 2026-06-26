@@ -84,7 +84,7 @@ function createClientMock(): TimeEntriesClient & {
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
   ensureGitHubIssueTask: ReturnType<typeof vi.fn<TimeEntriesClient["ensureGitHubIssueTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
-  listGitHubRepositoryIssues: ReturnType<typeof vi.fn<TimeEntriesClient["listGitHubRepositoryIssues"]>>;
+  listProjectGitHubIssues: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectGitHubIssues"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   listProjectTimeEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTimeEntries"]>>;
   listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
@@ -113,7 +113,7 @@ function createClientMock(): TimeEntriesClient & {
       throw new Error("unused");
     }),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
-    listGitHubRepositoryIssues: vi.fn(async () => ({
+    listProjectGitHubIssues: vi.fn(async () => ({
       items: [],
       pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
     })),

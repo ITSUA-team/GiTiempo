@@ -3,6 +3,7 @@ import { getErrorMessage } from "@gitiempo/web-shared";
 import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
+import { listUnsyncedProjectGitHubIssues } from "@/lib/project-github-issues";
 import { getGitHubIssueTaskOptionId } from "@/lib/top-bar-timer-helpers";
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -116,55 +117,30 @@ export function useTopBarTaskOptions({
       return localTasks;
     }
 
-    const repo = parseGitHubRepositoryProject(project);
-    if (!repo) {
-      return localTasks;
-    }
-
     try {
-      const response = await client.listGitHubRepositoryIssues(repo.owner, repo.name, {
-        limit: 30,
-        state: "open",
-      });
-      const syncedLocalIssues = new Set(
-        localTasks
-          .map((task) => task.githubIssue)
-          .filter((issue) => issue !== null)
-          .map((issue) => `${issue.githubRepo.toLowerCase()}#${issue.issueNumber}`),
-      );
-      const githubOptions: GitHubIssueTaskOption[] = response.items
-        .filter(
-          (issue) =>
-            !syncedLocalIssues.has(
-              `${issue.repository.fullName.toLowerCase()}#${issue.number}`,
-            ),
-        )
-        .map((issue) => ({
-          createdAt: issue.updatedAt,
-          defaultBillableForTimeEntries: project.defaultBillableForTasks,
-          githubIssue: {
-            githubRepo: issue.repository.fullName,
-            issueNumber: issue.number,
-          },
-          id: getGitHubIssueTaskOptionId({
-            githubRepo: issue.repository.fullName,
-            issueNumber: issue.number,
-          }),
-          isActive: true,
-          isGitHubIssueOption: true,
-          issueTitle: issue.title,
+      const githubOptions: GitHubIssueTaskOption[] = (
+        await listUnsyncedProjectGitHubIssues({
+          client,
+          localTasks,
           projectId: project.id,
-          status: "open",
-          title: issue.title,
-          updatedAt: issue.updatedAt,
-          workspaceId: project.workspaceId,
-        }));
+        })
+      ).map((issue) => ({
+        createdAt: issue.updatedAt,
+        defaultBillableForTimeEntries: project.defaultBillableForTasks,
+        githubIssue: issue.githubIssue,
+        id: getGitHubIssueTaskOptionId(issue.githubIssue),
+        isActive: true,
+        isGitHubIssueOption: true,
+        issueTitle: issue.issueTitle,
+        projectId: issue.projectId,
+        status: "open",
+        title: issue.issueTitle,
+        updatedAt: issue.updatedAt,
+        workspaceId: project.workspaceId,
+      }));
 
       return [...localTasks, ...githubOptions];
-    } catch (error) {
-      picker.setTasksError(
-        `GitHub issues could not load: ${getErrorMessage(error)}`,
-      );
+    } catch {
       return localTasks;
     }
   }
@@ -175,16 +151,4 @@ export function useTopBarTaskOptions({
     isLoadingTasks,
     loadTasksForProject,
   };
-}
-
-function parseGitHubRepositoryProject(
-  project: ProjectResponse,
-): { name: string; owner: string } | null {
-  const [owner, name, ...rest] = project.name.split("/");
-
-  if (!owner || !name || rest.length > 0) {
-    return null;
-  }
-
-  return { owner, name };
 }

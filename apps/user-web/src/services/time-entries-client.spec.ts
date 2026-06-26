@@ -230,7 +230,7 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
-  it("lists GitHub repository issues with encoded owner, repo, and query", async () => {
+  it("lists GitHub issues for a local project with the shared query shape", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
         items: [
@@ -256,15 +256,14 @@ describe("createTimeEntriesClient", () => {
       apiClient: createTestApiClient(fetchFn),
     });
 
-    const response = await client.listGitHubRepositoryIssues(
-      "octo-org",
-      "repo.with.dots",
+    const response = await client.listProjectGitHubIssues(
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       { limit: 15, q: "timer bug", state: "all" },
     );
 
     expect(response.items[0]?.title).toBe("Improve reports filters");
     expect(fetchFn).toHaveBeenCalledWith(
-      "/github/repos/octo-org/repo.with.dots/issues?limit=15&state=all&q=timer+bug",
+      "/projects/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f/github/issues?limit=15&state=all&q=timer+bug",
       {
         body: undefined,
         headers: {
@@ -298,9 +297,8 @@ describe("createTimeEntriesClient", () => {
     });
 
     const task = await client.ensureGitHubIssueTask({
-      githubRepo: "octo-org/repo",
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       issueNumber: 184,
-      issueTitle: "Improve reports filters",
     });
 
     expect(task.githubIssue).toEqual({
@@ -309,9 +307,8 @@ describe("createTimeEntriesClient", () => {
     });
     expect(fetchFn).toHaveBeenCalledWith("/tasks/from-github", {
       body: JSON.stringify({
-        githubRepo: "octo-org/repo",
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
         issueNumber: 184,
-        issueTitle: "Improve reports filters",
       }),
       headers: {
         Authorization: "Bearer access-token",

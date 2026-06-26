@@ -86,16 +86,30 @@ function collectSqlParamValues(value: unknown): unknown[] {
 function createService(
   db: unknown,
   projects: { requireVisibleProject?: ReturnType<typeof vi.fn> },
+  overrides: {
+    github?: Partial<{
+      getRepositoryIssue: ReturnType<typeof vi.fn>;
+      listRepositoryIssues: ReturnType<typeof vi.fn>;
+    }>;
+    githubTasks?: Partial<{
+      findOrCreateTaskForIssue: ReturnType<typeof vi.fn>;
+      findProjectRepoKey: ReturnType<typeof vi.fn>;
+    }>;
+  } = {},
 ): TasksService {
   return new TasksService(
     db as never,
     {
-      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
+      getRepositoryIssue: vi.fn(),
+      listRepositoryIssues: vi.fn(),
+      ...overrides.github,
+    } as never,
+    {
+      findOrCreateTaskForIssue: vi.fn(),
+      findProjectRepoKey: vi.fn(),
+      ...overrides.githubTasks,
     } as never,
     projects as never,
-    {
-      assertOrganizationAllowed: vi.fn().mockResolvedValue(undefined),
-    } as never,
   );
 }
 
@@ -246,6 +260,107 @@ describe('TasksService', () => {
       }),
     );
     expect(result.defaultBillableForTimeEntries).toBe(true);
+  });
+
+  it('lists project github issues through the local project mapping', async () => {
+    const github = {
+      listRepositoryIssues: vi.fn().mockResolvedValue({
+        items: [],
+        pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
+      }),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue({
+        ...projectRow,
+        name: 'Visible project',
+      }),
+    };
+    const service = createService(
+      {},
+      projects,
+      {
+        github,
+        githubTasks: {
+          findProjectRepoKey: vi.fn().mockResolvedValue('octo-org/repo-name'),
+        },
+      },
+    );
+
+    const result = await service.listProjectGitHubIssues(user, projectRow.id, {
+      limit: 30,
+      state: 'open',
+    });
+
+    expect(result.pagination.limit).toBe(30);
+    expect(github.listRepositoryIssues).toHaveBeenCalledWith(
+      user,
+      'octo-org',
+      'repo-name',
+      { limit: 30, state: 'open' },
+    );
+  });
+
+  it('materializes a github issue task from the visible project mapping', async () => {
+    const github = {
+      getRepositoryIssue: vi.fn().mockResolvedValue({
+        id: 'issue-184',
+        nodeId: 'node-184',
+        repository: {
+          owner: 'octo-org',
+          name: 'repo-name',
+          fullName: 'octo-org/repo-name',
+        },
+        number: 184,
+        title: 'Provider title',
+        state: 'open',
+        url: 'https://github.com/octo-org/repo-name/issues/184',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    };
+    const githubTasks = {
+      findProjectRepoKey: vi.fn().mockResolvedValue('octo-org/repo-name'),
+      findOrCreateTaskForIssue: vi.fn().mockResolvedValue({
+        ...taskRow,
+        title: 'Provider title',
+      }),
+    };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue({
+        ...projectRow,
+        defaultBillableForTasks: false,
+      }),
+    };
+    const db = {
+      transaction: vi.fn((callback) => callback({})),
+    };
+    const service = createService(db, projects, { github, githubTasks });
+
+    const result = await service.ensureGitHubIssueTask(user, {
+      projectId: projectRow.id,
+      issueNumber: 184,
+    });
+
+    expect(github.getRepositoryIssue).toHaveBeenCalledWith(
+      user,
+      'octo-org',
+      'repo-name',
+      184,
+    );
+    expect(githubTasks.findOrCreateTaskForIssue).toHaveBeenCalledWith(
+      {},
+      {
+        workspaceId: user.workspaceId,
+        projectId: projectRow.id,
+        issueKey: 'octo-org/repo-name#184',
+        issueTitle: 'Provider title',
+        defaultBillableForTimeEntries: false,
+      },
+    );
+    expect(result.title).toBe('Provider title');
+    expect(result.githubIssue).toEqual({
+      githubRepo: 'octo-org/repo-name',
+      issueNumber: 184,
+    });
   });
 
   it('checks project visibility before updating a task', async () => {

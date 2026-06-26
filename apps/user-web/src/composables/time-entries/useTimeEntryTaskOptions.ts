@@ -1,6 +1,7 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 
+import { listUnsyncedProjectGitHubIssues } from "@/lib/project-github-issues";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import {
@@ -108,57 +109,25 @@ export function useTimeEntryTaskOptions({
       return localTaskOptions;
     }
 
-    const repo = parseGitHubRepositoryProject(project);
-
-    if (!repo) {
-      return localTaskOptions;
-    }
-
     try {
-      const response = await client.listGitHubRepositoryIssues(repo.owner, repo.name, {
-        limit: 30,
-        state: "open",
-      });
-      const syncedLocalIssues = new Set(
-        localTasks
-          .map((task) => task.githubIssue)
-          .filter((issue) => issue !== null)
-          .map((issue) => `${issue.githubRepo.toLowerCase()}#${issue.issueNumber}`),
+      const githubIssueOptions = (
+        await listUnsyncedProjectGitHubIssues({
+          client,
+          localTasks,
+          projectId: project.id,
+        })
+      ).map((issue) =>
+        toGitHubIssueTaskLookupOption({
+          defaultBillableForTimeEntries: project.defaultBillableForTasks,
+          githubIssue: issue.githubIssue,
+          issueTitle: issue.issueTitle,
+          projectId: issue.projectId,
+        }),
       );
-      const githubIssueOptions = response.items
-        .filter(
-          (issue) =>
-            !syncedLocalIssues.has(
-              `${issue.repository.fullName.toLowerCase()}#${issue.number}`,
-            ),
-        )
-        .map((issue) =>
-          toGitHubIssueTaskLookupOption({
-            defaultBillableForTimeEntries: project.defaultBillableForTasks,
-            githubIssue: {
-              githubRepo: issue.repository.fullName,
-              issueNumber: issue.number,
-            },
-            issueTitle: issue.title,
-            projectId: project.id,
-          }),
-        );
 
       return [...localTaskOptions, ...githubIssueOptions];
     } catch {
       return localTaskOptions;
     }
   }
-}
-
-function parseGitHubRepositoryProject(
-  project: ProjectResponse,
-): { name: string; owner: string } | null {
-  const [owner, name, ...rest] = project.name.split("/");
-
-  if (!owner || !name || rest.length > 0) {
-    return null;
-  }
-
-  return { owner, name };
 }

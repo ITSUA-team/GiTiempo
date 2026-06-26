@@ -87,9 +87,8 @@ export function useTimeEntryMutations({
 
       if (isGitHubIssueTaskLookupOption(selectedTask)) {
         materializedTask = await client.ensureGitHubIssueTask({
-          githubRepo: selectedTask.githubIssue.githubRepo,
+          projectId: selectedTask.projectId,
           issueNumber: selectedTask.githubIssue.issueNumber,
-          issueTitle: selectedTask.issueTitle,
         });
         inputToSave = {
           ...input,

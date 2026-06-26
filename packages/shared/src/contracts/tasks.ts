@@ -41,13 +41,8 @@ export const createTaskSchema = z
 
 export const ensureGitHubIssueTaskSchema = z
   .object({
-    githubRepo: z
-      .string()
-      .min(3)
-      .max(200)
-      .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+    projectId: z.uuid(),
     issueNumber: z.number().int().positive(),
-    issueTitle: z.string().min(1).max(500),
   })
   .strict();
 

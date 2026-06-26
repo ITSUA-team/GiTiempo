@@ -104,15 +104,28 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | Method | Path                       | Auth | Role | Description                                                                                      |
 | ------ | -------------------------- | ---- | ---- | ------------------------------------------------------------------------------------------------ |
 | GET    | `/projects/:id/tasks`      | JWT  | Any  | List active tasks for a visible active project by default. Private projects require assignment for non-admin users. |
+| GET    | `/projects/:id/github/issues` | JWT | Any | List GitHub repository issues for a visible GitHub-backed project using the connected GitHub account. |
 | POST   | `/projects/:id/tasks`      | JWT  | Any  | Create a provider-neutral task in a visible active project.                                      |
 | GET    | `/tasks/:id`               | JWT  | Any  | Get task details when the user has visibility to the task's project.                             |
 | PATCH  | `/tasks/:id`               | JWT  | Any  | Update task (title, status, isActive) when the user has visibility to the task's active project. Closing a task stops currently running timers for that task. |
 | DELETE | `/tasks/:id`               | JWT  | Any  | Permanently delete a visible task only when it has no related time entries.                      |
+| POST   | `/tasks/from-github`       | JWT  | Any  | Create or reuse a local task for a selected GitHub issue in a visible GitHub-backed project.     |
 | POST   | `/projects/:id/tasks/sync` | JWT  | Any  | Trigger task sync from the project's configured external provider refs.                          |
 
 **DELETE /tasks/:id** returns `204 No Content` when the task has no related time entries. If any time entry references the task, the backend returns `409 Conflict` with an explanatory message. Task responses do not include `canDelete`, `hasTimeEntries`, or other delete-eligibility metadata; clients must handle a rejected delete attempt.
 
 **PATCH /tasks/:id** with `status: "closed"` makes the task unavailable for future manual entries and timer starts. If any users currently have running timers on that task, the backend ends those entries at the close timestamp, computes positive `durationSeconds`, and clears them from `GET /time-entries/current` responses.
+
+**GET /projects/:id/github/issues** query: `limit?`, `state?`, `pageToken?`, `q?`
+
+- Requires the project to be visible and GitHub-backed.
+- Uses the caller's connected GitHub account to browse the mapped repository; the client does not send repository identity separately.
+
+**POST /tasks/from-github** body: `{ projectId: string, issueNumber: number }`
+
+- Requires the project to be visible and GitHub-backed.
+- Verifies the selected issue through the caller's connected GitHub account before creating or reusing the local task mapping.
+- Uses provider data as the source of truth for the issue title and repository identity.
 
 ---
 

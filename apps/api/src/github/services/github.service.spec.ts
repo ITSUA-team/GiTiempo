@@ -24,6 +24,7 @@ describe('GithubService', () => {
     listRepositories: vi.fn(),
     listProjects: vi.fn(),
     getProjectOwner: vi.fn(),
+    getRepositoryIssue: vi.fn(),
     listRepositoryIssues: vi.fn(),
     listProjectIssues: vi.fn(),
   };
@@ -190,6 +191,44 @@ describe('GithubService', () => {
       q: 'timer',
       limit: 30,
       pageToken: undefined,
+    });
+  });
+
+  it('loads a single repository issue through the connected github account', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.getRepositoryIssue.mockResolvedValue({
+      id: 'issue-184',
+      nodeId: 'issue-184',
+      repository: {
+        owner: 'octocat',
+        name: 'repo',
+        fullName: 'octocat/repo',
+      },
+      number: 184,
+      title: 'Timer bug',
+      state: 'open',
+      url: 'https://github.com/octocat/repo/issues/184',
+      updatedAt: '2026-05-14T12:00:00.000Z',
+    });
+
+    const issue = await service().getRepositoryIssue(user, 'octocat', 'repo', 184);
+
+    expect(issue.title).toBe('Timer bug');
+    expect(apiClient.getRepositoryIssue).toHaveBeenCalledWith({
+      accessToken: 'ghu_token',
+      owner: 'octocat',
+      repo: 'repo',
+      issueNumber: 184,
     });
   });
 

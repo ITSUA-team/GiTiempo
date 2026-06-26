@@ -1717,6 +1717,93 @@
         ]
       }
     },
+    "/projects/{projectId}/github/issues": {
+      "get": {
+        "operationId": "TasksController_listProjectGitHubIssues",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "default": 30,
+              "minimum": 1,
+              "maximum": 100,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageToken",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "x-nestjs_zod-parent-additional-properties": false,
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubRepositoryIssueListResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or GitHub repository not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List GitHub repository issues for a visible GitHub-backed project",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/tasks/from-github": {
       "post": {
         "operationId": "TasksController_ensureGitHubIssueTask",
@@ -1743,7 +1830,7 @@
             }
           },
           "404": {
-            "description": "GitHub organization or project not found"
+            "description": "GitHub connection, project, or issue not found"
           },
           "422": {
             "description": "Project or task inactive"
@@ -4833,27 +4920,20 @@
       "EnsureGitHubIssueTaskDto": {
         "type": "object",
         "properties": {
-          "githubRepo": {
+          "projectId": {
             "type": "string",
-            "minLength": 3,
-            "maxLength": 200,
-            "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "issueNumber": {
             "type": "integer",
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
-          },
-          "issueTitle": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500
           }
         },
         "required": [
-          "githubRepo",
-          "issueNumber",
-          "issueTitle"
+          "projectId",
+          "issueNumber"
         ],
         "additionalProperties": false
       },

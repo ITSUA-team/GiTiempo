@@ -10,6 +10,8 @@ import type {
   BackfillTaskBillableDefaultInput,
   CreateTaskInput,
   EnsureGitHubIssueTaskInput,
+  GitHubIssueListQuery,
+  GitHubRepositoryIssueListResponse,
   TaskListQuery,
   TaskBillableDefaultBackfillResponse,
   TaskResponse,
@@ -24,19 +26,9 @@ import {
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
-import {
-  normalizeGitHubIssueExternalKey,
-  normalizeGitHubRepoKey,
-  parseGitHubRepoKey,
-} from '../../github/github-repo-key';
-import { WorkspaceGitHubOrganizationsService } from '../../github/services/workspace-github-organizations.service';
-import { MembersService } from '../../members/services/members.service';
-import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
-import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
-import {
-  projectRowSelection,
-  projects as projectsTable,
-} from '../../projects/schemas/projects.schema';
+import { parseGitHubRepoKey } from '../../github/github-repo-key';
+import { GithubService } from '../../github/services/github.service';
+import { GithubTaskMaterializationService } from '../../github/services/github-task-materialization.service';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
@@ -44,7 +36,7 @@ import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { taskRowSelection, tasks } from '../schemas/tasks.schema';
 
 export type TaskRow = typeof tasks.$inferSelect;
-type QueryExecutor = Pick<DrizzleDB, 'delete' | 'insert' | 'select' | 'update'>;
+type QueryExecutor = Pick<DrizzleDB, 'update'>;
 
 interface TaskResponseRow extends TaskRow {
   githubIssueExternalKey: string | null;
@@ -54,9 +46,9 @@ interface TaskResponseRow extends TaskRow {
 export class TasksService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
-    private readonly members: MembersService,
+    private readonly github: GithubService,
+    private readonly githubTasks: GithubTaskMaterializationService,
     private readonly projects: ProjectsService,
-    private readonly workspaceGitHubOrganizations: WorkspaceGitHubOrganizationsService,
   ) {}
 
   async listProjectTasks(
@@ -123,62 +115,81 @@ export class TasksService {
     return this.toResponse(row, null);
   }
 
+  async listProjectGitHubIssues(
+    user: AuthUser,
+    projectId: string,
+    query: GitHubIssueListQuery,
+  ): Promise<GitHubRepositoryIssueListResponse> {
+    const project = await this.projects.requireVisibleProject(user, projectId);
+    if (!project.isActive) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const githubRepo = await this.githubTasks.findProjectRepoKey(
+      user.workspaceId,
+      project.id,
+    );
+    if (!githubRepo) {
+      throw new NotFoundException('GitHub project not found');
+    }
+
+    const repoParts = parseGitHubRepoKey(githubRepo);
+    if (!repoParts) {
+      throw DomainError.internal(
+        'github_repo_invalid',
+        'GitHub repository reference is invalid',
+      );
+    }
+
+    return this.github.listRepositoryIssues(
+      user,
+      repoParts.owner,
+      repoParts.name,
+      query,
+    );
+  }
+
   async ensureGitHubIssueTask(
     user: AuthUser,
     input: EnsureGitHubIssueTaskInput,
   ): Promise<TaskResponse> {
-    const repoParts = parseGitHubRepoKey(input.githubRepo);
-    if (!repoParts) {
-      throw new UnprocessableEntityException('GitHub repository is invalid');
+    const project = await this.projects.requireVisibleProject(user, input.projectId);
+    if (!project.isActive) {
+      throw new UnprocessableEntityException('Project is inactive');
     }
 
-    await this.workspaceGitHubOrganizations.assertOrganizationAllowed(
+    const githubRepo = await this.githubTasks.findProjectRepoKey(
       user.workspaceId,
-      repoParts.owner,
+      project.id,
     );
+    if (!githubRepo) {
+      throw new NotFoundException('GitHub project not found');
+    }
 
-    const membership = await this.members.requireActiveMembership(
-      user.sub,
-      user.workspaceId,
+    const repoParts = parseGitHubRepoKey(githubRepo);
+    if (!repoParts) {
+      throw DomainError.internal(
+        'github_repo_invalid',
+        'GitHub repository reference is invalid',
+      );
+    }
+
+    const issue = await this.github.getRepositoryIssue(
+      user,
+      repoParts.owner,
+      repoParts.name,
+      input.issueNumber,
     );
-    const issueKey = `${input.githubRepo}#${input.issueNumber}`;
+    const issueKey = `${issue.repository.fullName}#${issue.number}`;
 
     const task = await this.db.transaction(async (tx) => {
-      const { project, created } = await this.findOrCreateGitHubProject(
-        tx,
-        user,
-        input.githubRepo,
-      );
-      if (!project.isActive) {
-        throw new UnprocessableEntityException('Project is inactive');
-      }
-
-      if (membership.role !== 'admin') {
-        if (created) {
-          await tx
-            .insert(projectAssignments)
-            .values({
-              workspaceId: user.workspaceId,
-              projectId: project.id,
-              userId: user.sub,
-              assignedBy: user.sub,
-            })
-            .onConflictDoNothing({
-              target: [projectAssignments.projectId, projectAssignments.userId],
-            });
-        } else {
-          await this.projects.requireVisibleProject(user, project.id, tx);
-        }
-      }
-
-      const nextTask = await this.findOrCreateGitHubTask(
-        tx,
-        user.workspaceId,
-        project.id,
+      const nextTask = await this.githubTasks.findOrCreateTaskForIssue(tx, {
+        workspaceId: user.workspaceId,
+        projectId: project.id,
         issueKey,
-        input.issueTitle,
-        project.defaultBillableForTasks,
-      );
+        issueTitle: issue.title,
+        defaultBillableForTimeEntries: project.defaultBillableForTasks,
+      });
       if (!nextTask.isActive) {
         throw new UnprocessableEntityException('Task is inactive');
       }
@@ -381,239 +392,6 @@ export class TasksService {
 
     this.assertTrackableTask(task, project);
     return { task, project };
-  }
-
-  private async findOrCreateGitHubProject(
-    db: QueryExecutor,
-    user: AuthUser,
-    githubRepo: string,
-  ): Promise<{ created: boolean; project: ProjectRow }> {
-    const existingRef = await this.findGitHubProjectRef(
-      db,
-      user.workspaceId,
-      githubRepo,
-    );
-
-    if (existingRef) {
-      const project = await this.requireProjectRow(
-        db,
-        user.workspaceId,
-        existingRef.projectId,
-      );
-      return { project, created: false };
-    }
-
-    const project = (
-      await db
-        .insert(projectsTable)
-        .values({
-          workspaceId: user.workspaceId,
-          name: githubRepo,
-          color: null,
-        })
-        .returning()
-    )[0]!;
-
-    const [createdRef] = await db
-      .insert(projectExternalRefs)
-      .values({
-        workspaceId: user.workspaceId,
-        projectId: project.id,
-        provider: 'github',
-        externalType: 'repository',
-        externalKey: githubRepo,
-        externalUrl: `https://github.com/${githubRepo}`,
-        metadata: { githubRepo },
-        syncedAt: new Date(),
-      })
-      .onConflictDoNothing({
-        target: [
-          projectExternalRefs.workspaceId,
-          projectExternalRefs.provider,
-          projectExternalRefs.externalType,
-          projectExternalRefs.externalKey,
-        ],
-      })
-      .returning({ projectId: projectExternalRefs.projectId });
-
-    if (!createdRef) {
-      await db.delete(projectsTable).where(eq(projectsTable.id, project.id));
-
-      const winningRef = await this.findGitHubProjectRef(
-        db,
-        user.workspaceId,
-        githubRepo,
-      );
-      if (!winningRef) {
-        throw DomainError.internal(
-          'github_project_mapping_missing',
-          'Failed to load GitHub project mapping',
-        );
-      }
-
-      const winningProject = await this.requireProjectRow(
-        db,
-        user.workspaceId,
-        winningRef.projectId,
-      );
-      return { project: winningProject, created: false };
-    }
-
-    return { project, created: true };
-  }
-
-  private async findOrCreateGitHubTask(
-    db: QueryExecutor,
-    workspaceId: string,
-    projectId: string,
-    issueKey: string,
-    issueTitle: string,
-    defaultBillableForTimeEntries: boolean,
-  ): Promise<TaskRow> {
-    const existingRef = await this.findGitHubTaskRef(
-      db,
-      workspaceId,
-      projectId,
-      issueKey,
-    );
-
-    if (existingRef) {
-      return this.requireTaskRow(
-        db,
-        workspaceId,
-        projectId,
-        existingRef.taskId,
-      );
-    }
-
-    const [task] = await db
-      .insert(tasks)
-      .values({
-        workspaceId,
-        projectId,
-        title: issueTitle,
-        defaultBillableForTimeEntries,
-      })
-      .returning();
-    if (!task) {
-      throw DomainError.internal(
-        'github_task_create_failed',
-        'Failed to create GitHub task',
-      );
-    }
-
-    const [repo, issueNumber] = issueKey.split('#');
-    const [createdRef] = await db
-      .insert(taskExternalRefs)
-      .values({
-        workspaceId,
-        projectId,
-        taskId: task.id,
-        provider: 'github',
-        externalType: 'issue',
-        externalKey: issueKey,
-        externalUrl: `https://github.com/${repo}/issues/${issueNumber}`,
-        metadata: { githubRepo: repo, issueNumber: Number(issueNumber) },
-        syncedAt: new Date(),
-      })
-      .onConflictDoNothing({
-        target: [
-          taskExternalRefs.workspaceId,
-          taskExternalRefs.provider,
-          taskExternalRefs.externalType,
-          taskExternalRefs.externalKey,
-        ],
-      })
-      .returning({ taskId: taskExternalRefs.taskId });
-
-    if (!createdRef) {
-      await db.delete(tasks).where(eq(tasks.id, task.id));
-
-      const winningRef = await this.findGitHubTaskRef(
-        db,
-        workspaceId,
-        projectId,
-        issueKey,
-      );
-      if (!winningRef) throw new NotFoundException('Task not found');
-
-      return this.requireTaskRow(db, workspaceId, projectId, winningRef.taskId);
-    }
-
-    return task;
-  }
-
-  private async findGitHubProjectRef(
-    db: Pick<DrizzleDB, 'select'>,
-    workspaceId: string,
-    githubRepo: string,
-  ): Promise<{ projectId: string } | null> {
-    const normalizedRepo = normalizeGitHubRepoKey(githubRepo);
-    if (!normalizedRepo) {
-      return null;
-    }
-
-    const [existingRef] = await db
-      .select({ projectId: projectExternalRefs.projectId })
-      .from(projectExternalRefs)
-      .where(
-        and(
-          eq(projectExternalRefs.workspaceId, workspaceId),
-          eq(projectExternalRefs.provider, 'github'),
-          eq(projectExternalRefs.externalType, 'repository'),
-          sql`lower(${projectExternalRefs.externalKey}) = ${normalizedRepo}`,
-        ),
-      )
-      .limit(1);
-
-    return existingRef ?? null;
-  }
-
-  private async findGitHubTaskRef(
-    db: Pick<DrizzleDB, 'select'>,
-    workspaceId: string,
-    projectId: string,
-    issueKey: string,
-  ): Promise<{ taskId: string } | null> {
-    const normalizedIssueKey = normalizeGitHubIssueExternalKey(issueKey);
-    if (!normalizedIssueKey) {
-      return null;
-    }
-
-    const [existingRef] = await db
-      .select({ taskId: taskExternalRefs.taskId })
-      .from(taskExternalRefs)
-      .where(
-        and(
-          eq(taskExternalRefs.workspaceId, workspaceId),
-          eq(taskExternalRefs.projectId, projectId),
-          eq(taskExternalRefs.provider, 'github'),
-          eq(taskExternalRefs.externalType, 'issue'),
-          sql`lower(${taskExternalRefs.externalKey}) = ${normalizedIssueKey}`,
-        ),
-      )
-      .limit(1);
-
-    return existingRef ?? null;
-  }
-
-  private async requireProjectRow(
-    db: Pick<DrizzleDB, 'select'>,
-    workspaceId: string,
-    projectId: string,
-  ): Promise<ProjectRow> {
-    const [project] = await db
-      .select(projectRowSelection)
-      .from(projectsTable)
-      .where(
-        and(
-          eq(projectsTable.id, projectId),
-          eq(projectsTable.workspaceId, workspaceId),
-        ),
-      )
-      .limit(1);
-    if (!project) throw new NotFoundException('Project not found');
-    return project;
   }
 
   private async requireTaskRow(

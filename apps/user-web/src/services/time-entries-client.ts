@@ -56,9 +56,8 @@ export interface TimeEntriesClient {
   deleteEntry(entryId: string): Promise<void>;
   ensureGitHubIssueTask(input: EnsureGitHubIssueTaskInput): Promise<TaskResponse>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
-  listGitHubRepositoryIssues(
-    owner: string,
-    repo: string,
+  listProjectGitHubIssues(
+    projectId: string,
     query?: Partial<GitHubIssueListQuery>,
   ): Promise<GitHubRepositoryIssueListResponse>;
   listOwnEntries(
@@ -139,11 +138,11 @@ export function createTimeEntriesClient({
         responseSchema: currentTimeEntryResponseSchema,
       });
     },
-    listGitHubRepositoryIssues(owner, repo, query) {
+    listProjectGitHubIssues(projectId, query) {
       const search = buildGitHubIssueQueryString(query);
 
       return apiClient.requestJson({
-        path: `/github/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues?${search}`,
+        path: `/projects/${projectId}/github/issues?${search}`,
         responseSchema: githubRepositoryIssueListResponseSchema,
       });
     },

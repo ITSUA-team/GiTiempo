@@ -182,7 +182,7 @@ function createClientMock(options: {
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
   ensureGitHubIssueTask: ReturnType<typeof vi.fn<TimeEntriesClient["ensureGitHubIssueTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
-  listGitHubRepositoryIssues: ReturnType<typeof vi.fn<TimeEntriesClient["listGitHubRepositoryIssues"]>>;
+  listProjectGitHubIssues: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectGitHubIssues"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   listProjectTimeEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTimeEntries"]>>;
   listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
@@ -227,7 +227,7 @@ function createClientMock(options: {
     deleteTask: vi.fn(async () => undefined),
     ensureGitHubIssueTask: vi.fn(async () => createTask()),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
-    listGitHubRepositoryIssues: vi.fn(async () => ({
+    listProjectGitHubIssues: vi.fn(async () => ({
       items: [],
       pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
     })),
@@ -1197,7 +1197,7 @@ describe("TimeEntriesView", () => {
       visibleProjects: [createProject(), githubProject],
     });
 
-    client.listGitHubRepositoryIssues.mockResolvedValue({
+    client.listProjectGitHubIssues.mockResolvedValue({
       items: [
         {
           id: "issue-1",
@@ -1241,9 +1241,8 @@ describe("TimeEntriesView", () => {
     const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
 
     expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.githubProject);
-    expect(client.listGitHubRepositoryIssues).toHaveBeenCalledWith(
-      "My-test-org-for-clock",
-      "test-repo",
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.githubProject,
       { limit: 30, state: "open" },
     );
     expect(dialogSuggestions.text()).toContain("some test issue");
@@ -1314,7 +1313,7 @@ describe("TimeEntriesView", () => {
       visibleProjects: [createProject(), githubProject],
     });
 
-    client.listGitHubRepositoryIssues.mockResolvedValue({
+    client.listProjectGitHubIssues.mockResolvedValue({
       items: [
         {
           id: "issue-2",
@@ -1346,9 +1345,8 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
-      githubRepo: "My-test-org-for-clock/test-repo",
+      projectId: TEST_IDS.githubProject,
       issueNumber: 2,
-      issueTitle: "second test issue",
     });
     expect(client.createManualEntry).toHaveBeenCalledWith({
       description: null,
@@ -1403,7 +1401,7 @@ describe("TimeEntriesView", () => {
       visibleProjects: [githubProject],
     });
 
-    client.listGitHubRepositoryIssues.mockResolvedValue({
+    client.listProjectGitHubIssues.mockResolvedValue({
       items: [
         {
           id: "issue-1",
@@ -1448,9 +1446,8 @@ describe("TimeEntriesView", () => {
     await flushPromises();
 
     expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
-      githubRepo: "My-test-org-for-clock/test-repo",
+      projectId: TEST_IDS.githubProject,
       issueNumber: 2,
-      issueTitle: "second test issue",
     });
     expect(client.updateEntry).toHaveBeenCalledWith(
       TEST_IDS.completedEntry,
