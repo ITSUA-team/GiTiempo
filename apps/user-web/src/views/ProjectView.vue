@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import AutoComplete from "primevue/autocomplete";
-import Select from "primevue/select";
 import { computed } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -11,6 +9,7 @@ import {
 } from "@gitiempo/web-shared";
 
 import ProjectTaskDialog from "@/components/projects/ProjectTaskDialog.vue";
+import ProjectsFilters from "@/components/projects/ProjectsFilters.vue";
 import ProjectsLoadingSkeleton from "@/components/projects/ProjectsLoadingSkeleton.vue";
 import ProjectsTaskSection from "@/components/projects/ProjectsTaskSection.vue";
 import { useProjectTaskActions } from "@/composables/projects/useProjectTaskActions";
@@ -22,12 +21,7 @@ import { useProjectTaskMutations } from "@/composables/projects/useProjectTaskMu
 import { createDefaultTimeEntriesClient } from "@/config/clients";
 import { resolveDataPageState } from "@/lib/page-state";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
-import {
-  formatUpdatedLabel,
-  type ProjectStatusFilterOption,
-  type ProjectUpdatedFilterOption,
-  type ProjectsSearchSuggestion,
-} from "@/lib/projects-page-helpers";
+import { formatUpdatedLabel } from "@/lib/projects-page-helpers";
 import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
@@ -141,89 +135,18 @@ async function retryLoadPage(): Promise<void> {
     <ProjectsLoadingSkeleton v-if="pageState === 'loading'" />
 
     <template v-else>
-      <div
-        class="flex flex-col gap-3 sm:flex-row sm:flex-wrap"
-        data-testid="projects-filters"
-      >
-        <div class="flex w-full flex-col gap-1.5 sm:w-[360px]">
-          <label
-            for="projects-search"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Search
-          </label>
-          <AutoComplete
-            data-testid="projects-search-filter"
-            input-id="projects-search"
-            class="w-full"
-            option-label="label"
-            placeholder="Search projects or tasks"
-            :model-value="selectedSearchValue"
-            :suggestions="searchSuggestions"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
-            fluid
-            :min-length="0"
-            @complete="handleSearchComplete($event.query)"
-            @update:model-value="setSearchValue(($event ?? null) as ProjectsSearchSuggestion | string | null)"
-          >
-            <template #option="slotProps">
-              <div class="flex flex-col gap-0.5">
-                <span
-                  class="text-text-dark text-sm"
-                  :class="slotProps.option.kind === 'project' ? 'font-semibold' : 'font-normal'"
-                >
-                  {{ slotProps.option.label }}
-                </span>
-                <span class="text-text-muted text-xs">
-                  {{ slotProps.option.meta }}
-                </span>
-              </div>
-            </template>
-          </AutoComplete>
-        </div>
-
-        <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">
-          <label
-            for="projects-status-filter"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Status
-          </label>
-          <Select
-            data-testid="projects-status-filter"
-            input-id="projects-status-filter"
-            class="w-full"
-            option-label="label"
-            placeholder="All statuses"
-            :model-value="selectedStatusFilter"
-            fluid
-            :options="statusFilterOptions"
-            @update:model-value="setStatusFilterValue(($event ?? null) as ProjectStatusFilterOption | null)"
-          />
-        </div>
-
-        <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">
-          <label
-            for="projects-updated-filter"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Updated
-          </label>
-          <Select
-            data-testid="projects-updated-filter"
-            input-id="projects-updated-filter"
-            class="w-full"
-            option-label="label"
-            placeholder="Any time"
-            :model-value="selectedUpdatedFilter"
-            fluid
-            :options="updatedFilterOptions"
-            @update:model-value="setUpdatedFilterValue(($event ?? null) as ProjectUpdatedFilterOption | null)"
-          />
-        </div>
-      </div>
+      <ProjectsFilters
+        :search-suggestions="searchSuggestions"
+        :search-value="selectedSearchValue"
+        :status-filter="selectedStatusFilter"
+        :status-filter-options="statusFilterOptions"
+        :updated-filter="selectedUpdatedFilter"
+        :updated-filter-options="updatedFilterOptions"
+        @search-complete="handleSearchComplete"
+        @update:search-value="setSearchValue"
+        @update:status-filter="setStatusFilterValue"
+        @update:updated-filter="setUpdatedFilterValue"
+      />
 
       <RequestStateCard
         v-if="pageState === 'request-error'"
