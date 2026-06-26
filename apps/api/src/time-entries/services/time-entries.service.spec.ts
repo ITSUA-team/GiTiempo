@@ -22,6 +22,8 @@ const mockUsersActivity = {
   touchLastActive: vi.fn().mockResolvedValue(undefined),
 };
 
+const mockGithubTasks = {} as never;
+
 const completedEntry = {
   id: 'entry-1',
   workspaceId: user.workspaceId,
@@ -114,6 +116,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     Object.defineProperty(service, 'requireEntryResponse', {
@@ -175,6 +178,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({
@@ -225,6 +229,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -265,6 +270,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -301,6 +307,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -336,6 +343,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({ ...runningEntry, taskId: 'task-2' }),
@@ -381,6 +389,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -409,6 +418,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -437,6 +447,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({
@@ -486,6 +497,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
@@ -510,6 +522,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
@@ -552,6 +565,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
@@ -595,6 +609,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({ ...completedEntry, taskId: 'task-2' }),
@@ -636,6 +651,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(

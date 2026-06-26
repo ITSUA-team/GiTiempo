@@ -1,7 +1,7 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 
-import { listUnsyncedProjectGitHubIssues } from "@/lib/project-github-issues";
+import { loadUnsyncedProjectGitHubIssues } from "@/lib/project-github-issues";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import {
@@ -17,6 +17,11 @@ interface UseTimeEntryTaskOptionsOptions {
 
 interface LoadTaskOptionsOptions {
   trackableOnly?: boolean;
+}
+
+interface LoadedTaskOptionsResult {
+  errorMessage: string | null;
+  taskOptions: TaskLookupOption[];
 }
 
 /* eslint-disable no-unused-vars */
@@ -38,7 +43,7 @@ export function useTimeEntryTaskOptions({
   async function loadProjectTaskOptions(
     projectId: string,
     options: LoadTaskOptionsOptions = {},
-  ): Promise<TaskLookupOption[]> {
+  ): Promise<LoadedTaskOptionsResult> {
     let tasks = taskCache.get(projectId);
 
     if (!tasks) {
@@ -67,13 +72,17 @@ export function useTimeEntryTaskOptions({
     target.setTasksError(null);
 
     try {
-      const tasks = await loadProjectTaskOptions(projectId, options);
+      const { errorMessage, taskOptions } = await loadProjectTaskOptions(
+        projectId,
+        options,
+      );
 
       if (target.isCurrentTaskRequest(requestId)) {
-        target.setTaskOptions(tasks);
+        target.setTaskOptions(taskOptions);
+        target.setTasksError(errorMessage);
       }
 
-      return tasks;
+      return taskOptions;
     } catch (error) {
       if (target.isCurrentTaskRequest(requestId)) {
         target.setTaskOptions([]);
@@ -102,21 +111,22 @@ export function useTimeEntryTaskOptions({
     projectId: string,
     localTaskOptions: TaskLookupOption[],
     localTasks: TaskResponse[],
-  ): Promise<TaskLookupOption[]> {
+  ): Promise<LoadedTaskOptionsResult> {
     const project = getProjectById(projectId);
 
     if (!project || project.source !== "github") {
-      return localTaskOptions;
+      return {
+        errorMessage: null,
+        taskOptions: localTaskOptions,
+      };
     }
 
-    try {
-      const githubIssueOptions = (
-        await listUnsyncedProjectGitHubIssues({
-          client,
-          localTasks,
-          projectId: project.id,
-        })
-      ).map((issue) =>
+    const { errorMessage, issues } = await loadUnsyncedProjectGitHubIssues({
+      client,
+      localTasks,
+      projectId: project.id,
+    });
+    const githubIssueOptions = issues.map((issue) =>
         toGitHubIssueTaskLookupOption({
           defaultBillableForTimeEntries: project.defaultBillableForTasks,
           githubIssue: issue.githubIssue,
@@ -125,9 +135,9 @@ export function useTimeEntryTaskOptions({
         }),
       );
 
-      return [...localTaskOptions, ...githubIssueOptions];
-    } catch {
-      return localTaskOptions;
-    }
+    return {
+      errorMessage,
+      taskOptions: [...localTaskOptions, ...githubIssueOptions],
+    };
   }
 }

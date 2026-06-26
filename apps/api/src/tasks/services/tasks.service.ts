@@ -144,7 +144,7 @@ export class TasksService {
     return this.github.listRepositoryIssues(
       user,
       repoParts.owner,
-      repoParts.name,
+      repoParts.repo,
       query,
     );
   }
@@ -177,7 +177,7 @@ export class TasksService {
     const issue = await this.github.getRepositoryIssue(
       user,
       repoParts.owner,
-      repoParts.name,
+      repoParts.repo,
       input.issueNumber,
     );
     const issueKey = `${issue.repository.fullName}#${issue.number}`;

@@ -42,6 +42,7 @@ import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
 import { projects as projectsTable } from '../../projects/schemas/projects.schema';
 import { ProjectsService } from '../../projects/services/projects.service';
+import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
 import {
   taskRowSelection,
   tasks as tasksTable,
@@ -89,7 +90,7 @@ export class TimeEntriesService {
     private readonly projects: ProjectsService,
     private readonly tasks: TasksService,
     private readonly usersActivity: UsersActivityService,
-    private readonly githubTasks: GithubTaskMaterializationService = null as never,
+    private readonly githubTasks: GithubTaskMaterializationService,
   ) {}
 
   async listOwnEntries(

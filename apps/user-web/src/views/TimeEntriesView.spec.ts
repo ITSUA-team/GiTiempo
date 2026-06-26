@@ -460,6 +460,7 @@ async function mountView(
                 title: 'Ship admin polish'
               })">Task</button>
               <button data-testid="dialog-task-github-issue" type="button" @click="$emit('update:taskValue', {
+                defaultBillableForTimeEntries: true,
                 githubIssue: {
                   githubRepo: 'My-test-org-for-clock/test-repo',
                   issueNumber: 2

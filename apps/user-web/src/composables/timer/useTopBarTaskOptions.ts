@@ -3,7 +3,7 @@ import { getErrorMessage } from "@gitiempo/web-shared";
 import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
-import { listUnsyncedProjectGitHubIssues } from "@/lib/project-github-issues";
+import { loadUnsyncedProjectGitHubIssues } from "@/lib/project-github-issues";
 import { getGitHubIssueTaskOptionId } from "@/lib/top-bar-timer-helpers";
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -19,6 +19,11 @@ interface UseTopBarTaskOptionsOptions {
   client: TimeEntriesClient;
   picker: TopBarTaskPicker;
   scope: ComputedRef<UserServerStateScope>;
+}
+
+interface LoadedTopBarTaskOptions {
+  errorMessage: string | null;
+  taskOptions: TopBarTaskOption[];
 }
 
 export function useTopBarTaskOptions({
@@ -74,6 +79,7 @@ export function useTopBarTaskOptions({
       const cachedTasks = picker.getCachedTasks(projectId);
 
       if (cachedTasks) {
+        picker.setTasksError(null);
         picker.setTasks(cachedTasks);
         return cachedTasks;
       }
@@ -82,15 +88,21 @@ export function useTopBarTaskOptions({
         queryKey: timerKeys.projectTasks(scope.value, projectId),
         queryFn: () => client.listProjectTasks(projectId),
       });
-      const nextTasks = await appendGitHubIssueOptions(projectId, localTasks);
+      const { errorMessage, taskOptions } = await appendGitHubIssueOptions(
+        projectId,
+        localTasks,
+      );
 
       if (requestId !== taskRequestId) {
         return picker.tasks.value;
       }
 
-      picker.setCachedTasks(projectId, nextTasks);
-      picker.setTasks(nextTasks);
-      return nextTasks;
+      if (errorMessage === null) {
+        picker.setCachedTasks(projectId, taskOptions);
+      }
+      picker.setTasks(taskOptions);
+      picker.setTasksError(errorMessage);
+      return taskOptions;
     } catch (error) {
       if (requestId === taskRequestId) {
         picker.setTasks([]);
@@ -108,23 +120,28 @@ export function useTopBarTaskOptions({
   async function appendGitHubIssueOptions(
     projectId: string,
     localTasks: TaskResponse[],
-  ): Promise<TopBarTaskOption[]> {
+  ): Promise<LoadedTopBarTaskOptions> {
     const project = picker.projects.value.find(
       (candidate) => candidate.id === projectId,
     );
 
-    if (!project || project.source !== "github") {
-      return localTasks;
+    const hasGitHubIssueTask = localTasks.some(
+      (task) => task.githubIssue !== null,
+    );
+
+    if (!project || (project.source !== "github" && !hasGitHubIssueTask)) {
+      return {
+        errorMessage: null,
+        taskOptions: localTasks,
+      };
     }
 
-    try {
-      const githubOptions: GitHubIssueTaskOption[] = (
-        await listUnsyncedProjectGitHubIssues({
-          client,
-          localTasks,
-          projectId: project.id,
-        })
-      ).map((issue) => ({
+    const { errorMessage, issues } = await loadUnsyncedProjectGitHubIssues({
+      client,
+      localTasks,
+      projectId: project.id,
+    });
+    const githubOptions: GitHubIssueTaskOption[] = issues.map((issue) => ({
         createdAt: issue.updatedAt,
         defaultBillableForTimeEntries: project.defaultBillableForTasks,
         githubIssue: issue.githubIssue,
@@ -139,10 +156,10 @@ export function useTopBarTaskOptions({
         workspaceId: project.workspaceId,
       }));
 
-      return [...localTasks, ...githubOptions];
-    } catch {
-      return localTasks;
-    }
+    return {
+      errorMessage,
+      taskOptions: [...localTasks, ...githubOptions],
+    };
   }
 
   return {

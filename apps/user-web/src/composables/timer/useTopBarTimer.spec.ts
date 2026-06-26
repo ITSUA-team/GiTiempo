@@ -448,6 +448,100 @@ describe('useTopBarTimer', () => {
     });
   });
 
+  it('loads GitHub issues when updating a running timer from an existing GitHub task', async () => {
+    const client = createClientMock();
+    const githubProject = createProject(
+      TEST_IDS.project,
+      'My-test-org-for-clock/test-repo',
+    );
+    const syncedTask = {
+      ...createTask(TEST_IDS.task, TEST_IDS.project, 'some test issue'),
+      githubIssue: {
+        githubRepo: 'My-test-org-for-clock/test-repo',
+        issueNumber: 1,
+      },
+    };
+
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createRunningEntry({
+        githubIssue: syncedTask.githubIssue,
+        project: { id: TEST_IDS.project, name: githubProject.name },
+        projectId: TEST_IDS.project,
+        task: { id: TEST_IDS.task, title: syncedTask.title },
+        taskId: TEST_IDS.task,
+      }),
+    });
+    client.listVisibleProjects.mockResolvedValue([githubProject]);
+    client.listProjectTasks.mockResolvedValue([syncedTask]);
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-3',
+          nodeId: 'node-3',
+          number: 3,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'other issue',
+          updatedAt: '2026-06-25T09:23:27.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/3',
+        },
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'My first issue',
+          updatedAt: '2026-03-16T16:54:23.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+        {
+          id: 'issue-1',
+          nodeId: 'node-1',
+          number: 1,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'some test issue',
+          updatedAt: '2026-03-16T15:18:30.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/1',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+    await flushPromises();
+
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.project,
+      { limit: 30, state: 'open' },
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'some test issue',
+      'other issue',
+      'My first issue',
+    ]);
+  });
+
   it('keeps no eligible task context when the latest tracked task is hidden', async () => {
     const client = createClientMock();
 

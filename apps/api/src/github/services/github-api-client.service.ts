@@ -385,6 +385,8 @@ export class GithubApiClientService {
     const issue = await this.rest<GitHubIssueRest>(
       input.accessToken,
       `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}/issues/${input.issueNumber}`,
+      {},
+      null,
     ).then((result) => result.body);
 
     if (issue.pull_request !== undefined) {
