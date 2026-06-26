@@ -3,6 +3,8 @@ import {
   createManualTimeEntrySchema,
   createTaskSchema,
   currentTimeEntryResponseSchema,
+  ensureGitHubIssueTaskSchema,
+  githubRepositoryIssueListResponseSchema,
   projectListResponseSchema,
   type StartTimerInput,
   taskResponseSchema,
@@ -17,6 +19,9 @@ import {
   type CreateManualTimeEntryInput,
   type CreateTaskInput,
   type CurrentTimeEntryResponse,
+  type EnsureGitHubIssueTaskInput,
+  type GitHubIssueListQuery,
+  type GitHubRepositoryIssueListResponse,
   type ProjectResponse,
   type TaskBillableDefaultBackfillResponse,
   type TaskResponse,
@@ -49,7 +54,13 @@ export interface TimeEntriesClient {
   ): Promise<TaskResponse>;
   deleteTask(taskId: string): Promise<void>;
   deleteEntry(entryId: string): Promise<void>;
+  ensureGitHubIssueTask(input: EnsureGitHubIssueTaskInput): Promise<TaskResponse>;
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
+  listGitHubRepositoryIssues(
+    owner: string,
+    repo: string,
+    query?: Partial<GitHubIssueListQuery>,
+  ): Promise<GitHubRepositoryIssueListResponse>;
   listOwnEntries(
     query?: Partial<TimeEntryListQuery>,
     options?: { signal?: AbortSignal },
@@ -114,10 +125,26 @@ export function createTimeEntriesClient({
         path: `/time-entries/${entryId}`,
       });
     },
+    ensureGitHubIssueTask(input) {
+      return apiClient.requestJson({
+        body: ensureGitHubIssueTaskSchema.parse(input),
+        method: "POST",
+        path: "/tasks/from-github",
+        responseSchema: taskResponseSchema,
+      });
+    },
     getCurrentTimer() {
       return apiClient.requestJson({
         path: "/time-entries/current",
         responseSchema: currentTimeEntryResponseSchema,
+      });
+    },
+    listGitHubRepositoryIssues(owner, repo, query) {
+      const search = buildGitHubIssueQueryString(query);
+
+      return apiClient.requestJson({
+        path: `/github/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues?${search}`,
+        responseSchema: githubRepositoryIssueListResponseSchema,
       });
     },
     listOwnEntries(query, options) {
@@ -181,4 +208,23 @@ export function createTimeEntriesClient({
       });
     },
   };
+}
+
+function buildGitHubIssueQueryString(
+  query: Partial<GitHubIssueListQuery> | undefined,
+): string {
+  const search = new URLSearchParams();
+
+  search.set("limit", String(query?.limit ?? 30));
+  search.set("state", query?.state ?? "open");
+
+  if (query?.pageToken) {
+    search.set("pageToken", query.pageToken);
+  }
+
+  if (query?.q) {
+    search.set("q", query.q);
+  }
+
+  return search.toString();
 }

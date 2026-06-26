@@ -1,12 +1,17 @@
-import type { TaskResponse } from "@gitiempo/shared";
+import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
-import { toTaskLookupOption, type TaskLookupOption } from "./time-entry-task-lookup";
+import {
+  toGitHubIssueTaskLookupOption,
+  toTaskLookupOption,
+  type TaskLookupOption,
+} from "./time-entry-task-lookup";
 
 interface UseTimeEntryTaskOptionsOptions {
   client: TimeEntriesClient;
+  getProjectById(projectId: string): ProjectResponse | null;
 }
 
 interface LoadTaskOptionsOptions {
@@ -25,6 +30,7 @@ interface TaskOptionsTarget {
 
 export function useTimeEntryTaskOptions({
   client,
+  getProjectById,
 }: UseTimeEntryTaskOptionsOptions) {
   const taskCache = new Map<string, TaskResponse[]>();
 
@@ -39,12 +45,14 @@ export function useTimeEntryTaskOptions({
       taskCache.set(projectId, tasks);
     }
 
-    return tasks
+    const localTaskOptions = tasks
       .filter(
         (task) =>
           task.isActive && (!options.trackableOnly || task.status === "open"),
       )
       .map(toTaskLookupOption);
+
+    return appendGitHubIssueOptions(projectId, localTaskOptions, tasks);
   }
 
   async function loadTargetProjectTaskOptions(
@@ -79,8 +87,78 @@ export function useTimeEntryTaskOptions({
     }
   }
 
+  function invalidateProjectTaskOptions(projectId: string): void {
+    taskCache.delete(projectId);
+  }
+
   return {
+    invalidateProjectTaskOptions,
     loadProjectTaskOptions,
     loadTargetProjectTaskOptions,
   };
+
+  async function appendGitHubIssueOptions(
+    projectId: string,
+    localTaskOptions: TaskLookupOption[],
+    localTasks: TaskResponse[],
+  ): Promise<TaskLookupOption[]> {
+    const project = getProjectById(projectId);
+
+    if (!project || project.source !== "github") {
+      return localTaskOptions;
+    }
+
+    const repo = parseGitHubRepositoryProject(project);
+
+    if (!repo) {
+      return localTaskOptions;
+    }
+
+    try {
+      const response = await client.listGitHubRepositoryIssues(repo.owner, repo.name, {
+        limit: 30,
+        state: "open",
+      });
+      const syncedLocalIssues = new Set(
+        localTasks
+          .map((task) => task.githubIssue)
+          .filter((issue) => issue !== null)
+          .map((issue) => `${issue.githubRepo.toLowerCase()}#${issue.issueNumber}`),
+      );
+      const githubIssueOptions = response.items
+        .filter(
+          (issue) =>
+            !syncedLocalIssues.has(
+              `${issue.repository.fullName.toLowerCase()}#${issue.number}`,
+            ),
+        )
+        .map((issue) =>
+          toGitHubIssueTaskLookupOption({
+            defaultBillableForTimeEntries: project.defaultBillableForTasks,
+            githubIssue: {
+              githubRepo: issue.repository.fullName,
+              issueNumber: issue.number,
+            },
+            issueTitle: issue.title,
+            projectId: project.id,
+          }),
+        );
+
+      return [...localTaskOptions, ...githubIssueOptions];
+    } catch {
+      return localTaskOptions;
+    }
+  }
+}
+
+function parseGitHubRepositoryProject(
+  project: ProjectResponse,
+): { name: string; owner: string } | null {
+  const [owner, name, ...rest] = project.name.split("/");
+
+  if (!owner || !name || rest.length > 0) {
+    return null;
+  }
+
+  return { owner, name };
 }

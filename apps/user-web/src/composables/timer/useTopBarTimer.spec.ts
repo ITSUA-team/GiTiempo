@@ -155,8 +155,14 @@ function createClientMock(): TimeEntriesClient & {
   createTask: ReturnType<typeof vi.fn<TimeEntriesClient['createTask']>>;
   deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient['deleteEntry']>>;
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient['deleteTask']>>;
+  ensureGitHubIssueTask: ReturnType<
+    typeof vi.fn<TimeEntriesClient['ensureGitHubIssueTask']>
+  >;
   getCurrentTimer: ReturnType<
     typeof vi.fn<TimeEntriesClient['getCurrentTimer']>
+  >;
+  listGitHubRepositoryIssues: ReturnType<
+    typeof vi.fn<TimeEntriesClient['listGitHubRepositoryIssues']>
   >;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient['listOwnEntries']>>;
   listProjectTimeEntries: ReturnType<
@@ -190,7 +196,14 @@ function createClientMock(): TimeEntriesClient & {
     ),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
+    ensureGitHubIssueTask: vi.fn(async () =>
+      createTask(TEST_IDS.task, TEST_IDS.project, 'GitHub issue'),
+    ),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    listGitHubRepositoryIssues: vi.fn(async () => ({
+      items: [],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTimeEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTasks: vi.fn(async () => []),
@@ -324,8 +337,116 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
+      source: 'local',
       taskId: TEST_IDS.task,
       taskTitle: 'Improve reports filters',
+    });
+  });
+
+  it('loads GitHub issues for a GitHub project and materializes the selected issue before start', async () => {
+    const client = createClientMock();
+    const githubProject = {
+      ...createProject(TEST_IDS.project, 'My-test-org-for-clock/test-repo'),
+      source: 'github' as const,
+    };
+    const syncedTask = {
+      ...createTask(TEST_IDS.task, TEST_IDS.project, 'some test issue'),
+      githubIssue: {
+        githubRepo: 'My-test-org-for-clock/test-repo',
+        issueNumber: 1,
+      },
+    };
+    const materializedTask = {
+      ...createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'second test issue'),
+      githubIssue: {
+        githubRepo: 'My-test-org-for-clock/test-repo',
+        issueNumber: 2,
+      },
+    };
+
+    client.listVisibleProjects.mockResolvedValue([githubProject]);
+    client.listProjectTasks.mockResolvedValue([syncedTask]);
+    client.listGitHubRepositoryIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-1',
+          nodeId: 'node-1',
+          number: 1,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'some test issue',
+          updatedAt: '2026-04-21T10:00:00.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/1',
+        },
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'second test issue',
+          updatedAt: '2026-04-21T10:01:00.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+    client.ensureGitHubIssueTask.mockResolvedValue(materializedTask);
+    client.startTimer.mockResolvedValue(
+      createRunningEntry({
+        githubIssue: materializedTask.githubIssue,
+        project: { id: TEST_IDS.project, name: githubProject.name },
+        projectId: TEST_IDS.project,
+        task: { id: TEST_IDS.taskAlt, title: materializedTask.title },
+        taskId: TEST_IDS.taskAlt,
+      }),
+    );
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+    await flushPromises();
+
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(client.listGitHubRepositoryIssues).toHaveBeenCalledWith(
+      'My-test-org-for-clock',
+      'test-repo',
+      { limit: 30, state: 'open' },
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'some test issue',
+      'second test issue',
+    ]);
+
+    const githubIssueOption = topBarTimer.taskOptions.value.find(
+      (task) => task.title === 'second test issue',
+    );
+    expect(githubIssueOption).toBeDefined();
+
+    topBarTimer.setSelectedTaskId(githubIssueOption!.id);
+    await topBarTimer.startTimerFromDialog();
+    await flushPromises();
+
+    expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
+      githubRepo: 'My-test-org-for-clock/test-repo',
+      issueNumber: 2,
+      issueTitle: 'second test issue',
+    });
+    expect(client.startTimer).toHaveBeenCalledWith({
+      taskId: TEST_IDS.taskAlt,
     });
   });
 
@@ -432,6 +553,7 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: 'project-1',
       projectName: 'Project Orion',
+      source: 'local',
       taskId: 'task-1',
       taskTitle: 'Improve reports filters',
     });
@@ -548,6 +670,7 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: 'project-2',
       projectName: 'Project Atlas',
+      source: 'local',
       taskId: 'task-2',
       taskTitle: 'Summarize PM scope changes',
     });
@@ -1032,6 +1155,7 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
+      source: 'local',
       taskId: TEST_IDS.task,
       taskTitle: 'Improve reports filters',
     });
@@ -1109,6 +1233,7 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
+      source: 'local',
       taskId: TEST_IDS.task,
       taskTitle: 'Improve reports filters',
     });

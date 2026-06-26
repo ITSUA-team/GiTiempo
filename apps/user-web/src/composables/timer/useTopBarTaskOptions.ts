@@ -3,10 +3,15 @@ import { getErrorMessage } from "@gitiempo/web-shared";
 import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
+import { getGitHubIssueTaskOptionId } from "@/lib/top-bar-timer-helpers";
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
-import type { TopBarTaskPicker } from "./useTopBarTaskPicker";
+import type {
+  GitHubIssueTaskOption,
+  TopBarTaskOption,
+  TopBarTaskPicker,
+} from "./useTopBarTaskPicker";
 
 interface UseTopBarTaskOptionsOptions {
   accessToken: ComputedRef<string | null>;
@@ -54,7 +59,7 @@ export function useTopBarTaskOptions({
     }
   }
 
-  async function loadTasksForProject(projectId: string): Promise<TaskResponse[]> {
+  async function loadTasksForProject(projectId: string): Promise<TopBarTaskOption[]> {
     const requestId = ++taskRequestId;
 
     if (!accessToken.value) {
@@ -72,10 +77,11 @@ export function useTopBarTaskOptions({
         return cachedTasks;
       }
 
-      const nextTasks = await queryClient.ensureQueryData({
+      const localTasks = await queryClient.ensureQueryData({
         queryKey: timerKeys.projectTasks(scope.value, projectId),
         queryFn: () => client.listProjectTasks(projectId),
       });
+      const nextTasks = await appendGitHubIssueOptions(projectId, localTasks);
 
       if (requestId !== taskRequestId) {
         return picker.tasks.value;
@@ -98,10 +104,87 @@ export function useTopBarTaskOptions({
     }
   }
 
+  async function appendGitHubIssueOptions(
+    projectId: string,
+    localTasks: TaskResponse[],
+  ): Promise<TopBarTaskOption[]> {
+    const project = picker.projects.value.find(
+      (candidate) => candidate.id === projectId,
+    );
+
+    if (!project || project.source !== "github") {
+      return localTasks;
+    }
+
+    const repo = parseGitHubRepositoryProject(project);
+    if (!repo) {
+      return localTasks;
+    }
+
+    try {
+      const response = await client.listGitHubRepositoryIssues(repo.owner, repo.name, {
+        limit: 30,
+        state: "open",
+      });
+      const syncedLocalIssues = new Set(
+        localTasks
+          .map((task) => task.githubIssue)
+          .filter((issue) => issue !== null)
+          .map((issue) => `${issue.githubRepo.toLowerCase()}#${issue.issueNumber}`),
+      );
+      const githubOptions: GitHubIssueTaskOption[] = response.items
+        .filter(
+          (issue) =>
+            !syncedLocalIssues.has(
+              `${issue.repository.fullName.toLowerCase()}#${issue.number}`,
+            ),
+        )
+        .map((issue) => ({
+          createdAt: issue.updatedAt,
+          defaultBillableForTimeEntries: project.defaultBillableForTasks,
+          githubIssue: {
+            githubRepo: issue.repository.fullName,
+            issueNumber: issue.number,
+          },
+          id: getGitHubIssueTaskOptionId({
+            githubRepo: issue.repository.fullName,
+            issueNumber: issue.number,
+          }),
+          isActive: true,
+          isGitHubIssueOption: true,
+          issueTitle: issue.title,
+          projectId: project.id,
+          status: "open",
+          title: issue.title,
+          updatedAt: issue.updatedAt,
+          workspaceId: project.workspaceId,
+        }));
+
+      return [...localTasks, ...githubOptions];
+    } catch (error) {
+      picker.setTasksError(
+        `GitHub issues could not load: ${getErrorMessage(error)}`,
+      );
+      return localTasks;
+    }
+  }
+
   return {
     ensureProjectsLoaded,
     isLoadingProjects,
     isLoadingTasks,
     loadTasksForProject,
   };
+}
+
+function parseGitHubRepositoryProject(
+  project: ProjectResponse,
+): { name: string; owner: string } | null {
+  const [owner, name, ...rest] = project.name.split("/");
+
+  if (!owner || !name || rest.length > 0) {
+    return null;
+  }
+
+  return { owner, name };
 }

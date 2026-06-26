@@ -39,6 +39,18 @@ export const createTaskSchema = z
   })
   .strict();
 
+export const ensureGitHubIssueTaskSchema = z
+  .object({
+    githubRepo: z
+      .string()
+      .min(3)
+      .max(200)
+      .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+    issueNumber: z.number().int().positive(),
+    issueTitle: z.string().min(1).max(500),
+  })
+  .strict();
+
 export const updateTaskSchema = z
   .object({
     title: z.string().min(1).max(500).optional(),
@@ -74,6 +86,9 @@ export type TaskResponse = z.infer<typeof taskResponseSchema>;
 export type TaskListResponse = z.infer<typeof taskListResponseSchema>;
 export type TaskListQuery = z.infer<typeof taskListQuerySchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
+export type EnsureGitHubIssueTaskInput = z.infer<
+  typeof ensureGitHubIssueTaskSchema
+>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type BackfillTaskBillableDefaultInput = z.infer<
   typeof backfillTaskBillableDefaultSchema

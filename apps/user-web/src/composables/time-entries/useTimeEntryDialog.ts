@@ -287,6 +287,7 @@ export function useTimeEntryDialog() {
   }
 
   return {
+    activeDialogTask,
     beginTaskRequest,
     closeDialog,
     dialogDescription,

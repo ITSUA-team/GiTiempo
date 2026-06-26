@@ -1,12 +1,31 @@
-import { createTaskSchema, type ProjectResponse, type TaskResponse } from "@gitiempo/shared";
+import {
+  createTaskSchema,
+  type ProjectResponse,
+  type SyncedGitHubIssue,
+  type TaskResponse,
+} from "@gitiempo/shared";
 import { computed, ref } from "vue";
 
 import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 
+export interface GitHubIssueTaskOption extends TaskResponse {
+  githubIssue: SyncedGitHubIssue;
+  isGitHubIssueOption: true;
+  issueTitle: string;
+}
+
+export type TopBarTaskOption = GitHubIssueTaskOption | TaskResponse;
+
+export function isTopBarGitHubIssueTaskOption(
+  task: TopBarTaskOption,
+): task is GitHubIssueTaskOption {
+  return "isGitHubIssueOption" in task && task.isGitHubIssueOption === true;
+}
+
 export function useTopBarTaskPicker() {
   const projects = ref<ProjectResponse[]>([]);
-  const tasks = ref<TaskResponse[]>([]);
-  const taskCache = new Map<string, TaskResponse[]>();
+  const tasks = ref<TopBarTaskOption[]>([]);
+  const taskCache = new Map<string, TopBarTaskOption[]>();
   const isDialogOpen = ref(false);
   const selectedProjectId = ref<string | null>(null);
   const selectedTaskId = ref<string | null>(null);
@@ -34,15 +53,15 @@ export function useTopBarTaskPicker() {
     projects.value = nextProjects;
   }
 
-  function setTasks(nextTasks: TaskResponse[]): void {
+  function setTasks(nextTasks: TopBarTaskOption[]): void {
     tasks.value = nextTasks;
   }
 
-  function getCachedTasks(projectId: string): TaskResponse[] | undefined {
+  function getCachedTasks(projectId: string): TopBarTaskOption[] | undefined {
     return taskCache.get(projectId);
   }
 
-  function setCachedTasks(projectId: string, nextTasks: TaskResponse[]): void {
+  function setCachedTasks(projectId: string, nextTasks: TopBarTaskOption[]): void {
     taskCache.set(projectId, nextTasks);
   }
 
@@ -118,10 +137,23 @@ export function useTopBarTaskPicker() {
       return null;
     }
 
+    if (isTopBarGitHubIssueTaskOption(selectedTask.value)) {
+      return {
+        githubIssue: selectedTask.value.githubIssue,
+        issueTitle: selectedTask.value.issueTitle,
+        projectId: selectedProject.value.id,
+        projectName: selectedProject.value.name,
+        source: "github-issue",
+        taskId: selectedTask.value.id,
+        taskTitle: selectedTask.value.title,
+      };
+    }
+
     return {
       githubIssue: selectedTask.value.githubIssue,
       projectId: selectedProject.value.id,
       projectName: selectedProject.value.name,
+      source: "local",
       taskId: selectedTask.value.id,
       taskTitle: selectedTask.value.title,
     };

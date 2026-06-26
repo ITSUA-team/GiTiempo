@@ -1,4 +1,8 @@
-import { updateTimeEntrySchema, type TimeEntryResponse } from "@gitiempo/shared";
+import {
+  updateTimeEntrySchema,
+  type TaskResponse,
+  type TimeEntryResponse,
+} from "@gitiempo/shared";
 import {
   createAppToast,
   getErrorMessage,
@@ -18,11 +22,21 @@ import type {
   TimeEntryDialogMode,
   ValidatedTimeEntryDialogInput,
 } from "./useTimeEntryDialog";
+import {
+  isGitHubIssueTaskLookupOption,
+  type TaskLookupOption,
+} from "./time-entry-task-lookup";
 
 interface SaveTimeEntryDialogOptions {
   editingEntry: TimeEntryResponse | null;
   input: ValidatedTimeEntryDialogInput;
   mode: TimeEntryDialogMode;
+  selectedTask: TaskLookupOption | null;
+}
+
+interface SaveTimeEntryDialogResult {
+  errorMessage: string | null;
+  materializedTask: TaskResponse | null;
 }
 
 interface UseTimeEntryMutationsOptions {
@@ -62,29 +76,48 @@ export function useTimeEntryMutations({
     editingEntry,
     input,
     mode,
-  }: SaveTimeEntryDialogOptions): Promise<string | null> {
+    selectedTask,
+  }: SaveTimeEntryDialogOptions): Promise<SaveTimeEntryDialogResult> {
     isSavingDialog.value = true;
     lastMutationErrorMessage.value = null;
 
     try {
+      let inputToSave = input;
+      let materializedTask: TaskResponse | null = null;
+
+      if (isGitHubIssueTaskLookupOption(selectedTask)) {
+        materializedTask = await client.ensureGitHubIssueTask({
+          githubRepo: selectedTask.githubIssue.githubRepo,
+          issueNumber: selectedTask.githubIssue.issueNumber,
+          issueTitle: selectedTask.issueTitle,
+        });
+        inputToSave = {
+          ...input,
+          taskId: materializedTask.id,
+        };
+      }
+
       if (mode === "edit" && editingEntry) {
         await updateEntryMutation.mutateAsync({
           entryId: editingEntry.id,
-          input: updateTimeEntrySchema.parse(input),
+          input: updateTimeEntrySchema.parse(inputToSave),
         });
         appToast.showSuccessToast(
           "Time entry updated",
           "Your changes have been saved.",
         );
       } else {
-        await createEntryMutation.mutateAsync(input);
+        await createEntryMutation.mutateAsync(inputToSave);
         appToast.showSuccessToast(
           "Time entry created",
           "Your manual entry has been added.",
         );
       }
 
-      return null;
+      return {
+        errorMessage: null,
+        materializedTask,
+      };
     } catch (error) {
       const message = getErrorMessage(error);
 
@@ -101,7 +134,10 @@ export function useTimeEntryMutations({
             ? "Could not update time entry"
             : "Could not create time entry",
       });
-      return message;
+      return {
+        errorMessage: message,
+        materializedTask: null,
+      };
     } finally {
       isSavingDialog.value = false;
     }

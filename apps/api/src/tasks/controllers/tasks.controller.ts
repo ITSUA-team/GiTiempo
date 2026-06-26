@@ -26,6 +26,7 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { BackfillTaskBillableDefaultDto } from '../dto/backfill-task-billable-default.dto';
 import { CreateTaskDto } from '../dto/create-task.dto';
+import { EnsureGitHubIssueTaskDto } from '../dto/ensure-github-issue-task.dto';
 import { TaskBillableDefaultBackfillResponseDto } from '../dto/task-billable-default-backfill-response.dto';
 import { TaskListQueryDto } from '../dto/task-list-query.dto';
 import { TaskListResponseDto } from '../dto/task-list-response.dto';
@@ -66,6 +67,24 @@ export class TasksController {
     @Body() body: CreateTaskDto,
   ): Promise<TaskResponseDto> {
     return this.tasks.createTask(user, projectId, body);
+  }
+
+  @Post('tasks/from-github')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create or reuse a visible task from a GitHub issue',
+  })
+  @ApiCreatedResponse({ type: TaskResponseDto })
+  @ApiNotFoundResponse({
+    description: 'GitHub organization or project not found',
+  })
+  @ApiUnprocessableEntityResponse({ description: 'Project or task inactive' })
+  @ZodSerializerDto(TaskResponseDto)
+  ensureGitHubIssueTask(
+    @CurrentUser() user: AuthUser,
+    @Body() body: EnsureGitHubIssueTaskDto,
+  ): Promise<TaskResponseDto> {
+    return this.tasks.ensureGitHubIssueTask(user, body);
   }
 
   @Get('tasks/:id')

@@ -83,6 +83,22 @@ function collectSqlParamValues(value: unknown): unknown[] {
   return values;
 }
 
+function createService(
+  db: unknown,
+  projects: { requireVisibleProject?: ReturnType<typeof vi.fn> },
+): TasksService {
+  return new TasksService(
+    db as never,
+    {
+      requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
+    } as never,
+    projects as never,
+    {
+      assertOrganizationAllowed: vi.fn().mockResolvedValue(undefined),
+    } as never,
+  );
+}
+
 describe('TasksService', () => {
   it('includes synced github issue linkage in project task lists', async () => {
     const listRows = [
@@ -105,7 +121,7 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     const result = await service.listProjectTasks(user, projectRow.id);
 
@@ -149,7 +165,7 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     const result = await service.listProjectTasks(user, projectRow.id, {
       includeInactive: true,
@@ -170,7 +186,7 @@ describe('TasksService', () => {
       }),
     };
     const db = { insert: vi.fn() };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     await expect(
       service.createTask(user, projectRow.id, { title: 'Task' }),
@@ -193,7 +209,7 @@ describe('TasksService', () => {
         defaultBillableForTasks: false,
       }),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     const result = await service.createTask(user, projectRow.id, {
       title: 'Task',
@@ -217,7 +233,7 @@ describe('TasksService', () => {
         defaultBillableForTasks: false,
       }),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     const result = await service.createTask(user, projectRow.id, {
       title: 'Task',
@@ -248,7 +264,7 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     const result = await service.updateTask(user, taskRow.id, {
       title: 'Renamed',
@@ -283,7 +299,7 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     const result = await service.updateTask(user, taskRow.id, {
       defaultBillableForTimeEntries: false,
@@ -320,7 +336,7 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     const result = await service.backfillBillableDefault(user, taskRow.id, {
       updateTimeEntries: true,
@@ -346,7 +362,7 @@ describe('TasksService', () => {
         isActive: false,
       }),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     await expect(
       service.updateTask(user, taskRow.id, { title: 'Renamed' }),
@@ -385,7 +401,7 @@ describe('TasksService', () => {
       const projects = {
         requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
       };
-      const service = new TasksService(db as never, projects as never);
+      const service = createService(db, projects);
 
       const result = await service.updateTask(user, taskRow.id, {
         status: 'closed',
@@ -424,7 +440,7 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     await expect(
       service.requireTrackableTask(user, taskRow.id),
@@ -438,7 +454,7 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService({} as never, projects as never);
+    const service = createService({}, projects);
 
     const result = await service.requireTrackableTaskForUpdate(
       user,

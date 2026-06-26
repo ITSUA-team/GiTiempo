@@ -10,7 +10,9 @@ import { useUpdateTimeEntryMutation } from '@/composables/query';
 import { createDefaultTimeEntriesClient } from '@/config/clients';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
 import {
+  isGitHubIssueSelectedTaskContext,
   isRunningTimer,
+  type LocalSelectedTaskContext,
   TOP_BAR_TIMER_NEW_TASK_ID,
 } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
@@ -251,13 +253,68 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     picker.setSelectedDescription(description);
   }
 
+  async function ensureLocalSelectedContext(
+    context: ReturnType<typeof picker.getSelectedTaskContext>,
+  ): Promise<LocalSelectedTaskContext | null> {
+    if (!context) {
+      return null;
+    }
+
+    if (!isGitHubIssueSelectedTaskContext(context)) {
+      return context;
+    }
+
+    try {
+      const task = await client.ensureGitHubIssueTask({
+        githubRepo: context.githubIssue.githubRepo,
+        issueNumber: context.githubIssue.issueNumber,
+        issueTitle: context.issueTitle,
+      });
+      const cachedTasks = picker.getCachedTasks(context.projectId) ?? picker.tasks.value;
+      const nextTasks = replaceGitHubIssueOptionWithTask(
+        cachedTasks,
+        context.taskId,
+        task,
+      );
+
+      picker.setCachedTasks(context.projectId, nextTasks);
+      picker.setTasks(nextTasks);
+      picker.setSelectedTaskId(task.id);
+
+      return {
+        githubIssue: task.githubIssue,
+        projectId: context.projectId,
+        projectName: context.projectName,
+        source: 'local',
+        taskId: task.id,
+        taskTitle: task.title,
+      };
+    } catch (error) {
+      const message = getErrorMessage(error);
+
+      selectionUpdateErrorMessage.value = message;
+      appToast.showErrorToast({
+        detail: 'Choose another task or try again.',
+        error,
+        logContext: {
+          action: 'materialize-github-task',
+          feature: 'top-bar-timer',
+        },
+        summary: 'Could not prepare GitHub issue',
+      });
+      return null;
+    }
+  }
+
   async function confirmSelectedTask(): Promise<void> {
     if (isNewTaskSelected.value) {
       await taskCreation.createTaskFromDialog();
       return;
     }
 
-    const context = picker.getSelectedTaskContext();
+    const context = await ensureLocalSelectedContext(
+      picker.getSelectedTaskContext(),
+    );
 
     if (!context) {
       return;
@@ -331,7 +388,9 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
         return;
       }
 
-      const context = picker.getSelectedTaskContext();
+      const context = await ensureLocalSelectedContext(
+        picker.getSelectedTaskContext(),
+      );
 
       if (!context) {
         return;
@@ -440,4 +499,22 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     timerStatusLabel,
     timerTaskLabel,
   };
+}
+
+function replaceGitHubIssueOptionWithTask<TTask extends { githubIssue: unknown; id: string }>(
+  tasks: TTask[],
+  optionId: string,
+  task: TTask,
+): TTask[] {
+  const existingTaskIndex = tasks.findIndex((candidate) => candidate.id === task.id);
+  if (existingTaskIndex >= 0) {
+    return tasks.filter((candidate) => candidate.id !== optionId);
+  }
+
+  const optionIndex = tasks.findIndex((candidate) => candidate.id === optionId);
+  if (optionIndex < 0) {
+    return [...tasks, task];
+  }
+
+  return tasks.map((candidate, index) => (index === optionIndex ? task : candidate));
 }
