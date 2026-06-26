@@ -122,10 +122,10 @@ function mountDialog(
             '<button :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Checkbox: {
-          props: ["disabled", "modelValue"],
+          props: ["disabled", "inputId", "modelValue"],
           emits: ["update:modelValue"],
           template:
-            '<input :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
+            '<input :id="inputId" :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
         },
         Dialog: {
           props: ["closable", "dismissableMask", "visible"],
@@ -170,8 +170,15 @@ describe("ProjectTaskDialog", () => {
 
   it("emits default billable updates", async () => {
     const wrapper = mountDialog({ defaultBillableForTimeEntries: false });
+    const billableLabel = wrapper.get(
+      'label[for="project-task-default-billable"]',
+    );
 
-    await wrapper.get('input[type="checkbox"]').setValue(true);
+    expect(billableLabel.find('#project-task-default-billable').exists()).toBe(
+      true,
+    );
+
+    await billableLabel.trigger("click");
 
     expect(wrapper.emitted("update:defaultBillableForTimeEntries")?.[0]).toEqual([
       true,

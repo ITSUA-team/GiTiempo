@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import Checkbox from "primevue/checkbox";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
+import {
+  filterAutocompleteOptions,
+  InlineRequestMessage,
+  LabeledCheckbox,
+} from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 const props = defineProps<{
@@ -247,20 +250,13 @@ function handleProjectComplete(event: { query: string }): void {
         <span class="text-text-dark text-[13px] font-medium">
           Default billable for time entries
         </span>
-        <label
-          for="project-task-default-billable"
-          class="border-divider bg-surface-primary flex h-[38px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
-        >
-          <Checkbox
-            id="project-task-default-billable"
-            v-model="defaultBillableModel"
-            binary
-            :disabled="isDialogMutating"
-          />
-          <span class="text-text-dark text-sm font-medium">
-            Billable by default
-          </span>
-        </label>
+        <LabeledCheckbox
+          v-model="defaultBillableModel"
+          input-id="project-task-default-billable"
+          label="Billable by default"
+          root-class="border-divider bg-surface-primary flex h-[38px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
+          :disabled="isDialogMutating"
+        />
         <small class="text-text-muted text-xs">
           New time entries for this task inherit this value.
         </small>

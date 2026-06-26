@@ -111,7 +111,7 @@ async function fillValidRegistrationForm(
   await wrapper.get('[data-testid="register-confirm-password"]').setValue(
     "password123",
   );
-  await wrapper.get('input#register-owner-acknowledgement').setValue(true);
+  await wrapper.get('label[for="register-owner-acknowledgement"]').trigger("click");
 }
 
 function createApiError(code: string, message: string): Error & { code: string } {
@@ -175,7 +175,7 @@ describe("RegisterView", () => {
     await wrapper.get('[data-testid="register-confirm-password"]').setValue(
       "password456",
     );
-    await wrapper.get('input#register-owner-acknowledgement').setValue(true);
+    await wrapper.get('label[for="register-owner-acknowledgement"]').trigger("click");
     await wrapper.get("form").trigger("submit");
     await flushPromises();
 

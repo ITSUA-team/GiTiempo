@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import Checkbox from "primevue/checkbox";
 import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
+import {
+  filterAutocompleteOptions,
+  InlineRequestMessage,
+  LabeledCheckbox,
+} from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
@@ -376,20 +379,13 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label
-          for="time-entry-billable"
-          class="border-divider bg-surface-primary flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
-        >
-          <Checkbox
-            id="time-entry-billable"
-            v-model="billableModel"
-            binary
-            :disabled="isDialogMutating"
-          />
-          <span class="text-text-dark text-sm font-medium">
-            Billable entry
-          </span>
-        </label>
+        <LabeledCheckbox
+          v-model="billableModel"
+          input-id="time-entry-billable"
+          label="Billable entry"
+          root-class="border-divider bg-surface-primary flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2"
+          :disabled="isDialogMutating"
+        />
       </div>
     </div>
 
