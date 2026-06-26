@@ -28,12 +28,12 @@ import { DomainError } from '../../commons/errors/domain-error';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
 import { parseGitHubRepoKey } from '../../github/github-repo-key';
 import { GithubService } from '../../github/services/github.service';
-import { GithubTaskMaterializationService } from '../../github/services/github-task-materialization.service';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { taskRowSelection, tasks } from '../schemas/tasks.schema';
+import { GithubTaskMaterializationService } from './github-task-materialization.service';
 
 export type TaskRow = typeof tasks.$inferSelect;
 type QueryExecutor = Pick<DrizzleDB, 'update'>;

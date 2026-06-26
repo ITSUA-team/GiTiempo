@@ -61,10 +61,13 @@ export class TasksController {
   @Get('projects/:projectId/github/issues')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'List GitHub repository issues for a visible GitHub-backed project',
+    summary:
+      'List GitHub repository issues for a visible GitHub-backed project',
   })
   @ApiOkResponse({ type: GithubRepositoryIssueListResponseDto })
-  @ApiNotFoundResponse({ description: 'Project or GitHub repository not found' })
+  @ApiNotFoundResponse({
+    description: 'Project or GitHub repository not found',
+  })
   @ZodSerializerDto(GithubRepositoryIssueListResponseDto)
   listProjectGitHubIssues(
     @CurrentUser() user: AuthUser,

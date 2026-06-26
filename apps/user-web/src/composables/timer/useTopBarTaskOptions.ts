@@ -3,7 +3,7 @@ import { getErrorMessage } from "@gitiempo/web-shared";
 import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
-import { loadUnsyncedProjectGitHubIssues } from "@/lib/project-github-issues";
+import { appendUnsyncedProjectGitHubIssueOptions } from "@/lib/project-github-issues";
 import { getGitHubIssueTaskOptionId } from "@/lib/top-bar-timer-helpers";
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
@@ -121,45 +121,36 @@ export function useTopBarTaskOptions({
     projectId: string,
     localTasks: TaskResponse[],
   ): Promise<LoadedTopBarTaskOptions> {
-    const project = picker.projects.value.find(
-      (candidate) => candidate.id === projectId,
-    );
+    const project =
+      picker.projects.value.find((candidate) => candidate.id === projectId) ??
+      null;
 
-    const hasGitHubIssueTask = localTasks.some(
-      (task) => task.githubIssue !== null,
-    );
-
-    if (!project || (project.source !== "github" && !hasGitHubIssueTask)) {
-      return {
-        errorMessage: null,
-        taskOptions: localTasks,
-      };
-    }
-
-    const { errorMessage, issues } = await loadUnsyncedProjectGitHubIssues({
+    return appendUnsyncedProjectGitHubIssueOptions({
       client,
+      localTaskOptions: localTasks,
       localTasks,
-      projectId: project.id,
-    });
-    const githubOptions: GitHubIssueTaskOption[] = issues.map((issue) => ({
-        createdAt: issue.updatedAt,
-        defaultBillableForTimeEntries: project.defaultBillableForTasks,
-        githubIssue: issue.githubIssue,
-        id: getGitHubIssueTaskOptionId(issue.githubIssue),
-        isActive: true,
-        isGitHubIssueOption: true,
-        issueTitle: issue.issueTitle,
-        projectId: issue.projectId,
-        status: "open",
-        title: issue.issueTitle,
-        updatedAt: issue.updatedAt,
-        workspaceId: project.workspaceId,
-      }));
+      mapGitHubIssue(issue): GitHubIssueTaskOption {
+        if (!project) {
+          throw new Error("GitHub issue options require a visible project.");
+        }
 
-    return {
-      errorMessage,
-      taskOptions: [...localTasks, ...githubOptions],
-    };
+        return {
+          createdAt: issue.updatedAt,
+          defaultBillableForTimeEntries: project.defaultBillableForTasks,
+          githubIssue: issue.githubIssue,
+          id: getGitHubIssueTaskOptionId(issue.githubIssue),
+          isActive: true,
+          isGitHubIssueOption: true,
+          issueTitle: issue.issueTitle,
+          projectId: issue.projectId,
+          status: "open",
+          title: issue.issueTitle,
+          updatedAt: issue.updatedAt,
+          workspaceId: project.workspaceId,
+        };
+      },
+      project,
+    });
   }
 
   return {

@@ -37,7 +37,6 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { normalizeGitHubRepoKey } from '../../github/github-repo-key';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
-import { GithubTaskMaterializationService } from '../../github/services/github-task-materialization.service';
 import { MembersService } from '../../members/services/members.service';
 import { projectAssignments } from '../../projects/schemas/project-assignments.schema';
 import { projects as projectsTable } from '../../projects/schemas/projects.schema';
@@ -47,6 +46,7 @@ import {
   taskRowSelection,
   tasks as tasksTable,
 } from '../../tasks/schemas/tasks.schema';
+import { GithubTaskMaterializationService } from '../../tasks/services/github-task-materialization.service';
 import { TasksService } from '../../tasks/services/tasks.service';
 import { users } from '../../users/schemas/users.schema';
 import { UsersActivityService } from '../../users/services/users-activity.service';
@@ -337,11 +337,12 @@ export class TimeEntriesService {
 
     try {
       const entryId = await this.db.transaction(async (tx) => {
-        const { project, created } = await this.githubTasks.findOrCreateProjectForRepo(
-          tx,
-          user,
-          githubRepo,
-        );
+        const { project, created } =
+          await this.githubTasks.findOrCreateProjectForRepo(
+            tx,
+            user,
+            githubRepo,
+          );
         if (!project.isActive) {
           throw new UnprocessableEntityException('Project is inactive');
         }

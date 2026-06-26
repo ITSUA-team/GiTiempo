@@ -1,18 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, and, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
+import {
+  projectRowSelection,
+  projects,
+} from '../../projects/schemas/projects.schema';
+import type { ProjectRow } from '../../projects/services/projects.service';
 import {
   normalizeGitHubIssueExternalKey,
   normalizeGitHubRepoKey,
-} from '../github-repo-key';
-import { projectExternalRefs } from '../../projects/schemas/project-external-refs.schema';
-import { projects } from '../../projects/schemas/projects.schema';
-import type { ProjectRow } from '../../projects/services/projects.service';
-import { taskExternalRefs } from '../../tasks/schemas/task-external-refs.schema';
-import { tasks } from '../../tasks/schemas/tasks.schema';
+} from '../../github/github-repo-key';
+import { taskExternalRefs } from '../schemas/task-external-refs.schema';
+import { taskRowSelection, tasks } from '../schemas/tasks.schema';
 
 type QueryExecutor = Pick<DrizzleDB, 'delete' | 'insert' | 'select'>;
 type TaskRow = typeof tasks.$inferSelect;
@@ -251,9 +254,11 @@ export class GithubTaskMaterializationService {
     projectId: string,
   ): Promise<ProjectRow> {
     const [row] = await executor
-      .select()
+      .select(projectRowSelection)
       .from(projects)
-      .where(and(eq(projects.id, projectId), eq(projects.workspaceId, workspaceId)))
+      .where(
+        and(eq(projects.id, projectId), eq(projects.workspaceId, workspaceId)),
+      )
       .limit(1);
     if (!row) {
       throw DomainError.internal(
@@ -302,7 +307,7 @@ export class GithubTaskMaterializationService {
     taskId: string,
   ): Promise<TaskRow> {
     const [row] = await executor
-      .select()
+      .select(taskRowSelection)
       .from(tasks)
       .where(
         and(

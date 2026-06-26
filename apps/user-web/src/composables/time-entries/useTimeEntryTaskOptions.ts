@@ -1,7 +1,7 @@
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { getErrorMessage } from "@gitiempo/web-shared";
 
-import { loadUnsyncedProjectGitHubIssues } from "@/lib/project-github-issues";
+import { appendUnsyncedProjectGitHubIssueOptions } from "@/lib/project-github-issues";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import {
@@ -10,10 +10,12 @@ import {
   type TaskLookupOption,
 } from "./time-entry-task-lookup";
 
+/* eslint-disable no-unused-vars */
 interface UseTimeEntryTaskOptionsOptions {
   client: TimeEntriesClient;
   getProjectById(projectId: string): ProjectResponse | null;
 }
+/* eslint-enable no-unused-vars */
 
 interface LoadTaskOptionsOptions {
   trackableOnly?: boolean;
@@ -22,6 +24,11 @@ interface LoadTaskOptionsOptions {
 interface LoadedTaskOptionsResult {
   errorMessage: string | null;
   taskOptions: TaskLookupOption[];
+}
+
+interface CachedProjectTaskOptions {
+  githubIssueOptions: TaskLookupOption[];
+  localTasks: TaskResponse[];
 }
 
 /* eslint-disable no-unused-vars */
@@ -38,27 +45,43 @@ export function useTimeEntryTaskOptions({
   client,
   getProjectById,
 }: UseTimeEntryTaskOptionsOptions) {
-  const taskCache = new Map<string, TaskResponse[]>();
+  const taskCache = new Map<string, CachedProjectTaskOptions>();
 
   async function loadProjectTaskOptions(
     projectId: string,
     options: LoadTaskOptionsOptions = {},
   ): Promise<LoadedTaskOptionsResult> {
-    let tasks = taskCache.get(projectId);
+    const cached = taskCache.get(projectId);
 
-    if (!tasks) {
-      tasks = await client.listProjectTasks(projectId);
-      taskCache.set(projectId, tasks);
+    if (cached) {
+      return {
+        errorMessage: null,
+        taskOptions: buildTaskOptions(
+          cached.localTasks,
+          cached.githubIssueOptions,
+          options.trackableOnly,
+        ),
+      };
     }
 
-    const localTaskOptions = tasks
-      .filter(
-        (task) =>
-          task.isActive && (!options.trackableOnly || task.status === "open"),
-      )
-      .map(toTaskLookupOption);
+    const localTasks = await client.listProjectTasks(projectId);
+    const localTaskOptions = buildLocalTaskOptions(localTasks, options.trackableOnly);
+    const result = await appendGitHubIssueOptions(
+      projectId,
+      localTaskOptions,
+      localTasks,
+    );
 
-    return appendGitHubIssueOptions(projectId, localTaskOptions, tasks);
+    if (result.errorMessage === null) {
+      taskCache.set(projectId, {
+        githubIssueOptions: result.taskOptions.filter(
+          (task) => task.isGitHubIssueOption === true,
+        ),
+        localTasks,
+      });
+    }
+
+    return result;
   }
 
   async function loadTargetProjectTaskOptions(
@@ -107,6 +130,28 @@ export function useTimeEntryTaskOptions({
     loadTargetProjectTaskOptions,
   };
 
+  function buildLocalTaskOptions(
+    tasks: TaskResponse[],
+    trackableOnly = false,
+  ): TaskLookupOption[] {
+    return tasks
+      .filter(
+        (task) => task.isActive && (!trackableOnly || task.status === "open"),
+      )
+      .map(toTaskLookupOption);
+  }
+
+  function buildTaskOptions(
+    localTasks: TaskResponse[],
+    githubIssueOptions: TaskLookupOption[],
+    trackableOnly = false,
+  ): TaskLookupOption[] {
+    return [
+      ...buildLocalTaskOptions(localTasks, trackableOnly),
+      ...githubIssueOptions,
+    ];
+  }
+
   async function appendGitHubIssueOptions(
     projectId: string,
     localTaskOptions: TaskLookupOption[],
@@ -114,30 +159,23 @@ export function useTimeEntryTaskOptions({
   ): Promise<LoadedTaskOptionsResult> {
     const project = getProjectById(projectId);
 
-    if (!project || project.source !== "github") {
-      return {
-        errorMessage: null,
-        taskOptions: localTaskOptions,
-      };
-    }
-
-    const { errorMessage, issues } = await loadUnsyncedProjectGitHubIssues({
+    return appendUnsyncedProjectGitHubIssueOptions({
       client,
+      localTaskOptions,
       localTasks,
-      projectId: project.id,
-    });
-    const githubIssueOptions = issues.map((issue) =>
-        toGitHubIssueTaskLookupOption({
+      mapGitHubIssue(issue) {
+        if (!project) {
+          throw new Error("GitHub issue options require a visible project.");
+        }
+
+        return toGitHubIssueTaskLookupOption({
           defaultBillableForTimeEntries: project.defaultBillableForTasks,
           githubIssue: issue.githubIssue,
           issueTitle: issue.issueTitle,
           projectId: issue.projectId,
-        }),
-      );
-
-    return {
-      errorMessage,
-      taskOptions: [...localTaskOptions, ...githubIssueOptions],
-    };
+        });
+      },
+      project,
+    });
   }
 }

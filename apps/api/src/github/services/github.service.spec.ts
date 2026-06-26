@@ -221,7 +221,12 @@ describe('GithubService', () => {
       updatedAt: '2026-05-14T12:00:00.000Z',
     });
 
-    const issue = await service().getRepositoryIssue(user, 'octocat', 'repo', 184);
+    const issue = await service().getRepositoryIssue(
+      user,
+      'octocat',
+      'repo',
+      184,
+    );
 
     expect(issue.title).toBe('Timer bug');
     expect(apiClient.getRepositoryIssue).toHaveBeenCalledWith({

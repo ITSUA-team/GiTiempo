@@ -117,4 +117,23 @@ describe("loadUnsyncedProjectGitHubIssues", () => {
       ],
     });
   });
+
+  it("stops loading after the bounded GitHub issue page limit", async () => {
+    const listProjectGitHubIssues = vi
+      .fn<TimeEntriesClient["listProjectGitHubIssues"]>()
+      .mockResolvedValue(createGitHubIssueResponse([], "next-page"));
+    const client = createClientMock(listProjectGitHubIssues);
+
+    const result = await loadUnsyncedProjectGitHubIssues({
+      client,
+      localTasks: [],
+      projectId: PROJECT_ID,
+    });
+
+    expect(listProjectGitHubIssues).toHaveBeenCalledTimes(5);
+    expect(result).toEqual({
+      errorMessage: null,
+      issues: [],
+    });
+  });
 });
