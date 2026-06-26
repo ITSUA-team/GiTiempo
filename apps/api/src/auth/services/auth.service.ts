@@ -13,12 +13,13 @@ import { sql } from 'drizzle-orm';
 import type { RegisterRequest } from '@gitiempo/shared';
 import type { Env } from '../../config/env.validation';
 import { normalizeEmail } from '../../commons/utils/normalize-email';
+import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { UsersService } from '../../users/services/users.service';
-import { users } from '../../users/schemas/users.schema';
+import { userRowSelection, users } from '../../users/schemas/users.schema';
 import { refreshTokens } from '../schemas/refresh-tokens.schema';
 import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
@@ -132,7 +133,10 @@ function parseDurationMs(input: string): number {
   const trimmed = input.trim();
   const match = /^(\d+)\s*([smhd]?)$/i.exec(trimmed);
   if (!match) {
-    throw new Error(`Invalid duration: "${input}"`);
+    throw DomainError.internal(
+      'invalid_duration_config',
+      `Invalid duration: "${input}"`,
+    );
   }
   const value = Number.parseInt(match[1]!, 10);
   const unit = match[2]?.toLowerCase() || 's';
@@ -487,7 +491,7 @@ export class AuthService {
     db: Pick<DrizzleDB, 'select'> = this.db,
   ) {
     const [row] = await db
-      .select()
+      .select(userRowSelection)
       .from(users)
       .where(sql`lower(btrim(${users.email})) = ${email}`)
       .limit(1);

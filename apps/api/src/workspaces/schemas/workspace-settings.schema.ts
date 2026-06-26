@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import {
   numeric,
   pgTable,
@@ -33,3 +34,5 @@ export const workspaceSettings = pgTable(
     uniqueIndex('workspace_settings_workspace_id_unique').on(table.workspaceId),
   ],
 );
+
+export const workspaceSettingsRowSelection = getTableColumns(workspaceSettings);

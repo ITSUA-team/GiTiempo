@@ -27,7 +27,7 @@ import type { Env } from '../../config/env.validation';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { UsersService } from '../../users/services/users.service';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
-import { invites } from '../schemas/invites.schema';
+import { inviteRowSelection, invites } from '../schemas/invites.schema';
 import { InviteDeliveryService } from './invite-delivery.service';
 import { buildInviteAcceptUrl } from './invite-url.helper';
 
@@ -48,7 +48,7 @@ export class InvitesService {
 
   async listInvites(workspaceId: string): Promise<WorkspaceInviteResponse[]> {
     const rows = await this.db
-      .select()
+      .select(inviteRowSelection)
       .from(invites)
       .where(
         and(
@@ -186,7 +186,7 @@ export class InvitesService {
 
     await this.db.transaction(async (tx) => {
       const [currentInvite] = await tx
-        .select()
+        .select(inviteRowSelection)
         .from(invites)
         .where(eq(invites.id, invite.id))
         .limit(1);
@@ -222,7 +222,7 @@ export class InvitesService {
 
   private async findInviteByToken(token: string): Promise<InviteRow> {
     const [row] = await this.db
-      .select()
+      .select(inviteRowSelection)
       .from(invites)
       .where(eq(invites.token, token))
       .limit(1);
@@ -235,7 +235,7 @@ export class InvitesService {
     inviteId: string,
   ): Promise<InviteRow> {
     const [row] = await this.db
-      .select()
+      .select(inviteRowSelection)
       .from(invites)
       .where(
         and(eq(invites.id, inviteId), eq(invites.workspaceId, workspaceId)),

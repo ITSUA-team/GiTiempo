@@ -4,16 +4,15 @@ import {
   DEFAULT_SETTINGS_CURRENCY,
   SETTINGS_CURRENCY_OPTIONS,
 } from '@/lib/currencies';
-import { getSettingsTimeZoneOptions } from '@/lib/time-zones';
+import {
+  getRuntimeDefaultTimeZone,
+  getSettingsTimeZoneOptions,
+} from '@/lib/time-zones';
 import {
   validateAdminSettingsForm,
   type AdminSettingsFieldErrors,
   type AdminSettingsFormValues,
 } from './admin-settings-form';
-
-function getDefaultTimeZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-}
 
 function assignForm(
   form: AdminSettingsFormValues,
@@ -47,7 +46,7 @@ export function useAdminSettingsForm() {
   const form = reactive<AdminSettingsFormValues>({
     currency: DEFAULT_SETTINGS_CURRENCY,
     defaultHourlyRate: null,
-    timeZone: getDefaultTimeZone(),
+    timeZone: getRuntimeDefaultTimeZone(),
     workspaceName: '',
   });
   const isDirty = computed(() => {

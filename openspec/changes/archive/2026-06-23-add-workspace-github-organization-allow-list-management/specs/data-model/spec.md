@@ -27,4 +27,3 @@ The backend data model MUST represent a workspace with no allowed GitHub organiz
 - **WHEN** no GitHub organizations have been allowed for that workspace
 - **THEN** the data model contains no placeholder organization policy row
 - **AND** policy reads return an empty organization list for that workspace
-

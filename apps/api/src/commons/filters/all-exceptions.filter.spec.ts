@@ -1,7 +1,15 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DomainError } from '../errors/domain-error';
 import { AllExceptionsFilter } from './all-exceptions.filter';
+
+interface TestRequest {
+  id: string;
+  method: string;
+  path: string;
+  url: string;
+}
 
 function createResponse() {
   return {
@@ -10,24 +18,48 @@ function createResponse() {
   };
 }
 
+function createRequest(overrides: Partial<TestRequest> = {}): TestRequest {
+  return {
+    id: 'request-1',
+    method: 'GET',
+    path: '/test',
+    url: '/test',
+    ...overrides,
+  };
+}
+
+function createHost(
+  request: TestRequest,
+  response: ReturnType<typeof createResponse>,
+) {
+  return {
+    switchToHttp: () => ({
+      getRequest: () => request,
+      getResponse: () => response,
+    }),
+  };
+}
+
+function createFilter(nodeEnv = 'test'): AllExceptionsFilter {
+  return new AllExceptionsFilter({
+    get: vi.fn().mockReturnValue(nodeEnv),
+  } as never as ConfigService<never, true>);
+}
+
 describe('AllExceptionsFilter', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('preserves typed recovery payloads in normalized HttpException envelopes', () => {
     const response = createResponse();
-    const request = {
-      id: 'request-1',
+    const request = createRequest({
       method: 'POST',
       path: '/workspace/github/organizations',
       url: '/workspace/github/organizations',
-    };
-    const host = {
-      switchToHttp: () => ({
-        getRequest: () => request,
-        getResponse: () => response,
-      }),
-    };
-    const filter = new AllExceptionsFilter({
-      get: vi.fn().mockReturnValue('test'),
-    } as never as ConfigService<never, true>);
+    });
+    const host = createHost(request, response);
+    const filter = createFilter();
 
     filter.catch(
       new BadRequestException({
@@ -64,6 +96,55 @@ describe('AllExceptionsFilter', () => {
           { id: 'retry', status: 'blocked' },
         ],
       },
+      requestId: 'request-1',
+    });
+  });
+
+  it('masks internal DomainError payloads in production', () => {
+    const loggerError = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const response = createResponse();
+    const host = createHost(createRequest(), response);
+    const filter = createFilter('production');
+    const exception = DomainError.internal(
+      'invalid_duration_config',
+      'Invalid duration: "JWT_ACCESS_TTL"',
+    );
+
+    filter.catch(exception, host as never);
+
+    expect(response.status).toHaveBeenCalledWith(500);
+    expect(response.json).toHaveBeenCalledWith({
+      statusCode: 500,
+      error: 'InternalServerError',
+      message: 'Internal server error',
+      requestId: 'request-1',
+    });
+    expect(loggerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: exception,
+        requestId: 'request-1',
+        path: '/test',
+        method: 'GET',
+      }),
+      'Unhandled exception',
+    );
+  });
+
+  it('keeps generic errors masked in production', () => {
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const response = createResponse();
+    const host = createHost(createRequest(), response);
+    const filter = createFilter('production');
+
+    filter.catch(new Error('private database detail'), host as never);
+
+    expect(response.status).toHaveBeenCalledWith(500);
+    expect(response.json).toHaveBeenCalledWith({
+      statusCode: 500,
+      error: 'InternalServerError',
+      message: 'Internal server error',
       requestId: 'request-1',
     });
   });
