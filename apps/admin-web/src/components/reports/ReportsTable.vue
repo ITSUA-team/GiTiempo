@@ -7,10 +7,10 @@ import {
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteOptions,
-  filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
   managementTableFilterSelectPt,
+  managementTableHeaderClass,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -19,6 +19,7 @@ import AutoComplete from 'primevue/autocomplete';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
+import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
@@ -44,15 +45,8 @@ const props = defineProps<{
 
 const filters = defineModel<ReportTableFilters>('filters', { required: true });
 const isMobileViewport = useIsMobileViewport();
-const globalSearchSuggestions = ref<string[]>([]);
 const projectFilterSuggestions = ref<ReportFilterOption[]>([]);
 const memberFilterSuggestions = ref<ReportFilterOption[]>([]);
-
-const globalSearchOptions = computed(() => {
-  const labels = props.rows.flatMap((row) => [row.projectName, row.memberName]);
-
-  return [...new Set(labels)].sort((a, b) => a.localeCompare(b));
-});
 
 const selectedProjectFilterOption = computed(
   () =>
@@ -75,6 +69,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'billable', label: 'Billable', width: 140, align: 'end' },
 ];
 
+const reportTableHeaderClass = `${managementTableHeaderClass} min-w-[720px]`;
+
 const hoursFilterOptions: { label: string; value: ReportHoursFilter }[] = [
   { label: 'Any', value: 'any' },
   { label: 'Tracked', value: 'gt0' },
@@ -87,13 +83,6 @@ const billableFilterOptions: { label: string; value: ReportBillableFilter }[] = 
   { label: 'Billable', value: 'withBillable' },
   { label: 'Non-billable', value: 'withoutBillable' },
 ];
-
-function handleGlobalSearchComplete(event: AutoCompleteCompleteEvent): void {
-  globalSearchSuggestions.value = filterAutocompleteStrings(
-    globalSearchOptions.value,
-    event.query,
-  );
-}
 
 function handleGlobalSearchUpdate(value: string | null | undefined): void {
   filters.value.global = value ?? '';
@@ -143,14 +132,6 @@ function handleMemberFilterUpdate(
   filters.value.memberId = value?.value ?? null;
 }
 
-const searchAutoCompletePt = composeGiTiempoAutoCompletePt({
-  root: { class: 'h-[38px]' },
-  pcInputText: {
-    root: { class: 'h-[38px] w-full rounded-l-[6px] rounded-r-none pl-9 text-[14px]' },
-  },
-  dropdown: { class: 'h-[38px] w-9 text-text-muted' },
-  option: { class: 'text-[13px]' },
-});
 const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
   managementTableFilterAutoCompletePt,
 );
@@ -163,18 +144,11 @@ const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompleteP
         <template #actions>
           <IconField class="w-full sm:w-[280px]">
             <InputIcon class="pi pi-search text-text-muted" />
-            <AutoComplete
-              append-to="self"
+            <InputText
               :model-value="filters.global"
-              :suggestions="globalSearchSuggestions"
               aria-label="Search report rows"
-              complete-on-focus
-              dropdown
-              dropdown-mode="blank"
-              :min-length="0"
+              class="h-[38px] w-full rounded-[6px] text-[14px]"
               placeholder="Search report rows"
-              :pt="searchAutoCompletePt"
-              @complete="handleGlobalSearchComplete"
               @update:model-value="handleGlobalSearchUpdate"
             />
           </IconField>
@@ -351,7 +325,7 @@ const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompleteP
       :value="rows"
       :loading="loading"
       data-key="id"
-      header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[720px] items-center border-b font-sans text-[13px] font-semibold"
+      :header-class="reportTableHeaderClass"
       shell-class="border-divider overflow-x-auto rounded-[6px] border"
       single-scroll
       table-class="min-w-[720px] w-full table-fixed border-collapse"

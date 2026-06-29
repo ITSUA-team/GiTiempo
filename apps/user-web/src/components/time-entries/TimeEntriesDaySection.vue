@@ -8,6 +8,7 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   managementTableColumnPt,
+  managementTableHeaderClass,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
@@ -38,19 +39,18 @@ const emit = defineEmits<{
 }>();
 const isMobileViewport = useIsMobileViewport();
 
-const projectColumnWidth = '12rem';
-const timeColumnWidth = '10rem';
-const durationColumnWidth = '7rem';
+const timeEntriesTableBodyRowClass = 'h-[52px] transition-colors';
+const timeEntriesTableHeaderClass = `${managementTableHeaderClass} min-w-[740px]`;
 
 const columns = [
   { key: 'task', label: 'Task', width: 'fill' },
-  { key: 'project', label: 'Project', width: 192 },
-  { key: 'time', label: 'Time', width: 160 },
-  { key: 'duration', label: 'Duration', width: 112 },
+  { key: 'project', label: 'Project', width: 170 },
+  { key: 'range', label: 'Range', width: 130 },
+  { key: 'duration', label: 'Duration', width: 110, align: 'end' },
 ] satisfies ManagementTableColumn[];
 
 function getEntryRowClass(entry: TimeEntryResponse): string {
-  return entry.endedAt === null ? "bg-accent-tint" : "bg-surface-primary hover:bg-app-bg";
+  return entry.endedAt === null ? "bg-accent-tint hover:bg-accent-tint" : "bg-surface-primary hover:bg-app-bg";
 }
 
 function getEntryTaskOpenLabel(entry: TimeEntryResponse): string {
@@ -194,7 +194,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
           </div>
 
           <div class="col-span-2 flex min-w-0 flex-col gap-1">
-            <span class="text-text-muted text-xs">Time</span>
+            <span class="text-text-muted text-xs">Range</span>
             <span class="text-text-dark text-[13px] font-medium">
               {{ props.formatTimeRange(entry) }}
             </span>
@@ -205,16 +205,17 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 
     <ManagementTableShell
       v-else
-      body-row-class="h-[52px]"
+      :body-row-class="timeEntriesTableBodyRowClass"
       :columns="columns"
       data-key="id"
-      header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
+      :header-class="timeEntriesTableHeaderClass"
       :loading="false"
       :row-class="(entry) => getEntryRowClass(entry as TimeEntryResponse)"
-      shell-class="border-divider overflow-hidden rounded-lg border bg-surface-primary"
+      shell-class="border-divider overflow-x-auto rounded-lg border bg-surface-primary"
       :show-header="props.showHeader"
+      single-scroll
       table-class="min-w-[740px] w-full table-fixed border-collapse"
-      table-container-class="overflow-auto rounded-none border-none"
+      table-container-class="overflow-visible rounded-none border-none"
       :value="props.group.items"
     >
       <Column :pt="managementTableColumnPt">
@@ -266,10 +267,10 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 
       <Column
         :pt="managementTableColumnPt"
-        :style="{ width: projectColumnWidth }"
+        style="width: 170px"
       >
         <template #body="{ data: entry }">
-          <p class="text-text-dark truncate text-sm font-medium">
+          <p class="text-text-muted truncate text-[13px] font-normal">
             {{ entry.project.name }}
           </p>
         </template>
@@ -277,10 +278,10 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 
       <Column
         :pt="managementTableColumnPt"
-        :style="{ width: timeColumnWidth }"
+        style="width: 130px"
       >
         <template #body="{ data: entry }">
-          <p class="text-text-dark text-sm font-medium">
+          <p class="text-text-muted text-[13px] font-normal">
             {{ props.formatTimeRange(entry) }}
           </p>
         </template>
@@ -288,10 +289,10 @@ function handleStartTimer(entry: TimeEntryResponse): void {
 
       <Column
         :pt="managementTableColumnPt"
-        :style="{ width: durationColumnWidth }"
+        style="width: 110px"
       >
         <template #body="{ data: entry }">
-          <p class="text-text-dark text-sm font-medium tabular-nums">
+          <p class="text-text-dark text-right text-[13px] font-semibold tabular-nums">
             {{ props.formatDuration(entry) }}
           </p>
         </template>
