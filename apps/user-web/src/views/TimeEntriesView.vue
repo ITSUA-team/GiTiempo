@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import AutoComplete from "primevue/autocomplete";
-import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import ProgressSpinner from "primevue/progressspinner";
 import type { ProjectResponse } from "@gitiempo/shared";
@@ -17,6 +15,7 @@ import { useToast } from "primevue/usetoast";
 import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
+import TimeEntriesFilters from "@/components/time-entries/TimeEntriesFilters.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
 import {
   toEntryTaskOption,
@@ -154,14 +153,6 @@ const {
   stoppingTimerEntryId,
   stopTimerForEntry,
 } = directTimerActions;
-const filterAutoCompleteOverlayClass = "max-w-[calc(100vw-2rem)]";
-const filterAutoCompletePt = {
-  listContainer: { class: "max-w-full overflow-x-hidden" },
-  option: { class: "max-w-full min-w-0 truncate" },
-  overlay: { class: "max-w-[calc(100vw-2rem)] overflow-hidden" },
-  pcInputText: { root: { class: "truncate" } },
-  root: { class: "max-w-full min-w-0" },
-} as const;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
 const selectedProjectFilterOption = computed(
   () =>
@@ -180,10 +171,10 @@ const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
   return [...optionsByTaskId.values()];
 });
 
-function handleProjectFilterComplete(event: { query: string }): void {
+function handleProjectFilterComplete(query: string): void {
   projectFilterSuggestions.value = filterAutocompleteOptions(
     visibleProjects.value,
-    event.query,
+    query,
     (project) => project.name,
   );
 }
@@ -250,92 +241,20 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <SurfaceCard
-      body-class="flex flex-col gap-3"
-      padding-class="p-4"
-    >
-      <div class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
-        <div class="flex flex-col gap-1">
-          <label
-            for="time-entries-date-range"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Date range
-          </label>
-          <DatePicker
-            date-format="M d, yy"
-            input-id="time-entries-date-range"
-            :manual-input="false"
-            :model-value="selectedDateRange"
-            selection-mode="range"
-            fluid
-            show-icon
-            @update:model-value="(value) => void setDateRange(value as Date[] | null)"
-          />
-        </div>
-
-        <div class="flex flex-col gap-1">
-          <label
-            for="time-entries-project-filter"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Project
-          </label>
-          <AutoComplete
-            input-id="time-entries-project-filter"
-            option-label="name"
-            placeholder="All projects"
-            :suggestions="projectFilterSuggestions"
-            complete-on-focus
-            :disabled="isLoadingProjects"
-            dropdown
-            dropdown-mode="blank"
-            force-selection
-            :loading="isLoadingProjects"
-            :min-length="0"
-            :model-value="selectedProjectFilterOption"
-            :overlay-class="filterAutoCompleteOverlayClass"
-            :pt="filterAutoCompletePt"
-            fluid
-            show-clear
-            @complete="handleProjectFilterComplete"
-            @update:model-value="(value) => void setSelectedProjectFilterValue((value ?? null) as ProjectResponse | string | null)"
-          />
-        </div>
-
-        <div class="flex flex-col gap-1">
-          <label
-            for="time-entries-task-filter"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Task
-          </label>
-          <AutoComplete
-            input-id="time-entries-task-filter"
-            option-label="title"
-            placeholder="Search tasks"
-            :model-value="selectedTaskFilter"
-            :suggestions="filterTaskSuggestions"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
-            fluid
-            :min-length="0"
-            :overlay-class="filterAutoCompleteOverlayClass"
-            :pt="filterAutoCompletePt"
-            @complete="(event) => void handleFilterTaskSearch(event.query)"
-            @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
-          />
-        </div>
-      </div>
-
-      <p
-        v-if="projectsErrorMessage"
-        class="text-destructive text-xs"
-      >
-        {{ projectsErrorMessage }}
-      </p>
-    </SurfaceCard>
+    <TimeEntriesFilters
+      :is-loading-projects="isLoadingProjects"
+      :project-suggestions="projectFilterSuggestions"
+      :projects-error-message="projectsErrorMessage"
+      :selected-date-range="selectedDateRange"
+      :selected-project="selectedProjectFilterOption"
+      :selected-task="selectedTaskFilter"
+      :task-suggestions="filterTaskSuggestions"
+      @project-complete="handleProjectFilterComplete"
+      @task-search="handleFilterTaskSearch"
+      @update:date-range="(value) => void setDateRange(value)"
+      @update:project-value="(value) => void setSelectedProjectFilterValue(value)"
+      @update:task-value="(value) => void setSelectedTaskFilter(value)"
+    />
 
     <SurfaceCard
       v-if="pageState === 'loading'"
