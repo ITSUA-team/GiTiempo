@@ -38,10 +38,6 @@ export function useTopBarTaskOptions({
   let taskRequestId = 0;
 
   async function ensureProjectsLoaded(): Promise<ProjectResponse[]> {
-    if (picker.projects.value.length > 0) {
-      return picker.projects.value;
-    }
-
     if (!accessToken.value) {
       throw new Error("Authentication is required to load visible projects.");
     }
@@ -50,10 +46,21 @@ export function useTopBarTaskOptions({
     picker.setProjectsError(null);
 
     try {
-      const projects = await queryClient.ensureQueryData({
+      const previousProjectsById = new Map(
+        picker.projects.value.map((project) => [project.id, project]),
+      );
+      const projects = await queryClient.fetchQuery({
         queryKey: timerKeys.visibleProjects(scope.value),
         queryFn: () => client.listVisibleProjects(),
       });
+
+      for (const project of projects) {
+        const previousProject = previousProjectsById.get(project.id);
+
+        if (previousProject && previousProject.source !== project.source) {
+          picker.invalidateCachedTasks(project.id);
+        }
+      }
 
       picker.setProjects(projects);
       return picker.projects.value;
@@ -76,9 +83,12 @@ export function useTopBarTaskOptions({
     picker.setTasksError(null);
 
     try {
+      const hasProjectMetadata = picker.projects.value.some(
+        (project) => project.id === projectId,
+      );
       const cachedTasks = picker.getCachedTasks(projectId);
 
-      if (cachedTasks) {
+      if (cachedTasks && hasProjectMetadata) {
         picker.setTasksError(null);
         picker.setTasks(cachedTasks);
         return cachedTasks;
@@ -97,7 +107,7 @@ export function useTopBarTaskOptions({
         return picker.tasks.value;
       }
 
-      if (errorMessage === null) {
+      if (errorMessage === null && hasProjectMetadata) {
         picker.setCachedTasks(projectId, taskOptions);
       }
       picker.setTasks(taskOptions);
@@ -124,9 +134,17 @@ export function useTopBarTaskOptions({
     const project =
       picker.projects.value.find((candidate) => candidate.id === projectId) ??
       null;
+    const selectedContextGitHubIssue =
+      picker.selectedProjectId.value === projectId
+        ? picker.selectedContextGitHubIssue.value
+        : null;
 
     return appendUnsyncedProjectGitHubIssueOptions({
       client,
+      hasKnownGitHubIssueSource: selectedContextGitHubIssue !== null,
+      knownSyncedGitHubIssues: selectedContextGitHubIssue
+        ? [selectedContextGitHubIssue]
+        : [],
       localTaskOptions: localTasks,
       localTasks,
       mapGitHubIssue(issue): GitHubIssueTaskOption {

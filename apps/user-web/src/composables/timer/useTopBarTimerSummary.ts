@@ -55,6 +55,7 @@ export function useTopBarTimerSummary({
   }
 
   function getDialogSelectionFromCurrentState(): {
+    githubIssue: TimeEntryResponse["githubIssue"];
     projectId: string;
     taskId: string;
     description: string;
@@ -62,12 +63,14 @@ export function useTopBarTimerSummary({
     return currentTimer.value
       ? {
           description: currentTimer.value.description ?? "",
+          githubIssue: currentTimer.value.githubIssue,
           projectId: currentTimer.value.project.id,
           taskId: currentTimer.value.task.id,
         }
       : selectedContext.value
         ? {
             description: selectedDescription.value ?? "",
+            githubIssue: selectedContext.value.githubIssue,
             projectId: selectedContext.value.projectId,
             taskId: selectedContext.value.taskId,
           }

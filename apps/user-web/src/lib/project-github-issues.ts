@@ -32,8 +32,10 @@ export interface AppendedProjectTaskOptionsResult<TTaskOption> {
 /* eslint-disable no-unused-vars */
 interface AppendUnsyncedProjectGitHubIssueOptionsInput<TTaskOption> {
   client: TimeEntriesClient;
+  knownSyncedGitHubIssues?: SyncedGitHubIssue[];
   localTaskOptions: TTaskOption[];
   localTasks: TaskResponse[];
+  hasKnownGitHubIssueSource?: boolean;
   project: Pick<ProjectResponse, "id" | "source"> | null;
   mapGitHubIssue(issue: UnsyncedProjectGitHubIssue): TTaskOption;
 }
@@ -52,15 +54,18 @@ export function supportsProjectGitHubIssueSuggestions(
 
 export async function loadUnsyncedProjectGitHubIssues(input: {
   client: TimeEntriesClient;
+  knownSyncedGitHubIssues?: SyncedGitHubIssue[];
   localTasks: TaskResponse[];
   projectId: string;
 }): Promise<UnsyncedProjectGitHubIssueResult> {
   try {
     const issues: UnsyncedProjectGitHubIssue[] = [];
     const syncedLocalIssues = new Set(
-      input.localTasks
-        .map((task) => task.githubIssue)
-        .filter((issue) => issue !== null)
+      [
+        ...input.localTasks.map((task) => task.githubIssue),
+        ...(input.knownSyncedGitHubIssues ?? []),
+      ]
+        .filter((issue): issue is SyncedGitHubIssue => issue !== null)
         .map(toGitHubIssueKey),
     );
     let pageToken: string | undefined = undefined;
@@ -122,7 +127,8 @@ export async function appendUnsyncedProjectGitHubIssueOptions<TTaskOption>(
 
   if (
     project === null ||
-    !supportsProjectGitHubIssueSuggestions(project, input.localTasks)
+    (!input.hasKnownGitHubIssueSource &&
+      !supportsProjectGitHubIssueSuggestions(project, input.localTasks))
   ) {
     return {
       errorMessage: null,
@@ -132,6 +138,7 @@ export async function appendUnsyncedProjectGitHubIssueOptions<TTaskOption>(
 
   const { errorMessage, issues } = await loadUnsyncedProjectGitHubIssues({
     client: input.client,
+    knownSyncedGitHubIssues: input.knownSyncedGitHubIssues,
     localTasks: input.localTasks,
     projectId: project.id,
   });

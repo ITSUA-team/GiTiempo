@@ -125,15 +125,28 @@ export class TasksService {
       throw new NotFoundException('Project not found');
     }
 
-    const githubRepo = await this.githubTasks.findProjectRepoKey(
+    const issueSource = await this.githubTasks.findProjectIssueSource(
       user.workspaceId,
       project.id,
     );
-    if (!githubRepo) {
+    if (!issueSource) {
       throw new NotFoundException('GitHub project not found');
     }
 
-    const repoParts = parseGitHubRepoKey(githubRepo);
+    if (issueSource.externalType === 'project') {
+      const response = await this.github.listProjectIssues(
+        user,
+        issueSource.externalKey,
+        query,
+      );
+
+      return {
+        items: response.items.map((item) => item.issue),
+        pagination: response.pagination,
+      };
+    }
+
+    const repoParts = parseGitHubRepoKey(issueSource.externalKey);
     if (!repoParts) {
       throw DomainError.internal(
         'github_repo_invalid',

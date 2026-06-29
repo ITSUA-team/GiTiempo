@@ -244,6 +244,29 @@ describe("TopBarTimerTaskDialog", () => {
     ]);
   });
 
+  it("shows every task option when opening the selected task dropdown", async () => {
+    const wrapper = mountDialog({
+      taskOptions: [reportsTask, alertTask],
+    });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1];
+
+    await taskAutoComplete?.vm.$emit("complete", {
+      query: reportsTask.title,
+    });
+    await nextTick();
+
+    const taskSuggestions = taskAutoComplete?.props("suggestions") as Array<{
+      id: string;
+      title: string;
+    }>;
+
+    expect(taskSuggestions.map((task) => task.title)).toEqual([
+      "Improve reports filters",
+      "Fix alert routing",
+      "New task",
+    ]);
+  });
+
   it("disables selection actions while autocomplete text is not a selected option", async () => {
     const idleWrapper = mountDialog();
     const idleAutoCompletes = idleWrapper.findAllComponents({ name: "AutoComplete" });
