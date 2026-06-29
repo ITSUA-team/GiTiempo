@@ -19,9 +19,6 @@ import { taskRowSelection, tasks } from '../schemas/tasks.schema';
 
 type QueryExecutor = Pick<DrizzleDB, 'delete' | 'insert' | 'select'>;
 type TaskRow = typeof tasks.$inferSelect;
-export type ProjectGitHubIssueSource =
-  | { externalKey: string; externalType: 'repository' }
-  | { externalKey: string; externalType: 'project' };
 
 @Injectable()
 export class GithubTaskMaterializationService {
@@ -220,40 +217,6 @@ export class GithubTaskMaterializationService {
       .limit(1);
 
     return row?.externalKey ?? null;
-  }
-
-  async findProjectIssueSource(
-    workspaceId: string,
-    projectId: string,
-    executor: Pick<DrizzleDB, 'select'> = this.db,
-  ): Promise<ProjectGitHubIssueSource | null> {
-    const [row] = await executor
-      .select({
-        externalKey: projectExternalRefs.externalKey,
-        externalType: projectExternalRefs.externalType,
-      })
-      .from(projectExternalRefs)
-      .where(
-        and(
-          eq(projectExternalRefs.workspaceId, workspaceId),
-          eq(projectExternalRefs.projectId, projectId),
-          eq(projectExternalRefs.provider, 'github'),
-          sql`${projectExternalRefs.externalType} IN ('repository', 'project')`,
-        ),
-      )
-      .orderBy(
-        sql`CASE WHEN ${projectExternalRefs.externalType} = 'repository' THEN 0 ELSE 1 END`,
-      )
-      .limit(1);
-
-    if (row?.externalType !== 'repository' && row?.externalType !== 'project') {
-      return null;
-    }
-
-    return {
-      externalKey: row.externalKey,
-      externalType: row.externalType,
-    };
   }
 
   private async findGitHubProjectRef(

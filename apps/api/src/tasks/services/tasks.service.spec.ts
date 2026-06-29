@@ -89,12 +89,10 @@ function createService(
   overrides: {
     github?: Partial<{
       getRepositoryIssue: ReturnType<typeof vi.fn>;
-      listProjectIssues: ReturnType<typeof vi.fn>;
       listRepositoryIssues: ReturnType<typeof vi.fn>;
     }>;
     githubTasks?: Partial<{
       findOrCreateTaskForIssue: ReturnType<typeof vi.fn>;
-      findProjectIssueSource: ReturnType<typeof vi.fn>;
       findProjectRepoKey: ReturnType<typeof vi.fn>;
     }>;
   } = {},
@@ -103,13 +101,11 @@ function createService(
     db as never,
     {
       getRepositoryIssue: vi.fn(),
-      listProjectIssues: vi.fn(),
       listRepositoryIssues: vi.fn(),
       ...overrides.github,
     } as never,
     {
       findOrCreateTaskForIssue: vi.fn(),
-      findProjectIssueSource: vi.fn(),
       findProjectRepoKey: vi.fn(),
       ...overrides.githubTasks,
     } as never,
@@ -282,10 +278,7 @@ describe('TasksService', () => {
     const service = createService({}, projects, {
       github,
       githubTasks: {
-        findProjectIssueSource: vi.fn().mockResolvedValue({
-          externalKey: 'octo-org/repo-name',
-          externalType: 'repository',
-        }),
+        findProjectRepoKey: vi.fn().mockResolvedValue('octo-org/repo-name'),
       },
     });
 
@@ -303,69 +296,30 @@ describe('TasksService', () => {
     );
   });
 
-  it('lists project github issues through a connected GitHub Project mapping', async () => {
-    const issue = {
-      id: 'issue-2',
-      nodeId: 'node-2',
-      repository: {
-        owner: 'My-test-org-for-clock',
-        name: 'test-repo',
-        fullName: 'My-test-org-for-clock/test-repo',
-      },
-      number: 2,
-      title: 'second test issue',
-      state: 'open' as const,
-      url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
-      updatedAt: '2026-04-21T10:01:00.000Z',
-    };
+  it('rejects project github issue browsing without a repository mapping', async () => {
     const github = {
-      listProjectIssues: vi.fn().mockResolvedValue({
-        items: [
-          {
-            projectItemId: 'item-2',
-            isArchived: false,
-            issue,
-          },
-        ],
-        pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
-        skippedCounts: {
-          draftIssues: 0,
-          pullRequests: 0,
-          redacted: 0,
-          unknown: 0,
-        },
-      }),
+      listRepositoryIssues: vi.fn(),
     };
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue({
         ...projectRow,
-        name: 'My-test-org-for-clock/test-repo',
+        name: 'Project without repository mapping',
       }),
     };
     const service = createService({}, projects, {
       github,
       githubTasks: {
-        findProjectIssueSource: vi.fn().mockResolvedValue({
-          externalKey: 'PVT_kwDOProjectV2',
-          externalType: 'project',
-        }),
+        findProjectRepoKey: vi.fn().mockResolvedValue(null),
       },
     });
 
-    const result = await service.listProjectGitHubIssues(user, projectRow.id, {
-      limit: 30,
-      state: 'open',
-    });
-
-    expect(result).toEqual({
-      items: [issue],
-      pagination: { limit: 30, hasNextPage: false, nextPageToken: null },
-    });
-    expect(github.listProjectIssues).toHaveBeenCalledWith(
-      user,
-      'PVT_kwDOProjectV2',
-      { limit: 30, state: 'open' },
-    );
+    await expect(
+      service.listProjectGitHubIssues(user, projectRow.id, {
+        limit: 30,
+        state: 'open',
+      }),
+    ).rejects.toThrow('GitHub project not found');
+    expect(github.listRepositoryIssues).not.toHaveBeenCalled();
   });
 
   it('materializes a github issue task from the visible project mapping', async () => {
