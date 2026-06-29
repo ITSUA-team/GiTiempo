@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, sql } from 'drizzle-orm';
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
@@ -174,10 +174,9 @@ export class GithubTaskMaterializationService {
     if (!createdRef) {
       await executor.delete(tasks).where(eq(tasks.id, task.id));
 
-      const winningRef = await this.findGitHubTaskRef(
+      const winningRef = await this.findGitHubTaskRefInWorkspace(
         executor,
         input.workspaceId,
-        input.projectId,
         input.issueKey,
       );
       if (!winningRef) {
@@ -185,6 +184,9 @@ export class GithubTaskMaterializationService {
           'github_task_mapping_missing',
           'Failed to load GitHub task mapping',
         );
+      }
+      if (winningRef.projectId !== input.projectId) {
+        throw new NotFoundException('GitHub issue not found');
       }
 
       return this.requireTaskRow(
@@ -290,6 +292,38 @@ export class GithubTaskMaterializationService {
         and(
           eq(taskExternalRefs.workspaceId, workspaceId),
           eq(taskExternalRefs.projectId, projectId),
+          eq(taskExternalRefs.provider, 'github'),
+          eq(taskExternalRefs.externalType, 'issue'),
+          sql`lower(${taskExternalRefs.externalKey}) = ${normalizedIssueKey}`,
+        ),
+      )
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  private async findGitHubTaskRefInWorkspace(
+    executor: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    issueKey: string,
+  ): Promise<{ projectId: string; taskId: string } | null> {
+    const normalizedIssueKey = normalizeGitHubIssueExternalKey(issueKey);
+    if (!normalizedIssueKey) {
+      throw DomainError.internal(
+        'github_issue_invalid',
+        'GitHub issue reference is invalid',
+      );
+    }
+
+    const [row] = await executor
+      .select({
+        projectId: taskExternalRefs.projectId,
+        taskId: taskExternalRefs.taskId,
+      })
+      .from(taskExternalRefs)
+      .where(
+        and(
+          eq(taskExternalRefs.workspaceId, workspaceId),
           eq(taskExternalRefs.provider, 'github'),
           eq(taskExternalRefs.externalType, 'issue'),
           sql`lower(${taskExternalRefs.externalKey}) = ${normalizedIssueKey}`,
