@@ -24,6 +24,13 @@ The system MUST allow any active workspace member with project visibility to cre
 - **THEN** the system reuses the existing task
 - **AND** it does not create a duplicate local task for the same issue mapping
 
+#### Scenario: Closed GitHub provider issue is rejected before local task creation
+- **GIVEN** the requester can see an active local GitHub-backed project
+- **AND** the mapped GitHub issue is now closed in the provider response
+- **WHEN** the requester asks to create or reuse a task for that issue
+- **THEN** the system rejects the request with a validation failure
+- **AND** it does not create a new local task for that issue mapping
+
 #### Scenario: GitHub issue task cannot be materialized in inactive work
 - **GIVEN** the requester identifies a GitHub issue through a visible local project
 - **AND** the project or resolved local task is inactive
