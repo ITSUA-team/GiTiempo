@@ -9,7 +9,7 @@ import {
   SurfaceCard,
   filterAutocompleteOptions,
 } from "@gitiempo/web-shared";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { PlusIcon } from "@heroicons/vue/24/outline";
@@ -22,7 +22,11 @@ import {
   type TaskLookupOption,
   type TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
+import { useRunningEntryTicker } from "@/composables/time-entries/useRunningEntryTicker";
 import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesData";
+import { useTimeEntriesDisplay } from "@/composables/time-entries/useTimeEntriesDisplay";
+import { useTimeEntriesLoadErrorNotifications } from "@/composables/time-entries/useTimeEntriesLoadErrorNotifications";
+import { useTimeEntriesPaginationSync } from "@/composables/time-entries/useTimeEntriesPaginationSync";
 import { useTimeEntryDialogWorkflow } from "@/composables/time-entries/useTimeEntryDialogWorkflow";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryDirectTimerActions } from "@/composables/time-entries/useTimeEntryDirectTimerActions";
@@ -46,11 +50,18 @@ const filters = useTimeEntryFilters();
 const dialog = useTimeEntryDialog();
 const data = useTimeEntriesData({
   accessToken,
-  clearIntervalFn: clearInterval,
   client,
-  currentPage: filters.currentPage,
   entryListQuery: filters.entryListQuery,
-  now: () => Date.now(),
+  scope,
+});
+useTimeEntriesPaginationSync({
+  currentPage: filters.currentPage,
+  isFetchingEntries: data.isFetchingEntries,
+  pageMeta: data.entriesMeta,
+  pageSize: filters.pageSize,
+});
+useTimeEntriesLoadErrorNotifications({
+  entriesError: data.entriesError,
   onLoadEntriesError(error) {
     appToast.showErrorToast({
       detail: "Please try again.",
@@ -67,9 +78,19 @@ const data = useTimeEntriesData({
       summary: "Could not load visible projects",
     });
   },
-  pageSize: filters.pageSize,
-  scope,
+  projectsError: data.projectsError,
+});
+const runningEntryTicker = useRunningEntryTicker({
+  clearIntervalFn: clearInterval,
+  entries: data.entries,
+  now: () => Date.now(),
   setIntervalFn: setInterval,
+});
+const display = useTimeEntriesDisplay({
+  entries: data.entries,
+  isLoadingEntries: data.isLoadingEntries,
+  nowMs: runningEntryTicker.nowMs,
+  requestErrorMessage: data.requestErrorMessage,
 });
 const taskOptions = useTimeEntryTaskOptions({ client });
 const mutations = useTimeEntryMutations({
@@ -126,16 +147,18 @@ const {
 } = filters;
 const {
   entries,
-  formatDuration,
-  formatTimeRange,
-  groupedEntries,
   isLoadingProjects,
-  pageState,
   projectsErrorMessage,
   requestErrorMessage,
   totalRecords,
   visibleProjects,
 } = data;
+const {
+  formatDuration,
+  formatTimeRange,
+  groupedEntries,
+  pageState,
+} = display;
 const { isSavingDialog } = mutations;
 const {
   handleDialogTaskSearch,
@@ -234,9 +257,6 @@ onMounted(async () => {
   await Promise.allSettled([data.ensureProjectsLoaded()]);
 });
 
-onBeforeUnmount(() => {
-  data.stopTicker();
-});
 </script>
 
 <template>
