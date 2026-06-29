@@ -20,6 +20,15 @@ const actionToneClassByTone = {
 
 export type ManagementTableActionTone = keyof typeof actionToneClassByTone;
 
+export const managementTableHeaderClass =
+  'border-divider bg-app-bg text-text-dark flex h-[44px] items-center border-b font-sans text-[13px] font-medium uppercase tracking-wide';
+
+export const managementTableBodyRowClass =
+  'h-12 transition-colors hover:bg-app-bg';
+
+export const managementTableShellClass =
+  'border-divider overflow-hidden rounded-[6px] border bg-surface-primary';
+
 export function getManagementTableActionIconClass(
   tone: ManagementTableActionTone,
 ): string {
@@ -34,7 +43,7 @@ export function getManagementTableActionRootClass(
 
 export const managementTableColumnPt = {
   bodyCell: {
-    class: 'border-0 border-t border-divider px-3 py-0 align-middle font-sans',
+    class: 'border-0 border-t border-divider px-3 py-0 align-middle font-sans text-sm',
   },
 } as const;
 

@@ -1,7 +1,5 @@
 import {
   computed,
-  nextTick,
-  onUnmounted,
   ref,
   shallowRef,
   watch,
@@ -64,15 +62,10 @@ function sortProjects(projects: ProjectListResponse): ProjectListResponse {
 
 function getVisibleProjectsForScope(
   projects: ProjectListResponse,
-  projectId: string | null,
 ): ProjectResponse[] {
-  if (!projectId) {
-    return projects.filter(
-      (project) => project.isActive && project.totalSeconds > 0,
-    );
-  }
-
-  return projects.filter((project) => project.id === projectId);
+  return projects.filter(
+    (project) => project.isActive && project.totalSeconds > 0,
+  );
 }
 
 function getReportErrorMessage(error: unknown): string {
@@ -85,6 +78,19 @@ function getReportErrorMessage(error: unknown): string {
   return message;
 }
 
+function cloneReportDateRange(dateRange: ReportDateRange): ReportDateRange {
+  if (!dateRange) {
+    return null;
+  }
+
+  const [start, end] = dateRange;
+
+  return [
+    start ? new Date(start) : null,
+    end ? new Date(end) : null,
+  ] as ReportDateRange;
+}
+
 export function useReportsData({
   accessToken,
   membersClient = adminMembersClient,
@@ -93,15 +99,18 @@ export function useReportsData({
   onError,
   scope,
 }: UseReportsDataOptions) {
+  const defaultDateRange = getDefaultReportDateRange();
   const selectedProjectId = ref<string | null>(null);
   const selectedMemberId = ref<string | null>(null);
-  const dateRange = shallowRef<ReportDateRange>(getDefaultReportDateRange());
+  const dateRange = shallowRef<ReportDateRange>(
+    cloneReportDateRange(defaultDateRange),
+  );
   const groupBy = ref<ReportSetupFilters['groupBy']>('project');
-  const appliedFilters = shallowRef<ReportSetupFilters>({
-    dateRange: dateRange.value,
-    groupBy: groupBy.value,
-    memberId: selectedMemberId.value,
-    projectId: selectedProjectId.value,
+  const tableReportFilters = shallowRef<ReportSetupFilters>({
+    dateRange: cloneReportDateRange(defaultDateRange),
+    groupBy: 'user',
+    memberId: null,
+    projectId: null,
   });
   const currentAction = ref('load-reports');
   const projectsQuery = useAdminProjectsQuery({
@@ -121,9 +130,6 @@ export function useReportsData({
     client: reportsClient,
     scope,
   });
-
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
   const projects = computed(() => sortProjects(projectsQuery.data.value ?? []));
   const projectOptions = computed(() => deriveProjectOptions(projects.value));
   const projectMemberOptions = computed(() => deriveMemberOptions(projects.value));
@@ -166,12 +172,8 @@ export function useReportsData({
 
   async function fetchReportRowsForScope(
     visibleProjects: ProjectListResponse,
-    filters: ReportSetupFilters,
   ): Promise<ReportTableRow[]> {
-    const targetProjects = getVisibleProjectsForScope(
-      visibleProjects,
-      filters.projectId,
-    );
+    const targetProjects = getVisibleProjectsForScope(visibleProjects);
     const nextRows: ReportTableRow[] = [];
 
     for (const project of targetProjects) {
@@ -182,7 +184,7 @@ export function useReportsData({
         const response = await reportsClient.getTimeReport(
           toTimeReportQuery(
             {
-              dateRange: filters.dateRange,
+              dateRange: tableReportFilters.value.dateRange,
               groupBy: 'user',
               memberId: null,
               projectId: project.id,
@@ -210,16 +212,16 @@ export function useReportsData({
     queryKey: computed(() =>
       reportsKeys.time(
         scope.value,
-        toTimeReportQuery(appliedFilters.value, 1, pageLimit),
+        toTimeReportQuery(tableReportFilters.value, 1, pageLimit),
       ),
     ),
     enabled: computed(
       () =>
         Boolean(accessToken.value) &&
         projectsQuery.isSuccess.value &&
-        isReportDateRangeValid(appliedFilters.value.dateRange),
+        isReportDateRangeValid(tableReportFilters.value.dateRange),
     ),
-    queryFn: () => fetchReportRowsForScope(projects.value, appliedFilters.value),
+    queryFn: () => fetchReportRowsForScope(projects.value),
   });
   const rows = computed(() => reportRowsQuery.data.value ?? []);
   const summary = computed(() => deriveReportSummaryView(rows.value));
@@ -251,45 +253,17 @@ export function useReportsData({
       rows.value.length === 0,
   );
 
-  function clearDebounceTimer(): void {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-      debounceTimer = null;
-    }
-  }
-
-  function applyCurrentFilters(): void {
-    if (!isReportDateRangeValid(dateRange.value)) {
-      return;
-    }
-
-    appliedFilters.value = getCurrentSetupFilters();
-  }
-
-  function scheduleReportRefresh(): void {
-    if (!initialLoaded.value) {
-      return;
-    }
-
-    currentAction.value = 'refresh-reports';
-    clearDebounceTimer();
-    debounceTimer = setTimeout(applyCurrentFilters, 300);
-  }
-
   async function refresh(): Promise<void> {
     if (!accessToken.value) {
       return;
     }
 
     currentAction.value = initialLoaded.value ? 'refresh-reports' : 'load-reports';
-    clearDebounceTimer();
     await Promise.all([
       projectsQuery.refetch(),
       isAdminScope.value ? membersQuery.refetch() : Promise.resolve(),
     ]);
     syncSelectedFiltersWithOptions();
-    applyCurrentFilters();
-    await nextTick();
     await reportRowsQuery.refetch();
   }
 
@@ -305,15 +279,6 @@ export function useReportsData({
     return exportReportMutation.mutateAsync(toTimeReportExportQuery(filters));
   }
 
-  watch(
-    [
-      selectedProjectId,
-      () => dateRange.value?.[0]?.getTime() ?? null,
-      () => dateRange.value?.[1]?.getTime() ?? null,
-    ],
-    scheduleReportRefresh,
-  );
-
   watch([projectOptions, memberOptions], syncSelectedFiltersWithOptions);
 
   watch(
@@ -328,9 +293,6 @@ export function useReportsData({
       }
     },
   );
-
-  onUnmounted(clearDebounceTimer);
-
   return {
     dateRange,
     exportCurrentReport,
