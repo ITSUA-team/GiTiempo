@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { RuntimeClient, RuntimeMutationResult, RuntimeSnapshot } from "@/lib/runtime";
+import type {
+  RuntimeAuthResult,
+  RuntimeClient,
+  RuntimeMutationResult,
+  RuntimeSnapshot,
+} from "@/lib/runtime";
 import { bootstrapInjectedIssueControl, mountInjectedIssueControl } from "./main";
 
 function createMatchMediaController(initialMatches = false) {
@@ -117,7 +122,14 @@ function createRuntimeClient(overrides?: {
   stopTimer?: () => Promise<RuntimeMutationResult>;
 }): RuntimeClient {
   return {
-    exchangeFirebaseToken: vi.fn(),
+    exchangeFirebaseToken: vi.fn(async (): Promise<RuntimeAuthResult> => ({
+      ok: true,
+      snapshot: {
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+      },
+    })),
     getSnapshot: vi.fn(async () =>
         overrides?.snapshot ?? {
           authenticated: true,

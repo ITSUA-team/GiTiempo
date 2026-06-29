@@ -86,6 +86,34 @@ describe("createExtensionApiClient", () => {
     });
   });
 
+  it("maps login gateway failures to a temporary API outage message", async () => {
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn: vi.fn(async () =>
+        new Response("<html>bad gateway</html>", { status: 502 }),
+      ),
+      storage: createStorage().storage,
+    });
+
+    await expect(client.loginWithFirebaseToken("firebase-id-token")).rejects.toThrow(
+      "GiTiempo API is temporarily unavailable. Please try again in a moment.",
+    );
+  });
+
+  it("maps login fetch failures to an API connectivity message", async () => {
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn: vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+      storage: createStorage().storage,
+    });
+
+    await expect(client.loginWithFirebaseToken("firebase-id-token")).rejects.toThrow(
+      "Unable to reach GiTiempo API. Check your connection and try again.",
+    );
+  });
+
   it("requests the current timer with an authorization header", async () => {
     const fetchFn = vi.fn(async () => jsonResponse({ timeEntry: null }));
     const { storage } = createStorage({
@@ -112,6 +140,27 @@ describe("createExtensionApiClient", () => {
         },
         method: "GET",
       },
+    );
+  });
+
+  it("maps authenticated fetch failures to an API connectivity message", async () => {
+    const { storage } = createStorage({
+      [EXTENSION_SESSION_STORAGE_KEY]: {
+        accessToken: "access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "refresh-token",
+      },
+    });
+    const client = createExtensionApiClient({
+      config: createTestConfig(),
+      fetchFn: vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+      storage,
+    });
+
+    await expect(client.getCurrentTimer()).rejects.toThrow(
+      "Unable to reach GiTiempo API. Check your connection and try again.",
     );
   });
 

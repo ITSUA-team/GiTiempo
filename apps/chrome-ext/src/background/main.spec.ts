@@ -2,6 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RuntimeSnapshot } from "@/lib/runtime";
 
+const backgroundApiMocks = vi.hoisted(() => ({
+  getCurrentTimer: vi.fn(),
+  loginWithFirebaseToken: vi.fn(),
+  startTimerFromGitHub: vi.fn(),
+  stopTimer: vi.fn(),
+}));
+
+const sessionMocks = vi.hoisted(() => ({
+  getStoredSession: vi.fn(),
+}));
+
 vi.mock("@/lib/config", () => ({
   getExtensionConfig: () => ({
     apiBaseUrl: "http://localhost:3000",
@@ -12,16 +23,11 @@ vi.mock("@/lib/config", () => ({
 }));
 
 vi.mock("@/lib/api", () => ({
-  createExtensionApiClient: () => ({
-    getCurrentTimer: vi.fn(),
-    loginWithFirebaseToken: vi.fn(),
-    startTimerFromGitHub: vi.fn(),
-    stopTimer: vi.fn(),
-  }),
+  createExtensionApiClient: () => backgroundApiMocks,
 }));
 
 vi.mock("@/lib/session", () => ({
-  getStoredSession: vi.fn(),
+  getStoredSession: sessionMocks.getStoredSession,
 }));
 
 type ChromeStub = {
@@ -55,6 +61,8 @@ describe("background snapshot broadcast", () => {
     vi.resetModules();
     chromeStub = createChromeStub();
     vi.stubGlobal("chrome", chromeStub);
+    vi.clearAllMocks();
+    sessionMocks.getStoredSession.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -133,5 +141,48 @@ describe("background snapshot broadcast", () => {
     ).resolves.toBeUndefined();
 
     expect(chromeStub.tabs.sendMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns a structured auth error result instead of rejecting the message", async () => {
+    backgroundApiMocks.loginWithFirebaseToken.mockRejectedValueOnce(
+      new Error("GiTiempo API is temporarily unavailable. Please try again in a moment."),
+    );
+
+    await import("./main");
+
+    const onMessage = chromeStub.runtime.onMessage.addListener.mock.calls[0]?.[0];
+    const sendResponse = vi.fn();
+
+    expect(onMessage).toBeTypeOf("function");
+    expect(
+      onMessage(
+        {
+          type: "auth/exchange-firebase-token",
+          firebaseIdToken: "firebase-id-token",
+        },
+        {},
+        sendResponse,
+      ),
+    ).toBe(true);
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({
+        errorMessage: "GiTiempo API is temporarily unavailable. Please try again in a moment.",
+        ok: false,
+        snapshot: {
+          authenticated: false,
+          currentTimer: null,
+          errorMessage: null,
+        },
+      });
+    });
+    expect(chromeStub.runtime.sendMessage).toHaveBeenCalledWith({
+      type: "runtime/snapshot-updated",
+      snapshot: {
+        authenticated: false,
+        currentTimer: null,
+        errorMessage: null,
+      },
+    });
   });
 });

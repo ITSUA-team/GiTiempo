@@ -367,11 +367,15 @@ describe('useReportsData', () => {
     );
   });
 
-  it('debounces project/date table refreshes without applying export group-by to the table', async () => {
+  it('keeps setup controls as export-only scope without changing rows or summary', async () => {
     const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
+    reportsClient.exportTimeReport.mockResolvedValue({
+      blob: new Blob(['csv'], { type: 'text/csv' }),
+      filename: 'time-report.csv',
+    });
     let reports!: ReturnType<typeof useReportsData>;
 
     mountWithQuery(
@@ -390,30 +394,35 @@ describe('useReportsData', () => {
     );
 
     await flushPromises();
+    const initialRows = reports.rows.value;
+    const initialTotalSeconds = reports.summary.value.totalSeconds;
     reportsClient.getTimeReport.mockClear();
 
     reports.selectedProjectId.value = projectOrionId;
+    reports.selectedMemberId.value = ninaId;
     reports.groupBy.value = 'project';
     reports.dateRange.value = [
       new Date('2026-05-01T12:00:00.000Z'),
       new Date('2026-05-02T12:00:00.000Z'),
     ];
 
-    await vi.advanceTimersByTimeAsync(299);
-    expect(reportsClient.getTimeReport).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
 
-    expect(reportsClient.getTimeReport).toHaveBeenCalledTimes(1);
-    expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
+    expect(reportsClient.getTimeReport).not.toHaveBeenCalled();
+    expect(reports.rows.value).toBe(initialRows);
+    expect(reports.summary.value.totalSeconds).toBe(initialTotalSeconds);
+
+    await reports.exportCurrentReport();
+    await flushPromises();
+
+    expect(reportsClient.exportTimeReport).toHaveBeenCalledWith(
       expect.objectContaining({
         dateFrom: new Date(2026, 4, 1).toISOString(),
         dateTo: new Date(2026, 4, 3).toISOString(),
-        groupBy: 'user',
-        limit: 100,
-        page: 1,
+        groupBy: 'project',
         projectId: projectOrionId,
+        userId: ninaId,
       }),
     );
   });
@@ -465,7 +474,7 @@ describe('useReportsData', () => {
     );
   });
 
-  it('blocks invalid table date ranges before refresh and export requests', async () => {
+  it('blocks invalid setup date ranges before export without refreshing table data', async () => {
     const accessToken = ref<string | null>('access-token');
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
