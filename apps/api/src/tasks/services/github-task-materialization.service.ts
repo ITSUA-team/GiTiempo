@@ -263,10 +263,7 @@ export class GithubTaskMaterializationService {
       )
       .limit(1);
     if (!row) {
-      throw DomainError.internal(
-        'github_project_missing',
-        'GitHub project mapping points to a missing project',
-      );
+      throw new NotFoundException('GitHub project not found');
     }
     return row;
   }

@@ -3,6 +3,38 @@ import { describe, expect, it, vi } from 'vitest';
 import { GithubTaskMaterializationService } from './github-task-materialization.service';
 
 describe('GithubTaskMaterializationService', () => {
+  it('fails closed when a GitHub repository ref points outside the current workspace', async () => {
+    const executor = {
+      select: vi.fn(),
+    };
+    const service = new GithubTaskMaterializationService({} as never);
+
+    Object.defineProperty(service, 'findGitHubProjectRef', {
+      value: vi.fn().mockResolvedValue({
+        projectId: 'foreign-project',
+      }),
+    });
+    Object.defineProperty(service, 'requireProjectRow', {
+      value: vi
+        .fn()
+        .mockRejectedValue(new NotFoundException('GitHub project not found')),
+    });
+
+    await expect(
+      service.findOrCreateProjectForRepo(
+        executor as never,
+        {
+          sub: 'user-1',
+          email: 'user@example.com',
+          firebaseUid: 'user-uid',
+          workspaceId: 'workspace-1',
+          role: 'admin',
+        },
+        'octo/repo',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('fails closed when a GitHub issue ref already belongs to a different project', async () => {
     const createdTask = {
       id: 'task-new',
