@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import Button from "primevue/button";
 import Column from "primevue/column";
-import DataTable from "primevue/datatable";
 import {
+  ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
   SurfaceCard,
+  managementTableColumnPt,
+  managementTableHeaderClass,
   useIsMobileViewport,
+  type ManagementTableColumn,
 } from "@gitiempo/web-shared";
 
 import type { DashboardRecentEntryRow } from "@/composables/dashboard/useDashboardOverview";
@@ -21,12 +24,17 @@ const emit = defineEmits<{
 }>();
 const isMobileViewport = useIsMobileViewport();
 
-const projectColumnWidth = "11rem";
-const rangeColumnWidth = "8rem";
-const durationColumnWidth = "8rem";
+const columns = [
+  { key: "task", label: "Task", width: "fill" },
+  { key: "project", label: "Project", width: 180 },
+  { key: "range", label: "Range", width: 120 },
+  { key: "duration", label: "Duration", width: 120, align: "end" },
+] satisfies ManagementTableColumn[];
+
+const dashboardRecentEntriesHeaderClass = `${managementTableHeaderClass} min-w-[740px]`;
 
 function getRowClass(entry: DashboardRecentEntryRow): string {
-  return entry.isHighlighted ? "bg-accent-tint" : "bg-surface-primary";
+  return entry.isHighlighted ? "bg-accent-tint hover:bg-accent-tint" : "bg-surface-primary";
 }
 </script>
 
@@ -94,73 +102,67 @@ function getRowClass(entry: DashboardRecentEntryRow): string {
       </MobileRecordCard>
     </div>
 
-    <div
+    <ManagementTableShell
       v-else
-      class="border-divider overflow-x-auto rounded-md border"
+      :columns="columns"
       data-testid="dashboard-recent-entries-table"
+      data-key="id"
+      :header-class="dashboardRecentEntriesHeaderClass"
+      :loading="false"
+      :row-class="(entry) => getRowClass(entry as DashboardRecentEntryRow)"
+      shell-class="border-divider overflow-x-auto rounded-[6px] border"
+      single-scroll
+      table-class="min-w-[740px] w-full table-fixed border-collapse"
+      table-container-class="overflow-visible rounded-none border-none"
+      :value="props.entries"
     >
-      <DataTable
-        :pt="{
-          bodyCell: 'px-3 py-0',
-          bodyRow: 'h-12 border-t border-divider',
-          columnHeaderContent: 'justify-start',
-          headerCell: 'bg-app-bg px-3 py-3 text-[13px] font-medium text-text-dark',
-          table: 'w-full',
-        }"
-        :row-class="getRowClass"
-        :value="props.entries"
-        class="w-full"
-        data-key="id"
-        table-style="min-width: 740px; table-layout: fixed"
+      <Column :pt="managementTableColumnPt">
+        <template #body="{ data: entry }">
+          <div class="flex max-w-full min-w-0 items-center gap-1">
+            <p class="text-text-dark truncate text-sm font-medium">
+              {{ entry.taskTitle }}
+            </p>
+            <TaskGitHubIssueLink
+              v-if="entry.githubIssue"
+              :issue="entry.githubIssue"
+              :test-id="`dashboard-recent-entry-github-${entry.id}`"
+            />
+          </div>
+        </template>
+      </Column>
+
+      <Column
+        style="width: 180px"
+        :pt="managementTableColumnPt"
       >
-        <Column header="Task">
-          <template #body="{ data: entry }">
-            <div class="flex max-w-full min-w-0 items-center gap-1">
-              <p class="text-text-dark truncate text-sm font-medium">
-                {{ entry.taskTitle }}
-              </p>
-              <TaskGitHubIssueLink
-                v-if="entry.githubIssue"
-                :issue="entry.githubIssue"
-                :test-id="`dashboard-recent-entry-github-${entry.id}`"
-              />
-            </div>
-          </template>
-        </Column>
+        <template #body="{ data: entry }">
+          <p class="text-text-muted truncate text-[13px]">
+            {{ entry.projectName }}
+          </p>
+        </template>
+      </Column>
 
-        <Column
-          header="Project"
-          :style="{ width: projectColumnWidth }"
-        >
-          <template #body="{ data: entry }">
-            <p class="text-text-muted truncate text-[13px]">
-              {{ entry.projectName }}
-            </p>
-          </template>
-        </Column>
+      <Column
+        style="width: 120px"
+        :pt="managementTableColumnPt"
+      >
+        <template #body="{ data: entry }">
+          <p class="text-text-muted text-[13px]">
+            {{ entry.timeRangeLabel }}
+          </p>
+        </template>
+      </Column>
 
-        <Column
-          header="Range"
-          :style="{ width: rangeColumnWidth }"
-        >
-          <template #body="{ data: entry }">
-            <p class="text-text-muted text-[13px]">
-              {{ entry.timeRangeLabel }}
-            </p>
-          </template>
-        </Column>
-
-        <Column
-          header="Duration"
-          :style="{ width: durationColumnWidth }"
-        >
-          <template #body="{ data: entry }">
-            <p class="text-text-dark text-right text-[13px] font-semibold tabular-nums">
-              {{ entry.durationLabel }}
-            </p>
-          </template>
-        </Column>
-      </DataTable>
-    </div>
+      <Column
+        style="width: 120px"
+        :pt="managementTableColumnPt"
+      >
+        <template #body="{ data: entry }">
+          <p class="text-text-dark text-right text-[13px] font-semibold tabular-nums">
+            {{ entry.durationLabel }}
+          </p>
+        </template>
+      </Column>
+    </ManagementTableShell>
   </SurfaceCard>
 </template>
