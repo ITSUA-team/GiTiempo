@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
-import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
+import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
 import {
   normalizeReportDateRangeValue,
   filterAutocompleteOptions,
@@ -105,7 +105,7 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
   groupBy.value = value;
 }
 
-const autoCompletePt = composeGiTiempoAutoCompletePt({
+const autoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
   pcInputText: {
     root: {
       class:

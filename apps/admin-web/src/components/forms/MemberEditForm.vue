@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
-import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
+import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
 import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
@@ -38,7 +38,7 @@ const initialValues = computed<MemberAssignFormInput>(() => ({
     .map((project) => project.id),
 }));
 
-const projectAutoCompletePt = composeGiTiempoAutoCompletePt({
+const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
   root: { class: 'min-h-[42px]' },
   pcInputText: {
     root: {

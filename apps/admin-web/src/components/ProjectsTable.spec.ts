@@ -4,7 +4,10 @@ import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import type { ProjectListResponse, ProjectResponse } from '@gitiempo/shared';
 import { ManagementTableShell } from '@gitiempo/web-shared';
-import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import {
+  giTiempoPrimeVueOptions,
+  giTiempoSelfAppendedAutoCompleteOverlayStyle,
+} from '@gitiempo/web-config/theme';
 import AutoComplete from 'primevue/autocomplete';
 import MultiSelect from 'primevue/multiselect';
 import PrimeVue from 'primevue/config';
@@ -19,6 +22,13 @@ import type {
 } from '@/lib/projects-table';
 
 import ProjectsTable from './ProjectsTable.vue';
+
+type AutoCompletePt = {
+  overlay?: {
+    class?: string;
+    style?: unknown;
+  };
+};
 
 const defaultFilters: ProjectsTableFilters = {
   global: '',
@@ -220,6 +230,10 @@ describe('ProjectsTable', () => {
     expect(autoCompleteFilters).toHaveLength(1);
     expect(projectQueryFilter.props('dropdown')).toBe(true);
     expect(projectQueryFilter.props('completeOnFocus')).toBe(true);
+    expect(projectQueryFilter.props('appendTo')).not.toBe('self');
+    expect((projectQueryFilter.props('pt') as AutoCompletePt).overlay).toEqual({
+      class: 'overflow-hidden',
+    });
     expect(memberFilter.props('display')).toBe('chip');
     expect(memberFilter.props('filter')).toBe(true);
     expect(memberFilter.props('modelValue')).toEqual([]);
@@ -291,6 +305,10 @@ describe('ProjectsTable', () => {
     const memberFilter = wrapper.getComponent(MultiSelect);
 
     expect(projectQueryFilter.props('placeholder')).toBe('Filter project');
+    expect(projectQueryFilter.props('appendTo')).toBe('self');
+    expect((projectQueryFilter.props('pt') as AutoCompletePt).overlay?.style).toEqual(
+      giTiempoSelfAppendedAutoCompleteOverlayStyle,
+    );
     expect(memberFilter.props('placeholder')).toBe('All members');
 
     await projectQueryFilter.vm.$emit('update:modelValue', 'legacy');

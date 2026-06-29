@@ -3,6 +3,7 @@ import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
+import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
   createAppConfirm,
   createAppToast,
@@ -487,6 +488,7 @@ onBeforeUnmount(() => {
               :loading="isLoadingProjects"
               :min-length="0"
               :model-value="selectedProjectFilterOption"
+              :pt="giTiempoSelfAppendedAutoCompletePt"
               fluid
               show-clear
               @complete="handleProjectFilterComplete"
@@ -514,6 +516,7 @@ onBeforeUnmount(() => {
               dropdown-mode="blank"
               fluid
               :min-length="0"
+              :pt="giTiempoSelfAppendedAutoCompletePt"
               @complete="(event) => void handleFilterTaskSearch(event.query)"
               @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
             />

@@ -2,7 +2,10 @@
 import { computed, ref } from 'vue';
 import { FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
-import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
+import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   EntryActionButton,
@@ -114,6 +117,9 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
 const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
   managementTableFilterAutoCompletePt,
 );
+const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
 
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
@@ -171,7 +177,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
         dropdown-mode="blank"
         :min-length="0"
         placeholder="Filter project"
-        :pt="managementTableFilterAutoCompleteResolvedPt"
+        :pt="managementTableSelfAppendedFilterAutoCompletePt"
         @complete="handleProjectQueryComplete"
         @update:model-value="updateProjectQueryFilter"
       />

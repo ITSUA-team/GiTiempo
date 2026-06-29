@@ -5,7 +5,10 @@ import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { composeGiTiempoAutoCompletePt } from "@gitiempo/web-config/theme";
+import {
+  composeGiTiempoSelfAppendedAutoCompletePt,
+  giTiempoSelfAppendedAutoCompletePt,
+} from "@gitiempo/web-config/theme";
 import {
   filterAutocompleteOptions,
   InlineRequestMessage,
@@ -98,7 +101,7 @@ const billableModel = computed({
 });
 
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
-const projectAutoCompletePt = composeGiTiempoAutoCompletePt({
+const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
   dropdown: {
     onMousedown: handleProjectDropdownMouseDown,
   },
@@ -282,6 +285,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           :disabled="!props.projectId || props.isLoadingTasks || isDialogMutating"
           :invalid="!!props.errors.taskId"
           :loading="props.isLoadingTasks"
+          :pt="giTiempoSelfAppendedAutoCompletePt"
           :suggestions="props.taskSuggestions"
           placeholder="Search tasks"
           @complete="handleTaskComplete"

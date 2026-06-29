@@ -5,6 +5,7 @@ import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
+import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
   filterAutocompleteOptions,
   InlineRequestMessage,
@@ -183,6 +184,7 @@ function handleProjectComplete(event: { query: string }): void {
           :min-length="0"
           option-label="name"
           placeholder="Select project"
+          :pt="giTiempoSelfAppendedAutoCompletePt"
           :disabled="isDialogMutating"
           :invalid="!!props.errors.projectId"
           :suggestions="projectSuggestions"

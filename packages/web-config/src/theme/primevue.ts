@@ -1,9 +1,11 @@
 import { definePreset } from "@primeuix/themes";
 import Aura from "@primeuix/themes/aura";
 
-export const giTiempoAutoCompleteOverlayClass = "w-full max-w-full overflow-hidden";
+export const giTiempoAutoCompleteOverlayClass = "overflow-hidden";
 
-export const giTiempoAutoCompleteOverlayStyle = {
+export const giTiempoSelfAppendedAutoCompleteOverlayClass = "w-full max-w-full";
+
+export const giTiempoSelfAppendedAutoCompleteOverlayStyle = {
   boxSizing: "border-box",
   maxWidth: "100%",
   minWidth: "100%",
@@ -15,7 +17,6 @@ export const giTiempoAutoCompletePt = {
   option: { class: "max-w-full min-w-0 truncate" },
   overlay: {
     class: giTiempoAutoCompleteOverlayClass,
-    style: giTiempoAutoCompleteOverlayStyle,
   },
   pcInputText: { root: { class: "truncate" } },
   root: { class: "relative w-full max-w-full min-w-0" },
@@ -81,11 +82,10 @@ function mergePtSection(
   };
 }
 
-export function composeGiTiempoAutoCompletePt(
-  override: GiTiempoAutoCompletePt = {},
+function composeAutoCompletePt(
+  baseline: GiTiempoAutoCompletePt,
+  override: GiTiempoAutoCompletePt,
 ): GiTiempoAutoCompletePt {
-  const baseline = giTiempoAutoCompletePt as GiTiempoAutoCompletePt;
-
   return {
     ...baseline,
     ...override,
@@ -108,6 +108,28 @@ export function composeGiTiempoAutoCompletePt(
     },
     root: mergePtSection(baseline.root, override.root),
   };
+}
+
+export function composeGiTiempoAutoCompletePt(
+  override: GiTiempoAutoCompletePt = {},
+): GiTiempoAutoCompletePt {
+  return composeAutoCompletePt(
+    giTiempoAutoCompletePt as GiTiempoAutoCompletePt,
+    override,
+  );
+}
+
+export const giTiempoSelfAppendedAutoCompletePt = composeGiTiempoAutoCompletePt({
+  overlay: {
+    class: giTiempoSelfAppendedAutoCompleteOverlayClass,
+    style: giTiempoSelfAppendedAutoCompleteOverlayStyle,
+  },
+});
+
+export function composeGiTiempoSelfAppendedAutoCompletePt(
+  override: GiTiempoAutoCompletePt = {},
+): GiTiempoAutoCompletePt {
+  return composeAutoCompletePt(giTiempoSelfAppendedAutoCompletePt, override);
 }
 
 export const giTiempoThemePreset = definePreset(Aura, {

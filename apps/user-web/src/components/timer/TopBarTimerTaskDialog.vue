@@ -6,6 +6,7 @@ import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
+import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
   filterAutocompleteOptions,
   InlineRequestMessage,
@@ -317,6 +318,7 @@ watch(
             :loading="props.isLoadingProjects"
             :model-value="mobileProjectModel"
             placeholder="Search projects"
+            :pt="giTiempoSelfAppendedAutoCompletePt"
             :suggestions="projectSuggestions"
             @complete="handleProjectComplete"
             @update:model-value="handleMobileProjectUpdate"
@@ -348,6 +350,7 @@ watch(
             :loading="props.isLoadingTasks"
             :model-value="mobileTaskModel"
             placeholder="Search tasks"
+            :pt="giTiempoSelfAppendedAutoCompletePt"
             :suggestions="taskSuggestions"
             @complete="handleTaskComplete"
             @update:model-value="handleMobileTaskUpdate"

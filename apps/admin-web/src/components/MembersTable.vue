@@ -5,7 +5,10 @@ import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
 } from '@gitiempo/shared';
-import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
+import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   EntryActionButton,
@@ -115,6 +118,9 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
 const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
   managementTableFilterAutoCompletePt,
 );
+const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
 
 const columns: ManagementTableColumn[] = [
   { key: 'member', label: 'Member', width: 'fill' },
@@ -178,7 +184,7 @@ function getRoleClass(role: WorkspaceRole): string {
         dropdown-mode="blank"
         :min-length="0"
         placeholder="Filter name or email"
-        :pt="managementTableFilterAutoCompleteResolvedPt"
+        :pt="managementTableSelfAppendedFilterAutoCompletePt"
         @complete="handleMemberQueryComplete"
         @update:model-value="updateMemberQueryFilter"
       />

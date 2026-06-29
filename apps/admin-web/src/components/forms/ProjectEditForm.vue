@@ -5,7 +5,7 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import { WorkspaceRoles } from '@gitiempo/shared';
-import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
+import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
 import {
   EditFormPanel,
   LabeledCheckbox,
@@ -41,7 +41,7 @@ const visibilityOptions = [
   { label: 'Private', value: 'private' as const },
 ];
 
-const memberAutoCompletePt = composeGiTiempoAutoCompletePt({
+const memberAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
   root: { class: 'min-h-[42px]' },
   pcInputText: {
     root: {

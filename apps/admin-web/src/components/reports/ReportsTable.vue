@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { composeGiTiempoAutoCompletePt } from '@gitiempo/web-config/theme';
+import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   ManagementTableShell,
@@ -135,6 +138,9 @@ function handleMemberFilterUpdate(
 const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
   managementTableFilterAutoCompletePt,
 );
+const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
 </script>
 
 <template>
@@ -176,7 +182,7 @@ const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompleteP
             option-label="label"
             placeholder="All projects"
             show-clear
-            :pt="managementTableFilterAutoCompleteResolvedPt"
+            :pt="managementTableSelfAppendedFilterAutoCompletePt"
             @complete="handleProjectFilterComplete"
             @update:model-value="handleProjectFilterUpdate"
           />
@@ -200,7 +206,7 @@ const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompleteP
             option-label="label"
             placeholder="All members"
             show-clear
-            :pt="managementTableFilterAutoCompleteResolvedPt"
+            :pt="managementTableSelfAppendedFilterAutoCompletePt"
             @complete="handleMemberFilterComplete"
             @update:model-value="handleMemberFilterUpdate"
           />

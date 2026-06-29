@@ -5,6 +5,7 @@ import Skeleton from "primevue/skeleton";
 import { computed, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
+import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
   BillableDefaultBackfillDialog,
   createAppConfirm,
@@ -383,6 +384,7 @@ async function retryLoadPage(): Promise<void> {
             dropdown-mode="blank"
             fluid
             :min-length="0"
+            :pt="giTiempoSelfAppendedAutoCompletePt"
             @complete="handleSearchComplete($event.query)"
             @update:model-value="setSearchValue(($event ?? null) as ProjectsSearchSuggestion | string | null)"
           >
