@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import Paginator from "primevue/paginator";
-import ProgressSpinner from "primevue/progressspinner";
 import type { ProjectResponse } from "@gitiempo/shared";
 import {
   createAppToast,
@@ -16,6 +15,7 @@ import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
 import TimeEntriesFilters from "@/components/time-entries/TimeEntriesFilters.vue";
+import TimeEntriesLoadingState from "@/components/time-entries/TimeEntriesLoadingState.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
 import {
   toEntryTaskOption,
@@ -261,99 +261,90 @@ onMounted(async () => {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <TimeEntriesFilters
-      :is-loading-projects="isLoadingProjects"
-      :project-suggestions="projectFilterSuggestions"
-      :projects-error-message="projectsErrorMessage"
-      :selected-date-range="selectedDateRange"
-      :selected-project="selectedProjectFilterOption"
-      :selected-task="selectedTaskFilter"
-      :task-suggestions="filterTaskSuggestions"
-      @project-complete="handleProjectFilterComplete"
-      @task-search="handleFilterTaskSearch"
-      @update:date-range="(value) => void setDateRange(value)"
-      @update:project-value="(value) => void setSelectedProjectFilterValue(value)"
-      @update:task-value="(value) => void setSelectedTaskFilter(value)"
-    />
+    <TimeEntriesLoadingState v-if="pageState === 'loading'" />
 
-    <SurfaceCard
-      v-if="pageState === 'loading'"
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3"
-    >
-      <ProgressSpinner
-        stroke-width="3"
-        style="width:32px;height:32px"
-      />
-      <p class="text-text-muted text-sm">
-        Loading your time entries.
-      </p>
-    </SurfaceCard>
-
-    <RequestStateCard
-      v-else-if="pageState === 'request-error'"
-      data-testid="time-entries-request-error"
-      :description="requestErrorMessage"
-      retry-label="Retry"
-      title="Could not load time entries"
-      @retry="void retryLoadEntries()"
-    />
-
-    <RequestStateCard
-      v-else-if="pageState === 'empty'"
-      data-testid="time-entries-empty-state"
-      description="Add a new time entry or adjust the current filters."
-      title="No time entries match these filters"
-    >
-      <template #actions>
-        <EntryActionButton
-          :icon="PlusIcon"
-          label="New time entry"
-          @click="void openCreateDialog()"
-        />
-      </template>
-    </RequestStateCard>
-
-    <div
-      v-else
-      class="flex flex-col gap-5"
-      data-testid="time-entries-groups"
-    >
-      <TimeEntriesDaySection
-        v-for="(group, groupIndex) in groupedEntries"
-        :key="group.dateKey"
-        :format-duration="formatDuration"
-        :format-time-range="formatTimeRange"
-        :group="group"
-        :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
-        :show-header="groupIndex === 0"
-        :starting-timer-entry-id="startingTimerEntryId"
-        :stopping-timer-entry-id="stoppingTimerEntryId"
-        @create-for-day="(day) => void openCreateDialog(day)"
-        @edit-entry="(entry) => void openEditDialog(entry)"
-        @open-active-timer="openActiveTimerDialog"
-        @start-timer="(entry) => void startTimerForEntry(entry)"
-        @stop-timer="(entry) => void stopTimerForEntry(entry)"
+    <template v-else>
+      <TimeEntriesFilters
+        :is-loading-projects="isLoadingProjects"
+        :project-suggestions="projectFilterSuggestions"
+        :projects-error-message="projectsErrorMessage"
+        :selected-date-range="selectedDateRange"
+        :selected-project="selectedProjectFilterOption"
+        :selected-task="selectedTaskFilter"
+        :task-suggestions="filterTaskSuggestions"
+        @project-complete="handleProjectFilterComplete"
+        @task-search="handleFilterTaskSearch"
+        @update:date-range="(value) => void setDateRange(value)"
+        @update:project-value="(value) => void setSelectedProjectFilterValue(value)"
+        @update:task-value="(value) => void setSelectedTaskFilter(value)"
       />
 
-      <SurfaceCard
-        border
-        body-class="flex items-center justify-between gap-4"
-        padding-class="p-3 sm:p-4"
+      <RequestStateCard
+        v-if="pageState === 'request-error'"
+        data-testid="time-entries-request-error"
+        :description="requestErrorMessage"
+        retry-label="Retry"
+        title="Could not load time entries"
+        @retry="void retryLoadEntries()"
+      />
+
+      <RequestStateCard
+        v-else-if="pageState === 'empty'"
+        data-testid="time-entries-empty-state"
+        description="Add a new time entry or adjust the current filters."
+        title="No time entries match these filters"
       >
-        <p class="text-text-muted text-[13px]">
-          Showing {{ entries.length ? (currentPage - 1) * pageSize + 1 : 0 }} to
-          {{ (currentPage - 1) * pageSize + entries.length }} of {{ totalRecords }}
-        </p>
-        <Paginator
-          :first="(currentPage - 1) * pageSize"
-          :rows="pageSize"
-          :total-records="totalRecords"
-          current-page-report-template="Showing {first} to {last} of {totalRecords}"
-          template="PrevPageLink PageLinks NextPageLink"
-          @page="({ page }) => void setPage(page + 1)"
+        <template #actions>
+          <EntryActionButton
+            :icon="PlusIcon"
+            label="New time entry"
+            @click="void openCreateDialog()"
+          />
+        </template>
+      </RequestStateCard>
+
+      <div
+        v-else
+        class="flex flex-col gap-5"
+        data-testid="time-entries-groups"
+      >
+        <TimeEntriesDaySection
+          v-for="(group, groupIndex) in groupedEntries"
+          :key="group.dateKey"
+          :format-duration="formatDuration"
+          :format-time-range="formatTimeRange"
+          :group="group"
+          :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
+          :show-header="groupIndex === 0"
+          :starting-timer-entry-id="startingTimerEntryId"
+          :stopping-timer-entry-id="stoppingTimerEntryId"
+          @create-for-day="(day) => void openCreateDialog(day)"
+          @edit-entry="(entry) => void openEditDialog(entry)"
+          @open-active-timer="openActiveTimerDialog"
+          @start-timer="(entry) => void startTimerForEntry(entry)"
+          @stop-timer="(entry) => void stopTimerForEntry(entry)"
         />
-      </SurfaceCard>
-    </div>
+
+        <SurfaceCard
+          border
+          body-class="flex items-center justify-between gap-4"
+          padding-class="p-3 sm:p-4"
+        >
+          <p class="text-text-muted text-[13px]">
+            Showing {{ entries.length ? (currentPage - 1) * pageSize + 1 : 0 }} to
+            {{ (currentPage - 1) * pageSize + entries.length }} of {{ totalRecords }}
+          </p>
+          <Paginator
+            :first="(currentPage - 1) * pageSize"
+            :rows="pageSize"
+            :total-records="totalRecords"
+            current-page-report-template="Showing {first} to {last} of {totalRecords}"
+            template="PrevPageLink PageLinks NextPageLink"
+            @page="({ page }) => void setPage(page + 1)"
+          />
+        </SurfaceCard>
+      </div>
+    </template>
 
     <TimeEntryDialog
       :dialog-error-message="dialogRequestErrorMessage"

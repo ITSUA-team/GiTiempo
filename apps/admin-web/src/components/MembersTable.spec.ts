@@ -155,18 +155,31 @@ describe('MembersTable', () => {
 
   it('uses member name as the edit entry point without an actions column', async () => {
     const row = createRows()[0]!;
-    const wrapper = mountMembersTable({ rows: [createRows()[0]!] });
+    const wrapper = mountMembersTable({ rows: createRows() });
+    const tableShell = wrapper.getComponent(ManagementTableShell);
 
     expect(
-      wrapper
-        .getComponent(ManagementTableShell)
+      tableShell
         .props('columns')
         .map((column) => column.label),
     ).toEqual(['Member', 'Role', 'Projects Assigned', 'Last Active']);
+    expect(tableShell.props('bodyRowClass')).toBe(
+      'h-[56px] transition-colors hover:bg-app-bg',
+    );
 
     const nameButton = wrapper.get('[data-testid="member-name-member-1"]');
 
     expect(nameButton.attributes('aria-label')).toBe('Edit member Pat PM');
+    expect(nameButton.classes()).not.toContain('p-button-link');
+    expect(nameButton.classes()).toEqual(
+      expect.arrayContaining(['text-brand', 'text-[14px]', 'font-semibold', 'leading-none']),
+    );
+    expect(wrapper.get('[data-testid="member-role-member-1"]').classes()).toEqual(
+      expect.arrayContaining(['text-brand', 'text-[13px]', 'font-semibold']),
+    );
+    expect(wrapper.get('[data-testid="member-role-member-2"]').classes()).toEqual(
+      expect.arrayContaining(['text-text-dark', 'text-[13px]', 'font-medium']),
+    );
     expect(wrapper.find('[data-testid="member-assign-pm-member-1"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-edit-member-1"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-remove-member-1"]').exists()).toBe(false);
@@ -303,7 +316,14 @@ describe('MembersTable', () => {
     expect(wrapper.find('[data-testid="member-mobile-edit-member-1"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-mobile-remove-member-1"]').exists()).toBe(false);
 
-    await wrapper.get('[data-testid="member-mobile-name-member-1"]').trigger('click');
+    const mobileNameButton = wrapper.get('[data-testid="member-mobile-name-member-1"]');
+
+    expect(mobileNameButton.classes()).not.toContain('p-button-link');
+    expect(mobileNameButton.classes()).toEqual(
+      expect.arrayContaining(['text-brand', 'text-[15px]', 'font-semibold', 'leading-none']),
+    );
+
+    await mobileNameButton.trigger('click');
 
     expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
   });

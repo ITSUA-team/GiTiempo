@@ -112,18 +112,13 @@ describe('ReportsTable', () => {
     expect(filterControls).toHaveLength(2);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
 
+    const search = wrapper.get('input[aria-label="Search report rows"]');
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
-    const search = autoCompleteControls[0]!;
-    const projectFilter = autoCompleteControls[1]!;
-    const memberFilter = autoCompleteControls[2]!;
+    const projectFilter = autoCompleteControls[0]!;
+    const memberFilter = autoCompleteControls[1]!;
 
-    expect(autoCompleteControls).toHaveLength(3);
-    expect(search.props('dropdown')).toBe(true);
-    expect(search.props('pt')).toMatchObject({
-      pcInputText: {
-        root: { class: expect.stringContaining('rounded-r-none') },
-      },
-    });
+    expect(autoCompleteControls).toHaveLength(2);
+    expect(search.attributes('placeholder')).toBe('Search report rows');
     expect(projectFilter.props('forceSelection')).toBe(true);
     expect(memberFilter.props('forceSelection')).toBe(true);
     expect(projectFilter.props('modelValue')).toBeNull();
@@ -131,19 +126,12 @@ describe('ReportsTable', () => {
     expect(memberFilter.props('modelValue')).toBeNull();
     expect(memberFilter.props('placeholder')).toBe('All members');
 
-    search.vm.$emit('complete', { query: 'orion' });
-    await nextTick();
-
-    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('suggestions')).toEqual([
-      'Project Orion',
-    ]);
-
-    await search.vm.$emit('update:modelValue', 'orion');
+    await search.setValue('orion');
 
     projectFilter.vm.$emit('complete', { query: 'orion' });
     await nextTick();
 
-    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
+    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('suggestions')).toEqual([
       { label: 'Project Orion', value: 'project-1' },
     ]);
 
@@ -155,7 +143,7 @@ describe('ReportsTable', () => {
     memberFilter.vm.$emit('complete', { query: 'alex' });
     await nextTick();
 
-    expect(wrapper.findAllComponents(AutoComplete)[2]?.props('suggestions')).toEqual([
+    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
       { label: 'Alex Admin', value: 'member-1' },
     ]);
 
@@ -202,7 +190,7 @@ describe('ReportsTable', () => {
     });
 
     expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
-    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(3);
+    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
     expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
     expect(wrapper.text()).not.toContain('2h 00m');
@@ -248,7 +236,7 @@ describe('ReportsTable', () => {
     expect(mobileCards[0]?.text()).toContain('2h 00m');
     expect(mobileCards[0]?.text()).toContain('1h 00m');
     expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
-    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(3);
+    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
   });
 
   it('shows selected filter labels in the table filter row', () => {
@@ -276,11 +264,11 @@ describe('ReportsTable', () => {
 
     expect(wrapper.text()).toContain('Tracked');
     expect(wrapper.text()).toContain('Billable');
-    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('modelValue')).toEqual({
+    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('modelValue')).toEqual({
       label: 'Selected Project',
       value: 'project-1',
     });
-    expect(wrapper.findAllComponents(AutoComplete)[2]?.props('modelValue')).toEqual({
+    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('modelValue')).toEqual({
       label: 'Selected Member',
       value: 'member-1',
     });

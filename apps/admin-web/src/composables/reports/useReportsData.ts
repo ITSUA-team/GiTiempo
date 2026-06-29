@@ -1,4 +1,4 @@
-import { computed, nextTick, ref, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
 import {
   useAdminProjectsQuery,
   useWorkspaceMembersQuery,
@@ -23,7 +23,6 @@ import { useReportExport } from './useReportExport';
 import { useReportFilters } from './useReportFilters';
 import { useReportLoadErrorNotifications } from './useReportLoadErrorNotifications';
 import { useReportOptions } from './useReportOptions';
-import { useReportRefreshDebounce } from './useReportRefreshDebounce';
 import { useReportRowsData } from './useReportRowsData';
 
 interface UseReportsDataOptions {
@@ -80,15 +79,6 @@ export function useReportsData({
     reportsClient,
     scope,
   });
-  const { clearDebounceTimer } = useReportRefreshDebounce({
-    applyCurrentFilters: filters.applyCurrentFilters,
-    dateRange: filters.dateRange,
-    initialLoaded: rowsData.initialLoaded,
-    onRefreshScheduled() {
-      currentAction.value = 'refresh-reports';
-    },
-    selectedProjectId: filters.selectedProjectId,
-  });
   const reportExport = useReportExport({
     accessToken,
     reportsClient,
@@ -110,14 +100,11 @@ export function useReportsData({
     }
 
     currentAction.value = rowsData.initialLoaded.value ? 'refresh-reports' : 'load-reports';
-    clearDebounceTimer();
     await Promise.all([
       projectsQuery.refetch(),
       isAdminScope.value ? membersQuery.refetch() : Promise.resolve(),
     ]);
     reportOptions.syncSelectedFiltersWithOptions();
-    filters.applyCurrentFilters();
-    await nextTick();
     await rowsData.refetchRows();
   }
 

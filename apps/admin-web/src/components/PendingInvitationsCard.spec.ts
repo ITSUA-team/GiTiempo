@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import { ManagementTableShell } from '@gitiempo/web-shared';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -69,10 +70,13 @@ describe('PendingInvitationsCard', () => {
 
   it('renders desktop invitation actions as icon-only controls with accessible labels', () => {
     const wrapper = mountPendingInvitationsCard();
+    const tableShell = wrapper.getComponent(ManagementTableShell);
 
     const resendButton = wrapper.get('[data-testid="pending-invite-resend-invite-1"]');
     const cancelButton = wrapper.get('[data-testid="pending-invite-cancel-invite-1"]');
 
+    expect(tableShell.props('headerClass')).toContain('min-w-[700px]');
+    expect(tableShell.props('singleScroll')).toBe(true);
     expect(wrapper.text()).toContain('Pending Invitations');
     expect(wrapper.text()).toContain('maya@example.com');
     expect(wrapper.text()).toContain('PM');
