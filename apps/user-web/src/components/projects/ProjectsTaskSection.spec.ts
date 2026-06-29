@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
+import { ManagementTableShell } from "@gitiempo/web-shared";
 import PrimeVue from "primevue/config";
 import { beforeEach, describe, expect, it } from "vitest";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
@@ -136,7 +137,14 @@ describe("ProjectsTaskSection", () => {
 
   it("renders the desktop task table branch with the expected column labels", () => {
     const wrapper = mountSection();
+    const tableShell = wrapper.getComponent(ManagementTableShell);
 
+    expect(tableShell.props("headerClass")).toContain("min-w-[740px]");
+    expect(tableShell.props("singleScroll")).toBe(true);
+    expect(tableShell.props("shellClass")).toContain("overflow-x-auto");
+    expect(tableShell.props("tableContainerClass")).toBe(
+      "overflow-visible rounded-none border-none",
+    );
     expect(wrapper.findAll('[data-testid="project-task-mobile-card"]')).toHaveLength(0);
     expect(wrapper.text()).toContain("Task");
     expect(wrapper.text()).toContain("Status");

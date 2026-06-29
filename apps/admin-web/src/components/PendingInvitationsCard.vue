@@ -10,6 +10,7 @@ import {
   SurfaceCard,
   formatWorkspaceRole,
   managementTableColumnPt,
+  managementTableHeaderClass,
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
@@ -52,6 +53,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'expires', label: 'Expires', width: 180 },
   { key: 'actions', label: 'Actions', width: 140, align: 'end' },
 ];
+
+const pendingInvitesHeaderClass = `${managementTableHeaderClass} min-w-[700px]`;
 
 const pendingCountLabel = computed(() => {
   const count = props.pendingInvites.length;
@@ -117,7 +120,7 @@ function formatSentInviteTime(createdAt: string): string {
 
       <template v-else-if="props.loading">
         <div class="border-divider overflow-hidden rounded-[6px] border">
-          <div class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[700px] items-center border-b font-sans text-[13px] font-semibold">
+          <div :class="pendingInvitesHeaderClass">
             <div
               v-for="column in columns"
               :key="column.key"
@@ -198,6 +201,7 @@ function formatSentInviteTime(createdAt: string): string {
         v-else-if="props.pendingInvites.length > 0"
         :columns="columns"
         data-key="id"
+        :header-class="pendingInvitesHeaderClass"
         :loading="false"
         shell-class="border-divider overflow-x-auto rounded-[6px] border"
         single-scroll
