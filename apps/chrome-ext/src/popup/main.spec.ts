@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PageContext } from "@/lib/github-context";
-import type { RuntimeClient, RuntimeMutationResult, RuntimeSnapshot } from "@/lib/runtime";
+import type {
+  RuntimeAuthResult,
+  RuntimeClient,
+  RuntimeMutationResult,
+  RuntimeSnapshot,
+} from "@/lib/runtime";
 import { createPopupApp, resolveActivePageContext } from "./main";
 
 function currentTimer(): RuntimeSnapshot["currentTimer"] {
@@ -49,7 +54,10 @@ function createRuntimeClient(overrides?: {
   return {
     exchangeFirebaseToken:
       overrides?.exchangeFirebaseToken ??
-      vi.fn(async () => ({ authenticated: true, currentTimer: null, errorMessage: null })),
+      vi.fn(async (): Promise<RuntimeAuthResult> => ({
+        ok: true,
+        snapshot: { authenticated: true, currentTimer: null, errorMessage: null },
+      })),
     getSnapshot: vi.fn(async () =>
         overrides?.snapshot ?? {
           authenticated: false,
@@ -120,9 +128,12 @@ describe("popup app", () => {
 
   it("submits Google sign-in through Firebase and exchanges the token", async () => {
     const exchangeFirebaseToken = vi.fn(async () => ({
-      authenticated: true,
-      currentTimer: null,
-      errorMessage: null,
+      ok: true,
+      snapshot: {
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+      },
     }));
     const runtimeClient = createRuntimeClient({ exchangeFirebaseToken });
     const signInWithGoogleFn = vi.fn(async () => "firebase-google-token");
@@ -171,9 +182,12 @@ describe("popup app", () => {
 
   it("submits email sign-in through Firebase and exchanges the token", async () => {
     const exchangeFirebaseToken = vi.fn(async () => ({
-      authenticated: true,
-      currentTimer: null,
-      errorMessage: null,
+      ok: true,
+      snapshot: {
+        authenticated: true,
+        currentTimer: null,
+        errorMessage: null,
+      },
     }));
     const runtimeClient = createRuntimeClient({ exchangeFirebaseToken });
     const signInWithEmailPasswordFn = vi.fn(async () => "firebase-email-token");
@@ -251,6 +265,40 @@ describe("popup app", () => {
     expect(document.querySelector('[data-form="email-sign-in"]')).not.toBeNull();
     expect(submitButton).not.toBeNull();
     expect(submitButton?.disabled).toBe(false);
+  });
+
+  it("shows an inline auth error when the background token exchange fails", async () => {
+    const runtimeClient = createRuntimeClient({
+      exchangeFirebaseToken: vi.fn(async () => ({
+        errorMessage:
+          "GiTiempo API is temporarily unavailable. Please try again in a moment.",
+        ok: false,
+        snapshot: {
+          authenticated: false,
+          currentTimer: null,
+          errorMessage: null,
+        },
+      })),
+    });
+    const app = createPopupApp({
+      root: document.querySelector<HTMLElement>("#app")!,
+      runtimeClient,
+      pageContextResolver: async () => ({ kind: "unsupported" }),
+      signInWithGoogleFn: vi.fn(async () => "firebase-google-token"),
+    });
+
+    await app.load();
+    document
+      .querySelector<HTMLButtonElement>('[data-action="google-sign-in"]')!
+      .click();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.body.textContent).toContain(
+      "GiTiempo API is temporarily unavailable. Please try again in a moment.",
+    );
+    expect(document.body.textContent).toContain("Sign in with Google");
   });
 
   it("renders the authenticated no-timer popup state on supported issue pages", async () => {
