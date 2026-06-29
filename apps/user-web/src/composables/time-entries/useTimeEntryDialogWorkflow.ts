@@ -6,7 +6,6 @@ import type { useTimeEntryDialog } from "./useTimeEntryDialog";
 import type { useTimeEntryMutations } from "./useTimeEntryMutations";
 import type { useTimeEntryTaskOptions } from "./useTimeEntryTaskOptions";
 
-/* eslint-disable no-unused-vars */
 interface UseTimeEntryDialogWorkflowOptions {
   confirm: ConfirmLike;
   dialog: ReturnType<typeof useTimeEntryDialog>;
@@ -14,7 +13,6 @@ interface UseTimeEntryDialogWorkflowOptions {
   mutations: ReturnType<typeof useTimeEntryMutations>;
   taskOptions: ReturnType<typeof useTimeEntryTaskOptions>;
 }
-/* eslint-enable no-unused-vars */
 
 export function useTimeEntryDialogWorkflow({
   confirm,

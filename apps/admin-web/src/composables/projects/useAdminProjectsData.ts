@@ -21,7 +21,6 @@ interface LoadProjectsDataOptions {
   setInitialLoaded?: boolean;
 }
 
-/* eslint-disable no-unused-vars */
 interface UseAdminProjectsDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   membersClient?: Pick<AdminMembersClient, 'listMembers'>;
@@ -31,7 +30,6 @@ interface UseAdminProjectsDataOptions {
     'getManagementSummary' | 'listProjects'
   >;
 }
-/* eslint-enable no-unused-vars */
 
 function createEmptySummary(): ManagementProjectSummaryResponse {
   return {

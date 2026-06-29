@@ -1,6 +1,5 @@
 import { vi } from 'vitest';
 
-// eslint-disable-next-line no-unused-vars
 type MatchMediaChangeHandler = (event: MediaQueryListEvent) => void;
 type MatchMediaListener = MatchMediaChangeHandler;
 

@@ -13,7 +13,6 @@ interface LoadTaskOptionsOptions {
   trackableOnly?: boolean;
 }
 
-/* eslint-disable no-unused-vars */
 interface TaskOptionsTarget {
   beginTaskRequest(): number;
   isCurrentTaskRequest(requestId: number): boolean;
@@ -21,7 +20,6 @@ interface TaskOptionsTarget {
   setTasksError(message: string | null): void;
   setTasksLoading(isLoading: boolean): void;
 }
-/* eslint-enable no-unused-vars */
 
 export function useTimeEntryTaskOptions({
   client,

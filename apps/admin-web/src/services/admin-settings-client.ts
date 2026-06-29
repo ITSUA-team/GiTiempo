@@ -21,7 +21,6 @@ interface AdminSettingsClientOptions {
 	apiClient: Pick<AuthenticatedApiClient, 'requestJson' | 'requestNoContent'>;
 }
 
-/* eslint-disable no-unused-vars */
 
 export interface AdminSettingsClient {
 	addWorkspaceGitHubOrganization(

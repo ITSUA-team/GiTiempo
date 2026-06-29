@@ -7,7 +7,6 @@ import {
 } from '@/services/admin-members-client';
 import { getMemberDisplayName } from '@/lib/member-management';
 
-/* eslint-disable no-unused-vars */
 interface UseMemberRemovalActionOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'removeMember'>;
@@ -21,7 +20,6 @@ interface UseMemberRemovalActionOptions {
     accept: () => void,
   ) => void;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Failed to remove member';

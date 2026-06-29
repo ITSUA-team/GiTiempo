@@ -8,7 +8,6 @@ import {
 } from '@/services/admin-projects-client';
 import { diffProjectMemberAssignments } from '@/lib/project-management';
 
-/* eslint-disable no-unused-vars */
 interface UseProjectEditActionsOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<
@@ -21,7 +20,6 @@ interface UseProjectEditActionsOptions {
   openProjectBackfillDialogIfNeeded: (project: ProjectResponse) => Promise<void>;
   refreshProjects: () => Promise<void>;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Failed to save project';

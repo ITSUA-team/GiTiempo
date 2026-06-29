@@ -20,7 +20,6 @@ import { resolveDataPageState } from "@/lib/page-state";
 import { timeEntriesKeys, userProjectsKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
-/* eslint-disable no-unused-vars */
 interface UseTimeEntriesDataOptions {
   accessToken: ComputedRef<string | null>;
   clearIntervalFn: typeof clearInterval;
@@ -34,7 +33,6 @@ interface UseTimeEntriesDataOptions {
   scope: ComputedRef<UserServerStateScope>;
   setIntervalFn: typeof setInterval;
 }
-/* eslint-enable no-unused-vars */
 
 export function useTimeEntriesData({
   accessToken,

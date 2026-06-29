@@ -19,14 +19,12 @@ interface LoadMembersDataOptions {
   setInitialLoaded?: boolean;
 }
 
-/* eslint-disable no-unused-vars */
 interface UseWorkspaceMembersDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   membersClient?: Pick<AdminMembersClient, 'listMembers'>;
   onError?: (message: string, error: unknown, action: string) => void;
   projectsClient?: Pick<AdminProjectsClient, 'listProjects'>;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'An unexpected error occurred';

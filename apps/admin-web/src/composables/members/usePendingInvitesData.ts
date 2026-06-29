@@ -12,13 +12,11 @@ interface LoadInvitesOptions {
   setErrorState?: boolean;
 }
 
-/* eslint-disable no-unused-vars */
 interface UsePendingInvitesDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'listInvites'>;
   onError?: (message: string, error: unknown, action: string) => void;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'An unexpected error occurred';

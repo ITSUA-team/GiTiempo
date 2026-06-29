@@ -11,7 +11,6 @@ interface BackfillTarget {
   title: string;
 }
 
-/* eslint-disable no-unused-vars */
 interface UseProjectTaskActionsOptions {
   confirm: ConfirmLike;
   dialog: ReturnType<typeof useProjectTaskDialog>;
@@ -19,7 +18,6 @@ interface UseProjectTaskActionsOptions {
   onTaskBillableDefaultChanged(task: BackfillTarget): Promise<void>;
   visibleProjects: ComputedRef<ProjectResponse[]>;
 }
-/* eslint-enable no-unused-vars */
 
 export function useProjectTaskActions({
   confirm,

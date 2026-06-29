@@ -20,7 +20,6 @@ import {
   type StorageAreaLike,
 } from "./session";
 
-/* eslint-disable no-unused-vars */
 
 export interface ExtensionApiClient {
   getCurrentTimer(): Promise<CurrentTimeEntryResponse>;
@@ -37,7 +36,6 @@ interface ExtensionApiClientOptions {
   storage?: StorageAreaLike;
 }
 
-/* eslint-enable no-unused-vars */
 
 function getResponseErrorMessage(status: number, body: unknown): string {
   if (body && typeof body === "object") {

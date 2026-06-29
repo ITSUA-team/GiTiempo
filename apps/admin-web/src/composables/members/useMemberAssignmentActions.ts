@@ -15,7 +15,6 @@ import {
   getMemberDisplayName,
 } from '@/lib/member-management';
 
-/* eslint-disable no-unused-vars */
 interface UseMemberAssignmentActionsOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminProjectsClient, 'assignMember' | 'removeAssignment'>;
@@ -25,7 +24,6 @@ interface UseMemberAssignmentActionsOptions {
   projects: Ref<ProjectListResponse>;
   refreshMembers: () => Promise<void>;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Failed to save assignments';

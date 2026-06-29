@@ -2,9 +2,7 @@ import { watch, type ComputedRef, type Ref } from 'vue';
 
 import { getReportErrorMessage } from './report-data-helpers';
 
-/* eslint-disable no-unused-vars */
 type ReportErrorHandler = (message: string, error: unknown, action: string) => void;
-/* eslint-enable no-unused-vars */
 
 interface UseReportLoadErrorNotificationsOptions {
   currentAction: Ref<string>;

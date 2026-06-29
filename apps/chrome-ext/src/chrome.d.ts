@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 
 declare namespace chrome {
   namespace action {

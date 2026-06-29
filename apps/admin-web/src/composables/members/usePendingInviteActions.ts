@@ -6,7 +6,6 @@ import {
   type AdminMembersClient,
 } from '@/services/admin-members-client';
 
-/* eslint-disable no-unused-vars */
 interface UsePendingInviteActionsOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'cancelInvite' | 'resendInvite'>;
@@ -20,7 +19,6 @@ interface UsePendingInviteActionsOptions {
     accept: () => void,
   ) => void;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;

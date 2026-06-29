@@ -10,7 +10,6 @@ import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
 import { getAuthenticatedAppApiClient } from '@/services/api-client';
 
-/* eslint-disable no-unused-vars */
 
 interface AdminReportsClientOptions {
   apiClient: Pick<AuthenticatedApiClient, 'request' | 'requestJson'>;
@@ -30,7 +29,6 @@ export interface AdminReportsClient {
   ): Promise<TimeReportResponse>;
 }
 
-/* eslint-enable no-unused-vars */
 
 const fallbackExportFilename = 'time-report.csv';
 

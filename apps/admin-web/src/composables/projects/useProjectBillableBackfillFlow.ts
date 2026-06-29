@@ -15,7 +15,6 @@ interface ProjectBackfillDialogState {
   updateTimeEntries: boolean;
 }
 
-/* eslint-disable no-unused-vars */
 interface UseProjectBillableBackfillFlowOptions {
   client?: Pick<
     AdminProjectsClient,
@@ -27,7 +26,6 @@ interface UseProjectBillableBackfillFlowOptions {
   onSuccess: (message: string) => void;
   refreshProjects: () => Promise<void>;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;

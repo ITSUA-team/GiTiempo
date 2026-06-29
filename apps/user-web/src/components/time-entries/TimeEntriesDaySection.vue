@@ -18,9 +18,7 @@ import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 
 const props = defineProps<{
-  // eslint-disable-next-line no-unused-vars
   formatDuration: (entry: TimeEntryResponse) => string;
-  // eslint-disable-next-line no-unused-vars
   formatTimeRange: (entry: TimeEntryResponse) => string;
   group: TimeEntriesDayGroup;
   isStartTimerDisabled?: boolean;

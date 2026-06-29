@@ -1,6 +1,4 @@
-/* eslint-disable no-unused-vars */
 type AutocompleteLabelGetter<Option> = (option: Option) => string;
-/* eslint-enable no-unused-vars */
 
 export function matchesAutocompleteLabel(label: string, query: string): boolean {
   const normalizedQuery = query.trim().toLowerCase();

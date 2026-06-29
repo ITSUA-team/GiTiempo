@@ -31,9 +31,7 @@ interface UseReportsDataOptions {
   membersClient?: Pick<AdminMembersClient, 'listMembers'>;
   projectsClient?: Pick<AdminProjectsClient, 'listProjects'>;
   reportsClient?: AdminReportsClient;
-  /* eslint-disable no-unused-vars */
   onError?: (message: string, error: unknown, action: string) => void;
-  /* eslint-enable no-unused-vars */
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
 

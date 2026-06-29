@@ -6,7 +6,6 @@ import {
   type AdminProjectsClient,
 } from '@/services/admin-projects-client';
 
-/* eslint-disable no-unused-vars */
 interface UseProjectArchiveActionsOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminProjectsClient, 'updateProject'>;
@@ -21,7 +20,6 @@ interface UseProjectArchiveActionsOptions {
     accept: () => void,
   ) => void;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
