@@ -1,5 +1,5 @@
 {
-  "version": "2.13",
+  "version": "2.14",
   "children": [
     {
       "type": "frame",
@@ -3083,6 +3083,19 @@
                               "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "Gqvz6",
+                              "layoutPosition": "absolute",
+                              "x": 194,
+                              "y": 12,
+                              "name": "Clear date range",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "x",
+                              "library": "lucide",
+                              "fill": "#666666"
                             }
                           ]
                         }
@@ -29045,5 +29058,6 @@
       "type": "number",
       "value": 4
     }
-  }
+  },
+  "fileToken": "ac75a356-64f2-4b0d-b8da-6443e37e8249"
 }
