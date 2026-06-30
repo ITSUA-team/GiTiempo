@@ -94,7 +94,12 @@ const display = useTimeEntriesDisplay({
   nowMs: runningEntryTicker.nowMs,
   requestErrorMessage: data.requestErrorMessage,
 });
-const taskOptions = useTimeEntryTaskOptions({ client });
+const taskOptions = useTimeEntryTaskOptions({
+  client,
+  getProjectById(projectId) {
+    return data.visibleProjects.value.find((project) => project.id === projectId) ?? null;
+  },
+});
 const mutations = useTimeEntryMutations({
   accessToken,
   client,

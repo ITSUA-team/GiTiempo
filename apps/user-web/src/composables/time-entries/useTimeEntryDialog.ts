@@ -60,6 +60,7 @@ export function useTimeEntryDialog() {
   }
 
   return {
+    activeDialogTask: taskLookup.activeDialogTask,
     beginTaskRequest: taskLookup.beginTaskRequest,
     closeDialog,
     dialogDescription: state.dialogDescription,

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type {
@@ -373,6 +374,26 @@ export class GithubApiClientService {
         .map((issue) => this.toIssue(issue, input.owner, input.repo)),
       pagination: result.pagination,
     };
+  }
+
+  async getRepositoryIssue(input: {
+    accessToken: string;
+    owner: string;
+    repo: string;
+    issueNumber: number;
+  }): Promise<GitHubIssue> {
+    const issue = await this.rest<GitHubIssueRest>(
+      input.accessToken,
+      `/repos/${encodeURIComponent(input.owner)}/${encodeURIComponent(input.repo)}/issues/${input.issueNumber}`,
+      {},
+      null,
+    ).then((result) => result.body);
+
+    if (issue.pull_request !== undefined) {
+      throw new NotFoundException('GitHub issue not found');
+    }
+
+    return this.toIssue(issue, input.owner, input.repo);
   }
 
   async listProjectIssues(input: {

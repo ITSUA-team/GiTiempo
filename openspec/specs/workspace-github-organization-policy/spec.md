@@ -1,7 +1,7 @@
 # workspace-github-organization-policy Specification
 
 ## Purpose
-TBD - created by archiving change add-workspace-github-organization-allow-list-management. Update Purpose after archive.
+Define the workspace-owned GitHub organization allow-list that filters organization-scoped GitHub browsing and selection flows without changing the existing user-to-server GitHub authentication model.
 ## Requirements
 ### Requirement: Workspace GitHub Organization Policy Exists
 The system SHALL maintain a workspace-owned allow-list of GitHub organization logins that defines which GitHub organizations can be used in workspace GitHub flows.
@@ -60,4 +60,3 @@ The system SHALL compare GitHub organization logins case-insensitively while pre
 - **GIVEN** a workspace allows GitHub organization login `Octo-Org`
 - **WHEN** a GitHub browsing request targets owner `octo-org`
 - **THEN** the system treats the owner as allowed for that workspace
-

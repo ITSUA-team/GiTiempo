@@ -55,6 +55,7 @@ export function useTopBarTimerSummary({
   }
 
   function getDialogSelectionFromCurrentState(): {
+    githubIssue: TimeEntryResponse["githubIssue"];
     projectId: string;
     taskId: string;
     description: string;
@@ -62,30 +63,40 @@ export function useTopBarTimerSummary({
     return currentTimer.value
       ? {
           description: currentTimer.value.description ?? "",
+          githubIssue: currentTimer.value.githubIssue,
           projectId: currentTimer.value.project.id,
           taskId: currentTimer.value.task.id,
         }
       : selectedContext.value
         ? {
             description: selectedDescription.value ?? "",
+            githubIssue: selectedContext.value.githubIssue,
             projectId: selectedContext.value.projectId,
             taskId: selectedContext.value.taskId,
           }
         : null;
   }
 
-  async function loadEligibleLastTrackedContext(): Promise<SelectedTaskContext | null> {
-    const latestEntryResponse = await client.listOwnEntries({ limit: 1 });
-    const latestEntry = latestEntryResponse.items[0];
+  async function loadMostRecentOwnEntry(): Promise<TimeEntryResponse | null> {
+    const response = await client.listOwnEntries({ limit: 1 });
 
-    if (!latestEntry) {
+    return response.items[0] ?? null;
+  }
+
+  async function loadEligibleLastTrackedContext(): Promise<SelectedTaskContext | null> {
+    const entry = await loadMostRecentOwnEntry();
+
+    if (!entry) {
       return null;
     }
 
     const visibleProjects = await client.listVisibleProjects();
-    const project = visibleProjects.find(
-      (candidate) => candidate.id === latestEntry.project.id && candidate.isActive,
+    const activeProjectMap = new Map(
+      visibleProjects
+        .filter((project) => project.isActive)
+        .map((project) => [project.id, project]),
     );
+    const project = activeProjectMap.get(entry.project.id);
 
     if (!project) {
       return null;
@@ -94,7 +105,7 @@ export function useTopBarTimerSummary({
     const projectTasks = await client.listProjectTasks(project.id);
     const task = projectTasks.find(
       (candidate) =>
-        candidate.id === latestEntry.task.id &&
+        candidate.id === entry.task.id &&
         candidate.isActive &&
         candidate.status === "open",
     );
@@ -102,11 +113,11 @@ export function useTopBarTimerSummary({
     if (!task) {
       return null;
     }
-
     return {
       githubIssue: task.githubIssue,
       projectId: project.id,
       projectName: project.name,
+      source: "local",
       taskId: task.id,
       taskTitle: task.title,
     };

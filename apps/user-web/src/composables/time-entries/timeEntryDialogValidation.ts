@@ -6,10 +6,13 @@ import {
 import type { ZodError } from "zod";
 
 import {
+  isGitHubIssueTaskLookupOption,
   isNewTaskLookupOption,
   isTaskLookupOption,
   type TaskLookupValue,
 } from "./time-entry-task-lookup";
+
+const GITHUB_ISSUE_VALIDATION_TASK_ID = "00000000-0000-0000-0000-000000000000";
 
 export interface TimeEntryFormErrors {
   description: string | null;
@@ -166,7 +169,9 @@ export function validateTimeEntryDialogInput({
     ? createManualTimeEntryDraftSchema.safeParse(draftInput)
     : createManualTimeEntrySchema.safeParse({
         ...draftInput,
-        taskId: selectedTaskOption.id,
+        taskId: isGitHubIssueTaskLookupOption(selectedTaskOption)
+          ? GITHUB_ISSUE_VALIDATION_TASK_ID
+          : selectedTaskOption.id,
       });
 
   if (!parsed.success) {

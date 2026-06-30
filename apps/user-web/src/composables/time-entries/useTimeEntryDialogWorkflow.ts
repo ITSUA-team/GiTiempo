@@ -18,6 +18,7 @@ import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import {
+  isGitHubIssueTaskLookupOption,
   isNewTaskLookupOption,
   toTaskLookupOption,
   type TaskLookupOption,
@@ -237,14 +238,23 @@ export function useTimeEntryDialogWorkflow({
       validInput = validationResult.input;
     }
 
-    const errorMessage = await mutations.saveDialogEntry({
+    const result = await mutations.saveDialogEntry({
       editingEntry: dialog.editingEntry.value,
       input: validInput,
       mode: dialog.dialogMode.value,
+      selectedTask: dialog.activeDialogTask.value,
     });
 
-    if (errorMessage) {
-      dialog.setRequestError(errorMessage);
+    if (result.materializedTask) {
+      taskOptions.invalidateProjectTaskOptions(result.materializedTask.projectId);
+
+      if (isGitHubIssueTaskLookupOption(dialog.activeDialogTask.value)) {
+        dialog.setTaskValue(toTaskLookupOption(result.materializedTask));
+      }
+    }
+
+    if (result.errorMessage) {
+      dialog.setRequestError(result.errorMessage);
       return;
     }
 

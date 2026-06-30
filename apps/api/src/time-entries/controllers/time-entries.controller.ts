@@ -97,6 +97,7 @@ export class TimeEntriesController {
   @ApiOperation({ summary: 'Start timer from GitHub issue data' })
   @ApiCreatedResponse({ type: TimeEntryResponseDto })
   @ApiConflictResponse({ description: 'Timer already running' })
+  @ApiNotFoundResponse({ description: 'GitHub issue not found' })
   @ApiUnprocessableEntityResponse({ description: 'Project or task inactive' })
   @ZodSerializerDto(TimeEntryResponseDto)
   startTimerFromGitHub(

@@ -113,13 +113,11 @@ export function useTopBarTimerDialogFlow({
         return;
       }
 
-      const context = picker.getSelectedTaskContext();
+      const didApplySelection = await selectionUpdate.applySelectedTaskContext();
 
-      if (!context) {
+      if (!didApplySelection) {
         return;
       }
-
-      summary.setIdleSelection(context, picker.getNormalizedDescription());
     }
 
     const didMutateTimer = await timerActions.handlePrimaryAction();

@@ -1,12 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { and, eq, inArray, like, or } from 'drizzle-orm';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import { and, eq, inArray, like, or, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
+import { GithubService } from '../src/github/services/github.service';
 import {
   projectAssignments,
   projectExternalRefs,
@@ -79,6 +88,7 @@ describe('Projects and tasks (e2e)', () => {
   let aliceUserId: string;
   let bobUserId: string;
   let carolUserId: string;
+  let github: GithubService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -88,6 +98,7 @@ describe('Projects and tasks (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
     db = app.get<DrizzleDB>(DRIZZLE);
+    github = app.get(GithubService);
 
     const { workspace } = await getSeededAdminWorkspace(db);
     workspaceId = workspace.id;
@@ -161,6 +172,7 @@ describe('Projects and tasks (e2e)', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await cleanupTestFixtures();
   });
 
@@ -218,6 +230,39 @@ describe('Projects and tasks (e2e)', () => {
         .where(inArray(projectAssignments.projectId, testProjectIds));
       await db.delete(projects).where(inArray(projects.id, testProjectIds));
     }
+  }
+
+  async function createGitHubBackedProject(options: {
+    defaultBillableForTasks?: boolean;
+    isActive?: boolean;
+    namePrefix: string;
+    visibility?: 'private' | 'public';
+  }): Promise<{ projectId: string; repoKey: string }> {
+    const repoKey = `octo-org/${randomUUID()}`;
+    const [project] = await db
+      .insert(projects)
+      .values({
+        workspaceId,
+        name: `${options.namePrefix} ${randomUUID()}`,
+        visibility: options.visibility ?? 'public',
+        isActive: options.isActive ?? true,
+        defaultBillableForTasks: options.defaultBillableForTasks ?? true,
+      })
+      .returning({ id: projects.id });
+    if (!project) throw new Error('Expected GitHub-backed project');
+
+    await db.insert(projectExternalRefs).values({
+      workspaceId,
+      projectId: project.id,
+      provider: 'github',
+      externalType: 'repository',
+      externalKey: repoKey,
+      externalUrl: `https://github.com/${repoKey}`,
+      metadata: { githubRepo: repoKey },
+      syncedAt: new Date(),
+    });
+
+    return { projectId: project.id, repoKey };
   }
 
   it('lists all projects for admin and only assigned active projects for members', async () => {
@@ -1019,6 +1064,231 @@ describe('Projects and tasks (e2e)', () => {
       .set('Authorization', bearer(adminToken))
       .send({ title: 'Should Not Update' });
     expect(updateTask.status).toBe(422);
+  });
+
+  it('lists GitHub repository issues for a visible mapped project without mutating local data', async () => {
+    const { projectId, repoKey } = await createGitHubBackedProject({
+      namePrefix: 'GitHub Detail',
+    });
+    const [owner, repo] = repoKey.split('/');
+    const listRepositoryIssues = vi
+      .spyOn(github, 'listRepositoryIssues')
+      .mockResolvedValue({
+        items: [
+          {
+            id: 'issue-184',
+            nodeId: 'node-184',
+            number: 184,
+            repository: {
+              fullName: repoKey,
+              name: repo,
+              owner,
+            },
+            state: 'open',
+            title: 'Timer bug',
+            updatedAt: '2026-06-25T09:23:27.000Z',
+            url: `https://github.com/${repoKey}/issues/184`,
+          },
+        ],
+        pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+      });
+    const [tasksBefore, entriesBefore] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tasks)
+        .where(eq(tasks.projectId, projectId))
+        .then((rows) => rows[0]?.count ?? 0),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(timeEntries)
+        .then((rows) => rows[0]?.count ?? 0),
+    ]);
+
+    const response = await request(app.getHttpServer())
+      .get(`/projects/${projectId}/github/issues`)
+      .set('Authorization', bearer(adminToken))
+      .query({ limit: 30, q: 'timer', state: 'open' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0]).toMatchObject({
+      number: 184,
+      repository: { fullName: repoKey },
+      title: 'Timer bug',
+    });
+    expect(listRepositoryIssues).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId }),
+      owner,
+      repo,
+      { limit: 30, q: 'timer', state: 'open' },
+    );
+
+    const [tasksAfter, entriesAfter] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tasks)
+        .where(eq(tasks.projectId, projectId))
+        .then((rows) => rows[0]?.count ?? 0),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(timeEntries)
+        .then((rows) => rows[0]?.count ?? 0),
+    ]);
+    expect(tasksAfter).toBe(tasksBefore);
+    expect(entriesAfter).toBe(entriesBefore);
+  });
+
+  it('rejects project-scoped GitHub issue browsing when the project has no GitHub mapping', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/projects')
+      .set('Authorization', bearer(adminToken))
+      .send({ name: `GitHub Detail ${randomUUID()}` });
+    expect(project.status).toBe(201);
+
+    const listRepositoryIssues = vi.spyOn(github, 'listRepositoryIssues');
+    const response = await request(app.getHttpServer())
+      .get(`/projects/${project.body.id}/github/issues`)
+      .set('Authorization', bearer(adminToken));
+
+    expect(response.status).toBe(404);
+    expect(listRepositoryIssues).not.toHaveBeenCalled();
+  });
+
+  it('materializes and reuses a GitHub issue task through the project-scoped contract', async () => {
+    const { projectId, repoKey } = await createGitHubBackedProject({
+      defaultBillableForTasks: false,
+      namePrefix: 'GitHub Detail',
+    });
+    const [owner, repo] = repoKey.split('/');
+    const getRepositoryIssue = vi
+      .spyOn(github, 'getRepositoryIssue')
+      .mockResolvedValue({
+        id: 'issue-184',
+        nodeId: 'node-184',
+        repository: {
+          fullName: repoKey,
+          name: repo,
+          owner,
+        },
+        number: 184,
+        state: 'open',
+        title: 'Improve reports filters',
+        updatedAt: '2026-06-25T09:23:27.000Z',
+        url: `https://github.com/${repoKey}/issues/184`,
+      });
+
+    const first = await request(app.getHttpServer())
+      .post('/tasks/from-github')
+      .set('Authorization', bearer(adminToken))
+      .send({ projectId, issueNumber: 184 });
+
+    expect(first.status).toBe(201);
+    expect(first.body).toMatchObject({
+      defaultBillableForTimeEntries: false,
+      githubIssue: {
+        githubRepo: repoKey,
+        issueNumber: 184,
+      },
+      projectId,
+      status: 'open',
+      title: 'Improve reports filters',
+    });
+    expect(getRepositoryIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId }),
+      owner,
+      repo,
+      184,
+    );
+
+    const second = await request(app.getHttpServer())
+      .post('/tasks/from-github')
+      .set('Authorization', bearer(adminToken))
+      .send({ projectId, issueNumber: 184 });
+
+    expect(second.status).toBe(201);
+    expect(second.body.id).toBe(first.body.id);
+
+    const persistedTasks = await db
+      .select({
+        defaultBillableForTimeEntries: tasks.defaultBillableForTimeEntries,
+        id: tasks.id,
+      })
+      .from(tasks)
+      .where(eq(tasks.projectId, projectId));
+    expect(persistedTasks).toEqual([
+      {
+        defaultBillableForTimeEntries: false,
+        id: first.body.id,
+      },
+    ]);
+
+    const persistedRefs = await db
+      .select({
+        externalKey: taskExternalRefs.externalKey,
+        taskId: taskExternalRefs.taskId,
+      })
+      .from(taskExternalRefs)
+      .where(eq(taskExternalRefs.taskId, first.body.id));
+    expect(persistedRefs).toEqual([
+      {
+        externalKey: `${repoKey}#184`,
+        taskId: first.body.id,
+      },
+    ]);
+  });
+
+  it('rejects client-owned GitHub repository fields in the materialization request body', async () => {
+    const { projectId } = await createGitHubBackedProject({
+      namePrefix: 'GitHub Detail',
+    });
+    const getRepositoryIssue = vi.spyOn(github, 'getRepositoryIssue');
+
+    const response = await request(app.getHttpServer())
+      .post('/tasks/from-github')
+      .set('Authorization', bearer(adminToken))
+      .send({
+        projectId,
+        issueNumber: 184,
+        githubRepo: 'octo-org/repo-name',
+        issueTitle: 'Client title',
+      });
+
+    expect(response.status).toBe(400);
+    expect(getRepositoryIssue).not.toHaveBeenCalled();
+  });
+
+  it('rejects closed GitHub issues before writing local task rows', async () => {
+    const { projectId, repoKey } = await createGitHubBackedProject({
+      namePrefix: 'GitHub Detail',
+    });
+    const [owner, repo] = repoKey.split('/');
+    vi.spyOn(github, 'getRepositoryIssue').mockResolvedValue({
+      id: 'issue-184',
+      nodeId: 'node-184',
+      repository: {
+        fullName: repoKey,
+        name: repo,
+        owner,
+      },
+      number: 184,
+      state: 'closed',
+      title: 'Closed provider issue',
+      updatedAt: '2026-06-25T09:23:27.000Z',
+      url: `https://github.com/${repoKey}/issues/184`,
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/tasks/from-github')
+      .set('Authorization', bearer(adminToken))
+      .send({ projectId, issueNumber: 184 });
+
+    expect(response.status).toBe(422);
+
+    const persistedTasks = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.projectId, projectId));
+    expect(persistedTasks).toEqual([]);
   });
 
   it('lists only active tasks for visible active projects', async () => {
