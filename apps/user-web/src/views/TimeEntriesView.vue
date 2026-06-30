@@ -4,7 +4,6 @@ import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import {
   createManualTimeEntrySchema,
-  createTaskSchema,
   type ProjectResponse,
   type TimeEntryResponse,
 } from "@gitiempo/shared";
@@ -50,6 +49,7 @@ import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMu
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createDefaultTimeEntriesClient } from "@/config/clients";
+import { validateInlineNewTaskInput } from "@/lib/inline-new-task";
 import { timerKeys } from "@/lib/query-keys";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
@@ -302,7 +302,7 @@ async function createDialogTaskFromSelection(
     return null;
   }
 
-  const parsedTaskInput = createTaskSchema.safeParse({
+  const parsedTaskInput = validateInlineNewTaskInput({
     defaultBillableForTimeEntries: getProjectDefaultBillable(projectId),
     title: taskTitle,
   });

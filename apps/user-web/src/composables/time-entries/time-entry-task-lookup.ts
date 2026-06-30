@@ -1,9 +1,15 @@
 import type { TaskResponse, TimeEntryResponse } from "@gitiempo/shared";
 import { filterAutocompleteOptions } from "@gitiempo/web-shared";
 
+import {
+  createInlineNewTaskOption,
+  INLINE_NEW_TASK_ID,
+  isInlineNewTaskOption,
+} from "@/lib/inline-new-task";
+
 export type TaskLookupValue = string | TaskLookupOption | null;
 
-export const TIME_ENTRY_NEW_TASK_ID = "__time-entry-new-task__";
+export const TIME_ENTRY_NEW_TASK_ID = INLINE_NEW_TASK_ID;
 
 export interface TaskLookupOption {
   defaultBillableForTimeEntries?: boolean;
@@ -21,21 +27,14 @@ export function isTaskLookupOption(value: TaskLookupValue): value is TaskLookupO
 export function isNewTaskLookupOption(
   value: TaskLookupValue,
 ): value is TaskLookupOption & { isNewTask: true } {
-  return (
-    isTaskLookupOption(value) &&
-    value.id === TIME_ENTRY_NEW_TASK_ID &&
-    value.isNewTask === true
-  );
+  return isTaskLookupOption(value) && isInlineNewTaskOption(value);
 }
 
 export function createNewTaskLookupOption(projectId: string): TaskLookupOption {
-  return {
-    id: TIME_ENTRY_NEW_TASK_ID,
+  return createInlineNewTaskOption({
     isActive: true,
-    isNewTask: true,
     projectId,
-    title: "New task",
-  };
+  });
 }
 
 export function toTaskLookupOption(task: TaskResponse): TaskLookupOption {

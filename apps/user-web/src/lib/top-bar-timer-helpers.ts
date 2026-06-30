@@ -1,6 +1,8 @@
 import type { SyncedGitHubIssue, TimeEntryResponse } from '@gitiempo/shared';
 import { formatRunningDuration } from '@gitiempo/web-shared/time';
 
+export { INLINE_NEW_TASK_ID as TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/inline-new-task';
+
 export interface SelectedTaskContext {
   githubIssue: SyncedGitHubIssue | null;
   projectId: string;
@@ -8,8 +10,6 @@ export interface SelectedTaskContext {
   taskId: string;
   taskTitle: string;
 }
-
-export const TOP_BAR_TIMER_NEW_TASK_ID = "__top-bar-timer-new-task__";
 
 export function formatElapsedTime(
   startedAt: string | null,

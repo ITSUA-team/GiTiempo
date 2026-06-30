@@ -1,6 +1,7 @@
-import { createTaskSchema, type ProjectResponse, type TaskResponse } from "@gitiempo/shared";
+import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { computed, ref } from "vue";
 
+import { validateInlineNewTaskInput } from "@/lib/inline-new-task";
 import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 
 export function useTopBarTaskPicker() {
@@ -98,10 +99,10 @@ export function useTopBarTaskPicker() {
   }
 
   function validateCreateTaskInput() {
-    const parsed = createTaskSchema.safeParse({
+    const parsed = validateInlineNewTaskInput({
       defaultBillableForTimeEntries:
         selectedProject.value?.defaultBillableForTasks ?? true,
-      title: createTaskTitle.value.trim(),
+      title: createTaskTitle.value,
     });
 
     if (!parsed.success) {
