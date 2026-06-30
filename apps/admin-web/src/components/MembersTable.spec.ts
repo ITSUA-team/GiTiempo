@@ -174,7 +174,7 @@ describe('MembersTable', () => {
         .map((column) => column.label),
     ).toEqual(['Member', 'Role', 'Projects Assigned', 'Last Active']);
     expect(tableShell.props('bodyRowClass')).toBe(
-      'h-[56px] transition-colors hover:bg-app-bg',
+      'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg',
     );
 
     const nameButton = wrapper.get('[data-testid="member-name-member-1"]');
