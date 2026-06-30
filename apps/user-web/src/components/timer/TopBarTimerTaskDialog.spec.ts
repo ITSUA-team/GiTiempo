@@ -82,6 +82,7 @@ function mountDialog(overrides: DialogProps = {}) {
         AutoComplete: {
           name: "AutoComplete",
           props: [
+            "appendTo",
             "completeOnFocus",
             "disabled",
             "dropdown",
@@ -92,7 +93,6 @@ function mountDialog(overrides: DialogProps = {}) {
             "inputClass",
             "minLength",
             "modelValue",
-            "overlayClass",
             "pt",
             "suggestions",
           ],
@@ -105,7 +105,7 @@ function mountDialog(overrides: DialogProps = {}) {
             },
           },
           template:
-            '<input :class="$attrs.class" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-overlay-class="overlayClass" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "variant"],
@@ -180,11 +180,9 @@ describe("TopBarTimerTaskDialog", () => {
       expect(autoComplete.classes()).toContain("max-w-full");
       expect(autoComplete.classes()).toContain("min-w-0");
       expect(autoComplete.attributes("data-dropdown")).toBe("true");
+      expect(autoComplete.attributes("data-append-to")).toBe("self");
       expect(autoComplete.attributes("data-fluid")).toBe("true");
       expect(autoComplete.attributes("data-force-selection")).toBe("true");
-      expect(autoComplete.attributes("data-overlay-class")).toBe(
-        "max-w-[calc(100vw-2rem)]",
-      );
     }
     expect(wrapper.text()).not.toContain("AutoComplete");
     expect(taskSuggestions.map((task) => task.title)).toEqual([
@@ -463,11 +461,9 @@ describe("TopBarTimerTaskDialog", () => {
       expect(predictiveField.classes()).toContain("max-w-full");
       expect(predictiveField.classes()).toContain("w-full");
       expect(predictiveField.attributes("data-dropdown")).toBe("true");
+      expect(predictiveField.attributes("data-append-to")).toBe("self");
       expect(predictiveField.attributes("data-fluid")).toBe("true");
       expect(predictiveField.attributes("data-force-selection")).toBe("true");
-      expect(predictiveField.attributes("data-overlay-class")).toBe(
-        "max-w-[calc(100vw-2rem)]",
-      );
     }
   });
 

@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import Checkbox from "primevue/checkbox";
 import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
+import {
+  composeGiTiempoSelfAppendedAutoCompletePt,
+  giTiempoSelfAppendedAutoCompletePt,
+} from "@gitiempo/web-config/theme";
+import {
+  filterAutocompleteOptions,
+  InlineRequestMessage,
+  LabeledCheckbox,
+} from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
 import {
@@ -117,11 +124,11 @@ const newTaskHint = computed(() => {
 
   return `This task is created in ${projectName} and inherits the project billable default.`;
 });
-const projectAutoCompletePt = {
+const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
   dropdown: {
     onMousedown: handleProjectDropdownMouseDown,
   },
-};
+});
 
 watch(
   [() => props.isOpen, () => props.mode, () => props.projectId, () => props.projects],
@@ -252,6 +259,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           Project
         </label>
         <AutoComplete
+          append-to="self"
           complete-on-focus
           data-key="id"
           dropdown
@@ -287,6 +295,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           Task
         </label>
         <AutoComplete
+          append-to="self"
           complete-on-focus
           data-key="id"
           dropdown
@@ -300,6 +309,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           :disabled="!props.projectId || props.isLoadingTasks || isDialogMutating"
           :invalid="!!props.errors.taskId"
           :loading="props.isLoadingTasks"
+          :pt="giTiempoSelfAppendedAutoCompletePt"
           :suggestions="props.taskSuggestions"
           placeholder="Search tasks"
           @complete="handleTaskComplete"
@@ -440,20 +450,13 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label
-          for="time-entry-billable"
-          class="border-divider bg-surface-primary flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
-        >
-          <Checkbox
-            id="time-entry-billable"
-            v-model="billableModel"
-            binary
-            :disabled="isDialogMutating"
-          />
-          <span class="text-text-dark text-sm font-medium">
-            Billable entry
-          </span>
-        </label>
+        <LabeledCheckbox
+          v-model="billableModel"
+          input-id="time-entry-billable"
+          label="Billable entry"
+          root-class="border-divider bg-surface-primary flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2"
+          :disabled="isDialogMutating"
+        />
       </div>
     </div>
 
