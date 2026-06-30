@@ -331,6 +331,19 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("rejects skipped task billable-default backfills before transport", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ timeEntriesUpdated: 0 }));
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+
+    expect(() =>
+      client.backfillTaskBillableDefault(
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        { updateTimeEntries: false } as never,
+      ),
+    ).toThrow();
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
   it("handles task deletion with the no-content contract", async () => {
     const fetchFn = vi.fn(async () => noContentResponse());
     const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });

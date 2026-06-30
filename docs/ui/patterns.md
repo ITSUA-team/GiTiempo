@@ -85,13 +85,13 @@ Use PrimeVue `<Dialog>` for non-destructive propagation choices after a project 
 
 Use `<DatePicker>`.
 
-- Date range filters use `selectionMode="range"`.
+- Date range filters use `selectionMode="range"` and expose the PrimeVue clear affordance when a selected range can be reset independently from other filters.
 - Time-only fields use `timeOnly` and `hourFormat="24"`.
 - Date and time combined uses `showTime` and should be used for time-entry create and edit forms that submit `startedAt` and `endedAt` ISO datetimes.
 - Do not split HH/MM into separate text inputs.
 
 ```vue
-<DatePicker v-model="dateRange" selectionMode="range" :manualInput="false" showIcon />
+<DatePicker v-model="dateRange" selectionMode="range" :manualInput="false" showIcon showClear />
 <DatePicker v-model="startTime" timeOnly hourFormat="24" />
 ```
 

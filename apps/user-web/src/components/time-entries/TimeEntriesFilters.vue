@@ -86,6 +86,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           selection-mode="range"
           fluid
           show-icon
+          show-clear
           @update:model-value="updateDateRange"
         />
       </div>

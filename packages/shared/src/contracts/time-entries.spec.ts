@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createManualTimeEntryDraftSchema,
   createManualTimeEntrySchema,
   startTimerSchema,
   timeEntryResponseSchema,
@@ -142,6 +143,29 @@ describe("createManualTimeEntrySchema", () => {
     });
 
     expect(result.isBillable).toBe(false);
+  });
+});
+
+describe("createManualTimeEntryDraftSchema", () => {
+  const validManualEntryDraft = {
+    endedAt: "2026-04-21T10:00:00.000Z",
+    startedAt: "2026-04-21T09:00:00.000Z",
+  };
+
+  it("accepts manual create draft values before a task id exists", () => {
+    const result = createManualTimeEntryDraftSchema.parse(validManualEntryDraft);
+
+    expect(result).toEqual(validManualEntryDraft);
+  });
+
+  it("rejects task id placeholders on draft values", () => {
+    const result = createManualTimeEntryDraftSchema.safeParse({
+      ...validManualEntryDraft,
+      taskId: "selected-project",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain("Unrecognized key");
   });
 });
 

@@ -74,6 +74,11 @@ export function useProjectTaskBackfillFlow({
       return;
     }
 
+    if (!dialogState.updateTimeEntries) {
+      taskBackfillDialog.value = null;
+      return;
+    }
+
     submittingTaskBackfill.value = true;
 
     try {

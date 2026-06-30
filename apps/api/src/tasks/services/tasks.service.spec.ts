@@ -335,6 +335,25 @@ describe('TasksService', () => {
     );
   });
 
+  it('rejects task billable default backfill when time entries are unselected', async () => {
+    const tx = {
+      select: vi.fn().mockReturnValue(selectRows([{ ...taskRow }])),
+      update: vi.fn(),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const projects = {
+      requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
+    };
+    const service = new TasksService(db as never, projects as never);
+
+    await expect(
+      service.backfillBillableDefault(user, taskRow.id, {
+        updateTimeEntries: false,
+      } as never),
+    ).rejects.toThrow('Task backfill requires selected time entries');
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
   it('rejects task updates in an inactive project', async () => {
     const db = {
       select: vi.fn().mockReturnValue(selectRows([taskRow])),

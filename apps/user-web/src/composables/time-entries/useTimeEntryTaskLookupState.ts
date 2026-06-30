@@ -3,6 +3,7 @@ import { computed, ref, shallowRef, type Ref } from "vue";
 
 import {
   buildTaskLookupSuggestions,
+  isNewTaskLookupOption,
   isTaskLookupOption,
   toEntryTaskOption,
   type TaskLookupOption,
@@ -15,6 +16,7 @@ interface UseTimeEntryTaskLookupStateOptions {
   clearTaskValidationError(): void;
   dialogIsBillable: Ref<boolean>;
   dialogMode: Ref<TimeEntryDialogMode>;
+  dialogProjectId: Ref<string | null>;
 }
 
 export function useTimeEntryTaskLookupState({
@@ -22,6 +24,7 @@ export function useTimeEntryTaskLookupState({
   clearTaskValidationError,
   dialogIsBillable,
   dialogMode,
+  dialogProjectId,
 }: UseTimeEntryTaskLookupStateOptions) {
   const dialogTaskValue = shallowRef<TaskLookupValue>(null);
   const dialogTaskOptions = ref<TaskLookupOption[]>([]);
@@ -31,6 +34,9 @@ export function useTimeEntryTaskLookupState({
   let taskRequestId = 0;
   const activeDialogTask = computed(() =>
     isTaskLookupOption(dialogTaskValue.value) ? dialogTaskValue.value : null,
+  );
+  const isNewTaskSelected = computed(() =>
+    isNewTaskLookupOption(dialogTaskValue.value),
   );
 
   function beginTaskRequest(): number {
@@ -65,7 +71,11 @@ export function useTimeEntryTaskLookupState({
     query: string,
     options = dialogTaskOptions.value,
   ): void {
-    dialogTaskSuggestions.value = buildTaskLookupSuggestions(query, options);
+    dialogTaskSuggestions.value = buildTaskLookupSuggestions(
+      query,
+      options,
+      dialogProjectId.value,
+    );
   }
 
   function setTaskValue(value: TaskLookupValue): void {
@@ -95,6 +105,7 @@ export function useTimeEntryTaskLookupState({
     dialogTaskValue,
     isCurrentTaskRequest,
     isLoadingDialogTasks,
+    isNewTaskSelected,
     resetTaskLookupState,
     setTaskFromEntryFallback,
     setTaskOptions,

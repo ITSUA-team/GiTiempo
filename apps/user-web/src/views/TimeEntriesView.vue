@@ -27,8 +27,8 @@ import { useTimeEntriesData } from "@/composables/time-entries/useTimeEntriesDat
 import { useTimeEntriesDisplay } from "@/composables/time-entries/useTimeEntriesDisplay";
 import { useTimeEntriesLoadErrorNotifications } from "@/composables/time-entries/useTimeEntriesLoadErrorNotifications";
 import { useTimeEntriesPaginationSync } from "@/composables/time-entries/useTimeEntriesPaginationSync";
-import { useTimeEntryDialogWorkflow } from "@/composables/time-entries/useTimeEntryDialogWorkflow";
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
+import { useTimeEntryDialogWorkflow } from "@/composables/time-entries/useTimeEntryDialogWorkflow";
 import { useTimeEntryDirectTimerActions } from "@/composables/time-entries/useTimeEntryDirectTimerActions";
 import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
@@ -54,6 +54,7 @@ const data = useTimeEntriesData({
   entryListQuery: filters.entryListQuery,
   scope,
 });
+
 useTimeEntriesPaginationSync({
   currentPage: filters.currentPage,
   isFetchingEntries: data.isFetchingEntries,
@@ -80,6 +81,7 @@ useTimeEntriesLoadErrorNotifications({
   },
   projectsError: data.projectsError,
 });
+
 const runningEntryTicker = useRunningEntryTicker({
   clearIntervalFn: clearInterval,
   entries: data.entries,
@@ -100,11 +102,16 @@ const mutations = useTimeEntryMutations({
   toast,
 });
 const dialogWorkflow = useTimeEntryDialogWorkflow({
+  accessToken,
+  client,
   confirm,
   dialog,
   ensureProjectsLoaded: data.ensureProjectsLoaded,
   mutations,
+  scope,
   taskOptions,
+  toast,
+  visibleProjects: data.visibleProjects,
 });
 const directTimerActions = useTimeEntryDirectTimerActions({
   accessToken,
@@ -113,6 +120,7 @@ const directTimerActions = useTimeEntryDirectTimerActions({
   scope,
   toast,
 });
+
 const {
   closeDialog,
   dialogDescription,
@@ -120,6 +128,7 @@ const {
   dialogErrors,
   dialogIsBillable,
   dialogMode,
+  dialogNewTaskTitle,
   dialogProjectId,
   dialogRequestErrorMessage,
   dialogSaveLabel,
@@ -134,8 +143,8 @@ const {
   setDescription: setDialogDescription,
   setEndedAt: setDialogEndedAt,
   setIsBillable: setDialogIsBillable,
+  setNewTaskTitle: setDialogNewTaskTitle,
   setStartedAt: setDialogStartedAt,
-  setTaskValue: setDialogTaskValue,
 } = dialog;
 const {
   currentPage,
@@ -159,15 +168,16 @@ const {
   groupedEntries,
   pageState,
 } = display;
-const { isSavingDialog } = mutations;
 const {
   handleDialogTaskSearch,
   isDeletingDialogEntry,
+  isSavingDialogFlow,
   openCreateDialog,
   openEditDialog,
   requestDeleteDialogEntry,
   saveDialog,
   setDialogProjectId,
+  setDialogTaskValue,
 } = dialogWorkflow;
 const {
   isDirectStartBlockedByCurrentTimer,
@@ -256,7 +266,6 @@ async function retryLoadEntries(): Promise<void> {
 onMounted(async () => {
   await Promise.allSettled([data.ensureProjectsLoaded()]);
 });
-
 </script>
 
 <template>
@@ -354,8 +363,9 @@ onMounted(async () => {
       :is-loading-projects="isLoadingProjects"
       :is-loading-tasks="isLoadingDialogTasks"
       :is-open="isDialogOpen"
-      :is-saving="isSavingDialog"
+      :is-saving="isSavingDialogFlow"
       :mode="dialogMode"
+      :new-task-title="dialogNewTaskTitle"
       :project-id="dialogProjectId"
       :projects="visibleProjects"
       :projects-error-message="projectsErrorMessage"
@@ -375,6 +385,7 @@ onMounted(async () => {
       @update:description="setDialogDescription"
       @update:ended-at="setDialogEndedAt"
       @update:is-billable="setDialogIsBillable"
+      @update:new-task-title="setDialogNewTaskTitle"
       @update:project-id="(value) => void setDialogProjectId(value)"
       @update:started-at="setDialogStartedAt"
       @update:task-value="setDialogTaskValue"

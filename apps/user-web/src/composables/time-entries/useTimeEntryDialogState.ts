@@ -17,6 +17,7 @@ export function useTimeEntryDialogState() {
   const dialogEndedAt = shallowRef<Date | null>(null);
   const dialogDescription = ref("");
   const dialogIsBillable = ref(false);
+  const dialogNewTaskTitle = ref("");
   const dialogErrors = ref<TimeEntryFormErrors>(
     createDefaultTimeEntryFormErrors(),
   );
@@ -40,6 +41,7 @@ export function useTimeEntryDialogState() {
   }
 
   function clearTaskValidationError(): void {
+    dialogErrors.value.newTaskTitle = null;
     dialogErrors.value.taskId = null;
   }
 
@@ -55,6 +57,7 @@ export function useTimeEntryDialogState() {
     dialogEndedAt.value = null;
     dialogDescription.value = "";
     dialogIsBillable.value = false;
+    dialogNewTaskTitle.value = "";
     clearDialogErrors();
   }
 
@@ -108,6 +111,12 @@ export function useTimeEntryDialogState() {
     clearRequestError();
   }
 
+  function setNewTaskTitle(value: string): void {
+    dialogNewTaskTitle.value = value;
+    dialogErrors.value.newTaskTitle = null;
+    clearRequestError();
+  }
+
   function setIsBillable(value: boolean): void {
     dialogIsBillable.value = value;
     clearRequestError();
@@ -115,6 +124,10 @@ export function useTimeEntryDialogState() {
 
   function setRequestError(message: string | null): void {
     dialogRequestErrorMessage.value = message;
+  }
+
+  function setNewTaskTitleError(message: string | null): void {
+    dialogErrors.value.newTaskTitle = message;
   }
 
   return {
@@ -127,6 +140,7 @@ export function useTimeEntryDialogState() {
     dialogErrors,
     dialogIsBillable,
     dialogMode,
+    dialogNewTaskTitle,
     dialogProjectId,
     dialogRequestErrorMessage,
     dialogSaveLabel,
@@ -141,6 +155,8 @@ export function useTimeEntryDialogState() {
     setDescription,
     setEndedAt,
     setIsBillable,
+    setNewTaskTitle,
+    setNewTaskTitleError,
     setProjectId,
     setRequestError,
     setStartedAt,

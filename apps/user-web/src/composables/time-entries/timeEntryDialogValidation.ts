@@ -1,27 +1,51 @@
+import {
+  createManualTimeEntryDraftSchema,
+  createManualTimeEntrySchema,
+  createTaskSchema,
+} from "@gitiempo/shared";
 import type { ZodError } from "zod";
 
-import type { TaskLookupOption } from "./time-entry-task-lookup";
 import {
-  timeEntryDialogFormSchema,
-  type ValidatedTimeEntryDialogInput,
-} from "../../validation/time-entry-dialog";
-
-export type { ValidatedTimeEntryDialogInput } from "../../validation/time-entry-dialog";
+  isNewTaskLookupOption,
+  isTaskLookupOption,
+  type TaskLookupValue,
+} from "./time-entry-task-lookup";
 
 export interface TimeEntryFormErrors {
   description: string | null;
   endedAt: string | null;
+  newTaskTitle: string | null;
   projectId: string | null;
   startedAt: string | null;
   taskId: string | null;
 }
 
+export type ValidatedTimeEntryDialogInput = {
+  description?: string | null;
+  endedAt: string;
+  isBillable: boolean;
+  startedAt: string;
+  taskId: string;
+};
+
+export type ValidatedTimeEntryDialogResult =
+  | {
+      input: ValidatedTimeEntryDialogInput;
+      kind: "existing-task";
+    }
+  | {
+      draftInput: Omit<ValidatedTimeEntryDialogInput, "taskId">;
+      kind: "new-task";
+      taskTitle: string;
+    };
+
 interface ValidateTimeEntryDialogInputOptions {
   description: string;
   endedAt: Date | null;
   isBillable: boolean;
+  newTaskTitle: string;
   projectId: string | null;
-  selectedTask: TaskLookupOption | null;
+  selectedTask: TaskLookupValue;
   startedAt: Date | null;
 }
 
@@ -37,6 +61,7 @@ function getTimeEntryFormErrorField(
   if (
     path === "description" ||
     path === "endedAt" ||
+    path === "newTaskTitle" ||
     path === "projectId" ||
     path === "startedAt"
   ) {
@@ -50,6 +75,7 @@ export function createDefaultTimeEntryFormErrors(): TimeEntryFormErrors {
   return {
     description: null,
     endedAt: null,
+    newTaskTitle: null,
     projectId: null,
     startedAt: null,
     taskId: null,
@@ -74,31 +100,111 @@ export function validateTimeEntryDialogInput({
   description,
   endedAt,
   isBillable,
+  newTaskTitle,
   projectId,
   selectedTask,
   startedAt,
 }: ValidateTimeEntryDialogInputOptions): {
   errors: TimeEntryFormErrors;
-  input: ValidatedTimeEntryDialogInput | null;
+  input: ValidatedTimeEntryDialogResult | null;
 } {
-  const parsed = timeEntryDialogFormSchema.safeParse({
-    description,
-    endedAt,
+  const nextErrors = createDefaultTimeEntryFormErrors();
+  const selectedTaskOption = isTaskLookupOption(selectedTask) ? selectedTask : null;
+  const isCreatingNewTask = isNewTaskLookupOption(selectedTaskOption);
+  let validatedTaskTitle: string | null = null;
+
+  if (!projectId) {
+    nextErrors.projectId = "Select a project.";
+  }
+
+  if (!selectedTaskOption) {
+    nextErrors.taskId = "Select a visible task.";
+  }
+
+  if (isCreatingNewTask) {
+    const parsedTaskInput = createTaskSchema.safeParse({
+      title: newTaskTitle.trim(),
+    });
+
+    if (!parsedTaskInput.success) {
+      nextErrors.newTaskTitle =
+        parsedTaskInput.error.flatten().fieldErrors.title?.[0] ??
+        "Task title is invalid.";
+    } else {
+      validatedTaskTitle = parsedTaskInput.data.title;
+    }
+  }
+
+  if (!startedAt) {
+    nextErrors.startedAt = "Select a start date and time.";
+  }
+
+  if (!endedAt) {
+    nextErrors.endedAt = "Select an end date and time.";
+  }
+
+  if (
+    !projectId ||
+    !selectedTaskOption ||
+    !startedAt ||
+    !endedAt ||
+    nextErrors.newTaskTitle
+  ) {
+    return {
+      errors: nextErrors,
+      input: null,
+    };
+  }
+
+  const draftInput = {
+    description: description.trim().length > 0 ? description.trim() : null,
+    endedAt: endedAt.toISOString(),
     isBillable,
-    projectId,
-    selectedTask,
-    startedAt,
-  });
+    startedAt: startedAt.toISOString(),
+  };
+  const parsed = isCreatingNewTask
+    ? createManualTimeEntryDraftSchema.safeParse(draftInput)
+    : createManualTimeEntrySchema.safeParse({
+        ...draftInput,
+        taskId: selectedTaskOption.id,
+      });
 
   if (!parsed.success) {
     return {
-      errors: createTimeEntryFormErrors(parsed.error),
+      errors: {
+        ...nextErrors,
+        ...createTimeEntryFormErrors(parsed.error),
+      },
       input: null,
+    };
+  }
+
+  if (isCreatingNewTask) {
+    if (!validatedTaskTitle) {
+      return {
+        errors: nextErrors,
+        input: null,
+      };
+    }
+
+    return {
+      errors: createDefaultTimeEntryFormErrors(),
+      input: {
+        draftInput,
+        kind: "new-task",
+        taskTitle: validatedTaskTitle,
+      },
     };
   }
 
   return {
     errors: createDefaultTimeEntryFormErrors(),
-    input: parsed.data,
+    input: {
+      input: {
+        ...draftInput,
+        taskId: selectedTaskOption.id,
+      },
+      kind: "existing-task",
+    },
   };
 }

@@ -2,7 +2,7 @@ import type { TimeEntryResponse } from "@gitiempo/shared";
 
 import {
   validateTimeEntryDialogInput,
-  type ValidatedTimeEntryDialogInput,
+  type ValidatedTimeEntryDialogResult,
 } from "./timeEntryDialogValidation";
 import { useTimeEntryDialogState } from "./useTimeEntryDialogState";
 import { useTimeEntryTaskLookupState } from "./useTimeEntryTaskLookupState";
@@ -11,6 +11,7 @@ export type { TimeEntryDialogMode } from "./useTimeEntryDialogState";
 export type {
   TimeEntryFormErrors,
   ValidatedTimeEntryDialogInput,
+  ValidatedTimeEntryDialogResult,
 } from "./timeEntryDialogValidation";
 
 export function useTimeEntryDialog() {
@@ -20,6 +21,7 @@ export function useTimeEntryDialog() {
     clearTaskValidationError: state.clearTaskValidationError,
     dialogIsBillable: state.dialogIsBillable,
     dialogMode: state.dialogMode,
+    dialogProjectId: state.dialogProjectId,
   });
 
   function openCreateDialogState(day: string | null = null): void {
@@ -42,13 +44,14 @@ export function useTimeEntryDialog() {
     taskLookup.resetTaskLookupState();
   }
 
-  function validateDialog(): ValidatedTimeEntryDialogInput | null {
+  function validateDialog(): ValidatedTimeEntryDialogResult | null {
     const { errors, input } = validateTimeEntryDialogInput({
       description: state.dialogDescription.value,
       endedAt: state.dialogEndedAt.value,
       isBillable: state.dialogIsBillable.value,
+      newTaskTitle: state.dialogNewTaskTitle.value,
       projectId: state.dialogProjectId.value,
-      selectedTask: taskLookup.activeDialogTask.value,
+      selectedTask: taskLookup.dialogTaskValue.value,
       startedAt: state.dialogStartedAt.value,
     });
 
@@ -64,6 +67,7 @@ export function useTimeEntryDialog() {
     dialogErrors: state.dialogErrors,
     dialogIsBillable: state.dialogIsBillable,
     dialogMode: state.dialogMode,
+    dialogNewTaskTitle: state.dialogNewTaskTitle,
     dialogProjectId: state.dialogProjectId,
     dialogRequestErrorMessage: state.dialogRequestErrorMessage,
     dialogSaveLabel: state.dialogSaveLabel,
@@ -78,11 +82,14 @@ export function useTimeEntryDialog() {
     isCurrentTaskRequest: taskLookup.isCurrentTaskRequest,
     isDialogOpen: state.isDialogOpen,
     isLoadingDialogTasks: taskLookup.isLoadingDialogTasks,
+    isNewTaskSelected: taskLookup.isNewTaskSelected,
     openCreateDialogState,
     openEditDialogState,
     setDescription: state.setDescription,
     setEndedAt: state.setEndedAt,
     setIsBillable: state.setIsBillable,
+    setNewTaskTitle: state.setNewTaskTitle,
+    setNewTaskTitleError: state.setNewTaskTitleError,
     setProjectId,
     setRequestError: state.setRequestError,
     setStartedAt: state.setStartedAt,
