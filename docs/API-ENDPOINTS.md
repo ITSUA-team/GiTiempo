@@ -13,15 +13,19 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | POST   | `/auth/login`   | None | —    | Exchange Firebase ID token for JWT access/refresh tokens |
 | POST   | `/auth/register`| None | —    | Register the first workspace owner and issue API tokens  |
 | POST   | `/auth/refresh` | None | —    | Exchange refresh token for new access/refresh pair       |
+| POST   | `/auth/switch-workspace` | JWT | Any | Switch the authenticated session to another workspace membership and issue a fresh token pair |
 | POST   | `/auth/logout`  | JWT  | Any  | Invalidate current refresh token                         |
 
 **POST /auth/login** body: `{ firebaseIdToken: string }`
 **POST /auth/register** body: `{ email: string, fullName: string, workspaceName: string, password: string, ownerAcknowledgement: true }`
 **POST /auth/refresh** body: `{ refreshToken: string }`
+**POST /auth/switch-workspace** body: `{ workspaceId: string }`
 
 `POST /auth/register` is the only public first-workspace-owner registration path. It creates the Firebase identity, local user, workspace, owner membership, and returns the normal token pair. Existing-workspace member onboarding remains invite-only; the User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation.
 
 Successful registration returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`.
+
+Successful workspace switching returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`. The backend must reject target workspaces where the caller does not have an existing membership with `403 Forbidden`.
 
 Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`. These are returned in the standard error response `code` field; `error` remains the HTTP-category label.
 
@@ -32,7 +36,10 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 | Method | Path        | Auth | Role | Description                               |
 | ------ | ----------- | ---- | ---- | ----------------------------------------- |
 | GET    | `/users/me` | JWT  | Any  | Get current user profile + workspace role |
+| GET    | `/users/me/workspaces` | JWT | Any | List the authenticated user's accessible workspace memberships |
 | PATCH  | `/users/me` | JWT  | Any  | Update display name, avatar               |
+
+**GET /users/me/workspaces** response: `{ items: Array<{ workspaceId: string, workspaceName: string, role: "admin" | "pm" | "member", isCurrent: boolean }> }`
 
 ---
 
@@ -239,6 +246,8 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | DELETE | `/workspace/github/organizations/:organizationId` | JWT | Admin | Remove an allowed GitHub organization policy row |
 
 **GET /workspace/settings** response includes `{ id, workspaceId, currency, defaultHourlyRate, timeZone, createdAt, updatedAt }`.
+
+`GET /workspace` always returns the currently active workspace bound to the caller's active JWT session. It does not list alternate workspace memberships.
 
 **PATCH /workspace/settings** body: `{ currency?: string, defaultHourlyRate?: number | null, timeZone?: string }`
 

@@ -138,7 +138,7 @@ Per-workspace configuration. One settings record per workspace, created automati
 
 ### WorkspaceMember (`workspace_members`)
 
-Joins users to workspaces with a role. A user may hold memberships in different workspaces over time; the authenticated API session resolves one active workspace context at a time.
+Joins users to workspaces with a role. A user may hold memberships in different workspaces at the same time; the authenticated API session resolves one active workspace context at a time and may later switch that session to another existing membership.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
