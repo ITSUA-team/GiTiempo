@@ -186,6 +186,11 @@ async function handleTaskBackfillSubmitted(): Promise<void> {
     return;
   }
 
+  if (!dialogState.updateTimeEntries) {
+    taskBackfillDialog.value = null;
+    return;
+  }
+
   submittingTaskBackfill.value = true;
 
   try {

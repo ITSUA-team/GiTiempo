@@ -192,12 +192,16 @@ export class TasksService {
     taskId: string,
     input: BackfillTaskBillableDefaultInput,
   ): Promise<TaskBillableDefaultBackfillResponse> {
-    void input;
-
     return this.db.transaction(async (tx) => {
       const { task, project } = await this.requireVisibleTask(user, taskId, tx);
       if (!project.isActive) {
         throw new UnprocessableEntityException('Project is inactive');
+      }
+
+      if (input.updateTimeEntries !== true) {
+        throw new UnprocessableEntityException(
+          'Task backfill requires selected time entries',
+        );
       }
 
       const updatedEntries = await tx

@@ -1,11 +1,14 @@
 import {
+  createManualTimeEntryDraftSchema,
   createManualTimeEntrySchema,
+  createTaskSchema,
   type TimeEntryResponse,
 } from "@gitiempo/shared";
 import { computed, ref, shallowRef } from "vue";
 
 import {
   buildTaskLookupSuggestions,
+  isNewTaskLookupOption,
   isTaskLookupOption,
   toEntryTaskOption,
   type TaskLookupOption,
@@ -18,6 +21,7 @@ export interface TimeEntryFormErrors {
   description: string | null;
   endedAt: string | null;
   projectId: string | null;
+  newTaskTitle: string | null;
   startedAt: string | null;
   taskId: string | null;
 }
@@ -30,10 +34,22 @@ export type ValidatedTimeEntryDialogInput = {
   taskId: string;
 };
 
+export type ValidatedTimeEntryDialogResult =
+  | {
+      input: ValidatedTimeEntryDialogInput;
+      kind: "existing-task";
+    }
+  | {
+      draftInput: Omit<ValidatedTimeEntryDialogInput, "taskId">;
+      kind: "new-task";
+      taskTitle: string;
+    };
+
 function defaultFormErrors(): TimeEntryFormErrors {
   return {
     description: null,
     endedAt: null,
+    newTaskTitle: null,
     projectId: null,
     startedAt: null,
     taskId: null,
@@ -79,6 +95,7 @@ export function useTimeEntryDialog() {
   const dialogEndedAt = shallowRef<Date | null>(null);
   const dialogDescription = ref("");
   const dialogIsBillable = ref(false);
+  const dialogNewTaskTitle = ref("");
   const dialogErrors = ref<TimeEntryFormErrors>(defaultFormErrors());
   const dialogRequestErrorMessage = ref<string | null>(null);
   const dialogTaskOptions = ref<TaskLookupOption[]>([]);
@@ -89,6 +106,9 @@ export function useTimeEntryDialog() {
 
   const activeDialogTask = computed(() =>
     isTaskLookupOption(dialogTaskValue.value) ? dialogTaskValue.value : null,
+  );
+  const isNewTaskSelected = computed(() =>
+    isNewTaskLookupOption(dialogTaskValue.value),
   );
   const dialogTitle = computed(() =>
     dialogMode.value === "edit" ? "Edit time entry" : "New time entry",
@@ -125,6 +145,7 @@ export function useTimeEntryDialog() {
     dialogTaskOptions.value = [];
     dialogTaskSuggestions.value = [];
     dialogTasksErrorMessage.value = null;
+    dialogNewTaskTitle.value = "";
     dialogStartedAt.value = null;
     dialogEndedAt.value = null;
     dialogDescription.value = "";
@@ -182,12 +203,17 @@ export function useTimeEntryDialog() {
   }
 
   function updateTaskSuggestions(query: string, options = dialogTaskOptions.value): void {
-    dialogTaskSuggestions.value = buildTaskLookupSuggestions(query, options);
+    dialogTaskSuggestions.value = buildTaskLookupSuggestions(
+      query,
+      options,
+      dialogProjectId.value,
+    );
   }
 
   function setTaskValue(value: TaskLookupValue): void {
     dialogTaskValue.value = value;
     dialogErrors.value.taskId = null;
+    dialogErrors.value.newTaskTitle = null;
     dialogRequestErrorMessage.value = null;
 
     if (
@@ -223,6 +249,12 @@ export function useTimeEntryDialog() {
     dialogRequestErrorMessage.value = null;
   }
 
+  function setNewTaskTitle(value: string): void {
+    dialogNewTaskTitle.value = value;
+    dialogErrors.value.newTaskTitle = null;
+    dialogRequestErrorMessage.value = null;
+  }
+
   function setIsBillable(value: boolean): void {
     dialogIsBillable.value = value;
     dialogRequestErrorMessage.value = null;
@@ -232,9 +264,15 @@ export function useTimeEntryDialog() {
     dialogRequestErrorMessage.value = message;
   }
 
-  function validateDialog(): ValidatedTimeEntryDialogInput | null {
+  function setNewTaskTitleError(message: string | null): void {
+    dialogErrors.value.newTaskTitle = message;
+  }
+
+  function validateDialog(): ValidatedTimeEntryDialogResult | null {
     const nextErrors = defaultFormErrors();
     const selectedTask = activeDialogTask.value;
+    const isCreatingNewTask = isNewTaskLookupOption(selectedTask);
+    let newTaskTitle: string | null = null;
 
     if (!dialogProjectId.value) {
       nextErrors.projectId = "Select a project.";
@@ -242,6 +280,20 @@ export function useTimeEntryDialog() {
 
     if (!selectedTask) {
       nextErrors.taskId = "Select a visible task.";
+    }
+
+    if (isCreatingNewTask) {
+      const parsedTaskInput = createTaskSchema.safeParse({
+        title: dialogNewTaskTitle.value.trim(),
+      });
+
+      if (!parsedTaskInput.success) {
+        nextErrors.newTaskTitle =
+          parsedTaskInput.error.flatten().fieldErrors.title?.[0] ??
+          "Task title is invalid.";
+      } else {
+        newTaskTitle = parsedTaskInput.data.title;
+      }
     }
 
     if (!dialogStartedAt.value) {
@@ -254,11 +306,17 @@ export function useTimeEntryDialog() {
 
     dialogErrors.value = nextErrors;
 
-    if (!selectedTask || !dialogStartedAt.value || !dialogEndedAt.value) {
+    if (
+      !selectedTask ||
+      !dialogProjectId.value ||
+      !dialogStartedAt.value ||
+      !dialogEndedAt.value ||
+      nextErrors.newTaskTitle
+    ) {
       return null;
     }
 
-    const input = {
+    const draftInput = {
       description:
         dialogDescription.value.trim().length > 0
           ? dialogDescription.value.trim()
@@ -266,24 +324,51 @@ export function useTimeEntryDialog() {
       endedAt: dialogEndedAt.value.toISOString(),
       isBillable: dialogIsBillable.value,
       startedAt: dialogStartedAt.value.toISOString(),
-      taskId: selectedTask.id,
     };
-    const parsed = createManualTimeEntrySchema.safeParse(input);
+    const parsed = isCreatingNewTask
+      ? createManualTimeEntryDraftSchema.safeParse(draftInput)
+      : createManualTimeEntrySchema.safeParse({
+          ...draftInput,
+          taskId: selectedTask.id,
+        });
 
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
+      const taskIdError = isCreatingNewTask
+        ? nextErrors.taskId
+        : (fieldErrors as { taskId?: string[] }).taskId?.[0] ??
+          nextErrors.taskId;
 
       dialogErrors.value = {
         description: fieldErrors.description?.[0] ?? nextErrors.description,
         endedAt: fieldErrors.endedAt?.[0] ?? nextErrors.endedAt,
+        newTaskTitle: nextErrors.newTaskTitle,
         projectId: nextErrors.projectId,
         startedAt: fieldErrors.startedAt?.[0] ?? nextErrors.startedAt,
-        taskId: fieldErrors.taskId?.[0] ?? nextErrors.taskId,
+        taskId: taskIdError,
       };
       return null;
     }
 
-    return input;
+    if (isCreatingNewTask) {
+      if (!newTaskTitle) {
+        return null;
+      }
+
+      return {
+        draftInput,
+        kind: "new-task",
+        taskTitle: newTaskTitle,
+      };
+    }
+
+    return {
+      input: {
+        ...draftInput,
+        taskId: selectedTask.id,
+      },
+      kind: "existing-task",
+    };
   }
 
   return {
@@ -294,6 +379,7 @@ export function useTimeEntryDialog() {
     dialogErrors,
     dialogIsBillable,
     dialogMode,
+    dialogNewTaskTitle,
     dialogProjectId,
     dialogRequestErrorMessage,
     dialogSaveLabel,
@@ -308,11 +394,14 @@ export function useTimeEntryDialog() {
     isCurrentTaskRequest,
     isDialogOpen,
     isLoadingDialogTasks,
+    isNewTaskSelected,
     openCreateDialogState,
     openEditDialogState,
     setDescription,
     setEndedAt,
     setIsBillable,
+    setNewTaskTitle,
+    setNewTaskTitleError,
     setProjectId,
     setRequestError,
     setStartedAt,

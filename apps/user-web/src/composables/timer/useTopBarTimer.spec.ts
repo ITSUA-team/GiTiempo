@@ -368,6 +368,7 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.selectedContext.value).toBeNull();
     expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
     expect(client.listOwnEntries).toHaveBeenCalledWith({ limit: 1 });
+    expect(client.listProjectTasks).toHaveBeenCalledTimes(1);
   });
 
   it('ignores closed tasks when resolving the idle timer context', async () => {

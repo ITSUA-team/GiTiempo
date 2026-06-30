@@ -8,11 +8,9 @@ import { useToast } from 'primevue/usetoast';
 
 import { useUpdateTimeEntryMutation } from '@/composables/query';
 import { createDefaultTimeEntriesClient } from '@/config/clients';
+import { isInlineNewTaskId } from '@/lib/inline-new-task';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
-import {
-  isRunningTimer,
-  TOP_BAR_TIMER_NEW_TASK_ID,
-} from '@/lib/top-bar-timer-helpers';
+import { isRunningTimer } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 
@@ -140,7 +138,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isTimerRunning.value ? 'Stop' : 'Start',
   );
   const isNewTaskSelected = computed(
-    () => picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID,
+    () => isInlineNewTaskId(picker.selectedTaskId.value),
   );
   const isCreateTaskDisabled = computed(() => {
     return (

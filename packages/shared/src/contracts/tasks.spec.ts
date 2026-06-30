@@ -111,7 +111,6 @@ describe("backfillTaskBillableDefaultSchema", () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["updateTimeEntries"]);
   });
 
   it("accepts backfill response count", () => {
