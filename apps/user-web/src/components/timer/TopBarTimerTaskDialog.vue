@@ -6,6 +6,7 @@ import InputText from "primevue/inputtext";
 import ProgressSpinner from "primevue/progressspinner";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
+import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
   filterAutocompleteOptions,
   InlineRequestMessage,
@@ -90,7 +91,6 @@ const dialogDescription = computed(() =>
 const primaryButtonLabel = computed(() =>
   props.primaryActionLabel === "Stop" ? "Stop timer" : "Start timer",
 );
-const taskSelectOverlayClass = "max-w-[calc(100vw-2rem)]";
 const newTaskOption: NewTaskOption = {
   id: TOP_BAR_TIMER_NEW_TASK_ID,
   isNewTask: true,
@@ -308,6 +308,7 @@ watch(
         </label>
         <div class="relative">
           <AutoComplete
+            append-to="self"
             class="w-full max-w-full min-w-0"
             complete-on-focus
             data-key="id"
@@ -321,8 +322,8 @@ watch(
             :disabled="props.isLoadingProjects || props.isConfirmingSelection"
             :loading="props.isLoadingProjects"
             :model-value="mobileProjectModel"
-            :overlay-class="taskSelectOverlayClass"
             placeholder="Search projects"
+            :pt="giTiempoSelfAppendedAutoCompletePt"
             :suggestions="projectSuggestions"
             @complete="handleProjectComplete"
             @update:model-value="handleMobileProjectUpdate"
@@ -339,6 +340,7 @@ watch(
         </label>
         <div class="relative">
           <AutoComplete
+            append-to="self"
             class="w-full max-w-full min-w-0"
             complete-on-focus
             data-key="id"
@@ -352,8 +354,8 @@ watch(
             :disabled="isTaskAutoCompleteDisabled"
             :loading="props.isLoadingTasks"
             :model-value="mobileTaskModel"
-            :overlay-class="taskSelectOverlayClass"
             placeholder="Search tasks"
+            :pt="giTiempoSelfAppendedAutoCompletePt"
             :suggestions="taskSuggestions"
             @complete="handleTaskComplete"
             @update:model-value="handleMobileTaskUpdate"

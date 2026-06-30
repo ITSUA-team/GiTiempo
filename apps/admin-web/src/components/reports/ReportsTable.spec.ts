@@ -3,13 +3,23 @@ import { defineComponent, nextTick } from 'vue';
 import AutoComplete from 'primevue/autocomplete';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import {
+  giTiempoPrimeVueOptions,
+  giTiempoSelfAppendedAutoCompleteOverlayStyle,
+} from '@gitiempo/web-config/theme';
 
 import {
   createDefaultReportTableFilters,
   type ReportTableRow,
 } from '@/lib/report-view-model';
 import ReportsTable from './ReportsTable.vue';
+
+type AutoCompletePt = {
+  overlay?: {
+    class?: string;
+    style?: unknown;
+  };
+};
 
 const SelectStub = defineComponent({
   props: {
@@ -118,6 +128,12 @@ describe('ReportsTable', () => {
     const memberFilter = autoCompleteControls[1]!;
 
     expect(autoCompleteControls).toHaveLength(2);
+    for (const autoCompleteControl of autoCompleteControls) {
+      expect(autoCompleteControl.props('appendTo')).not.toBe('self');
+      expect((autoCompleteControl.props('pt') as AutoCompletePt).overlay).toEqual({
+        class: 'overflow-hidden',
+      });
+    }
     expect(search.attributes('placeholder')).toBe('Search report rows');
     expect(projectFilter.props('forceSelection')).toBe(true);
     expect(memberFilter.props('forceSelection')).toBe(true);
@@ -189,8 +205,16 @@ describe('ReportsTable', () => {
       },
     });
 
+    const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
+
     expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
-    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
+    expect(autoCompleteControls).toHaveLength(2);
+    for (const autoCompleteControl of autoCompleteControls) {
+      expect(autoCompleteControl.props('appendTo')).toBe('self');
+      expect((autoCompleteControl.props('pt') as AutoCompletePt).overlay?.style).toEqual(
+        giTiempoSelfAppendedAutoCompleteOverlayStyle,
+      );
+    }
     expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
     expect(wrapper.text()).not.toContain('2h 00m');

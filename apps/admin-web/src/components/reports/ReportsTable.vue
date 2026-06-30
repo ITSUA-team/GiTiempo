@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
+import {
   EmptyStateBlock,
   ManagementTableShell,
   MobileRecordCard,
@@ -131,6 +135,12 @@ function handleMemberFilterUpdate(
   filters.value.memberId = value?.value ?? null;
 }
 
+const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
 </script>
 
 <template>
@@ -160,6 +170,7 @@ function handleMemberFilterUpdate(
             class="text-text-muted text-[12px] font-medium"
           >Project</label>
           <AutoComplete
+            append-to="self"
             input-id="mobile-report-project-filter"
             :model-value="selectedProjectFilterOption"
             :suggestions="projectFilterSuggestions"
@@ -171,7 +182,7 @@ function handleMemberFilterUpdate(
             option-label="label"
             placeholder="All projects"
             show-clear
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableSelfAppendedFilterAutoCompletePt"
             @complete="handleProjectFilterComplete"
             @update:model-value="handleProjectFilterUpdate"
           />
@@ -183,6 +194,7 @@ function handleMemberFilterUpdate(
             class="text-text-muted text-[12px] font-medium"
           >Member</label>
           <AutoComplete
+            append-to="self"
             input-id="mobile-report-member-filter"
             :model-value="selectedMemberFilterOption"
             :suggestions="memberFilterSuggestions"
@@ -194,7 +206,7 @@ function handleMemberFilterUpdate(
             option-label="label"
             placeholder="All members"
             show-clear
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableSelfAppendedFilterAutoCompletePt"
             @complete="handleMemberFilterComplete"
             @update:model-value="handleMemberFilterUpdate"
           />
@@ -340,7 +352,7 @@ function handleMemberFilterUpdate(
               option-label="label"
               placeholder="All projects"
               show-clear
-              :pt="managementTableFilterAutoCompletePt"
+              :pt="managementTableFilterAutoCompleteResolvedPt"
               @complete="handleProjectFilterComplete"
               @update:model-value="handleProjectFilterUpdate"
             />
@@ -359,7 +371,7 @@ function handleMemberFilterUpdate(
               option-label="label"
               placeholder="All members"
               show-clear
-              :pt="managementTableFilterAutoCompletePt"
+              :pt="managementTableFilterAutoCompleteResolvedPt"
               @complete="handleMemberFilterComplete"
               @update:model-value="handleMemberFilterUpdate"
             />

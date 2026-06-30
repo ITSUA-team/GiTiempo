@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
+import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
 import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
@@ -37,8 +38,8 @@ const initialValues = computed<MemberAssignFormInput>(() => ({
     .map((project) => project.id),
 }));
 
-const projectAutoCompletePt = {
-  root: { class: 'min-h-[42px] w-full' },
+const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
+  root: { class: 'min-h-[42px]' },
   pcInputText: {
     root: {
       class: 'min-h-[42px] w-full rounded-[6px] font-sans text-[14px] font-medium',
@@ -49,7 +50,7 @@ const projectAutoCompletePt = {
   },
   chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
   option: { class: 'font-sans text-[14px]' },
-} as const;
+});
 
 interface AutoCompleteCompleteEvent {
   query: string;
@@ -112,6 +113,7 @@ function handleSave({
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
           >Assigned projects</label>
           <AutoComplete
+            append-to="self"
             :input-id="`member-settings-${member.id}-projects`"
             name="projectIds"
             :suggestions="projectSuggestions"

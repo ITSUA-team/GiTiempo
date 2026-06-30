@@ -3,6 +3,10 @@ import { computed, ref } from 'vue';
 import { FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
+import {
   EmptyStateBlock,
   EntryActionButton,
   ManagementTableShell,
@@ -110,6 +114,13 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
   emit('update:expandedRows', value);
 }
 
+const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
   { key: 'source', label: 'Source', width: 140 },
@@ -157,6 +168,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
         class="text-text-muted text-[12px] font-medium"
       >Project</label>
       <AutoComplete
+        append-to="self"
         input-id="mobile-project-name-filter"
         :model-value="filters.projectQuery"
         :suggestions="projectQuerySuggestions"
@@ -165,7 +177,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
         dropdown-mode="blank"
         :min-length="0"
         placeholder="Filter project"
-        :pt="managementTableFilterAutoCompletePt"
+        :pt="managementTableSelfAppendedFilterAutoCompletePt"
         @complete="handleProjectQueryComplete"
         @update:model-value="updateProjectQueryFilter"
       />
@@ -404,7 +416,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
             dropdown-mode="blank"
             :min-length="0"
             placeholder="Filter project"
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableFilterAutoCompleteResolvedPt"
             @complete="handleProjectQueryComplete"
             @update:model-value="updateProjectQueryFilter"
           />
