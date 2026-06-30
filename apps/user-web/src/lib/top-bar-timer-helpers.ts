@@ -1,6 +1,8 @@
 import type { SyncedGitHubIssue, TimeEntryResponse } from '@gitiempo/shared';
 import { formatRunningDuration } from '@gitiempo/web-shared/time';
 
+export { INLINE_NEW_TASK_ID as TOP_BAR_TIMER_NEW_TASK_ID } from '@/lib/inline-new-task';
+
 export interface LocalSelectedTaskContext {
   githubIssue: SyncedGitHubIssue | null;
   projectId: string;
@@ -24,7 +26,6 @@ export type SelectedTaskContext =
   | GitHubIssueSelectedTaskContext
   | LocalSelectedTaskContext;
 
-export const TOP_BAR_TIMER_NEW_TASK_ID = "__top-bar-timer-new-task__";
 export const TOP_BAR_TIMER_GITHUB_ISSUE_TASK_ID_PREFIX =
   "__top-bar-timer-github-issue__";
 
@@ -41,7 +42,6 @@ export function isGitHubIssueSelectedTaskContext(
 export function isGitHubIssueTaskOptionId(taskId: string): boolean {
   return taskId.startsWith(TOP_BAR_TIMER_GITHUB_ISSUE_TASK_ID_PREFIX);
 }
-
 export function formatElapsedTime(
   startedAt: string | null,
   nowMs: number,

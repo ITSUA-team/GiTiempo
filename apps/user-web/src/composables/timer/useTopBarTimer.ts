@@ -8,12 +8,12 @@ import { useToast } from 'primevue/usetoast';
 
 import { useUpdateTimeEntryMutation } from '@/composables/query';
 import { createDefaultTimeEntriesClient } from '@/config/clients';
+import { isInlineNewTaskId } from '@/lib/inline-new-task';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
 import {
   isGitHubIssueSelectedTaskContext,
   isRunningTimer,
-  type LocalSelectedTaskContext,
-  TOP_BAR_TIMER_NEW_TASK_ID,
+  type SelectedTaskContext,
 } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
@@ -142,7 +142,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isTimerRunning.value ? 'Stop' : 'Start',
   );
   const isNewTaskSelected = computed(
-    () => picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID,
+    () => isInlineNewTaskId(picker.selectedTaskId.value),
   );
   const isCreateTaskDisabled = computed(() => {
     return (
@@ -255,7 +255,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
 
   async function ensureLocalSelectedContext(
     context: ReturnType<typeof picker.getSelectedTaskContext>,
-  ): Promise<LocalSelectedTaskContext | null> {
+  ): Promise<SelectedTaskContext | null> {
     if (!context) {
       return null;
     }

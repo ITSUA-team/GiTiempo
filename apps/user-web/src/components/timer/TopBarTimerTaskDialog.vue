@@ -14,17 +14,14 @@ import {
 } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
-import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
+import {
+  createInlineNewTaskOption,
+  isInlineNewTaskId,
+  type InlineNewTaskOption,
+} from "@/lib/inline-new-task";
 
 type ProjectAutoCompleteValue = ProjectResponse | string | null;
-
-interface NewTaskOption {
-  id: typeof TOP_BAR_TIMER_NEW_TASK_ID;
-  isNewTask: true;
-  title: "New task";
-}
-
-type TaskPickerOption = TaskResponse | NewTaskOption;
+type TaskPickerOption = TaskResponse | InlineNewTaskOption;
 type TaskAutoCompleteValue = TaskPickerOption | string | null;
 
 interface AutoCompleteCompleteEvent {
@@ -91,11 +88,7 @@ const dialogDescription = computed(() =>
 const primaryButtonLabel = computed(() =>
   props.primaryActionLabel === "Stop" ? "Stop timer" : "Start timer",
 );
-const newTaskOption: NewTaskOption = {
-  id: TOP_BAR_TIMER_NEW_TASK_ID,
-  isNewTask: true,
-  title: "New task",
-};
+const newTaskOption = createInlineNewTaskOption();
 const taskPickerOptions = computed<TaskPickerOption[]>(() => [
   ...props.taskOptions,
   newTaskOption,
@@ -105,7 +98,7 @@ const mobileTaskModel = shallowRef<TaskAutoCompleteValue>(null);
 const projectSuggestions = shallowRef<ProjectResponse[]>([]);
 const taskSuggestions = shallowRef<TaskPickerOption[]>([]);
 const isNewTaskSelected = computed(
-  () => props.selectedTaskId === TOP_BAR_TIMER_NEW_TASK_ID,
+  () => isInlineNewTaskId(props.selectedTaskId),
 );
 const hasSelectedProjectOption = computed(() =>
   isProjectOption(mobileProjectModel.value),
@@ -165,7 +158,7 @@ function findTaskOption(taskId: string | null): TaskPickerOption | null {
     return null;
   }
 
-  if (taskId === TOP_BAR_TIMER_NEW_TASK_ID) {
+  if (isInlineNewTaskId(taskId)) {
     return newTaskOption;
   }
 

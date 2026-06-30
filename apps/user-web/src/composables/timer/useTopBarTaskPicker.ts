@@ -1,11 +1,11 @@
 import {
-  createTaskSchema,
   type ProjectResponse,
   type SyncedGitHubIssue,
   type TaskResponse,
 } from "@gitiempo/shared";
 import { computed, ref } from "vue";
 
+import { validateInlineNewTaskInput } from "@/lib/inline-new-task";
 import type { SelectedTaskContext } from "@/lib/top-bar-timer-helpers";
 
 export interface GitHubIssueTaskOption extends TaskResponse {
@@ -129,10 +129,10 @@ export function useTopBarTaskPicker() {
   }
 
   function validateCreateTaskInput() {
-    const parsed = createTaskSchema.safeParse({
+    const parsed = validateInlineNewTaskInput({
       defaultBillableForTimeEntries:
         selectedProject.value?.defaultBillableForTasks ?? true,
-      title: createTaskTitle.value.trim(),
+      title: createTaskTitle.value,
     });
 
     if (!parsed.success) {
