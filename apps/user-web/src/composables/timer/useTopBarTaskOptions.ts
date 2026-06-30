@@ -3,16 +3,27 @@ import { getErrorMessage } from "@gitiempo/web-shared";
 import { useQueryClient } from "@tanstack/vue-query";
 import { ref, type ComputedRef } from "vue";
 
+import { appendUnsyncedProjectGitHubIssueOptions } from "@/lib/project-github-issues";
+import { getGitHubIssueTaskOptionId } from "@/lib/top-bar-timer-helpers";
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
-import type { TopBarTaskPicker } from "./useTopBarTaskPicker";
+import type {
+  GitHubIssueTaskOption,
+  TopBarTaskOption,
+  TopBarTaskPicker,
+} from "./useTopBarTaskPicker";
 
 interface UseTopBarTaskOptionsOptions {
   accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   picker: TopBarTaskPicker;
   scope: ComputedRef<UserServerStateScope>;
+}
+
+interface LoadedTopBarTaskOptions {
+  errorMessage: string | null;
+  taskOptions: TopBarTaskOption[];
 }
 
 export function useTopBarTaskOptions({
@@ -27,10 +38,6 @@ export function useTopBarTaskOptions({
   let taskRequestId = 0;
 
   async function ensureProjectsLoaded(): Promise<ProjectResponse[]> {
-    if (picker.projects.value.length > 0) {
-      return picker.projects.value;
-    }
-
     if (!accessToken.value) {
       throw new Error("Authentication is required to load visible projects.");
     }
@@ -39,10 +46,21 @@ export function useTopBarTaskOptions({
     picker.setProjectsError(null);
 
     try {
-      const projects = await queryClient.ensureQueryData({
+      const previousProjectsById = new Map(
+        picker.projects.value.map((project) => [project.id, project]),
+      );
+      const projects = await queryClient.fetchQuery({
         queryKey: timerKeys.visibleProjects(scope.value),
         queryFn: () => client.listVisibleProjects(),
       });
+
+      for (const project of projects) {
+        const previousProject = previousProjectsById.get(project.id);
+
+        if (previousProject && previousProject.source !== project.source) {
+          picker.invalidateCachedTasks(project.id);
+        }
+      }
 
       picker.setProjects(projects);
       return picker.projects.value;
@@ -54,7 +72,7 @@ export function useTopBarTaskOptions({
     }
   }
 
-  async function loadTasksForProject(projectId: string): Promise<TaskResponse[]> {
+  async function loadTasksForProject(projectId: string): Promise<TopBarTaskOption[]> {
     const requestId = ++taskRequestId;
 
     if (!accessToken.value) {
@@ -65,25 +83,36 @@ export function useTopBarTaskOptions({
     picker.setTasksError(null);
 
     try {
+      const hasProjectMetadata = picker.projects.value.some(
+        (project) => project.id === projectId,
+      );
       const cachedTasks = picker.getCachedTasks(projectId);
 
-      if (cachedTasks) {
+      if (cachedTasks && hasProjectMetadata) {
+        picker.setTasksError(null);
         picker.setTasks(cachedTasks);
         return cachedTasks;
       }
 
-      const nextTasks = await queryClient.ensureQueryData({
+      const localTasks = await queryClient.ensureQueryData({
         queryKey: timerKeys.projectTasks(scope.value, projectId),
         queryFn: () => client.listProjectTasks(projectId),
       });
+      const { errorMessage, taskOptions } = await appendGitHubIssueOptions(
+        projectId,
+        localTasks,
+      );
 
       if (requestId !== taskRequestId) {
         return picker.tasks.value;
       }
 
-      picker.setCachedTasks(projectId, nextTasks);
-      picker.setTasks(nextTasks);
-      return nextTasks;
+      if (errorMessage === null && hasProjectMetadata) {
+        picker.setCachedTasks(projectId, taskOptions);
+      }
+      picker.setTasks(taskOptions);
+      picker.setTasksError(errorMessage);
+      return taskOptions;
     } catch (error) {
       if (requestId === taskRequestId) {
         picker.setTasks([]);
@@ -96,6 +125,50 @@ export function useTopBarTaskOptions({
         isLoadingTasks.value = false;
       }
     }
+  }
+
+  async function appendGitHubIssueOptions(
+    projectId: string,
+    localTasks: TaskResponse[],
+  ): Promise<LoadedTopBarTaskOptions> {
+    const project =
+      picker.projects.value.find((candidate) => candidate.id === projectId) ??
+      null;
+    const selectedContextGitHubIssue =
+      picker.selectedProjectId.value === projectId
+        ? picker.selectedContextGitHubIssue.value
+        : null;
+
+    return appendUnsyncedProjectGitHubIssueOptions({
+      client,
+      hasKnownGitHubIssueSource: selectedContextGitHubIssue !== null,
+      knownSyncedGitHubIssues: selectedContextGitHubIssue
+        ? [selectedContextGitHubIssue]
+        : [],
+      localTaskOptions: localTasks,
+      localTasks,
+      mapGitHubIssue(issue): GitHubIssueTaskOption {
+        if (!project) {
+          throw new Error("GitHub issue options require a visible project.");
+        }
+
+        return {
+          createdAt: issue.updatedAt,
+          defaultBillableForTimeEntries: project.defaultBillableForTasks,
+          githubIssue: issue.githubIssue,
+          id: getGitHubIssueTaskOptionId(issue.githubIssue),
+          isActive: true,
+          isGitHubIssueOption: true,
+          issueTitle: issue.issueTitle,
+          projectId: issue.projectId,
+          status: "open",
+          title: issue.issueTitle,
+          updatedAt: issue.updatedAt,
+          workspaceId: project.workspaceId,
+        };
+      },
+      project,
+    });
   }
 
   return {

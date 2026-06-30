@@ -59,6 +59,7 @@ describe("top-bar-timer-helpers", () => {
       githubIssue: null,
       projectId: "project-1",
       projectName: "Project Orion",
+      source: "local",
       taskId: "task-1",
       taskTitle: "Improve reports filters",
     });

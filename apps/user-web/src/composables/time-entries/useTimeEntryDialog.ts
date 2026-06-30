@@ -8,6 +8,7 @@ import { computed, ref, shallowRef } from "vue";
 
 import {
   buildTaskLookupSuggestions,
+  isGitHubIssueTaskLookupOption,
   isNewTaskLookupOption,
   isTaskLookupOption,
   toEntryTaskOption,
@@ -34,6 +35,7 @@ export type ValidatedTimeEntryDialogInput = {
   taskId: string;
 };
 
+const GITHUB_ISSUE_VALIDATION_TASK_ID = "00000000-0000-0000-0000-000000000000";
 export type ValidatedTimeEntryDialogResult =
   | {
       input: ValidatedTimeEntryDialogInput;
@@ -329,7 +331,9 @@ export function useTimeEntryDialog() {
       ? createManualTimeEntryDraftSchema.safeParse(draftInput)
       : createManualTimeEntrySchema.safeParse({
           ...draftInput,
-          taskId: selectedTask.id,
+          taskId: isGitHubIssueTaskLookupOption(selectedTask)
+            ? GITHUB_ISSUE_VALIDATION_TASK_ID
+            : selectedTask.id,
         });
 
     if (!parsed.success) {
@@ -372,6 +376,7 @@ export function useTimeEntryDialog() {
   }
 
   return {
+    activeDialogTask,
     beginTaskRequest,
     closeDialog,
     dialogDescription,
