@@ -214,10 +214,15 @@ function handleProjectComplete(event: AutoCompleteCompleteEvent): void {
 }
 
 function handleTaskComplete(event: AutoCompleteCompleteEvent): void {
+  const selectedTaskTitle = isTaskOption(mobileTaskModel.value)
+    ? mobileTaskModel.value.title
+    : null;
+  const query = event.query === selectedTaskTitle ? "" : event.query;
+
   taskSuggestions.value = [
     ...filterAutocompleteOptions(
       props.taskOptions,
-      event.query,
+      query,
       (task) => task.title,
     ),
     newTaskOption,

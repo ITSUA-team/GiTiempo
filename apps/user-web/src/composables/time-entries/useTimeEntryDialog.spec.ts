@@ -99,6 +99,40 @@ describe("useTimeEntryDialog", () => {
     expect(dialog.dialogIsBillable.value).toBe(false);
   });
 
+  it("validates GitHub issue draft entries without requiring a materialized task id", () => {
+    const dialog = useTimeEntryDialog();
+
+    dialog.openCreateDialogState();
+    dialog.setProjectId("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f900");
+    dialog.setTaskValue({
+      defaultBillableForTimeEntries: true,
+      githubIssue: {
+        githubRepo: "octo-org/repo-name",
+        issueNumber: 184,
+      },
+      id: "__top-bar-timer-github-issue__octo-org/repo-name#184",
+      isActive: true,
+      isGitHubIssueOption: true,
+      issueTitle: "Provider issue",
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f900",
+      title: "Provider issue",
+    });
+    dialog.setStartedAt(new Date("2026-04-21T09:00:00.000Z"));
+    dialog.setEndedAt(new Date("2026-04-21T10:00:00.000Z"));
+
+    expect(dialog.validateDialog()).toEqual({
+      input: {
+        description: null,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        isBillable: true,
+        startedAt: "2026-04-21T09:00:00.000Z",
+        taskId: "__top-bar-timer-github-issue__octo-org/repo-name#184",
+      },
+      kind: "existing-task",
+    });
+    expect(dialog.dialogErrors.value.taskId).toBeNull();
+  });
+
   it("appends New task after visible task suggestions", () => {
     const dialog = useTimeEntryDialog();
 

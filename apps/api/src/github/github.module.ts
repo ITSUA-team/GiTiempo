@@ -19,6 +19,10 @@ import { WorkspaceGitHubOrganizationsService } from './services/workspace-github
     GithubService,
     WorkspaceGitHubOrganizationsService,
   ],
-  exports: [GithubConnectionsService, WorkspaceGitHubOrganizationsService],
+  exports: [
+    GithubConnectionsService,
+    GithubService,
+    WorkspaceGitHubOrganizationsService,
+  ],
 })
 export class GithubModule {}

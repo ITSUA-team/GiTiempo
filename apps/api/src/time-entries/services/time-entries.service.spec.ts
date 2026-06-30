@@ -22,6 +22,8 @@ const mockUsersActivity = {
   touchLastActive: vi.fn().mockResolvedValue(undefined),
 };
 
+const mockGithubTasks = {} as never;
+
 const completedEntry = {
   id: 'entry-1',
   workspaceId: user.workspaceId,
@@ -114,6 +116,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     Object.defineProperty(service, 'requireEntryResponse', {
@@ -175,6 +178,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({
@@ -225,6 +229,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -265,6 +270,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -301,6 +307,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -336,6 +343,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({ ...runningEntry, taskId: 'task-2' }),
@@ -381,6 +389,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -409,6 +418,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -437,6 +447,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({
@@ -486,6 +497,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       {} as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
@@ -510,6 +522,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
@@ -552,6 +565,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
@@ -595,6 +609,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue({ ...completedEntry, taskId: 'task-2' }),
@@ -636,6 +651,7 @@ describe('TimeEntriesService', () => {
       {} as never,
       tasks as never,
       mockUsersActivity as never,
+      mockGithubTasks,
     );
 
     await expect(
@@ -679,20 +695,8 @@ describe('TimeEntriesService', () => {
     const members = {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'member' }),
     };
-    const service = new TimeEntriesService(
-      db as never,
-      members as never,
-      {} as never,
-      {} as never,
-      mockUsersActivity as never,
-    );
-    const findOrCreateGitHubTask = vi.fn().mockResolvedValue({
-      id: 'task-1',
-      isActive: true,
-      status: 'open',
-    });
-    Object.defineProperty(service, 'findOrCreateGitHubProject', {
-      value: vi.fn().mockResolvedValue({
+    const githubTasks = {
+      findOrCreateProjectForRepo: vi.fn().mockResolvedValue({
         project: {
           id: 'project-1',
           defaultBillableForTasks: false,
@@ -700,10 +704,20 @@ describe('TimeEntriesService', () => {
         },
         created: true,
       }),
-    });
-    Object.defineProperty(service, 'findOrCreateGitHubTask', {
-      value: findOrCreateGitHubTask,
-    });
+      findOrCreateTaskForIssue: vi.fn().mockResolvedValue({
+        id: 'task-1',
+        isActive: true,
+        status: 'open',
+      }),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      githubTasks as never,
+    );
     Object.defineProperty(service, 'requireEntryResponse', {
       value: vi.fn().mockResolvedValue(completedEntry),
     });
@@ -716,14 +730,13 @@ describe('TimeEntriesService', () => {
 
     expect(db.transaction).toHaveBeenCalledOnce();
     expect(tx.select).toHaveBeenCalled();
-    expect(findOrCreateGitHubTask).toHaveBeenCalledWith(
-      tx,
-      user.workspaceId,
-      'project-1',
-      'org/repo#123',
-      'Issue title',
-      false,
-    );
+    expect(githubTasks.findOrCreateTaskForIssue).toHaveBeenCalledWith(tx, {
+      workspaceId: user.workspaceId,
+      projectId: 'project-1',
+      issueKey: 'org/repo#123',
+      issueTitle: 'Issue title',
+      defaultBillableForTimeEntries: false,
+    });
     expect(timeEntryValues).toHaveBeenCalledWith(
       expect.objectContaining({
         isBillable: false,
@@ -750,15 +763,8 @@ describe('TimeEntriesService', () => {
     const members = {
       requireActiveMembership: vi.fn().mockResolvedValue({ role: 'admin' }),
     };
-    const service = new TimeEntriesService(
-      db as never,
-      members as never,
-      {} as never,
-      {} as never,
-      mockUsersActivity as never,
-    );
-    Object.defineProperty(service, 'findOrCreateGitHubProject', {
-      value: vi.fn().mockResolvedValue({
+    const githubTasks = {
+      findOrCreateProjectForRepo: vi.fn().mockResolvedValue({
         project: {
           id: 'project-1',
           defaultBillableForTasks: true,
@@ -766,14 +772,20 @@ describe('TimeEntriesService', () => {
         },
         created: true,
       }),
-    });
-    Object.defineProperty(service, 'findOrCreateGitHubTask', {
-      value: vi.fn().mockResolvedValue({
+      findOrCreateTaskForIssue: vi.fn().mockResolvedValue({
         id: 'task-1',
         isActive: true,
         status: 'closed',
       }),
-    });
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      members as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      githubTasks as never,
+    );
 
     await expect(
       service.startTimerFromGitHub(user, {
@@ -783,44 +795,5 @@ describe('TimeEntriesService', () => {
       }),
     ).rejects.toThrow('Task is closed');
     expect(tx.insert).not.toHaveBeenCalled();
-  });
-
-  it('matches GitHub project refs case-insensitively', async () => {
-    const select = selectRows([{ projectId: 'project-1' }]);
-    const service = new TimeEntriesService(
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      mockUsersActivity as never,
-    );
-
-    const result = await service['findGitHubProjectRef'](
-      { select: vi.fn().mockReturnValue({ from: select.from }) } as never,
-      user.workspaceId,
-      'gitiempo-test/mixed-case',
-    );
-
-    expect(result).toEqual({ projectId: 'project-1' });
-  });
-
-  it('matches GitHub task refs case-insensitively', async () => {
-    const select = selectRows([{ taskId: 'task-1' }]);
-    const service = new TimeEntriesService(
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      mockUsersActivity as never,
-    );
-
-    const result = await service['findGitHubTaskRef'](
-      { select: vi.fn().mockReturnValue({ from: select.from }) } as never,
-      user.workspaceId,
-      'project-1',
-      'gitiempo-test/mixed-case#123',
-    );
-
-    expect(result).toEqual({ taskId: 'task-1' });
   });
 });

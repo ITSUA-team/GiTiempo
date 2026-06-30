@@ -27,6 +27,7 @@ import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySecti
 import TimeEntriesLoadingState from "@/components/time-entries/TimeEntriesLoadingState.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
 import {
+  isGitHubIssueTaskLookupOption,
   isNewTaskLookupOption,
   toEntryTaskOption,
   toTaskLookupOption,
@@ -96,7 +97,12 @@ const data = useTimeEntriesData({
   scope,
   setIntervalFn: setInterval,
 });
-const taskOptions = useTimeEntryTaskOptions({ client });
+const taskOptions = useTimeEntryTaskOptions({
+  client,
+  getProjectById(projectId) {
+    return data.visibleProjects.value.find((project) => project.id === projectId) ?? null;
+  },
+});
 const createTaskMutation = useCreateTaskMutation({
   accessToken,
   client,
@@ -124,6 +130,7 @@ const mutations = useTimeEntryMutations({
   toast,
 });
 const {
+  activeDialogTask,
   closeDialog,
   dialogDescription,
   dialogEndedAt,
@@ -433,14 +440,23 @@ async function saveDialog(): Promise<void> {
     validInput = validationResult.input;
   }
 
-  const errorMessage = await mutations.saveDialogEntry({
+  const result = await mutations.saveDialogEntry({
     editingEntry: dialog.editingEntry.value,
     input: validInput,
     mode: dialog.dialogMode.value,
+    selectedTask: activeDialogTask.value,
   });
 
-  if (errorMessage) {
-    dialog.setRequestError(errorMessage);
+  if (result.materializedTask) {
+    taskOptions.invalidateProjectTaskOptions(result.materializedTask.projectId);
+
+    if (isGitHubIssueTaskLookupOption(activeDialogTask.value)) {
+      dialog.setTaskValue(toTaskLookupOption(result.materializedTask));
+    }
+  }
+
+  if (result.errorMessage) {
+    dialog.setRequestError(result.errorMessage);
     return;
   }
 
