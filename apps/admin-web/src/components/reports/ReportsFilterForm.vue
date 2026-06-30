@@ -211,6 +211,7 @@ const datePickerPt = {
         selection-mode="range"
         :manual-input="false"
         show-button-bar
+        show-clear
         placeholder="All dates"
         date-format="M d, yy"
         :disabled="disabled"
