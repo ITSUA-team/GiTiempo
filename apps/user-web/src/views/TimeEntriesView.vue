@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
+import type { DatePickerPassThroughOptions } from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import {
   createManualTimeEntrySchema,
@@ -202,14 +203,11 @@ const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
   return [...optionsByTaskId.values()];
 });
 const datePickerPt = {
-  root: { class: "w-full" },
-  pcInputText: {
-    root: {
-      class:
-        "border-divider bg-surface-primary h-[38px] rounded-[6px] border px-3 text-[14px] font-medium text-text-dark shadow-none",
-    },
+  panel: {
+    class:
+      "border-divider bg-surface-primary rounded-md border text-text-dark shadow-popover",
   },
-} as const;
+} satisfies DatePickerPassThroughOptions;
 
 function getProjectDefaultBillable(projectId: string | null): boolean {
   return (
@@ -597,7 +595,6 @@ onBeforeUnmount(() => {
               input-id="time-entries-date-range"
               :manual-input="false"
               :model-value="selectedDateRange"
-              placeholder="All dates"
               selection-mode="range"
               fluid
               show-button-bar

@@ -321,10 +321,13 @@ async function mountView(
         DatePicker: {
           emits: ["update:modelValue"],
           props: [
+            "dateFormat",
             "inputId",
+            "manualInput",
             "modelValue",
             "placeholder",
             "pt",
+            "selectionMode",
             "showButtonBar",
             "showClear",
             "showIcon",
@@ -356,8 +359,13 @@ async function mountView(
             <div>
               <button
                 :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
+                :data-date-format="dateFormat ?? ''"
+                :data-manual-input="String(manualInput === true || manualInput === '')"
                 :data-placeholder="placeholder ?? ''"
                 :data-pt-input-class="pt?.pcInputText?.root?.class ?? ''"
+                :data-pt-panel-class="pt?.panel?.class ?? ''"
+                :data-pt-root-class="pt?.root?.class ?? ''"
+                :data-selection-mode="selectionMode ?? ''"
                 :data-show-button-bar="String(showButtonBar === true || showButtonBar === '')"
                 :data-show-clear="String(showClear === true || showClear === '')"
                 :data-show-icon="String(showIcon === true || showIcon === '')"
@@ -1030,7 +1038,7 @@ describe("TimeEntriesView", () => {
     });
   });
 
-  it("renders the date range filter with Admin-style clear affordances", async () => {
+  it("keeps the date range input styling local while applying dropdown panel styling", async () => {
     const client = createClientMock();
     const { wrapper } = await mountView(client);
 
@@ -1038,11 +1046,17 @@ describe("TimeEntriesView", () => {
 
     const dateRangeFilter = wrapper.get('[data-testid="date-range-filter"]');
 
-    expect(dateRangeFilter.attributes("data-placeholder")).toBe("All dates");
+    expect(dateRangeFilter.attributes("data-date-format")).toBe("M d, yy");
+    expect(dateRangeFilter.attributes("data-manual-input")).toBe("false");
+    expect(dateRangeFilter.attributes("data-placeholder")).toBe("");
+    expect(dateRangeFilter.attributes("data-selection-mode")).toBe("range");
     expect(dateRangeFilter.attributes("data-show-button-bar")).toBe("true");
     expect(dateRangeFilter.attributes("data-show-clear")).toBe("true");
     expect(dateRangeFilter.attributes("data-show-icon")).toBe("true");
-    expect(dateRangeFilter.attributes("data-pt-input-class")).toContain("h-[38px]");
+    expect(dateRangeFilter.attributes("data-pt-input-class")).toBe("");
+    expect(dateRangeFilter.attributes("data-pt-root-class")).toBe("");
+    expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("shadow-popover");
+    expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("rounded-md");
   });
 
   it("clears the date range without dropping the other active filters", async () => {
