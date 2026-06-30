@@ -176,10 +176,10 @@ function mountDialog(
             '<button :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Checkbox: {
-          props: ["modelValue", "disabled"],
+          props: ["modelValue", "disabled", "inputId"],
           emits: ["update:modelValue"],
           template:
-            '<input :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
+            '<input :id="inputId" :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
         },
         DatePicker: {
           props: ["modelValue", "dateFormat", "disabled", "inputId", "invalid"],
@@ -287,6 +287,13 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.emitted("update:endedAt")?.[0]?.[0]).toBeInstanceOf(Date);
     expect(wrapper.emitted("update:isBillable")?.[0]).toEqual([false]);
     expect(wrapper.emitted("update:description")?.[0]).toEqual(["Updated description"]);
+  });
+
+  it("associates the billable label with the checkbox input", () => {
+    const wrapper = mountDialog();
+    const billableLabel = wrapper.get('label[for="time-entry-billable"]');
+
+    expect(billableLabel.find("#time-entry-billable").exists()).toBe(true);
   });
 
   it("configures task lookup to suggest all project tasks on empty input", () => {

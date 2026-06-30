@@ -1,6 +1,137 @@
 import { definePreset } from "@primeuix/themes";
 import Aura from "@primeuix/themes/aura";
 
+export const giTiempoAutoCompleteOverlayClass = "overflow-hidden";
+
+export const giTiempoSelfAppendedAutoCompleteOverlayClass = "w-full max-w-full";
+
+export const giTiempoSelfAppendedAutoCompleteOverlayStyle = {
+  boxSizing: "border-box",
+  maxWidth: "100%",
+  minWidth: "100%",
+  width: "100%",
+} as const;
+
+export const giTiempoAutoCompletePt = {
+  listContainer: { class: "max-w-full overflow-x-hidden" },
+  option: { class: "max-w-full min-w-0 truncate" },
+  overlay: {
+    class: giTiempoAutoCompleteOverlayClass,
+  },
+  pcInputText: { root: { class: "truncate" } },
+  root: { class: "relative w-full max-w-full min-w-0" },
+} as const;
+
+type PrimeVuePtSection = {
+  class?: string;
+  style?: Readonly<Record<string, string>>;
+  [attribute: string]: unknown;
+};
+
+type AutoCompleteInputPt = {
+  root?: PrimeVuePtSection;
+};
+
+export type GiTiempoAutoCompletePt = {
+  chip?: PrimeVuePtSection;
+  dropdown?: PrimeVuePtSection;
+  inputMultiple?: PrimeVuePtSection;
+  listContainer?: PrimeVuePtSection;
+  option?: PrimeVuePtSection;
+  overlay?: PrimeVuePtSection;
+  pcInputText?: AutoCompleteInputPt;
+  root?: PrimeVuePtSection;
+};
+
+function mergeClassNames(
+  baseClass: string | undefined,
+  overrideClass: string | undefined,
+): string | undefined {
+  return [baseClass, overrideClass].filter(Boolean).join(" ") || undefined;
+}
+
+function mergeStyles(
+  baseStyle: Readonly<Record<string, string>> | undefined,
+  overrideStyle: Readonly<Record<string, string>> | undefined,
+): Readonly<Record<string, string>> | undefined {
+  const style = {
+    ...(baseStyle ?? {}),
+    ...(overrideStyle ?? {}),
+  };
+
+  return Object.keys(style).length > 0 ? style : undefined;
+}
+
+function mergePtSection(
+  base: PrimeVuePtSection | undefined,
+  override: PrimeVuePtSection | undefined,
+): PrimeVuePtSection | undefined {
+  if (!base) {
+    return override;
+  }
+
+  if (!override) {
+    return base;
+  }
+
+  return {
+    ...base,
+    ...override,
+    class: mergeClassNames(base.class, override.class),
+    style: mergeStyles(base.style, override.style),
+  };
+}
+
+function composeAutoCompletePt(
+  baseline: GiTiempoAutoCompletePt,
+  override: GiTiempoAutoCompletePt,
+): GiTiempoAutoCompletePt {
+  return {
+    ...baseline,
+    ...override,
+    chip: mergePtSection(baseline.chip, override.chip),
+    dropdown: mergePtSection(baseline.dropdown, override.dropdown),
+    inputMultiple: mergePtSection(baseline.inputMultiple, override.inputMultiple),
+    listContainer: mergePtSection(
+      baseline.listContainer,
+      override.listContainer,
+    ),
+    option: mergePtSection(baseline.option, override.option),
+    overlay: mergePtSection(baseline.overlay, override.overlay),
+    pcInputText: {
+      ...baseline.pcInputText,
+      ...override.pcInputText,
+      root: mergePtSection(
+        baseline.pcInputText?.root,
+        override.pcInputText?.root,
+      ),
+    },
+    root: mergePtSection(baseline.root, override.root),
+  };
+}
+
+export function composeGiTiempoAutoCompletePt(
+  override: GiTiempoAutoCompletePt = {},
+): GiTiempoAutoCompletePt {
+  return composeAutoCompletePt(
+    giTiempoAutoCompletePt as GiTiempoAutoCompletePt,
+    override,
+  );
+}
+
+export const giTiempoSelfAppendedAutoCompletePt = composeGiTiempoAutoCompletePt({
+  overlay: {
+    class: giTiempoSelfAppendedAutoCompleteOverlayClass,
+    style: giTiempoSelfAppendedAutoCompleteOverlayStyle,
+  },
+});
+
+export function composeGiTiempoSelfAppendedAutoCompletePt(
+  override: GiTiempoAutoCompletePt = {},
+): GiTiempoAutoCompletePt {
+  return composeAutoCompletePt(giTiempoSelfAppendedAutoCompletePt, override);
+}
+
 export const giTiempoThemePreset = definePreset(Aura, {
   semantic: {
     primary: {
@@ -53,6 +184,9 @@ export const giTiempoThemePreset = definePreset(Aura, {
 });
 
 export const giTiempoPrimeVueOptions = {
+  pt: {
+    autocomplete: giTiempoAutoCompletePt,
+  },
   theme: {
     preset: giTiempoThemePreset,
     options: {

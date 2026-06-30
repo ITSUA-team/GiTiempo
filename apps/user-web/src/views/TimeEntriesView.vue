@@ -3,6 +3,7 @@ import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
 import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
+import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
   createAppConfirm,
   createAppToast,
@@ -153,14 +154,6 @@ const isDeletingDialogEntry = computed(() => {
 
   return !!entry && isDeletingEntry.value === entry.id;
 });
-const filterAutoCompleteOverlayClass = "max-w-[calc(100vw-2rem)]";
-const filterAutoCompletePt = {
-  listContainer: { class: "max-w-full overflow-x-hidden" },
-  option: { class: "max-w-full min-w-0 truncate" },
-  overlay: { class: "max-w-[calc(100vw-2rem)] overflow-hidden" },
-  pcInputText: { root: { class: "truncate" } },
-  root: { class: "max-w-full min-w-0" },
-} as const;
 const projectFilterSuggestions = ref<ProjectResponse[]>([]);
 const startingTimerEntryId = shallowRef<string | null>(null);
 const stoppingTimerEntryId = shallowRef<string | null>(null);
@@ -481,6 +474,8 @@ onBeforeUnmount(() => {
               Project
             </label>
             <AutoComplete
+              append-to="self"
+              class="w-full max-w-full min-w-0"
               input-id="time-entries-project-filter"
               option-label="name"
               placeholder="All projects"
@@ -493,8 +488,7 @@ onBeforeUnmount(() => {
               :loading="isLoadingProjects"
               :min-length="0"
               :model-value="selectedProjectFilterOption"
-              :overlay-class="filterAutoCompleteOverlayClass"
-              :pt="filterAutoCompletePt"
+              :pt="giTiempoSelfAppendedAutoCompletePt"
               fluid
               show-clear
               @complete="handleProjectFilterComplete"
@@ -510,6 +504,8 @@ onBeforeUnmount(() => {
               Task
             </label>
             <AutoComplete
+              append-to="self"
+              class="w-full max-w-full min-w-0"
               input-id="time-entries-task-filter"
               option-label="title"
               placeholder="Search tasks"
@@ -520,8 +516,7 @@ onBeforeUnmount(() => {
               dropdown-mode="blank"
               fluid
               :min-length="0"
-              :overlay-class="filterAutoCompleteOverlayClass"
-              :pt="filterAutoCompletePt"
+              :pt="giTiempoSelfAppendedAutoCompletePt"
               @complete="(event) => void handleFilterTaskSearch(event.query)"
               @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
             />

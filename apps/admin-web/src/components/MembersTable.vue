@@ -6,6 +6,10 @@ import type {
   WorkspaceRole,
 } from '@gitiempo/shared';
 import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
+import {
   EmptyStateBlock,
   EntryActionButton,
   ManagementTableShell,
@@ -111,6 +115,13 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
   emit('update:expandedRows', value);
 }
 
+const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+
 const columns: ManagementTableColumn[] = [
   { key: 'member', label: 'Member', width: 'fill' },
   { key: 'role', label: 'Role', width: 120 },
@@ -164,6 +175,7 @@ function getRoleClass(role: WorkspaceRole): string {
         class="text-text-muted text-[12px] font-medium"
       >Member</label>
       <AutoComplete
+        append-to="self"
         input-id="mobile-member-name-filter"
         :model-value="filters.memberQuery"
         :suggestions="memberQuerySuggestions"
@@ -172,7 +184,7 @@ function getRoleClass(role: WorkspaceRole): string {
         dropdown-mode="blank"
         :min-length="0"
         placeholder="Filter name or email"
-        :pt="managementTableFilterAutoCompletePt"
+        :pt="managementTableSelfAppendedFilterAutoCompletePt"
         @complete="handleMemberQueryComplete"
         @update:model-value="updateMemberQueryFilter"
       />
@@ -399,7 +411,7 @@ function getRoleClass(role: WorkspaceRole): string {
             dropdown-mode="blank"
             :min-length="0"
             placeholder="Filter name or email"
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableFilterAutoCompleteResolvedPt"
             @complete="handleMemberQueryComplete"
             @update:model-value="updateMemberQueryFilter"
           />

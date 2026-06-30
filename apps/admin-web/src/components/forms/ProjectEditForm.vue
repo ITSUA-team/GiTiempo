@@ -5,13 +5,17 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import { WorkspaceRoles } from '@gitiempo/shared';
-import { EditFormPanel, projectEditFormSchema } from '@gitiempo/web-shared';
+import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
+import {
+  EditFormPanel,
+  LabeledCheckbox,
+  projectEditFormSchema,
+} from '@gitiempo/web-shared';
 import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
 import Select from 'primevue/select';
 
 const props = defineProps<{
@@ -37,8 +41,8 @@ const visibilityOptions = [
   { label: 'Private', value: 'private' as const },
 ];
 
-const memberAutoCompletePt = {
-  root: { class: 'min-h-[42px] w-full' },
+const memberAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
+  root: { class: 'min-h-[42px]' },
   pcInputText: {
     root: {
       class: 'min-h-[42px] w-full rounded-[6px] font-sans text-[14px] font-medium',
@@ -49,7 +53,7 @@ const memberAutoCompletePt = {
   },
   chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
   option: { class: 'font-sans text-[14px]' },
-} as const;
+});
 
 interface AutoCompleteCompleteEvent {
   query: string;
@@ -108,6 +112,7 @@ function handleSave({
             class="text-text-dark font-sans text-[12px] leading-none font-medium"
           >Select members</label>
           <AutoComplete
+            append-to="self"
             input-id="edit-members"
             name="memberIds"
             :suggestions="memberSuggestions"
@@ -147,20 +152,13 @@ function handleSave({
           <span class="text-text-dark font-sans text-[13px] leading-none font-medium">
             New task billable default
           </span>
-          <label
-            for="edit-default-billable-for-tasks"
-            class="border-divider bg-surface-primary flex h-[42px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
-          >
-            <Checkbox
-              input-id="edit-default-billable-for-tasks"
-              name="defaultBillableForTasks"
-              binary
-              :disabled="saving"
-            />
-            <span class="text-text-dark text-sm font-medium">
-              Billable by default
-            </span>
-          </label>
+          <LabeledCheckbox
+            input-id="edit-default-billable-for-tasks"
+            label="Billable by default"
+            name="defaultBillableForTasks"
+            root-class="border-divider bg-surface-primary flex h-[42px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
+            :disabled="saving"
+          />
         </div>
 
         <div
