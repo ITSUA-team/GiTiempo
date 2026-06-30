@@ -85,6 +85,7 @@ describe('ReportsFilterForm', () => {
       { label: 'Project', value: 'project' },
       { label: 'Member', value: 'user' },
     ]);
+    expect(wrapper.getComponent({ name: 'DatePicker' }).props('showClear')).toBe(true);
 
     projectFilter.vm.$emit('complete', { query: 'orion' });
     memberFilter.vm.$emit('complete', { query: 'alex' });
@@ -114,5 +115,18 @@ describe('ReportsFilterForm', () => {
       ['33333333-3333-4333-8333-333333333333'],
     ]);
     expect(wrapper.emitted('update:groupBy')).toEqual([['user']]);
+  });
+
+  it('clears the selected date range back to the all-dates state', async () => {
+    const wrapper = mountReportsFilterForm([
+      new Date('2026-05-01T12:00:00.000Z'),
+      new Date('2026-05-02T12:00:00.000Z'),
+    ]);
+
+    await flushPromises();
+
+    await wrapper.getComponent({ name: 'DatePicker' }).vm.$emit('update:modelValue', null);
+
+    expect(wrapper.emitted('update:dateRange')).toEqual([[null]]);
   });
 });

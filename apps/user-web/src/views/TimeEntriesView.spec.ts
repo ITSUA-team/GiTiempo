@@ -318,7 +318,7 @@ async function mountView(
         },
         DatePicker: {
           emits: ["update:modelValue"],
-          props: ["inputId", "modelValue", "showIcon"],
+          props: ["inputId", "modelValue", "showClear", "showIcon"],
           methods: {
             formatRange(value: Date[] | null | undefined): string {
               if (!value?.length) {
@@ -335,12 +335,21 @@ async function mountView(
             },
           },
           template: `
-            <button
-              :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
-              :data-show-icon="String(showIcon === true || showIcon === '')"
-              type="button"
-              @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
-            >{{ formatRange(modelValue) }}</button>
+            <div>
+              <button
+                :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
+                :data-show-clear="String(showClear === true || showClear === '')"
+                :data-show-icon="String(showIcon === true || showIcon === '')"
+                type="button"
+                @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
+              >{{ formatRange(modelValue) }}</button>
+              <button
+                v-if="(showClear === true || showClear === '') && inputId === 'time-entries-date-range' && modelValue?.length"
+                data-testid="date-range-filter-clear"
+                type="button"
+                @click="$emit('update:modelValue', null)"
+              >Clear</button>
+            </div>
           `,
         },
         Paginator: {
@@ -533,6 +542,9 @@ describe("TimeEntriesView", () => {
       taskId: undefined,
     });
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
+    expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-clear")).toBe(
+      "true",
+    );
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
       "true",
     );
@@ -973,6 +985,35 @@ describe("TimeEntriesView", () => {
       search: "Ship admin polish",
       taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
     });
+  });
+
+  it("clears the date range without dropping the other active filters", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="date-range-filter"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-select"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-search"]').trigger("click");
+    await wrapper.get('[data-testid="filter-task-select"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="paginator-page-2"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="date-range-filter-clear"]').trigger("click");
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toEqual({
+      dateFrom: undefined,
+      dateTo: undefined,
+      limit: 20,
+      page: 1,
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
+      search: "Ship admin polish",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
+    });
+    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
   });
 
   it("shows task suggestions from the current filtered entries", async () => {
