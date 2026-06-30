@@ -537,7 +537,7 @@ describe('TasksService', () => {
     const projects = {
       requireVisibleProject: vi.fn().mockResolvedValue(projectRow),
     };
-    const service = new TasksService(db as never, projects as never);
+    const service = createService(db, projects);
 
     await expect(
       service.backfillBillableDefault(user, taskRow.id, {
