@@ -39,7 +39,8 @@ const emit = defineEmits<{
 }>();
 const isMobileViewport = useIsMobileViewport();
 
-const timeEntriesTableBodyRowClass = 'h-[52px] transition-colors';
+const timeEntriesTableBodyRowClass =
+  'border-divider h-[52px] border-b transition-colors last:border-b-0';
 const timeEntriesTableHeaderClass = `${managementTableHeaderClass} min-w-[740px]`;
 
 const columns = [

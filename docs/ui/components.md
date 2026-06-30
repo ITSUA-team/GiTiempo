@@ -124,8 +124,8 @@ if (!result.success) {
 
 Use `<DataTable>` and `<Column>`.
 
-- Header row: `bg-app-bg text-[13px] font-medium uppercase tracking-wide text-text-dark`.
-- Body row: `h-12 border-b border-divider hover:bg-app-bg`.
+- Header row: `bg-app-bg text-[13px] font-semibold text-text-dark`.
+- Body row: `h-12 border-b border-divider last:border-b-0 hover:bg-app-bg`.
 - Searchable admin tables use the PrimeVue DataTable global filter pattern by default: table/card header contains a right-aligned `IconField` + `InputIcon` + `InputText` search control bound to table filter state.
 - Admin table search placeholder copy follows `Search <table label>`, for example `Search members`, `Search projects`, and `Search report rows`. Deferred pages such as invoices must not render temporary search controls before their API contract exists.
 - Admin table search filters the visible table rows using DataTable `globalFilterFields` where native PrimeVue headers are used. When a table uses the shared `ManagementTableShell` with custom headers and hidden native DataTable headers, local computed filtering over the loaded rows is the accepted equivalent. Do not document either pattern as a new backend free-text endpoint unless the API contract is updated separately.
@@ -144,8 +144,8 @@ Use `<DataTable>` and `<Column>`.
   :value="entries"
   :pt="{
     headerCell:
-      'bg-app-bg text-[13px] font-medium uppercase tracking-wide text-text-dark',
-    bodyRow: 'border-b border-divider h-12 hover:bg-app-bg',
+      'bg-app-bg text-[13px] font-semibold text-text-dark',
+    bodyRow: 'border-b border-divider h-12 last:border-b-0 hover:bg-app-bg',
     bodyCell: 'text-sm',
   }"
 />
