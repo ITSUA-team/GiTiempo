@@ -145,6 +145,16 @@ function createOwnEntriesResponse(
   return { items, meta };
 }
 
+function createDeferred<T>() {
+  // eslint-disable-next-line no-unused-vars
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+
+  return { promise, resolve };
+}
+
 function createClientMock(): TimeEntriesClient & {
   backfillTaskBillableDefault: ReturnType<
     typeof vi.fn<TimeEntriesClient['backfillTaskBillableDefault']>
@@ -155,8 +165,14 @@ function createClientMock(): TimeEntriesClient & {
   createTask: ReturnType<typeof vi.fn<TimeEntriesClient['createTask']>>;
   deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient['deleteEntry']>>;
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient['deleteTask']>>;
+  ensureGitHubIssueTask: ReturnType<
+    typeof vi.fn<TimeEntriesClient['ensureGitHubIssueTask']>
+  >;
   getCurrentTimer: ReturnType<
     typeof vi.fn<TimeEntriesClient['getCurrentTimer']>
+  >;
+  listProjectGitHubIssues: ReturnType<
+    typeof vi.fn<TimeEntriesClient['listProjectGitHubIssues']>
   >;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient['listOwnEntries']>>;
   listProjectTimeEntries: ReturnType<
@@ -190,7 +206,14 @@ function createClientMock(): TimeEntriesClient & {
     ),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
+    ensureGitHubIssueTask: vi.fn(async () =>
+      createTask(TEST_IDS.task, TEST_IDS.project, 'GitHub issue'),
+    ),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    listProjectGitHubIssues: vi.fn(async () => ({
+      items: [],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTimeEntries: vi.fn(async () => createOwnEntriesResponse([])),
     listProjectTasks: vi.fn(async () => []),
@@ -324,38 +347,615 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
+      source: 'local',
       taskId: TEST_IDS.task,
       taskTitle: 'Improve reports filters',
     });
+    expect(client.listOwnEntries).toHaveBeenCalledWith({ limit: 1 });
   });
 
-  it('keeps no eligible task context when the latest tracked task is hidden', async () => {
+  it('loads GitHub issues for a GitHub project and materializes the selected issue before start', async () => {
+    const client = createClientMock();
+    const githubProject = {
+      ...createProject(TEST_IDS.project, 'My-test-org-for-clock/test-repo'),
+      source: 'github' as const,
+    };
+    const syncedTask = {
+      ...createTask(TEST_IDS.task, TEST_IDS.project, 'some test issue'),
+      githubIssue: {
+        githubRepo: 'My-test-org-for-clock/test-repo',
+        issueNumber: 1,
+      },
+    };
+    const materializedTask = {
+      ...createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'second test issue'),
+      githubIssue: {
+        githubRepo: 'My-test-org-for-clock/test-repo',
+        issueNumber: 2,
+      },
+    };
+
+    client.listVisibleProjects.mockResolvedValue([githubProject]);
+    client.listProjectTasks.mockResolvedValue([syncedTask]);
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-1',
+          nodeId: 'node-1',
+          number: 1,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'some test issue',
+          updatedAt: '2026-04-21T10:00:00.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/1',
+        },
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'second test issue',
+          updatedAt: '2026-04-21T10:01:00.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+    client.ensureGitHubIssueTask.mockResolvedValue(materializedTask);
+    client.startTimer.mockResolvedValue(
+      createRunningEntry({
+        githubIssue: materializedTask.githubIssue,
+        project: { id: TEST_IDS.project, name: githubProject.name },
+        projectId: TEST_IDS.project,
+        task: { id: TEST_IDS.taskAlt, title: materializedTask.title },
+        taskId: TEST_IDS.taskAlt,
+      }),
+    );
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+    await flushPromises();
+
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.project,
+      { limit: 30, state: 'open' },
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'some test issue',
+      'second test issue',
+    ]);
+
+    const githubIssueOption = topBarTimer.taskOptions.value.find(
+      (task) => task.title === 'second test issue',
+    );
+    expect(githubIssueOption).toBeDefined();
+
+    topBarTimer.setSelectedTaskId(githubIssueOption!.id);
+    await topBarTimer.startTimerFromDialog();
+    await flushPromises();
+
+    expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
+      projectId: TEST_IDS.project,
+      issueNumber: 2,
+    });
+    expect(client.startTimer).toHaveBeenCalledWith({
+      taskId: TEST_IDS.taskAlt,
+    });
+  });
+
+  it('refreshes project source before loading task options so newly connected GitHub projects show issues', async () => {
+    const client = createClientMock();
+    const localTask = createTask(
+      TEST_IDS.task,
+      TEST_IDS.project,
+      'Improve reports filters',
+    );
+    const manualProject = createProject(
+      TEST_IDS.project,
+      'My-test-org-for-clock/test-repo',
+    );
+    const githubProject = {
+      ...manualProject,
+      source: 'github' as const,
+    };
+
+    client.listVisibleProjects
+      .mockResolvedValueOnce([manualProject])
+      .mockResolvedValueOnce([githubProject]);
+    client.listProjectTasks.mockResolvedValue([localTask]);
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'second test issue',
+          updatedAt: '2026-04-21T10:01:00.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(client.listProjectGitHubIssues).not.toHaveBeenCalled();
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Improve reports filters',
+    ]);
+
+    topBarTimer.closeDialog();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(client.listVisibleProjects).toHaveBeenCalledTimes(2);
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.project,
+      { limit: 30, state: 'open' },
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Improve reports filters',
+      'second test issue',
+    ]);
+  });
+
+  it('keeps local task options visible and retries GitHub suggestions after a failed GitHub load', async () => {
+    const client = createClientMock();
+    const githubProject = {
+      ...createProject(TEST_IDS.project, 'My-test-org-for-clock/test-repo'),
+      source: 'github' as const,
+    };
+    const localTask = createTask(
+      TEST_IDS.task,
+      TEST_IDS.project,
+      'Improve reports filters',
+    );
+
+    client.listVisibleProjects.mockResolvedValue([githubProject]);
+    client.listProjectTasks.mockResolvedValue([localTask]);
+    client.listProjectGitHubIssues
+      .mockRejectedValueOnce(new Error('GitHub is temporarily unavailable'))
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'issue-2',
+            nodeId: 'node-2',
+            number: 2,
+            repository: {
+              fullName: 'My-test-org-for-clock/test-repo',
+              name: 'test-repo',
+              owner: 'My-test-org-for-clock',
+            },
+            state: 'open',
+            title: 'second test issue',
+            updatedAt: '2026-04-21T10:01:00.000Z',
+            url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+          },
+        ],
+        pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+      });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(topBarTimer.tasksErrorMessage.value).toBe(
+      'GitHub is temporarily unavailable',
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Improve reports filters',
+    ]);
+
+    topBarTimer.setSelectedProjectId(null);
+    await flushPromises();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledTimes(2);
+    expect(topBarTimer.tasksErrorMessage.value).toBeNull();
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'Improve reports filters',
+      'second test issue',
+    ]);
+  });
+
+  it('keeps the dialog open and skips timer start when GitHub issue materialization fails', async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    const githubProject = {
+      ...createProject(TEST_IDS.project, 'My-test-org-for-clock/test-repo'),
+      source: 'github' as const,
+    };
+
+    client.listVisibleProjects.mockResolvedValue([githubProject]);
+    client.listProjectTasks.mockResolvedValue([]);
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'second test issue',
+          updatedAt: '2026-04-21T10:01:00.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+    client.ensureGitHubIssueTask.mockRejectedValueOnce(
+      new ApiError('GitHub issue is closed', { status: 422 }),
+    );
+
+    const mounted = mountTopBarTimer({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    await flushPromises();
+
+    const githubIssueOption = topBarTimer.taskOptions.value.find(
+      (task) => task.title === 'second test issue',
+    );
+    expect(githubIssueOption).toBeDefined();
+
+    topBarTimer.setSelectedTaskId(githubIssueOption!.id);
+    await topBarTimer.startTimerFromDialog();
+    await flushPromises();
+
+    expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
+      projectId: TEST_IDS.project,
+      issueNumber: 2,
+    });
+    expect(client.startTimer).not.toHaveBeenCalled();
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+    expect(topBarTimer.selectedTaskId.value).toBe(githubIssueOption!.id);
+    expect(topBarTimer.selectionUpdateErrorMessage.value).toBe(
+      'GitHub issue is closed',
+    );
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        summary: 'Could not prepare GitHub issue',
+      }),
+    );
+  });
+
+  it('loads GitHub issues when updating a running timer from an existing GitHub task', async () => {
+    const client = createClientMock();
+    const githubProject = createProject(
+      TEST_IDS.project,
+      'My-test-org-for-clock/test-repo',
+    );
+    const syncedTask = {
+      ...createTask(TEST_IDS.task, TEST_IDS.project, 'some test issue'),
+      githubIssue: {
+        githubRepo: 'My-test-org-for-clock/test-repo',
+        issueNumber: 1,
+      },
+    };
+
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createRunningEntry({
+        githubIssue: syncedTask.githubIssue,
+        project: { id: TEST_IDS.project, name: githubProject.name },
+        projectId: TEST_IDS.project,
+        task: { id: TEST_IDS.task, title: syncedTask.title },
+        taskId: TEST_IDS.task,
+      }),
+    });
+    client.listVisibleProjects.mockResolvedValue([githubProject]);
+    client.listProjectTasks.mockResolvedValue([syncedTask]);
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-3',
+          nodeId: 'node-3',
+          number: 3,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'other issue',
+          updatedAt: '2026-06-25T09:23:27.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/3',
+        },
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'My first issue',
+          updatedAt: '2026-03-16T16:54:23.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+        {
+          id: 'issue-1',
+          nodeId: 'node-1',
+          number: 1,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'some test issue',
+          updatedAt: '2026-03-16T15:18:30.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/1',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+    await flushPromises();
+
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.project,
+      { limit: 30, state: 'open' },
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'some test issue',
+      'other issue',
+      'My first issue',
+    ]);
+  });
+
+  it('loads sibling GitHub issues from the running timer issue when project metadata is stale', async () => {
+    const client = createClientMock();
+    const githubIssue = {
+      githubRepo: 'My-test-org-for-clock/test-repo',
+      issueNumber: 1,
+    };
+    const localTask = createTask(
+      TEST_IDS.task,
+      TEST_IDS.project,
+      'some test issue',
+    );
+    const project = createProject(
+      TEST_IDS.project,
+      'My-test-org-for-clock/test-repo',
+    );
+
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createRunningEntry({
+        githubIssue,
+        project: { id: TEST_IDS.project, name: project.name },
+        projectId: TEST_IDS.project,
+        task: { id: TEST_IDS.task, title: localTask.title },
+        taskId: TEST_IDS.task,
+      }),
+    });
+    client.listVisibleProjects.mockResolvedValue([project]);
+    client.listProjectTasks.mockResolvedValue([localTask]);
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-3',
+          nodeId: 'node-3',
+          number: 3,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'other issue',
+          updatedAt: '2026-06-25T09:23:27.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/3',
+        },
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'My first issue',
+          updatedAt: '2026-03-16T16:54:23.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+        {
+          id: 'issue-1',
+          nodeId: 'node-1',
+          number: 1,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'some test issue',
+          updatedAt: '2026-03-16T15:18:30.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/1',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+    await flushPromises();
+
+    await topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.project,
+      { limit: 30, state: 'open' },
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'some test issue',
+      'other issue',
+      'My first issue',
+    ]);
+  });
+
+  it('does not cache local-only selected project tasks before project metadata loads', async () => {
+    const client = createClientMock();
+    const projectsRequest = createDeferred<ProjectResponse[]>();
+    const syncedTask = {
+      ...createTask(TEST_IDS.task, TEST_IDS.project, 'some test issue'),
+      githubIssue: {
+        githubRepo: 'My-test-org-for-clock/test-repo',
+        issueNumber: 1,
+      },
+    };
+    const githubProject = {
+      ...createProject(TEST_IDS.project, 'My-test-org-for-clock/test-repo'),
+      source: 'github' as const,
+    };
+
+    client.getCurrentTimer.mockResolvedValue({
+      timeEntry: createRunningEntry({
+        githubIssue: syncedTask.githubIssue,
+        project: { id: TEST_IDS.project, name: githubProject.name },
+        projectId: TEST_IDS.project,
+        task: { id: TEST_IDS.task, title: syncedTask.title },
+        taskId: TEST_IDS.task,
+      }),
+    });
+    client.listVisibleProjects.mockReturnValue(projectsRequest.promise);
+    client.listProjectTasks.mockResolvedValue([syncedTask]);
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: 'issue-2',
+          nodeId: 'node-2',
+          number: 2,
+          repository: {
+            fullName: 'My-test-org-for-clock/test-repo',
+            name: 'test-repo',
+            owner: 'My-test-org-for-clock',
+          },
+          state: 'open',
+          title: 'My first issue',
+          updatedAt: '2026-03-16T16:54:23.000Z',
+          url: 'https://github.com/My-test-org-for-clock/test-repo/issues/2',
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+
+    const mounted = mountTopBarTimer({ client });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+    await flushPromises();
+
+    const openDialogPromise = topBarTimer.openDialog();
+    await flushPromises();
+
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.project);
+    expect(client.listProjectGitHubIssues).not.toHaveBeenCalled();
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'some test issue',
+    ]);
+
+    projectsRequest.resolve([githubProject]);
+    await openDialogPromise;
+    await flushPromises();
+
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.project,
+      { limit: 30, state: 'open' },
+    );
+    expect(topBarTimer.taskOptions.value.map((task) => task.title)).toEqual([
+      'some test issue',
+      'My first issue',
+    ]);
+  });
+
+  it('keeps no eligible context when the single most recent entry is hidden', async () => {
     const client = createClientMock();
 
     client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, 'Project Orion'),
     ]);
-    client.listOwnEntries
-      .mockResolvedValueOnce(
-        createOwnEntriesResponse(
-          [
-            createCompletedEntry({
-              task: { id: TEST_IDS.hiddenTask, title: 'Hidden Task' },
-              taskId: TEST_IDS.hiddenTask,
-            }),
-          ],
-          { limit: 1, page: 1, total: 2, totalPages: 2 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        createOwnEntriesResponse(
-          [createCompletedEntry()],
-          { limit: 1, page: 2, total: 2, totalPages: 2 },
-        ),
-      );
-    client.listProjectTasks.mockResolvedValueOnce([
-      createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
-    ]);
+    client.listOwnEntries.mockResolvedValueOnce(
+      createOwnEntriesResponse([
+        createCompletedEntry({
+          project: { id: TEST_IDS.hiddenProject, name: 'Hidden Project' },
+          projectId: TEST_IDS.hiddenProject,
+          task: { id: TEST_IDS.hiddenTask, title: 'Hidden Task' },
+          taskId: TEST_IDS.hiddenTask,
+        }),
+      ], {
+        limit: 1,
+        page: 1,
+        total: 4,
+        totalPages: 4,
+      }),
+    );
 
     const mounted = mountTopBarTimer({ client });
 
@@ -368,7 +968,7 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.selectedContext.value).toBeNull();
     expect(client.listOwnEntries).toHaveBeenCalledTimes(1);
     expect(client.listOwnEntries).toHaveBeenCalledWith({ limit: 1 });
-    expect(client.listProjectTasks).toHaveBeenCalledTimes(1);
+    expect(client.listProjectTasks).not.toHaveBeenCalled();
   });
 
   it('ignores closed tasks when resolving the idle timer context', async () => {
@@ -433,6 +1033,7 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: 'project-1',
       projectName: 'Project Orion',
+      source: 'local',
       taskId: 'task-1',
       taskTitle: 'Improve reports filters',
     });
@@ -549,6 +1150,7 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: 'project-2',
       projectName: 'Project Atlas',
+      source: 'local',
       taskId: 'task-2',
       taskTitle: 'Summarize PM scope changes',
     });
@@ -1033,6 +1635,7 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
+      source: 'local',
       taskId: TEST_IDS.task,
       taskTitle: 'Improve reports filters',
     });
@@ -1110,6 +1713,7 @@ describe('useTopBarTimer', () => {
       githubIssue: null,
       projectId: TEST_IDS.project,
       projectName: 'Project Orion',
+      source: 'local',
       taskId: TEST_IDS.task,
       taskTitle: 'Improve reports filters',
     });

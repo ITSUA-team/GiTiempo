@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type {
   GitHubAuthUrlResponse,
   GitHubConnectionStatusResponse,
+  GitHubIssue,
   GitHubIssueListQuery,
   GitHubOwnerListQuery,
   GitHubOwnerListResponse,
@@ -149,6 +150,26 @@ export class GithubService {
       q: query.q,
       limit: query.limit,
       pageToken: query.pageToken,
+    });
+  }
+
+  async getRepositoryIssue(
+    user: AuthUser,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+  ): Promise<GitHubIssue> {
+    const connection = await this.connectedConnection(user.sub);
+    await this.assertRepositoryOwnerAllowed(
+      user.workspaceId,
+      owner,
+      connection,
+    );
+    return this.apiClient.getRepositoryIssue({
+      accessToken: connection.accessToken,
+      owner,
+      repo,
+      issueNumber,
     });
   }
 

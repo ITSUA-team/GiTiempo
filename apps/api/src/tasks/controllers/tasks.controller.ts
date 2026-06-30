@@ -24,8 +24,13 @@ import {
 import { ZodSerializerDto } from 'nestjs-zod';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../../auth/types/auth-user';
+import {
+  GithubIssueListQueryDto,
+  GithubRepositoryIssueListResponseDto,
+} from '../../github/dto/github-browsing.dto';
 import { BackfillTaskBillableDefaultDto } from '../dto/backfill-task-billable-default.dto';
 import { CreateTaskDto } from '../dto/create-task.dto';
+import { EnsureGitHubIssueTaskDto } from '../dto/ensure-github-issue-task.dto';
 import { TaskBillableDefaultBackfillResponseDto } from '../dto/task-billable-default-backfill-response.dto';
 import { TaskListQueryDto } from '../dto/task-list-query.dto';
 import { TaskListResponseDto } from '../dto/task-list-response.dto';
@@ -53,6 +58,25 @@ export class TasksController {
     return this.tasks.listProjectTasks(user, projectId, query);
   }
 
+  @Get('projects/:projectId/github/issues')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'List GitHub repository issues for a visible GitHub-backed project',
+  })
+  @ApiOkResponse({ type: GithubRepositoryIssueListResponseDto })
+  @ApiNotFoundResponse({
+    description: 'Project or GitHub repository not found',
+  })
+  @ZodSerializerDto(GithubRepositoryIssueListResponseDto)
+  listProjectGitHubIssues(
+    @CurrentUser() user: AuthUser,
+    @Param('projectId') projectId: string,
+    @Query() query: GithubIssueListQueryDto,
+  ): Promise<GithubRepositoryIssueListResponseDto> {
+    return this.tasks.listProjectGitHubIssues(user, projectId, query);
+  }
+
   @Post('projects/:projectId/tasks')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a task in a visible project' })
@@ -66,6 +90,24 @@ export class TasksController {
     @Body() body: CreateTaskDto,
   ): Promise<TaskResponseDto> {
     return this.tasks.createTask(user, projectId, body);
+  }
+
+  @Post('tasks/from-github')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create or reuse a visible task from a GitHub issue',
+  })
+  @ApiCreatedResponse({ type: TaskResponseDto })
+  @ApiNotFoundResponse({
+    description: 'GitHub connection, project, or issue not found',
+  })
+  @ApiUnprocessableEntityResponse({ description: 'Project or task inactive' })
+  @ZodSerializerDto(TaskResponseDto)
+  ensureGitHubIssueTask(
+    @CurrentUser() user: AuthUser,
+    @Body() body: EnsureGitHubIssueTaskDto,
+  ): Promise<TaskResponseDto> {
+    return this.tasks.ensureGitHubIssueTask(user, body);
   }
 
   @Get('tasks/:id')

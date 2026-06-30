@@ -7,7 +7,6 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node"]
