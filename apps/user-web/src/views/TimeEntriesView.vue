@@ -462,6 +462,7 @@ onBeforeUnmount(() => {
               selection-mode="range"
               fluid
               show-icon
+              show-clear
               @update:model-value="(value) => void setDateRange(value as Date[] | null)"
             />
           </div>
