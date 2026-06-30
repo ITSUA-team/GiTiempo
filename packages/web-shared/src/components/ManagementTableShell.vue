@@ -3,7 +3,12 @@ import DataTable from 'primevue/datatable';
 
 import type { DataTableProps } from 'primevue/datatable';
 
-import type { ManagementTableColumn } from './management-table';
+import {
+  managementTableBodyRowClass,
+  managementTableHeaderClass,
+  managementTableShellClass,
+  type ManagementTableColumn,
+} from './management-table';
 
 withDefaults(
   defineProps<{
@@ -21,11 +26,10 @@ withDefaults(
     value: unknown[];
   }>(),
   {
-    bodyRowClass: 'h-[56px] bg-transparent hover:bg-transparent',
-    headerClass:
-      'border-divider bg-app-bg text-text-dark flex h-[44px] items-center border-b font-sans text-[13px] font-semibold',
+    bodyRowClass: managementTableBodyRowClass,
+    headerClass: managementTableHeaderClass,
     rowClass: undefined,
-    shellClass: 'border-divider overflow-hidden rounded-[6px] border',
+    shellClass: managementTableShellClass,
     showHeader: true,
     singleScroll: false,
     tableClass: 'w-full table-fixed border-collapse',

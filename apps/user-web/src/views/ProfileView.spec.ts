@@ -1,7 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import PrimeVue from "primevue/config";
-import { computed, ref, shallowRef } from "vue";
+import type { Component } from "vue";
 import {
   afterAll,
   afterEach,
@@ -12,13 +11,7 @@ import {
   it,
   vi,
 } from "vitest";
-import type * as VueRouterModule from "vue-router";
-import type {
-  GitHubConnectionStatusResponse,
-  UpdateUserInput,
-  UserResponse,
-} from "@gitiempo/shared";
-import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
+import type { UpdateUserInput, UserResponse } from "@gitiempo/shared";
 
 import {
   resetAuthRuntimeForTesting,
@@ -26,56 +19,18 @@ import {
   type AuthRuntime,
 } from "@/services/auth-runtime";
 import { useAuthStore } from "@/stores/auth";
-import { formatLocalTimestampLabel } from "@/lib/time-formatters";
 
-const replaceSpy = vi.fn(async () => undefined);
 const toastAddSpy = vi.fn();
 const mountedWrappers: Array<{ unmount: () => void }> = [];
-
-const githubState = ref<
-  "connected" | "connecting" | "disconnected" | "loading" | "request-error"
->("disconnected");
-const githubConnection = shallowRef<GitHubConnectionStatusResponse | null>({
-  account: null,
-  status: "disconnected",
-});
-const githubRequestErrorMessage = ref<string | null>(null);
-const githubIsConnecting = ref(false);
-const githubIsDisconnecting = ref(false);
-const githubActions = {
-  connect: vi.fn(),
-  refreshConnectionStatus: vi.fn(async () => undefined),
-  requestDisconnect: vi.fn(),
-};
-
-vi.mock("vue-router", async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof VueRouterModule;
-
-  return {
-    ...actual,
-    useRouter: () => ({ replace: replaceSpy }),
-  };
-});
-
-vi.mock("primevue/usetoast", () => ({
-  useToast: () => ({ add: toastAddSpy }),
-}));
-
-vi.mock("@/composables/profile/useProfileGithubConnection", () => ({
-  useProfileGithubConnection: () => ({
-    connect: githubActions.connect,
-    connection: computed(() => githubConnection.value),
-    isConnecting: computed(() => githubIsConnecting.value),
-    isDisconnecting: computed(() => githubIsDisconnecting.value),
-    refreshConnectionStatus: githubActions.refreshConnectionStatus,
-    requestDisconnect: githubActions.requestDisconnect,
-    requestErrorMessage: computed(() => githubRequestErrorMessage.value),
-    state: computed(() => githubState.value),
+const useProfileGithubConnectionMock = vi.hoisted(() =>
+  vi.fn(() => {
+    throw new Error("ProfileView must not own GitHub connection state.");
   }),
-}));
+);
+let ProfileView: Component;
 
-function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
-  const currentUser: UserResponse = {
+function createUserProfile(): UserResponse {
+  return {
     avatarUrl: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     displayName: "Alexey Tsukanov",
@@ -84,6 +39,18 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     role: "member",
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
+}
+
+vi.mock("primevue/usetoast", () => ({
+  useToast: () => ({ add: toastAddSpy }),
+}));
+
+vi.mock("@/composables/profile/useProfileGithubConnection", () => ({
+  useProfileGithubConnection: useProfileGithubConnectionMock,
+}));
+
+function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
+  const currentUser = createUserProfile();
 
   return {
     getCurrentUser: async () => currentUser,
@@ -115,26 +82,20 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
   };
 }
 
-async function mountProfileView() {
+async function mountProfileView(options: { profile?: UserResponse | null } = {}) {
   const pinia = createPinia();
+
   setActivePinia(pinia);
+
   const authStore = useAuthStore();
   authStore.accessToken = "access-token";
-  authStore.profile = {
-    avatarUrl: null,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    displayName: "Alexey Tsukanov",
-    email: "alexey@example.com",
-    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
-    role: "member",
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  };
-
-  const ProfileView = (await import("./ProfileView.vue")).default;
+  authStore.profile = "profile" in options
+    ? options.profile ?? null
+    : createUserProfile();
 
   const wrapper = mount(ProfileView, {
     global: {
-      plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
+      plugins: [pinia],
       stubs: {
         Avatar: {
           props: ["label"],
@@ -158,12 +119,11 @@ async function mountProfileView() {
             />
           `,
         },
+        ProfileGithubConnectionCard: {
+          template: '<section data-testid="profile-github-section">GitHub Connection</section>',
+        },
         Skeleton: { template: '<div data-testid="profile-skeleton" />' },
         SurfaceCard: { template: "<section><slot /></section>" },
-        Tag: {
-          props: ["value"],
-          template: "<span>{{ value }}</span>",
-        },
       },
     },
   });
@@ -177,9 +137,10 @@ async function mountProfileView() {
 }
 
 describe("ProfileView", () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     vi.stubEnv("TZ", "Europe/Kiev");
-  });
+    ProfileView = (await import("./ProfileView.vue")).default;
+  }, 20_000);
 
   afterAll(() => {
     vi.unstubAllEnvs();
@@ -189,25 +150,8 @@ describe("ProfileView", () => {
     resetAuthRuntimeForTesting();
     setAuthRuntimeForTesting(createRuntimeMock());
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    replaceSpy.mockClear();
     toastAddSpy.mockClear();
-    githubActions.connect.mockClear();
-    githubActions.refreshConnectionStatus.mockClear();
-    githubActions.requestDisconnect.mockClear();
-    githubState.value = "connected";
-    githubConnection.value = {
-      account: {
-        avatarUrl: null,
-        connectedAt: "2026-05-01T10:15:00.000Z",
-        githubUserId: "123456",
-        login: "alexeytsukanov",
-        updatedAt: "2026-05-04T08:45:00.000Z",
-      },
-      status: "connected",
-    };
-    githubIsConnecting.value = false;
-    githubIsDisconnecting.value = false;
-    githubRequestErrorMessage.value = null;
+    useProfileGithubConnectionMock.mockClear();
   });
 
   afterEach(() => {
@@ -216,27 +160,41 @@ describe("ProfileView", () => {
     }
   });
 
-  it(
-    "wires the identity form and GitHub surface without a duplicate sign-out action",
-    async () => {
-      const { wrapper } = await mountProfileView();
-      const text = wrapper.text();
-      const connectedAt = "2026-05-01T10:15:00.000Z";
-      const updatedAt = "2026-05-04T08:45:00.000Z";
+  it("renders full profile skeletons while the profile prerequisite loads", async () => {
+    const { wrapper } = await mountProfileView({ profile: null });
 
-      expect(text).not.toContain("Manage your personal settings and session access.");
-      expect(text).toContain("GitHub Connection");
-      expect(text).toContain("Connected at");
-      expect(text).toContain(formatLocalTimestampLabel(connectedAt));
-      expect(text).toContain("Updated at");
-      expect(text).toContain(formatLocalTimestampLabel(updatedAt));
-      expect(text).not.toContain("2026-05-01T10:15:00.000Z");
-      expect(text).not.toContain("2026-05-04T08:45:00.000Z");
-      expect(text).not.toContain("Avatar");
-      expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);
-    },
-    20_000,
-  );
+    expect(wrapper.find('[data-testid="profile-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-form-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-github-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-display-name-input"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="profile-email-input"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="profile-github-section"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("Alexey Tsukanov");
+    expect(wrapper.text()).not.toContain("GitHub Connection");
+    expect(useProfileGithubConnectionMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps page rendering independent from GitHub section state", async () => {
+    const { wrapper } = await mountProfileView();
+
+    expect(wrapper.find('[data-testid="profile-loading"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="profile-display-name-input"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-email-input"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="profile-github-section"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain("Alexey Tsukanov");
+    expect(wrapper.text()).toContain("GitHub Connection");
+    expect(useProfileGithubConnectionMock).not.toHaveBeenCalled();
+  });
+
+  it("wires the identity form without a duplicate sign-out action", async () => {
+    const { wrapper } = await mountProfileView();
+    const text = wrapper.text();
+
+    expect(text).not.toContain("Manage your personal settings and session access.");
+    expect(text).toContain("GitHub Connection");
+    expect(text).not.toContain("Avatar");
+    expect(wrapper.find('[data-testid="profile-signout"]').exists()).toBe(false);
+  });
 
   it("saves a new display name, updates the rendered identity, and shows a success toast", async () => {
     const { authStore, wrapper } = await mountProfileView();

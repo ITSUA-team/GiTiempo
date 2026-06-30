@@ -39,14 +39,37 @@ interface ExtensionApiClientOptions {
 
 /* eslint-enable no-unused-vars */
 
-function getResponseErrorMessage(status: number, body: unknown): string {
-  if (body && typeof body === "object") {
-    const payload = body as { error?: string; message?: string };
+const API_UNAVAILABLE_ERROR_MESSAGE =
+  "GiTiempo API is temporarily unavailable. Please try again in a moment.";
+const API_UNREACHABLE_ERROR_MESSAGE =
+  "Unable to reach GiTiempo API. Check your connection and try again.";
 
-    return payload.message ?? payload.error ?? `Request failed with ${status}`;
+function getDefaultResponseErrorMessage(status: number): string {
+  if ([502, 503, 504].includes(status)) {
+    return API_UNAVAILABLE_ERROR_MESSAGE;
   }
 
   return `Request failed with ${status}`;
+}
+
+function getResponseErrorMessage(status: number, body: unknown): string {
+  if ([502, 503, 504].includes(status)) {
+    return API_UNAVAILABLE_ERROR_MESSAGE;
+  }
+
+  if (body && typeof body === "object") {
+    const payload = body as { error?: string; message?: string };
+
+    if (typeof payload.message === "string" && payload.message.trim().length > 0) {
+      return payload.message;
+    }
+
+    if (typeof payload.error === "string" && payload.error.trim().length > 0) {
+      return payload.error;
+    }
+  }
+
+  return getDefaultResponseErrorMessage(status);
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown> {
@@ -61,6 +84,16 @@ function getRequestUrl(config: ExtensionConfig, path: string): string {
   return `${config.apiBaseUrl}${path}`;
 }
 
+async function fetchWithHandledNetworkError(
+  fetcher: () => Promise<Response>,
+): Promise<Response> {
+  try {
+    return await fetcher();
+  } catch {
+    throw new Error(API_UNREACHABLE_ERROR_MESSAGE);
+  }
+}
+
 export function createExtensionApiClient({
   config,
   fetchFn = globalThis.fetch.bind(globalThis),
@@ -71,13 +104,15 @@ export function createExtensionApiClient({
   async function loginWithFirebaseToken(
     firebaseIdToken: string,
   ): Promise<TokenPairResponse> {
-    const response = await fetchFn(getRequestUrl(config, "/auth/login"), {
-      body: JSON.stringify(loginRequestSchema.parse({ firebaseIdToken })),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-    });
+    const response = await fetchWithHandledNetworkError(() =>
+      fetchFn(getRequestUrl(config, "/auth/login"), {
+        body: JSON.stringify(loginRequestSchema.parse({ firebaseIdToken })),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }),
+    );
     const body = await parseJsonResponse(response);
 
     if (!response.ok) {
@@ -143,16 +178,18 @@ export function createExtensionApiClient({
     }
 
     const makeRequest = async (accessToken: string): Promise<Response> =>
-      fetchFn(getRequestUrl(config, options.path), {
-        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          ...(options.body !== undefined
-            ? { "Content-Type": "application/json" }
-            : {}),
-        },
-        method: options.method ?? "GET",
-      });
+      fetchWithHandledNetworkError(() =>
+        fetchFn(getRequestUrl(config, options.path), {
+          body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            ...(options.body !== undefined
+              ? { "Content-Type": "application/json" }
+              : {}),
+          },
+          method: options.method ?? "GET",
+        }),
+      );
 
     let response = await makeRequest(session.accessToken);
     let body = await parseJsonResponse(response);

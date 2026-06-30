@@ -2,7 +2,6 @@
 import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
 import Paginator from "primevue/paginator";
-import ProgressSpinner from "primevue/progressspinner";
 import type { ProjectResponse, TimeEntryResponse } from "@gitiempo/shared";
 import {
   createAppConfirm,
@@ -20,6 +19,7 @@ import { useToast } from "primevue/usetoast";
 import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import TimeEntriesDaySection from "@/components/time-entries/TimeEntriesDaySection.vue";
+import TimeEntriesLoadingState from "@/components/time-entries/TimeEntriesLoadingState.vue";
 import TimeEntryDialog from "@/components/time-entries/TimeEntryDialog.vue";
 import {
   isGitHubIssueTaskLookupOption,
@@ -463,171 +463,162 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="flex flex-col gap-6 pb-20 sm:pb-0">
-    <SurfaceCard
-      body-class="flex flex-col gap-3"
-      padding-class="p-4"
-    >
-      <div class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
-        <div class="flex flex-col gap-1">
-          <label
-            for="time-entries-date-range"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Date range
-          </label>
-          <DatePicker
-            date-format="M d, yy"
-            input-id="time-entries-date-range"
-            :manual-input="false"
-            :model-value="selectedDateRange"
-            selection-mode="range"
-            fluid
-            show-icon
-            @update:model-value="(value) => void setDateRange(value as Date[] | null)"
-          />
-        </div>
+    <TimeEntriesLoadingState v-if="pageState === 'loading'" />
 
-        <div class="flex flex-col gap-1">
-          <label
-            for="time-entries-project-filter"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Project
-          </label>
-          <AutoComplete
-            input-id="time-entries-project-filter"
-            option-label="name"
-            placeholder="All projects"
-            :suggestions="projectFilterSuggestions"
-            complete-on-focus
-            :disabled="isLoadingProjects"
-            dropdown
-            dropdown-mode="blank"
-            force-selection
-            :loading="isLoadingProjects"
-            :min-length="0"
-            :model-value="selectedProjectFilterOption"
-            :overlay-class="filterAutoCompleteOverlayClass"
-            :pt="filterAutoCompletePt"
-            fluid
-            show-clear
-            @complete="handleProjectFilterComplete"
-            @update:model-value="(value) => void setSelectedProjectFilterValue((value ?? null) as ProjectResponse | string | null)"
-          />
-        </div>
-
-        <div class="flex flex-col gap-1">
-          <label
-            for="time-entries-task-filter"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            Task
-          </label>
-          <AutoComplete
-            input-id="time-entries-task-filter"
-            option-label="title"
-            placeholder="Search tasks"
-            :model-value="selectedTaskFilter"
-            :suggestions="filterTaskSuggestions"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
-            fluid
-            :min-length="0"
-            :overlay-class="filterAutoCompleteOverlayClass"
-            :pt="filterAutoCompletePt"
-            @complete="(event) => void handleFilterTaskSearch(event.query)"
-            @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
-          />
-        </div>
-      </div>
-
-      <p
-        v-if="projectsErrorMessage"
-        class="text-destructive text-xs"
-      >
-        {{ projectsErrorMessage }}
-      </p>
-    </SurfaceCard>
-
-    <SurfaceCard
-      v-if="pageState === 'loading'"
-      body-class="flex min-h-52 flex-col items-center justify-center gap-3"
-    >
-      <ProgressSpinner
-        stroke-width="3"
-        style="width:32px;height:32px"
-      />
-      <p class="text-text-muted text-sm">
-        Loading your time entries.
-      </p>
-    </SurfaceCard>
-
-    <RequestStateCard
-      v-else-if="pageState === 'request-error'"
-      data-testid="time-entries-request-error"
-      :description="requestErrorMessage"
-      retry-label="Retry"
-      title="Could not load time entries"
-      @retry="void retryLoadEntries()"
-    />
-
-    <RequestStateCard
-      v-else-if="pageState === 'empty'"
-      data-testid="time-entries-empty-state"
-      description="Add a new time entry or adjust the current filters."
-      title="No time entries match these filters"
-    >
-      <template #actions>
-        <EntryActionButton
-          :icon="PlusIcon"
-          label="New time entry"
-          @click="void openCreateDialog()"
-        />
-      </template>
-    </RequestStateCard>
-
-    <div
-      v-else
-      class="flex flex-col gap-5"
-      data-testid="time-entries-groups"
-    >
-      <TimeEntriesDaySection
-        v-for="(group, groupIndex) in groupedEntries"
-        :key="group.dateKey"
-        :format-duration="formatDuration"
-        :format-time-range="formatTimeRange"
-        :group="group"
-        :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
-        :show-header="groupIndex === 0"
-        :starting-timer-entry-id="startingTimerEntryId"
-        :stopping-timer-entry-id="stoppingTimerEntryId"
-        @create-for-day="(day) => void openCreateDialog(day)"
-        @edit-entry="(entry) => void openEditDialog(entry)"
-        @open-active-timer="openActiveTimerDialog"
-        @start-timer="(entry) => void startTimerForEntry(entry)"
-        @stop-timer="(entry) => void stopTimerForEntry(entry)"
-      />
-
+    <template v-else>
       <SurfaceCard
-        border
-        body-class="flex items-center justify-between gap-4"
-        padding-class="p-3 sm:p-4"
+        body-class="flex flex-col gap-3"
+        padding-class="p-4"
       >
-        <p class="text-text-muted text-[13px]">
-          Showing {{ entries.length ? (currentPage - 1) * pageSize + 1 : 0 }} to
-          {{ (currentPage - 1) * pageSize + entries.length }} of {{ totalRecords }}
+        <div class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
+          <div class="flex flex-col gap-1">
+            <label
+              for="time-entries-date-range"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              Date range
+            </label>
+            <DatePicker
+              date-format="M d, yy"
+              input-id="time-entries-date-range"
+              :manual-input="false"
+              :model-value="selectedDateRange"
+              selection-mode="range"
+              fluid
+              show-icon
+              @update:model-value="(value) => void setDateRange(value as Date[] | null)"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label
+              for="time-entries-project-filter"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              Project
+            </label>
+            <AutoComplete
+              input-id="time-entries-project-filter"
+              option-label="name"
+              placeholder="All projects"
+              :suggestions="projectFilterSuggestions"
+              complete-on-focus
+              :disabled="isLoadingProjects"
+              dropdown
+              dropdown-mode="blank"
+              force-selection
+              :loading="isLoadingProjects"
+              :min-length="0"
+              :model-value="selectedProjectFilterOption"
+              :overlay-class="filterAutoCompleteOverlayClass"
+              :pt="filterAutoCompletePt"
+              fluid
+              show-clear
+              @complete="handleProjectFilterComplete"
+              @update:model-value="(value) => void setSelectedProjectFilterValue((value ?? null) as ProjectResponse | string | null)"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label
+              for="time-entries-task-filter"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              Task
+            </label>
+            <AutoComplete
+              input-id="time-entries-task-filter"
+              option-label="title"
+              placeholder="Search tasks"
+              :model-value="selectedTaskFilter"
+              :suggestions="filterTaskSuggestions"
+              complete-on-focus
+              dropdown
+              dropdown-mode="blank"
+              fluid
+              :min-length="0"
+              :overlay-class="filterAutoCompleteOverlayClass"
+              :pt="filterAutoCompletePt"
+              @complete="(event) => void handleFilterTaskSearch(event.query)"
+              @update:model-value="(value) => void setSelectedTaskFilter(value ?? null)"
+            />
+          </div>
+        </div>
+
+        <p
+          v-if="projectsErrorMessage"
+          class="text-destructive text-xs"
+        >
+          {{ projectsErrorMessage }}
         </p>
-        <Paginator
-          :first="(currentPage - 1) * pageSize"
-          :rows="pageSize"
-          :total-records="totalRecords"
-          current-page-report-template="Showing {first} to {last} of {totalRecords}"
-          template="PrevPageLink PageLinks NextPageLink"
-          @page="({ page }) => void setPage(page + 1)"
-        />
       </SurfaceCard>
-    </div>
+
+      <RequestStateCard
+        v-if="pageState === 'request-error'"
+        data-testid="time-entries-request-error"
+        :description="requestErrorMessage"
+        retry-label="Retry"
+        title="Could not load time entries"
+        @retry="void retryLoadEntries()"
+      />
+
+      <RequestStateCard
+        v-else-if="pageState === 'empty'"
+        data-testid="time-entries-empty-state"
+        description="Add a new time entry or adjust the current filters."
+        title="No time entries match these filters"
+      >
+        <template #actions>
+          <EntryActionButton
+            :icon="PlusIcon"
+            label="New time entry"
+            @click="void openCreateDialog()"
+          />
+        </template>
+      </RequestStateCard>
+
+      <div
+        v-else
+        class="flex flex-col gap-5"
+        data-testid="time-entries-groups"
+      >
+        <TimeEntriesDaySection
+          v-for="(group, groupIndex) in groupedEntries"
+          :key="group.dateKey"
+          :format-duration="formatDuration"
+          :format-time-range="formatTimeRange"
+          :group="group"
+          :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
+          :show-header="groupIndex === 0"
+          :starting-timer-entry-id="startingTimerEntryId"
+          :stopping-timer-entry-id="stoppingTimerEntryId"
+          @create-for-day="(day) => void openCreateDialog(day)"
+          @edit-entry="(entry) => void openEditDialog(entry)"
+          @open-active-timer="openActiveTimerDialog"
+          @start-timer="(entry) => void startTimerForEntry(entry)"
+          @stop-timer="(entry) => void stopTimerForEntry(entry)"
+        />
+
+        <SurfaceCard
+          border
+          body-class="flex items-center justify-between gap-4"
+          padding-class="p-3 sm:p-4"
+        >
+          <p class="text-text-muted text-[13px]">
+            Showing {{ entries.length ? (currentPage - 1) * pageSize + 1 : 0 }} to
+            {{ (currentPage - 1) * pageSize + entries.length }} of {{ totalRecords }}
+          </p>
+          <Paginator
+            :first="(currentPage - 1) * pageSize"
+            :rows="pageSize"
+            :total-records="totalRecords"
+            current-page-report-template="Showing {first} to {last} of {totalRecords}"
+            template="PrevPageLink PageLinks NextPageLink"
+            @page="({ page }) => void setPage(page + 1)"
+          />
+        </SurfaceCard>
+      </div>
+    </template>
 
     <TimeEntryDialog
       :dialog-error-message="dialogRequestErrorMessage"

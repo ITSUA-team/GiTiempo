@@ -4,27 +4,24 @@ import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Skeleton from "primevue/skeleton";
 import Tag from "primevue/tag";
-import type { GitHubConnectionStatusResponse } from "@gitiempo/shared";
 
 import SurfaceCard from "@/components/layout/SurfaceCard.vue";
+import { useProfileGithubConnection } from "@/composables/profile/useProfileGithubConnection";
 import { formatLocalTimestampLabel } from "@/lib/time-formatters";
 
-const props = defineProps<{
-  isConnecting: boolean;
-  isDisconnecting: boolean;
-  requestErrorMessage: string | null;
-  status: "connected" | "connecting" | "disconnected" | "loading" | "request-error";
-  value: GitHubConnectionStatusResponse | null;
-}>();
-
-const emit = defineEmits<{
-  connect: [];
-  disconnect: [];
-  refresh: [];
-}>();
+const {
+  connect,
+  connection,
+  isConnecting,
+  isDisconnecting,
+  refreshConnectionStatus,
+  requestDisconnect,
+  requestErrorMessage,
+  state,
+} = useProfileGithubConnection();
 
 const statusTagConfig = computed(() => {
-  switch (props.status) {
+  switch (state.value) {
     case "connected":
       return {
         ptRoot:
@@ -60,13 +57,13 @@ const statusTagConfig = computed(() => {
 });
 
 const connectedAtLabel = computed(() =>
-  props.value?.status === "connected"
-    ? formatLocalTimestampLabel(props.value.account.connectedAt)
+  connection.value?.status === "connected"
+    ? formatLocalTimestampLabel(connection.value.account.connectedAt)
     : "",
 );
 const updatedAtLabel = computed(() =>
-  props.value?.status === "connected"
-    ? formatLocalTimestampLabel(props.value.account.updatedAt)
+  connection.value?.status === "connected"
+    ? formatLocalTimestampLabel(connection.value.account.updatedAt)
     : "",
 );
 </script>
@@ -95,7 +92,7 @@ const updatedAtLabel = computed(() =>
       />
     </div>
 
-    <template v-if="props.status === 'loading'">
+    <template v-if="state === 'loading'">
       <div class="flex flex-col gap-4">
         <Skeleton
           height="1rem"
@@ -117,7 +114,7 @@ const updatedAtLabel = computed(() =>
       </div>
     </template>
 
-    <template v-else-if="props.status === 'connected' && props.value?.status === 'connected'">
+    <template v-else-if="state === 'connected' && connection?.status === 'connected'">
       <dl
         class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 text-xs sm:items-start"
       >
@@ -125,23 +122,23 @@ const updatedAtLabel = computed(() =>
           GitHub user ID
         </dt>
         <dd class="text-text-dark m-0 text-left font-medium sm:text-right">
-          {{ props.value.account.githubUserId }}
+          {{ connection.account.githubUserId }}
         </dd>
 
         <dt class="text-text-muted">
           Login
         </dt>
         <dd class="text-text-dark m-0 text-left font-medium sm:text-right">
-          {{ props.value.account.login }}
+          {{ connection.account.login }}
         </dd>
 
-        <template v-if="props.value.account.avatarUrl">
+        <template v-if="connection.account.avatarUrl">
           <dt class="text-text-muted">
             Avatar
           </dt>
           <dd class="text-text-dark m-0 flex text-left sm:justify-end">
             <Avatar
-              :image="props.value.account.avatarUrl"
+              :image="connection.account.avatarUrl"
               shape="circle"
               class="size-8"
             />
@@ -170,9 +167,9 @@ const updatedAtLabel = computed(() =>
           severity="secondary"
           variant="outlined"
           size="small"
-          :disabled="props.isDisconnecting"
-          :loading="props.isConnecting"
-          @click="emit('connect')"
+          :disabled="isDisconnecting"
+          :loading="isConnecting"
+          @click="connect"
         />
         <Button
           type="button"
@@ -180,14 +177,14 @@ const updatedAtLabel = computed(() =>
           severity="danger"
           variant="outlined"
           size="small"
-          :disabled="props.isConnecting"
-          :loading="props.isDisconnecting"
-          @click="emit('disconnect')"
+          :disabled="isConnecting"
+          :loading="isDisconnecting"
+          @click="requestDisconnect"
         />
       </div>
     </template>
 
-    <template v-else-if="props.status === 'connecting'">
+    <template v-else-if="state === 'connecting'">
       <p class="text-text-muted text-sm leading-5">
         The app is preparing your GitHub authorization flow and redirecting
         you to GitHub.
@@ -206,13 +203,13 @@ const updatedAtLabel = computed(() =>
       </div>
     </template>
 
-    <template v-else-if="props.status === 'request-error'">
+    <template v-else-if="state === 'request-error'">
       <p class="text-text-muted text-sm leading-5">
         The last GitHub request failed. Retry the action or reconnect your
         account.
       </p>
       <p class="text-text-muted text-sm leading-5">
-        {{ props.requestErrorMessage ?? 'Retry the request or start a fresh connection flow.' }}
+        {{ requestErrorMessage ?? 'Retry the request or start a fresh connection flow.' }}
       </p>
       <div class="flex flex-wrap justify-end gap-2">
         <Button
@@ -221,14 +218,14 @@ const updatedAtLabel = computed(() =>
           severity="secondary"
           variant="outlined"
           size="small"
-          @click="emit('refresh')"
+          @click="refreshConnectionStatus"
         />
         <Button
           type="button"
           label="Connect GitHub"
           size="small"
-          :loading="props.isConnecting"
-          @click="emit('connect')"
+          :loading="isConnecting"
+          @click="connect"
         />
       </div>
     </template>
@@ -244,14 +241,14 @@ const updatedAtLabel = computed(() =>
           severity="secondary"
           variant="outlined"
           size="small"
-          @click="emit('refresh')"
+          @click="refreshConnectionStatus"
         />
         <Button
           type="button"
           label="Connect GitHub"
           size="small"
-          :loading="props.isConnecting"
-          @click="emit('connect')"
+          :loading="isConnecting"
+          @click="connect"
         />
       </div>
     </template>
