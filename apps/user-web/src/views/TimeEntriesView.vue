@@ -44,7 +44,10 @@ import {
   useTimeEntryDialog,
   type ValidatedTimeEntryDialogInput,
 } from "@/composables/time-entries/useTimeEntryDialog";
-import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
+import {
+  useTimeEntryFilters,
+  type TimeEntryDatePickerRangeValue,
+} from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
@@ -198,6 +201,15 @@ const filteredEntryTaskOptions = computed<TaskLookupOption[]>(() => {
 
   return [...optionsByTaskId.values()];
 });
+const datePickerPt = {
+  root: { class: "w-full" },
+  pcInputText: {
+    root: {
+      class:
+        "border-divider bg-surface-primary h-[38px] rounded-[6px] border px-3 text-[14px] font-medium text-text-dark shadow-none",
+    },
+  },
+} as const;
 
 function getProjectDefaultBillable(projectId: string | null): boolean {
   return (
@@ -225,9 +237,15 @@ async function applyFilters(): Promise<void> {
   await data.loadEntries();
 }
 
-async function setDateRange(range: Date[] | null): Promise<void> {
+async function setDateRange(
+  range: TimeEntryDatePickerRangeValue,
+): Promise<void> {
   filters.setDateRange(range);
   await applyFilters();
+}
+
+function handleDateRangeUpdate(value: TimeEntryDatePickerRangeValue): void {
+  void setDateRange(value);
 }
 
 async function setSelectedProjectId(projectId: string | null): Promise<void> {
@@ -579,11 +597,14 @@ onBeforeUnmount(() => {
               input-id="time-entries-date-range"
               :manual-input="false"
               :model-value="selectedDateRange"
+              placeholder="All dates"
               selection-mode="range"
               fluid
+              show-button-bar
               show-icon
               show-clear
-              @update:model-value="(value) => void setDateRange(value as Date[] | null)"
+              :pt="datePickerPt"
+              @update:model-value="handleDateRangeUpdate"
             />
           </div>
 
