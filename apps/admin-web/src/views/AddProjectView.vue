@@ -9,9 +9,12 @@ import {
   Form,
 } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
-import { createProjectFormSchema, type CreateProjectFormInput } from '@gitiempo/web-shared';
+import {
+  createProjectFormSchema,
+  LabeledCheckbox,
+  type CreateProjectFormInput,
+} from '@gitiempo/web-shared';
 import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 
@@ -239,20 +242,14 @@ onMounted(loadMembers);
               <span class="text-text-dark text-[13px] font-medium">
                 Default billable for new tasks
               </span>
-              <label
-                for="default-billable-for-tasks"
-                class="border-divider bg-surface-primary flex h-[34px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
-              >
-                <Checkbox
-                  input-id="default-billable-for-tasks"
-                  name="defaultBillableForTasks"
-                  binary
-                  :disabled="isSubmitting"
-                />
-                <span class="text-text-dark text-[14px] font-medium">
-                  Billable by default
-                </span>
-              </label>
+              <LabeledCheckbox
+                input-id="default-billable-for-tasks"
+                label="Billable by default"
+                label-class="text-text-dark text-[14px] font-medium"
+                name="defaultBillableForTasks"
+                root-class="border-divider bg-surface-primary flex h-[34px] cursor-pointer items-center gap-2.5 rounded-[6px] border px-3"
+                :disabled="isSubmitting"
+              />
               <small class="text-text-muted text-xs">
                 New tasks in this project inherit this value unless changed later.
               </small>

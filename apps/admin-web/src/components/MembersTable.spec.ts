@@ -7,7 +7,10 @@ import type {
   WorkspaceRole,
 } from '@gitiempo/shared';
 import { ManagementTableShell } from '@gitiempo/web-shared';
-import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import {
+  giTiempoPrimeVueOptions,
+  giTiempoSelfAppendedAutoCompleteOverlayStyle,
+} from '@gitiempo/web-config/theme';
 import AutoComplete from 'primevue/autocomplete';
 import MultiSelect from 'primevue/multiselect';
 import PrimeVue from 'primevue/config';
@@ -22,6 +25,13 @@ import type {
 } from '@/lib/members-table';
 
 import MembersTable from './MembersTable.vue';
+
+type AutoCompletePt = {
+  overlay?: {
+    class?: string;
+    style?: unknown;
+  };
+};
 
 const defaultFilters: MembersTableFilters = {
   global: '',
@@ -209,6 +219,10 @@ describe('MembersTable', () => {
     expect(autoCompleteFilters).toHaveLength(1);
     expect(memberQueryFilter.props('dropdown')).toBe(true);
     expect(memberQueryFilter.props('completeOnFocus')).toBe(true);
+    expect(memberQueryFilter.props('appendTo')).not.toBe('self');
+    expect((memberQueryFilter.props('pt') as AutoCompletePt).overlay).toEqual({
+      class: 'overflow-hidden',
+    });
     expect(projectFilter.props('display')).toBe('chip');
     expect(projectFilter.props('filter')).toBe(true);
     expect(projectFilter.props('modelValue')).toEqual([]);
@@ -278,6 +292,10 @@ describe('MembersTable', () => {
     const projectFilter = wrapper.getComponent(MultiSelect);
 
     expect(memberQueryFilter.props('placeholder')).toBe('Filter name or email');
+    expect(memberQueryFilter.props('appendTo')).toBe('self');
+    expect((memberQueryFilter.props('pt') as AutoCompletePt).overlay?.style).toEqual(
+      giTiempoSelfAppendedAutoCompleteOverlayStyle,
+    );
     expect(projectFilter.props('placeholder')).toBe('All projects');
 
     await memberQueryFilter.vm.$emit('update:modelValue', 'alex');

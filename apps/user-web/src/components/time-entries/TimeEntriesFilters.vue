@@ -2,6 +2,7 @@
 import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
 import type { ProjectResponse } from "@gitiempo/shared";
+import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import { SurfaceCard } from "@gitiempo/web-shared";
 
 import type {
@@ -28,15 +29,6 @@ const emit = defineEmits<{
   "update:projectValue": [value: ProjectResponse | string | null];
   "update:taskValue": [value: TaskLookupValue];
 }>();
-
-const filterAutoCompleteOverlayClass = "max-w-[calc(100vw-2rem)]";
-const filterAutoCompletePt = {
-  listContainer: { class: "max-w-full overflow-x-hidden" },
-  option: { class: "max-w-full min-w-0 truncate" },
-  overlay: { class: "max-w-[calc(100vw-2rem)] overflow-hidden" },
-  pcInputText: { root: { class: "truncate" } },
-  root: { class: "max-w-full min-w-0" },
-} as const;
 
 function emitProjectComplete(event: { query: string }): void {
   emit("projectComplete", event.query);
@@ -106,6 +98,8 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           Project
         </label>
         <AutoComplete
+          append-to="self"
+          class="w-full max-w-full min-w-0"
           input-id="time-entries-project-filter"
           option-label="name"
           placeholder="All projects"
@@ -118,8 +112,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           :loading="isLoadingProjects"
           :min-length="0"
           :model-value="selectedProject"
-          :overlay-class="filterAutoCompleteOverlayClass"
-          :pt="filterAutoCompletePt"
+          :pt="giTiempoSelfAppendedAutoCompletePt"
           fluid
           show-clear
           @complete="emitProjectComplete"
@@ -135,6 +128,8 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           Task
         </label>
         <AutoComplete
+          append-to="self"
+          class="w-full max-w-full min-w-0"
           input-id="time-entries-task-filter"
           option-label="title"
           placeholder="Search tasks"
@@ -145,8 +140,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           dropdown-mode="blank"
           fluid
           :min-length="0"
-          :overlay-class="filterAutoCompleteOverlayClass"
-          :pt="filterAutoCompletePt"
+          :pt="giTiempoSelfAppendedAutoCompletePt"
           @complete="emitTaskSearch"
           @update:model-value="updateTaskValue"
         />

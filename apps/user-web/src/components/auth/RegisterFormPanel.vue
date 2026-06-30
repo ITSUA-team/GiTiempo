@@ -2,8 +2,8 @@
 import { Form, type FormSubmitEvent } from "@primevue/forms";
 import { zodResolver } from "@primevue/forms/resolvers/zod";
 import { RouterLink } from "vue-router";
+import { LabeledCheckbox } from "@gitiempo/web-shared";
 import Button from "primevue/button";
-import Checkbox from "primevue/checkbox";
 import InputText from "primevue/inputtext";
 import Message from "primevue/message";
 import Password from "primevue/password";
@@ -213,22 +213,15 @@ function handleSubmit(event: FormSubmitEvent): void {
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <label
-          for="register-owner-acknowledgement"
-          class="border-divider bg-surface-primary flex items-start gap-3 rounded-lg border px-3 py-2.5"
-        >
-          <Checkbox
-            id="register-owner-acknowledgement"
-            name="ownerAcknowledgement"
-            binary
-            input-id="register-owner-acknowledgement"
-            :invalid="$form.ownerAcknowledgement?.invalid || !!fieldErrors.ownerAcknowledgement"
-            data-testid="register-owner-acknowledgement"
-          />
-          <span class="text-text-muted text-[13px] leading-5">
-            I agree to receive workspace email and accept the workspace owner responsibility.
-          </span>
-        </label>
+        <LabeledCheckbox
+          input-id="register-owner-acknowledgement"
+          input-test-id="register-owner-acknowledgement"
+          label="I agree to receive workspace email and accept the workspace owner responsibility."
+          label-class="text-text-muted text-[13px] leading-5"
+          name="ownerAcknowledgement"
+          root-class="border-divider bg-surface-primary flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5"
+          :invalid="$form.ownerAcknowledgement?.invalid || !!fieldErrors.ownerAcknowledgement"
+        />
         <Message
           v-if="getFieldMessage($form.ownerAcknowledgement?.error?.message, fieldErrors.ownerAcknowledgement)"
           severity="error"

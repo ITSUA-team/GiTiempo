@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import Button from "primevue/button";
-import Checkbox from "primevue/checkbox";
 import Dialog from "primevue/dialog";
+
+import LabeledCheckbox from "./LabeledCheckbox.vue";
 
 const props = defineProps<{
   entityName: string;
@@ -84,39 +85,23 @@ const timeEntriesModel = computed({
       </p>
 
       <div class="flex flex-col gap-2">
-        <label
+        <LabeledCheckbox
           v-if="props.variant === 'project' && props.hasTasks"
-          for="billable-default-update-tasks"
-          class="border-divider bg-surface-primary flex min-h-[38px] items-center gap-2.5 rounded-[6px] border px-3 py-2"
-        >
-          <Checkbox
-            v-model="tasksModel"
-            binary
-            input-id="billable-default-update-tasks"
-            :disabled="props.isSubmitting"
-          />
-          <span class="text-text-dark text-sm font-medium">
-            Update existing tasks in this project
-          </span>
-        </label>
+          v-model="tasksModel"
+          input-id="billable-default-update-tasks"
+          label="Update existing tasks in this project"
+          :disabled="props.isSubmitting"
+        />
 
-        <label
+        <LabeledCheckbox
           v-if="props.hasTimeEntries"
-          for="billable-default-update-time-entries"
-          class="border-divider bg-surface-primary flex min-h-[38px] items-center gap-2.5 rounded-[6px] border px-3 py-2"
-        >
-          <Checkbox
-            v-model="timeEntriesModel"
-            binary
-            input-id="billable-default-update-time-entries"
-            :disabled="props.isSubmitting"
-          />
-          <span class="text-text-dark text-sm font-medium">
-            {{ props.variant === 'project'
-              ? 'Update existing time entries in this project'
-              : 'Update existing time entries for this task' }}
-          </span>
-        </label>
+          v-model="timeEntriesModel"
+          input-id="billable-default-update-time-entries"
+          :label="props.variant === 'project'
+            ? 'Update existing time entries in this project'
+            : 'Update existing time entries for this task'"
+          :disabled="props.isSubmitting"
+        />
       </div>
     </div>
 

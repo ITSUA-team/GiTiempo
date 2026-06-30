@@ -53,7 +53,7 @@ const managementTableFilterAutoCompleteInputClass =
   'h-[34px] w-full rounded-l-[6px] rounded-r-none text-[12px]';
 
 export const managementTableFilterAutoCompletePt = {
-  root: { class: 'h-[34px] w-full' },
+  root: { class: 'h-[34px]' },
   pcInputText: {
     root: { class: managementTableFilterAutoCompleteInputClass },
   },
