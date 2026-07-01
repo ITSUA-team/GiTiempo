@@ -34,13 +34,11 @@ const TEST_SCOPE = {
 type ListOwnEntriesOptions = Parameters<TimeEntriesClient["listOwnEntries"]>[1];
 
 function createDeferred<T>() {
-  /* eslint-disable no-unused-vars */
   const deferred = {} as {
     promise: Promise<T>;
     reject: (error?: unknown) => void;
     resolve: (value: T) => void;
   };
-  /* eslint-enable no-unused-vars */
 
   deferred.promise = new Promise<T>((nextResolve, nextReject) => {
     deferred.resolve = nextResolve;

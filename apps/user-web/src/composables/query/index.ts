@@ -29,7 +29,6 @@ import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
 
 type QueryKey = readonly unknown[];
 
-/* eslint-disable no-unused-vars */
 interface CreateManualTimeEntryClient {
   createManualEntry(
     input: CreateManualTimeEntryInput,
@@ -91,7 +90,6 @@ interface UpdateTimeEntryClient {
 interface VisibleProjectsClient {
   listVisibleProjects(): Promise<ProjectResponse[]>;
 }
-/* eslint-enable no-unused-vars */
 
 interface UserScopedQueryOptions extends QueryAccessOptions {
   scope: MaybeRefOrGetter<UserServerStateScope>;

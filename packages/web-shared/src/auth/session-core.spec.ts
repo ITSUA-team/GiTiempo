@@ -190,7 +190,6 @@ describe("createAuthSessionCore", () => {
 
   it("refreshes access tokens with single-flight rotation", async () => {
     setRefreshToken("persisted-refresh-token");
-    // eslint-disable-next-line no-unused-vars
     let resolveRefresh!: (_value: {
       accessToken: string;
       accessTokenExpiresIn: number;

@@ -6,7 +6,6 @@ import {
 } from "@gitiempo/shared";
 import type { AuthenticatedApiClient } from "./http";
 
-/* eslint-disable no-unused-vars */
 
 interface WorkspaceClientOptions {
   apiClient: Pick<AuthenticatedApiClient, "requestJson">;
@@ -17,7 +16,6 @@ export interface WorkspaceClient {
   updateWorkspace(input: UpdateWorkspaceInput): Promise<WorkspaceResponse>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export function createWorkspaceClient({
   apiClient,

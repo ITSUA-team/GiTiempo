@@ -16,7 +16,6 @@ import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 import type { ValidProjectTaskDialogInput } from "./useProjectTaskDialog";
 
-/* eslint-disable no-unused-vars */
 interface UseProjectTaskMutationsOptions {
   accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
@@ -25,7 +24,6 @@ interface UseProjectTaskMutationsOptions {
   scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
-/* eslint-enable no-unused-vars */
 
 export function useProjectTaskMutations({
   accessToken,

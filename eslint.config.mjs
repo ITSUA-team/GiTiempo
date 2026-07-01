@@ -36,10 +36,11 @@ export default [
       "@typescript-eslint": tsPlugin,
     },
     rules: {
+      "no-unused-vars": "off",
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { argsIgnorePattern: "^_" },
+        { args: "none" },
       ],
       "vue/multi-word-component-names": "off",
     },

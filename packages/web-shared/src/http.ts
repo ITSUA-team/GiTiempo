@@ -25,7 +25,6 @@ export interface ApiRequestJsonOptions<TResponse> extends ApiRequestOptions {
   responseSchema: ZodType<TResponse>;
 }
 
-/* eslint-disable no-unused-vars */
 export interface AuthenticatedApiClient {
   request(options: ApiRequestOptions): Promise<Response>;
   requestJson<TResponse>(
@@ -33,7 +32,6 @@ export interface AuthenticatedApiClient {
   ): Promise<TResponse>;
   requestNoContent(options: ApiRequestOptions): Promise<void>;
 }
-/* eslint-enable no-unused-vars */
 
 export interface AuthenticatedApiClientOptions {
   apiBaseUrl?: string;

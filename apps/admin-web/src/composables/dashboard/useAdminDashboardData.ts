@@ -34,9 +34,7 @@ interface UseAdminDashboardDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   membersClient?: Pick<AdminMembersClient, 'listInvites' | 'listMembers'>;
   now?: () => Date;
-  /* eslint-disable no-unused-vars */
   onError?: (message: string, error: unknown, action: string) => void;
-  /* eslint-enable no-unused-vars */
   projectsClient?: Pick<AdminProjectsClient, 'getManagementSummary' | 'listProjects'>;
   reportsClient?: Pick<AdminReportsClient, 'getTimeReport'>;
   role?: Ref<WorkspaceRole | null> | ComputedRef<WorkspaceRole | null>;

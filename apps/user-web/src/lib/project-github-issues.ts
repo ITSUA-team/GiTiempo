@@ -29,7 +29,6 @@ export interface AppendedProjectTaskOptionsResult<TTaskOption> {
   taskOptions: TTaskOption[];
 }
 
-/* eslint-disable no-unused-vars */
 interface AppendUnsyncedProjectGitHubIssueOptionsInput<TTaskOption> {
   client: TimeEntriesClient;
   knownSyncedGitHubIssues?: SyncedGitHubIssue[];
@@ -39,7 +38,6 @@ interface AppendUnsyncedProjectGitHubIssueOptionsInput<TTaskOption> {
   project: Pick<ProjectResponse, "id" | "source"> | null;
   mapGitHubIssue(issue: UnsyncedProjectGitHubIssue): TTaskOption;
 }
-/* eslint-enable no-unused-vars */
 
 export function supportsProjectGitHubIssueSuggestions(
   project: Pick<ProjectResponse, "source"> | null,

@@ -19,7 +19,6 @@ import {
 import { createDefaultProfileGitHubClient } from "@/config/clients";
 import type { ProfileGitHubClient } from "@/services/profile-github-client";
 
-/* eslint-disable no-unused-vars */
 
 interface UseProfileGithubConnectionOptions {
   client?: ProfileGitHubClient;
@@ -30,7 +29,6 @@ interface UseProfileGithubConnectionOptions {
   toast?: ToastLike;
 }
 
-/* eslint-enable no-unused-vars */
 
 const callbackErrorMessages: Record<string, string> = {
   github_config: "GitHub is not configured for this environment yet.",

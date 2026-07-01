@@ -4,7 +4,6 @@ import type { CurrentTimeEntryResponse, TimeEntryResponse } from "@gitiempo/shar
 
 import type { SupportedGitHubIssueContext } from "./github-context";
 
-/* eslint-disable no-unused-vars */
 
 export interface RuntimeSnapshot {
   authenticated: boolean;
@@ -30,7 +29,6 @@ export interface RuntimeClient {
   stopTimer(): Promise<RuntimeMutationResult>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export type BackgroundMessage =
   | { type: "auth/exchange-firebase-token"; firebaseIdToken: string }

@@ -8,7 +8,6 @@ import {
 } from "@gitiempo/shared";
 import { getDefaultFetchFn, requestJson } from "../http";
 
-/* eslint-disable no-unused-vars */
 
 interface CurrentUserClientOptions {
   apiBaseUrl?: string;
@@ -26,7 +25,6 @@ export interface CurrentUserClient {
   ): Promise<UserResponse>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export function createCurrentUserClient({
   apiBaseUrl,

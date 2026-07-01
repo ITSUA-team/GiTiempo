@@ -19,7 +19,6 @@ import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 
 interface ProjectsTaskSectionProps {
-  // eslint-disable-next-line no-unused-vars
   formatUpdatedLabel: (updatedAt: string) => string;
   project: ProjectResponse;
   tasks: TaskResponse[];

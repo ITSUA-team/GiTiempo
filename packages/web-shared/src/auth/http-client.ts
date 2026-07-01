@@ -14,7 +14,6 @@ import {
   requestJson,
 } from "../http";
 
-/* eslint-disable no-unused-vars */
 
 interface AuthHttpClientOptions {
   apiBaseUrl?: string;
@@ -33,7 +32,6 @@ export interface AuthHttpClient {
   ): Promise<TokenPairResponse>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export function createAuthHttpClient({
   apiBaseUrl,

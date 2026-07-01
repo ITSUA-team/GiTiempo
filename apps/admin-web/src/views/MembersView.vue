@@ -1,18 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import type {
-  ProjectListResponse,
-  WorkspaceInviteListResponse,
-  WorkspaceInviteResponse,
-  WorkspaceMemberListResponse,
-  WorkspaceMemberResponse,
-} from '@gitiempo/shared';
+import type { WorkspaceMemberResponse } from '@gitiempo/shared';
 import {
   StatCard,
   SurfaceCard,
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
-import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import MemberEditForm from '@/components/forms/MemberEditForm.vue';
@@ -22,10 +15,13 @@ import PendingInvitationsCard from '@/components/PendingInvitationsCard.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
+import { useMemberAssignmentActions } from '@/composables/members/useMemberAssignmentActions';
+import { useMemberRemovalAction } from '@/composables/members/useMemberRemovalAction';
+import { usePendingInviteActions } from '@/composables/members/usePendingInviteActions';
+import { usePendingInvitesData } from '@/composables/members/usePendingInvitesData';
+import { useWorkspaceMembersData } from '@/composables/members/useWorkspaceMembersData';
 import { useMembersTableState } from '@/composables/useMembersTableState';
-import type { MembersTableRow } from '@/lib/members-table';
-import { adminMembersClient } from '@/services/admin-members-client';
-import { adminProjectsClient } from '@/services/admin-projects-client';
+import { deriveMemberManagementStats } from '@/lib/member-management';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
@@ -33,31 +29,46 @@ const { requireConfirmation } = useConfirmation();
 const { errorToast, successToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
-const members = ref<WorkspaceMemberListResponse>([]);
-const invites = ref<WorkspaceInviteListResponse>([]);
-const projects = ref<ProjectListResponse>([]);
-const loading = ref(true);
-const invitesLoading = ref(true);
-const loadError = ref<string | null>(null);
-const invitesLoadError = ref<string | null>(null);
-const initialLoaded = ref(false);
 const inviteDialogVisible = ref(false);
-const resendingInviteId = ref<string | null>(null);
-const cancelingInviteId = ref<string | null>(null);
-const savingMemberAssignmentId = ref<string | null>(null);
 
-interface LoadDataOptions {
-  errorAction: string;
-  setError?: boolean;
-  setInitialLoaded?: boolean;
-}
-
-interface LoadInvitesOptions {
-  errorAction: string;
-  setErrorState?: boolean;
-}
-
+const accessToken = computed(() => authStore.accessToken);
 const currentUserId = computed(() => authStore.profile?.id ?? null);
+
+function notifyMembersError(
+  message: string,
+  error: unknown,
+  action: string,
+): void {
+  errorToast(message, {
+    error,
+    logContext: { action, feature: 'members' },
+  });
+}
+
+const {
+  initialLoaded,
+  loadError,
+  loading,
+  loadMembersData,
+  members,
+  projects,
+  refreshMembers,
+} = useWorkspaceMembersData({
+  accessToken,
+  onError: notifyMembersError,
+});
+
+const {
+  invitesLoadError,
+  invitesLoading,
+  loadInvites,
+  pendingInviteRows,
+  refreshPendingInvites,
+} = usePendingInvitesData({
+  accessToken,
+  onError: notifyMembersError,
+});
+
 const {
   collapseRow: collapseMemberRow,
   emptyDescription: memberTableEmptyDescription,
@@ -75,96 +86,50 @@ const {
   members,
   projects,
 });
-const pendingInviteRows = computed(() =>
-  invites.value.filter((invite) => invite.status === 'pending'),
+
+const memberStats = computed(() =>
+  deriveMemberManagementStats({
+    invitesLoadError: invitesLoadError.value,
+    members: members.value,
+    pendingInviteRows: pendingInviteRows.value,
+  }),
 );
 
-const activeMembers = computed(() => members.value.length);
-const pendingInvites = computed<number | string>(() =>
-  invitesLoadError.value && pendingInviteRows.value.length === 0
-    ? '—'
-    : pendingInviteRows.value.length,
-);
-const pmsAssigned = computed(
-  () => members.value.filter((m) => m.role === 'pm').length,
-);
+const { handleAssignmentsSubmitted, savingMemberAssignmentId } =
+  useMemberAssignmentActions({
+    accessToken,
+    collapseMemberRow,
+    onError: notifyMembersError,
+    onSuccess: successToast,
+    projects,
+    refreshMembers,
+  });
 
-async function loadData({
-  errorAction,
-  setError = false,
-  setInitialLoaded = false,
-}: LoadDataOptions): Promise<void> {
-  const token = authStore.accessToken;
+const { handleRemoveMember } = useMemberRemovalAction({
+  accessToken,
+  onError: notifyMembersError,
+  onSuccess: successToast,
+  refreshMembers,
+  requireConfirmation,
+});
 
-  if (!token) {
-    return;
-  }
-
-  loading.value = true;
-  if (setError) {
-    loadError.value = null;
-  }
-
-  try {
-    const [membersData, projectsData] = await Promise.all([
-      adminMembersClient.listMembers(),
-      adminProjectsClient.listProjects(),
-    ]);
-
-    members.value = membersData;
-    projects.value = projectsData;
-    if (setInitialLoaded) {
-      initialLoaded.value = true;
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-    if (setError) {
-      loadError.value = message;
-    }
-    errorToast(message, {
-      error: err,
-      logContext: { action: errorAction, feature: 'members' },
-    });
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function loadInvites({
-  errorAction,
-  setErrorState = false,
-}: LoadInvitesOptions): Promise<void> {
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  invitesLoading.value = true;
-  if (setErrorState) {
-    invitesLoadError.value = null;
-  }
-
-  try {
-    invites.value = await adminMembersClient.listInvites();
-    invitesLoadError.value = null;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-    if (setErrorState && invites.value.length === 0) {
-      invitesLoadError.value = message;
-    }
-    errorToast(message, {
-      error: err,
-      logContext: { action: errorAction, feature: 'members' },
-    });
-  } finally {
-    invitesLoading.value = false;
-  }
-}
+const {
+  cancelingInviteId,
+  handleCancelInvite,
+  handleInviteCreated,
+  handleResendInvite,
+  resendingInviteId,
+} = usePendingInviteActions({
+  accessToken,
+  onError: notifyMembersError,
+  onSuccess: successToast,
+  refreshPendingInvites,
+  requireConfirmation,
+});
 
 async function fetchAll(): Promise<void> {
   await Promise.all([
-    loadData({
+    loadMembersData({
       errorAction: 'load-members',
       setError: true,
       setInitialLoaded: true,
@@ -176,160 +141,8 @@ async function fetchAll(): Promise<void> {
   ]);
 }
 
-async function refreshMembers(): Promise<void> {
-  await loadData({ errorAction: 'refresh-members' });
-}
-
-async function refreshPendingInvites(): Promise<void> {
-  await loadInvites({
-    errorAction: 'refresh-pending-invites',
-  });
-}
-
-function handleInviteCreated(): void {
-  refreshPendingInvites();
-}
-
-function getMemberDisplayName(member: WorkspaceMemberResponse): string {
-  return member.displayName?.trim() || member.email;
-}
-
-function handleRemoveMember(member: WorkspaceMemberResponse): void {
-  const memberName = getMemberDisplayName(member);
-
-  requireConfirmation(
-    `${memberName} will be removed from this workspace. This action cannot be undone.`,
-    'Remove member?',
-    'Remove',
-    async () => {
-      const token = authStore.accessToken;
-
-      if (!token) {
-        return;
-      }
-
-      try {
-        await adminMembersClient.removeMember(member.id);
-        successToast(`${memberName} has been removed.`);
-        await refreshMembers();
-      } catch (err) {
-        errorToast(err instanceof Error ? err.message : 'Failed to remove member', {
-          error: err,
-          logContext: { action: 'remove-member', feature: 'members' },
-        });
-      }
-    },
-  );
-}
-
 function handleEditMember(member: WorkspaceMemberResponse): void {
   toggleMemberExpansion(member);
-}
-
-async function handleAssignmentsSubmitted(
-  row: MembersTableRow,
-  input: MemberAssignFormInput,
-): Promise<void> {
-  if (!row.canAssignPm) {
-    return;
-  }
-
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  const { member } = row;
-
-  const currentAssignedIds = new Set(
-    projects.value
-      .filter((project) =>
-        project.isActive &&
-        project.members.some((projectMember) => projectMember.userId === member.userId),
-      )
-      .map((project) => project.id),
-  );
-  const nextAssignedIds = new Set(input.projectIds);
-  const projectIdsToAdd = input.projectIds.filter((id) => !currentAssignedIds.has(id));
-  const projectIdsToRemove = [...currentAssignedIds].filter(
-    (id) => !nextAssignedIds.has(id),
-  );
-
-  savingMemberAssignmentId.value = member.id;
-
-  try {
-    for (const projectId of projectIdsToAdd) {
-      await adminProjectsClient.assignMember(projectId, member.userId);
-    }
-    for (const projectId of projectIdsToRemove) {
-      await adminProjectsClient.removeAssignment(projectId, member.userId);
-    }
-
-    successToast(`Project assignments for ${getMemberDisplayName(member)} saved.`);
-    collapseMemberRow(member);
-    await refreshMembers();
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to save assignments', {
-      error: err,
-      logContext: { action: 'save-project-assignments', feature: 'members' },
-    });
-  } finally {
-    savingMemberAssignmentId.value = null;
-  }
-}
-
-async function handleResendInvite(invite: WorkspaceInviteResponse): Promise<void> {
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  resendingInviteId.value = invite.id;
-
-  try {
-    await adminMembersClient.resendInvite(invite.id);
-    successToast(`Invitation resent to ${invite.email}.`);
-    await refreshPendingInvites();
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to resend invite', {
-      error: err,
-      logContext: { action: 'resend-invite', feature: 'members' },
-    });
-  } finally {
-    resendingInviteId.value = null;
-  }
-}
-
-function handleCancelInvite(invite: WorkspaceInviteResponse): void {
-  requireConfirmation(
-    `${invite.email} will lose access to this invitation. This action cannot be undone.`,
-    'Cancel invite?',
-    'Cancel invite',
-    async () => {
-      const token = authStore.accessToken;
-
-      if (!token) {
-        return;
-      }
-
-      cancelingInviteId.value = invite.id;
-
-      try {
-        await adminMembersClient.cancelInvite(invite.id);
-        successToast(`Invitation canceled for ${invite.email}.`);
-        await refreshPendingInvites();
-      } catch (err) {
-        errorToast(err instanceof Error ? err.message : 'Failed to cancel invite', {
-          error: err,
-          logContext: { action: 'cancel-invite', feature: 'members' },
-        });
-      } finally {
-        cancelingInviteId.value = null;
-      }
-    },
-  );
 }
 
 onMounted(fetchAll);
@@ -353,15 +166,15 @@ onMounted(fetchAll);
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Active Members"
-          :value="activeMembers"
+          :value="memberStats.activeMembers"
         />
         <StatCard
           label="Pending Invites"
-          :value="pendingInvites"
+          :value="memberStats.pendingInvites"
         />
         <StatCard
           label="PMs Assigned"
-          :value="pmsAssigned"
+          :value="memberStats.pmsAssigned"
         />
       </div>
 

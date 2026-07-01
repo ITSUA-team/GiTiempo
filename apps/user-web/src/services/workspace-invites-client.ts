@@ -8,7 +8,6 @@ import {
   getRequestUrl,
 } from "@gitiempo/web-shared/http";
 
-/* eslint-disable no-unused-vars */
 
 interface WorkspaceInvitesClientOptions {
   apiBaseUrl?: string;
@@ -19,7 +18,6 @@ export interface WorkspaceInvitesClient {
   acceptInvite(input: AcceptWorkspaceInviteInput): Promise<void>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export function createWorkspaceInvitesClient({
   apiBaseUrl,

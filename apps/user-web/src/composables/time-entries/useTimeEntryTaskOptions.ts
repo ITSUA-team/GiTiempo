@@ -10,12 +10,10 @@ import {
   type TaskLookupOption,
 } from "./time-entry-task-lookup";
 
-/* eslint-disable no-unused-vars */
 interface UseTimeEntryTaskOptionsOptions {
   client: TimeEntriesClient;
   getProjectById(projectId: string): ProjectResponse | null;
 }
-/* eslint-enable no-unused-vars */
 
 interface LoadTaskOptionsOptions {
   trackableOnly?: boolean;
@@ -26,12 +24,6 @@ interface LoadedTaskOptionsResult {
   taskOptions: TaskLookupOption[];
 }
 
-interface CachedProjectTaskOptions {
-  githubIssueOptions: TaskLookupOption[];
-  localTasks: TaskResponse[];
-}
-
-/* eslint-disable no-unused-vars */
 interface TaskOptionsTarget {
   beginTaskRequest(): number;
   isCurrentTaskRequest(requestId: number): boolean;
@@ -39,7 +31,11 @@ interface TaskOptionsTarget {
   setTasksError(message: string | null): void;
   setTasksLoading(isLoading: boolean): void;
 }
-/* eslint-enable no-unused-vars */
+
+interface CachedProjectTaskOptions {
+  githubIssueOptions: TaskLookupOption[];
+  localTasks: TaskResponse[];
+}
 
 export function useTimeEntryTaskOptions({
   client,
