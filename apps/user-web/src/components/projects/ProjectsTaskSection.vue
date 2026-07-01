@@ -8,7 +8,6 @@ import {
   ManagementTableEmptyState,
   ManagementTableShell,
   MobileRecordCard,
-  managementTableBodyRowClass,
   managementTableColumnPt,
   managementTableHeaderClass,
   useIsMobileViewport,
@@ -41,6 +40,8 @@ const columns = [
   { key: "updated", label: "Updated", width: 170 },
 ] satisfies ManagementTableColumn[];
 
+const projectTasksTableBodyRowClass =
+  "border-divider h-[52px] border-b transition-colors last:border-b-0 hover:bg-app-bg";
 const projectTasksTableHeaderClass = `${managementTableHeaderClass} min-w-[740px]`;
 
 function formatTaskCount(count: number): string {
@@ -127,7 +128,7 @@ function getStatusPt(task: TaskResponse) {
 
     <ManagementTableShell
       v-else
-      :body-row-class="managementTableBodyRowClass"
+      :body-row-class="projectTasksTableBodyRowClass"
       :columns="columns"
       data-key="id"
       :header-class="projectTasksTableHeaderClass"

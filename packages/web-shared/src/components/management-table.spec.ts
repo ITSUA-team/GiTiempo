@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  managementTableBodyRowClass,
+  managementTableColumnPt,
   managementTableFilterAutoCompletePt,
   managementTableFilterInputClass,
 } from './management-table';
@@ -17,5 +19,13 @@ describe('management table filter styles', () => {
     });
     expect('overlay' in managementTableFilterAutoCompletePt).toBe(false);
     expect(managementTableFilterAutoCompletePt.option?.class).toBe('text-[12px]');
+  });
+});
+
+describe('management table row styles', () => {
+  it('puts row dividers on rows instead of duplicating borders per cell', () => {
+    expect(managementTableBodyRowClass).toContain('border-b');
+    expect(managementTableBodyRowClass).toContain('last:border-b-0');
+    expect(managementTableColumnPt.bodyCell.class).not.toContain('border-t');
   });
 });
