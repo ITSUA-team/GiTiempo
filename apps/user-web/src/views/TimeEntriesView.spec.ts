@@ -331,7 +331,7 @@ async function mountView(
         },
         DatePicker: {
           emits: ["update:modelValue"],
-          props: ["inputId", "modelValue", "showClear", "showIcon"],
+          props: ["inputId", "modelValue", "showButtonBar", "showClear", "showIcon"],
           methods: {
             formatRange(value: Date[] | null | undefined): string {
               if (!value?.length) {
@@ -351,6 +351,7 @@ async function mountView(
             <div>
               <button
                 :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
+                :data-show-button-bar="String(showButtonBar === true || showButtonBar === '')"
                 :data-show-clear="String(showClear === true || showClear === '')"
                 :data-show-icon="String(showIcon === true || showIcon === '')"
                 type="button"
@@ -589,6 +590,9 @@ describe("TimeEntriesView", () => {
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-clear")).toBe(
       "true",
+    );
+    expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-button-bar")).toBe(
+      "false",
     );
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
       "true",
