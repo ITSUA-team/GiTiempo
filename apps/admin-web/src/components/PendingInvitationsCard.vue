@@ -54,6 +54,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'actions', label: 'Actions', width: 140, align: 'end' },
 ];
 
+const pendingInvitesBodyRowClass =
+  'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg';
 const pendingInvitesHeaderClass = `${managementTableHeaderClass} min-w-[700px]`;
 
 const pendingCountLabel = computed(() => {
@@ -201,6 +203,7 @@ function formatSentInviteTime(createdAt: string): string {
         v-else-if="props.pendingInvites.length > 0"
         :columns="columns"
         data-key="id"
+        :body-row-class="pendingInvitesBodyRowClass"
         :header-class="pendingInvitesHeaderClass"
         :loading="false"
         shell-class="border-divider overflow-x-auto rounded-[6px] border"

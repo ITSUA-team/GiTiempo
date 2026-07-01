@@ -9,10 +9,38 @@ import {
   type TaskLookupValue,
 } from './time-entry-task-lookup';
 
+export type TimeEntryDateRange = [Date | null, Date | null] | null;
+export type TimeEntryDatePickerRangeValue =
+  | Date
+  | (Date | null)[]
+  | null
+  | undefined;
+
+function normalizeDateRange(
+  value: TimeEntryDatePickerRangeValue,
+): TimeEntryDateRange {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return [value, null];
+  }
+
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+
+  const startDate = value[0] ?? null;
+  const endDate = value[1] ?? null;
+
+  return startDate || endDate ? [startDate, endDate] : null;
+}
+
 export function useTimeEntryFilters() {
   const currentPage = ref(1);
   const pageSize = ref(20);
-  const selectedDateRange = shallowRef<Date[] | null>(null);
+  const selectedDateRange = shallowRef<TimeEntryDateRange>(null);
   const selectedProjectId = ref<string | null>(null);
   const selectedTaskFilter = shallowRef<TaskLookupValue>(null);
   const filterTaskSuggestions = ref<TaskLookupOption[]>([]);
@@ -50,8 +78,8 @@ export function useTimeEntryFilters() {
     currentPage.value = page;
   }
 
-  function setDateRange(range: Date[] | null): void {
-    selectedDateRange.value = range && range.length > 0 ? range : null;
+  function setDateRange(range: TimeEntryDatePickerRangeValue): void {
+    selectedDateRange.value = normalizeDateRange(range);
   }
 
   function setProjectId(projectId: string | null): void {

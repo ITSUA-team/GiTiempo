@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
+import type { DatePickerPassThroughOptions } from "primevue/datepicker";
 import type { ProjectResponse } from "@gitiempo/shared";
 import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import { SurfaceCard } from "@gitiempo/web-shared";
@@ -9,12 +10,16 @@ import type {
   TaskLookupOption,
   TaskLookupValue,
 } from "@/composables/time-entries/time-entry-task-lookup";
+import type {
+  TimeEntryDatePickerRangeValue,
+  TimeEntryDateRange,
+} from "@/composables/time-entries/useTimeEntryFilters";
 
 interface TimeEntriesFiltersProps {
   isLoadingProjects: boolean;
   projectSuggestions: ProjectResponse[];
   projectsErrorMessage: string | null;
-  selectedDateRange: Date[] | null;
+  selectedDateRange: TimeEntryDateRange;
   selectedProject: ProjectResponse | null;
   selectedTask: TaskLookupValue;
   taskSuggestions: TaskLookupOption[];
@@ -25,10 +30,17 @@ defineProps<TimeEntriesFiltersProps>();
 const emit = defineEmits<{
   projectComplete: [query: string];
   taskSearch: [query: string];
-  "update:dateRange": [value: Date[] | null];
+  "update:dateRange": [value: TimeEntryDatePickerRangeValue];
   "update:projectValue": [value: ProjectResponse | string | null];
   "update:taskValue": [value: TaskLookupValue];
 }>();
+
+const datePickerPt = {
+  panel: {
+    class:
+      "border-divider bg-surface-primary rounded-md border text-text-dark shadow-popover",
+  },
+} satisfies DatePickerPassThroughOptions;
 
 function emitProjectComplete(event: { query: string }): void {
   emit("projectComplete", event.query);
@@ -38,20 +50,8 @@ function emitTaskSearch(event: { query: string }): void {
   emit("taskSearch", event.query);
 }
 
-function updateDateRange(
-  value: Date | (Date | null)[] | Date[] | null | undefined,
-): void {
-  const dateRange: Date[] | null = Array.isArray(value)
-    ? value.reduce<Date[]>((dates, date) => {
-        if (date !== null) {
-          dates.push(date);
-        }
-
-        return dates;
-      }, [])
-    : null;
-
-  emit("update:dateRange", dateRange);
+function updateDateRange(value: TimeEntryDatePickerRangeValue): void {
+  emit("update:dateRange", value);
 }
 
 function updateProjectValue(
@@ -85,8 +85,10 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           :model-value="selectedDateRange"
           selection-mode="range"
           fluid
+          show-button-bar
           show-icon
           show-clear
+          :pt="datePickerPt"
           @update:model-value="updateDateRange"
         />
       </div>
