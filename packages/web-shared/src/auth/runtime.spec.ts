@@ -158,6 +158,7 @@ describe("createDefaultAuthRuntime", () => {
     await expect(
       runtime.switchWorkspace(
         "access-token",
+        "refresh-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
       ),
     ).resolves.toEqual({

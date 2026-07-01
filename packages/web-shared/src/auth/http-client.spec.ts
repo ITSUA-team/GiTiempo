@@ -69,6 +69,7 @@ describe("createAuthHttpClient", () => {
     await expect(
       client.switchWorkspace(
         "access-token",
+        "refresh-token",
         "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
       ),
     ).resolves.toEqual({
@@ -78,6 +79,7 @@ describe("createAuthHttpClient", () => {
     });
     expect(fetchFn).toHaveBeenCalledWith("/auth/switch-workspace", {
       body: JSON.stringify({
+        refreshToken: "refresh-token",
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
       }),
       headers: {

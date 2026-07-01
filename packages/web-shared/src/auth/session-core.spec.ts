@@ -115,12 +115,12 @@ describe("createAuthSessionCore", () => {
     expect(session.isSubmitting.value).toBe(false);
   });
 
-  it("runs login-success cleanup when a new app session starts", async () => {
+  it("runs session-context cleanup when a new app session starts", async () => {
     let cleanupCalls = 0;
     const runtime = createRuntimeMock();
     const session = createAuthSessionCore({
       getAuthRuntime: () => runtime,
-      onLoginSuccess: () => {
+      onSessionContextChanged: () => {
         cleanupCalls += 1;
       },
     });
@@ -136,7 +136,7 @@ describe("createAuthSessionCore", () => {
     const runtime = createRuntimeMock();
     const session = createAuthSessionCore({
       getAuthRuntime: () => runtime,
-      onLoginSuccess: () => {
+      onSessionContextChanged: () => {
         cleanupCalls += 1;
       },
     });
@@ -246,16 +246,26 @@ describe("createAuthSessionCore", () => {
     expect(session.bootstrapComplete.value).toBe(true);
   });
 
-  it("atomically replaces the token pair after a successful workspace switch", async () => {
+  it("replaces the token pair after a successful workspace switch", async () => {
     setRefreshToken("persisted-refresh-token");
+    const switchWorkspace = vi.fn(async () => ({
+      accessToken: "switched-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "switched-refresh-token",
+    }));
     const session = createAuthSessionCore({
-      getAuthRuntime: () => createRuntimeMock(),
+      getAuthRuntime: () => createRuntimeMock({ switchWorkspace }),
     });
 
     session.accessToken.value = "current-access-token";
 
     await session.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002");
 
+    expect(switchWorkspace).toHaveBeenCalledWith(
+      "current-access-token",
+      "persisted-refresh-token",
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    );
     expect(session.accessToken.value).toBe("switched-access-token");
     expect(getRefreshToken()).toBe("switched-refresh-token");
     expect(session.profile.value?.email).toBe("alexey@example.com");

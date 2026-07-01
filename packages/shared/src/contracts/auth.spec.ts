@@ -108,6 +108,7 @@ describe("registrationErrorCodeSchema", () => {
 describe("switchWorkspaceRequestSchema", () => {
   it("accepts a strict workspace switch payload", () => {
     const payload = {
+      refreshToken: "current-refresh-token",
       workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
     };
 
@@ -116,6 +117,7 @@ describe("switchWorkspaceRequestSchema", () => {
 
   it("rejects invalid workspace identifiers", () => {
     const result = switchWorkspaceRequestSchema.safeParse({
+      refreshToken: "current-refresh-token",
       workspaceId: "workspace-1",
     });
 
@@ -123,8 +125,18 @@ describe("switchWorkspaceRequestSchema", () => {
     expect(result.error?.issues[0]?.path).toEqual(["workspaceId"]);
   });
 
+  it("requires the current refresh token", () => {
+    const result = switchWorkspaceRequestSchema.safeParse({
+      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["refreshToken"]);
+  });
+
   it("rejects unknown payload keys", () => {
     const result = switchWorkspaceRequestSchema.safeParse({
+      refreshToken: "current-refresh-token",
       workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
       workspaceName: "Acme Studio",
     });

@@ -292,7 +292,10 @@ describe('Auth (e2e)', () => {
         const switched = await request(app.getHttpServer())
           .post('/auth/switch-workspace')
           .set('Authorization', bearer(initialTokens.accessToken))
-          .send({ workspaceId: workspace.id });
+          .send({
+            refreshToken: initialTokens.refreshToken,
+            workspaceId: workspace.id,
+          });
 
         expect(switched.status).toBe(200);
         expect(typeof switched.body.accessToken).toBe('string');
@@ -330,6 +333,11 @@ describe('Auth (e2e)', () => {
           .limit(1);
         expect(refreshRow?.workspaceId).toBe(workspace.id);
 
+        const oldRefresh = await postAuth(app, '/auth/refresh').send({
+          refreshToken: initialTokens.refreshToken,
+        });
+        expect(oldRefresh.status).toBe(401);
+
         const refreshed = await postAuth(app, '/auth/refresh').send({
           refreshToken: switched.body.refreshToken,
         });
@@ -358,14 +366,25 @@ describe('Auth (e2e)', () => {
       const invalidWorkspaceId = await request(app.getHttpServer())
         .post('/auth/switch-workspace')
         .set('Authorization', bearer(initialTokens.accessToken))
-        .send({ workspaceId: 'not-a-uuid' });
+        .send({
+          refreshToken: initialTokens.refreshToken,
+          workspaceId: 'not-a-uuid',
+        });
 
       expect(invalidWorkspaceId.status).toBe(400);
+
+      const missingRefreshToken = await request(app.getHttpServer())
+        .post('/auth/switch-workspace')
+        .set('Authorization', bearer(initialTokens.accessToken))
+        .send({ workspaceId: workspace.id });
+
+      expect(missingRefreshToken.status).toBe(400);
 
       const payloadWithUnknownKey = await request(app.getHttpServer())
         .post('/auth/switch-workspace')
         .set('Authorization', bearer(initialTokens.accessToken))
         .send({
+          refreshToken: initialTokens.refreshToken,
           workspaceId: workspace.id,
           unexpected: true,
         });
@@ -385,7 +404,10 @@ describe('Auth (e2e)', () => {
         const switched = await request(app.getHttpServer())
           .post('/auth/switch-workspace')
           .set('Authorization', bearer(initialTokens.accessToken))
-          .send({ workspaceId: workspace.id });
+          .send({
+            refreshToken: initialTokens.refreshToken,
+            workspaceId: workspace.id,
+          });
 
         expect(switched.status).toBe(403);
       } finally {
@@ -413,7 +435,10 @@ describe('Auth (e2e)', () => {
         const switched = await request(app.getHttpServer())
           .post('/auth/switch-workspace')
           .set('Authorization', bearer(initialTokens.accessToken))
-          .send({ workspaceId: workspace.id });
+          .send({
+            refreshToken: initialTokens.refreshToken,
+            workspaceId: workspace.id,
+          });
 
         expect(switched.status).toBe(200);
 

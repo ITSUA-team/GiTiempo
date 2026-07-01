@@ -12,6 +12,7 @@ The backend SHALL allow an authenticated user to switch the active workspace to 
 - **THEN** the backend validates the target membership
 - **AND** the backend returns a fresh access token and refresh token pair
 - **AND** the new access token carries the selected workspace ID and the user's role in that selected workspace
+- **AND** the previous refresh token from that session is no longer usable
 
 #### Scenario: Switch rejects workspace without membership
 
@@ -25,6 +26,7 @@ The backend SHALL allow an authenticated user to switch the active workspace to 
 - **GIVEN** an authenticated user requests an active-workspace switch to the workspace already carried by the current access token
 - **WHEN** the backend validates that membership
 - **THEN** the backend returns a fresh access token and refresh token pair for the same workspace context
+- **AND** the previous refresh token from that session is no longer usable
 
 ### Requirement: Refresh Preserves Selected Workspace Context
 

@@ -2,11 +2,11 @@
 
 - [x] 1.1 Review `docs/API-ENDPOINTS.md`, `docs/TECHNICAL-REQUIREMENTS.md`, `docs/ui/layout.md`, `docs/ui/pages-user.md`, `docs/ui/pages-admin.md`, and the relevant approved `GITiempo.pen` profile-dropdown screens before implementation.
 - [x] 1.2 Decide and document the deterministic initial workspace selection order used when a multi-workspace user logs in without an explicit selected workspace.
-- [x] 1.3 Confirm that the existing refresh-token/session persistence model already binds refresh sessions to `workspace_id`, so selected workspace context does not require a schema/migration update for this change.
+- [x] 1.3 Add and document the `refresh_tokens.workspace_id` migration/backfill so selected workspace context is persisted on refresh sessions.
 
 ## 2. Shared Contracts
 
-- [x] 2.1 Add shared auth contract schemas/types for `POST /auth/switch-workspace` using `{ workspaceId }` and the existing token-pair response shape.
+- [x] 2.1 Add shared auth contract schemas/types for `POST /auth/switch-workspace` using `{ refreshToken, workspaceId }` and the existing token-pair response shape.
 - [x] 2.2 Add shared current-user workspace-membership response schemas/types with `workspaceId`, `workspaceName`, `role`, and `isCurrent`.
 - [x] 2.3 Add contract tests for valid payloads, unknown-field rejection, role enum validation, and exactly-one-current membership response behavior.
 
@@ -14,7 +14,7 @@
 
 - [x] 3.1 Extend membership lookup logic so it can list all active memberships for a user and resolve a requested target workspace membership.
 - [x] 3.2 Implement `GET /users/me/workspaces` for authenticated users and ensure it marks the access-token workspace as current.
-- [x] 3.3 Implement `POST /auth/switch-workspace` so it validates target membership and returns a fresh token pair for the selected workspace and role.
+- [x] 3.3 Implement `POST /auth/switch-workspace` so it validates target membership, rotates the current refresh-token session, and returns a fresh token pair for the selected workspace and role.
 - [x] 3.4 Preserve selected workspace context across refresh and reject refresh when the selected membership has been removed.
 - [x] 3.5 Keep `GET /workspace` scoped only to the active access-token workspace and ensure it does not return alternate memberships.
 - [x] 3.6 Regenerate or update OpenAPI output for the new endpoints and shared contracts.

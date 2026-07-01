@@ -336,6 +336,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    setRefreshToken("persisted-refresh-token");
     authStore.accessToken = "current-access-token";
     seedAuthenticatedQueryCache();
     authStore.profile = {
@@ -390,6 +391,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    setRefreshToken("persisted-refresh-token");
     authStore.accessToken = "current-access-token";
     seedAuthenticatedQueryCache();
     authStore.profile = {
@@ -425,6 +427,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    setRefreshToken("persisted-refresh-token");
     authStore.accessToken = "current-access-token";
     authStore.profile = {
       avatarUrl: null,
@@ -441,6 +444,7 @@ describe("useAuthStore", () => {
     ).rejects.toThrow("switch failed");
 
     expect(authStore.accessToken).toBe("current-access-token");
+    expect(getRefreshToken()).toBe("persisted-refresh-token");
     expect(authStore.profile?.role).toBe("member");
     expect(authStore.switchingWorkspaceId).toBeNull();
   });

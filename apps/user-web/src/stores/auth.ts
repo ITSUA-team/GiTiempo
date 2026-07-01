@@ -22,7 +22,7 @@ export const useAuthStore = defineStore("auth", () => {
       resetWorkspaceContext();
       clearAuthenticatedQueryCache();
     },
-    onLoginSuccess: () => {
+    onSessionContextChanged: () => {
       clearWorkspaceMemberships();
       clearAuthenticatedQueryCache();
     },

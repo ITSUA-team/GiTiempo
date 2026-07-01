@@ -20,19 +20,18 @@ The affected areas span `apps/api` auth/users/workspace services, shared contrac
 - No workspace merge, transfer, or membership invitation changes.
 - No new role model and no change to GitHub App user-to-server authorization.
 - No browser-side Firebase account switching flow beyond the existing sign-in and invite flows.
-- No data-model migration for refresh-session workspace binding. The existing `refresh_tokens.workspace_id` column already persists the selected workspace context for refresh.
 
 ## Decisions
 
 ### Use Token Reissue For Workspace Switching
 
-`POST /auth/switch-workspace` should validate the caller's current authenticated user, verify that the requested `workspaceId` has an active membership for that user, then issue the normal `{ accessToken, refreshToken, accessTokenExpiresIn }` response for the target membership. The frontend replaces its current token pair with that response and reloads session-scoped data.
+`POST /auth/switch-workspace` should validate the caller's current authenticated user and current refresh token, verify that the requested `workspaceId` has an active membership for that user, then rotate the current refresh-token session into the target workspace and issue the normal `{ accessToken, refreshToken, accessTokenExpiresIn }` response for the target membership. The frontend replaces its current token pair with that response and reloads session-scoped data.
 
 Alternative considered: mutate only frontend state while keeping the existing access token. That is rejected because existing guards and services trust JWT `workspaceId` and `role` claims for request scoping.
 
 ### Keep Refresh Bound To The Session Workspace
 
-Refresh should continue rotating credentials for the active workspace context represented by the refresh session. The existing `refresh_tokens.workspace_id` persistence remains the source of truth for that binding. If the user loses that membership, refresh is rejected even if the user still belongs to another workspace. A user can recover by signing in again or switching from a still-valid session in another workspace.
+Refresh should continue rotating credentials for the active workspace context represented by the refresh session. The `refresh_tokens.workspace_id` persistence remains the source of truth for that binding. If the user loses that membership, refresh is rejected even if the user still belongs to another workspace. A user can recover by signing in again or switching from a still-valid session in another workspace.
 
 Alternative considered: have refresh automatically pick another membership when the original membership is removed. That is rejected because it silently changes authorization context and can put the user in an unexpected workspace.
 
@@ -62,8 +61,8 @@ Alternative considered: always redirect to the same path in the current app. Tha
 
 ## Risks / Trade-offs
 
-- Refresh-token records already persist `workspace_id`, but switch and refresh paths still need to preserve that binding consistently when they rotate credentials or invalidate session families.
-- Switching while requests are in flight can mix stale and new workspace responses -> app stores must replace tokens atomically, clear scoped caches, and reload shell/current-user/workspace data after the switch.
+- Refresh-token records are migrated to persist `workspace_id`; existing rows are backfilled to the user's deterministic default membership, and rows without a resolvable membership are deleted before the column becomes required.
+- Switching while requests are in flight can mix stale and new workspace responses -> app stores must replace tokens immediately after a successful switch response, clear scoped caches, and reload shell/current-user/workspace data after the switch.
 - The approved `.pen` screens do not yet include a multi-workspace list state -> implementation should treat docs/specs as source of truth and keep the PrimeVue dropdown/list treatment consistent with existing profile dropdown patterns.
 - A 403 page may render before membership options load -> show the action only when another membership is known, and keep `Back to dashboard` available as the primary recovery path.
 - Users with many workspaces may outgrow a simple dropdown section -> keep the MVP list compact and keyboard accessible; defer search/filtering until usage requires it.
@@ -71,13 +70,14 @@ Alternative considered: always redirect to the same path in the current app. Tha
 ## Migration Plan
 
 1. Add shared contracts for switch request/response reuse and workspace-membership listing.
-2. Add backend membership listing and switch-session behavior with unit/e2e coverage while preserving the existing `refresh_tokens.workspace_id` session binding.
-3. Update OpenAPI output after backend DTO/controller changes.
-4. Add shared frontend clients/session helpers for membership listing and switch token replacement.
-5. Update user/admin auth stores, shell dropdowns, and 403 routes to use the switcher and reset scoped data after switching.
-6. Verify backend tests, shared contract tests, both frontend auth/session tests, lint/typecheck, and OpenAPI export.
+2. Add the `refresh_tokens.workspace_id` migration with deterministic backfill/deletion for existing rows that cannot be bound safely.
+3. Add backend membership listing and switch-session behavior with unit/e2e coverage while preserving refresh-token workspace binding during rotation.
+4. Update OpenAPI output after backend DTO/controller changes.
+5. Add shared frontend clients/session helpers for membership listing and switch token replacement.
+6. Update user/admin auth stores, shell dropdowns, and 403 routes to use the switcher and reset scoped data after switching.
+7. Verify backend tests, shared contract tests, both frontend auth/session tests, lint/typecheck, and OpenAPI export.
 
-Rollback is a normal code rollback because the planned behavior can be introduced without changing existing request shapes or adding a schema migration for refresh-session workspace binding.
+Rollback requires normal code rollback plus an explicit database rollback plan for `refresh_tokens.workspace_id`, because the change adds a required session-binding column and may delete refresh-token rows that cannot be backfilled safely.
 
 ## Initial Workspace Selection
 

@@ -15,6 +15,12 @@ import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Menu from "primevue/menu";
 import type { MenuItem as PrimeMenuItem } from "primevue/menuitem";
+import {
+  getWorkspaceRoleLabel,
+  getWorkspaceSwitchStatus,
+  getWorkspaceSwitchStatusLabel,
+  isWorkspaceSwitchDisabled,
+} from "./workspace-membership-display";
 
 type WorkspaceMembershipMenuItem = PrimeMenuItem & {
   command?: () => void;
@@ -53,10 +59,6 @@ type ProfileMenuItem =
 type ProfileMenuEntry = ProfileMenuItem | (PrimeMenuItem & { separator: true });
 
 type CenterContentAlign = "center" | "end";
-
-function assertNever(value: never): never {
-  throw new Error(`Unhandled profile menu item type: ${String(value)}`);
-}
 
 const props = withDefaults(
   defineProps<{
@@ -145,11 +147,13 @@ const profileMenuItems = computed<ProfileMenuEntry[]>(() => {
     items.push(
       ...props.workspaceMemberships.map((membership) => ({
         command:
-          membership.isCurrent || props.switchingWorkspaceId !== null
+          isWorkspaceSwitchDisabled(membership, props.switchingWorkspaceId)
             ? undefined
             : () => emit("switchWorkspace", membership.workspaceId),
         isCurrent: membership.isCurrent,
-        isSwitching: props.switchingWorkspaceId === membership.workspaceId,
+        isSwitching:
+          getWorkspaceSwitchStatus(membership, props.switchingWorkspaceId) ===
+          "switching",
         label: membership.workspaceName,
         roleLabel: getWorkspaceRoleLabel(membership.role),
         type: "workspace-membership" as const,
@@ -236,19 +240,6 @@ function handleSettingsClick(
   closeProfileMenu({ restoreFocus: true });
 }
 
-function getWorkspaceRoleLabel(role: CurrentUserWorkspaceMembershipResponse["role"]): string {
-  switch (role) {
-    case "admin":
-      return "Admin";
-    case "pm":
-      return "PM";
-    case "member":
-      return "Member";
-    default:
-      return assertNever(role);
-  }
-}
-
 function toProfileMenuItem(item: PrimeMenuItem): ProfileMenuItem {
   switch (item.type) {
     case "workspace-membership":
@@ -278,15 +269,13 @@ function toWorkspaceMembershipMenuItem(
 function getWorkspaceStatusLabel(item: PrimeMenuItem): string | null {
   const workspaceItem = toWorkspaceMembershipMenuItem(item);
 
-  if (workspaceItem.isSwitching) {
-    return "Switching...";
-  }
-
-  if (workspaceItem.isCurrent) {
-    return "Current";
-  }
-
-  return null;
+  return getWorkspaceSwitchStatusLabel(
+    workspaceItem.isSwitching
+      ? "switching"
+      : workspaceItem.isCurrent
+        ? "current"
+        : "available",
+  );
 }
 
 function getMenuActionClass(item: PrimeMenuItem): string {

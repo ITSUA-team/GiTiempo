@@ -3,6 +3,12 @@ import type { CurrentUserWorkspaceMembershipResponse } from "@gitiempo/shared";
 import { computed } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
+import {
+  getWorkspaceRoleLabel,
+  getWorkspaceSwitchActionLabel,
+  getWorkspaceSwitchStatus,
+  isWorkspaceSwitchDisabled,
+} from "./workspace-membership-display";
 
 const visible = defineModel<boolean>("visible", { required: true });
 
@@ -26,19 +32,6 @@ const emit = defineEmits<{
 }>();
 
 const isSwitchingWorkspace = computed(() => props.switchingWorkspaceId !== null);
-
-function getWorkspaceRoleLabel(
-  role: CurrentUserWorkspaceMembershipResponse["role"],
-): string {
-  switch (role) {
-    case "admin":
-      return "Admin";
-    case "pm":
-      return "PM";
-    case "member":
-      return "Member";
-  }
-}
 
 function handleVisibleChange(nextVisible: boolean): void {
   if (nextVisible) {
@@ -83,10 +76,10 @@ function closeDialog(): void {
           :class="[
             'ring-divider focus-visible:outline-brand hover:bg-app-bg flex min-h-14 w-full items-start justify-between gap-3 rounded-lg px-4 py-3 text-left ring-1 transition ring-inset focus-visible:outline-2 focus-visible:outline-offset-2',
             membership.isCurrent ? 'bg-accent-tint/40' : 'bg-surface-primary',
-            membership.isCurrent || isSwitchingWorkspace ? 'cursor-default' : 'cursor-pointer',
+            isWorkspaceSwitchDisabled(membership, switchingWorkspaceId) ? 'cursor-default' : 'cursor-pointer',
           ]"
           :data-testid="`workspace-switch-dialog-option-${membership.workspaceId}`"
-          :disabled="membership.isCurrent || isSwitchingWorkspace"
+          :disabled="isWorkspaceSwitchDisabled(membership, switchingWorkspaceId)"
           @click="emit('switchWorkspace', membership.workspaceId)"
         >
           <span class="min-w-0">
@@ -105,11 +98,9 @@ function closeDialog(): void {
             "
           >
             {{
-              switchingWorkspaceId === membership.workspaceId
-                ? "Switching..."
-                : membership.isCurrent
-                  ? "Current"
-                  : "Select"
+              getWorkspaceSwitchActionLabel(
+                getWorkspaceSwitchStatus(membership, switchingWorkspaceId),
+              )
             }}
           </span>
         </button>

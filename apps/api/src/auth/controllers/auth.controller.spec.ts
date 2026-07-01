@@ -99,12 +99,14 @@ describe('AuthController', () => {
 
     await expect(
       controller.switchWorkspace(user, {
+        refreshToken: 'refresh-current',
         workspaceId: 'workspace-2',
       } as never),
     ).resolves.toBe(pair);
     expect(authService.switchWorkspace).toHaveBeenCalledWith(
       user,
       'workspace-2',
+      'refresh-current',
     );
   });
 });

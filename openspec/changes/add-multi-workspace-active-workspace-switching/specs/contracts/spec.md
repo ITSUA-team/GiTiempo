@@ -9,6 +9,7 @@ The shared contracts MUST define request and response schemas for switching the 
 - **GIVEN** a client constructs an active-workspace switch request
 - **WHEN** the request payload is validated against the shared schema
 - **THEN** the payload requires a valid `workspaceId`
+- **AND** the payload requires the current non-empty `refreshToken`
 - **AND** the payload rejects unknown additional fields
 
 #### Scenario: Switch response uses token pair schema

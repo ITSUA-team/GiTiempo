@@ -28,6 +28,7 @@ export interface AuthHttpClient {
   refreshAuthSession(refreshToken: string): Promise<TokenPairResponse>;
   switchWorkspace(
     accessToken: string,
+    refreshToken: string,
     workspaceId: string,
   ): Promise<TokenPairResponse>;
 }
@@ -83,11 +84,11 @@ export function createAuthHttpClient({
         responseSchema: tokenPairResponseSchema,
       });
     },
-    switchWorkspace(accessToken, workspaceId) {
+    switchWorkspace(accessToken, refreshToken, workspaceId) {
       return requestJson({
         accessToken,
         apiBaseUrl,
-        body: switchWorkspaceRequestSchema.parse({ workspaceId }),
+        body: switchWorkspaceRequestSchema.parse({ refreshToken, workspaceId }),
         fetchFn,
         method: "POST",
         path: "/auth/switch-workspace",

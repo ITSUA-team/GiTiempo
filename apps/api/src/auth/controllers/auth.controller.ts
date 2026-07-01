@@ -111,6 +111,6 @@ export class AuthController {
     @CurrentUser() user: AuthUser,
     @Body() body: SwitchWorkspaceDto,
   ): Promise<TokenPairResponseDto> {
-    return this.auth.switchWorkspace(user, body.workspaceId);
+    return this.auth.switchWorkspace(user, body.workspaceId, body.refreshToken);
   }
 }

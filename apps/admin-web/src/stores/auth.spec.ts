@@ -365,6 +365,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    setRefreshToken("persisted-refresh-token");
     authStore.accessToken = "current-access-token";
     seedAuthenticatedQueryCache();
     authStore.profile = {
@@ -419,6 +420,7 @@ describe("useAuthStore", () => {
     );
 
     const authStore = useAuthStore();
+    setRefreshToken("persisted-refresh-token");
     authStore.accessToken = "current-access-token";
     seedAuthenticatedQueryCache();
     authStore.profile = {

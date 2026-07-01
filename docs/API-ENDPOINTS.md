@@ -19,13 +19,13 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 **POST /auth/login** body: `{ firebaseIdToken: string }`
 **POST /auth/register** body: `{ email: string, fullName: string, workspaceName: string, password: string, ownerAcknowledgement: true }`
 **POST /auth/refresh** body: `{ refreshToken: string }`
-**POST /auth/switch-workspace** body: `{ workspaceId: string }`
+**POST /auth/switch-workspace** body: `{ refreshToken: string, workspaceId: string }`
 
 `POST /auth/register` is the only public first-workspace-owner registration path. It creates the Firebase identity, local user, workspace, owner membership, and returns the normal token pair. Existing-workspace member onboarding remains invite-only; the User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation.
 
 Successful registration returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`.
 
-Successful workspace switching returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`. The backend must reject target workspaces where the caller does not have an existing membership with `403 Forbidden`.
+Successful workspace switching rotates the current refresh-token session into the selected workspace and returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`. The backend must reject target workspaces where the caller does not have an existing membership with `403 Forbidden`.
 
 Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`. These are returned in the standard error response `code` field; `error` remains the HTTP-category label.
 

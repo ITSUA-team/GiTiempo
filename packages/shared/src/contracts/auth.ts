@@ -29,6 +29,7 @@ export const logoutRequestSchema = z
 /** Body for `POST /auth/switch-workspace`. */
 export const switchWorkspaceRequestSchema = z
   .object({
+    refreshToken: z.string().min(1),
     workspaceId: z.uuid(),
   })
   .strict();

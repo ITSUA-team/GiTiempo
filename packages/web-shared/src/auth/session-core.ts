@@ -18,13 +18,13 @@ const SESSION_EXPIRED_MESSAGE =
 interface AuthSessionCoreOptions {
   getAuthRuntime(): AuthRuntime;
   onClearSession?: () => void;
-  onLoginSuccess?: () => void;
+  onSessionContextChanged?: () => void;
 }
 
 export function createAuthSessionCore({
   getAuthRuntime,
   onClearSession,
-  onLoginSuccess,
+  onSessionContextChanged,
 }: AuthSessionCoreOptions) {
   const accessToken = ref<string | null>(null);
   const bootstrapComplete = ref(false);
@@ -148,7 +148,7 @@ export function createAuthSessionCore({
   async function establishSessionFromTokenPair(
     tokenPair: TokenPairResponse,
   ): Promise<void> {
-    onLoginSuccess?.();
+    onSessionContextChanged?.();
     applyTokenPair(tokenPair);
     await loadCurrentUser(tokenPair.accessToken);
     completeBootstrap();
@@ -156,21 +156,23 @@ export function createAuthSessionCore({
 
   async function switchWorkspace(workspaceId: string): Promise<void> {
     const currentAccessToken = accessToken.value;
+    const currentRefreshToken = getRefreshToken();
 
-    if (!currentAccessToken) {
+    if (!currentAccessToken || !currentRefreshToken) {
       throw new Error(SESSION_EXPIRED_MESSAGE);
     }
 
     const tokenPair = await getAuthRuntime().switchWorkspace(
       currentAccessToken,
+      currentRefreshToken,
       workspaceId,
     );
+    onSessionContextChanged?.();
+    applyTokenPair(tokenPair);
     const nextProfile = await getAuthRuntime().getCurrentUser(
       tokenPair.accessToken,
     );
 
-    onLoginSuccess?.();
-    applyTokenPair(tokenPair);
     profile.value = nextProfile;
     completeBootstrap();
   }
