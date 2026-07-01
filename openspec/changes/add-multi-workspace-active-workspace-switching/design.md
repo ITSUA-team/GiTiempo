@@ -20,7 +20,7 @@ The affected areas span `apps/api` auth/users/workspace services, shared contrac
 - No workspace merge, transfer, or membership invitation changes.
 - No new role model and no change to GitHub App user-to-server authorization.
 - No browser-side Firebase account switching flow beyond the existing sign-in and invite flows.
-- No data migration unless implementation discovers the refresh-token persistence needs an active-workspace column.
+- No data-model migration for refresh-session workspace binding. The existing `refresh_tokens.workspace_id` column already persists the selected workspace context for refresh.
 
 ## Decisions
 
@@ -32,7 +32,7 @@ Alternative considered: mutate only frontend state while keeping the existing ac
 
 ### Keep Refresh Bound To The Session Workspace
 
-Refresh should continue rotating credentials for the active workspace context represented by the refresh session. If the user loses that membership, refresh is rejected even if the user still belongs to another workspace. A user can recover by signing in again or switching from a still-valid session in another workspace.
+Refresh should continue rotating credentials for the active workspace context represented by the refresh session. The existing `refresh_tokens.workspace_id` persistence remains the source of truth for that binding. If the user loses that membership, refresh is rejected even if the user still belongs to another workspace. A user can recover by signing in again or switching from a still-valid session in another workspace.
 
 Alternative considered: have refresh automatically pick another membership when the original membership is removed. That is rejected because it silently changes authorization context and can put the user in an unexpected workspace.
 
@@ -62,7 +62,7 @@ Alternative considered: always redirect to the same path in the current app. Tha
 
 ## Risks / Trade-offs
 
-- Refresh-token records may not currently store workspace context -> implementation must verify the persisted session model and add the smallest needed persistence change if refresh cannot safely preserve the selected workspace.
+- Refresh-token records already persist `workspace_id`, but switch and refresh paths still need to preserve that binding consistently when they rotate credentials or invalidate session families.
 - Switching while requests are in flight can mix stale and new workspace responses -> app stores must replace tokens atomically, clear scoped caches, and reload shell/current-user/workspace data after the switch.
 - The approved `.pen` screens do not yet include a multi-workspace list state -> implementation should treat docs/specs as source of truth and keep the PrimeVue dropdown/list treatment consistent with existing profile dropdown patterns.
 - A 403 page may render before membership options load -> show the action only when another membership is known, and keep `Back to dashboard` available as the primary recovery path.
@@ -71,13 +71,13 @@ Alternative considered: always redirect to the same path in the current app. Tha
 ## Migration Plan
 
 1. Add shared contracts for switch request/response reuse and workspace-membership listing.
-2. Add backend membership listing and switch-session behavior with unit/e2e coverage.
+2. Add backend membership listing and switch-session behavior with unit/e2e coverage while preserving the existing `refresh_tokens.workspace_id` session binding.
 3. Update OpenAPI output after backend DTO/controller changes.
 4. Add shared frontend clients/session helpers for membership listing and switch token replacement.
 5. Update user/admin auth stores, shell dropdowns, and 403 routes to use the switcher and reset scoped data after switching.
 6. Verify backend tests, shared contract tests, both frontend auth/session tests, lint/typecheck, and OpenAPI export.
 
-Rollback is a normal code rollback because the planned behavior can be introduced without changing existing request shapes. If a refresh-token workspace-context migration is required, rollback must preserve compatibility with existing single-workspace sessions or invalidate only the newly issued switched sessions.
+Rollback is a normal code rollback because the planned behavior can be introduced without changing existing request shapes or adding a schema migration for refresh-session workspace binding.
 
 ## Initial Workspace Selection
 

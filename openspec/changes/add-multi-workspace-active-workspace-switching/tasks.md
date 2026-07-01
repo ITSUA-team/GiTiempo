@@ -2,7 +2,7 @@
 
 - [x] 1.1 Review `docs/API-ENDPOINTS.md`, `docs/TECHNICAL-REQUIREMENTS.md`, `docs/ui/layout.md`, `docs/ui/pages-user.md`, `docs/ui/pages-admin.md`, and the relevant approved `GITiempo.pen` profile-dropdown screens before implementation.
 - [x] 1.2 Decide and document the deterministic initial workspace selection order used when a multi-workspace user logs in without an explicit selected workspace.
-- [x] 1.3 Inspect the current refresh-token/session persistence model and decide whether selected workspace context requires a schema/migration update.
+- [x] 1.3 Confirm that the existing refresh-token/session persistence model already binds refresh sessions to `workspace_id`, so selected workspace context does not require a schema/migration update for this change.
 
 ## 2. Shared Contracts
 

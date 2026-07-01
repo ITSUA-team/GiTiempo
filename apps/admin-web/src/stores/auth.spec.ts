@@ -366,6 +366,7 @@ describe("useAuthStore", () => {
 
     const authStore = useAuthStore();
     authStore.accessToken = "current-access-token";
+    seedAuthenticatedQueryCache();
     authStore.profile = {
       avatarUrl: null,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -395,6 +396,7 @@ describe("useAuthStore", () => {
     expect(authStore.workspaceMemberships).toEqual(memberships.items);
     expect(authStore.workspaceName).toBe("Workspace Beta");
     expect(authStore.switchingWorkspaceId).toBeNull();
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("keeps the switched admin session when membership reload fails after switching", async () => {
@@ -418,6 +420,7 @@ describe("useAuthStore", () => {
 
     const authStore = useAuthStore();
     authStore.accessToken = "current-access-token";
+    seedAuthenticatedQueryCache();
     authStore.profile = {
       avatarUrl: null,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -438,6 +441,7 @@ describe("useAuthStore", () => {
     expect(getRefreshToken()).toBe("switched-refresh-token");
     expect(authStore.profile?.role).toBe("pm");
     expect(authStore.switchingWorkspaceId).toBeNull();
+    expectAuthenticatedQueryCacheCleared();
   });
 
   it("clears tokens on logout even when API logout fails", async () => {

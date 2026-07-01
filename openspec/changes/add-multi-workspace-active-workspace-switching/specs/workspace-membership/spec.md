@@ -36,4 +36,6 @@ The system MUST choose a deterministic active workspace when login succeeds for 
 - **WHEN** the user logs in without an explicit selected workspace
 - **THEN** the backend issues exactly one token pair
 - **AND** the access token carries one deterministic workspace ID and role
+- **AND** the selected membership is the active membership with the earliest `joinedAt`
+- **AND** ties are broken by ascending `workspaceId`
 - **AND** the user can switch to another membership after login through the active-workspace switch flow

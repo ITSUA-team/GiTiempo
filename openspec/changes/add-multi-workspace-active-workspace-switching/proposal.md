@@ -19,8 +19,11 @@ Authenticated users can belong to more than one workspace, but the current sessi
 ### Modified Capabilities
 
 - `auth`: Add active-workspace switching as a token-issuing authenticated auth flow and preserve membership-gated login/refresh semantics.
+- `admin-auth`: Add admin-web session-switch handling through the shared auth session layer while preserving the current session on switch failure.
+- `admin-routing`: Clarify how `admin-web` routes recover after a workspace switch changes the selected role.
 - `contracts`: Add shared request/response contracts for workspace switching and current-user workspace-membership listing.
 - `frontend-auth`: Add frontend session behavior for switching active workspace context and replacing the local token pair.
+- `frontend-shared-leaves`: Extend the shared authenticated header boundary so workspace-switching UI stays shared while app auth/router orchestration stays local.
 - `layout`: Update the shared profile dropdown and 403 action behavior to distinguish workspace switching from counterpart-app navigation.
 - `users`: Add the current-user workspace-membership listing behavior.
 - `workspace-management`: Clarify that `/workspace` remains scoped to the active JWT workspace context.

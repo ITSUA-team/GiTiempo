@@ -351,6 +351,28 @@ describe('Auth (e2e)', () => {
       }
     });
 
+    it('rejects invalid switch payloads before issuing new tokens', async () => {
+      const initialTokens = await login(app);
+      const { workspace } = await getSeededAdminWorkspace(db);
+
+      const invalidWorkspaceId = await request(app.getHttpServer())
+        .post('/auth/switch-workspace')
+        .set('Authorization', bearer(initialTokens.accessToken))
+        .send({ workspaceId: 'not-a-uuid' });
+
+      expect(invalidWorkspaceId.status).toBe(400);
+
+      const payloadWithUnknownKey = await request(app.getHttpServer())
+        .post('/auth/switch-workspace')
+        .set('Authorization', bearer(initialTokens.accessToken))
+        .send({
+          workspaceId: workspace.id,
+          unexpected: true,
+        });
+
+      expect(payloadWithUnknownKey.status).toBe(400);
+    });
+
     it('rejects target workspaces where the caller has no membership', async () => {
       const [workspace] = await db
         .insert(workspaces)
@@ -367,6 +389,55 @@ describe('Auth (e2e)', () => {
 
         expect(switched.status).toBe(403);
       } finally {
+        await db.delete(workspaces).where(eq(workspaces.id, workspace.id));
+      }
+    });
+
+    it('rejects refresh when the selected workspace membership is removed after switching', async () => {
+      const suffix = randomUUID();
+      const { admin } = await getSeededAdminWorkspace(db);
+      const [workspace] = await db
+        .insert(workspaces)
+        .values({ name: `Removed Membership Workspace ${suffix}` })
+        .returning();
+      if (!workspace) throw new Error('Failed to create switched workspace');
+
+      try {
+        await db.insert(workspaceMembers).values({
+          workspaceId: workspace.id,
+          userId: admin.id,
+          role: 'member',
+        });
+
+        const initialTokens = await login(app);
+        const switched = await request(app.getHttpServer())
+          .post('/auth/switch-workspace')
+          .set('Authorization', bearer(initialTokens.accessToken))
+          .send({ workspaceId: workspace.id });
+
+        expect(switched.status).toBe(200);
+
+        await db
+          .delete(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, workspace.id),
+              eq(workspaceMembers.userId, admin.id),
+            ),
+          );
+
+        const refreshed = await postAuth(app, '/auth/refresh').send({
+          refreshToken: switched.body.refreshToken,
+        });
+
+        expect(refreshed.status).toBe(401);
+      } finally {
+        await db
+          .delete(refreshTokens)
+          .where(eq(refreshTokens.workspaceId, workspace.id));
+        await db
+          .delete(workspaceMembers)
+          .where(eq(workspaceMembers.workspaceId, workspace.id));
         await db.delete(workspaces).where(eq(workspaces.id, workspace.id));
       }
     });
