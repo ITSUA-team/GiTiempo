@@ -34,7 +34,6 @@ import {
 import type { AuthenticatedApiClient } from "@gitiempo/web-shared/http";
 import { buildTimeEntryListQueryString } from "@gitiempo/web-shared/query";
 
-/* eslint-disable no-unused-vars */
 
 interface TimeEntriesClientOptions {
   apiClient: Pick<AuthenticatedApiClient, "requestJson" | "requestNoContent">;
@@ -82,7 +81,6 @@ export interface TimeEntriesClient {
   ): Promise<TaskResponse>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export function createTimeEntriesClient({
   apiClient,

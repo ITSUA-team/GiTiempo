@@ -37,7 +37,6 @@ interface ReportsCsvExport {
   filename: string;
 }
 
-/* eslint-disable no-unused-vars */
 interface AdminProjectsClient {
   getManagementSummary(): Promise<ManagementProjectSummaryResponse>;
   listProjects(): Promise<ProjectListResponse>;
@@ -90,7 +89,6 @@ interface WorkspaceGitHubOrganizationsClient {
   listWorkspaceGitHubOrganizations(): Promise<WorkspaceGitHubOrganizationListResponse>;
   removeWorkspaceGitHubOrganization(organizationId: string): Promise<void>;
 }
-/* eslint-enable no-unused-vars */
 
 interface AdminScopedQueryOptions extends QueryAccessOptions {
   scope: MaybeRefOrGetter<AdminServerStateScope>;

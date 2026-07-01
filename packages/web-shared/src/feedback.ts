@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 
 export interface ConfirmLike {
   require(options: {
@@ -60,7 +59,6 @@ interface RunWithFeedbackOptions<T> {
   toast: Pick<ReturnType<typeof createAppToast>, "showErrorToast" | "showSuccessToast">;
 }
 
-/* eslint-enable no-unused-vars */
 
 const dismissibleToastLife = 4000;
 

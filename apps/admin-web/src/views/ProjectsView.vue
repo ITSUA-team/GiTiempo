@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import type {
-  ManagementProjectSummaryResponse,
-  ProjectListResponse,
-  ProjectResponse,
-  WorkspaceMemberListResponse,
-} from '@gitiempo/shared';
+import type { ProjectResponse } from '@gitiempo/shared';
 import {
   BillableDefaultBackfillDialog,
   StatCard,
   SurfaceCard,
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
-import type { ProjectEditFormInput } from '@gitiempo/web-shared';
 
 import ManagementPageSkeleton from '@/components/loading/ManagementPageSkeleton.vue';
 import ProjectEditForm from '@/components/forms/ProjectEditForm.vue';
@@ -21,10 +15,12 @@ import ProjectsTable from '@/components/ProjectsTable.vue';
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
+import { useAdminProjectsData } from '@/composables/projects/useAdminProjectsData';
+import { useProjectArchiveActions } from '@/composables/projects/useProjectArchiveActions';
+import { useProjectBillableBackfillFlow } from '@/composables/projects/useProjectBillableBackfillFlow';
+import { useProjectEditActions } from '@/composables/projects/useProjectEditActions';
 import { useProjectsTableState } from '@/composables/useProjectsTableState';
 import { routeNames } from '@/router';
-import { adminMembersClient } from '@/services/admin-members-client';
-import { adminProjectsClient } from '@/services/admin-projects-client';
 import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
@@ -33,27 +29,32 @@ const { requireConfirmation } = useConfirmation();
 const { errorToast, successToast } = useToasts();
 const isMobileViewport = useIsMobileViewport();
 
-const projects = ref<ProjectListResponse>([]);
-const summary = ref<ManagementProjectSummaryResponse>({
-  activeProjects: 0,
-  privateProjects: 0,
-  publicProjects: 0,
-});
-const members = ref<WorkspaceMemberListResponse>([]);
-const loading = ref(true);
-const loadError = ref<string | null>(null);
-const initialLoaded = ref(false);
-const savingProjectEditId = ref<string | null>(null);
-const submittingProjectBackfill = ref(false);
+const accessToken = computed(() => authStore.accessToken);
 
-const projectBackfillDialog = ref<{
-  hasTasks: boolean;
-  hasTimeEntries: boolean;
-  projectId: string;
-  projectName: string;
-  updateTasks: boolean;
-  updateTimeEntries: boolean;
-} | null>(null);
+function notifyProjectsError(
+  message: string,
+  error: unknown,
+  action: string,
+): void {
+  errorToast(message, {
+    error,
+    logContext: { action, feature: 'projects' },
+  });
+}
+
+const {
+  initialLoaded,
+  loadError,
+  loading,
+  loadProjectsData,
+  members,
+  projects,
+  refreshProjects,
+  summary,
+} = useAdminProjectsData({
+  accessToken,
+  onError: notifyProjectsError,
+});
 
 const {
   collapseRow: collapseProjectRow,
@@ -73,157 +74,43 @@ const {
   projects,
 });
 
-function sortProjects(list: ProjectListResponse): ProjectListResponse {
-  return [...list].sort((a, b) => {
-    if (a.isActive === b.isActive) {
-      return 0;
-    }
+const {
+  closeProjectBackfillDialog,
+  handleProjectBackfillSubmitted,
+  openProjectBackfillDialogIfNeeded,
+  projectBackfillDialog,
+  submittingProjectBackfill,
+} = useProjectBillableBackfillFlow({
+  onError: notifyProjectsError,
+  onSuccess: successToast,
+  refreshProjects,
+});
 
-    return a.isActive ? -1 : 1;
+const { handleProjectEditSubmitted, savingProjectEditId } =
+  useProjectEditActions({
+    accessToken,
+    collapseProjectRow,
+    onError: notifyProjectsError,
+    onSuccess: successToast,
+    openProjectBackfillDialogIfNeeded,
+    refreshProjects,
   });
-}
+
+const { handleArchive, handleUnarchive } = useProjectArchiveActions({
+  accessToken,
+  collapseProjectRow,
+  onError: notifyProjectsError,
+  onSuccess: successToast,
+  refreshProjects,
+  requireConfirmation,
+});
 
 async function fetchAll(): Promise<void> {
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  loading.value = true;
-  loadError.value = null;
-
-  try {
-    const [projectsData, summaryData, membersData] = await Promise.all([
-      adminProjectsClient.listProjects(),
-      adminProjectsClient.getManagementSummary(),
-      adminMembersClient.listMembers(),
-    ]);
-
-    projects.value = sortProjects(projectsData);
-    summary.value = summaryData;
-    members.value = membersData;
-    initialLoaded.value = true;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-    loadError.value = message;
-    errorToast(message, {
-      error: err,
-      logContext: { action: 'load-projects', feature: 'projects' },
-    });
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function refresh(): Promise<void> {
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  loading.value = true;
-
-  try {
-    const [projectsData, summaryData, membersData] = await Promise.all([
-      adminProjectsClient.listProjects(),
-      adminProjectsClient.getManagementSummary(),
-      adminMembersClient.listMembers(),
-    ]);
-
-    projects.value = sortProjects(projectsData);
-    summary.value = summaryData;
-    members.value = membersData;
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'An unexpected error occurred', {
-      error: err,
-      logContext: { action: 'refresh-projects', feature: 'projects' },
-    });
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function openProjectBackfillDialogIfNeeded(
-  project: ProjectResponse,
-): Promise<void> {
-  try {
-    const [tasksData, timeEntriesData] = await Promise.all([
-      adminProjectsClient.listProjectTasks(project.id, { includeInactive: true }),
-      adminProjectsClient.listProjectTimeEntries(project.id, { limit: 1 }),
-    ]);
-    const hasTasks = tasksData.length > 0;
-    const hasTimeEntries = timeEntriesData.meta.total > 0;
-
-    if (!hasTasks && !hasTimeEntries) {
-      return;
-    }
-
-    projectBackfillDialog.value = {
-      hasTasks,
-      hasTimeEntries,
-      projectId: project.id,
-      projectName: project.name,
-      updateTasks: hasTasks,
-      updateTimeEntries: hasTimeEntries,
-    };
-  } catch (err) {
-    errorToast(
-      err instanceof Error
-        ? err.message
-        : 'Failed to check existing project records',
-      {
-        error: err,
-        logContext: { action: 'check-project-backfill', feature: 'projects' },
-      },
-    );
-  }
-}
-
-function closeProjectBackfillDialog(): void {
-  if (submittingProjectBackfill.value) {
-    return;
-  }
-
-  projectBackfillDialog.value = null;
-}
-
-async function handleProjectBackfillSubmitted(): Promise<void> {
-  const dialog = projectBackfillDialog.value;
-
-  if (!dialog) {
-    return;
-  }
-
-  submittingProjectBackfill.value = true;
-
-  try {
-    const result = await adminProjectsClient.backfillProjectBillableDefault(
-      dialog.projectId,
-      {
-        updateTasks: dialog.updateTasks,
-        updateTimeEntries: dialog.updateTimeEntries,
-      },
-    );
-    const updatedCount = result.tasksUpdated + result.timeEntriesUpdated;
-
-    successToast(
-      `${updatedCount} existing ${updatedCount === 1 ? 'record has' : 'records have'} been updated.`,
-    );
-    projectBackfillDialog.value = null;
-    await refresh();
-  } catch (err) {
-    errorToast(
-      err instanceof Error ? err.message : 'Failed to update existing records',
-      {
-        error: err,
-        logContext: { action: 'backfill-project-default', feature: 'projects' },
-      },
-    );
-  } finally {
-    submittingProjectBackfill.value = false;
-  }
+  await loadProjectsData({
+    errorAction: 'load-projects',
+    setError: true,
+    setInitialLoaded: true,
+  });
 }
 
 function handleNewProject(): void {
@@ -232,116 +119,6 @@ function handleNewProject(): void {
 
 function handleEditProject(project: ProjectResponse): void {
   toggleProjectExpansion(project);
-}
-
-async function handleProjectEditSubmitted(
-  project: ProjectResponse,
-  input: ProjectEditFormInput,
-): Promise<void> {
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  const currentMemberIds = new Set(project.members.map((member) => member.userId));
-  const nextMemberIds = new Set(input.memberIds);
-  const memberIdsToAdd = input.memberIds.filter((id) => !currentMemberIds.has(id));
-  const memberIdsToRemove = project.members
-    .map((member) => member.userId)
-    .filter((id) => !nextMemberIds.has(id));
-  let savedProject: ProjectResponse | null = null;
-
-  savingProjectEditId.value = project.id;
-
-  try {
-    savedProject = await adminProjectsClient.updateProject(project.id, {
-      defaultBillableForTasks: input.defaultBillableForTasks,
-      visibility: input.visibility,
-    });
-
-    for (const userId of memberIdsToAdd) {
-      await adminProjectsClient.assignMember(project.id, userId);
-    }
-    for (const userId of memberIdsToRemove) {
-      await adminProjectsClient.removeAssignment(project.id, userId);
-    }
-
-    successToast(`${project.name} has been updated.`);
-    collapseProjectRow(project);
-    await refresh();
-
-    if (savedProject.defaultBillableForTasks !== project.defaultBillableForTasks) {
-      await openProjectBackfillDialogIfNeeded(savedProject);
-    }
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to save project', {
-      error: err,
-      logContext: { action: 'update-project', feature: 'projects' },
-    });
-
-    if (
-      savedProject &&
-      savedProject.defaultBillableForTasks !== project.defaultBillableForTasks
-    ) {
-      await openProjectBackfillDialogIfNeeded(savedProject);
-    }
-  } finally {
-    savingProjectEditId.value = null;
-  }
-}
-
-async function archiveProject(project: ProjectResponse): Promise<void> {
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  try {
-    await adminProjectsClient.updateProject(project.id, {
-      isActive: false,
-    });
-    successToast(`${project.name} has been archived.`);
-    collapseProjectRow(project);
-    await refresh();
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to archive project', {
-      error: err,
-      logContext: { action: 'archive-project', feature: 'projects' },
-    });
-  }
-}
-
-function handleArchive(project: ProjectResponse): void {
-  requireConfirmation(
-    `"${project.name}" will be archived and hidden from non-admin users.`,
-    'Archive project?',
-    'Archive',
-    () => archiveProject(project),
-  );
-}
-
-async function handleUnarchive(project: ProjectResponse): Promise<void> {
-  const token = authStore.accessToken;
-
-  if (!token) {
-    return;
-  }
-
-  try {
-    await adminProjectsClient.updateProject(project.id, {
-      isActive: true,
-    });
-    successToast(`${project.name} is now active.`);
-    collapseProjectRow(project);
-    await refresh();
-  } catch (err) {
-    errorToast(err instanceof Error ? err.message : 'Failed to unarchive project', {
-      error: err,
-      logContext: { action: 'unarchive-project', feature: 'projects' },
-    });
-  }
 }
 
 onMounted(fetchAll);

@@ -2,7 +2,6 @@
 
 import { tokenPairResponseSchema, type TokenPairResponse } from "@gitiempo/shared";
 
-/* eslint-disable no-unused-vars */
 
 export const EXTENSION_SESSION_STORAGE_KEY = "gitiempo.extension.session";
 
@@ -12,7 +11,6 @@ export interface StorageAreaLike {
   set(items: Record<string, unknown>): Promise<void>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export function getChromeStorageArea(): StorageAreaLike {
   return chrome.storage.local;

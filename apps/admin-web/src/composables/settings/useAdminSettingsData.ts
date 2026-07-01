@@ -20,7 +20,6 @@ interface AdminSettingsDataResult {
   workspace: WorkspaceResponse;
 }
 
-/* eslint-disable no-unused-vars */
 interface UseAdminSettingsDataOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<
@@ -34,7 +33,6 @@ interface UseAdminSettingsDataOptions {
   ) => void;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'An unexpected error occurred';

@@ -61,7 +61,6 @@ describe("createAuthenticatedApiClient", () => {
 
   it("refreshes once for concurrent 401 responses and retries requests", async () => {
     let token = "stale-token";
-    // eslint-disable-next-line no-unused-vars
     let refreshResolve!: (_value: string) => void;
     const refreshPromise = new Promise<string>((resolve) => {
       refreshResolve = resolve;

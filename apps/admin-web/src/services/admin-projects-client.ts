@@ -26,7 +26,6 @@ import { buildTimeEntryListQueryString } from '@gitiempo/web-shared/query';
 
 import { getAuthenticatedAppApiClient } from '@/services/api-client';
 
-/* eslint-disable no-unused-vars */
 
 interface AdminProjectsClientOptions {
 	apiClient: Pick<AuthenticatedApiClient, 'requestJson' | 'requestNoContent'>;

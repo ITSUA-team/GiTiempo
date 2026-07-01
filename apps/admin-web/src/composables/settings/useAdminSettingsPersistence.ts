@@ -41,7 +41,6 @@ type SaveAdminSettingsResult =
       wroteChanges: false;
     };
 
-/* eslint-disable no-unused-vars */
 interface UseAdminSettingsPersistenceOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<
@@ -51,7 +50,6 @@ interface UseAdminSettingsPersistenceOptions {
   onError?: (message: string, error: unknown) => void;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'An unexpected error occurred';

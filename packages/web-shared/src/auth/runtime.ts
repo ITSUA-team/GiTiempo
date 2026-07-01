@@ -9,7 +9,6 @@ import {
 import type { AuthHttpClient } from "./http-client";
 import type { CurrentUserClient } from "./current-user-client";
 
-/* eslint-disable no-unused-vars */
 
 export interface AuthRuntime {
   getCurrentUser: CurrentUserClient["getCurrentUser"];
@@ -85,7 +84,6 @@ export function createAuthRuntimeController(defaultAuthRuntime: AuthRuntime): {
   resetAuthRuntimeForTesting(): void;
   setAuthRuntimeForTesting(runtime: AuthRuntime): void;
 } {
-  /* eslint-enable no-unused-vars */
   let authRuntime = defaultAuthRuntime;
 
   return {
