@@ -146,7 +146,6 @@ function createOwnEntriesResponse(
 }
 
 function createDeferred<T>() {
-  // eslint-disable-next-line no-unused-vars
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((nextResolve) => {
     resolve = nextResolve;

@@ -20,7 +20,6 @@ interface AdminMembersClientOptions {
 	apiClient: Pick<AuthenticatedApiClient, 'requestJson' | 'requestNoContent'>;
 }
 
-/* eslint-disable no-unused-vars */
 
 export interface AdminMembersClient {
 	cancelInvite(inviteId: string): Promise<void>;
@@ -37,7 +36,6 @@ export interface AdminMembersClient {
 	): Promise<WorkspaceMemberResponse>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export function createAdminMembersClient({
 	apiClient,

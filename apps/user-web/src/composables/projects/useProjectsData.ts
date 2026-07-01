@@ -7,7 +7,6 @@ import { userProjectsKeys, type UserServerStateScope } from "@/lib/query-keys";
 import { sortProjectTasks } from "@/lib/projects-page-helpers";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
-/* eslint-disable no-unused-vars */
 interface UseProjectsDataOptions {
   accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
@@ -15,7 +14,6 @@ interface UseProjectsDataOptions {
   onLoadTasksError(message: string): void;
   scope: ComputedRef<UserServerStateScope>;
 }
-/* eslint-enable no-unused-vars */
 
 export function useProjectsData({
   accessToken,

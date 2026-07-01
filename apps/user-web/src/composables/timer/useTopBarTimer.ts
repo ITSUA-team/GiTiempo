@@ -1,29 +1,21 @@
-import {
-  createAppToast,
-  getErrorMessage,
-  type ToastLike,
-} from '@gitiempo/web-shared';
-import { computed, ref, watch } from 'vue';
+import type { ToastLike } from '@gitiempo/web-shared';
+import { computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 
-import { useUpdateTimeEntryMutation } from '@/composables/query';
 import { createDefaultTimeEntriesClient } from '@/config/clients';
-import { isInlineNewTaskId } from '@/lib/inline-new-task';
 import { getUserServerStateScope } from '@/lib/server-state-scope';
-import {
-  isGitHubIssueSelectedTaskContext,
-  isRunningTimer,
-  type SelectedTaskContext,
-} from '@/lib/top-bar-timer-helpers';
+import { isRunningTimer } from '@/lib/top-bar-timer-helpers';
 import type { TimeEntriesClient } from '@/services/time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 
-import { useElapsedTimerTicker } from './useElapsedTimerTicker';
 import { useTopBarTaskCreation } from './useTopBarTaskCreation';
 import { useTopBarTaskOptions } from './useTopBarTaskOptions';
 import { useTopBarTaskPicker } from './useTopBarTaskPicker';
 import { useTopBarTimerActions } from './useTopBarTimerActions';
+import { useTopBarTimerDialogFlow } from './useTopBarTimerDialogFlow';
+import { useTopBarTimerSelectionUpdate } from './useTopBarTimerSelectionUpdate';
 import { useTopBarTimerSummary } from './useTopBarTimerSummary';
+import { useTopBarTimerViewModel } from './useTopBarTimerViewModel';
 
 interface UseTopBarTimerOptions {
   authStore?: ReturnType<typeof useAuthStore>;
@@ -38,23 +30,16 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const authStore = options.authStore ?? useAuthStore();
   const client = options.client ?? createDefaultTimeEntriesClient();
   const toast = options.toast ?? useToast();
-  const appToast = createAppToast(toast);
   const now = options.now ?? (() => Date.now());
   const setIntervalFn = options.setIntervalFn ?? setInterval;
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
   const picker = useTopBarTaskPicker();
-  const selectionUpdateErrorMessage = ref<string | null>(null);
   const accessToken = computed(() => authStore.accessToken);
   const scope = computed(() => getUserServerStateScope(authStore.accessToken));
   const summary = useTopBarTimerSummary({ accessToken, client, scope, toast });
   const isTimerRunning = computed(() =>
     isRunningTimer(summary.currentTimer.value),
   );
-  const updateTimeEntryMutation = useUpdateTimeEntryMutation({
-    accessToken,
-    client,
-    scope,
-  });
   const taskOptions = useTopBarTaskOptions({
     accessToken,
     client,
@@ -76,402 +61,60 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     summary,
     toast,
   });
-  const runningStartedAt = computed(() =>
-    isTimerRunning.value
-      ? (summary.currentTimer.value?.startedAt ?? null)
-      : null,
-  );
-  const { elapsedTimeLabel } = useElapsedTimerTicker({
+  const selectionUpdate = useTopBarTimerSelectionUpdate({
+    accessToken,
+    client,
+    picker,
+    scope,
+    summary,
+    toast,
+  });
+  const viewModel = useTopBarTimerViewModel({
     clearIntervalFn,
+    isSelectionUpdatePending: selectionUpdate.isUpdatingSelection,
+    isTimerRunning,
     now,
-    runningStartedAt,
+    picker,
     setIntervalFn,
+    summary,
+    taskCreation,
+    timerActions,
   });
-  const timerStatusLabel = computed(() => {
-    if (isTimerRunning.value) {
-      return 'Running timer';
-    }
-
-    if (summary.selectedContext.value) {
-      return 'Last tracked task';
-    }
-
-    return 'No eligible task';
-  });
-  const timerContextLabel = computed(() => {
-    if (summary.currentTimer.value) {
-      return `${summary.currentTimer.value.project.name} / ${summary.currentTimer.value.task.title}`;
-    }
-
-    if (summary.selectedContext.value) {
-      return `${summary.selectedContext.value.projectName} / ${summary.selectedContext.value.taskTitle}`;
-    }
-
-    return 'Choose a visible project and task to start tracking time.';
-  });
-  const timerProjectLabel = computed(() => {
-    if (summary.currentTimer.value) {
-      return summary.currentTimer.value.project.name;
-    }
-
-    if (summary.selectedContext.value) {
-      return summary.selectedContext.value.projectName;
-    }
-
-    return timerStatusLabel.value;
-  });
-  const timerTaskLabel = computed(() => {
-    if (summary.currentTimer.value) {
-      return summary.currentTimer.value.task.title;
-    }
-
-    if (summary.selectedContext.value) {
-      return summary.selectedContext.value.taskTitle;
-    }
-
-    return 'Choose a visible project and task.';
-  });
-  const timerGitHubIssue = computed(() => {
-    if (summary.currentTimer.value) {
-      return summary.currentTimer.value.githubIssue;
-    }
-
-    return summary.selectedContext.value?.githubIssue ?? null;
-  });
-  const primaryActionLabel = computed(() =>
-    isTimerRunning.value ? 'Stop' : 'Start',
-  );
-  const isNewTaskSelected = computed(
-    () => isInlineNewTaskId(picker.selectedTaskId.value),
-  );
-  const isCreateTaskDisabled = computed(() => {
-    return (
-      !picker.selectedProjectId.value ||
-      taskCreation.isCreatingTask.value ||
-      picker.isCreateTaskTitleEmpty.value
-    );
-  });
-  const isConfirmSelectionDisabled = computed(() => {
-    if (isNewTaskSelected.value) {
-      return isCreateTaskDisabled.value || updateTimeEntryMutation.isPending.value;
-    }
-
-    return (
-      picker.isConfirmSelectionDisabled.value ||
-      taskCreation.isCreatingTask.value ||
-      updateTimeEntryMutation.isPending.value
-    );
-  });
-  const isDialogPrimaryActionDisabled = computed(() => {
-    if (
-      timerActions.isPrimaryActionPending.value ||
-      summary.isLoadingSummary.value ||
-      updateTimeEntryMutation.isPending.value
-    ) {
-      return true;
-    }
-
-    if (isTimerRunning.value) {
-      return false;
-    }
-
-    if (isNewTaskSelected.value) {
-      return (
-        isCreateTaskDisabled.value ||
-        summary.summaryErrorMessage.value !== null
-      );
-    }
-
-    return (
-      picker.getSelectedTaskContext() === null ||
-      summary.summaryErrorMessage.value !== null
-    );
-  });
-  const isDialogSecondaryActionDisabled = computed(() => {
-    if (!isTimerRunning.value) {
-      return true;
-    }
-
-    return (
-      isConfirmSelectionDisabled.value ||
-      timerActions.isPrimaryActionPending.value ||
-      updateTimeEntryMutation.isPending.value
-    );
-  });
-
-  async function openDialog(): Promise<void> {
-    selectionUpdateErrorMessage.value = null;
-    timerActions.clearTimerActionError();
-    picker.openTaskPicker(summary.getDialogSelectionFromCurrentState());
-
-    try {
-      await taskOptions.ensureProjectsLoaded();
-
-      if (picker.selectedProjectId.value) {
-        await taskOptions.loadTasksForProject(picker.selectedProjectId.value);
-      } else {
-        picker.setTasks([]);
-      }
-    } catch (error) {
-      appToast.showErrorToast({
-        detail: 'Refresh and try again.',
-        error,
-        logContext: { action: 'open-task-picker', feature: 'top-bar-timer' },
-        summary: 'Could not load timer task options',
-      });
-    }
-  }
-
-  function closeDialog(): void {
-    selectionUpdateErrorMessage.value = null;
-    timerActions.clearTimerActionError();
-    picker.closeDialog();
-  }
-
-  function setSelectedProjectId(projectId: string | null): void {
-    selectionUpdateErrorMessage.value = null;
-    timerActions.clearTimerActionError();
-    const shouldClearSelectedTask =
-      picker.selectedProjectId.value !== projectId;
-
-    picker.setSelectedProjectId(projectId);
-
-    if (shouldClearSelectedTask) {
-      picker.setSelectedTaskId(null);
-    }
-  }
-
-  function setSelectedTaskId(taskId: string | null): void {
-    selectionUpdateErrorMessage.value = null;
-    timerActions.clearTimerActionError();
-    picker.setSelectedTaskId(taskId);
-  }
-
-  function setSelectedDescription(description: string): void {
-    selectionUpdateErrorMessage.value = null;
-    timerActions.clearTimerActionError();
-    picker.setSelectedDescription(description);
-  }
-
-  async function ensureLocalSelectedContext(
-    context: ReturnType<typeof picker.getSelectedTaskContext>,
-  ): Promise<SelectedTaskContext | null> {
-    if (!context) {
-      return null;
-    }
-
-    if (!isGitHubIssueSelectedTaskContext(context)) {
-      return context;
-    }
-
-    try {
-      const task = await client.ensureGitHubIssueTask({
-        projectId: context.projectId,
-        issueNumber: context.githubIssue.issueNumber,
-      });
-      const cachedTasks = picker.getCachedTasks(context.projectId) ?? picker.tasks.value;
-      const nextTasks = replaceGitHubIssueOptionWithTask(
-        cachedTasks,
-        context.taskId,
-        task,
-      );
-
-      picker.setCachedTasks(context.projectId, nextTasks);
-      picker.setTasks(nextTasks);
-      picker.setSelectedTaskId(task.id);
-
-      return {
-        githubIssue: task.githubIssue,
-        projectId: context.projectId,
-        projectName: context.projectName,
-        source: 'local',
-        taskId: task.id,
-        taskTitle: task.title,
-      };
-    } catch (error) {
-      const message = getErrorMessage(error);
-
-      selectionUpdateErrorMessage.value = message;
-      appToast.showErrorToast({
-        detail: 'Choose another task or try again.',
-        error,
-        logContext: {
-          action: 'materialize-github-task',
-          feature: 'top-bar-timer',
-        },
-        summary: 'Could not prepare GitHub issue',
-      });
-      return null;
-    }
-  }
-
-  async function confirmSelectedTask(): Promise<void> {
-    if (isNewTaskSelected.value) {
-      await taskCreation.createTaskFromDialog();
-      return;
-    }
-
-    const context = await ensureLocalSelectedContext(
-      picker.getSelectedTaskContext(),
-    );
-
-    if (!context) {
-      return;
-    }
-
-    selectionUpdateErrorMessage.value = null;
-    const description = picker.getNormalizedDescription();
-
-    if (summary.currentTimer.value) {
-      const currentTimerId = summary.currentTimer.value.id;
-      const currentDescription = summary.currentTimer.value.description ?? null;
-
-      if (
-        summary.currentTimer.value.task.id === context.taskId &&
-        currentDescription === description
-      ) {
-        closeDialog();
-        return;
-      }
-
-      try {
-        await updateTimeEntryMutation.mutateAsync({
-          entryId: currentTimerId,
-          input: {
-            description,
-            taskId: context.taskId,
-          },
-        });
-
-        await summary.refreshSummary();
-        picker.setSelectedDescription(summary.selectedDescription.value ?? '');
-        closeDialog();
-        appToast.showSuccessToast(
-          'Timer updated',
-          'Your running timer has been updated.',
-        );
-      } catch (error) {
-        const message = getErrorMessage(error);
-
-        selectionUpdateErrorMessage.value = message;
-        appToast.showErrorToast({
-          detail: 'Please try again.',
-          error,
-          logContext: {
-            action: 'update-running-timer',
-            feature: 'top-bar-timer',
-          },
-          summary: 'Could not update the timer',
-        });
-
-        await summary.refreshSummaryAfterConflict(error);
-      }
-
-      return;
-    }
-
-    summary.setIdleSelection(context, description);
-    closeDialog();
-  }
-
-  async function handleDialogPrimaryAction(): Promise<void> {
-    if (updateTimeEntryMutation.isPending.value) {
-      return;
-    }
-
-    selectionUpdateErrorMessage.value = null;
-
-    if (!isTimerRunning.value) {
-      if (isNewTaskSelected.value) {
-        await taskCreation.createTaskFromDialog();
-        return;
-      }
-
-      const context = await ensureLocalSelectedContext(
-        picker.getSelectedTaskContext(),
-      );
-
-      if (!context) {
-        return;
-      }
-
-      summary.setIdleSelection(context, picker.getNormalizedDescription());
-    }
-
-    const didMutateTimer = await timerActions.handlePrimaryAction();
-
-    if (didMutateTimer) {
-      closeDialog();
-    }
-  }
-
-  async function startTimerFromDialog(): Promise<void> {
-    if (isTimerRunning.value) {
-      return;
-    }
-
-    await handleDialogPrimaryAction();
-  }
-
-  async function stopTimerFromDialog(): Promise<void> {
-    if (!isTimerRunning.value) {
-      return;
-    }
-
-    await handleDialogPrimaryAction();
-  }
-
-  watch(picker.selectedProjectId, async (nextProjectId, previousProjectId) => {
-    if (!picker.isDialogOpen.value) {
-      return;
-    }
-
-    if (!nextProjectId) {
-      picker.setTasks([]);
-      picker.setTasksError(null);
-      picker.setSelectedTaskId(null);
-      return;
-    }
-
-    if (nextProjectId !== previousProjectId && previousProjectId !== null) {
-      picker.setSelectedTaskId(null);
-    }
-
-    try {
-      await taskOptions.loadTasksForProject(nextProjectId);
-    } catch (error) {
-      appToast.showErrorToast({
-        detail: 'Refresh and try again.',
-        error,
-        logContext: { action: 'load-project-tasks', feature: 'top-bar-timer' },
-        summary: 'Could not load tasks',
-      });
-    }
+  const dialogFlow = useTopBarTimerDialogFlow({
+    isNewTaskSelected: viewModel.isNewTaskSelected,
+    isTimerRunning,
+    picker,
+    selectionUpdate,
+    summary,
+    taskCreation,
+    taskOptions,
+    timerActions,
+    toast,
   });
 
   return {
-    closeDialog,
-    confirmSelectedTask,
+    closeDialog: dialogFlow.closeDialog,
+    confirmSelectedTask: dialogFlow.confirmSelectedTask,
     createTaskErrorMessage: picker.createTaskErrorMessage,
     createTaskFromDialog: taskCreation.createTaskFromDialog,
     createTaskTitle: picker.createTaskTitle,
     currentTimer: summary.currentTimer,
-    elapsedTimeLabel,
-    handleDialogPrimaryAction,
-    isConfirmSelectionDisabled,
-    isConfirmingSelection: updateTimeEntryMutation.isPending,
-    isCreateTaskDisabled,
+    elapsedTimeLabel: viewModel.elapsedTimeLabel,
+    handleDialogPrimaryAction: dialogFlow.handleDialogPrimaryAction,
+    isConfirmSelectionDisabled: viewModel.isConfirmSelectionDisabled,
+    isConfirmingSelection: selectionUpdate.isUpdatingSelection,
+    isCreateTaskDisabled: viewModel.isCreateTaskDisabled,
     isCreatingTask: taskCreation.isCreatingTask,
-    isDialogPrimaryActionDisabled,
+    isDialogPrimaryActionDisabled: viewModel.isDialogPrimaryActionDisabled,
     isDialogOpen: picker.isDialogOpen,
-    isDialogSecondaryActionDisabled,
+    isDialogSecondaryActionDisabled: viewModel.isDialogSecondaryActionDisabled,
     isLoadingProjects: taskOptions.isLoadingProjects,
     isLoadingSummary: summary.isLoadingSummary,
     isLoadingTasks: taskOptions.isLoadingTasks,
     isPrimaryActionPending: timerActions.isPrimaryActionPending,
     isTimerRunning,
-    openDialog,
-    primaryActionLabel,
+    openDialog: dialogFlow.openDialog,
+    primaryActionLabel: viewModel.primaryActionLabel,
     projectsErrorMessage: picker.projectsErrorMessage,
     projectOptions: picker.activeProjects,
     refreshSummary: summary.refreshSummary,
@@ -481,39 +124,21 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     selectedProjectId: picker.selectedProjectId,
     selectedTask: picker.selectedTask,
     selectedTaskId: picker.selectedTaskId,
-    selectionUpdateErrorMessage,
+    selectionUpdateErrorMessage: selectionUpdate.selectionUpdateErrorMessage,
     setCreateTaskTitle: picker.setCreateTaskTitle,
-    setSelectedDescription,
-    setSelectedProjectId,
-    setSelectedTaskId,
-    startTimerFromDialog,
-    stopTimerFromDialog,
+    setSelectedDescription: dialogFlow.setSelectedDescription,
+    setSelectedProjectId: dialogFlow.setSelectedProjectId,
+    setSelectedTaskId: dialogFlow.setSelectedTaskId,
+    startTimerFromDialog: dialogFlow.startTimerFromDialog,
+    stopTimerFromDialog: dialogFlow.stopTimerFromDialog,
     summaryErrorMessage: summary.summaryErrorMessage,
     taskOptions: picker.activeTasks,
     tasksErrorMessage: picker.tasksErrorMessage,
     timerActionErrorMessage: timerActions.timerActionErrorMessage,
-    timerGitHubIssue,
-    timerContextLabel,
-    timerProjectLabel,
-    timerStatusLabel,
-    timerTaskLabel,
+    timerGitHubIssue: viewModel.timerGitHubIssue,
+    timerContextLabel: viewModel.timerContextLabel,
+    timerProjectLabel: viewModel.timerProjectLabel,
+    timerStatusLabel: viewModel.timerStatusLabel,
+    timerTaskLabel: viewModel.timerTaskLabel,
   };
-}
-
-function replaceGitHubIssueOptionWithTask<TTask extends { githubIssue: unknown; id: string }>(
-  tasks: TTask[],
-  optionId: string,
-  task: TTask,
-): TTask[] {
-  const existingTaskIndex = tasks.findIndex((candidate) => candidate.id === task.id);
-  if (existingTaskIndex >= 0) {
-    return tasks.filter((candidate) => candidate.id !== optionId);
-  }
-
-  const optionIndex = tasks.findIndex((candidate) => candidate.id === optionId);
-  if (optionIndex < 0) {
-    return [...tasks, task];
-  }
-
-  return tasks.map((candidate, index) => (index === optionIndex ? task : candidate));
 }
