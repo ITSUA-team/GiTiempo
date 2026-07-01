@@ -47,6 +47,11 @@ function createRuntime(overrides?: {
         accessTokenExpiresIn: 900,
         refreshToken: "refresh-token-next",
       }),
+      switchWorkspace: async () => ({
+        accessToken: "switched-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "switched-refresh-token",
+      }),
     },
     currentUserClient: {
       getCurrentUser: async () => ({
@@ -57,6 +62,16 @@ function createRuntime(overrides?: {
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
         role: "member",
         updatedAt: "2026-01-01T00:00:00.000Z",
+      }),
+      listCurrentUserWorkspaces: async () => ({
+        items: [
+          {
+            workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+            workspaceName: "GiTiempo Studio",
+            role: "member",
+            isCurrent: true,
+          },
+        ],
       }),
       updateCurrentUser: async () => ({
         avatarUrl: null,
@@ -119,6 +134,36 @@ describe("createDefaultAuthRuntime", () => {
       accessToken: "registered-access-token",
       accessTokenExpiresIn: 900,
       refreshToken: "registered-refresh-token",
+    });
+  });
+
+  it("delegates workspace membership loading through the shared current-user client", async () => {
+    const runtime = createRuntime();
+
+    await expect(runtime.listCurrentUserWorkspaces("access-token")).resolves.toEqual({
+      items: [
+        {
+          workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+          workspaceName: "GiTiempo Studio",
+          role: "member",
+          isCurrent: true,
+        },
+      ],
+    });
+  });
+
+  it("delegates workspace switching through the shared auth client", async () => {
+    const runtime = createRuntime();
+
+    await expect(
+      runtime.switchWorkspace(
+        "access-token",
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      ),
+    ).resolves.toEqual({
+      accessToken: "switched-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "switched-refresh-token",
     });
   });
 

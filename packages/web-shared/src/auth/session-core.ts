@@ -154,6 +154,27 @@ export function createAuthSessionCore({
     completeBootstrap();
   }
 
+  async function switchWorkspace(workspaceId: string): Promise<void> {
+    const currentAccessToken = accessToken.value;
+
+    if (!currentAccessToken) {
+      throw new Error(SESSION_EXPIRED_MESSAGE);
+    }
+
+    const tokenPair = await getAuthRuntime().switchWorkspace(
+      currentAccessToken,
+      workspaceId,
+    );
+    const nextProfile = await getAuthRuntime().getCurrentUser(
+      tokenPair.accessToken,
+    );
+
+    onLoginSuccess?.();
+    applyTokenPair(tokenPair);
+    profile.value = nextProfile;
+    completeBootstrap();
+  }
+
   async function runSubmittingLogin(login: () => Promise<void>): Promise<void> {
     isSubmitting.value = true;
 
@@ -255,6 +276,7 @@ export function createAuthSessionCore({
     logout,
     profile,
     refreshAccessToken,
+    switchWorkspace,
   };
 
   return {

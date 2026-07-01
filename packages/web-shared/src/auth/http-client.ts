@@ -2,6 +2,7 @@ import {
   loginRequestSchema,
   registerRequestSchema,
   refreshRequestSchema,
+  switchWorkspaceRequestSchema,
   type RegisterRequest,
   tokenPairResponseSchema,
   type TokenPairResponse,
@@ -25,6 +26,10 @@ export interface AuthHttpClient {
   logoutAuthSession(accessToken: string, refreshToken: string): Promise<void>;
   registerWorkspaceOwner(input: RegisterRequest): Promise<TokenPairResponse>;
   refreshAuthSession(refreshToken: string): Promise<TokenPairResponse>;
+  switchWorkspace(
+    accessToken: string,
+    workspaceId: string,
+  ): Promise<TokenPairResponse>;
 }
 
 /* eslint-enable no-unused-vars */
@@ -75,6 +80,17 @@ export function createAuthHttpClient({
         fetchFn,
         method: "POST",
         path: "/auth/refresh",
+        responseSchema: tokenPairResponseSchema,
+      });
+    },
+    switchWorkspace(accessToken, workspaceId) {
+      return requestJson({
+        accessToken,
+        apiBaseUrl,
+        body: switchWorkspaceRequestSchema.parse({ workspaceId }),
+        fetchFn,
+        method: "POST",
+        path: "/auth/switch-workspace",
         responseSchema: tokenPairResponseSchema,
       });
     },

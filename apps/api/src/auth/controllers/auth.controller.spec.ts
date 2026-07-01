@@ -10,6 +10,7 @@ describe('AuthController', () => {
     register: vi.fn(),
     refresh: vi.fn(),
     logout: vi.fn(),
+    switchWorkspace: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -78,5 +79,32 @@ describe('AuthController', () => {
       controller.logout('user-1', { refreshToken: 'raw' } as never),
     ).resolves.toBeUndefined();
     expect(authService.logout).toHaveBeenCalledWith('raw', 'user-1');
+  });
+
+  it('POST /auth/switch-workspace delegates to AuthService.switchWorkspace', async () => {
+    const pair = {
+      accessToken: 'a-next',
+      refreshToken: 'r-next',
+      accessTokenExpiresIn: 900,
+    };
+    const user = {
+      sub: 'user-1',
+      email: 'user@example.com',
+      firebaseUid: 'firebase-user-1',
+      workspaceId: 'workspace-1',
+      role: 'member' as const,
+    };
+
+    authService.switchWorkspace.mockResolvedValue(pair);
+
+    await expect(
+      controller.switchWorkspace(user, {
+        workspaceId: 'workspace-2',
+      } as never),
+    ).resolves.toBe(pair);
+    expect(authService.switchWorkspace).toHaveBeenCalledWith(
+      user,
+      'workspace-2',
+    );
   });
 });

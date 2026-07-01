@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { and, eq, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { ADMIN_FAKE_TOKEN, bearer, login } from './helpers/auth';
@@ -15,6 +16,7 @@ import {
   workspaces,
 } from '../src/db/schema';
 import { TokenService } from '../src/auth/services/token.service';
+import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
 let registerTrackerCounter = 1;
 let authTrackerCounter = 1;
@@ -181,6 +183,7 @@ describe('Auth (e2e)', () => {
         )
         .limit(1);
       expect(refreshRow?.revokedAt).toBeNull();
+      expect(refreshRow?.workspaceId).toBe(claims.workspaceId);
 
       const refreshed = await postAuth(app, '/auth/refresh').send({
         refreshToken: res.body.refreshToken,
@@ -265,6 +268,107 @@ describe('Auth (e2e)', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.code).toBe('weak_password');
+    });
+  });
+
+  describe('POST /auth/switch-workspace', () => {
+    it('switches to another workspace membership, scopes the new token, and preserves that scope on refresh', async () => {
+      const suffix = randomUUID();
+      const { admin } = await getSeededAdminWorkspace(db);
+      const [workspace] = await db
+        .insert(workspaces)
+        .values({ name: `Switched Workspace ${suffix}` })
+        .returning();
+      if (!workspace) throw new Error('Failed to create switched workspace');
+
+      try {
+        await db.insert(workspaceMembers).values({
+          workspaceId: workspace.id,
+          userId: admin.id,
+          role: 'member',
+        });
+
+        const initialTokens = await login(app);
+        const switched = await request(app.getHttpServer())
+          .post('/auth/switch-workspace')
+          .set('Authorization', bearer(initialTokens.accessToken))
+          .send({ workspaceId: workspace.id });
+
+        expect(switched.status).toBe(200);
+        expect(typeof switched.body.accessToken).toBe('string');
+        expect(typeof switched.body.refreshToken).toBe('string');
+
+        const switchedClaims = tokens.verifyAccess(
+          switched.body.accessToken as string,
+        );
+        expect(switchedClaims.workspaceId).toBe(workspace.id);
+        expect(switchedClaims.role).toBe('member');
+
+        const switchedWorkspace = await request(app.getHttpServer())
+          .get('/workspace')
+          .set('Authorization', bearer(switched.body.accessToken as string));
+        expect(switchedWorkspace.status).toBe(200);
+        expect(switchedWorkspace.body.name).toBe(workspace.name);
+
+        const adminOnlyMembers = await request(app.getHttpServer())
+          .get('/members')
+          .set('Authorization', bearer(switched.body.accessToken as string));
+        expect(adminOnlyMembers.status).toBe(403);
+
+        const [refreshRow] = await db
+          .select()
+          .from(refreshTokens)
+          .where(
+            and(
+              eq(refreshTokens.userId, admin.id),
+              eq(
+                refreshTokens.tokenHash,
+                tokens.hashRefreshToken(switched.body.refreshToken as string),
+              ),
+            ),
+          )
+          .limit(1);
+        expect(refreshRow?.workspaceId).toBe(workspace.id);
+
+        const refreshed = await postAuth(app, '/auth/refresh').send({
+          refreshToken: switched.body.refreshToken,
+        });
+        expect(refreshed.status).toBe(200);
+
+        const refreshedClaims = tokens.verifyAccess(
+          refreshed.body.accessToken as string,
+        );
+        expect(refreshedClaims.workspaceId).toBe(workspace.id);
+        expect(refreshedClaims.role).toBe('member');
+      } finally {
+        await db
+          .delete(refreshTokens)
+          .where(eq(refreshTokens.workspaceId, workspace.id));
+        await db
+          .delete(workspaceMembers)
+          .where(eq(workspaceMembers.workspaceId, workspace.id));
+        await db.delete(workspaces).where(eq(workspaces.id, workspace.id));
+      }
+    });
+
+    it('rejects target workspaces where the caller has no membership', async () => {
+      const [workspace] = await db
+        .insert(workspaces)
+        .values({ name: `Forbidden Workspace ${randomUUID()}` })
+        .returning();
+      if (!workspace) throw new Error('Failed to create forbidden workspace');
+
+      try {
+        const initialTokens = await login(app);
+        const switched = await request(app.getHttpServer())
+          .post('/auth/switch-workspace')
+          .set('Authorization', bearer(initialTokens.accessToken))
+          .send({ workspaceId: workspace.id });
+
+        expect(switched.status).toBe(403);
+      } finally {
+        await db.delete(workspaces).where(eq(workspaces.id, workspace.id));
+      }
     });
   });
 

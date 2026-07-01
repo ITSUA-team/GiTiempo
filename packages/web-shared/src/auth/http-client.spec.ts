@@ -56,6 +56,38 @@ describe("createAuthHttpClient", () => {
     });
   });
 
+  it("posts workspace switches with auth headers and parses token pairs", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        accessToken: "switched-access-token",
+        accessTokenExpiresIn: 900,
+        refreshToken: "switched-refresh-token",
+      }),
+    );
+    const client = createAuthHttpClient({ fetchFn });
+
+    await expect(
+      client.switchWorkspace(
+        "access-token",
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      ),
+    ).resolves.toEqual({
+      accessToken: "switched-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "switched-refresh-token",
+    });
+    expect(fetchFn).toHaveBeenCalledWith("/auth/switch-workspace", {
+      body: JSON.stringify({
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      }),
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+  });
+
   it("posts workspace registration payloads to the register endpoint", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
@@ -197,6 +229,38 @@ describe("createCurrentUserClient", () => {
     await expect(client.getCurrentUser("access-token")).rejects.toThrow(
       "Unauthorized",
     );
+  });
+
+  it("loads the current user workspace memberships with a bearer token", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        items: [
+          {
+            workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+            workspaceName: "GiTiempo Studio",
+            role: "member",
+            isCurrent: true,
+          },
+        ],
+      }),
+    );
+    const client = createCurrentUserClient({ fetchFn });
+
+    await expect(client.listCurrentUserWorkspaces("access-token")).resolves.toEqual({
+      items: [
+        {
+          workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+          workspaceName: "GiTiempo Studio",
+          role: "member",
+          isCurrent: true,
+        },
+      ],
+    });
+    expect(fetchFn).toHaveBeenCalledWith("/users/me/workspaces", {
+      body: undefined,
+      headers: { Authorization: "Bearer access-token" },
+      method: "GET",
+    });
   });
 
   it("patches the current user with validated payload and parses the response", async () => {

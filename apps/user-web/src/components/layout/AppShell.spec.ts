@@ -4,9 +4,19 @@ import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
 import { defineComponent } from "vue";
+import type {
+  CurrentUserWorkspaceMembershipListResponse,
+  UserResponse,
+} from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import {
+  resetAuthRuntimeForTesting,
+  setAuthRuntimeForTesting,
+  type AuthRuntime,
+} from "@/services/auth-runtime";
+import { waitForRoute } from "@gitiempo/web-shared/testing";
 import AppShell from "./AppShell.vue";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
 import { createAppRouter, routeNames } from "@/router";
@@ -29,9 +39,72 @@ vi.mock("@/services/workspace-client", () => ({
   }),
 }));
 
+function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
+  const currentUser: UserResponse = {
+    avatarUrl: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    displayName: "Alexey Tsukanov",
+    email: "alexey@example.com",
+    id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    role: "member",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+  const workspaceMemberships: CurrentUserWorkspaceMembershipListResponse = {
+    items: [
+      {
+        isCurrent: true,
+        role: "member",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        workspaceName: "Workspace Alpha",
+      },
+      {
+        isCurrent: false,
+        role: "admin",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        workspaceName: "Workspace Beta",
+      },
+    ],
+  };
+
+  return {
+    getCurrentUser: async () => currentUser,
+    listCurrentUserWorkspaces: async () => workspaceMemberships,
+    loginWithFirebaseToken: async () => ({
+      accessToken: "access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "refresh-token-next",
+    }),
+    logoutSession: async () => undefined,
+    registerWorkspaceOwner: async () => ({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    }),
+    refreshSession: async () => ({
+      accessToken: "restored-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "restored-refresh-token",
+    }),
+    switchWorkspace: async () => ({
+      accessToken: "switched-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "switched-refresh-token",
+    }),
+    signInWithEmailPassword: async () => "firebase-email-token",
+    signInWithGoogle: async () => "firebase-google-token",
+    signOutIdentityProvider: async () => undefined,
+    updateCurrentUser: async (_accessToken, input) => ({
+      ...currentUser,
+      ...input,
+    }),
+    ...overrides,
+  };
+}
+
 describe("AppShell", () => {
   beforeEach(() => {
     clearRefreshToken();
+    resetAuthRuntimeForTesting();
     testMocks.getWorkspace.mockReset();
     testMocks.toastAdd.mockReset();
     testMocks.getWorkspace.mockResolvedValue({
@@ -41,6 +114,7 @@ describe("AppShell", () => {
       updatedAt: "2026-05-01T10:00:00.000Z",
     });
     vi.stubEnv("VITE_ADMIN_APP_URL", "https://admin.example.test/login");
+    setAuthRuntimeForTesting(createRuntimeMock());
   });
 
   afterEach(() => {
@@ -100,14 +174,17 @@ describe("AppShell", () => {
               "settingsLabel",
               "settingsTo",
               "showDisplayName",
+              "switchingWorkspaceId",
               "userInitials",
+              "workspaceMemberships",
               "workspaceName",
             ],
-            emits: ["signOut"],
+            emits: ["signOut", "switchWorkspace"],
             template: `
               <header>
                 <span data-testid="workspace-header-page-name">{{ pageName }}</span>
                 <span data-testid="workspace-header-workspace-name">{{ workspaceName }}</span>
+                <span data-testid="workspace-header-memberships">{{ workspaceMemberships?.length ?? 0 }}</span>
                 <span data-testid="workspace-header-center-align">{{ centerContentAlign }}</span>
                 <span data-testid="workspace-header-page-name">{{ pageName }}</span>
                 <span data-testid="workspace-header-show-display-name">{{ String(showDisplayName) }}</span>
@@ -116,6 +193,7 @@ describe("AppShell", () => {
                 </div>
                 <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
                 <RouterLink data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
+                <button type="button" data-testid="profile-menu-switch-workspace" @click="$emit('switchWorkspace', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002')">Switch workspace</button>
                 <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
               </header>
             `,
@@ -178,5 +256,70 @@ describe("AppShell", () => {
     expect(wrapper.get('[data-testid="workspace-header-workspace-name"]').text()).toBe(
       "GiTiempo Studio",
     );
+    expect(wrapper.get('[data-testid="workspace-header-memberships"]').text()).toBe("2");
+  });
+
+  it("returns to the dashboard after switching workspace from the forbidden route", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.accessToken = "user-access-token";
+    authStore.bootstrapComplete = true;
+    authStore.profile = {
+      avatarUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Alexey Tsukanov",
+      email: "alexey@example.com",
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      role: "member",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const switchWorkspaceSpy = vi
+      .spyOn(authStore, "switchWorkspace")
+      .mockImplementation(async () => ({
+        membershipsReloaded: true,
+        reloadError: null,
+      }));
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/403");
+    await router.isReady();
+
+    const wrapper = mount(AppShell, {
+      global: {
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          RouterView: defineComponent({
+            template: '<div data-testid="router-view" />',
+          }),
+          TopBarTimer: {
+            props: ["openRequestId"],
+            template: '<div data-testid="top-bar-timer">{{ openRequestId }}</div>',
+          },
+          WorkspaceHeader: {
+            props: ["workspaceMemberships"],
+            emits: ["signOut", "switchWorkspace"],
+            template:
+              '<button type="button" data-testid="profile-menu-switch-workspace" @click="$emit(\'switchWorkspace\', \'018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002\')">Switch workspace</button>',
+          },
+        },
+      },
+    });
+
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
+
+    await wrapper.get('[data-testid="profile-menu-switch-workspace"]').trigger("click");
+    await routeReady;
+
+    expect(switchWorkspaceSpy).toHaveBeenCalledWith(
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    );
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 });

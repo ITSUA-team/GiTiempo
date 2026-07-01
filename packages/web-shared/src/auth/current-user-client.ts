@@ -1,6 +1,8 @@
 import {
+  currentUserWorkspaceMembershipListResponseSchema,
   updateUserSchema,
   userResponseSchema,
+  type CurrentUserWorkspaceMembershipListResponse,
   type UpdateUserInput,
   type UserResponse,
 } from "@gitiempo/shared";
@@ -15,6 +17,9 @@ interface CurrentUserClientOptions {
 
 export interface CurrentUserClient {
   getCurrentUser(accessToken: string): Promise<UserResponse>;
+  listCurrentUserWorkspaces(
+    accessToken: string,
+  ): Promise<CurrentUserWorkspaceMembershipListResponse>;
   updateCurrentUser(
     accessToken: string,
     input: UpdateUserInput,
@@ -35,6 +40,15 @@ export function createCurrentUserClient({
         fetchFn,
         path: "/users/me",
         responseSchema: userResponseSchema,
+      });
+    },
+    listCurrentUserWorkspaces(accessToken) {
+      return requestJson({
+        accessToken,
+        apiBaseUrl,
+        fetchFn,
+        path: "/users/me/workspaces",
+        responseSchema: currentUserWorkspaceMembershipListResponseSchema,
       });
     },
     updateCurrentUser(accessToken, input) {

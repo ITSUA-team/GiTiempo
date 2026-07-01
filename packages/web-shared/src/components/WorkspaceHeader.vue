@@ -8,45 +8,54 @@ import {
   useSlots,
   type Component,
 } from "vue";
+import type { CurrentUserWorkspaceMembershipResponse } from "@gitiempo/shared";
 import type { RouteLocationRaw } from "vue-router";
 import { RouterLink } from "vue-router";
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Menu from "primevue/menu";
+import type { MenuItem as PrimeMenuItem } from "primevue/menuitem";
 
-type ProfileMenuItemKey = "workspace" | "settings" | "sign-out";
-
-type ProfileMenuItem = {
+type WorkspaceMembershipMenuItem = PrimeMenuItem & {
   command?: () => void;
-  destructive?: boolean;
-  href?: string;
-  key: ProfileMenuItemKey;
+  isCurrent: boolean;
+  isSwitching: boolean;
   label: string;
-  route?: RouteLocationRaw;
+  roleLabel: string;
+  type: "workspace-membership";
+  workspaceId: string;
 };
+
+type CounterpartMenuItem = PrimeMenuItem & {
+  href: string;
+  label: string;
+  type: "counterpart";
+};
+
+type SettingsMenuItem = PrimeMenuItem & {
+  label: string;
+  route: RouteLocationRaw;
+  type: "settings";
+};
+
+type SignOutMenuItem = PrimeMenuItem & {
+  command: () => void;
+  label: string;
+  type: "sign-out";
+};
+
+type ProfileMenuItem =
+  | WorkspaceMembershipMenuItem
+  | CounterpartMenuItem
+  | SettingsMenuItem
+  | SignOutMenuItem;
+
+type ProfileMenuEntry = ProfileMenuItem | (PrimeMenuItem & { separator: true });
 
 type CenterContentAlign = "center" | "end";
 
-type ProfileMenuSlotItem = {
-  destructive?: boolean;
-  key?: ProfileMenuItemKey;
-};
-
 function assertNever(value: never): never {
-  throw new Error(`Unhandled profile menu item key: ${String(value)}`);
-}
-
-function getProfileMenuSlotItem(item: { destructive?: boolean; key?: string }): ProfileMenuSlotItem {
-  switch (item.key) {
-    case "workspace":
-    case "settings":
-    case "sign-out":
-      return { destructive: item.destructive, key: item.key };
-    case undefined:
-      return { destructive: item.destructive };
-    default:
-      throw new Error(`Unhandled profile menu item key: ${item.key}`);
-  }
+  throw new Error(`Unhandled profile menu item type: ${String(value)}`);
 }
 
 const props = withDefaults(
@@ -63,7 +72,9 @@ const props = withDefaults(
     showDisplayName?: boolean;
     showSettings?: boolean;
     settingsTo: RouteLocationRaw;
+    switchingWorkspaceId?: string | null;
     userInitials: string;
+    workspaceMemberships?: CurrentUserWorkspaceMembershipResponse[];
     workspaceName: string;
     workspaceShortName?: string;
   }>(),
@@ -76,6 +87,8 @@ const props = withDefaults(
     settingsLabel: "Settings",
     showDisplayName: false,
     showSettings: true,
+    switchingWorkspaceId: null,
+    workspaceMemberships: () => [],
     workspaceShortName: "GT",
   },
 );
@@ -87,6 +100,7 @@ const hasPageName = computed(() => normalizedPageName.value.length > 0);
 
 const emit = defineEmits<{
   signOut: [];
+  switchWorkspace: [workspaceId: string];
 }>();
 
 const profileMenuRegion = useTemplateRef<HTMLElement>("profileMenuRegion");
@@ -124,20 +138,40 @@ const centerRowContentClass = computed(() =>
   ].join(" "),
 );
 
-const profileMenuItems = computed<(ProfileMenuItem | { separator: true })[]>(() => {
-  const items: (ProfileMenuItem | { separator: true })[] = [
-    {
-      href: props.counterpartHref,
-      key: "workspace",
-      label: props.counterpartLabel,
-    },
-  ];
+const profileMenuItems = computed<ProfileMenuEntry[]>(() => {
+  const items: ProfileMenuEntry[] = [];
+
+  if (props.workspaceMemberships.length > 1) {
+    items.push(
+      ...props.workspaceMemberships.map((membership) => ({
+        command:
+          membership.isCurrent || props.switchingWorkspaceId !== null
+            ? undefined
+            : () => emit("switchWorkspace", membership.workspaceId),
+        isCurrent: membership.isCurrent,
+        isSwitching: props.switchingWorkspaceId === membership.workspaceId,
+        label: membership.workspaceName,
+        roleLabel: getWorkspaceRoleLabel(membership.role),
+        type: "workspace-membership" as const,
+        workspaceId: membership.workspaceId,
+      })),
+      {
+        separator: true,
+      },
+    );
+  }
+
+  items.push({
+    href: props.counterpartHref,
+    label: props.counterpartLabel,
+    type: "counterpart",
+  });
 
   if (props.showSettings) {
     items.push({
-      key: "settings",
       label: props.settingsLabel,
       route: props.settingsTo,
+      type: "settings",
     });
   }
 
@@ -150,9 +184,8 @@ const profileMenuItems = computed<(ProfileMenuItem | { separator: true })[]>(() 
         closeProfileMenu({ restoreFocus: true });
         emit("signOut");
       },
-      destructive: true,
-      key: "sign-out",
       label: "Sign out",
+      type: "sign-out",
     },
   );
 
@@ -195,60 +228,112 @@ function handleDocumentKeydown(event: KeyboardEvent): void {
 }
 
 function handleSettingsClick(
-  navigate: CallableFunction,
+  // eslint-disable-next-line no-unused-vars
+  navigate: (...args: [MouseEvent]) => void,
   event: MouseEvent,
 ): void {
   navigate(event);
   closeProfileMenu({ restoreFocus: true });
 }
 
-function getMenuActionClass(item: ProfileMenuSlotItem): string {
-  const baseClass =
-    "hover:bg-app-bg focus-visible:outline-brand flex h-11 items-center gap-2.5 rounded-md px-2.5 text-sm leading-[17px] transition focus-visible:outline-2 focus-visible:outline-offset-2";
-
-  switch (item.key) {
-    case "workspace":
-      return `${baseClass} text-brand font-semibold`;
-    case "settings":
-      return `${baseClass} text-text-dark font-medium`;
-    case "sign-out":
-      return `${baseClass} text-destructive font-semibold`;
-    case undefined:
-      return baseClass;
+function getWorkspaceRoleLabel(role: CurrentUserWorkspaceMembershipResponse["role"]): string {
+  switch (role) {
+    case "admin":
+      return "Admin";
+    case "pm":
+      return "PM";
+    case "member":
+      return "Member";
     default:
-      return assertNever(item.key);
+      return assertNever(role);
   }
 }
 
-function getMenuIconClass(item: ProfileMenuSlotItem): string {
-  const baseClass = "flex size-7 items-center justify-center rounded-sm";
+function toProfileMenuItem(item: PrimeMenuItem): ProfileMenuItem {
+  switch (item.type) {
+    case "workspace-membership":
+    case "counterpart":
+    case "settings":
+    case "sign-out":
+      return item as ProfileMenuItem;
+    default:
+      throw new Error(`Unhandled profile menu item type: ${String(item.type)}`);
+  }
+}
 
-  switch (item.key) {
-    case "workspace":
+function toWorkspaceMembershipMenuItem(
+  item: PrimeMenuItem,
+): WorkspaceMembershipMenuItem {
+  const profileMenuItem = toProfileMenuItem(item);
+
+  if (profileMenuItem.type !== "workspace-membership") {
+    throw new Error(
+      `Expected workspace membership item, received ${profileMenuItem.type}`,
+    );
+  }
+
+  return profileMenuItem;
+}
+
+function getWorkspaceStatusLabel(item: PrimeMenuItem): string | null {
+  const workspaceItem = toWorkspaceMembershipMenuItem(item);
+
+  if (workspaceItem.isSwitching) {
+    return "Switching...";
+  }
+
+  if (workspaceItem.isCurrent) {
+    return "Current";
+  }
+
+  return null;
+}
+
+function getMenuActionClass(item: PrimeMenuItem): string {
+  const baseClass =
+    "hover:bg-app-bg focus-visible:outline-brand flex w-full min-w-0 min-h-11 gap-2.5 rounded-md px-2.5 py-2 text-left text-sm leading-[17px] transition focus-visible:outline-2 focus-visible:outline-offset-2";
+  const profileMenuItem = toProfileMenuItem(item);
+
+  switch (profileMenuItem.type) {
+    case "workspace-membership":
+      return `${baseClass} items-start ${profileMenuItem.isCurrent ? "text-brand font-semibold" : "text-text-dark font-medium"}`;
+    case "counterpart":
+      return `${baseClass} items-center text-brand font-semibold`;
+    case "settings":
+      return `${baseClass} items-center text-text-dark font-medium`;
+    case "sign-out":
+      return `${baseClass} items-center text-destructive font-semibold`;
+  }
+}
+
+function getMenuIconClass(item: PrimeMenuItem): string {
+  const baseClass = "flex size-7 items-center justify-center rounded-sm";
+  const profileMenuItem = toProfileMenuItem(item);
+
+  switch (profileMenuItem.type) {
+    case "workspace-membership":
+      return `${baseClass} ${profileMenuItem.isCurrent ? "bg-accent-tint text-brand" : "bg-app-bg text-text-muted"}`;
+    case "counterpart":
       return `${baseClass} bg-accent-tint text-brand`;
     case "settings":
       return `${baseClass} bg-app-bg text-text-muted`;
     case "sign-out":
       return `${baseClass} bg-status-error-bg text-destructive`;
-    case undefined:
-      return baseClass;
-    default:
-      return assertNever(item.key);
   }
 }
 
-function getMenuActionTestId(item: ProfileMenuSlotItem): string {
-  switch (item.key) {
-    case "workspace":
+function getMenuActionTestId(item: PrimeMenuItem): string {
+  const profileMenuItem = toProfileMenuItem(item);
+
+  switch (profileMenuItem.type) {
+    case "workspace-membership":
+      return `profile-menu-workspace-${profileMenuItem.workspaceId}`;
+    case "counterpart":
       return "profile-menu-counterpart";
     case "settings":
       return "profile-menu-settings";
     case "sign-out":
       return "profile-menu-sign-out";
-    case undefined:
-      return "profile-menu-item";
-    default:
-      return assertNever(item.key);
   }
 }
 
@@ -371,7 +456,7 @@ onBeforeUnmount(() => {
         unstyled
         :model="profileMenuItems"
         aria-label="Profile actions"
-        class="ring-divider bg-surface-primary shadow-popover before:ring-divider before:bg-surface-primary absolute top-full right-0 z-30 mt-5 h-40 w-[264px] rounded-lg p-1.5 ring-1 ring-inset before:absolute before:top-0 before:right-4 before:size-3 before:rotate-45 before:ring-1 before:content-[''] before:ring-inset"
+        class="ring-divider bg-surface-primary shadow-popover before:ring-divider before:bg-surface-primary absolute top-full right-0 z-30 mt-5 max-h-[calc(100vh-6rem)] w-[320px] max-w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-lg p-1.5 ring-1 ring-inset before:absolute before:top-0 before:right-4 before:size-3 before:rotate-45 before:ring-1 before:content-[''] before:ring-inset"
         data-testid="profile-menu"
         :pt="{
           list: 'm-0 flex list-none flex-col gap-1 p-0',
@@ -381,15 +466,15 @@ onBeforeUnmount(() => {
       >
         <template #item="{ item, props: itemProps }">
           <a
-            v-if="item.href"
+            v-if="item.type === 'counterpart'"
             v-bind="itemProps.action"
             :href="item.href"
-            :class="getMenuActionClass(getProfileMenuSlotItem(item))"
-            :data-testid="getMenuActionTestId(getProfileMenuSlotItem(item))"
+            :class="getMenuActionClass(item)"
+            :data-testid="getMenuActionTestId(item)"
             @click="closeProfileMenu()"
           >
             <span
-              :class="getMenuIconClass(getProfileMenuSlotItem(item))"
+              :class="getMenuIconClass(item)"
               aria-hidden="true"
             >
               <svg
@@ -410,8 +495,54 @@ onBeforeUnmount(() => {
             <span>{{ item.label }}</span>
           </a>
 
+          <button
+            v-else-if="item.type === 'workspace-membership'"
+            v-bind="itemProps.action"
+            type="button"
+            :aria-current="item.isCurrent ? 'true' : undefined"
+            :disabled="item.isCurrent || item.isSwitching || props.switchingWorkspaceId !== null"
+            :class="getMenuActionClass(item)"
+            :data-testid="getMenuActionTestId(item)"
+          >
+            <span
+              :class="getMenuIconClass(item)"
+              aria-hidden="true"
+            >
+              <svg
+                class="size-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              >
+                <path d="M6 7h12" />
+                <path d="M9 12h9" />
+                <path d="M12 17h6" />
+              </svg>
+            </span>
+            <span class="flex min-w-0 flex-1 items-start justify-between gap-3">
+              <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span class="block text-left leading-5 break-words whitespace-normal">
+                  {{ item.label }}
+                </span>
+                <span class="text-text-muted block text-left text-xs font-medium">
+                  {{ item.roleLabel }}
+                </span>
+              </span>
+              <span
+                v-if="getWorkspaceStatusLabel(item)"
+                class="text-text-muted shrink-0 text-xs font-semibold"
+                data-testid="profile-menu-workspace-status"
+              >
+                {{ getWorkspaceStatusLabel(item) }}
+              </span>
+            </span>
+          </button>
+
           <RouterLink
-            v-else-if="item.route"
+            v-else-if="item.type === 'settings'"
             v-slot="{ href, navigate }"
             :to="item.route"
             custom
@@ -419,12 +550,12 @@ onBeforeUnmount(() => {
             <a
               v-bind="itemProps.action"
               :href="href"
-              :class="getMenuActionClass(getProfileMenuSlotItem(item))"
-              :data-testid="getMenuActionTestId(getProfileMenuSlotItem(item))"
+              :class="getMenuActionClass(item)"
+              :data-testid="getMenuActionTestId(item)"
               @click="handleSettingsClick(navigate, $event)"
             >
               <span
-                :class="getMenuIconClass(getProfileMenuSlotItem(item))"
+                :class="getMenuIconClass(item)"
                 aria-hidden="true"
               >
                 <component
@@ -454,11 +585,11 @@ onBeforeUnmount(() => {
           <a
             v-else
             v-bind="itemProps.action"
-            :class="getMenuActionClass(getProfileMenuSlotItem(item))"
-            :data-testid="getMenuActionTestId(getProfileMenuSlotItem(item))"
+            :class="getMenuActionClass(item)"
+            :data-testid="getMenuActionTestId(item)"
           >
             <span
-              :class="getMenuIconClass(getProfileMenuSlotItem(item))"
+              :class="getMenuIconClass(item)"
               aria-hidden="true"
             >
               <svg

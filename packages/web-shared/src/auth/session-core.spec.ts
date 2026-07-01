@@ -22,6 +22,16 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
 
   return {
     getCurrentUser: async () => currentUser,
+    listCurrentUserWorkspaces: async () => ({
+      items: [
+        {
+          workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+          workspaceName: "GiTiempo Studio",
+          role: "member",
+          isCurrent: true,
+        },
+      ],
+    }),
     loginWithFirebaseToken: async () => ({
       accessToken: "access-token",
       accessTokenExpiresIn: 900,
@@ -37,6 +47,11 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
       accessToken: "restored-access-token",
       accessTokenExpiresIn: 900,
       refreshToken: "restored-refresh-token",
+    }),
+    switchWorkspace: async () => ({
+      accessToken: "switched-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "switched-refresh-token",
     }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
@@ -229,5 +244,51 @@ describe("createAuthSessionCore", () => {
     expect(session.accessToken.value).toBeNull();
     expect(getRefreshToken()).toBeNull();
     expect(session.bootstrapComplete.value).toBe(true);
+  });
+
+  it("atomically replaces the token pair after a successful workspace switch", async () => {
+    setRefreshToken("persisted-refresh-token");
+    const session = createAuthSessionCore({
+      getAuthRuntime: () => createRuntimeMock(),
+    });
+
+    session.accessToken.value = "current-access-token";
+
+    await session.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002");
+
+    expect(session.accessToken.value).toBe("switched-access-token");
+    expect(getRefreshToken()).toBe("switched-refresh-token");
+    expect(session.profile.value?.email).toBe("alexey@example.com");
+  });
+
+  it("preserves the current session when workspace switching fails", async () => {
+    setRefreshToken("persisted-refresh-token");
+    const session = createAuthSessionCore({
+      getAuthRuntime: () =>
+        createRuntimeMock({
+          switchWorkspace: async () => {
+            throw new Error("switch failed");
+          },
+        }),
+    });
+
+    session.accessToken.value = "current-access-token";
+    session.profile.value = {
+      avatarUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Current User",
+      email: "current@example.com",
+      id: "current-user-id",
+      role: "member",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await expect(
+      session.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"),
+    ).rejects.toThrow("switch failed");
+
+    expect(session.accessToken.value).toBe("current-access-token");
+    expect(getRefreshToken()).toBe("persisted-refresh-token");
+    expect(session.profile.value?.email).toBe("current@example.com");
   });
 });

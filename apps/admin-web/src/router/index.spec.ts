@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createMemoryHistory } from "vue-router";
 import { createPinia, setActivePinia } from "pinia";
 import {
+  type CurrentUserWorkspaceMembershipListResponse,
   WorkspaceRoles,
   type UserResponse,
   type WorkspaceRole,
@@ -53,9 +54,20 @@ function createRuntimeMock(
   role: WorkspaceRole = WorkspaceRoles.Admin,
 ): AuthRuntime {
   const currentUser = createUserResponse(role);
+  const workspaceMemberships: CurrentUserWorkspaceMembershipListResponse = {
+    items: [
+      {
+        isCurrent: true,
+        role,
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        workspaceName: "Workspace Alpha",
+      },
+    ],
+  };
 
   return {
     getCurrentUser: async () => currentUser,
+    listCurrentUserWorkspaces: async () => workspaceMemberships,
     loginWithFirebaseToken: async () => ({
       accessToken: "access-token",
       accessTokenExpiresIn: 900,
@@ -70,6 +82,11 @@ function createRuntimeMock(
     refreshSession: async () => {
       throw new Error("no refresh token");
     },
+    switchWorkspace: async () => ({
+      accessToken: "switched-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "switched-refresh-token",
+    }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",
     signOutIdentityProvider: async () => undefined,

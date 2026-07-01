@@ -79,6 +79,6 @@ Alternative considered: always redirect to the same path in the current app. Tha
 
 Rollback is a normal code rollback because the planned behavior can be introduced without changing existing request shapes. If a refresh-token workspace-context migration is required, rollback must preserve compatibility with existing single-workspace sessions or invalidate only the newly issued switched sessions.
 
-## Open Questions
+## Initial Workspace Selection
 
-- Should login choose the earliest active membership or preserve the most recently selected workspace when no current session exists? The MVP can use a deterministic membership order, but a persistent preference would need a separate product decision.
+When login happens without an existing selected workspace context, the API selects the earliest active membership by `joinedAt ASC`, then `workspaceId ASC` as a deterministic tiebreaker. That keeps first-login behavior stable without introducing a separate persisted preference model. A future "remember last workspace" feature would be a separate product change and should not silently alter refresh semantics for this MVP.

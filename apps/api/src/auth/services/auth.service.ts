@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -320,14 +321,16 @@ export class AuthService {
       await this.refreshRepo.deleteFamily(row.familyId);
       throw new UnauthorizedException('Unauthorized');
     }
-    const membership = await this.members.requireActiveMembershipForUser(
+    const membership = await this.members.requireActiveMembership(
       user.id,
+      row.workspaceId,
     );
 
     const { token, hash: newHash } = this.tokens.generateRefreshToken();
     const expiresAt = new Date(Date.now() + this.refreshTtlMs);
     const rotated = await this.refreshRepo.rotateIfActive(row.id, {
       userId: user.id,
+      workspaceId: row.workspaceId,
       familyId: row.familyId,
       tokenHash: newHash,
       expiresAt,
@@ -356,6 +359,35 @@ export class AuthService {
     };
   }
 
+  async switchWorkspace(
+    subjectUser: AuthUser,
+    workspaceId: string,
+  ): Promise<TokenPair> {
+    const user = await this.users.findRowById(subjectUser.sub);
+    if (!user) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const membership = await this.members.resolveActiveMembership(
+      user.id,
+      workspaceId,
+    );
+    if (!membership) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    return this.issueTokenPair(
+      {
+        sub: user.id,
+        email: user.email,
+        firebaseUid: user.firebaseUid,
+        workspaceId: membership.workspaceId,
+        role: membership.role,
+      },
+      randomUUID(),
+    );
+  }
+
   async logout(refreshToken: string, subjectUserId: string): Promise<void> {
     const hash = this.tokens.hashRefreshToken(refreshToken);
     const row = await this.refreshRepo.findByHashIncludingRevoked(hash);
@@ -380,6 +412,7 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + this.refreshTtlMs);
     await this.refreshRepo.create({
       userId: user.sub,
+      workspaceId: user.workspaceId,
       familyId,
       tokenHash: hash,
       expiresAt,
@@ -455,6 +488,7 @@ export class AuthService {
         familyId,
         tokenHash: hash,
         userId: userRow.id,
+        workspaceId: workspaceRow.id,
       });
 
       return {

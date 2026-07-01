@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   registerRequestSchema,
   registrationErrorCodeSchema,
+  switchWorkspaceRequestSchema,
 } from "./auth.js";
 
 const validRegisterRequest = {
@@ -101,5 +102,34 @@ describe("registrationErrorCodeSchema", () => {
     const result = registrationErrorCodeSchema.safeParse("firebase/email-taken");
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("switchWorkspaceRequestSchema", () => {
+  it("accepts a strict workspace switch payload", () => {
+    const payload = {
+      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+    };
+
+    expect(switchWorkspaceRequestSchema.parse(payload)).toEqual(payload);
+  });
+
+  it("rejects invalid workspace identifiers", () => {
+    const result = switchWorkspaceRequestSchema.safeParse({
+      workspaceId: "workspace-1",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["workspaceId"]);
+  });
+
+  it("rejects unknown payload keys", () => {
+    const result = switchWorkspaceRequestSchema.safeParse({
+      workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      workspaceName: "Acme Studio",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.code).toBe("unrecognized_keys");
   });
 });

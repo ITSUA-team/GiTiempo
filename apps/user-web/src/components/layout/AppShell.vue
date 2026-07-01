@@ -49,6 +49,33 @@ async function handleSignOut(): Promise<void> {
   await router.push({ name: routeNames.login });
 }
 
+async function handleSwitchWorkspace(workspaceId: string): Promise<void> {
+  try {
+    const switchResult = await authStore.switchWorkspace(workspaceId);
+
+    if (route.name === routeNames.forbidden) {
+      await router.push({ name: routeNames.dashboard });
+    }
+
+    if (!switchResult.membershipsReloaded) {
+      appToast.showInfoToast(
+        "Workspace switched",
+        "The new workspace is active, but the workspace list could not be refreshed yet.",
+      );
+    }
+  } catch (error) {
+    appToast.showErrorToast({
+      detail: getErrorMessage(error, "Could not switch workspace."),
+      error,
+      logContext: {
+        action: "switch-workspace",
+        feature: "user-shell",
+      },
+      summary: "Could not switch workspace",
+    });
+  }
+}
+
 watch(
   () => authStore.accessToken,
   async (accessToken) => {
@@ -57,18 +84,21 @@ watch(
     workspaceNameRequestToken = accessToken;
 
     try {
-      const workspace = await getWorkspaceClient().getWorkspace();
+      const [workspace] = await Promise.all([
+        getWorkspaceClient().getWorkspace(),
+        authStore.loadWorkspaceMemberships(),
+      ]);
       authStore.setWorkspaceName(workspace.name);
     } catch (error) {
       workspaceNameRequestToken = null;
       appToast.showErrorToast({
-        detail: getErrorMessage(error, "Could not load workspace name."),
+        detail: getErrorMessage(error, "Could not load workspace context."),
         error,
         logContext: {
-          action: "load-workspace-name",
+          action: "load-workspace-context",
           feature: "user-shell",
         },
-        summary: "Could not load workspace",
+        summary: "Could not load workspace context",
       });
     }
   },
@@ -88,9 +118,12 @@ watch(
       :settings-label="USER_PROFILE_LABEL"
       :settings-to="{ name: routeNames.profile }"
       :show-display-name="false"
+      :switching-workspace-id="authStore.switchingWorkspaceId"
       :user-initials="authStore.userInitials"
+      :workspace-memberships="authStore.workspaceMemberships"
       :workspace-name="authStore.workspaceName"
       @sign-out="handleSignOut"
+      @switch-workspace="handleSwitchWorkspace"
     >
       <template #center>
         <TopBarTimer :open-request-id="topBarTimerDialogOpenRequestId" />

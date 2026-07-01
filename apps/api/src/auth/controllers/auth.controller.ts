@@ -5,6 +5,7 @@ import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
@@ -23,7 +24,9 @@ import { LoginDto } from '../dto/login.dto';
 import { RefreshDto } from '../dto/refresh.dto';
 import { LogoutDto } from '../dto/logout.dto';
 import { RegisterDto } from '../dto/register.dto';
+import { SwitchWorkspaceDto } from '../dto/switch-workspace.dto';
 import { TokenPairResponseDto } from '../dto/token-pair-response.dto';
+import type { AuthUser } from '../types/auth-user';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -91,5 +94,23 @@ export class AuthController {
     @Body() body: LogoutDto,
   ): Promise<void> {
     await this.auth.logout(body.refreshToken, sub);
+  }
+
+  @Post('switch-workspace')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Switch the active workspace and issue a fresh token pair',
+  })
+  @ApiOkResponse({ type: TokenPairResponseDto })
+  @ApiForbiddenResponse({
+    description: 'The user is not a member of the requested workspace',
+  })
+  @ZodSerializerDto(TokenPairResponseDto)
+  switchWorkspace(
+    @CurrentUser() user: AuthUser,
+    @Body() body: SwitchWorkspaceDto,
+  ): Promise<TokenPairResponseDto> {
+    return this.auth.switchWorkspace(user, body.workspaceId);
   }
 }
