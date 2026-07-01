@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
+import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
 import {
   normalizeReportDateRangeValue,
   filterAutocompleteOptions,
@@ -104,10 +105,7 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
   groupBy.value = value;
 }
 
-const autoCompletePt = {
-  root: {
-    class: 'w-full',
-  },
+const autoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
   pcInputText: {
     root: {
       class:
@@ -115,7 +113,7 @@ const autoCompletePt = {
     },
   },
   dropdown: { class: 'w-9 text-text-muted' },
-} as const;
+});
 
 const selectPt = {
   root: {
@@ -155,6 +153,7 @@ const datePickerPt = {
         class="text-text-dark text-[13px] font-medium"
       >Project</label>
       <AutoComplete
+        append-to="self"
         input-id="reports-project"
         name="projectId"
         :model-value="selectedProjectOption"
@@ -180,6 +179,7 @@ const datePickerPt = {
         class="text-text-dark text-[13px] font-medium"
       >Member</label>
       <AutoComplete
+        append-to="self"
         input-id="reports-member"
         name="memberId"
         :model-value="selectedMemberOption"
@@ -211,6 +211,7 @@ const datePickerPt = {
         selection-mode="range"
         :manual-input="false"
         show-button-bar
+        show-clear
         placeholder="All dates"
         date-format="M d, yy"
         :disabled="disabled"

@@ -1,6 +1,8 @@
 import { mount } from "@vue/test-utils";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { createNewTaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
+
 import TimeEntryDialog from "./TimeEntryDialog.vue";
 
 function findButtonByLabel(
@@ -28,6 +30,7 @@ function mountDialog(
       errors: {
         description: null,
         endedAt: null,
+        newTaskTitle: null,
         projectId: null,
         startedAt: null,
         taskId: null,
@@ -38,6 +41,7 @@ function mountDialog(
       isOpen: true,
       isSaving: false,
       mode: "edit",
+      newTaskTitle: "",
       projectId: "project-1",
       projects: [
         {
@@ -176,10 +180,10 @@ function mountDialog(
             '<button :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
         },
         Checkbox: {
-          props: ["modelValue", "disabled"],
+          props: ["modelValue", "disabled", "inputId"],
           emits: ["update:modelValue"],
           template:
-            '<input :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
+            '<input :id="inputId" :checked="modelValue" :disabled="disabled" type="checkbox" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
         },
         DatePicker: {
           props: ["modelValue", "dateFormat", "disabled", "inputId", "invalid"],
@@ -197,6 +201,12 @@ function mountDialog(
           emits: ["update:visible"],
           template:
             '<div v-if="visible"><button data-testid="dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot name="header" /><slot /><slot name="footer" /></div>',
+        },
+        InputText: {
+          props: ["modelValue", "disabled", "invalid"],
+          emits: ["update:modelValue"],
+          template:
+            '<input data-testid="time-entry-new-task-title" :data-invalid="String(invalid)" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Textarea: {
           props: ["modelValue", "disabled"],
@@ -287,6 +297,13 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.emitted("update:endedAt")?.[0]?.[0]).toBeInstanceOf(Date);
     expect(wrapper.emitted("update:isBillable")?.[0]).toEqual([false]);
     expect(wrapper.emitted("update:description")?.[0]).toEqual(["Updated description"]);
+  });
+
+  it("associates the billable label with the checkbox input", () => {
+    const wrapper = mountDialog();
+    const billableLabel = wrapper.get('label[for="time-entry-billable"]');
+
+    expect(billableLabel.find("#time-entry-billable").exists()).toBe(true);
   });
 
   it("configures task lookup to suggest all project tasks on empty input", () => {
@@ -414,6 +431,44 @@ describe("TimeEntryDialog", () => {
     ]);
   });
 
+  it("renders the new task option field and emits title updates", async () => {
+    const wrapper = mountDialog({
+      errors: {
+        description: null,
+        endedAt: null,
+        newTaskTitle: null,
+        projectId: null,
+        startedAt: null,
+        taskId: null,
+      },
+      mode: "create",
+      newTaskTitle: "Draft release notes",
+      saveLabel: "Save entry",
+      taskSuggestions: [
+        {
+          id: "task-1",
+          isActive: true,
+          projectId: "project-1",
+          title: "Improve reports filters",
+        },
+        createNewTaskLookupOption("project-1"),
+      ],
+      taskValue: createNewTaskLookupOption("project-1"),
+      title: "New time entry",
+    });
+
+    expect(wrapper.text()).toContain("New task");
+    expect(wrapper.text()).toContain("New task title");
+    expect(wrapper.text()).toContain("Required");
+    expect(wrapper.text()).toContain("inherits the project billable default");
+
+    await wrapper.get('[data-testid="time-entry-new-task-title"]').setValue("Write release checklist");
+
+    expect(wrapper.emitted("update:newTaskTitle")?.at(-1)).toEqual([
+      "Write release checklist",
+    ]);
+  });
+
   it("requests all task suggestions when the task dropdown query is empty", async () => {
     const wrapper = mountDialog();
     const taskAutoComplete = wrapper.get('[data-testid="time-entry-task"]');
@@ -449,6 +504,7 @@ describe("TimeEntryDialog", () => {
       errors: {
         description: "String must contain at most 2000 character(s)",
         endedAt: "endedAt must be later than startedAt",
+        newTaskTitle: null,
         projectId: null,
         startedAt: null,
         taskId: "Select a visible task.",

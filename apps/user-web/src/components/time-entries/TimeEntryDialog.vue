@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import Checkbox from "primevue/checkbox";
 import DatePicker from "primevue/datepicker";
 import Dialog from "primevue/dialog";
+import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { filterAutocompleteOptions, InlineRequestMessage } from "@gitiempo/web-shared";
+import {
+  composeGiTiempoSelfAppendedAutoCompletePt,
+  giTiempoSelfAppendedAutoCompletePt,
+} from "@gitiempo/web-config/theme";
+import {
+  filterAutocompleteOptions,
+  InlineRequestMessage,
+  LabeledCheckbox,
+} from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
-import type { TaskLookupOption } from "@/composables/time-entries/time-entry-task-lookup";
+import {
+  isNewTaskLookupOption,
+  type TaskLookupOption,
+} from "@/composables/time-entries/time-entry-task-lookup";
 
 type ProjectAutoCompleteValue = ProjectResponse | string | null;
 type TaskAutoCompleteValue = string | TaskLookupOption | null;
@@ -20,6 +31,7 @@ const props = defineProps<{
   errors: {
     description: string | null;
     endedAt: string | null;
+    newTaskTitle: string | null;
     projectId: string | null;
     startedAt: string | null;
     taskId: string | null;
@@ -30,6 +42,7 @@ const props = defineProps<{
   isOpen: boolean;
   isSaving: boolean;
   mode: "create" | "edit" | null;
+  newTaskTitle: string;
   projectId: string | null;
   projects: ProjectResponse[];
   projectsErrorMessage: string | null;
@@ -52,6 +65,7 @@ const emit = defineEmits<{
   "update:description": [value: string];
   "update:endedAt": [value: Date | null];
   "update:isBillable": [value: boolean];
+  "update:newTaskTitle": [value: string];
   "update:projectId": [value: string | null];
   "update:startedAt": [value: Date | null];
   "update:taskValue": [value: string | TaskLookupOption | null];
@@ -93,12 +107,28 @@ const billableModel = computed({
   },
 });
 
+const newTaskTitleModel = computed({
+  get: () => props.newTaskTitle,
+  set: (value: string) => {
+    emit("update:newTaskTitle", value);
+  },
+});
+
 const isDialogMutating = computed(() => props.isSaving || props.isDeleting);
-const projectAutoCompletePt = {
+const isNewTaskSelected = computed(() =>
+  isNewTaskLookupOption(props.taskValue),
+);
+const selectedProjectName = computed(() => selectedProject.value?.name ?? null);
+const newTaskHint = computed(() => {
+  const projectName = selectedProjectName.value ?? "the selected project";
+
+  return `This task is created in ${projectName} and inherits the project billable default.`;
+});
+const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
   dropdown: {
     onMousedown: handleProjectDropdownMouseDown,
   },
-};
+});
 
 watch(
   [() => props.isOpen, () => props.mode, () => props.projectId, () => props.projects],
@@ -229,6 +259,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           Project
         </label>
         <AutoComplete
+          append-to="self"
           complete-on-focus
           data-key="id"
           dropdown
@@ -264,7 +295,9 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           Task
         </label>
         <AutoComplete
+          append-to="self"
           complete-on-focus
+          data-key="id"
           dropdown
           dropdown-mode="blank"
           fluid
@@ -276,6 +309,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           :disabled="!props.projectId || props.isLoadingTasks || isDialogMutating"
           :invalid="!!props.errors.taskId"
           :loading="props.isLoadingTasks"
+          :pt="giTiempoSelfAppendedAutoCompletePt"
           :suggestions="props.taskSuggestions"
           placeholder="Search tasks"
           @complete="handleTaskComplete"
@@ -293,6 +327,48 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
         >
           {{ props.tasksErrorMessage }}
         </small>
+        <small
+          v-else
+          class="text-text-muted text-xs"
+        >
+          Visible tasks are listed first. New task is the last option.
+        </small>
+
+        <div
+          v-if="isNewTaskSelected"
+          class="mt-1 flex flex-col gap-1"
+        >
+          <label
+            for="time-entry-new-task-title"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            New task title
+          </label>
+          <div class="relative">
+            <InputText
+              id="time-entry-new-task-title"
+              v-model="newTaskTitleModel"
+              class="text-text-muted h-[38px] w-full pr-20 text-sm font-medium"
+              :disabled="isDialogMutating"
+              :invalid="!!props.errors.newTaskTitle"
+            />
+            <span class="text-text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium">
+              Required
+            </span>
+          </div>
+          <small
+            v-if="props.errors.newTaskTitle"
+            class="text-destructive text-xs"
+          >
+            {{ props.errors.newTaskTitle }}
+          </small>
+          <small
+            v-else
+            class="text-text-muted text-xs"
+          >
+            {{ newTaskHint }}
+          </small>
+        </div>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">
@@ -374,20 +450,13 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label
-          for="time-entry-billable"
-          class="border-divider bg-surface-primary flex min-h-10 items-center gap-3 rounded-lg border px-3 py-2"
-        >
-          <Checkbox
-            id="time-entry-billable"
-            v-model="billableModel"
-            binary
-            :disabled="isDialogMutating"
-          />
-          <span class="text-text-dark text-sm font-medium">
-            Billable entry
-          </span>
-        </label>
+        <LabeledCheckbox
+          v-model="billableModel"
+          input-id="time-entry-billable"
+          label="Billable entry"
+          root-class="border-divider bg-surface-primary flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2"
+          :disabled="isDialogMutating"
+        />
       </div>
     </div>
 

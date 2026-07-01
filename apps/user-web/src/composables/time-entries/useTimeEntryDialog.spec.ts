@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import {
+  createNewTaskLookupOption,
+  TIME_ENTRY_NEW_TASK_ID,
+} from "./time-entry-task-lookup";
 import { useTimeEntryDialog } from "./useTimeEntryDialog";
+
+const TEST_PROJECT_ID = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001";
+const TEST_TASK_ID = "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2001";
 
 describe("useTimeEntryDialog", () => {
   beforeAll(() => {
@@ -90,5 +97,141 @@ describe("useTimeEntryDialog", () => {
     });
 
     expect(dialog.dialogIsBillable.value).toBe(false);
+  });
+
+  it("validates GitHub issue draft entries without requiring a materialized task id", () => {
+    const dialog = useTimeEntryDialog();
+
+    dialog.openCreateDialogState();
+    dialog.setProjectId("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f900");
+    dialog.setTaskValue({
+      defaultBillableForTimeEntries: true,
+      githubIssue: {
+        githubRepo: "octo-org/repo-name",
+        issueNumber: 184,
+      },
+      id: "__top-bar-timer-github-issue__octo-org/repo-name#184",
+      isActive: true,
+      isGitHubIssueOption: true,
+      issueTitle: "Provider issue",
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f900",
+      title: "Provider issue",
+    });
+    dialog.setStartedAt(new Date("2026-04-21T09:00:00.000Z"));
+    dialog.setEndedAt(new Date("2026-04-21T10:00:00.000Z"));
+
+    expect(dialog.validateDialog()).toEqual({
+      input: {
+        description: null,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        isBillable: true,
+        startedAt: "2026-04-21T09:00:00.000Z",
+        taskId: "__top-bar-timer-github-issue__octo-org/repo-name#184",
+      },
+      kind: "existing-task",
+    });
+    expect(dialog.dialogErrors.value.taskId).toBeNull();
+  });
+
+  it("appends New task after visible task suggestions", () => {
+    const dialog = useTimeEntryDialog();
+
+    dialog.openCreateDialogState();
+    dialog.setProjectId(TEST_PROJECT_ID);
+    dialog.setTaskOptions([
+      {
+        defaultBillableForTimeEntries: true,
+        id: TEST_TASK_ID,
+        isActive: true,
+        projectId: TEST_PROJECT_ID,
+        title: "Improve reports filters",
+      },
+    ]);
+    dialog.updateTaskSuggestions("");
+
+    expect(dialog.dialogTaskSuggestions.value.map((task) => task.title)).toEqual([
+      "Improve reports filters",
+      "New task",
+    ]);
+    expect(dialog.dialogTaskSuggestions.value.at(-1)?.id).toBe(
+      TIME_ENTRY_NEW_TASK_ID,
+    );
+  });
+
+  it("validates a required new task title before returning the draft entry", () => {
+    const dialog = useTimeEntryDialog();
+
+    dialog.openCreateDialogState();
+    dialog.setProjectId(TEST_PROJECT_ID);
+    dialog.setTaskValue(createNewTaskLookupOption(TEST_PROJECT_ID));
+    dialog.setStartedAt(new Date("2026-04-21T09:00:00.000Z"));
+    dialog.setEndedAt(new Date("2026-04-21T10:00:00.000Z"));
+
+    expect(dialog.validateDialog()).toBeNull();
+    expect(dialog.dialogErrors.value.newTaskTitle).toBeTruthy();
+
+    dialog.setNewTaskTitle("Write release checklist");
+
+    expect(dialog.validateDialog()).toEqual({
+      draftInput: {
+        description: null,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        isBillable: false,
+        startedAt: "2026-04-21T09:00:00.000Z",
+      },
+      kind: "new-task",
+      taskTitle: "Write release checklist",
+    });
+  });
+
+  it("validates new-task drafts without using project id as a task id", () => {
+    const dialog = useTimeEntryDialog();
+    const projectId = "selected-project";
+
+    dialog.openCreateDialogState();
+    dialog.setProjectId(projectId);
+    dialog.setTaskValue(createNewTaskLookupOption(projectId));
+    dialog.setNewTaskTitle("Write release checklist");
+    dialog.setStartedAt(new Date("2026-04-21T09:00:00.000Z"));
+    dialog.setEndedAt(new Date("2026-04-21T10:00:00.000Z"));
+
+    expect(dialog.validateDialog()).toEqual({
+      draftInput: {
+        description: null,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        isBillable: false,
+        startedAt: "2026-04-21T09:00:00.000Z",
+      },
+      kind: "new-task",
+      taskTitle: "Write release checklist",
+    });
+    expect(dialog.dialogErrors.value.taskId).toBeNull();
+  });
+
+  it("returns a contract-safe input only after selecting an existing task", () => {
+    const dialog = useTimeEntryDialog();
+
+    dialog.openCreateDialogState();
+    dialog.setProjectId(TEST_PROJECT_ID);
+    dialog.setTaskValue({
+      defaultBillableForTimeEntries: true,
+      id: TEST_TASK_ID,
+      isActive: true,
+      projectId: TEST_PROJECT_ID,
+      title: "Improve reports filters",
+    });
+    dialog.setStartedAt(new Date("2026-04-21T09:00:00.000Z"));
+    dialog.setEndedAt(new Date("2026-04-21T10:00:00.000Z"));
+
+    expect(dialog.validateDialog()).toEqual({
+      input: {
+        description: null,
+        endedAt: "2026-04-21T10:00:00.000Z",
+        isBillable: true,
+        startedAt: "2026-04-21T09:00:00.000Z",
+        taskId: TEST_TASK_ID,
+      },
+      kind: "existing-task",
+    });
   });
 });

@@ -54,7 +54,6 @@ vi.mock('@/composables/feedback/useConfirmation', () => ({
 import MembersView from './MembersView.vue';
 
 function createDeferred<T>() {
-  // eslint-disable-next-line no-unused-vars
   const deferred = {} as { promise: Promise<T>; resolve: (..._args: [T]) => void };
 
   deferred.promise = new Promise<T>((res) => {

@@ -2,7 +2,12 @@
 
 import { getExtensionConfig } from "@/lib/config";
 import { createExtensionApiClient } from "@/lib/api";
-import type { BackgroundMessage, RuntimeMutationResult, RuntimeSnapshot } from "@/lib/runtime";
+import type {
+  BackgroundMessage,
+  RuntimeAuthResult,
+  RuntimeMutationResult,
+  RuntimeSnapshot,
+} from "@/lib/runtime";
 import { getStoredSession } from "@/lib/session";
 
 const config = getExtensionConfig();
@@ -103,6 +108,12 @@ async function handleMutation(
   }
 }
 
+async function handleAuthExchange(
+  firebaseIdToken: string,
+): Promise<RuntimeAuthResult> {
+  return handleMutation(() => apiClient.loginWithFirebaseToken(firebaseIdToken));
+}
+
 async function openExtension(): Promise<void> {
   try {
     if (chrome.action.openPopup) {
@@ -122,11 +133,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   void (async () => {
     switch (request.type) {
       case "auth/exchange-firebase-token": {
-        await apiClient.loginWithFirebaseToken(request.firebaseIdToken);
-        const snapshot = await loadSnapshot();
-
-        await broadcastSnapshot(snapshot);
-        sendResponse(snapshot);
+        sendResponse(await handleAuthExchange(request.firebaseIdToken));
         return;
       }
       case "runtime/get-snapshot": {

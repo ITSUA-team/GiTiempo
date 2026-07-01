@@ -17,7 +17,6 @@ import {
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import { buildGitHubWorkspaceAccessChecklist } from '@/components/settings/github-workspace-access';
 
-/* eslint-disable no-unused-vars */
 interface UseAdminWorkspaceGitHubOrganizationsOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<
@@ -36,7 +35,6 @@ interface UseAdminWorkspaceGitHubOrganizationsOptions {
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
   userAppUrl?: string | null;
 }
-/* eslint-enable no-unused-vars */
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error

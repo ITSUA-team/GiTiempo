@@ -88,7 +88,7 @@ export const timeEntryListQuerySchema = z
     },
   );
 
-export const createManualTimeEntrySchema = z
+const manualTimeEntryInputBaseSchema = z
   .object({
     taskId: z.uuid(),
     startedAt: dateTimeSchema,
@@ -96,14 +96,29 @@ export const createManualTimeEntrySchema = z
     description: z.string().max(2000).nullable().optional(),
     isBillable: z.boolean().optional(),
   })
+  .strict();
+
+function hasPositiveManualTimeEntryDuration(data: {
+  endedAt: string;
+  startedAt: string;
+}): boolean {
+  return new Date(data.endedAt).getTime() > new Date(data.startedAt).getTime();
+}
+
+export const createManualTimeEntrySchema = manualTimeEntryInputBaseSchema
   .strict()
-  .refine(
-    (data) => new Date(data.endedAt).getTime() > new Date(data.startedAt).getTime(),
-    {
-      message: "endedAt must be later than startedAt",
-      path: ["endedAt"],
-    },
-  );
+  .refine(hasPositiveManualTimeEntryDuration, {
+    message: "endedAt must be later than startedAt",
+    path: ["endedAt"],
+  });
+
+export const createManualTimeEntryDraftSchema = manualTimeEntryInputBaseSchema
+  .omit({ taskId: true })
+  .strict()
+  .refine(hasPositiveManualTimeEntryDuration, {
+    message: "endedAt must be later than startedAt",
+    path: ["endedAt"],
+  });
 
 export const updateTimeEntrySchema = z
   .object({
@@ -167,6 +182,9 @@ export type CurrentTimeEntryResponse = z.infer<
 export type TimeEntryListQuery = z.infer<typeof timeEntryListQuerySchema>;
 export type CreateManualTimeEntryInput = z.infer<
   typeof createManualTimeEntrySchema
+>;
+export type CreateManualTimeEntryDraftInput = z.infer<
+  typeof createManualTimeEntryDraftSchema
 >;
 export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntrySchema>;
 export type StartTimerInput = z.infer<typeof startTimerSchema>;

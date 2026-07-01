@@ -8,7 +8,9 @@ import {
   ManagementTableEmptyState,
   ManagementTableShell,
   MobileRecordCard,
+  managementTableBodyRowClass,
   managementTableColumnPt,
+  managementTableHeaderClass,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from "@gitiempo/web-shared";
@@ -17,7 +19,6 @@ import TaskNameLink from "@/components/tasks/TaskNameLink.vue";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
 
 interface ProjectsTaskSectionProps {
-  // eslint-disable-next-line no-unused-vars
   formatUpdatedLabel: (updatedAt: string) => string;
   project: ProjectResponse;
   tasks: TaskResponse[];
@@ -39,6 +40,8 @@ const columns = [
   { key: "status", label: "Status", width: 130 },
   { key: "updated", label: "Updated", width: 170 },
 ] satisfies ManagementTableColumn[];
+
+const projectTasksTableHeaderClass = `${managementTableHeaderClass} min-w-[740px]`;
 
 function formatTaskCount(count: number): string {
   return `${count} active task${count === 1 ? "" : "s"}`;
@@ -124,14 +127,15 @@ function getStatusPt(task: TaskResponse) {
 
     <ManagementTableShell
       v-else
-      body-row-class="h-[52px] bg-transparent hover:bg-app-bg"
+      :body-row-class="managementTableBodyRowClass"
       :columns="columns"
       data-key="id"
-      header-class="border-divider bg-app-bg text-text-muted flex h-[44px] items-center border-b font-sans text-[13px] font-medium"
+      :header-class="projectTasksTableHeaderClass"
       :loading="false"
-      shell-class="border-divider overflow-hidden rounded-lg border bg-surface-primary"
+      shell-class="border-divider overflow-x-auto rounded-lg border bg-surface-primary"
+      single-scroll
       table-class="min-w-[740px] w-full table-fixed border-collapse"
-      table-container-class="overflow-auto rounded-none border-none"
+      table-container-class="overflow-visible rounded-none border-none"
       :value="props.tasks"
     >
       <template #empty>

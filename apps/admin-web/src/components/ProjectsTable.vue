@@ -3,6 +3,10 @@ import { computed, ref } from 'vue';
 import { FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
 import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
+import {
   EmptyStateBlock,
   EntryActionButton,
   ManagementTableShell,
@@ -13,9 +17,11 @@ import {
   managementTableFilterAutoCompletePt,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
+  managementTableHeaderClass,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import AutoComplete from 'primevue/autocomplete';
+import Button from 'primevue/button';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -108,6 +114,13 @@ function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void 
   emit('update:expandedRows', value);
 }
 
+const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
   { key: 'source', label: 'Source', width: 140 },
@@ -115,6 +128,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'hours', label: 'Hours', width: 120 },
   { key: 'visibility', label: 'Visibility', width: 120 },
 ];
+
+const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
 </script>
 
 <template>
@@ -153,6 +168,7 @@ const columns: ManagementTableColumn[] = [
         class="text-text-muted text-[12px] font-medium"
       >Project</label>
       <AutoComplete
+        append-to="self"
         input-id="mobile-project-name-filter"
         :model-value="filters.projectQuery"
         :suggestions="projectQuerySuggestions"
@@ -161,7 +177,7 @@ const columns: ManagementTableColumn[] = [
         dropdown-mode="blank"
         :min-length="0"
         placeholder="Filter project"
-        :pt="managementTableFilterAutoCompletePt"
+        :pt="managementTableSelfAppendedFilterAutoCompletePt"
         @complete="handleProjectQueryComplete"
         @update:model-value="updateProjectQueryFilter"
       />
@@ -304,16 +320,23 @@ const columns: ManagementTableColumn[] = [
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <h3>
-              <button
+              <Button
                 type="button"
-                class="focus-visible:outline-brand max-w-full truncate text-left text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-                :class="row.nameClass"
+                variant="link"
                 :aria-label="`Edit project ${row.name}`"
                 :data-testid="`project-mobile-name-${row.id}`"
+                :pt="{
+                  root: {
+                    class: [
+                      'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[15px] font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                      row.nameClass,
+                    ],
+                  },
+                }"
                 @click="emit('edit-project', row.project)"
               >
                 {{ row.name }}
-              </button>
+              </Button>
             </h3>
             <p class="text-text-muted text-[13px]">
               {{ row.sourceLabel }}
@@ -374,7 +397,7 @@ const columns: ManagementTableColumn[] = [
     :value="rows"
     :loading="loading"
     data-key="id"
-    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[860px] items-center border-b font-sans text-[13px] font-semibold"
+    :header-class="projectsTableHeaderClass"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll
     table-class="min-w-[860px] w-full table-fixed border-collapse"
@@ -393,7 +416,7 @@ const columns: ManagementTableColumn[] = [
             dropdown-mode="blank"
             :min-length="0"
             placeholder="Filter project"
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableFilterAutoCompleteResolvedPt"
             @complete="handleProjectQueryComplete"
             @update:model-value="updateProjectQueryFilter"
           />
@@ -459,16 +482,23 @@ const columns: ManagementTableColumn[] = [
 
     <Column :pt="managementTableColumnPt">
       <template #body="{ data }">
-        <button
+        <Button
           type="button"
-          class="focus-visible:outline-brand max-w-full truncate text-left text-[14px] leading-none font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-          :class="data.nameClass"
+          variant="link"
           :aria-label="`Edit project ${data.name}`"
           :data-testid="`project-name-${data.id}`"
+          :pt="{
+            root: {
+              class: [
+                'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[14px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                data.nameClass,
+              ],
+            },
+          }"
           @click="emit('edit-project', data.project)"
         >
           {{ data.name }}
-        </button>
+        </Button>
       </template>
     </Column>
 

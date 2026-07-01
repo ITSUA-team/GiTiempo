@@ -6,6 +6,10 @@ import type {
   WorkspaceRole,
 } from '@gitiempo/shared';
 import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
+import {
   EmptyStateBlock,
   EntryActionButton,
   ManagementTableShell,
@@ -16,10 +20,12 @@ import {
   managementTableFilterAutoCompletePt,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
+  managementTableHeaderClass,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
 import AutoComplete from 'primevue/autocomplete';
 import Avatar from 'primevue/avatar';
+import Button from 'primevue/button';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -109,12 +115,28 @@ function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
   emit('update:expandedRows', value);
 }
 
+const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+
 const columns: ManagementTableColumn[] = [
   { key: 'member', label: 'Member', width: 'fill' },
   { key: 'role', label: 'Role', width: 120 },
   { key: 'projects', label: 'Projects Assigned', width: 220 },
   { key: 'lastActive', label: 'Last Active', width: 140 },
 ];
+
+const membersTableBodyRowClass = 'h-[56px] transition-colors hover:bg-app-bg';
+const membersTableHeaderClass = `${managementTableHeaderClass} min-w-[780px]`;
+
+function getRoleClass(role: WorkspaceRole): string {
+  return role === 'pm'
+    ? 'text-brand text-[13px] font-semibold'
+    : 'text-text-dark text-[13px] font-medium';
+}
 </script>
 
 <template>
@@ -153,6 +175,7 @@ const columns: ManagementTableColumn[] = [
         class="text-text-muted text-[12px] font-medium"
       >Member</label>
       <AutoComplete
+        append-to="self"
         input-id="mobile-member-name-filter"
         :model-value="filters.memberQuery"
         :suggestions="memberQuerySuggestions"
@@ -161,7 +184,7 @@ const columns: ManagementTableColumn[] = [
         dropdown-mode="blank"
         :min-length="0"
         placeholder="Filter name or email"
-        :pt="managementTableFilterAutoCompletePt"
+        :pt="managementTableSelfAppendedFilterAutoCompletePt"
         @complete="handleMemberQueryComplete"
         @update:model-value="updateMemberQueryFilter"
       />
@@ -303,16 +326,22 @@ const columns: ManagementTableColumn[] = [
           />
           <div class="min-w-0 flex-1">
             <h3>
-              <button
+              <Button
                 v-if="row.canManage"
                 type="button"
-                class="text-brand focus-visible:outline-brand max-w-full truncate text-left text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                unstyled
                 :aria-label="`Edit member ${row.primaryLabel}`"
                 :data-testid="`member-mobile-name-${row.id}`"
+                :pt="{
+                  root: {
+                    class:
+                      'max-w-full cursor-pointer truncate rounded-none border-0 bg-transparent p-0 text-left font-sans text-[15px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                  },
+                }"
                 @click="emit('edit-member', row.member)"
               >
                 {{ row.primaryLabel }}
-              </button>
+              </Button>
               <span
                 v-else
                 class="text-brand block truncate text-[15px] font-semibold"
@@ -361,8 +390,9 @@ const columns: ManagementTableColumn[] = [
     :columns="columns"
     :value="rows"
     :loading="loading"
+    :body-row-class="membersTableBodyRowClass"
     data-key="id"
-    header-class="border-divider bg-app-bg text-text-dark flex h-[44px] min-w-[780px] items-center border-b font-sans text-[13px] font-semibold"
+    :header-class="membersTableHeaderClass"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"
     single-scroll
     table-class="min-w-[780px] w-full table-fixed border-collapse"
@@ -381,7 +411,7 @@ const columns: ManagementTableColumn[] = [
             dropdown-mode="blank"
             :min-length="0"
             placeholder="Filter name or email"
-            :pt="managementTableFilterAutoCompletePt"
+            :pt="managementTableFilterAutoCompleteResolvedPt"
             @complete="handleMemberQueryComplete"
             @update:model-value="updateMemberQueryFilter"
           />
@@ -445,16 +475,22 @@ const columns: ManagementTableColumn[] = [
             }"
           />
           <div class="flex min-w-0 flex-col">
-            <button
+            <Button
               v-if="data.canManage"
               type="button"
-              class="text-brand focus-visible:outline-brand max-w-full truncate text-left text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              unstyled
               :aria-label="`Edit member ${data.primaryLabel}`"
               :data-testid="`member-name-${data.id}`"
+              :pt="{
+                root: {
+                  class:
+                    'max-w-full cursor-pointer truncate rounded-none border-0 bg-transparent p-0 text-left font-sans text-[14px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                },
+              }"
               @click="emit('edit-member', data.member)"
             >
               {{ data.primaryLabel }}
-            </button>
+            </Button>
             <span
               v-else
               class="text-brand truncate text-[14px] font-semibold"
@@ -476,7 +512,10 @@ const columns: ManagementTableColumn[] = [
       :pt="managementTableColumnPt"
     >
       <template #body="{ data }">
-        <span class="text-text-dark text-[13px] font-bold">{{
+        <span
+          :class="getRoleClass(data.member.role)"
+          :data-testid="`member-role-${data.id}`"
+        >{{
           data.roleLabel
         }}</span>
       </template>

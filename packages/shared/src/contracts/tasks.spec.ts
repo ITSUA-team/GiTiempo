@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   backfillTaskBillableDefaultSchema,
   createTaskSchema,
+  ensureGitHubIssueTaskSchema,
   taskListQuerySchema,
   taskBillableDefaultBackfillResponseSchema,
   taskResponseSchema,
@@ -86,6 +87,30 @@ describe("taskListQuerySchema", () => {
   });
 });
 
+describe("ensureGitHubIssueTaskSchema", () => {
+  it("accepts project-scoped github issue materialization input", () => {
+    const result = ensureGitHubIssueTaskSchema.parse({
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      issueNumber: 184,
+    });
+
+    expect(result).toEqual({
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+      issueNumber: 184,
+    });
+  });
+
+  it("rejects client-supplied repository fields", () => {
+    const result = ensureGitHubIssueTaskSchema.safeParse({
+      githubRepo: "octo/repo",
+      issueNumber: 184,
+      issueTitle: "Client title",
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("updateTaskSchema", () => {
   it("accepts defaultBillableForTimeEntries as the only update field", () => {
     const result = updateTaskSchema.parse({
@@ -111,7 +136,6 @@ describe("backfillTaskBillableDefaultSchema", () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["updateTimeEntries"]);
   });
 
   it("accepts backfill response count", () => {

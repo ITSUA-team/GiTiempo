@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsMobileViewport } from './viewport';
 
-// eslint-disable-next-line no-unused-vars
 type MatchMediaChangeHandler = (event: MediaQueryListEvent) => void;
 type MatchMediaListener = MatchMediaChangeHandler;
 type MockMediaQueryList = {

@@ -82,7 +82,9 @@ function createClientMock(): TimeEntriesClient & {
   createTask: ReturnType<typeof vi.fn<TimeEntriesClient["createTask"]>>;
   deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient["deleteEntry"]>>;
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
+  ensureGitHubIssueTask: ReturnType<typeof vi.fn<TimeEntriesClient["ensureGitHubIssueTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
+  listProjectGitHubIssues: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectGitHubIssues"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   listProjectTimeEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTimeEntries"]>>;
   listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
@@ -107,7 +109,14 @@ function createClientMock(): TimeEntriesClient & {
     ),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
+    ensureGitHubIssueTask: vi.fn(async () => {
+      throw new Error("unused");
+    }),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    listProjectGitHubIssues: vi.fn(async () => ({
+      items: [],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    })),
     listOwnEntries: vi.fn(async (): Promise<TimeEntryListResponse> => ({
       items: [],
       meta: { limit: 10, page: 1, total: 0, totalPages: 0 },
@@ -208,6 +217,8 @@ async function mountView(client = createClientMock()) {
           template: `
             <div data-testid="task-backfill-dialog">
               <p data-testid="task-backfill-name">{{ entityName }}</p>
+              <p data-testid="task-backfill-update-time-entries">{{ String(updateTimeEntries) }}</p>
+              <button data-testid="task-backfill-uncheck" type="button" @click="$emit('update:updateTimeEntries', false)">Do not update time entries</button>
               <button data-testid="task-backfill-submit" type="button" @click="$emit('submit')">Update existing records</button>
               <button data-testid="task-backfill-close" type="button" @click="$emit('close')">Close</button>
             </div>
@@ -541,6 +552,42 @@ describe("ProjectView", () => {
         summary: "Existing time entries updated",
       }),
     );
+  });
+
+  it("does not update existing entries when the task backfill checkbox is unchecked", async () => {
+    const client = createClientMock();
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject("project-1", "Project Orion"),
+    ]);
+    client.listProjectTasks.mockResolvedValueOnce([
+      createTask("task-1", "project-1", "Improve reports filters", {
+        defaultBillableForTimeEntries: true,
+      }),
+    ]);
+    client.listProjectTimeEntries.mockResolvedValueOnce({
+      items: [],
+      meta: { limit: 1, page: 1, total: 2, totalPages: 1 },
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="project-section-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-default-false"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="task-backfill-update-time-entries"]').text()).toBe(
+      "true",
+    );
+
+    await wrapper.get('[data-testid="task-backfill-uncheck"]').trigger("click");
+    await wrapper.get('[data-testid="task-backfill-submit"]').trigger("click");
+    await flushPromises();
+
+    expect(client.backfillTaskBillableDefault).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="task-backfill-dialog"]').exists()).toBe(false);
   });
 
   it("does not show a task backfill follow-up when the edited default is unchanged", async () => {

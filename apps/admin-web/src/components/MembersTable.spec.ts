@@ -7,7 +7,10 @@ import type {
   WorkspaceRole,
 } from '@gitiempo/shared';
 import { ManagementTableShell } from '@gitiempo/web-shared';
-import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
+import {
+  giTiempoPrimeVueOptions,
+  giTiempoSelfAppendedAutoCompleteOverlayStyle,
+} from '@gitiempo/web-config/theme';
 import AutoComplete from 'primevue/autocomplete';
 import MultiSelect from 'primevue/multiselect';
 import PrimeVue from 'primevue/config';
@@ -22,6 +25,13 @@ import type {
 } from '@/lib/members-table';
 
 import MembersTable from './MembersTable.vue';
+
+type AutoCompletePt = {
+  overlay?: {
+    class?: string;
+    style?: unknown;
+  };
+};
 
 const defaultFilters: MembersTableFilters = {
   global: '',
@@ -155,18 +165,31 @@ describe('MembersTable', () => {
 
   it('uses member name as the edit entry point without an actions column', async () => {
     const row = createRows()[0]!;
-    const wrapper = mountMembersTable({ rows: [createRows()[0]!] });
+    const wrapper = mountMembersTable({ rows: createRows() });
+    const tableShell = wrapper.getComponent(ManagementTableShell);
 
     expect(
-      wrapper
-        .getComponent(ManagementTableShell)
+      tableShell
         .props('columns')
         .map((column) => column.label),
     ).toEqual(['Member', 'Role', 'Projects Assigned', 'Last Active']);
+    expect(tableShell.props('bodyRowClass')).toBe(
+      'h-[56px] transition-colors hover:bg-app-bg',
+    );
 
     const nameButton = wrapper.get('[data-testid="member-name-member-1"]');
 
     expect(nameButton.attributes('aria-label')).toBe('Edit member Pat PM');
+    expect(nameButton.classes()).not.toContain('p-button-link');
+    expect(nameButton.classes()).toEqual(
+      expect.arrayContaining(['text-brand', 'text-[14px]', 'font-semibold', 'leading-none']),
+    );
+    expect(wrapper.get('[data-testid="member-role-member-1"]').classes()).toEqual(
+      expect.arrayContaining(['text-brand', 'text-[13px]', 'font-semibold']),
+    );
+    expect(wrapper.get('[data-testid="member-role-member-2"]').classes()).toEqual(
+      expect.arrayContaining(['text-text-dark', 'text-[13px]', 'font-medium']),
+    );
     expect(wrapper.find('[data-testid="member-assign-pm-member-1"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-edit-member-1"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-remove-member-1"]').exists()).toBe(false);
@@ -196,6 +219,10 @@ describe('MembersTable', () => {
     expect(autoCompleteFilters).toHaveLength(1);
     expect(memberQueryFilter.props('dropdown')).toBe(true);
     expect(memberQueryFilter.props('completeOnFocus')).toBe(true);
+    expect(memberQueryFilter.props('appendTo')).not.toBe('self');
+    expect((memberQueryFilter.props('pt') as AutoCompletePt).overlay).toEqual({
+      class: 'overflow-hidden',
+    });
     expect(projectFilter.props('display')).toBe('chip');
     expect(projectFilter.props('filter')).toBe(true);
     expect(projectFilter.props('modelValue')).toEqual([]);
@@ -265,6 +292,10 @@ describe('MembersTable', () => {
     const projectFilter = wrapper.getComponent(MultiSelect);
 
     expect(memberQueryFilter.props('placeholder')).toBe('Filter name or email');
+    expect(memberQueryFilter.props('appendTo')).toBe('self');
+    expect((memberQueryFilter.props('pt') as AutoCompletePt).overlay?.style).toEqual(
+      giTiempoSelfAppendedAutoCompleteOverlayStyle,
+    );
     expect(projectFilter.props('placeholder')).toBe('All projects');
 
     await memberQueryFilter.vm.$emit('update:modelValue', 'alex');
@@ -303,7 +334,14 @@ describe('MembersTable', () => {
     expect(wrapper.find('[data-testid="member-mobile-edit-member-1"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-mobile-remove-member-1"]').exists()).toBe(false);
 
-    await wrapper.get('[data-testid="member-mobile-name-member-1"]').trigger('click');
+    const mobileNameButton = wrapper.get('[data-testid="member-mobile-name-member-1"]');
+
+    expect(mobileNameButton.classes()).not.toContain('p-button-link');
+    expect(mobileNameButton.classes()).toEqual(
+      expect.arrayContaining(['text-brand', 'text-[15px]', 'font-semibold', 'leading-none']),
+    );
+
+    await mobileNameButton.trigger('click');
 
     expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
   });

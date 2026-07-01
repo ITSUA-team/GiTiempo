@@ -10,6 +10,7 @@ import type {
 } from "@gitiempo/shared";
 
 import { reconcileTimeEntryListCaches } from "@/lib/time-entry-query-cache";
+import { TIME_ENTRY_NEW_TASK_ID } from "@/composables/time-entries/time-entry-task-lookup";
 import { topBarTimerDialogControllerKey } from "@/composables/timer/useTopBarTimerDialogController";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 import { useAuthStore } from "@/stores/auth";
@@ -43,10 +44,14 @@ vi.mock("primevue/usetoast", () => ({
 const TEST_IDS = {
   completedEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3002",
   createdEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3003",
+  githubProject: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1003",
+  githubTaskIssueOne: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2003",
+  githubTaskIssueTwo: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2004",
   projectAdmin: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
   projectOrion: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1001",
   runningEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3001",
   taskAdmin: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
+  taskCreated: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2003",
   taskReports: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2001",
   updatedEntry: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f3004",
   user: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f4001",
@@ -170,13 +175,16 @@ function createEntryListResponse(
 function createClientMock(options: {
   entriesResponse?: TimeEntryListResponse;
   tasksByProject?: Record<string, TaskResponse[]>;
+  visibleProjects?: ProjectResponse[];
 } = {}): TimeEntriesClient & {
   backfillTaskBillableDefault: ReturnType<typeof vi.fn<TimeEntriesClient["backfillTaskBillableDefault"]>>;
   createManualEntry: ReturnType<typeof vi.fn<TimeEntriesClient["createManualEntry"]>>;
   createTask: ReturnType<typeof vi.fn<TimeEntriesClient["createTask"]>>;
   deleteEntry: ReturnType<typeof vi.fn<TimeEntriesClient["deleteEntry"]>>;
   deleteTask: ReturnType<typeof vi.fn<TimeEntriesClient["deleteTask"]>>;
+  ensureGitHubIssueTask: ReturnType<typeof vi.fn<TimeEntriesClient["ensureGitHubIssueTask"]>>;
   getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
+  listProjectGitHubIssues: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectGitHubIssues"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
   listProjectTimeEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTimeEntries"]>>;
   listProjectTasks: ReturnType<typeof vi.fn<TimeEntriesClient["listProjectTasks"]>>;
@@ -219,7 +227,12 @@ function createClientMock(options: {
     createTask: vi.fn(async () => createTask()),
     deleteEntry: vi.fn(async () => undefined),
     deleteTask: vi.fn(async () => undefined),
+    ensureGitHubIssueTask: vi.fn(async () => createTask()),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    listProjectGitHubIssues: vi.fn(async () => ({
+      items: [],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    })),
     listOwnEntries: vi.fn(async (query) => ({
       ...entriesResponse,
       meta: {
@@ -230,7 +243,7 @@ function createClientMock(options: {
     })),
     listProjectTimeEntries: vi.fn(async () => createEntryListResponse([])),
     listProjectTasks: vi.fn(async (projectId) => tasksByProject[projectId] ?? []),
-    listVisibleProjects: vi.fn(async () => [
+    listVisibleProjects: vi.fn(async () => options.visibleProjects ?? [
       createProject(),
       createProject({
         id: TEST_IDS.projectAdmin,
@@ -271,26 +284,21 @@ async function mountView(
         AutoComplete: {
           emits: ["complete", "update:modelValue"],
           props: [
+            "appendTo",
             "completeOnFocus",
             "dropdownMode",
             "inputId",
             "minLength",
             "optionLabel",
-            "overlayClass",
             "pt",
             "suggestions",
           ],
           template: `
             <div
+              :data-append-to="appendTo ?? ''"
               :data-complete-on-focus="String(completeOnFocus === true || completeOnFocus === '')"
               :data-dropdown-mode="dropdownMode ?? ''"
-              :data-input-pt-class="pt?.pcInputText?.root?.class ?? ''"
-              :data-list-container-pt-class="pt?.listContainer?.class ?? ''"
               :data-min-length="String(minLength)"
-              :data-option-pt-class="pt?.option?.class ?? ''"
-              :data-overlay-class="overlayClass ?? ''"
-              :data-overlay-pt-class="pt?.overlay?.class ?? ''"
-              :data-root-pt-class="pt?.root?.class ?? ''"
               :data-testid="inputId === 'time-entries-project-filter' ? 'project-filter-autocomplete' : inputId === 'time-entry-task' ? 'dialog-task-autocomplete' : 'filter-task-autocomplete'"
             >
               <p v-for="suggestion in suggestions" :key="suggestion.id">
@@ -323,7 +331,7 @@ async function mountView(
         },
         DatePicker: {
           emits: ["update:modelValue"],
-          props: ["inputId", "modelValue", "showIcon"],
+          props: ["inputId", "modelValue", "showClear", "showIcon"],
           methods: {
             formatRange(value: Date[] | null | undefined): string {
               if (!value?.length) {
@@ -340,19 +348,39 @@ async function mountView(
             },
           },
           template: `
-            <button
-              :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
-              :data-show-icon="String(showIcon === true || showIcon === '')"
-              type="button"
-              @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
-            >{{ formatRange(modelValue) }}</button>
+            <div>
+              <button
+                :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
+                :data-show-clear="String(showClear === true || showClear === '')"
+                :data-show-icon="String(showIcon === true || showIcon === '')"
+                type="button"
+                @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
+              >{{ formatRange(modelValue) }}</button>
+              <button
+                v-if="(showClear === true || showClear === '') && inputId === 'time-entries-date-range' && modelValue?.length"
+                data-testid="date-range-filter-clear"
+                type="button"
+                @click="$emit('update:modelValue', null)"
+              >Clear</button>
+            </div>
           `,
         },
         Paginator: {
           emits: ["page"],
           template: '<button data-testid="paginator-page-2" type="button" @click="$emit(\'page\', { page: 1 })">Page 2</button>',
         },
-        ProgressSpinner: { template: "<div />" },
+        Skeleton: {
+          props: ["height", "shape", "size", "width"],
+          template: `
+            <span
+              :data-height="height ?? ''"
+              :data-shape="shape ?? ''"
+              :data-size="size ?? ''"
+              :data-width="width ?? ''"
+              data-testid="time-entries-skeleton"
+            />
+          `,
+        },
         SurfaceCard: { template: "<section><slot /></section>" },
         TimeEntriesDaySection: {
           emits: ["createForDay", "editEntry", "openActiveTimer", "startTimer", "stopTimer"],
@@ -411,6 +439,7 @@ async function mountView(
             "update:description",
             "update:endedAt",
             "update:isBillable",
+            "update:newTaskTitle",
             "update:projectId",
             "update:startedAt",
             "update:taskValue",
@@ -418,10 +447,15 @@ async function mountView(
           props: [
             "dialogErrorMessage",
             "endedAt",
+            "errors",
             "isDeleting",
             "isOpen",
+            "isSaving",
+            "newTaskTitle",
             "startedAt",
             "taskSuggestions",
+            "tasksErrorMessage",
+            "taskValue",
             "valueDescription",
           ],
           methods: {
@@ -434,11 +468,16 @@ async function mountView(
               <p data-testid="dialog-description-value">{{ valueDescription }}</p>
               <p data-testid="dialog-started-value">{{ formatDialogTime(startedAt) }}</p>
               <p data-testid="dialog-ended-value">{{ formatDialogTime(endedAt) }}</p>
+              <p data-testid="dialog-new-task-title-error">{{ errors?.newTaskTitle }}</p>
+              <p data-testid="dialog-new-task-title-value">{{ newTaskTitle }}</p>
+              <p data-testid="dialog-task-value">{{ typeof taskValue === 'string' ? taskValue : taskValue?.title }}</p>
               <p data-testid="dialog-request-error">{{ dialogErrorMessage }}</p>
+              <p data-testid="dialog-tasks-error">{{ tasksErrorMessage }}</p>
               <div data-testid="dialog-task-suggestions">
                 <p v-for="suggestion in taskSuggestions" :key="suggestion.id">{{ suggestion.title }}</p>
               </div>
               <button data-testid="dialog-project-admin" type="button" @click="$emit('update:projectId', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002')">Project</button>
+              <button data-testid="dialog-project-github" type="button" @click="$emit('update:projectId', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1003')">GitHub project</button>
               <button data-testid="dialog-task-search-empty" type="button" @click="$emit('taskSearch', '')">Search all tasks</button>
               <button data-testid="dialog-task-search-polish" type="button" @click="$emit('taskSearch', 'polish')">Search polish tasks</button>
               <button data-testid="dialog-task-admin" type="button" @click="$emit('update:taskValue', {
@@ -447,6 +486,27 @@ async function mountView(
                 projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
                 title: 'Ship admin polish'
               })">Task</button>
+              <button data-testid="dialog-task-github-issue" type="button" @click="$emit('update:taskValue', {
+                defaultBillableForTimeEntries: true,
+                githubIssue: {
+                  githubRepo: 'My-test-org-for-clock/test-repo',
+                  issueNumber: 2
+                },
+                id: '__top-bar-timer-github-issue__My-test-org-for-clock/test-repo#2',
+                isActive: true,
+                isGitHubIssueOption: true,
+                issueTitle: 'second test issue',
+                projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1003',
+                title: 'second test issue'
+              })">GitHub issue task</button>
+              <button data-testid="dialog-task-new" type="button" @click="$emit('update:taskValue', {
+                id: '${TIME_ENTRY_NEW_TASK_ID}',
+                isActive: true,
+                isNewTask: true,
+                projectId: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002',
+                title: 'New task'
+              })">New task</button>
+              <button data-testid="dialog-new-task-title" type="button" @click="$emit('update:newTaskTitle', 'Write release checklist')">New task title</button>
               <button data-testid="dialog-description" type="button" @click="$emit('update:description', 'Manual cleanup')">Description</button>
               <button data-testid="dialog-started" type="button" @click="$emit('update:startedAt', new Date('2026-04-21T09:15:00.000Z'))">Started</button>
               <button data-testid="dialog-ended" type="button" @click="$emit('update:endedAt', new Date('2026-04-21T10:45:00.000Z'))">Ended</button>
@@ -484,6 +544,32 @@ describe("TimeEntriesView", () => {
     vi.useRealTimers();
   });
 
+  it("renders a structured skeleton while initial entries load", async () => {
+    const client = createClientMock();
+
+    client.listOwnEntries.mockReturnValue(
+      new Promise<TimeEntryListResponse>(() => undefined),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="time-entries-loading"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entries-loading-filters"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="time-entries-loading-groups"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="time-entries-loading-day"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-testid="time-entries-loading-entry-row"]')).toHaveLength(2);
+    expect(wrapper.find('[data-testid="time-entries-loading-pagination"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="time-entries-skeleton"]').length).toBeGreaterThan(10);
+    expect(wrapper.findAll('[data-testid="time-entries-skeleton"]').length).toBeLessThanOrEqual(20);
+    expect(wrapper.find('[data-testid="date-range-filter"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="time-entries-loading-desktop-table"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="time-entries-loading-mobile-card"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="time-entries-groups"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("Loading your time entries.");
+  });
+
   it("loads initial data, groups entries by day, and updates running durations", async () => {
     const client = createClientMock();
     const { wrapper } = await mountView(client);
@@ -501,6 +587,9 @@ describe("TimeEntriesView", () => {
       taskId: undefined,
     });
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
+    expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-clear")).toBe(
+      "true",
+    );
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
       "true",
     );
@@ -943,6 +1032,35 @@ describe("TimeEntriesView", () => {
     });
   });
 
+  it("clears the date range without dropping the other active filters", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="date-range-filter"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-select"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-search"]').trigger("click");
+    await wrapper.get('[data-testid="filter-task-select"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="paginator-page-2"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="date-range-filter-clear"]').trigger("click");
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toEqual({
+      dateFrom: undefined,
+      dateTo: undefined,
+      limit: 20,
+      page: 1,
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
+      search: "Ship admin polish",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
+    });
+    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
+  });
+
   it("shows task suggestions from the current filtered entries", async () => {
     const client = createClientMock({
       entriesResponse: createEntryListResponse([
@@ -973,24 +1091,9 @@ describe("TimeEntriesView", () => {
     const filterSuggestions = wrapper.get('[data-testid="filter-task-autocomplete"]');
 
     expect(filterSuggestions.attributes("data-complete-on-focus")).toBe("true");
+    expect(filterSuggestions.attributes("data-append-to")).toBe("self");
     expect(filterSuggestions.attributes("data-dropdown-mode")).toBe("blank");
-    expect(filterSuggestions.attributes("data-input-pt-class")).toBe("truncate");
-    expect(filterSuggestions.attributes("data-list-container-pt-class")).toBe(
-      "max-w-full overflow-x-hidden",
-    );
     expect(filterSuggestions.attributes("data-min-length")).toBe("0");
-    expect(filterSuggestions.attributes("data-option-pt-class")).toBe(
-      "max-w-full min-w-0 truncate",
-    );
-    expect(filterSuggestions.attributes("data-overlay-class")).toBe(
-      "max-w-[calc(100vw-2rem)]",
-    );
-    expect(filterSuggestions.attributes("data-overlay-pt-class")).toBe(
-      "max-w-[calc(100vw-2rem)] overflow-hidden",
-    );
-    expect(filterSuggestions.attributes("data-root-pt-class")).toBe(
-      "max-w-full min-w-0",
-    );
     expect(client.listProjectTasks).not.toHaveBeenCalled();
     expect(filterSuggestions.text()).toContain("Ship admin polish");
     expect(filterSuggestions.text()).not.toContain("Improve reports filters");
@@ -1151,6 +1254,118 @@ describe("TimeEntriesView", () => {
     expect(dialogSuggestions.text()).not.toContain("Closed historical cleanup");
   });
 
+  it("appends unsynced GitHub issues in the manual dialog for a GitHub-backed project", async () => {
+    const githubProject = createProject({
+      id: TEST_IDS.githubProject,
+      name: "My-test-org-for-clock/test-repo",
+      source: "github",
+    });
+    const syncedTask = createTask({
+      githubIssue: {
+        githubRepo: "My-test-org-for-clock/test-repo",
+        issueNumber: 1,
+      },
+      id: TEST_IDS.githubTaskIssueOne,
+      projectId: TEST_IDS.githubProject,
+      title: "some test issue",
+    });
+    const client = createClientMock({
+      tasksByProject: {
+        [TEST_IDS.githubProject]: [syncedTask],
+      },
+      visibleProjects: [createProject(), githubProject],
+    });
+
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: "issue-1",
+          nodeId: "node-1",
+          number: 1,
+          repository: {
+            fullName: "My-test-org-for-clock/test-repo",
+            name: "test-repo",
+            owner: "My-test-org-for-clock",
+          },
+          state: "open",
+          title: "some test issue",
+          updatedAt: "2026-04-21T10:00:00.000Z",
+          url: "https://github.com/My-test-org-for-clock/test-repo/issues/1",
+        },
+        {
+          id: "issue-2",
+          nodeId: "node-2",
+          number: 2,
+          repository: {
+            fullName: "My-test-org-for-clock/test-repo",
+            name: "test-repo",
+            owner: "My-test-org-for-clock",
+          },
+          state: "open",
+          title: "second test issue",
+          updatedAt: "2026-04-21T10:01:00.000Z",
+          url: "https://github.com/My-test-org-for-clock/test-repo/issues/2",
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-github"]').trigger("click");
+    await flushPromises();
+
+    const dialogSuggestions = wrapper.get('[data-testid="dialog-task-suggestions"]');
+
+    expect(client.listProjectTasks).toHaveBeenCalledWith(TEST_IDS.githubProject);
+    expect(client.listProjectGitHubIssues).toHaveBeenCalledWith(
+      TEST_IDS.githubProject,
+      { limit: 30, state: "open" },
+    );
+    expect(dialogSuggestions.text()).toContain("some test issue");
+    expect(dialogSuggestions.text()).toContain("second test issue");
+    expect(dialogSuggestions.text().match(/some test issue/g)?.length ?? 0).toBe(1);
+  });
+
+  it("keeps GitHub suggestion failures distinct from an empty manual-entry task state", async () => {
+    const githubProject = createProject({
+      id: TEST_IDS.githubProject,
+      name: "My-test-org-for-clock/test-repo",
+      source: "github",
+    });
+    const localTask = createTask({
+      id: TEST_IDS.githubTaskIssueOne,
+      projectId: TEST_IDS.githubProject,
+      title: "some test issue",
+    });
+    const client = createClientMock({
+      tasksByProject: {
+        [TEST_IDS.githubProject]: [localTask],
+      },
+      visibleProjects: [createProject(), githubProject],
+    });
+
+    client.listProjectGitHubIssues.mockRejectedValueOnce(
+      new Error("GitHub is temporarily unavailable"),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-github"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="dialog-tasks-error"]').text()).toBe(
+      "GitHub is temporarily unavailable",
+    );
+    expect(wrapper.get('[data-testid="dialog-task-suggestions"]').text()).toContain(
+      "some test issue",
+    );
+  });
+
   it("creates a manual entry and refreshes the current list page", async () => {
     const client = createClientMock({
       entriesResponse: createEntryListResponse([createEntry()], {
@@ -1193,6 +1408,357 @@ describe("TimeEntriesView", () => {
       search: undefined,
       taskId: undefined,
     });
+  });
+
+  it("materializes a selected GitHub issue before creating a manual entry", async () => {
+    const githubProject = createProject({
+      id: TEST_IDS.githubProject,
+      name: "My-test-org-for-clock/test-repo",
+      source: "github",
+    });
+    const materializedTask = createTask({
+      githubIssue: {
+        githubRepo: "My-test-org-for-clock/test-repo",
+        issueNumber: 2,
+      },
+      id: TEST_IDS.githubTaskIssueTwo,
+      projectId: TEST_IDS.githubProject,
+      title: "second test issue",
+    });
+    const client = createClientMock({
+      visibleProjects: [createProject(), githubProject],
+    });
+
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: "issue-2",
+          nodeId: "node-2",
+          number: 2,
+          repository: {
+            fullName: "My-test-org-for-clock/test-repo",
+            name: "test-repo",
+            owner: "My-test-org-for-clock",
+          },
+          state: "open",
+          title: "second test issue",
+          updatedAt: "2026-04-21T10:01:00.000Z",
+          url: "https://github.com/My-test-org-for-clock/test-repo/issues/2",
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+    client.ensureGitHubIssueTask.mockResolvedValue(materializedTask);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-github"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-github-issue"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
+      projectId: TEST_IDS.githubProject,
+      issueNumber: 2,
+    });
+    expect(client.createManualEntry).toHaveBeenCalledWith({
+      description: null,
+      endedAt: "2026-04-21T07:00:00.000Z",
+      isBillable: true,
+      startedAt: "2026-04-21T06:00:00.000Z",
+      taskId: TEST_IDS.githubTaskIssueTwo,
+    });
+  });
+
+  it("materializes a selected GitHub issue before updating a manual entry", async () => {
+    const githubProject = createProject({
+      id: TEST_IDS.githubProject,
+      name: "My-test-org-for-clock/test-repo",
+      source: "github",
+    });
+    const entry = createEntry({
+      project: {
+        id: TEST_IDS.githubProject,
+        name: githubProject.name,
+      },
+      projectId: TEST_IDS.githubProject,
+      task: {
+        id: TEST_IDS.githubTaskIssueOne,
+        title: "some test issue",
+      },
+      taskId: TEST_IDS.githubTaskIssueOne,
+    });
+    const syncedTask = createTask({
+      githubIssue: {
+        githubRepo: "My-test-org-for-clock/test-repo",
+        issueNumber: 1,
+      },
+      id: TEST_IDS.githubTaskIssueOne,
+      projectId: TEST_IDS.githubProject,
+      title: "some test issue",
+    });
+    const materializedTask = createTask({
+      githubIssue: {
+        githubRepo: "My-test-org-for-clock/test-repo",
+        issueNumber: 2,
+      },
+      id: TEST_IDS.githubTaskIssueTwo,
+      projectId: TEST_IDS.githubProject,
+      title: "second test issue",
+    });
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([entry]),
+      tasksByProject: {
+        [TEST_IDS.githubProject]: [syncedTask],
+      },
+      visibleProjects: [githubProject],
+    });
+
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: "issue-1",
+          nodeId: "node-1",
+          number: 1,
+          repository: {
+            fullName: "My-test-org-for-clock/test-repo",
+            name: "test-repo",
+            owner: "My-test-org-for-clock",
+          },
+          state: "open",
+          title: "some test issue",
+          updatedAt: "2026-04-21T10:00:00.000Z",
+          url: "https://github.com/My-test-org-for-clock/test-repo/issues/1",
+        },
+        {
+          id: "issue-2",
+          nodeId: "node-2",
+          number: 2,
+          repository: {
+            fullName: "My-test-org-for-clock/test-repo",
+            name: "test-repo",
+            owner: "My-test-org-for-clock",
+          },
+          state: "open",
+          title: "second test issue",
+          updatedAt: "2026-04-21T10:01:00.000Z",
+          url: "https://github.com/My-test-org-for-clock/test-repo/issues/2",
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+    client.ensureGitHubIssueTask.mockResolvedValue(materializedTask);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entry-edit-entry-completed"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-github-issue"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
+      projectId: TEST_IDS.githubProject,
+      issueNumber: 2,
+    });
+    expect(client.updateEntry).toHaveBeenCalledWith(
+      TEST_IDS.completedEntry,
+      expect.objectContaining({
+        taskId: TEST_IDS.githubTaskIssueTwo,
+      }),
+    );
+  });
+
+  it("keeps the manual-entry dialog open and skips entry creation when GitHub issue materialization fails", async () => {
+    const githubProject = createProject({
+      id: TEST_IDS.githubProject,
+      name: "My-test-org-for-clock/test-repo",
+      source: "github",
+    });
+    const client = createClientMock({
+      visibleProjects: [createProject(), githubProject],
+    });
+
+    client.listProjectGitHubIssues.mockResolvedValue({
+      items: [
+        {
+          id: "issue-2",
+          nodeId: "node-2",
+          number: 2,
+          repository: {
+            fullName: "My-test-org-for-clock/test-repo",
+            name: "test-repo",
+            owner: "My-test-org-for-clock",
+          },
+          state: "open",
+          title: "second test issue",
+          updatedAt: "2026-04-21T10:01:00.000Z",
+          url: "https://github.com/My-test-org-for-clock/test-repo/issues/2",
+        },
+      ],
+      pagination: { hasNextPage: false, limit: 30, nextPageToken: null },
+    });
+    client.ensureGitHubIssueTask.mockRejectedValueOnce(
+      new Error("GitHub issue is closed"),
+    );
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-github"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-github-issue"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.ensureGitHubIssueTask).toHaveBeenCalledWith({
+      projectId: TEST_IDS.githubProject,
+      issueNumber: 2,
+    });
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="dialog-request-error"]').text()).toBe(
+      "GitHub issue is closed",
+    );
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "error",
+        summary: "Could not create time entry",
+      }),
+    );
+  });
+
+  it("creates a new task before saving a manual time entry", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    const createdTask = createTask({
+      defaultBillableForTimeEntries: false,
+      id: TEST_IDS.taskCreated,
+      projectId: TEST_IDS.projectAdmin,
+      title: "Write release checklist",
+    });
+
+    client.listVisibleProjects.mockResolvedValueOnce([
+      createProject(),
+      createProject({
+        defaultBillableForTasks: false,
+        id: TEST_IDS.projectAdmin,
+        name: "Admin Web",
+      }),
+    ]);
+    client.createTask.mockResolvedValueOnce(createdTask);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-new"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-new-task-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-started"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-ended"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith(TEST_IDS.projectAdmin, {
+      defaultBillableForTimeEntries: false,
+      title: "Write release checklist",
+    });
+    expect(client.createManualEntry).toHaveBeenCalledWith({
+      description: null,
+      endedAt: "2026-04-21T10:45:00.000Z",
+      isBillable: false,
+      startedAt: "2026-04-21T09:15:00.000Z",
+      taskId: TEST_IDS.taskCreated,
+    });
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(false);
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "success",
+        summary: "Task created",
+      }),
+    );
+  });
+
+  it("validates the final new-task entry payload after task creation", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+    const createdTask = createTask({
+      defaultBillableForTimeEntries: false,
+      id: "created-task",
+      projectId: TEST_IDS.projectAdmin,
+      title: "Write release checklist",
+    });
+
+    client.createTask.mockResolvedValueOnce(createdTask);
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-new"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-new-task-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-started"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-ended"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith(
+      TEST_IDS.projectAdmin,
+      expect.objectContaining({ title: "Write release checklist" }),
+    );
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="dialog-request-error"]').text()).toBe(
+      "Time entry values are invalid.",
+    );
+  });
+
+  it("keeps new task creation failures visible without saving the entry", async () => {
+    const client = createClientMock({
+      entriesResponse: createEntryListResponse([createEntry()]),
+    });
+
+    client.createTask.mockRejectedValueOnce(new Error("Task title already exists"));
+
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="time-entries-day-create-2026-04-21"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-project-admin"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="dialog-task-new"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-new-task-title"]').trigger("click");
+    await wrapper.get('[data-testid="dialog-save"]').trigger("click");
+    await flushPromises();
+
+    expect(client.createTask).toHaveBeenCalledWith(
+      TEST_IDS.projectAdmin,
+      expect.objectContaining({ title: "Write release checklist" }),
+    );
+    expect(client.createManualEntry).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="time-entry-dialog"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="dialog-new-task-title-error"]').text()).toBe(
+      "Task title already exists",
+    );
+    expect(primeVueMocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: "error",
+        summary: "Could not create the task",
+      }),
+    );
   });
 
   it("keeps edit failures retryable with the backend message visible", async () => {

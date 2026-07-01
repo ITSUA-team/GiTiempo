@@ -4,7 +4,6 @@ import type { CurrentTimeEntryResponse, TimeEntryResponse } from "@gitiempo/shar
 
 import type { SupportedGitHubIssueContext } from "./github-context";
 
-/* eslint-disable no-unused-vars */
 
 export interface RuntimeSnapshot {
   authenticated: boolean;
@@ -12,14 +11,17 @@ export interface RuntimeSnapshot {
   errorMessage: string | null;
 }
 
-export interface RuntimeMutationResult {
+export interface RuntimeActionResult {
   errorMessage?: string;
   ok: boolean;
   snapshot: RuntimeSnapshot;
 }
 
+export type RuntimeAuthResult = RuntimeActionResult;
+export type RuntimeMutationResult = RuntimeActionResult;
+
 export interface RuntimeClient {
-  exchangeFirebaseToken(firebaseIdToken: string): Promise<RuntimeSnapshot>;
+  exchangeFirebaseToken(firebaseIdToken: string): Promise<RuntimeAuthResult>;
   getSnapshot(): Promise<RuntimeSnapshot>;
   onSnapshotUpdated(listener: (snapshot: RuntimeSnapshot) => void): () => void;
   openExtension(): Promise<void>;
@@ -27,7 +29,6 @@ export interface RuntimeClient {
   stopTimer(): Promise<RuntimeMutationResult>;
 }
 
-/* eslint-enable no-unused-vars */
 
 export type BackgroundMessage =
   | { type: "auth/exchange-firebase-token"; firebaseIdToken: string }
@@ -62,7 +63,7 @@ async function sendRuntimeMessage<TResponse>(
 export function createRuntimeClient(): RuntimeClient {
   return {
     exchangeFirebaseToken(firebaseIdToken) {
-      return sendRuntimeMessage<RuntimeSnapshot>({
+      return sendRuntimeMessage<RuntimeAuthResult>({
         type: "auth/exchange-firebase-token",
         firebaseIdToken,
       });

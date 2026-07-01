@@ -230,6 +230,94 @@ describe("createTimeEntriesClient", () => {
     );
   });
 
+  it("lists GitHub issues for a local project with the shared query shape", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        items: [
+          {
+            id: "issue-184",
+            nodeId: "I_kwDOExample",
+            number: 184,
+            repository: {
+              fullName: "octo-org/repo.with.dots",
+              name: "repo.with.dots",
+              owner: "octo-org",
+            },
+            state: "open",
+            title: "Improve reports filters",
+            updatedAt: "2026-04-20T12:00:00.000Z",
+            url: "https://github.com/octo-org/repo.with.dots/issues/184",
+          },
+        ],
+        pagination: { hasNextPage: false, limit: 15, nextPageToken: null },
+      }),
+    );
+    const client = createTimeEntriesClient({
+      apiClient: createTestApiClient(fetchFn),
+    });
+
+    const response = await client.listProjectGitHubIssues(
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      { limit: 15, q: "timer bug", state: "all" },
+    );
+
+    expect(response.items[0]?.title).toBe("Improve reports filters");
+    expect(fetchFn).toHaveBeenCalledWith(
+      "/projects/018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f/github/issues?limit=15&state=all&q=timer+bug",
+      {
+        body: undefined,
+        headers: {
+          Authorization: "Bearer access-token",
+        },
+        method: "GET",
+      },
+    );
+  });
+
+  it("materializes a GitHub issue task through the shared task schema", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse({
+        createdAt: "2026-04-20T12:00:00.000Z",
+        defaultBillableForTimeEntries: true,
+        githubIssue: {
+          githubRepo: "octo-org/repo",
+          issueNumber: 184,
+        },
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        isActive: true,
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        status: "open",
+        title: "Improve reports filters",
+        updatedAt: "2026-04-20T12:00:00.000Z",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+      }),
+    );
+    const client = createTimeEntriesClient({
+      apiClient: createTestApiClient(fetchFn),
+    });
+
+    const task = await client.ensureGitHubIssueTask({
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      issueNumber: 184,
+    });
+
+    expect(task.githubIssue).toEqual({
+      githubRepo: "octo-org/repo",
+      issueNumber: 184,
+    });
+    expect(fetchFn).toHaveBeenCalledWith("/tasks/from-github", {
+      body: JSON.stringify({
+        projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+        issueNumber: 184,
+      }),
+      headers: {
+        Authorization: "Bearer access-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+  });
+
   it("updates an existing task and parses the response", async () => {
     const fetchFn = vi.fn(async () =>
       jsonResponse({
@@ -329,6 +417,19 @@ describe("createTimeEntriesClient", () => {
         method: "POST",
       },
     );
+  });
+
+  it("rejects skipped task billable-default backfills before transport", async () => {
+    const fetchFn = vi.fn(async () => jsonResponse({ timeEntriesUpdated: 0 }));
+    const client = createTimeEntriesClient({ apiClient: createTestApiClient(fetchFn) });
+
+    expect(() =>
+      client.backfillTaskBillableDefault(
+        "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        { updateTimeEntries: false } as never,
+      ),
+    ).toThrow();
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it("handles task deletion with the no-content contract", async () => {

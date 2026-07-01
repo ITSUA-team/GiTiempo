@@ -345,9 +345,16 @@ export function createPopupApp({
 
     try {
       const firebaseIdToken = await signInWithGoogleFn();
+      const result = await runtimeClient.exchangeFirebaseToken(firebaseIdToken);
 
-      state.snapshot = await runtimeClient.exchangeFirebaseToken(firebaseIdToken);
-      await load();
+      state.snapshot = result.snapshot;
+      state.errorMessage = result.ok
+        ? null
+        : result.errorMessage ?? "Unable to sign in with Google.";
+
+      if (result.ok) {
+        await load();
+      }
     } catch (error) {
       state.errorMessage =
         error instanceof Error ? error.message : "Unable to sign in with Google.";
@@ -367,11 +374,18 @@ export function createPopupApp({
         state.email.trim(),
         state.password,
       );
+      const result = await runtimeClient.exchangeFirebaseToken(firebaseIdToken);
 
-      state.snapshot = await runtimeClient.exchangeFirebaseToken(firebaseIdToken);
-      state.showEmailForm = false;
-      state.password = "";
-      await load();
+      state.snapshot = result.snapshot;
+      state.errorMessage = result.ok
+        ? null
+        : result.errorMessage ?? "Unable to sign in with email.";
+
+      if (result.ok) {
+        state.showEmailForm = false;
+        state.password = "";
+        await load();
+      }
     } catch (error) {
       state.errorMessage =
         error instanceof Error ? error.message : "Unable to sign in with email.";

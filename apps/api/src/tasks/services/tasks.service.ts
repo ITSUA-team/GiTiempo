@@ -9,6 +9,9 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import type {
   BackfillTaskBillableDefaultInput,
   CreateTaskInput,
+  EnsureGitHubIssueTaskInput,
+  GitHubIssueListQuery,
+  GitHubRepositoryIssueListResponse,
   TaskListQuery,
   TaskBillableDefaultBackfillResponse,
   TaskResponse,
@@ -23,14 +26,17 @@ import {
 import type { AuthUser } from '../../auth/types/auth-user';
 import { DomainError } from '../../commons/errors/domain-error';
 import { parseGitHubIssueExternalKey } from '../../github/github-issue-external-key';
+import { parseGitHubRepoKey } from '../../github/github-repo-key';
+import { GithubService } from '../../github/services/github.service';
 import type { ProjectRow } from '../../projects/services/projects.service';
 import { ProjectsService } from '../../projects/services/projects.service';
 import { timeEntries } from '../../time-entries/schemas/time-entries.schema';
 import { taskExternalRefs } from '../schemas/task-external-refs.schema';
 import { taskRowSelection, tasks } from '../schemas/tasks.schema';
+import { GithubTaskMaterializationService } from './github-task-materialization.service';
 
 export type TaskRow = typeof tasks.$inferSelect;
-type QueryExecutor = Pick<DrizzleDB, 'select' | 'update'>;
+type QueryExecutor = Pick<DrizzleDB, 'update'>;
 
 interface TaskResponseRow extends TaskRow {
   githubIssueExternalKey: string | null;
@@ -40,6 +46,8 @@ interface TaskResponseRow extends TaskRow {
 export class TasksService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly github: GithubService,
+    private readonly githubTasks: GithubTaskMaterializationService,
     private readonly projects: ProjectsService,
   ) {}
 
@@ -105,6 +113,101 @@ export class TasksService {
       throw DomainError.internal('task_create_failed', 'Failed to create task');
     }
     return this.toResponse(row, null);
+  }
+
+  async listProjectGitHubIssues(
+    user: AuthUser,
+    projectId: string,
+    query: GitHubIssueListQuery,
+  ): Promise<GitHubRepositoryIssueListResponse> {
+    const project = await this.projects.requireVisibleProject(user, projectId);
+    if (!project.isActive) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const githubRepo = await this.githubTasks.findProjectRepoKey(
+      user.workspaceId,
+      project.id,
+    );
+    if (!githubRepo) {
+      throw new NotFoundException('GitHub project not found');
+    }
+
+    const repoParts = parseGitHubRepoKey(githubRepo);
+    if (!repoParts) {
+      throw DomainError.internal(
+        'github_repo_invalid',
+        'GitHub repository reference is invalid',
+      );
+    }
+
+    return this.github.listRepositoryIssues(
+      user,
+      repoParts.owner,
+      repoParts.repo,
+      query,
+    );
+  }
+
+  async ensureGitHubIssueTask(
+    user: AuthUser,
+    input: EnsureGitHubIssueTaskInput,
+  ): Promise<TaskResponse> {
+    const project = await this.projects.requireVisibleProject(
+      user,
+      input.projectId,
+    );
+    if (!project.isActive) {
+      throw new UnprocessableEntityException('Project is inactive');
+    }
+
+    const githubRepo = await this.githubTasks.findProjectRepoKey(
+      user.workspaceId,
+      project.id,
+    );
+    if (!githubRepo) {
+      throw new NotFoundException('GitHub project not found');
+    }
+
+    const repoParts = parseGitHubRepoKey(githubRepo);
+    if (!repoParts) {
+      throw DomainError.internal(
+        'github_repo_invalid',
+        'GitHub repository reference is invalid',
+      );
+    }
+
+    const issue = await this.github.getRepositoryIssue(
+      user,
+      repoParts.owner,
+      repoParts.repo,
+      input.issueNumber,
+    );
+    if (issue.state !== 'open') {
+      throw new UnprocessableEntityException('GitHub issue is closed');
+    }
+
+    const issueKey = `${issue.repository.fullName}#${issue.number}`;
+
+    const task = await this.db.transaction(async (tx) => {
+      const nextTask = await this.githubTasks.findOrCreateTaskForIssue(tx, {
+        workspaceId: user.workspaceId,
+        projectId: project.id,
+        issueKey,
+        issueTitle: issue.title,
+        defaultBillableForTimeEntries: project.defaultBillableForTasks,
+      });
+      if (!nextTask.isActive) {
+        throw new UnprocessableEntityException('Task is inactive');
+      }
+      if (nextTask.status === 'closed') {
+        throw new UnprocessableEntityException('Task is closed');
+      }
+
+      return nextTask;
+    });
+
+    return this.toResponse(task, issueKey);
   }
 
   async getTask(user: AuthUser, taskId: string): Promise<TaskResponse> {
@@ -192,12 +295,16 @@ export class TasksService {
     taskId: string,
     input: BackfillTaskBillableDefaultInput,
   ): Promise<TaskBillableDefaultBackfillResponse> {
-    void input;
-
     return this.db.transaction(async (tx) => {
       const { task, project } = await this.requireVisibleTask(user, taskId, tx);
       if (!project.isActive) {
         throw new UnprocessableEntityException('Project is inactive');
+      }
+
+      if (input.updateTimeEntries !== true) {
+        throw new UnprocessableEntityException(
+          'Task backfill requires selected time entries',
+        );
       }
 
       const updatedEntries = await tx
@@ -298,6 +405,27 @@ export class TasksService {
     return { task, project };
   }
 
+  private async requireTaskRow(
+    db: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+  ): Promise<TaskRow> {
+    const [task] = await db
+      .select(taskRowSelection)
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.id, taskId),
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.projectId, projectId),
+        ),
+      )
+      .limit(1);
+    if (!task) throw new NotFoundException('Task not found');
+    return task;
+  }
+
   private taskResponseSelection() {
     return {
       id: tasks.id,
@@ -315,10 +443,15 @@ export class TasksService {
 
   private toResponse(
     row: TaskRow | TaskResponseRow,
-    githubIssueExternalKey: string | null = 'githubIssueExternalKey' in row
-      ? row.githubIssueExternalKey
-      : null,
+    githubIssueExternalKey?: string | null,
   ): TaskResponse {
+    const resolvedGitHubIssueExternalKey =
+      githubIssueExternalKey !== undefined
+        ? githubIssueExternalKey
+        : 'githubIssueExternalKey' in row
+          ? row.githubIssueExternalKey
+          : null;
+
     return {
       id: row.id,
       workspaceId: row.workspaceId,
@@ -327,7 +460,7 @@ export class TasksService {
       status: row.status,
       defaultBillableForTimeEntries: row.defaultBillableForTimeEntries,
       isActive: row.isActive,
-      githubIssue: parseGitHubIssueExternalKey(githubIssueExternalKey),
+      githubIssue: parseGitHubIssueExternalKey(resolvedGitHubIssueExternalKey),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

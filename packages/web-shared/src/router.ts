@@ -14,7 +14,6 @@ import {
 type RouteName = string | symbol;
 
 interface AuthStoreAccessor<TPinia, TAuthStore extends ProtectedRouterAuthStore> {
-  // eslint-disable-next-line no-unused-vars
   (pinia: TPinia): TAuthStore;
 }
 

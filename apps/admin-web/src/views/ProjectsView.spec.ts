@@ -67,7 +67,6 @@ vi.mock('@/composables/feedback/useToasts', () => ({
 import ProjectsView from './ProjectsView.vue';
 
 function createDeferred<T>() {
-  // eslint-disable-next-line no-unused-vars
   const deferred = {} as { promise: Promise<T>; resolve: (..._args: [T]) => void };
 
   deferred.promise = new Promise<T>((res) => {
