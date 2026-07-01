@@ -34,27 +34,30 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const setIntervalFn = options.setIntervalFn ?? setInterval;
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
   const picker = useTopBarTaskPicker();
-  const accessToken = computed(() => authStore.accessToken);
+  const isAuthenticated = computed(() => Boolean(authStore.accessToken));
   const scope = computed(() => getUserServerStateScope(authStore.accessToken));
-  const summary = useTopBarTimerSummary({ accessToken, client, scope, toast });
+  const summary = useTopBarTimerSummary({
+    client,
+    enabled: isAuthenticated,
+    scope,
+    toast,
+  });
   const isTimerRunning = computed(() =>
     isRunningTimer(summary.currentTimer.value),
   );
   const taskOptions = useTopBarTaskOptions({
-    accessToken,
     client,
+    enabled: isAuthenticated,
     picker,
     scope,
   });
   const taskCreation = useTopBarTaskCreation({
-    accessToken,
     client,
     picker,
     scope,
     toast,
   });
   const timerActions = useTopBarTimerActions({
-    accessToken,
     client,
     isTimerRunning,
     scope,
@@ -62,7 +65,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     toast,
   });
   const selectionUpdate = useTopBarTimerSelectionUpdate({
-    accessToken,
     client,
     picker,
     scope,

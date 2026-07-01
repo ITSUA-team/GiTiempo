@@ -25,7 +25,6 @@ import type { useTimeEntryMutations } from "./useTimeEntryMutations";
 import type { useTimeEntryTaskOptions } from "./useTimeEntryTaskOptions";
 
 interface UseTimeEntryDialogWorkflowOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   confirm: ConfirmLike;
   dialog: ReturnType<typeof useTimeEntryDialog>;
@@ -38,7 +37,6 @@ interface UseTimeEntryDialogWorkflowOptions {
 }
 
 export function useTimeEntryDialogWorkflow({
-  accessToken,
   client,
   confirm,
   dialog,
@@ -50,7 +48,6 @@ export function useTimeEntryDialogWorkflow({
   visibleProjects,
 }: UseTimeEntryDialogWorkflowOptions) {
   const taskCreation = useTimeEntryDialogTaskCreation({
-    accessToken,
     client,
     dialog,
     scope,

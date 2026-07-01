@@ -44,13 +44,13 @@ const confirm = useConfirm();
 const toast = useToast();
 const appToast = createAppToast(toast);
 const topBarTimerDialogController = useTopBarTimerDialogController();
-const accessToken = computed(() => authStore.accessToken);
+const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
 const dialog = useTimeEntryDialog();
 const data = useTimeEntriesData({
-  accessToken,
   client,
+  enabled: isAuthenticated,
   entryListQuery: filters.entryListQuery,
   scope,
 });
@@ -101,13 +101,11 @@ const taskOptions = useTimeEntryTaskOptions({
   },
 });
 const mutations = useTimeEntryMutations({
-  accessToken,
   client,
   scope,
   toast,
 });
 const dialogWorkflow = useTimeEntryDialogWorkflow({
-  accessToken,
   client,
   confirm,
   dialog,
@@ -119,8 +117,8 @@ const dialogWorkflow = useTimeEntryDialogWorkflow({
   visibleProjects: data.visibleProjects,
 });
 const directTimerActions = useTimeEntryDirectTimerActions({
-  accessToken,
   client,
+  enabled: isAuthenticated,
   loadEntries: data.loadEntries,
   scope,
   toast,

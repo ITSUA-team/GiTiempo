@@ -250,7 +250,7 @@ describe('useReportsData', () => {
   }
 
   it('loads backend-generated project-member report rows', async () => {
-    const accessToken = ref<string | null>('access-token');
+    const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
@@ -260,7 +260,7 @@ describe('useReportsData', () => {
       defineComponent({
         setup() {
           reports = useReportsData({
-            accessToken,
+            enabled,
             membersClient,
             projectsClient: { listProjects },
             reportsClient,
@@ -302,7 +302,7 @@ describe('useReportsData', () => {
   });
 
   it('keeps active public and assigned private projects in PM-visible report scope', async () => {
-    const accessToken = ref<string | null>('access-token');
+    const enabled = ref(true);
     const scopedProjects: ProjectListResponse = [
       createProject(projectOrionId, 'Public Roadmap', [
         {
@@ -337,7 +337,7 @@ describe('useReportsData', () => {
       defineComponent({
         setup() {
           reports = useReportsData({
-            accessToken,
+            enabled,
             membersClient,
             projectsClient: { listProjects },
             reportsClient,
@@ -368,7 +368,7 @@ describe('useReportsData', () => {
   });
 
   it('keeps setup controls as export-only scope without changing rows or summary', async () => {
-    const accessToken = ref<string | null>('access-token');
+    const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
@@ -382,7 +382,7 @@ describe('useReportsData', () => {
       defineComponent({
         setup() {
           reports = useReportsData({
-            accessToken,
+            enabled,
             membersClient,
             projectsClient: { listProjects },
             reportsClient,
@@ -428,7 +428,7 @@ describe('useReportsData', () => {
   });
 
   it('exports through the reports API using explicit export setup controls', async () => {
-    const accessToken = ref<string | null>('access-token');
+    const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
@@ -442,7 +442,7 @@ describe('useReportsData', () => {
       defineComponent({
         setup() {
           reports = useReportsData({
-            accessToken,
+            enabled,
             membersClient,
             projectsClient: { listProjects },
             reportsClient,
@@ -475,7 +475,7 @@ describe('useReportsData', () => {
   });
 
   it('blocks invalid setup date ranges before export without refreshing table data', async () => {
-    const accessToken = ref<string | null>('access-token');
+    const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
@@ -485,7 +485,7 @@ describe('useReportsData', () => {
       defineComponent({
         setup() {
           reports = useReportsData({
-            accessToken,
+            enabled,
             membersClient,
             projectsClient: { listProjects },
             reportsClient,
@@ -520,7 +520,7 @@ describe('useReportsData', () => {
   });
 
   it('keeps admin reports in request-error state when workspace member options fail', async () => {
-    const accessToken = ref<string | null>('access-token');
+    const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = {
       listMembers: vi.fn().mockRejectedValue(new Error('Members unavailable')),
@@ -533,7 +533,7 @@ describe('useReportsData', () => {
       defineComponent({
         setup() {
           reports = useReportsData({
-            accessToken,
+            enabled,
             membersClient,
             onError,
             projectsClient: { listProjects },
@@ -557,7 +557,7 @@ describe('useReportsData', () => {
   });
 
   it('keeps request errors distinct from empty report results', async () => {
-    const accessToken = ref<string | null>('access-token');
+    const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects.slice(0, 1));
     const membersClient = createMembersClientMocks();
     const reportsClient = createReportsClientMocks();
@@ -569,7 +569,7 @@ describe('useReportsData', () => {
       defineComponent({
         setup() {
           reports = useReportsData({
-            accessToken,
+            enabled,
             membersClient,
             onError,
             projectsClient: { listProjects },

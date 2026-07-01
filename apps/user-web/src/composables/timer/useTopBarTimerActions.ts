@@ -12,7 +12,6 @@ import type { TimeEntriesClient } from "@/services/time-entries-client";
 import type { TopBarTimerSummary } from "./useTopBarTimerSummary";
 
 interface UseTopBarTimerActionsOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   isTimerRunning: ComputedRef<boolean>;
   scope: ComputedRef<UserServerStateScope>;
@@ -21,7 +20,6 @@ interface UseTopBarTimerActionsOptions {
 }
 
 export function useTopBarTimerActions({
-  accessToken,
   client,
   isTimerRunning,
   scope,
@@ -31,12 +29,10 @@ export function useTopBarTimerActions({
   const appToast = createAppToast(toast);
   const timerActionErrorMessage = ref<string | null>(null);
   const startTimerMutation = useStartTimerMutation({
-    accessToken,
     client,
     scope,
   });
   const stopTimerMutation = useStopTimerMutation({
-    accessToken,
     client,
     scope,
   });

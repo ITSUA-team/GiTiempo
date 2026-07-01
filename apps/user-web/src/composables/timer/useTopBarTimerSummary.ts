@@ -13,15 +13,15 @@ import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 interface UseTopBarTimerSummaryOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
+  enabled: ComputedRef<boolean>;
   scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
 
 export function useTopBarTimerSummary({
-  accessToken,
   client,
+  enabled,
   scope,
   toast,
 }: UseTopBarTimerSummaryOptions) {
@@ -80,7 +80,7 @@ export function useTopBarTimerSummary({
 
   const summaryQuery = useQuery({
     queryKey: computed(() => timerKeys.summary(scope.value)),
-    enabled: computed(() => Boolean(accessToken.value)),
+    enabled,
     queryFn: async () => {
       const { timeEntry } = await client.getCurrentTimer();
 

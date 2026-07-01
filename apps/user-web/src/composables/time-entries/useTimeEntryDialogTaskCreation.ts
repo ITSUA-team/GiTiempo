@@ -19,7 +19,6 @@ import type { useTimeEntryDialog } from "./useTimeEntryDialog";
 import type { useTimeEntryTaskOptions } from "./useTimeEntryTaskOptions";
 
 interface UseTimeEntryDialogTaskCreationOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   dialog: ReturnType<typeof useTimeEntryDialog>;
   scope: ComputedRef<UserServerStateScope>;
@@ -29,7 +28,6 @@ interface UseTimeEntryDialogTaskCreationOptions {
 }
 
 export function useTimeEntryDialogTaskCreation({
-  accessToken,
   client,
   dialog,
   scope,
@@ -39,7 +37,6 @@ export function useTimeEntryDialogTaskCreation({
 }: UseTimeEntryDialogTaskCreationOptions) {
   const appToast = createAppToast(toast);
   const createTaskMutation = useCreateTaskMutation({
-    accessToken,
     client,
     scope,
   });

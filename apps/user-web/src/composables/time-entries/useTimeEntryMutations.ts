@@ -40,14 +40,12 @@ interface SaveTimeEntryDialogResult {
 }
 
 interface UseTimeEntryMutationsOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
 
 export function useTimeEntryMutations({
-  accessToken,
   client,
   scope,
   toast,
@@ -57,17 +55,14 @@ export function useTimeEntryMutations({
   const isDeletingEntry = ref<string | null>(null);
   const lastMutationErrorMessage = ref<string | null>(null);
   const createEntryMutation = useCreateManualTimeEntryMutation({
-    accessToken,
     client,
     scope,
   });
   const updateEntryMutation = useUpdateTimeEntryMutation({
-    accessToken,
     client,
     scope,
   });
   const deleteEntryMutation = useDeleteTimeEntryMutation({
-    accessToken,
     client,
     scope,
   });

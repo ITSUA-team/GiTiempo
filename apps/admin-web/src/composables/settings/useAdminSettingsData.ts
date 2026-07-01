@@ -21,11 +21,11 @@ interface AdminSettingsDataResult {
 }
 
 interface UseAdminSettingsDataOptions {
-  accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<
     AdminSettingsClient,
     'getWorkspace' | 'getWorkspaceSettings'
   >;
+  enabled: Ref<boolean> | ComputedRef<boolean>;
   onError?: (
     message: string,
     error: unknown | undefined,
@@ -39,20 +39,20 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function useAdminSettingsData({
-  accessToken,
   client = getAdminSettingsClient(),
+  enabled,
   onError,
   scope,
 }: UseAdminSettingsDataOptions) {
   const queryClient = useQueryClient();
   const workspaceQuery = useWorkspaceQuery({
     client,
-    accessToken,
+    enabled,
     scope,
   });
   const workspaceSettingsQuery = useWorkspaceSettingsQuery({
     client,
-    accessToken,
+    enabled,
     scope,
   });
   const workspace = computed(() => workspaceQuery.data.value ?? null);
@@ -65,7 +65,7 @@ export function useAdminSettingsData({
     return { settings: settings.value, workspace: workspace.value };
   });
   const authError = computed(() =>
-    accessToken.value ? null : 'Authentication is required to load settings.',
+    enabled.value ? null : 'Authentication is required to load settings.',
   );
   const queryError = computed(
     () => workspaceQuery.error.value ?? workspaceSettingsQuery.error.value ?? null,
@@ -95,7 +95,7 @@ export function useAdminSettingsData({
   async function loadSettings(
     action = 'load-settings',
   ): Promise<AdminSettingsDataResult | null> {
-    if (!accessToken.value) {
+    if (!enabled.value) {
       const message = 'Authentication is required to load settings.';
       onError?.(message, undefined, action);
       return null;

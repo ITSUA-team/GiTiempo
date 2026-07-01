@@ -29,11 +29,11 @@ const client = createDefaultTimeEntriesClient();
 const confirm = useConfirm();
 const toast = useToast();
 const appToast = createAppToast(toast);
-const accessToken = computed(() => authStore.accessToken);
+const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const data = useProjectsData({
-  accessToken,
   client,
+  enabled: isAuthenticated,
   onLoadProjectsError(error) {
     appToast.showErrorToast({
       detail: "Please try again.",
@@ -55,7 +55,6 @@ const data = useProjectsData({
 const search = useProjectsSearch(data.visibleProjects, data.tasksByProjectId);
 const dialog = useProjectTaskDialog();
 const mutations = useProjectTaskMutations({
-  accessToken,
   client,
   onTaskDeleted: data.removeTask,
   onTaskSaved: data.upsertTask,
