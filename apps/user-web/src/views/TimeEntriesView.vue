@@ -326,13 +326,13 @@ onMounted(async () => {
         data-testid="time-entries-groups"
       >
         <TimeEntriesDaySection
-          v-for="(group, groupIndex) in groupedEntries"
+          v-for="group in groupedEntries"
           :key="group.dateKey"
           :format-duration="formatDuration"
           :format-time-range="formatTimeRange"
           :group="group"
           :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
-          :show-header="groupIndex === 0"
+          :show-header="false"
           :starting-timer-entry-id="startingTimerEntryId"
           :stopping-timer-entry-id="stoppingTimerEntryId"
           @create-for-day="(day) => void openCreateDialog(day)"
