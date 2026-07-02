@@ -8,7 +8,6 @@ import type { TimeEntriesClient } from "@/services/time-entries-client";
 import type { TopBarTaskPicker } from "./useTopBarTaskPicker";
 
 interface UseTopBarTaskCreationOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   picker: TopBarTaskPicker;
   scope: ComputedRef<UserServerStateScope>;
@@ -16,7 +15,6 @@ interface UseTopBarTaskCreationOptions {
 }
 
 export function useTopBarTaskCreation({
-  accessToken,
   client,
   picker,
   scope,
@@ -24,7 +22,6 @@ export function useTopBarTaskCreation({
 }: UseTopBarTaskCreationOptions) {
   const appToast = createAppToast(toast);
   const createTaskMutation = useCreateTaskMutation({
-    accessToken,
     client,
     scope,
   });

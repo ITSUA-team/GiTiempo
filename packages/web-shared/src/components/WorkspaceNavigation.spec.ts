@@ -73,14 +73,23 @@ describe("WorkspaceNavigation", () => {
 
     const activeLink = wrapper.get('a[href="/projects"]');
     const desktopRail = wrapper.get("aside");
+    const desktopIconShells = wrapper.findAll(
+      '[data-testid="workspace-navigation-icon-shell"]',
+    );
+    const activeIconShell = desktopIconShells[3]!;
 
-    expect(desktopRail.classes()).toContain("w-fit");
+    expect(desktopRail.classes()).toContain("w-20");
+    expect(desktopRail.classes()).not.toContain("w-fit");
     expect(desktopRail.classes()).not.toContain("lg:w-60");
     expect(activeLink.attributes("aria-label")).toBe("Projects");
     expect(activeLink.attributes("aria-current")).toBe("page");
     expect(activeLink.attributes("data-tooltip")).toBe("Projects");
-    expect(activeLink.classes()).toContain("bg-accent-tint");
-    expect(activeLink.classes()).toContain("text-brand");
+    expect(activeLink.classes()).not.toContain("bg-accent-tint");
+    expect(activeLink.classes()).not.toContain("border-l-[3px]");
+    expect(activeIconShell.classes()).toContain("size-8");
+    expect(activeIconShell.classes()).toContain("rounded-lg");
+    expect(activeIconShell.classes()).toContain("bg-accent-tint");
+    expect(activeIconShell.classes()).toContain("text-brand");
   });
 
   it("renders all provided items in mobile navigation without tap-triggered tooltips", async () => {
@@ -122,7 +131,15 @@ describe("WorkspaceNavigation", () => {
     expect(dashboardLinks).toHaveLength(2);
     expect(dashboardLinks[1]?.attributes("aria-current")).toBe("page");
     expect(dashboardLinks[1]?.attributes("data-tooltip")).toBeUndefined();
+    expect(dashboardLinks[1]?.classes()).not.toContain("bg-accent-tint");
     expect(wrapper.get("nav.fixed").classes()).toContain("inset-x-0");
+    expect(
+      wrapper
+        .findAll('[data-testid="workspace-navigation-mobile-icon-shell"]')[0]
+        ?.classes(),
+    ).toEqual(
+      expect.arrayContaining(["size-8", "rounded-lg", "bg-accent-tint", "text-brand"]),
+    );
     expect(wrapper.findAll('a[href="/settings"]')).toHaveLength(2);
   });
 

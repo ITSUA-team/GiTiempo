@@ -8,7 +8,7 @@
 User SPA and Admin SPA share the same shell:
 
 - Top bar: `bg-surface-primary border-b border-divider h-16`.
-- Sidebar: `bg-surface-primary border-r border-divider` icon-only content-fit rail on non-mobile breakpoints.
+- Sidebar: `bg-surface-primary border-r border-divider` icon-only rail on non-mobile breakpoints, with nav icon squares horizontally aligned to the top-bar logo square.
 - Main content: `bg-app-bg p-6`.
 
 ### Top Bar
@@ -32,14 +32,14 @@ User SPA and Admin SPA share the same shell:
 
 ### Sidebar Navigation
 
-- Nav item: `h-11 px-4`.
+- Nav item hit area: `h-11`; visible icon shell: `size-8 rounded-lg`, matching the top-bar logo square.
 - Sidebar links are icon-only in both authenticated SPAs. Do not render visible text labels in the sidebar on desktop or collapsed layouts.
 - Mobile bottom navigation uses the same icon-only shared nav items; keep labels available through accessibility naming rather than visible text.
 - Use the former link text as the PrimeVue tooltip copy and the accessible label on sidebar links, e.g. icon-only `Dashboard` link with tooltip `Dashboard`.
 - Mobile bottom navigation keeps the same accessible label and `sr-only` text, but does not use PrimeVue tooltip because touch-triggered tooltips can persist during route navigation.
-- Default: icon `text-text-muted` with an icon-only hit area that keeps the same `h-11 px-4` spacing.
-- Hover: `hover:bg-app-bg`.
-- Active: `bg-accent-tint text-brand font-semibold border-l-[3px] border-brand`; the active icon uses Brand Purple.
+- Default: icon `text-text-muted` inside a square icon shell.
+- Hover: square icon shell uses `hover:bg-app-bg`.
+- Active: square icon shell uses `bg-accent-tint text-brand font-semibold`; do not add row-wide fills or edge borders.
 - Group dividers: `border-t border-divider my-2`.
 - Authenticated `user-web` navigation no longer includes a dedicated Timer page entry; timer start/stop and task switching live in the global top-bar timer surface.
 

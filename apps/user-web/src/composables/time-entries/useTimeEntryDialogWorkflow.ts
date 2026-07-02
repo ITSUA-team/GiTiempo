@@ -3,17 +3,9 @@ import {
   type ProjectResponse,
   type TimeEntryResponse,
 } from "@gitiempo/shared";
-import {
-  createAppConfirm,
-  createAppToast,
-  getErrorMessage,
-  type ConfirmLike,
-  type ToastLike,
-} from "@gitiempo/web-shared";
+import type { ConfirmLike, ToastLike } from "@gitiempo/web-shared";
 import { computed, type ComputedRef } from "vue";
 
-import { useCreateTaskMutation } from "@/composables/query";
-import { validateInlineNewTaskInput } from "@/lib/inline-new-task";
 import type { UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
@@ -21,18 +13,18 @@ import {
   isGitHubIssueTaskLookupOption,
   isNewTaskLookupOption,
   toTaskLookupOption,
-  type TaskLookupOption,
   type TaskLookupValue,
 } from "./time-entry-task-lookup";
 import type {
   useTimeEntryDialog,
   ValidatedTimeEntryDialogInput,
 } from "./useTimeEntryDialog";
+import { useTimeEntryDeleteConfirmation } from "./useTimeEntryDeleteConfirmation";
+import { useTimeEntryDialogTaskCreation } from "./useTimeEntryDialogTaskCreation";
 import type { useTimeEntryMutations } from "./useTimeEntryMutations";
 import type { useTimeEntryTaskOptions } from "./useTimeEntryTaskOptions";
 
 interface UseTimeEntryDialogWorkflowOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   confirm: ConfirmLike;
   dialog: ReturnType<typeof useTimeEntryDialog>;
@@ -45,7 +37,6 @@ interface UseTimeEntryDialogWorkflowOptions {
 }
 
 export function useTimeEntryDialogWorkflow({
-  accessToken,
   client,
   confirm,
   dialog,
@@ -56,28 +47,22 @@ export function useTimeEntryDialogWorkflow({
   toast,
   visibleProjects,
 }: UseTimeEntryDialogWorkflowOptions) {
-  const appConfirm = createAppConfirm(confirm);
-  const appToast = createAppToast(toast);
-  const createTaskMutation = useCreateTaskMutation({
-    accessToken,
+  const taskCreation = useTimeEntryDialogTaskCreation({
     client,
+    dialog,
     scope,
+    taskOptions,
+    toast,
+    visibleProjects,
   });
-  const isDeletingDialogEntry = computed(() => {
-    const entry = dialog.editingEntry.value;
-
-    return !!entry && mutations.isDeletingEntry.value === entry.id;
+  const deleteConfirmation = useTimeEntryDeleteConfirmation({
+    confirm,
+    dialog,
+    mutations,
   });
   const isSavingDialogFlow = computed(
-    () => mutations.isSavingDialog.value || createTaskMutation.isPending.value,
+    () => mutations.isSavingDialog.value || taskCreation.isCreatingTask.value,
   );
-
-  function getProjectDefaultBillable(projectId: string | null): boolean {
-    return (
-      visibleProjects.value.find((project) => project.id === projectId)
-        ?.defaultBillableForTasks ?? true
-    );
-  }
 
   async function loadDialogProjectTasks(projectId: string) {
     return taskOptions.loadTargetProjectTaskOptions(projectId, dialog, {
@@ -107,67 +92,14 @@ export function useTimeEntryDialogWorkflow({
     dialog.setTaskValue(value);
 
     if (dialog.dialogMode.value === "create" && isNewTaskLookupOption(value)) {
-      dialog.setIsBillable(getProjectDefaultBillable(dialog.dialogProjectId.value));
+      dialog.setIsBillable(
+        taskCreation.getProjectDefaultBillable(dialog.dialogProjectId.value),
+      );
     }
   }
 
   function handleDialogTaskSearch(query: string): void {
     dialog.updateTaskSuggestions(query);
-  }
-
-  async function createDialogTaskFromSelection(
-    taskTitle: string,
-  ): Promise<TaskLookupOption | null> {
-    const projectId = dialog.dialogProjectId.value;
-
-    if (!projectId) {
-      return null;
-    }
-
-    const parsedTaskInput = validateInlineNewTaskInput({
-      defaultBillableForTimeEntries: getProjectDefaultBillable(projectId),
-      title: taskTitle,
-    });
-
-    if (!parsedTaskInput.success) {
-      dialog.setNewTaskTitleError(
-        parsedTaskInput.error.flatten().fieldErrors.title?.[0] ??
-          "Task title is invalid.",
-      );
-      return null;
-    }
-
-    try {
-      const task = await createTaskMutation.mutateAsync({
-        input: parsedTaskInput.data,
-        projectId,
-      });
-      const options = taskOptions.upsertProjectTask(task, { trackableOnly: true });
-      const taskOption = toTaskLookupOption(task);
-
-      dialog.setTaskOptions(options);
-      dialog.setTaskValue(taskOption);
-      dialog.updateTaskSuggestions("", options);
-      dialog.setNewTaskTitle("");
-      appToast.showSuccessToast(
-        "Task created",
-        "The new task is ready to use for time entries.",
-      );
-
-      return taskOption;
-    } catch (error) {
-      const message = getErrorMessage(error);
-
-      dialog.setNewTaskTitleError(message);
-      appToast.showErrorToast({
-        detail: "Please review the task title and try again.",
-        error,
-        logContext: { action: "create-task", feature: "time-entries" },
-        summary: "Could not create the task",
-      });
-
-      return null;
-    }
   }
 
   async function openCreateDialog(day: string | null = null): Promise<void> {
@@ -212,7 +144,7 @@ export function useTimeEntryDialogWorkflow({
     let validInput: ValidatedTimeEntryDialogInput;
 
     if (validationResult.kind === "new-task") {
-      const createdTask = await createDialogTaskFromSelection(
+      const createdTask = await taskCreation.createDialogTaskFromSelection(
         validationResult.taskTitle,
       );
 
@@ -261,46 +193,14 @@ export function useTimeEntryDialogWorkflow({
     dialog.closeDialog();
   }
 
-  function requestDeleteEntry(
-    entry: TimeEntryResponse,
-    options: { closeDialogOnSuccess?: boolean } = {},
-  ): void {
-    appConfirm.confirmDestructive({
-      accept: async () => {
-        const wasDeleted = await mutations.deleteEntry(entry);
-
-        if (
-          wasDeleted &&
-          options.closeDialogOnSuccess === true &&
-          dialog.editingEntry.value?.id === entry.id
-        ) {
-          dialog.closeDialog();
-        }
-      },
-      acceptLabel: "Delete",
-      header: "Delete entry?",
-      message: "This time entry will be permanently deleted.",
-    });
-  }
-
-  function requestDeleteDialogEntry(): void {
-    const entry = dialog.editingEntry.value;
-
-    if (!entry || dialog.dialogMode.value !== "edit") {
-      return;
-    }
-
-    requestDeleteEntry(entry, { closeDialogOnSuccess: true });
-  }
-
   return {
     handleDialogTaskSearch,
-    isDeletingDialogEntry,
+    isDeletingDialogEntry: deleteConfirmation.isDeletingDialogEntry,
     isSavingDialogFlow,
     openCreateDialog,
     openEditDialog,
-    requestDeleteDialogEntry,
-    requestDeleteEntry,
+    requestDeleteDialogEntry: deleteConfirmation.requestDeleteDialogEntry,
+    requestDeleteEntry: deleteConfirmation.requestDeleteEntry,
     saveDialog,
     setDialogProjectId,
     setDialogTaskValue,

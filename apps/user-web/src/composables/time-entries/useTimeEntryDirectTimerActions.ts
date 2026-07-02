@@ -16,16 +16,16 @@ import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 interface UseTimeEntryDirectTimerActionsOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
+  enabled: ComputedRef<boolean>;
   loadEntries(): Promise<void>;
   scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
 
 export function useTimeEntryDirectTimerActions({
-  accessToken,
   client,
+  enabled,
   loadEntries,
   scope,
   toast,
@@ -33,17 +33,15 @@ export function useTimeEntryDirectTimerActions({
   const appToast = createAppToast(toast);
   const queryClient = useQueryClient();
   const currentTimerGuardQuery = useCurrentTimerQuery({
-    accessToken,
     client,
+    enabled,
     scope,
   });
   const startTimerMutation = useStartTimerMutation({
-    accessToken,
     client,
     scope,
   });
   const stopTimerMutation = useStopTimerMutation({
-    accessToken,
     client,
     scope,
   });

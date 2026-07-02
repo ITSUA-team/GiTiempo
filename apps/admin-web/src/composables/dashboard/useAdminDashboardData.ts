@@ -31,7 +31,7 @@ import {
 import { adminDashboardKeys, type AdminServerStateScope } from '@/lib/query-keys';
 
 interface UseAdminDashboardDataOptions {
-  accessToken: Ref<string | null> | ComputedRef<string | null>;
+  enabled: Ref<boolean> | ComputedRef<boolean>;
   membersClient?: Pick<AdminMembersClient, 'listInvites' | 'listMembers'>;
   now?: () => Date;
   onError?: (message: string, error: unknown, action: string) => void;
@@ -46,7 +46,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function useAdminDashboardData({
-  accessToken,
+  enabled,
   membersClient = adminMembersClient,
   now = () => new Date(),
   onError,
@@ -59,7 +59,7 @@ export function useAdminDashboardData({
   const currentAction = ref('load-dashboard');
   const weekRange = computed(() => getLocalIsoWeekRange(requestedAt.value));
   const blockedError = computed(() => {
-    if (!accessToken.value) {
+    if (!enabled.value) {
       return ADMIN_DASHBOARD_MISSING_TOKEN_MESSAGE;
     }
 

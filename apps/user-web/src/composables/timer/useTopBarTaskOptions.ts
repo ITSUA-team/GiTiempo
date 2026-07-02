@@ -15,8 +15,8 @@ import type {
 } from "./useTopBarTaskPicker";
 
 interface UseTopBarTaskOptionsOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
+  enabled: ComputedRef<boolean>;
   picker: TopBarTaskPicker;
   scope: ComputedRef<UserServerStateScope>;
 }
@@ -27,8 +27,8 @@ interface LoadedTopBarTaskOptions {
 }
 
 export function useTopBarTaskOptions({
-  accessToken,
   client,
+  enabled,
   picker,
   scope,
 }: UseTopBarTaskOptionsOptions) {
@@ -38,7 +38,7 @@ export function useTopBarTaskOptions({
   let taskRequestId = 0;
 
   async function ensureProjectsLoaded(): Promise<ProjectResponse[]> {
-    if (!accessToken.value) {
+    if (!enabled.value) {
       throw new Error("Authentication is required to load visible projects.");
     }
 
@@ -75,7 +75,7 @@ export function useTopBarTaskOptions({
   async function loadTasksForProject(projectId: string): Promise<TopBarTaskOption[]> {
     const requestId = ++taskRequestId;
 
-    if (!accessToken.value) {
+    if (!enabled.value) {
       throw new Error("Authentication is required to load project tasks.");
     }
 

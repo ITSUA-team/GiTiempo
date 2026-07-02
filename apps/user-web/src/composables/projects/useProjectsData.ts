@@ -8,16 +8,16 @@ import { sortProjectTasks } from "@/lib/projects-page-helpers";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 interface UseProjectsDataOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
+  enabled: ComputedRef<boolean>;
   onLoadProjectsError(error: unknown): void;
   onLoadTasksError(message: string): void;
   scope: ComputedRef<UserServerStateScope>;
 }
 
 export function useProjectsData({
-  accessToken,
   client,
+  enabled,
   onLoadProjectsError,
   onLoadTasksError,
   scope,
@@ -32,7 +32,7 @@ export function useProjectsData({
   const queryKey = computed(() => userProjectsKeys.page(scope.value));
   const projectsPageQuery = useQuery({
     queryKey,
-    enabled: computed(() => Boolean(accessToken.value)),
+    enabled,
     queryFn: async (): Promise<ProjectsPageData> => {
       const projects = await client.listVisibleProjects();
       const visibleProjects = projects.filter((project) => project.isActive);

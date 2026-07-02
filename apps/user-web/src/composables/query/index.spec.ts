@@ -177,18 +177,16 @@ function mountQueryHarness(options?: {
       const scope = computed(() => TEST_SCOPE);
 
       recentEntriesQuery = useRecentOwnTimeEntriesQuery({
-        accessToken,
         client,
+        enabled: computed(() => Boolean(accessToken.value)),
         queryKey: computed(() => listKey),
         scope,
       });
       startTimerMutation = useStartTimerMutation({
-        accessToken,
         client,
         scope,
       });
       stopTimerMutation = useStopTimerMutation({
-        accessToken,
         client,
         scope,
       });

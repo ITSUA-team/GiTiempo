@@ -13,27 +13,27 @@ import { timeEntriesKeys, userProjectsKeys, type UserServerStateScope } from "@/
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 interface UseTimeEntriesDataOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
+  enabled: ComputedRef<boolean>;
   entryListQuery: ComputedRef<Partial<TimeEntryListQuery>>;
   scope: ComputedRef<UserServerStateScope>;
 }
 
 export function useTimeEntriesData({
-  accessToken,
   client,
+  enabled,
   entryListQuery,
   scope,
 }: UseTimeEntriesDataOptions) {
   const visibleProjectsQuery = useVisibleProjectsQuery({
-    accessToken,
     client,
+    enabled,
     queryKey: computed(() => userProjectsKeys.visibleProjects(scope.value)),
     scope,
   });
   const timeEntriesQuery = useOwnTimeEntriesQuery({
-    accessToken,
     client,
+    enabled,
     query: entryListQuery,
     queryKey: computed(() => timeEntriesKeys.list(scope.value, entryListQuery.value)),
     scope,

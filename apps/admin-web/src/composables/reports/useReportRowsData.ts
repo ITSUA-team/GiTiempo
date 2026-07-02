@@ -27,8 +27,8 @@ interface QueryStateRefs {
 }
 
 interface UseReportRowsDataOptions {
-  accessToken: Ref<string | null> | ComputedRef<string | null>;
   appliedFilters: Ref<ReportSetupFilters> | ComputedRef<ReportSetupFilters>;
+  enabled: Ref<boolean> | ComputedRef<boolean>;
   isAdminScope: ComputedRef<boolean>;
   memberOptions: ComputedRef<ReportFilterOption[]>;
   membersLoaded: ComputedRef<boolean>;
@@ -41,8 +41,8 @@ interface UseReportRowsDataOptions {
 }
 
 export function useReportRowsData({
-  accessToken,
   appliedFilters,
+  enabled,
   isAdminScope,
   memberOptions,
   membersLoaded,
@@ -104,7 +104,7 @@ export function useReportRowsData({
     ),
     enabled: computed(
       () =>
-        Boolean(accessToken.value) &&
+        enabled.value &&
         projectsQuery.isSuccess.value &&
         isReportDateRangeValid(appliedFilters.value.dateRange),
     ),

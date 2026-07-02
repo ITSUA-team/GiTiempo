@@ -1,6 +1,5 @@
 import { computed, onMounted, ref, shallowRef } from "vue";
 import type {
-  LocationQueryRaw,
   RouteLocationNormalizedLoaded,
   Router,
 } from "vue-router";
@@ -19,6 +18,9 @@ import {
 import { createDefaultProfileGitHubClient } from "@/config/clients";
 import type { ProfileGitHubClient } from "@/services/profile-github-client";
 
+import { useProfileGithubAuthorizationRedirect } from "./useProfileGithubAuthorizationRedirect";
+import { useProfileGithubCallbackQuery } from "./useProfileGithubCallbackQuery";
+
 
 interface UseProfileGithubConnectionOptions {
   client?: ProfileGitHubClient;
@@ -29,60 +31,6 @@ interface UseProfileGithubConnectionOptions {
   toast?: ToastLike;
 }
 
-
-const callbackErrorMessages: Record<string, string> = {
-  github_config: "GitHub is not configured for this environment yet.",
-  github_denied: "GitHub authorization was cancelled before the connection completed.",
-  github_exchange_failed: "GitHub could not complete the authorization exchange.",
-  invalid_callback: "GitHub returned an incomplete callback response.",
-  invalid_state: "The GitHub callback could not be validated. Start the connection again.",
-};
-const genericCallbackErrorMessage = "GitHub could not complete the connection flow.";
-
-function getCallbackToast(route: Pick<RouteLocationNormalizedLoaded, "query">): {
-  detail: string;
-  life?: number;
-  severity: "error" | "success";
-  summary: string;
-} | null {
-  const github = route.query.github;
-  const code = route.query.code;
-
-  if (github === "connected") {
-    return {
-      detail: "Your GitHub account is now connected.",
-      life: 4000,
-      severity: "success",
-      summary: "GitHub connected",
-    } as const;
-  }
-
-  if (github === "error") {
-    const detail =
-      typeof code === "string" && code in callbackErrorMessages
-        ? callbackErrorMessages[code]
-        : genericCallbackErrorMessage;
-
-    return {
-      detail,
-      severity: "error",
-      summary: "GitHub connection failed",
-    };
-  }
-
-  return null;
-}
-
-function getCleanQuery(
-  route: Pick<RouteLocationNormalizedLoaded, "query">,
-): LocationQueryRaw {
-  const nextQuery: LocationQueryRaw = { ...route.query };
-
-  delete nextQuery.github;
-  delete nextQuery.code;
-
-  return nextQuery;
-}
 
 export function useProfileGithubConnection(
   options: UseProfileGithubConnectionOptions = {},
@@ -96,17 +44,24 @@ export function useProfileGithubConnection(
   const appToast = createAppToast(toast);
   const locationAssign =
     options.locationAssign ?? ((url: string) => window.location.assign(url));
+  const authorizationRedirect = useProfileGithubAuthorizationRedirect({
+    client,
+    locationAssign,
+    toast,
+  });
+  const callbackQuery = useProfileGithubCallbackQuery({
+    route,
+    router,
+    toast,
+  });
 
   const connection = shallowRef<GitHubConnectionStatusResponse | null>(null);
-  const isConnecting = ref(false);
   const isDisconnecting = ref(false);
   const isLoading = ref(true);
   const requestErrorMessage = ref<string | null>(null);
 
-  let connectRequestId = 0;
-
   const state = computed(() => {
-    if (isConnecting.value) {
+    if (authorizationRedirect.isConnecting.value) {
       return "connecting" as const;
     }
 
@@ -144,45 +99,6 @@ export function useProfileGithubConnection(
     }
   }
 
-  async function handleCallbackQuery(): Promise<void> {
-    const callbackToast = getCallbackToast(route);
-
-    if (!callbackToast) {
-      return;
-    }
-
-    toast.add(callbackToast);
-    await router.replace({ query: getCleanQuery(route) });
-  }
-
-  async function connect(): Promise<void> {
-    const requestId = ++connectRequestId;
-
-    isConnecting.value = true;
-
-    try {
-      const response = await client.getAuthUrl();
-
-      if (requestId !== connectRequestId) {
-        return;
-      }
-
-      locationAssign(response.authorizationUrl);
-    } catch (error) {
-      if (requestId !== connectRequestId) {
-        return;
-      }
-
-      appToast.showErrorToast({
-        detail: "Please try again.",
-        error,
-        logContext: { action: "start-connection", feature: "profile-github" },
-        summary: "Could not start GitHub connection",
-      });
-      isConnecting.value = false;
-    }
-  }
-
   async function disconnect(): Promise<void> {
     isDisconnecting.value = true;
 
@@ -215,14 +131,14 @@ export function useProfileGithubConnection(
   }
 
   onMounted(async () => {
-    await handleCallbackQuery();
+    await callbackQuery.handleCallbackQuery();
     await refreshConnectionStatus();
   });
 
   return {
-    connect,
+    connect: authorizationRedirect.connect,
     connection,
-    isConnecting,
+    isConnecting: authorizationRedirect.isConnecting,
     isDisconnecting,
     refreshConnectionStatus,
     requestDisconnect,

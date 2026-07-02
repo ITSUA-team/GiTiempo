@@ -74,7 +74,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
       <div class="flex flex-col gap-1">
         <label
           for="time-entries-date-range"
-          class="text-text-dark text-[13px] font-medium"
+          class="sr-only"
         >
           Date range
         </label>
@@ -96,7 +96,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
       <div class="flex flex-col gap-1">
         <label
           for="time-entries-project-filter"
-          class="text-text-dark text-[13px] font-medium"
+          class="sr-only"
         >
           Project
         </label>
@@ -126,7 +126,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
       <div class="flex flex-col gap-1">
         <label
           for="time-entries-task-filter"
-          class="text-text-dark text-[13px] font-medium"
+          class="sr-only"
         >
           Task
         </label>

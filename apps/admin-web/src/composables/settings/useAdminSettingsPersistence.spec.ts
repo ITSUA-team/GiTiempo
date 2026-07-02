@@ -50,19 +50,19 @@ function createClient(
 }
 
 function createSubject({
-  accessToken = 'access-token',
   client = createClient(),
+  enabled: isEnabled = true,
   onError = vi.fn(),
 }: {
-  accessToken?: string | null;
   client?: Pick<
     AdminSettingsClient,
     'updateWorkspace' | 'updateWorkspaceSettings'
   >;
+  enabled?: boolean;
   onError?: AdminSettingsPersistenceErrorHandler;
 } = {}) {
   let persistence!: ReturnType<typeof useAdminSettingsPersistence>;
-  const token = ref<string | null>(accessToken);
+  const enabled = ref(isEnabled);
   const scope = shallowRef({
     role: 'admin' as const,
     userId: 'user-1',
@@ -73,8 +73,8 @@ function createSubject({
     defineComponent({
       setup() {
         persistence = useAdminSettingsPersistence({
-          accessToken: token,
           client,
+          enabled,
           onError,
           scope,
         });
@@ -89,7 +89,7 @@ function createSubject({
     },
   );
 
-  return { client, onError, persistence, token };
+  return { client, enabled, onError, persistence };
 }
 
 describe('useAdminSettingsPersistence', () => {
@@ -208,8 +208,8 @@ describe('useAdminSettingsPersistence', () => {
     );
   });
 
-  it('does not call update clients when access token is absent', async () => {
-    const { client, persistence } = createSubject({ accessToken: null });
+  it('does not call update clients when the auth gate is disabled', async () => {
+    const { client, persistence } = createSubject({ enabled: false });
 
     await expect(
       persistence.saveSettings({

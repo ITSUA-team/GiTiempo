@@ -17,7 +17,6 @@ import type { TimeEntriesClient } from "@/services/time-entries-client";
 import type { ValidProjectTaskDialogInput } from "./useProjectTaskDialog";
 
 interface UseProjectTaskMutationsOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   onTaskDeleted(task: TaskResponse): void;
   onTaskSaved(task: TaskResponse): void;
@@ -26,7 +25,6 @@ interface UseProjectTaskMutationsOptions {
 }
 
 export function useProjectTaskMutations({
-  accessToken,
   client,
   onTaskDeleted,
   onTaskSaved,
@@ -38,17 +36,14 @@ export function useProjectTaskMutations({
   const isDeletingTaskId = ref<string | null>(null);
   const lastMutationErrorMessage = ref<string | null>(null);
   const createTaskMutation = useCreateTaskMutation({
-    accessToken,
     client,
     scope,
   });
   const updateTaskMutation = useUpdateTaskMutation({
-    accessToken,
     client,
     scope,
   });
   const deleteTaskMutation = useDeleteTaskMutation({
-    accessToken,
     client,
     scope,
   });

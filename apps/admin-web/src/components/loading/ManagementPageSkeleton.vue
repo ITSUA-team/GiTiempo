@@ -139,7 +139,7 @@ const skeletonConfig = {
       <div
         class="border-divider hidden overflow-hidden rounded-[6px] border sm:block"
       >
-        <div class="bg-app-bg border-divider flex h-[44px] items-center gap-3 border-b px-3">
+        <div class="bg-app-bg flex h-[44px] items-center gap-3 px-3">
           <Skeleton
             class="flex-1"
             height="0.75rem"
@@ -156,7 +156,7 @@ const skeletonConfig = {
 
         <div
           v-if="skeletonConfig[props.variant].tableHeaderWidths.length > 0"
-          class="border-divider flex h-[44px] items-center gap-3 border-b px-3"
+          class="border-divider flex h-[44px] items-center gap-3 border-t px-3"
         >
           <Skeleton
             class="flex-1"

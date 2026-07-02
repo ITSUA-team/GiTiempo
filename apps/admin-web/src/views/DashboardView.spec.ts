@@ -15,7 +15,7 @@ import { useAuthStore } from '@/stores/auth';
 const dashboardMocks = vi.hoisted(() => ({
   activityOptions: undefined as unknown,
   dataOptions: undefined as unknown as {
-    accessToken: { value: string | null };
+    enabled: { value: boolean };
     onError?: CallableFunction;
     role?: { value: UserResponse['role'] | null };
   },
@@ -189,10 +189,10 @@ describe('DashboardView', () => {
     expect(wrapper.get('[data-testid="activity-table"]').text()).toContain('1 rows');
   });
 
-  it('passes auth token state and dashboard load failures to standard error toasts', () => {
+  it('passes auth gate state and dashboard load failures to standard error toasts', () => {
     mountDashboardView();
 
-    expect(dashboardMocks.dataOptions.accessToken.value).toBe('access-token');
+    expect(dashboardMocks.dataOptions.enabled.value).toBe(true);
     expect(dashboardMocks.dataOptions.role?.value).toBe('admin');
 
     const error = new Error('No scope');

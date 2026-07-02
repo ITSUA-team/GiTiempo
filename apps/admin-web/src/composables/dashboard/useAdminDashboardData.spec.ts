@@ -162,7 +162,7 @@ function mountDashboard(
     defineComponent({
       setup() {
         dashboard = useAdminDashboardData({
-          accessToken: ref<string | null>('access-token'),
+          enabled: ref(true),
           now: () => now,
           scope: shallowRef({
             role: 'admin',
@@ -275,7 +275,7 @@ describe('useAdminDashboardData', () => {
     const clients = createDashboardClients();
     const dashboard = mountDashboard({
       ...clients,
-      accessToken: ref<string | null>(null),
+      enabled: ref(false),
     });
 
     await flushPromises();

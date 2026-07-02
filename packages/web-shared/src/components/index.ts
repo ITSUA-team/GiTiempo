@@ -18,12 +18,14 @@ export type {
 export {
   getManagementTableActionIconClass,
   getManagementTableActionRootClass,
+  getManagementTableColumnStyle,
   managementTableBodyRowClass,
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
   managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
+  managementTableHeaderCellClass,
   managementTableHeaderClass,
   managementTableShellClass,
 } from "./management-table";
