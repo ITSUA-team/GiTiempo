@@ -135,20 +135,21 @@ describe("ProjectsTaskSection", () => {
     expect(wrapper.emitted("deleteTask")).toBeUndefined();
   });
 
-  it("renders the desktop task table branch with the expected column labels", () => {
+  it("renders the desktop task table branch without column headers", () => {
     const wrapper = mountSection();
     const tableShell = wrapper.getComponent(ManagementTableShell);
 
     expect(tableShell.props("headerClass")).toContain("min-w-[740px]");
+    expect(tableShell.props("showHeader")).toBe(false);
     expect(tableShell.props("singleScroll")).toBe(true);
     expect(tableShell.props("shellClass")).toContain("overflow-x-auto");
     expect(tableShell.props("tableContainerClass")).toBe(
       "overflow-visible rounded-none border-none",
     );
     expect(wrapper.findAll('[data-testid="project-task-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.text()).toContain("Task");
-    expect(wrapper.text()).toContain("Status");
-    expect(wrapper.text()).toContain("Updated");
+    expect(wrapper.text()).not.toContain("Task");
+    expect(wrapper.text()).not.toContain("Status");
+    expect(wrapper.text()).not.toContain("Updated");
     expect(wrapper.text()).not.toContain("Actions");
     expect(wrapper.text()).toContain("Improve reports filters");
     expect(wrapper.get('[data-testid="project-task-title"]').classes()).toContain("truncate");
