@@ -216,6 +216,7 @@ export class AuthService {
         workspaceId: membership.workspaceId,
         role: membership.role,
       },
+      membership.id,
       randomUUID(),
     );
     this.logger.log({
@@ -320,14 +321,17 @@ export class AuthService {
       await this.refreshRepo.deleteFamily(row.familyId);
       throw new UnauthorizedException('Unauthorized');
     }
-    const membership = await this.members.requireActiveMembershipForUser(
+    const membership = await this.members.requireActiveMembershipById(
       user.id,
+      row.workspaceMemberId,
     );
 
     const { token, hash: newHash } = this.tokens.generateRefreshToken();
     const expiresAt = new Date(Date.now() + this.refreshTtlMs);
     const rotated = await this.refreshRepo.rotateIfActive(row.id, {
       userId: user.id,
+      workspaceMemberId: membership.id,
+      workspaceId: membership.workspaceId,
       familyId: row.familyId,
       tokenHash: newHash,
       expiresAt,
@@ -374,12 +378,15 @@ export class AuthService {
 
   private async issueTokenPair(
     user: AuthUser,
+    membershipId: string,
     familyId: string,
   ): Promise<TokenPair> {
     const { token, hash } = this.tokens.generateRefreshToken();
     const expiresAt = new Date(Date.now() + this.refreshTtlMs);
     await this.refreshRepo.create({
       userId: user.sub,
+      workspaceMemberId: membershipId,
+      workspaceId: user.workspaceId,
       familyId,
       tokenHash: hash,
       expiresAt,
@@ -444,17 +451,24 @@ export class AuthService {
         workspaceId: workspaceRow.id,
       });
 
-      await tx.insert(workspaceMembers).values({
-        role: 'admin',
-        userId: userRow.id,
-        workspaceId: workspaceRow.id,
-      });
+      const membershipRow = (
+        await tx
+          .insert(workspaceMembers)
+          .values({
+            role: 'admin',
+            userId: userRow.id,
+            workspaceId: workspaceRow.id,
+          })
+          .returning()
+      )[0]!;
 
       await tx.insert(refreshTokens).values({
         expiresAt,
         familyId,
         tokenHash: hash,
         userId: userRow.id,
+        workspaceMemberId: membershipRow.id,
+        workspaceId: workspaceRow.id,
       });
 
       return {

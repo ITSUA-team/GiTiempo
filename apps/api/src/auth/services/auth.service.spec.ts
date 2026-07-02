@@ -112,6 +112,8 @@ describe('AuthService', () => {
     findRowById: ReturnType<typeof vi.fn>;
   };
   let members: {
+    requireActiveMembershipById: ReturnType<typeof vi.fn>;
+    requireActiveMembership: ReturnType<typeof vi.fn>;
     requireActiveMembershipForUser: ReturnType<typeof vi.fn>;
   };
 
@@ -130,6 +132,8 @@ describe('AuthService', () => {
       create: vi.fn(async (input) => ({
         id: 'rt-' + Math.random().toString(16).slice(2, 10),
         userId: input.userId,
+        workspaceMemberId: input.workspaceMemberId,
+        workspaceId: input.workspaceId,
         familyId: input.familyId,
         tokenHash: input.tokenHash,
         replacedBy: null,
@@ -144,6 +148,8 @@ describe('AuthService', () => {
           newRow: {
             id: 'rt-' + Math.random().toString(16).slice(2, 10),
             userId: input.userId,
+            workspaceMemberId: input.workspaceMemberId,
+            workspaceId: input.workspaceId,
             familyId: input.familyId,
             tokenHash: input.tokenHash,
             replacedBy: null,
@@ -162,6 +168,8 @@ describe('AuthService', () => {
       findRowById: vi.fn().mockResolvedValue(seedUserRow),
     };
     members = {
+      requireActiveMembershipById: vi.fn().mockResolvedValue(seedMembership),
+      requireActiveMembership: vi.fn().mockResolvedValue(seedMembership),
       requireActiveMembershipForUser: vi.fn().mockResolvedValue(seedMembership),
     };
 
@@ -196,6 +204,13 @@ describe('AuthService', () => {
         avatarUrl: null,
       });
       expect(repo.create).toHaveBeenCalledOnce();
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: seedUserRow.id,
+          workspaceMemberId: seedMembership.id,
+          workspaceId: seedMembership.workspaceId,
+        }),
+      );
       expect(pair.accessToken).toMatch(/^eyJ/);
       expect(pair.refreshToken.length).toBeGreaterThan(20);
       expect(pair.accessTokenExpiresIn).toBe(15 * 60);
@@ -253,6 +268,14 @@ describe('AuthService', () => {
               name: 'Acme Studio',
             },
           ],
+          [
+            {
+              id: 'membership-register-1',
+              role: 'admin',
+              userId: 'user-register-1',
+              workspaceId: 'workspace-register-1',
+            },
+          ],
         ],
         recordedInserts,
       );
@@ -306,6 +329,8 @@ describe('AuthService', () => {
         familyId: expect.any(String),
         tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
         userId: 'user-register-1',
+        workspaceMemberId: 'membership-register-1',
+        workspaceId: 'workspace-register-1',
       });
       expect(firebase.deleteUser).not.toHaveBeenCalled();
       expect(pair.refreshToken.length).toBeGreaterThan(20);
@@ -492,6 +517,8 @@ describe('AuthService', () => {
       const existingRow = {
         id: 'old-row',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: firstCreateCall.familyId,
         tokenHash: firstCreateCall.tokenHash,
         replacedBy: null,
@@ -505,6 +532,10 @@ describe('AuthService', () => {
 
       expect(pair.accessToken).toMatch(/^eyJ/);
       expect(pair.refreshToken).not.toBe(first.refreshToken);
+      expect(members.requireActiveMembershipById).toHaveBeenCalledWith(
+        seedUserRow.id,
+        seedMembership.id,
+      );
       expect(repo.rotateIfActive).toHaveBeenCalledOnce();
       const rotateCall = repo.rotateIfActive.mock.calls[0] as [
         string,
@@ -512,6 +543,8 @@ describe('AuthService', () => {
       ];
       expect(rotateCall[0]).toBe('old-row');
       expect(rotateCall[1].familyId).toBe(existingRow.familyId);
+      expect(rotateCall[1].workspaceMemberId).toBe(seedMembership.id);
+      expect(rotateCall[1].workspaceId).toBe(seedMembership.workspaceId);
 
       const payload = tokens.verifyAccess(pair.accessToken);
       expect(payload.sub).toBe(seedUserRow.id);
@@ -533,6 +566,8 @@ describe('AuthService', () => {
       const existingRow = {
         id: 'old-row-role',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: firstCreateCall.familyId,
         tokenHash: firstCreateCall.tokenHash,
         replacedBy: null,
@@ -542,7 +577,7 @@ describe('AuthService', () => {
       };
       repo.findByHashIncludingRevoked.mockResolvedValueOnce(existingRow);
 
-      members.requireActiveMembershipForUser.mockResolvedValueOnce({
+      members.requireActiveMembershipById.mockResolvedValueOnce({
         ...seedMembership,
         role: 'pm',
       });
@@ -554,10 +589,35 @@ describe('AuthService', () => {
       expect(payload.role).toBe('pm');
     });
 
+    it('rejects refresh when the stored workspace membership no longer exists', async () => {
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce({
+        id: 'workspace-bound-row',
+        userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
+        familyId: 'family-workspace-bound',
+        tokenHash: 'abc',
+        replacedBy: null,
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+      });
+      members.requireActiveMembershipById.mockRejectedValueOnce(
+        new UnauthorizedException('Unauthorized'),
+      );
+
+      await expect(service.refresh('some-raw-token')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      expect(repo.rotateIfActive).not.toHaveBeenCalled();
+    });
+
     it('rejects a parallel loser that sees a revoked token with an active replacement', async () => {
       const revokedRow = {
         id: 'revoked-row',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'family-parallel',
         tokenHash: 'abc',
         replacedBy: 'next-row',
@@ -569,6 +629,8 @@ describe('AuthService', () => {
       repo.findById.mockResolvedValueOnce({
         id: 'next-row',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'family-parallel',
         tokenHash: 'next-hash',
         replacedBy: null,
@@ -587,6 +649,8 @@ describe('AuthService', () => {
       const revokedRow = {
         id: 'revoked-row',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'family-xyz',
         tokenHash: 'abc',
         replacedBy: 'next-row',
@@ -598,6 +662,8 @@ describe('AuthService', () => {
       repo.findById.mockResolvedValueOnce({
         id: 'next-row',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'family-xyz',
         tokenHash: 'next-hash',
         replacedBy: 'later-row',
@@ -616,6 +682,8 @@ describe('AuthService', () => {
       const revokedRow = {
         id: 'revoked-row-no-replacement',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'family-missing-successor',
         tokenHash: 'abc',
         replacedBy: 'missing-row',
@@ -646,6 +714,8 @@ describe('AuthService', () => {
       repo.findByHashIncludingRevoked.mockResolvedValueOnce({
         id: 'r',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'f',
         tokenHash: 'h',
         replacedBy: null,
@@ -662,6 +732,8 @@ describe('AuthService', () => {
       const existingRow = {
         id: 'old-row',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'family-race',
         tokenHash: 'abc',
         replacedBy: null,
@@ -684,6 +756,8 @@ describe('AuthService', () => {
       repo.findByHashIncludingRevoked.mockResolvedValueOnce({
         id: 'row-1',
         userId: seedUserRow.id,
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'f1',
         tokenHash: 'h',
         replacedBy: null,
@@ -699,6 +773,8 @@ describe('AuthService', () => {
       repo.findByHashIncludingRevoked.mockResolvedValueOnce({
         id: 'row-1',
         userId: 'someone-else',
+        workspaceMemberId: seedMembership.id,
+        workspaceId: seedMembership.workspaceId,
         familyId: 'f1',
         tokenHash: 'h',
         replacedBy: null,

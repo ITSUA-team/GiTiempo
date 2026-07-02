@@ -69,6 +69,29 @@ export class MembersService {
     return row ?? null;
   }
 
+  async resolveActiveMembershipById(
+    userId: string,
+    membershipId: string,
+  ): Promise<ActiveMembership | null> {
+    const [row] = await this.db
+      .select({
+        id: workspaceMembers.id,
+        userId: workspaceMembers.userId,
+        workspaceId: workspaceMembers.workspaceId,
+        role: workspaceMembers.role,
+      })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.id, membershipId),
+          eq(workspaceMembers.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    return row ?? null;
+  }
+
   async requireActiveMembershipForUser(
     userId: string,
   ): Promise<ActiveMembership> {
@@ -82,6 +105,18 @@ export class MembersService {
     workspaceId: string,
   ): Promise<ActiveMembership> {
     const membership = await this.resolveActiveMembership(userId, workspaceId);
+    if (!membership) throw new UnauthorizedException('Unauthorized');
+    return membership;
+  }
+
+  async requireActiveMembershipById(
+    userId: string,
+    membershipId: string,
+  ): Promise<ActiveMembership> {
+    const membership = await this.resolveActiveMembershipById(
+      userId,
+      membershipId,
+    );
     if (!membership) throw new UnauthorizedException('Unauthorized');
     return membership;
   }
