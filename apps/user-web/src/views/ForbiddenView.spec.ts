@@ -184,6 +184,8 @@ describe("ForbiddenView", () => {
     const switchWorkspaceSpy = vi
       .spyOn(authStore, "switchWorkspace")
       .mockImplementation(async () => ({
+        profileReloaded: true,
+        profileReloadError: null,
         membershipsReloaded: true,
         reloadError: null,
       }));

@@ -53,6 +53,11 @@ async function handleSwitchWorkspace(workspaceId: string): Promise<void> {
   try {
     const switchResult = await authStore.switchWorkspace(workspaceId);
 
+    if (switchResult.profileReloaded === false) {
+      window.location.reload();
+      return;
+    }
+
     if (route.name === routeNames.forbidden) {
       await router.push({ name: routeNames.dashboard });
     }
@@ -82,14 +87,25 @@ watch(
     if (!accessToken || workspaceNameRequestToken === accessToken) return;
 
     workspaceNameRequestToken = accessToken;
+    const isSwitchingWorkspace = authStore.switchingWorkspaceId !== null;
 
     try {
+      if (isSwitchingWorkspace) {
+        const workspace = await getWorkspaceClient().getWorkspace();
+        authStore.setWorkspaceName(workspace.name);
+        return;
+      }
+
       const [workspace] = await Promise.all([
         getWorkspaceClient().getWorkspace(),
         authStore.loadWorkspaceMemberships(),
       ]);
       authStore.setWorkspaceName(workspace.name);
     } catch (error) {
+      if (isSwitchingWorkspace) {
+        return;
+      }
+
       workspaceNameRequestToken = null;
       appToast.showErrorToast({
         detail: getErrorMessage(error, "Could not load workspace context."),

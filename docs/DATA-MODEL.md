@@ -154,6 +154,35 @@ Joins users to workspaces with a role. A user may hold memberships in different 
 
 ---
 
+### RefreshToken (`refresh_tokens`)
+
+Persists API refresh-token sessions. Each row belongs to one user and one selected workspace context so refresh and workspace-switch rotation keep the session bound to exactly one active workspace at a time.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | UUID | PK, default `gen_random_uuid()` | |
+| `user_id` | UUID | FK → `users.id`, NOT NULL | Session owner |
+| `workspace_id` | UUID | FK → `workspaces.id`, NOT NULL | Selected workspace context for this refresh-token session |
+| `family_id` | UUID | NOT NULL | Rotation family identifier for reuse detection |
+| `token_hash` | VARCHAR(64) | UNIQUE, NOT NULL | `sha256` hash of the opaque refresh token |
+| `replaced_by` | UUID | FK → `refresh_tokens.id` | Next rotated session row when this token is spent |
+| `revoked_at` | TIMESTAMPTZ | | Soft-revoked timestamp used for reuse detection |
+| `expires_at` | TIMESTAMPTZ | NOT NULL | Session expiry time |
+| `created_at` | TIMESTAMPTZ | NOT NULL, default `now()` | |
+
+**Indexes:**
+- `refresh_tokens_user_id_idx` on `user_id`
+- `refresh_tokens_workspace_id_idx` on `workspace_id`
+- `refresh_tokens_family_id_idx` on `family_id`
+- `refresh_tokens_token_hash_idx` on `token_hash`
+
+**Notes:**
+- The backend stores only the token hash, never the raw refresh token.
+- `workspace_id` is the persisted source of truth for the workspace context used by refresh rotation.
+- Existing rows were backfilled to the user's deterministic default membership by `joined_at ASC`, then `workspace_id ASC`; rows without a resolvable membership were deleted before `workspace_id` became required.
+
+---
+
 ### Project (`projects`)
 
 Groups tasks within a workspace. Projects are provider-neutral core records: a project may be purely local, or it may be linked to one or more external providers through `project_external_refs`.

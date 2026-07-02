@@ -2,23 +2,28 @@ import type { CurrentUserWorkspaceMembershipResponse } from "@gitiempo/shared";
 import { computed, ref, type Ref } from "vue";
 
 import type { AuthRuntime } from "./runtime";
+import type { WorkspaceSwitchSessionResult } from "./session-core";
 
-export type WorkspaceSwitchResult =
-  | {
+export type WorkspaceSwitchResult = WorkspaceSwitchSessionResult &
+  (
+    | {
       membershipsReloaded: true;
       reloadError: null;
     }
-  | {
+    | {
       membershipsReloaded: false;
       reloadError: unknown;
-    };
+    }
+  );
 
 interface CreateWorkspaceMembershipSessionOptions {
   accessToken: Ref<string | null>;
   getAuthRuntime(): Pick<AuthRuntime, "listCurrentUserWorkspaces">;
   initialWorkspaceName: string;
   // eslint-disable-next-line no-unused-vars
-  switchWorkspace: (workspaceId: string) => Promise<void>;
+  switchWorkspace: (
+    workspaceId: string,
+  ) => Promise<WorkspaceSwitchSessionResult>;
 }
 
 export function createWorkspaceMembershipSession({
@@ -76,17 +81,19 @@ export function createWorkspaceMembershipSession({
     switchingWorkspaceId.value = workspaceId;
 
     try {
-      await switchWorkspaceSession(workspaceId);
+      const sessionResult = await switchWorkspaceSession(workspaceId);
 
       try {
         await loadWorkspaceMemberships();
 
         return {
+          ...sessionResult,
           membershipsReloaded: true,
           reloadError: null,
         };
       } catch (reloadError) {
         return {
+          ...sessionResult,
           membershipsReloaded: false,
           reloadError,
         };

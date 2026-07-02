@@ -78,6 +78,11 @@ async function handleSwitchWorkspace(workspaceId: string): Promise<void> {
   try {
     const switchResult = await authStore.switchWorkspace(workspaceId);
 
+    if (switchResult.profileReloaded === false) {
+      window.location.reload();
+      return;
+    }
+
     const nextRole = authStore.profile?.role ?? null;
     const canAccessDashboard = hasAllowedRole(
       router.resolve({ name: routeNames.dashboard }).meta.allowedRoles,
@@ -119,14 +124,25 @@ watch(
     if (!accessToken || workspaceNameRequestToken === accessToken) return;
 
     workspaceNameRequestToken = accessToken;
+    const isSwitchingWorkspace = authStore.switchingWorkspaceId !== null;
 
     try {
+      if (isSwitchingWorkspace) {
+        const workspace = await getAdminSettingsClient().getWorkspace();
+        authStore.setWorkspaceName(workspace.name);
+        return;
+      }
+
       const [workspace] = await Promise.all([
         getAdminSettingsClient().getWorkspace(),
         authStore.loadWorkspaceMemberships(),
       ]);
       authStore.setWorkspaceName(workspace.name);
     } catch (error) {
+      if (isSwitchingWorkspace) {
+        return;
+      }
+
       workspaceNameRequestToken = null;
       const message =
         error instanceof Error

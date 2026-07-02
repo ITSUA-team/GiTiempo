@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import {
+  ArrowRightStartOnRectangleIcon,
+  ArrowsRightLeftIcon,
+  BuildingOffice2Icon,
+  Cog6ToothIcon,
+} from "@heroicons/vue/24/outline";
+import {
   computed,
   onBeforeUnmount,
   onMounted,
@@ -24,6 +30,7 @@ import {
 
 type WorkspaceMembershipMenuItem = PrimeMenuItem & {
   command?: () => void;
+  iconComponent: Component;
   isCurrent: boolean;
   isSwitching: boolean;
   label: string;
@@ -34,11 +41,13 @@ type WorkspaceMembershipMenuItem = PrimeMenuItem & {
 
 type CounterpartMenuItem = PrimeMenuItem & {
   href: string;
+  iconComponent: Component;
   label: string;
   type: "counterpart";
 };
 
 type SettingsMenuItem = PrimeMenuItem & {
+  iconComponent: Component;
   label: string;
   route: RouteLocationRaw;
   type: "settings";
@@ -46,6 +55,7 @@ type SettingsMenuItem = PrimeMenuItem & {
 
 type SignOutMenuItem = PrimeMenuItem & {
   command: () => void;
+  iconComponent: Component;
   label: string;
   type: "sign-out";
 };
@@ -154,6 +164,7 @@ const profileMenuItems = computed<ProfileMenuEntry[]>(() => {
         isSwitching:
           getWorkspaceSwitchStatus(membership, props.switchingWorkspaceId) ===
           "switching",
+        iconComponent: BuildingOffice2Icon,
         label: membership.workspaceName,
         roleLabel: getWorkspaceRoleLabel(membership.role),
         type: "workspace-membership" as const,
@@ -167,12 +178,14 @@ const profileMenuItems = computed<ProfileMenuEntry[]>(() => {
 
   items.push({
     href: props.counterpartHref,
+    iconComponent: ArrowsRightLeftIcon,
     label: props.counterpartLabel,
     type: "counterpart",
   });
 
   if (props.showSettings) {
     items.push({
+      iconComponent: props.settingsIcon ?? Cog6ToothIcon,
       label: props.settingsLabel,
       route: props.settingsTo,
       type: "settings",
@@ -188,6 +201,7 @@ const profileMenuItems = computed<ProfileMenuEntry[]>(() => {
         closeProfileMenu({ restoreFocus: true });
         emit("signOut");
       },
+      iconComponent: ArrowRightStartOnRectangleIcon,
       label: "Sign out",
       type: "sign-out",
     },
@@ -466,20 +480,10 @@ onBeforeUnmount(() => {
               :class="getMenuIconClass(item)"
               aria-hidden="true"
             >
-              <svg
+              <component
+                :is="item.iconComponent"
                 class="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-              >
-                <path d="M8 7h12" />
-                <path d="m16 3 4 4-4 4" />
-                <path d="M16 17H4" />
-                <path d="m8 21-4-4 4-4" />
-              </svg>
+              />
             </span>
             <span>{{ item.label }}</span>
           </a>
@@ -497,19 +501,10 @@ onBeforeUnmount(() => {
               :class="getMenuIconClass(item)"
               aria-hidden="true"
             >
-              <svg
+              <component
+                :is="item.iconComponent"
                 class="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-              >
-                <path d="M6 7h12" />
-                <path d="M9 12h9" />
-                <path d="M12 17h6" />
-              </svg>
+              />
             </span>
             <span class="flex min-w-0 flex-1 items-start justify-between gap-3">
               <span class="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -548,24 +543,9 @@ onBeforeUnmount(() => {
                 aria-hidden="true"
               >
                 <component
-                  :is="props.settingsIcon"
-                  v-if="props.settingsIcon"
+                  :is="item.iconComponent"
                   class="size-4"
                 />
-                <svg
-                  v-else
-                  class="size-4"
-                  data-testid="profile-menu-settings-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                >
-                  <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
-                  <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.08A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4h.08A1.7 1.7 0 0 0 4.6 8.97a1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.03 4.2l.06.06a1.7 1.7 0 0 0 1.88.34H9A1.7 1.7 0 0 0 10 3.08V3a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.88V9c.3.6.91 1 1.56 1H21a2 2 0 1 1 0 4h-.08A1.7 1.7 0 0 0 19.4 15Z" />
-                </svg>
               </span>
               <span>{{ item.label }}</span>
             </a>
@@ -581,19 +561,10 @@ onBeforeUnmount(() => {
               :class="getMenuIconClass(item)"
               aria-hidden="true"
             >
-              <svg
+              <component
+                :is="item.iconComponent"
                 class="size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <path d="M16 17l5-5-5-5" />
-                <path d="M21 12H9" />
-              </svg>
+              />
             </span>
             <span>{{ item.label }}</span>
           </a>

@@ -62,6 +62,11 @@ async function handleWorkspaceSwitch(workspaceId: string): Promise<void> {
   try {
     const switchResult = await authStore.switchWorkspace(workspaceId);
 
+    if (switchResult.profileReloaded === false) {
+      window.location.reload();
+      return;
+    }
+
     workspaceSwitchDialogVisible.value = false;
 
     const nextRole = authStore.profile?.role ?? null;

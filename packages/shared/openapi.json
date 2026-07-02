@@ -373,6 +373,9 @@
               }
             }
           },
+          "401": {
+            "description": "Unknown, revoked, expired, or mismatched refresh token"
+          },
           "403": {
             "description": "The user is not a member of the requested workspace"
           }

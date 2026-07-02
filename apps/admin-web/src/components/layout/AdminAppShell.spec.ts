@@ -423,6 +423,8 @@ describe("AdminAppShell", () => {
       .mockImplementation(async () => {
         authStore.profile = createAuthProfile(WorkspaceRoles.PM);
         return {
+          profileReloaded: true,
+          profileReloadError: null,
           membershipsReloaded: true,
           reloadError: null,
         };
@@ -462,6 +464,8 @@ describe("AdminAppShell", () => {
     vi.spyOn(authStore, "switchWorkspace").mockImplementation(async () => {
       authStore.profile = createAuthProfile(WorkspaceRoles.Member);
       return {
+        profileReloaded: true,
+        profileReloadError: null,
         membershipsReloaded: true,
         reloadError: null,
       };

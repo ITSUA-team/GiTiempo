@@ -21,6 +21,16 @@ interface AuthSessionCoreOptions {
   onSessionContextChanged?: () => void;
 }
 
+export type WorkspaceSwitchSessionResult =
+  | {
+      profileReloaded: true;
+      profileReloadError: null;
+    }
+  | {
+      profileReloaded: false;
+      profileReloadError: unknown;
+    };
+
 export function createAuthSessionCore({
   getAuthRuntime,
   onClearSession,
@@ -154,7 +164,9 @@ export function createAuthSessionCore({
     completeBootstrap();
   }
 
-  async function switchWorkspace(workspaceId: string): Promise<void> {
+  async function switchWorkspace(
+    workspaceId: string,
+  ): Promise<WorkspaceSwitchSessionResult> {
     const currentAccessToken = accessToken.value;
     const currentRefreshToken = getRefreshToken();
 
@@ -169,12 +181,23 @@ export function createAuthSessionCore({
     );
     onSessionContextChanged?.();
     applyTokenPair(tokenPair);
-    const nextProfile = await getAuthRuntime().getCurrentUser(
-      tokenPair.accessToken,
-    );
+    profile.value = null;
 
-    profile.value = nextProfile;
-    completeBootstrap();
+    try {
+      profile.value = await getAuthRuntime().getCurrentUser(tokenPair.accessToken);
+
+      return {
+        profileReloaded: true,
+        profileReloadError: null,
+      };
+    } catch (profileReloadError) {
+      return {
+        profileReloaded: false,
+        profileReloadError,
+      };
+    } finally {
+      completeBootstrap();
+    }
   }
 
   async function runSubmittingLogin(login: () => Promise<void>): Promise<void> {

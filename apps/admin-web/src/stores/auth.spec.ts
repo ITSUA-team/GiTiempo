@@ -387,6 +387,8 @@ describe("useAuthStore", () => {
     );
 
     await expect(switchingPromise).resolves.toEqual({
+      profileReloaded: true,
+      profileReloadError: null,
       membershipsReloaded: true,
       reloadError: null,
     });
@@ -436,6 +438,7 @@ describe("useAuthStore", () => {
     await expect(
       authStore.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"),
     ).resolves.toMatchObject({
+      profileReloaded: true,
       membershipsReloaded: false,
     });
 

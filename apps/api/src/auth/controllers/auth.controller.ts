@@ -103,6 +103,9 @@ export class AuthController {
     summary: 'Switch the active workspace and issue a fresh token pair',
   })
   @ApiOkResponse({ type: TokenPairResponseDto })
+  @ApiUnauthorizedResponse({
+    description: 'Unknown, revoked, expired, or mismatched refresh token',
+  })
   @ApiForbiddenResponse({
     description: 'The user is not a member of the requested workspace',
   })

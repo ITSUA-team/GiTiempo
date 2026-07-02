@@ -28,6 +28,22 @@ The backend SHALL allow an authenticated user to switch the active workspace to 
 - **THEN** the backend returns a fresh access token and refresh token pair for the same workspace context
 - **AND** the previous refresh token from that session is no longer usable
 
+#### Scenario: Switch rejects refresh token owned by another user
+
+- **GIVEN** an authenticated user submits an active-workspace switch request
+- **AND** the provided refresh token belongs to a different user
+- **WHEN** the backend validates the switch request
+- **THEN** the backend rejects the request as unauthorized
+- **AND** no new token pair is issued
+
+#### Scenario: Switch rejects refresh token from another workspace session
+
+- **GIVEN** an authenticated user submits an active-workspace switch request
+- **AND** the provided refresh token belongs to a different current workspace session than the caller's access-token workspace
+- **WHEN** the backend validates the switch request
+- **THEN** the backend rejects the request as unauthorized
+- **AND** no new token pair is issued
+
 ### Requirement: Refresh Preserves Selected Workspace Context
 
 The backend MUST refresh credentials for the workspace context associated with the refresh session and MUST NOT silently move the session to another workspace.

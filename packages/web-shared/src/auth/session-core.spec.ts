@@ -258,7 +258,12 @@ describe("createAuthSessionCore", () => {
 
     session.accessToken.value = "current-access-token";
 
-    await session.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002");
+    await expect(
+      session.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"),
+    ).resolves.toEqual({
+      profileReloaded: true,
+      profileReloadError: null,
+    });
 
     expect(switchWorkspace).toHaveBeenCalledWith(
       "current-access-token",
@@ -268,6 +273,40 @@ describe("createAuthSessionCore", () => {
     expect(session.accessToken.value).toBe("switched-access-token");
     expect(getRefreshToken()).toBe("switched-refresh-token");
     expect(session.profile.value?.email).toBe("alexey@example.com");
+  });
+
+  it("keeps the switched session and clears stale profile when profile reload fails", async () => {
+    setRefreshToken("persisted-refresh-token");
+    const session = createAuthSessionCore({
+      getAuthRuntime: () =>
+        createRuntimeMock({
+          getCurrentUser: async () => {
+            throw new Error("profile reload failed");
+          },
+        }),
+    });
+
+    session.accessToken.value = "current-access-token";
+    session.profile.value = {
+      avatarUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Current User",
+      email: "current@example.com",
+      id: "current-user-id",
+      role: "member",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await expect(
+      session.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"),
+    ).resolves.toMatchObject({
+      profileReloaded: false,
+    });
+
+    expect(session.accessToken.value).toBe("switched-access-token");
+    expect(getRefreshToken()).toBe("switched-refresh-token");
+    expect(session.profile.value).toBeNull();
+    expect(session.bootstrapComplete.value).toBe(true);
   });
 
   it("preserves the current session when workspace switching fails", async () => {

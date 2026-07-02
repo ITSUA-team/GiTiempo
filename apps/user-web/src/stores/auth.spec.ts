@@ -358,6 +358,8 @@ describe("useAuthStore", () => {
     );
 
     await expect(switchingPromise).resolves.toEqual({
+      profileReloaded: true,
+      profileReloadError: null,
       membershipsReloaded: true,
       reloadError: null,
     });
@@ -407,6 +409,7 @@ describe("useAuthStore", () => {
     await expect(
       authStore.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"),
     ).resolves.toMatchObject({
+      profileReloaded: true,
       membershipsReloaded: false,
     });
 
@@ -415,6 +418,54 @@ describe("useAuthStore", () => {
     expect(authStore.profile?.role).toBe("pm");
     expect(authStore.switchingWorkspaceId).toBeNull();
     expectAuthenticatedQueryCacheCleared();
+  });
+
+  it("keeps the switched session and reports partial recovery when profile reload fails", async () => {
+    const memberships = {
+      items: [
+        {
+          isCurrent: true,
+          role: "pm" as const,
+          workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+          workspaceName: "Workspace Beta",
+        },
+      ],
+    };
+    setAuthRuntimeForTesting(
+      createRuntimeMock({
+        getCurrentUser: async () => {
+          throw new Error("profile reload failed");
+        },
+        listCurrentUserWorkspaces: async () => memberships,
+      }),
+    );
+
+    const authStore = useAuthStore();
+    setRefreshToken("persisted-refresh-token");
+    authStore.accessToken = "current-access-token";
+    authStore.profile = {
+      avatarUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "Alexey Tsukanov",
+      email: "alexey@example.com",
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9f9f",
+      role: "member",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+
+    await expect(
+      authStore.switchWorkspace("018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"),
+    ).resolves.toMatchObject({
+      profileReloaded: false,
+      membershipsReloaded: true,
+    });
+
+    expect(authStore.accessToken).toBe("switched-access-token");
+    expect(getRefreshToken()).toBe("switched-refresh-token");
+    expect(authStore.profile).toBeNull();
+    expect(authStore.workspaceMemberships).toEqual(memberships.items);
+    expect(authStore.workspaceName).toBe("Workspace Beta");
+    expect(authStore.switchingWorkspaceId).toBeNull();
   });
 
   it("resets switching state when workspace switching fails", async () => {
