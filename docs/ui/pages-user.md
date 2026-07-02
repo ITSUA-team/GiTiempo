@@ -206,8 +206,11 @@
 
 ## Cross-App Navigation
 
-- The user SPA should expose a visible entry point to the admin workspace when the admin SPA is available.
-- Place the cross-link in the shared shell profile dropdown so it is available from authenticated user pages without competing with page-level actions.
+- The user SPA should expose authenticated workspace switching when the current user belongs to more than one workspace.
+- Place workspace switching in the shared shell profile dropdown and treat it as a session-context change, not as cross-app navigation.
+- When the user has only one workspace membership, omit the workspace-switcher section entirely.
+- Keep the separate entry point to the admin workspace in the same dropdown below the workspace-switcher section when the admin SPA is available.
+- Switching workspaces from `user-web` keeps the user in `user-web` and reloads the shell against the selected workspace context.
 
 ## Error Pages
 
@@ -216,5 +219,6 @@
 - 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, and primary action `Back to dashboard`.
 - The 404 secondary action `Go back` renders only when the browser history contains a prior entry for the current tab. When no prior history entry exists, omit the secondary action entirely.
 - 403 Forbidden renders as a standalone route-level page outside the authenticated app shell when the current user is signed in but lacks access to the requested page or workspace resource.
-- 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current workspace role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace is available.
+- 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current workspace role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace membership is available.
+- The 403 `Switch workspace` action opens the authenticated workspace switcher for the current session. It must not be reused as the cross-app link to `admin-web`.
 - Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the full route surface; request errors stay scoped to the feature surface that failed.

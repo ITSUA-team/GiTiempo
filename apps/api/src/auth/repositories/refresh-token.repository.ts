@@ -16,6 +16,7 @@ export type RefreshTokenRow = typeof refreshTokens.$inferSelect;
 
 export interface CreateRefreshTokenInput {
   userId: string;
+  workspaceId: string;
   familyId: string;
   tokenHash: string;
   expiresAt: Date;
@@ -26,8 +27,8 @@ export interface CreateRefreshTokenInput {
  *
  * Lookups by `token_hash` use the unique index (O(log n)) and never
  * SQL-interpolate the raw token; the caller is responsible for hashing.
- * The unique index makes hash lookups constant-time from the DB's
- * perspective — we never iterate rows to find a match.
+ * The unique index keeps hash lookups indexed; we never iterate rows to
+ * find a match.
  *
  * See design D1 and D2 in `add-firebase-jwt-auth`.
  */
@@ -40,6 +41,7 @@ export class RefreshTokenRepository {
       .insert(refreshTokens)
       .values({
         userId: input.userId,
+        workspaceId: input.workspaceId,
         familyId: input.familyId,
         tokenHash: input.tokenHash,
         expiresAt: input.expiresAt,
@@ -141,6 +143,7 @@ export class RefreshTokenRepository {
         .insert(refreshTokens)
         .values({
           userId: input.userId,
+          workspaceId: input.workspaceId,
           familyId: input.familyId,
           tokenHash: input.tokenHash,
           expiresAt: input.expiresAt,
