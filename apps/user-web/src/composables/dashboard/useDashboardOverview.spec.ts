@@ -28,7 +28,10 @@ const TEST_SCOPE = {
   workspaceId: null,
 };
 
-type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
+type DashboardOverviewClient = Pick<
+  TimeEntriesClient,
+  "getCurrentTimer" | "listOwnEntries" | "startTimer" | "stopTimer"
+>;
 
 function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
   const { githubIssue = null, ...entryOverrides } = overrides;
@@ -74,10 +77,16 @@ function createOwnEntriesResponse(
 }
 
 function createClientMock(): DashboardOverviewClient & {
+  getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
+  startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
+  stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
 } {
   return {
+    getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
+    startTimer: vi.fn(async () => createEntry({ endedAt: null, id: TEST_IDS.startedEntry })),
+    stopTimer: vi.fn(async () => createEntry()),
   };
 }
 
@@ -347,7 +356,7 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Admin Web");
   });
 
-  it("keeps running recent-entry durations reactive without adding dashboard timer controls", async () => {
+  it("keeps running recent-entry durations reactive", async () => {
     const client = createClientMock();
 
     client.listOwnEntries
@@ -424,6 +433,12 @@ describe("useDashboardOverview", () => {
       id: TEST_IDS.startedEntry,
       isHighlighted: true,
       projectName: "Project Orion",
+      timerEntry: {
+        endedAt: null,
+        id: TEST_IDS.startedEntry,
+        task: { title: "Improve reports filters" },
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9201",
+      },
       taskTitle: "Improve reports filters",
       timeRangeLabel: `${formatLocalTime("2026-04-21T11:00:00.000Z")} - Running`,
     });
@@ -483,6 +498,12 @@ describe("useDashboardOverview", () => {
       id: TEST_IDS.runningEntry,
       isHighlighted: false,
       projectName: "Project Orion",
+      timerEntry: {
+        endedAt: "2026-04-21T11:30:00.000Z",
+        id: TEST_IDS.runningEntry,
+        task: { title: "Improve reports filters" },
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9201",
+      },
       taskTitle: "Improve reports filters",
       timeRangeLabel: `${formatLocalTime("2026-04-21T11:00:00.000Z")} - ${formatLocalTime("2026-04-21T11:30:00.000Z")}`,
     });

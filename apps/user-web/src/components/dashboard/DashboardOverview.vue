@@ -14,10 +14,15 @@ const router = useRouter();
 
 const {
   dashboardStats,
+  isDirectStartBlockedByCurrentTimer,
   pageState,
   recentEntryRows,
   requestErrorMessage,
   retryLoadOverview,
+  startingTimerEntryId,
+  startTimerForEntry,
+  stoppingTimerEntryId,
+  stopTimerForEntry,
   weeklyFocus,
 } = useDashboardOverview();
 
@@ -102,6 +107,11 @@ function openTimeEntries(): void {
 
       <DashboardRecentEntriesCard
         :entries="recentEntryRows"
+        :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
+        :starting-timer-entry-id="startingTimerEntryId"
+        :stopping-timer-entry-id="stoppingTimerEntryId"
+        @start-timer="(entry) => void startTimerForEntry(entry)"
+        @stop-timer="(entry) => void stopTimerForEntry(entry)"
         @view-all="openTimeEntries"
       />
     </div>

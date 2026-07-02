@@ -12,11 +12,12 @@
 - When the winning task is backed by a synced GitHub issue, show a compact external-link icon next to the task name that opens the source issue in a new browser tab.
 - Recent Time Entries: render the existing `<DataTable>` on tablet and desktop, and switch to stacked mobile cards below `640px`.
 - The mobile recent-entry cards keep the same record content as the desktop table: task title, project name, time range, duration, and highlighted running/current-entry state when applicable.
+- Recent-entry rows/cards include the same first-column icon-only direct timer action pattern as Time Entries: completed entries show `Start timer`, and the active running entry shows `Stop timer`.
 - Dashboard recent-entry task names keep their current row behavior, and synced GitHub tasks add a separate external-link icon beside the task name that opens the source issue in a new browser tab.
 - The section-level `View all` action remains available in both desktop/table and mobile-card layouts.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
-- Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar. The Time Entries page is the only MVP page-content exception for direct row-level timer starts from existing entries.
+- Dashboard page-content timer controls are limited to Recent Time Entries row/card actions; the global top bar remains the main timer surface, and no separate dashboard timer panel appears in page content.
 
 ## Global Top-Bar Timer
 

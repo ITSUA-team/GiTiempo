@@ -142,7 +142,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             :entry="entry"
             :is-loading="isStartTimerPending(entry)"
             test-id-prefix="time-entry-mobile"
-            @trigger="handleStartTimer"
+            @trigger="() => handleStartTimer(entry)"
           />
           <TimeEntryTimerAction
             v-else
@@ -151,7 +151,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             :entry="entry"
             :is-loading="isStopTimerPending(entry)"
             test-id-prefix="time-entry-mobile"
-            @trigger="handleStopTimer"
+            @trigger="() => handleStopTimer(entry)"
           />
 
           <div class="flex min-w-0 flex-col gap-1">
@@ -227,7 +227,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
               :entry="entry"
               :is-loading="isStartTimerPending(entry)"
               test-id-prefix="time-entry"
-              @trigger="handleStartTimer"
+              @trigger="() => handleStartTimer(entry)"
             />
             <TimeEntryTimerAction
               v-else
@@ -236,7 +236,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
               :entry="entry"
               :is-loading="isStopTimerPending(entry)"
               test-id-prefix="time-entry"
-              @trigger="handleStopTimer"
+              @trigger="() => handleStopTimer(entry)"
             />
 
             <div class="flex min-w-0 flex-col">
