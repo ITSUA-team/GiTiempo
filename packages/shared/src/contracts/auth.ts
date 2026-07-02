@@ -26,6 +26,14 @@ export const logoutRequestSchema = z
   })
   .strict();
 
+/** Body for `POST /auth/switch-workspace`. */
+export const switchWorkspaceRequestSchema = z
+  .object({
+    refreshToken: z.string().min(1),
+    workspaceId: z.uuid(),
+  })
+  .strict();
+
 /** Body for `POST /auth/register`. */
 export const registerRequestSchema = z
   .object({
@@ -62,6 +70,7 @@ export const tokenPairResponseSchema = z.object({
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
 export type LogoutRequest = z.infer<typeof logoutRequestSchema>;
+export type SwitchWorkspaceRequest = z.infer<typeof switchWorkspaceRequestSchema>;
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 export type RegistrationErrorCode = z.infer<typeof registrationErrorCodeSchema>;
 export type TokenPairResponse = z.infer<typeof tokenPairResponseSchema>;

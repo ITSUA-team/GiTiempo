@@ -12,10 +12,12 @@ import type { CurrentUserClient } from "./current-user-client";
 
 export interface AuthRuntime {
   getCurrentUser: CurrentUserClient["getCurrentUser"];
+  listCurrentUserWorkspaces: CurrentUserClient["listCurrentUserWorkspaces"];
   loginWithFirebaseToken: AuthHttpClient["loginWithFirebaseToken"];
   logoutSession: AuthHttpClient["logoutAuthSession"];
   registerWorkspaceOwner: AuthHttpClient["registerWorkspaceOwner"];
   refreshSession: AuthHttpClient["refreshAuthSession"];
+  switchWorkspace: AuthHttpClient["switchWorkspace"];
   signInWithEmailPassword(email: string, password: string): Promise<string>;
   signInWithGoogle(): Promise<string>;
   signOutIdentityProvider(): Promise<void>;
@@ -68,10 +70,12 @@ export function createDefaultAuthRuntime({
 
   return {
     getCurrentUser: currentUserClient.getCurrentUser,
+    listCurrentUserWorkspaces: currentUserClient.listCurrentUserWorkspaces,
     loginWithFirebaseToken: authClient.loginWithFirebaseToken,
     logoutSession: authClient.logoutAuthSession,
     registerWorkspaceOwner: authClient.registerWorkspaceOwner,
     refreshSession: authClient.refreshAuthSession,
+    switchWorkspace: authClient.switchWorkspace,
     signInWithEmailPassword,
     signInWithGoogle,
     signOutIdentityProvider,

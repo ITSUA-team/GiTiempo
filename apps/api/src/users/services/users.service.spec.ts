@@ -3,6 +3,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UsersService } from './users.service';
 import { DRIZZLE } from '../../db/db.constants';
+import { MembersService } from '../../members/services/members.service';
 
 type UserRowMock = typeof sampleRow;
 
@@ -146,6 +147,9 @@ const sampleRole = 'admin' as const;
 describe('UsersService', () => {
   let service: UsersService;
   let dbMock: ReturnType<typeof makeDbMock>;
+  let membersService: {
+    listMembershipsForUser: ReturnType<typeof vi.fn>;
+  };
 
   async function build(opts: {
     selectRows?: unknown[];
@@ -153,8 +157,15 @@ describe('UsersService', () => {
     insertRows?: unknown[];
   }) {
     dbMock = makeDbMock(opts);
+    membersService = {
+      listMembershipsForUser: vi.fn(),
+    };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UsersService, { provide: DRIZZLE, useValue: dbMock }],
+      providers: [
+        UsersService,
+        { provide: DRIZZLE, useValue: dbMock },
+        { provide: MembersService, useValue: membersService },
+      ],
     }).compile();
     service = module.get(UsersService);
   }
@@ -240,6 +251,58 @@ describe('UsersService', () => {
       await build({ updateRows: [] });
       await expect(
         service.updateById(sampleRow.id, workspaceId, { displayName: 'x' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('listCurrentUserWorkspaces', () => {
+    it('returns the ordered memberships with exactly one current workspace', async () => {
+      await build({});
+      membersService.listMembershipsForUser.mockResolvedValueOnce([
+        {
+          workspaceId: workspaceId,
+          workspaceName: 'GiTiempo Studio',
+          role: 'admin',
+        },
+        {
+          workspaceId: '33333333-3333-3333-3333-333333333333',
+          workspaceName: 'Client Delivery',
+          role: 'member',
+        },
+      ]);
+
+      await expect(
+        service.listCurrentUserWorkspaces(sampleRow.id, workspaceId),
+      ).resolves.toEqual({
+        items: [
+          {
+            workspaceId,
+            workspaceName: 'GiTiempo Studio',
+            role: 'admin',
+            isCurrent: true,
+          },
+          {
+            workspaceId: '33333333-3333-3333-3333-333333333333',
+            workspaceName: 'Client Delivery',
+            role: 'member',
+            isCurrent: false,
+          },
+        ],
+      });
+    });
+
+    it('rejects stale sessions when the token workspace is no longer in the membership list', async () => {
+      await build({});
+      membersService.listMembershipsForUser.mockResolvedValueOnce([
+        {
+          workspaceId: '33333333-3333-3333-3333-333333333333',
+          workspaceName: 'Client Delivery',
+          role: 'member',
+        },
+      ]);
+
+      await expect(
+        service.listCurrentUserWorkspaces(sampleRow.id, workspaceId),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
