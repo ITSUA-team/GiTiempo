@@ -18,13 +18,23 @@ const SESSION_EXPIRED_MESSAGE =
 interface AuthSessionCoreOptions {
   getAuthRuntime(): AuthRuntime;
   onClearSession?: () => void;
-  onLoginSuccess?: () => void;
+  onSessionContextChanged?: () => void;
 }
+
+export type WorkspaceSwitchSessionResult =
+  | {
+      profileReloaded: true;
+      profileReloadError: null;
+    }
+  | {
+      profileReloaded: false;
+      profileReloadError: unknown;
+    };
 
 export function createAuthSessionCore({
   getAuthRuntime,
   onClearSession,
-  onLoginSuccess,
+  onSessionContextChanged,
 }: AuthSessionCoreOptions) {
   const accessToken = ref<string | null>(null);
   const bootstrapComplete = ref(false);
@@ -148,10 +158,46 @@ export function createAuthSessionCore({
   async function establishSessionFromTokenPair(
     tokenPair: TokenPairResponse,
   ): Promise<void> {
-    onLoginSuccess?.();
+    onSessionContextChanged?.();
     applyTokenPair(tokenPair);
     await loadCurrentUser(tokenPair.accessToken);
     completeBootstrap();
+  }
+
+  async function switchWorkspace(
+    workspaceId: string,
+  ): Promise<WorkspaceSwitchSessionResult> {
+    const currentAccessToken = accessToken.value;
+    const currentRefreshToken = getRefreshToken();
+
+    if (!currentAccessToken || !currentRefreshToken) {
+      throw new Error(SESSION_EXPIRED_MESSAGE);
+    }
+
+    const tokenPair = await getAuthRuntime().switchWorkspace(
+      currentAccessToken,
+      currentRefreshToken,
+      workspaceId,
+    );
+    onSessionContextChanged?.();
+    applyTokenPair(tokenPair);
+    profile.value = null;
+
+    try {
+      profile.value = await getAuthRuntime().getCurrentUser(tokenPair.accessToken);
+
+      return {
+        profileReloaded: true,
+        profileReloadError: null,
+      };
+    } catch (profileReloadError) {
+      return {
+        profileReloaded: false,
+        profileReloadError,
+      };
+    } finally {
+      completeBootstrap();
+    }
   }
 
   async function runSubmittingLogin(login: () => Promise<void>): Promise<void> {
@@ -255,6 +301,7 @@ export function createAuthSessionCore({
     logout,
     profile,
     refreshAccessToken,
+    switchWorkspace,
   };
 
   return {

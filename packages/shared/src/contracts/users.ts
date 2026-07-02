@@ -37,5 +37,33 @@ export const updateUserSchema = z
     },
   );
 
+export const currentUserWorkspaceMembershipResponseSchema = z
+  .object({
+    workspaceId: z.uuid(),
+    workspaceName: z.string().min(1),
+    role: workspaceRoleSchema,
+    isCurrent: z.boolean(),
+  })
+  .strict();
+
+export const currentUserWorkspaceMembershipListResponseSchema = z
+  .object({
+    items: z.array(currentUserWorkspaceMembershipResponseSchema),
+  })
+  .strict()
+  .refine(
+    ({ items }) => items.filter((item) => item.isCurrent).length === 1,
+    {
+      message: "Exactly one current workspace membership is required",
+      path: ["items"],
+    },
+  );
+
 export type UserResponse = z.infer<typeof userResponseSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+export type CurrentUserWorkspaceMembershipResponse = z.infer<
+  typeof currentUserWorkspaceMembershipResponseSchema
+>;
+export type CurrentUserWorkspaceMembershipListResponse = z.infer<
+  typeof currentUserWorkspaceMembershipListResponseSchema
+>;

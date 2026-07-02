@@ -8,6 +8,7 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { users } from '../../users/schemas/users.schema';
+import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 
 /**
  * Refresh tokens table.
@@ -27,6 +28,9 @@ export const refreshTokens = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     familyId: uuid('family_id').notNull(),
     tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
     replacedBy: uuid('replaced_by').references(
@@ -41,6 +45,7 @@ export const refreshTokens = pgTable(
   },
   (table) => [
     index('refresh_tokens_user_id_idx').on(table.userId),
+    index('refresh_tokens_workspace_id_idx').on(table.workspaceId),
     index('refresh_tokens_family_id_idx').on(table.familyId),
     index('refresh_tokens_token_hash_idx').on(table.tokenHash),
   ],

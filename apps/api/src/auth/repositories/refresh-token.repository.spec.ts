@@ -95,6 +95,7 @@ function makeDbMock(
 const sampleRow = {
   id: '11111111-1111-1111-1111-111111111111',
   userId: '22222222-2222-2222-2222-222222222222',
+  workspaceId: '44444444-4444-4444-4444-444444444444',
   familyId: '33333333-3333-3333-3333-333333333333',
   tokenHash: 'a'.repeat(64),
   replacedBy: null,
@@ -125,6 +126,7 @@ describe('RefreshTokenRepository', () => {
       build({ insertRows: [sampleRow] });
       const row = await repo.create({
         userId: sampleRow.userId,
+        workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: sampleRow.tokenHash,
         expiresAt: sampleRow.expiresAt,
@@ -132,6 +134,7 @@ describe('RefreshTokenRepository', () => {
       expect(row).toEqual(sampleRow);
       expect(dbMock._spies.values).toHaveBeenCalledWith({
         userId: sampleRow.userId,
+        workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: sampleRow.tokenHash,
         expiresAt: sampleRow.expiresAt,
@@ -143,6 +146,7 @@ describe('RefreshTokenRepository', () => {
       await expect(
         repo.create({
           userId: sampleRow.userId,
+          workspaceId: sampleRow.workspaceId,
           familyId: sampleRow.familyId,
           tokenHash: sampleRow.tokenHash,
           expiresAt: sampleRow.expiresAt,
@@ -225,6 +229,7 @@ describe('RefreshTokenRepository', () => {
     const newRow = {
       id: 'new-rt-id',
       userId: sampleRow.userId,
+      workspaceId: sampleRow.workspaceId,
       familyId: sampleRow.familyId,
       tokenHash: 'b'.repeat(64),
       replacedBy: null,
@@ -237,6 +242,7 @@ describe('RefreshTokenRepository', () => {
       build({ insertRows: [newRow], updateReturningRows: [sampleRow] });
       const result = await repo.rotateIfActive(sampleRow.id, {
         userId: sampleRow.userId,
+        workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: newRow.tokenHash,
         expiresAt: newRow.expiresAt,
@@ -255,6 +261,7 @@ describe('RefreshTokenRepository', () => {
       build({ insertRows: [newRow], updateReturningRows: [] });
       const result = await repo.rotateIfActive(sampleRow.id, {
         userId: sampleRow.userId,
+        workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: newRow.tokenHash,
         expiresAt: newRow.expiresAt,
@@ -266,6 +273,7 @@ describe('RefreshTokenRepository', () => {
       build({ insertRows: [], updateReturningRows: [sampleRow] });
       const result = await repo.rotateIfActive(sampleRow.id, {
         userId: sampleRow.userId,
+        workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: newRow.tokenHash,
         expiresAt: newRow.expiresAt,

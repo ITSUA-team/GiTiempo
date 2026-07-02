@@ -177,6 +177,33 @@
         ]
       }
     },
+    "/users/me/workspaces": {
+      "get": {
+        "operationId": "UsersController_listCurrentUserWorkspaces",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserWorkspaceMembershipListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the current user workspace memberships",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
         "operationId": "AuthController_login",
@@ -316,6 +343,49 @@
           }
         ],
         "summary": "End the session bound to the refresh token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/switch-workspace": {
+      "post": {
+        "operationId": "AuthController_switchWorkspace",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchWorkspaceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPairResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unknown, revoked, expired, or mismatched refresh token"
+          },
+          "403": {
+            "description": "The user is not a member of the requested workspace"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Switch the active workspace and issue a fresh token pair",
         "tags": [
           "auth"
         ]
@@ -1735,9 +1805,9 @@
             "in": "query",
             "x-nestjs_zod-parent-additional-properties": false,
             "schema": {
-              "default": 30,
               "minimum": 1,
               "maximum": 100,
+              "default": 30,
               "type": "integer"
             }
           },
@@ -2262,6 +2332,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "GitHub issue not found"
           },
           "409": {
             "description": "Timer already running"
@@ -3055,6 +3128,50 @@
           "updatedAt"
         ]
       },
+      "CurrentUserWorkspaceMembershipListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "workspaceId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "workspaceName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "admin",
+                    "pm",
+                    "member"
+                  ]
+                },
+                "isCurrent": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "workspaceId",
+                "workspaceName",
+                "role",
+                "isCurrent"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
       "UpdateUserDto": {
         "type": "object",
         "properties": {
@@ -3165,6 +3282,25 @@
         },
         "required": [
           "refreshToken"
+        ],
+        "additionalProperties": false
+      },
+      "SwitchWorkspaceDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "refreshToken",
+          "workspaceId"
         ],
         "additionalProperties": false
       },

@@ -25,7 +25,10 @@ User SPA and Admin SPA share the same shell:
 - Mobile timer strip: place a single `Task & timer` opener on the left, and render a two-line project/task stack on the right with elapsed running time when applicable.
 - The mobile timer opener must remain outside the top-right profile menu area; if the profile menu overlaps any timer content, only non-critical task metadata may be covered.
 - Right: `user-web` uses an avatar-only profile dropdown trigger with no visible member-name text; `admin-web` may continue to show identity and scope text beside the avatar.
-- When both SPAs exist, include the counterpart workspace switch as the first action in the shared profile dropdown so users can move between user-web and admin-web without changing URLs manually.
+- When the authenticated user belongs to more than one workspace, the shared profile dropdown must expose workspace switching before any app-to-app navigation actions.
+- Workspace switching changes the active workspace membership for the current authenticated session. It is not the same as moving between `user-web` and `admin-web`.
+- The workspace-switcher section lists the current workspace plus the user's other accessible workspaces. Selecting another workspace reissues the session token pair for that membership, refreshes shell data, and keeps the user in the current SPA only when the target role can access it.
+- Keep the counterpart app link as a separate action below workspace switching so users can move between `user-web` and `admin-web` for the already active workspace without changing URLs manually.
 
 ### Sidebar Navigation
 
