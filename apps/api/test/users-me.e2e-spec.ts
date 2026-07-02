@@ -9,6 +9,7 @@ import { DRIZZLE } from '../src/db/db.constants';
 import type { DrizzleDB } from '../src/db/db.types';
 import { users, workspaceMembers } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
+import { workspaces } from '../src/db/schema';
 
 /**
  * End-to-end tests for `/users/me` behind the global `JwtAuthGuard`.
@@ -24,6 +25,7 @@ import { eq } from 'drizzle-orm';
 describe('Users (e2e)', () => {
   let app: INestApplication;
   let accessToken: string;
+  let db: DrizzleDB;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -32,6 +34,7 @@ describe('Users (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+    db = app.get<DrizzleDB>(DRIZZLE);
 
     const tokens = await login(app);
     accessToken = tokens.accessToken;
@@ -57,6 +60,66 @@ describe('Users (e2e)', () => {
       expect(res.body).toHaveProperty('id');
       expect(res.body).toHaveProperty('createdAt');
       expect(res.body).toHaveProperty('updatedAt');
+    });
+  });
+
+  describe('GET /users/me/workspaces', () => {
+    it('returns 401 without a bearer token', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/users/me/workspaces',
+      );
+      expect(res.status).toBe(401);
+    });
+
+    it('lists accessible memberships and marks the access-token workspace as current', async () => {
+      const { admin, workspace: currentWorkspace } =
+        await getSeededAdminWorkspace(db);
+      const [extraWorkspace] = await db
+        .insert(workspaces)
+        .values({ name: `Users Me Extra ${Date.now()}` })
+        .returning();
+      if (!extraWorkspace) throw new Error('Failed to create extra workspace');
+
+      try {
+        await db.insert(workspaceMembers).values({
+          workspaceId: extraWorkspace.id,
+          userId: admin.id,
+          role: 'member',
+        });
+
+        const res = await request(app.getHttpServer())
+          .get('/users/me/workspaces')
+          .set('Authorization', bearer(accessToken));
+
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body.items)).toBe(true);
+        expect(res.body.items).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              workspaceId: currentWorkspace.id,
+              workspaceName: currentWorkspace.name,
+              role: 'admin',
+              isCurrent: true,
+            }),
+            expect.objectContaining({
+              workspaceId: extraWorkspace.id,
+              workspaceName: extraWorkspace.name,
+              role: 'member',
+              isCurrent: false,
+            }),
+          ]),
+        );
+        expect(
+          res.body.items.filter(
+            (item: { isCurrent: boolean }) => item.isCurrent,
+          ),
+        ).toHaveLength(1);
+      } finally {
+        await db
+          .delete(workspaceMembers)
+          .where(eq(workspaceMembers.workspaceId, extraWorkspace.id));
+        await db.delete(workspaces).where(eq(workspaces.id, extraWorkspace.id));
+      }
     });
   });
 

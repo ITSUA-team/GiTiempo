@@ -3,11 +3,11 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppConfig } from "vue";
 import { createMemoryHistory } from "vue-router";
 import {
   WorkspaceRoles,
   type UserResponse,
+  type CurrentUserWorkspaceMembershipResponse,
   type WorkspaceRole,
 } from "@gitiempo/shared";
 
@@ -22,6 +22,13 @@ const testMocks = vi.hoisted(() => ({
 
 vi.mock("@/services/external-navigation", () => ({
   navigateToExternalHref: testMocks.navigateToExternalHref,
+}));
+
+vi.mock("@/composables/feedback/useToasts", () => ({
+  useToasts: () => ({
+    errorToast: vi.fn(),
+    infoToast: vi.fn(),
+  }),
 }));
 
 const RouteErrorPanelStub = {
@@ -53,6 +60,25 @@ const RouteErrorPanelStub = {
   `,
 };
 
+const WorkspaceSwitchDialogStub = {
+  name: "WorkspaceSwitchDialog",
+  props: ["visible", "workspaceMemberships", "switchingWorkspaceId"],
+  emits: ["switchWorkspace", "update:visible"],
+  template: `
+    <section v-if="visible" data-testid="workspace-switch-dialog">
+      <button
+        v-for="membership in workspaceMemberships"
+        :key="membership.workspaceId"
+        :data-testid="'workspace-switch-dialog-option-' + membership.workspaceId"
+        type="button"
+        @click="$emit('switchWorkspace', membership.workspaceId)"
+      >
+        {{ membership.workspaceName }}
+      </button>
+    </section>
+  `,
+};
+
 function createAuthProfile(role: WorkspaceRole): UserResponse {
   return {
     avatarUrl: null,
@@ -67,7 +93,7 @@ function createAuthProfile(role: WorkspaceRole): UserResponse {
 
 async function mountForbiddenView(
   role: WorkspaceRole,
-  options: { errorHandler?: AppConfig["errorHandler"] } = {},
+  workspaceMemberships: CurrentUserWorkspaceMembershipResponse[] = [],
 ) {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -75,6 +101,7 @@ async function mountForbiddenView(
   authStore.accessToken = `${role}-access-token`;
   authStore.bootstrapComplete = true;
   authStore.profile = createAuthProfile(role);
+  authStore.workspaceMemberships = workspaceMemberships;
   const router = createAppRouter({
     history: createMemoryHistory(),
     pinia,
@@ -87,12 +114,10 @@ async function mountForbiddenView(
     router,
     wrapper: mount(ForbiddenView, {
       global: {
-        config: {
-          errorHandler: options.errorHandler,
-        },
         plugins: [pinia, router],
         stubs: {
           RouteErrorPanel: RouteErrorPanelStub,
+          WorkspaceSwitchDialog: WorkspaceSwitchDialogStub,
         },
       },
     }),
@@ -110,68 +135,131 @@ describe("ForbiddenView", () => {
     vi.unstubAllEnvs();
   });
 
-  it("switches member users to the user workspace instead of showing a dashboard recovery", async () => {
+  it("always keeps dashboard recovery as the primary action", async () => {
     const { wrapper } = await mountForbiddenView(WorkspaceRoles.Member);
 
     expect(wrapper.get('[data-testid="primary-action"]').text()).toBe(
-      "Switch workspace",
+      "Back to dashboard",
     );
     expect(wrapper.find('[data-testid="secondary-action"]').exists()).toBe(false);
-    expect(wrapper.text()).not.toContain("Back to dashboard");
-    expect(wrapper.get('[data-testid="copy"]').text()).not.toContain("dashboard");
+    expect(wrapper.get('[data-testid="copy"]').text()).toContain("dashboard");
   });
 
-  it("switches member users to the configured user workspace URL", async () => {
-    const { wrapper } = await mountForbiddenView(WorkspaceRoles.Member);
+  it("shows the switch action only when another workspace membership is available", async () => {
+    const { wrapper } = await mountForbiddenView(WorkspaceRoles.Admin, [
+      {
+        isCurrent: true,
+        role: "admin",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        workspaceName: "Workspace Alpha",
+      },
+      {
+        isCurrent: false,
+        role: "member",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        workspaceName: "Workspace Beta",
+      },
+    ]);
 
-    await wrapper.get('[data-testid="primary-action"]').trigger("click");
-
-    expect(testMocks.navigateToExternalHref).toHaveBeenCalledOnce();
-    expect(testMocks.navigateToExternalHref).toHaveBeenCalledWith(
-      "https://user.example.test/login",
+    expect(wrapper.get('[data-testid="secondary-action"]').text()).toBe(
+      "Switch workspace",
     );
   });
 
-  it("fails fast instead of falling back to the admin origin when the user workspace URL is missing", async () => {
-    vi.stubEnv("VITE_USER_APP_URL", "");
-    const errorHandler = vi.fn();
-    const { wrapper } = await mountForbiddenView(WorkspaceRoles.Member, {
-      errorHandler,
-    });
+  it("opens the workspace switcher and returns to the dashboard for admin-accessible workspaces", async () => {
+    const { router, wrapper } = await mountForbiddenView(WorkspaceRoles.Admin, [
+      {
+        isCurrent: true,
+        role: "admin",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        workspaceName: "Workspace Alpha",
+      },
+      {
+        isCurrent: false,
+        role: "pm",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        workspaceName: "Workspace Beta",
+      },
+    ]);
+    const authStore = useAuthStore();
+    const switchWorkspaceSpy = vi
+      .spyOn(authStore, "switchWorkspace")
+      .mockImplementation(async () => {
+        authStore.profile = createAuthProfile(WorkspaceRoles.PM);
+        return {
+          profileReloaded: true,
+          profileReloadError: null,
+          membershipsReloaded: true,
+          reloadError: null,
+        };
+      });
 
-    await wrapper.get('[data-testid="primary-action"]').trigger("click");
-
-    const handledError = errorHandler.mock.calls[0]?.[0];
-
-    expect(handledError).toBeInstanceOf(Error);
-    expect((handledError as Error).message).toBe(
-      "VITE_USER_APP_URL is required for admin /403 workspace recovery.",
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
     );
+
+    await wrapper.get('[data-testid="secondary-action"]').trigger("click");
+    expect(wrapper.find('[data-testid="workspace-switch-dialog"]').exists()).toBe(true);
+
+    await wrapper
+      .get('[data-testid="workspace-switch-dialog-option-018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"]')
+      .trigger("click");
+    await routeReady;
+
+    expect(switchWorkspaceSpy).toHaveBeenCalledWith(
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    );
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
     expect(testMocks.navigateToExternalHref).not.toHaveBeenCalled();
   });
 
-  it.each([WorkspaceRoles.Admin, WorkspaceRoles.PM])(
-    "allows %s users to return to the admin dashboard",
-    async (role) => {
-      const { router, wrapper } = await mountForbiddenView(role);
+  it("redirects to user-web after switching to a non-admin workspace", async () => {
+    const { wrapper } = await mountForbiddenView(WorkspaceRoles.Admin, [
+      {
+        isCurrent: true,
+        role: "admin",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        workspaceName: "Workspace Alpha",
+      },
+      {
+        isCurrent: false,
+        role: "member",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        workspaceName: "Workspace Beta",
+      },
+    ]);
+    const authStore = useAuthStore();
+    vi.spyOn(authStore, "switchWorkspace").mockImplementation(async () => {
+      authStore.profile = createAuthProfile(WorkspaceRoles.Member);
+      return {
+        profileReloaded: true,
+        profileReloadError: null,
+        membershipsReloaded: true,
+        reloadError: null,
+      };
+    });
 
-      expect(wrapper.get('[data-testid="primary-action"]').text()).toBe(
-        "Back to dashboard",
-      );
-      expect(wrapper.get('[data-testid="secondary-action"]').text()).toBe(
-        "Switch workspace",
-      );
-      expect(wrapper.get('[data-testid="copy"]').text()).toContain("dashboard");
+    await wrapper.get('[data-testid="secondary-action"]').trigger("click");
+    await wrapper
+      .get('[data-testid="workspace-switch-dialog-option-018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"]')
+      .trigger("click");
 
-      const routeReady = waitForRoute(
-        router,
-        () => router.currentRoute.value.name === routeNames.dashboard,
-      );
+    expect(testMocks.navigateToExternalHref).toHaveBeenCalledWith(
+      "https://user.example.test/",
+    );
+  });
 
-      await wrapper.get('[data-testid="primary-action"]').trigger("click");
-      await routeReady;
+  it("routes the primary action back to the dashboard", async () => {
+    const { router, wrapper } = await mountForbiddenView(WorkspaceRoles.Admin);
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
 
-      expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
-    },
-  );
+    await wrapper.get('[data-testid="primary-action"]').trigger("click");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
 });

@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ZodSerializerInterceptor } from 'nestjs-zod';
+import { MembersModule } from '../members/members.module';
 import { UsersActivityService } from './services/users-activity.service';
 import { UsersService } from './services/users.service';
 import { UsersController } from './controllers/users.controller';
 
 @Module({
+  imports: [MembersModule],
   controllers: [UsersController],
   providers: [
     UsersService,
