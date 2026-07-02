@@ -15,9 +15,17 @@ import {
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
+interface DirectTimerEntry {
+  endedAt: string | null;
+  id: string;
+  task: Pick<TimeEntryResponse["task"], "title">;
+  taskId: string;
+}
+
 interface UseTimeEntryDirectTimerActionsOptions {
   accessToken: ComputedRef<string | null>;
-  client: TimeEntriesClient;
+  client: Pick<TimeEntriesClient, "getCurrentTimer" | "startTimer" | "stopTimer">;
+  logFeature?: "dashboard" | "time-entries";
   loadEntries(): Promise<void>;
   scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
@@ -26,6 +34,7 @@ interface UseTimeEntryDirectTimerActionsOptions {
 export function useTimeEntryDirectTimerActions({
   accessToken,
   client,
+  logFeature = "time-entries",
   loadEntries,
   scope,
   toast,
@@ -65,7 +74,7 @@ export function useTimeEntryDirectTimerActions({
     ]);
   }
 
-  async function startTimerForEntry(entry: TimeEntryResponse): Promise<void> {
+  async function startTimerForEntry(entry: DirectTimerEntry): Promise<void> {
     if (
       entry.endedAt === null ||
       startingTimerEntryId.value !== null ||
@@ -86,7 +95,7 @@ export function useTimeEntryDirectTimerActions({
       appToast.showErrorToast({
         detail: getErrorMessage(error),
         error,
-        logContext: { action: "start-timer-from-entry", feature: "time-entries" },
+        logContext: { action: "start-timer-from-entry", feature: logFeature },
         summary: "Could not start timer",
       });
 
@@ -96,7 +105,7 @@ export function useTimeEntryDirectTimerActions({
     }
   }
 
-  async function stopTimerForEntry(entry: TimeEntryResponse): Promise<void> {
+  async function stopTimerForEntry(entry: DirectTimerEntry): Promise<void> {
     if (entry.endedAt !== null || stoppingTimerEntryId.value !== null) {
       return;
     }
@@ -127,7 +136,7 @@ export function useTimeEntryDirectTimerActions({
       appToast.showErrorToast({
         detail: getErrorMessage(error),
         error,
-        logContext: { action: "stop-timer-from-entry", feature: "time-entries" },
+        logContext: { action: "stop-timer-from-entry", feature: logFeature },
         summary: "Could not stop timer",
       });
 

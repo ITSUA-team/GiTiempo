@@ -36,12 +36,20 @@ export interface DashboardWeeklyFocus {
   task: DashboardFocusItem | null;
 }
 
+export interface DashboardRecentEntryTimer {
+  endedAt: string | null;
+  id: string;
+  task: Pick<TimeEntryResponse['task'], 'title'>;
+  taskId: string;
+}
+
 export interface DashboardRecentEntryRow {
   durationLabel: string;
   githubIssue: SyncedGitHubIssue | null;
   id: string;
   isHighlighted: boolean;
   projectName: string;
+  timerEntry: DashboardRecentEntryTimer;
   taskTitle: string;
   timeRangeLabel: string;
 }
@@ -223,6 +231,14 @@ export function mapDashboardRecentEntryRows(
     id: entry.id,
     isHighlighted: entry.endedAt === null,
     projectName: entry.project.name,
+    timerEntry: {
+      endedAt: entry.endedAt,
+      id: entry.id,
+      task: {
+        title: entry.task.title,
+      },
+      taskId: entry.taskId,
+    },
     taskTitle: entry.task.title,
     timeRangeLabel: formatTimeEntryTimeRange(entry),
   }));
