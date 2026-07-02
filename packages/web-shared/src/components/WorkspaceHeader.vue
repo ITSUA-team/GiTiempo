@@ -269,6 +269,7 @@ onBeforeUnmount(() => {
   >
     <div class="row-start-1 flex min-w-0 items-center gap-3">
       <div
+        data-testid="workspace-header-logo"
         class="bg-accent-tint text-brand flex size-8 items-center justify-center rounded-lg text-xs leading-[14px] font-semibold"
       >
         {{ props.workspaceShortName }}
