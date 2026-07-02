@@ -30,7 +30,10 @@ import { useTimeEntriesPaginationSync } from "@/composables/time-entries/useTime
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryDialogWorkflow } from "@/composables/time-entries/useTimeEntryDialogWorkflow";
 import { useTimeEntryDirectTimerActions } from "@/composables/time-entries/useTimeEntryDirectTimerActions";
-import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
+import {
+  useTimeEntryFilters,
+  type TimeEntryDatePickerRangeValue,
+} from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
@@ -220,7 +223,9 @@ async function applyFilters(): Promise<void> {
   await data.loadEntries();
 }
 
-async function setDateRange(range: Date[] | null): Promise<void> {
+async function setDateRange(
+  range: TimeEntryDatePickerRangeValue,
+): Promise<void> {
   filters.setDateRange(range);
   await applyFilters();
 }

@@ -331,14 +331,30 @@ async function mountView(
         },
         DatePicker: {
           emits: ["update:modelValue"],
-          props: ["inputId", "modelValue", "showButtonBar", "showClear", "showIcon"],
+          props: [
+            "dateFormat",
+            "inputId",
+            "manualInput",
+            "modelValue",
+            "placeholder",
+            "pt",
+            "selectionMode",
+            "showButtonBar",
+            "showClear",
+            "showIcon",
+          ],
           methods: {
-            formatRange(value: Date[] | null | undefined): string {
-              if (!value?.length) {
+            formatRange(
+              value: Date | (Date | null)[] | null | undefined,
+            ): string {
+              if (!value) {
                 return "";
               }
 
-              return value
+              const dates = value instanceof Date ? [value] : value;
+
+              return dates
+                .filter((date): date is Date => date instanceof Date)
                 .map((date) => [
                   date.getFullYear(),
                   String(date.getMonth() + 1).padStart(2, "0"),
@@ -346,11 +362,21 @@ async function mountView(
                 ].join("-"))
                 .join(" - ");
             },
+            hasValue(value: Date | (Date | null)[] | null | undefined): boolean {
+              return value instanceof Date || (Array.isArray(value) && value.some(Boolean));
+            },
           },
           template: `
             <div>
               <button
                 :data-testid="inputId === 'time-entries-date-range' ? 'date-range-filter' : 'date-picker-other'"
+                :data-date-format="dateFormat ?? ''"
+                :data-manual-input="String(manualInput === true || manualInput === '')"
+                :data-placeholder="placeholder ?? ''"
+                :data-pt-input-class="pt?.pcInputText?.root?.class ?? ''"
+                :data-pt-panel-class="pt?.panel?.class ?? ''"
+                :data-pt-root-class="pt?.root?.class ?? ''"
+                :data-selection-mode="selectionMode ?? ''"
                 :data-show-button-bar="String(showButtonBar === true || showButtonBar === '')"
                 :data-show-clear="String(showClear === true || showClear === '')"
                 :data-show-icon="String(showIcon === true || showIcon === '')"
@@ -358,7 +384,13 @@ async function mountView(
                 @click="$emit('update:modelValue', [new Date(2026, 3, 1, 0, 0, 0, 0), new Date(2026, 3, 21, 0, 0, 0, 0)])"
               >{{ formatRange(modelValue) }}</button>
               <button
-                v-if="(showClear === true || showClear === '') && inputId === 'time-entries-date-range' && modelValue?.length"
+                v-if="inputId === 'time-entries-date-range'"
+                data-testid="date-range-filter-start-only"
+                type="button"
+                @click="$emit('update:modelValue', new Date(2026, 3, 1, 0, 0, 0, 0))"
+              >Select start only</button>
+              <button
+                v-if="(showClear === true || showClear === '') && inputId === 'time-entries-date-range' && hasValue(modelValue)"
                 data-testid="date-range-filter-clear"
                 type="button"
                 @click="$emit('update:modelValue', null)"
@@ -592,7 +624,7 @@ describe("TimeEntriesView", () => {
       "true",
     );
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-button-bar")).toBe(
-      "false",
+      "true",
     );
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
       "true",
@@ -1036,6 +1068,27 @@ describe("TimeEntriesView", () => {
     });
   });
 
+  it("keeps the date range input styling local while applying dropdown panel styling", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    const dateRangeFilter = wrapper.get('[data-testid="date-range-filter"]');
+
+    expect(dateRangeFilter.attributes("data-date-format")).toBe("M d, yy");
+    expect(dateRangeFilter.attributes("data-manual-input")).toBe("false");
+    expect(dateRangeFilter.attributes("data-placeholder")).toBe("");
+    expect(dateRangeFilter.attributes("data-selection-mode")).toBe("range");
+    expect(dateRangeFilter.attributes("data-show-button-bar")).toBe("true");
+    expect(dateRangeFilter.attributes("data-show-clear")).toBe("true");
+    expect(dateRangeFilter.attributes("data-show-icon")).toBe("true");
+    expect(dateRangeFilter.attributes("data-pt-input-class")).toBe("");
+    expect(dateRangeFilter.attributes("data-pt-root-class")).toBe("");
+    expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("shadow-popover");
+    expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("rounded-md");
+  });
+
   it("clears the date range without dropping the other active filters", async () => {
     const client = createClientMock();
     const { wrapper } = await mountView(client);
@@ -1050,6 +1103,44 @@ describe("TimeEntriesView", () => {
     await flushPromises();
     await wrapper.get('[data-testid="paginator-page-2"]').trigger("click");
     await flushPromises();
+    await wrapper.get('[data-testid="date-range-filter-clear"]').trigger("click");
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toEqual({
+      dateFrom: undefined,
+      dateTo: undefined,
+      limit: 20,
+      page: 1,
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
+      search: "Ship admin polish",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
+    });
+    expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
+  });
+
+  it("clears a partial date range without dropping the other active filters", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+    await wrapper.get('[data-testid="date-range-filter-start-only"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="project-filter-select"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="filter-task-search"]').trigger("click");
+    await wrapper.get('[data-testid="filter-task-select"]').trigger("click");
+    await flushPromises();
+
+    expect(client.listOwnEntries.mock.calls.at(-1)?.[0]).toEqual({
+      dateFrom: new Date(2026, 3, 1, 0, 0, 0, 0).toISOString(),
+      dateTo: undefined,
+      limit: 20,
+      page: 1,
+      projectId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f1002",
+      search: "Ship admin polish",
+      taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f2002",
+    });
+
     await wrapper.get('[data-testid="date-range-filter-clear"]').trigger("click");
     await flushPromises();
 
