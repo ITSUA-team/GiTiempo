@@ -88,7 +88,7 @@ interface VisibleProjectsClient {
 }
 
 interface UserScopedQueryOptions {
-  enabled?: MaybeRefOrGetter<boolean>;
+  enabled: MaybeRefOrGetter<boolean>;
   scope: MaybeRefOrGetter<UserServerStateScope>;
 }
 
@@ -160,8 +160,8 @@ function requireProjectId(projectId: string | null | undefined): string {
   return projectId;
 }
 
-function isQueryEnabled(options: { enabled?: MaybeRefOrGetter<boolean> }): boolean {
-  return options.enabled === undefined || Boolean(toValue(options.enabled));
+function isQueryEnabled(options: UserScopedQueryOptions): boolean {
+  return Boolean(toValue(options.enabled));
 }
 
 async function invalidateQueryKeys(

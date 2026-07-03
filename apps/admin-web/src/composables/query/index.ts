@@ -87,7 +87,7 @@ interface WorkspaceGitHubOrganizationsClient {
 }
 
 interface AdminScopedQueryOptions {
-  enabled?: MaybeRefOrGetter<boolean>;
+  enabled: MaybeRefOrGetter<boolean>;
   scope: MaybeRefOrGetter<AdminServerStateScope>;
 }
 
@@ -160,8 +160,8 @@ async function invalidateQueryKeys(
   );
 }
 
-function isQueryEnabled(options: { enabled?: MaybeRefOrGetter<boolean> }): boolean {
-  return options.enabled === undefined || Boolean(toValue(options.enabled));
+function isQueryEnabled(options: AdminScopedQueryOptions): boolean {
+  return Boolean(toValue(options.enabled));
 }
 
 export const useAdminProjectsQuery = (options: UseAdminProjectsQueryOptions) =>
