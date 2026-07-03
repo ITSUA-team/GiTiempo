@@ -95,6 +95,7 @@ function makeDbMock(
 const sampleRow = {
   id: '11111111-1111-1111-1111-111111111111',
   userId: '22222222-2222-2222-2222-222222222222',
+  workspaceMemberId: '55555555-5555-5555-5555-555555555555',
   workspaceId: '44444444-4444-4444-4444-444444444444',
   familyId: '33333333-3333-3333-3333-333333333333',
   tokenHash: 'a'.repeat(64),
@@ -126,6 +127,7 @@ describe('RefreshTokenRepository', () => {
       build({ insertRows: [sampleRow] });
       const row = await repo.create({
         userId: sampleRow.userId,
+        workspaceMemberId: sampleRow.workspaceMemberId,
         workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: sampleRow.tokenHash,
@@ -134,6 +136,7 @@ describe('RefreshTokenRepository', () => {
       expect(row).toEqual(sampleRow);
       expect(dbMock._spies.values).toHaveBeenCalledWith({
         userId: sampleRow.userId,
+        workspaceMemberId: sampleRow.workspaceMemberId,
         workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: sampleRow.tokenHash,
@@ -146,6 +149,7 @@ describe('RefreshTokenRepository', () => {
       await expect(
         repo.create({
           userId: sampleRow.userId,
+          workspaceMemberId: sampleRow.workspaceMemberId,
           workspaceId: sampleRow.workspaceId,
           familyId: sampleRow.familyId,
           tokenHash: sampleRow.tokenHash,
@@ -229,6 +233,7 @@ describe('RefreshTokenRepository', () => {
     const newRow = {
       id: 'new-rt-id',
       userId: sampleRow.userId,
+      workspaceMemberId: sampleRow.workspaceMemberId,
       workspaceId: sampleRow.workspaceId,
       familyId: sampleRow.familyId,
       tokenHash: 'b'.repeat(64),
@@ -242,6 +247,7 @@ describe('RefreshTokenRepository', () => {
       build({ insertRows: [newRow], updateReturningRows: [sampleRow] });
       const result = await repo.rotateIfActive(sampleRow.id, {
         userId: sampleRow.userId,
+        workspaceMemberId: sampleRow.workspaceMemberId,
         workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: newRow.tokenHash,
@@ -250,7 +256,11 @@ describe('RefreshTokenRepository', () => {
       expect(result).toEqual({ newRow });
       expect(dbMock.transaction).toHaveBeenCalledOnce();
       expect(dbMock._spies.txValues).toHaveBeenCalledWith(
-        expect.objectContaining({ tokenHash: newRow.tokenHash }),
+        expect.objectContaining({
+          tokenHash: newRow.tokenHash,
+          workspaceMemberId: sampleRow.workspaceMemberId,
+          workspaceId: sampleRow.workspaceId,
+        }),
       );
       expect(dbMock._spies.txSet).toHaveBeenCalledWith(
         expect.objectContaining({ replacedBy: newRow.id }),
@@ -261,6 +271,7 @@ describe('RefreshTokenRepository', () => {
       build({ insertRows: [newRow], updateReturningRows: [] });
       const result = await repo.rotateIfActive(sampleRow.id, {
         userId: sampleRow.userId,
+        workspaceMemberId: sampleRow.workspaceMemberId,
         workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: newRow.tokenHash,
@@ -273,6 +284,7 @@ describe('RefreshTokenRepository', () => {
       build({ insertRows: [], updateReturningRows: [sampleRow] });
       const result = await repo.rotateIfActive(sampleRow.id, {
         userId: sampleRow.userId,
+        workspaceMemberId: sampleRow.workspaceMemberId,
         workspaceId: sampleRow.workspaceId,
         familyId: sampleRow.familyId,
         tokenHash: newRow.tokenHash,

@@ -152,6 +152,7 @@ The API deploy workflow must follow this order:
 9. Update environment and Compose files if needed.
 10. Perform temporary GHCR login on the VPS and pull the selected image.
 11. Run migrations explicitly.
+   If a committed migration intentionally invalidates persisted sessions because legacy rows cannot be upgraded safely, treat that forced logout as planned release behavior and communicate it before rollout.
 12. Run the idempotent seed script only when `run_seed=true`.
 13. Recreate the API service with Docker Compose.
 14. Check `GET /commons/health/ready` through the public API URL.
