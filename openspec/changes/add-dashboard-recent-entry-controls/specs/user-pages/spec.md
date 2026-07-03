@@ -61,13 +61,15 @@ User-web record-list surfaces SHALL preserve desktop table rendering on tablet a
 - **WHEN** the day section renders below the mobile breakpoint
 - **THEN** the section renders one stacked card per time entry instead of the fixed-width desktop entry table
 - **AND** each card shows the task title, optional description, project name, time range, duration, and running-entry highlight when applicable
-- **AND** completed entries expose icon-only `Edit` and `Delete` actions with accessible labels
-- **AND** running entries do not expose edit or delete actions and continue to direct stopping to the global top-bar timer
+- **AND** completed entry cards expose an icon-only `Start timer` action for the entry's task and keep the task title as the edit-entry affordance
+- **AND** active running entry cards expose an icon-only `Stop timer` action and do not expose edit or delete actions
 
 #### Scenario: Time entry day sections preserve desktop table
 - **GIVEN** the Time Entries page has a day group with own time entries
 - **WHEN** the day section renders at or above the mobile breakpoint
-- **THEN** the section continues to render the existing desktop entry table with task, project, time, duration, and actions columns
+- **THEN** the section continues to render the existing desktop entry table with task, project, time range, and duration columns
+- **AND** completed entries expose an icon-only `Start timer` action for the entry's task before the task label
+- **AND** active running entries expose an icon-only `Stop timer` action before the task label and do not expose edit or delete actions
 
 ### Requirement: Top-Bar Timer Changes Synchronize User Time Entry Lists
 
