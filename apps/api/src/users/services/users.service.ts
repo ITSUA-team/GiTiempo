@@ -6,12 +6,14 @@ import {
 } from '@nestjs/common';
 import { and, eq, sql } from 'drizzle-orm';
 import type {
+  CurrentUserWorkspaceMembershipListResponse,
   UserResponse,
   UpdateUserInput,
   WorkspaceRole,
 } from '@gitiempo/shared';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
+import { MembersService } from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { userRowSelection, users } from '../schemas/users.schema';
 
@@ -34,7 +36,10 @@ function firebaseDisplayNameFallback(displayName: string | null | undefined) {
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly members: MembersService,
+  ) {}
 
   /** Returns the public user view; missing subjects are treated as unauthorized. */
   async findById(id: string, workspaceId: string): Promise<UserResponse> {
@@ -94,6 +99,29 @@ export class UsersService {
     this.logger.log(`Updated user ${updated.id}`);
     const role = await this.findRole(id, workspaceId);
     return this.toResponse(updated, role);
+  }
+
+  async listCurrentUserWorkspaces(
+    userId: string,
+    currentWorkspaceId: string,
+  ): Promise<CurrentUserWorkspaceMembershipListResponse> {
+    const memberships = await this.members.listMembershipsForUser(userId);
+    const currentMembershipCount = memberships.filter(
+      (membership) => membership.workspaceId === currentWorkspaceId,
+    ).length;
+
+    if (currentMembershipCount !== 1) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    return {
+      items: memberships.map((membership) => ({
+        workspaceId: membership.workspaceId,
+        workspaceName: membership.workspaceName,
+        role: membership.role,
+        isCurrent: membership.workspaceId === currentWorkspaceId,
+      })),
+    };
   }
 
   async updateFromFirebase(

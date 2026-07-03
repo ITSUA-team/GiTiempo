@@ -60,7 +60,7 @@ User → Firebase Auth (Google SSO or email/password) on frontend
                                ↓
                            Backend verifies Firebase ID token via Firebase Admin SDK
                                ↓
-                           Backend resolves local user and active workspace membership
+                           Backend resolves local user and one active workspace membership
                                ↓
                            If no active membership → 401 Unauthorized
                                ↓
@@ -74,6 +74,8 @@ User → Firebase Auth (Google SSO or email/password) on frontend
 
 **Onboarding model:** Member access to an existing workspace is invite-only. New workspace members are added through the invite-acceptance flow (`POST /invites/accept`). The login endpoint does not create users or memberships - it only issues sessions for users who already have an existing local user record and an active workspace membership.
 
+**Multiple workspace memberships:** A single authenticated user may belong to more than one workspace. Login and refresh still establish one active workspace context at a time through the JWT `workspaceId` and `role` claims. After login, authenticated clients load the user's workspace-membership list and must expose a workspace switcher when more than one membership is available. Switching workspaces rotates the current refresh-token session and reissues the normal access/refresh token pair for the selected membership instead of mutating the existing token in place.
+
 **New workspace registration:** The User SPA exposes `/register` for creating the first owner account of a new workspace through the dedicated public `POST /auth/register` contract. This first-owner flow is separate from invite acceptance; it must not replace the invite-only flow for members joining an existing workspace.
 
 **Invite accept page flow:** Invite emails link to the User SPA at `/invites/accept?token=<invite-token>`. This route is unauthenticated and outside the authenticated app shell. Invited Firebase identities are provisioned by the backend with the Firebase Admin SDK during invite creation or delivery, because browser self-service Firebase signup may be disabled by project policy. The API never receives or stores raw passwords. Invite email copy must guide first-time invitees to use Firebase's password setup/reset flow for the invited email, then return to the invite accept page and sign in. Admins may resend a pending unexpired invite when the original delivery is lost or the invitee needs fresh password setup/reset link content; resend reuses the existing invite token and expiration and must not create membership. After Firebase sign-in with email/password or Google returns an identity token, the page submits `POST /invites/accept` with the invite token and Firebase ID token, then creates the normal app API session with that same Firebase ID token after invite acceptance returns `204 No Content`. Missing, expired, reused, or unknown invite tokens are terminal link errors; email mismatch is retryable with the correct identity. If Firebase sign-in succeeds but invite acceptance fails, the page must keep the user on a retry/recovery state and explain whether to retry acceptance, switch accounts, or request a fresh invite; the backend must remain the source of truth for invite validity and membership creation.
@@ -85,7 +87,7 @@ User → Firebase Auth (Google SSO or email/password) on frontend
 | Access token (JWT) | 15 minutes | Memory (frontend), `chrome.storage` (extension)       |
 | Refresh token      | 7 days     | localStorage (frontend), `chrome.storage` (extension) |
 
-**Refresh flow:** When the access token expires, the frontend calls `POST /auth/refresh` with the refresh token. The backend validates the refresh token, rotates it (invalidates old, issues new), and returns a new access/refresh pair.
+**Refresh flow:** When the access token expires, the frontend calls `POST /auth/refresh` with the refresh token. The backend validates the refresh token, rotates it (invalidates old, issues new), and returns a new access/refresh pair for the current active workspace context.
 
 **CORS:** The backend configures CORS with allowed origins from the `ALLOWED_ORIGINS` environment variable (comma-separated list of web app URLs and exact Chrome extension origins such as `chrome-extension://<extension-id>`).
 

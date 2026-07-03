@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -54,6 +55,22 @@ const registerInput: RegisterRequest = {
   password: 'password123',
   workspaceName: 'Acme Studio',
 };
+
+function createActiveRefreshTokenRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'refresh-row',
+    userId: seedUserRow.id,
+    workspaceMemberId: seedMembership.id,
+    workspaceId: seedMembership.workspaceId,
+    familyId: 'refresh-family',
+    tokenHash: 'refresh-token-hash',
+    replacedBy: null,
+    revokedAt: null,
+    expiresAt: new Date(Date.now() + 60_000),
+    createdAt: new Date(),
+    ...overrides,
+  };
+}
 
 function createSelectMock(queue: unknown[][]) {
   return vi.fn(() => ({
@@ -113,8 +130,9 @@ describe('AuthService', () => {
   };
   let members: {
     requireActiveMembershipById: ReturnType<typeof vi.fn>;
-    requireActiveMembership: ReturnType<typeof vi.fn>;
     requireActiveMembershipForUser: ReturnType<typeof vi.fn>;
+    requireActiveMembership: ReturnType<typeof vi.fn>;
+    resolveActiveMembership: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -169,8 +187,9 @@ describe('AuthService', () => {
     };
     members = {
       requireActiveMembershipById: vi.fn().mockResolvedValue(seedMembership),
-      requireActiveMembership: vi.fn().mockResolvedValue(seedMembership),
       requireActiveMembershipForUser: vi.fn().mockResolvedValue(seedMembership),
+      requireActiveMembership: vi.fn().mockResolvedValue(seedMembership),
+      resolveActiveMembership: vi.fn().mockResolvedValue(seedMembership),
     };
 
     service = new AuthService(
@@ -203,6 +222,11 @@ describe('AuthService', () => {
         displayName: null,
         avatarUrl: null,
       });
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: seedMembership.workspaceId,
+        }),
+      );
       expect(repo.create).toHaveBeenCalledOnce();
       expect(repo.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -792,6 +816,144 @@ describe('AuthService', () => {
         service.logout('raw', seedUserRow.id),
       ).resolves.toBeUndefined();
       expect(repo.deleteById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('switchWorkspace', () => {
+    it('issues a fresh token pair for another active membership', async () => {
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce(
+        createActiveRefreshTokenRow({
+          id: 'switch-row',
+          familyId: 'switch-family',
+        }),
+      );
+      members.resolveActiveMembership.mockResolvedValueOnce({
+        ...seedMembership,
+        workspaceId: '44444444-4444-4444-4444-444444444444',
+        role: 'pm',
+      });
+
+      const pair = await service.switchWorkspace(
+        {
+          sub: seedUserRow.id,
+          email: seedUserRow.email,
+          firebaseUid: seedUserRow.firebaseUid,
+          workspaceId: seedMembership.workspaceId,
+          role: seedMembership.role,
+        },
+        '44444444-4444-4444-4444-444444444444',
+        'current-refresh-token',
+      );
+
+      expect(repo.rotateIfActive).toHaveBeenCalledWith(
+        'switch-row',
+        expect.objectContaining({
+          familyId: 'switch-family',
+          userId: seedUserRow.id,
+          workspaceMemberId: seedMembership.id,
+          workspaceId: '44444444-4444-4444-4444-444444444444',
+        }),
+      );
+      expect(repo.create).not.toHaveBeenCalled();
+      expect(tokens.verifyAccess(pair.accessToken)).toMatchObject({
+        sub: seedUserRow.id,
+        workspaceId: '44444444-4444-4444-4444-444444444444',
+        role: 'pm',
+      });
+    });
+
+    it('supports idempotent switching to the current workspace', async () => {
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce(
+        createActiveRefreshTokenRow(),
+      );
+      const pair = await service.switchWorkspace(
+        {
+          sub: seedUserRow.id,
+          email: seedUserRow.email,
+          firebaseUid: seedUserRow.firebaseUid,
+          workspaceId: seedMembership.workspaceId,
+          role: seedMembership.role,
+        },
+        seedMembership.workspaceId,
+        'current-refresh-token',
+      );
+
+      expect(pair.refreshToken.length).toBeGreaterThan(20);
+      expect(repo.rotateIfActive).toHaveBeenCalledWith(
+        'refresh-row',
+        expect.objectContaining({
+          workspaceMemberId: seedMembership.id,
+          workspaceId: seedMembership.workspaceId,
+        }),
+      );
+      expect(tokens.verifyAccess(pair.accessToken)).toMatchObject({
+        workspaceId: seedMembership.workspaceId,
+        role: seedMembership.role,
+      });
+    });
+
+    it('rejects target workspaces without a membership', async () => {
+      members.resolveActiveMembership.mockResolvedValueOnce(null);
+
+      await expect(
+        service.switchWorkspace(
+          {
+            sub: seedUserRow.id,
+            email: seedUserRow.email,
+            firebaseUid: seedUserRow.firebaseUid,
+            workspaceId: seedMembership.workspaceId,
+            role: seedMembership.role,
+          },
+          '55555555-5555-5555-5555-555555555555',
+          'current-refresh-token',
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects switch requests with a refresh token owned by another user', async () => {
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce(
+        createActiveRefreshTokenRow({
+          userId: '99999999-9999-9999-9999-999999999999',
+        }),
+      );
+
+      await expect(
+        service.switchWorkspace(
+          {
+            sub: seedUserRow.id,
+            email: seedUserRow.email,
+            firebaseUid: seedUserRow.firebaseUid,
+            workspaceId: seedMembership.workspaceId,
+            role: seedMembership.role,
+          },
+          seedMembership.workspaceId,
+          'other-user-refresh-token',
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(repo.rotateIfActive).not.toHaveBeenCalled();
+    });
+
+    it('rejects switch requests with a refresh token from another workspace session', async () => {
+      repo.findByHashIncludingRevoked.mockResolvedValueOnce(
+        createActiveRefreshTokenRow({
+          workspaceId: '66666666-6666-6666-6666-666666666666',
+        }),
+      );
+
+      await expect(
+        service.switchWorkspace(
+          {
+            sub: seedUserRow.id,
+            email: seedUserRow.email,
+            firebaseUid: seedUserRow.firebaseUid,
+            workspaceId: seedMembership.workspaceId,
+            role: seedMembership.role,
+          },
+          seedMembership.workspaceId,
+          'other-workspace-session-refresh-token',
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(repo.rotateIfActive).not.toHaveBeenCalled();
     });
   });
 });

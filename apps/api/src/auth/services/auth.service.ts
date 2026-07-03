@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -16,14 +17,20 @@ import { normalizeEmail } from '../../commons/utils/normalize-email';
 import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
-import { MembersService } from '../../members/services/members.service';
+import {
+  MembersService,
+  type ActiveMembership,
+} from '../../members/services/members.service';
 import { workspaceMembers } from '../../members/schemas/workspace-members.schema';
 import { UsersService } from '../../users/services/users.service';
 import { userRowSelection, users } from '../../users/schemas/users.schema';
 import { refreshTokens } from '../schemas/refresh-tokens.schema';
 import { workspaceSettings } from '../../workspaces/schemas/workspace-settings.schema';
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
-import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
+import {
+  RefreshTokenRepository,
+  type RefreshTokenRow,
+} from '../repositories/refresh-token.repository';
 import {
   FIREBASE_ADMIN,
   type DecodedFirebaseToken,
@@ -287,33 +294,7 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string): Promise<TokenPair> {
-    const hash = this.tokens.hashRefreshToken(refreshToken);
-    const row = await this.refreshRepo.findByHashIncludingRevoked(hash);
-    if (!row) {
-      throw new UnauthorizedException('Unauthorized');
-    }
-
-    if (row.revokedAt !== null) {
-      if (row.replacedBy) {
-        const replacement = await this.refreshRepo.findById(row.replacedBy);
-
-        if (replacement && replacement.revokedAt === null) {
-          throw new UnauthorizedException('Unauthorized');
-        }
-      }
-
-      await this.refreshRepo.deleteFamily(row.familyId);
-      this.logger.warn({
-        event: 'auth.refresh.reuse_detected',
-        userId: row.userId,
-        familyId: row.familyId,
-      });
-      throw new UnauthorizedException('Unauthorized');
-    }
-
-    if (row.expiresAt.getTime() <= Date.now()) {
-      throw new UnauthorizedException('Unauthorized');
-    }
+    const row = await this.requireRotatableRefreshToken(refreshToken);
 
     const user = await this.users.findRowById(row.userId);
     if (!user) {
@@ -326,38 +307,46 @@ export class AuthService {
       row.workspaceMemberId,
     );
 
-    const { token, hash: newHash } = this.tokens.generateRefreshToken();
-    const expiresAt = new Date(Date.now() + this.refreshTtlMs);
-    const rotated = await this.refreshRepo.rotateIfActive(row.id, {
-      userId: user.id,
-      workspaceMemberId: membership.id,
-      workspaceId: membership.workspaceId,
-      familyId: row.familyId,
-      tokenHash: newHash,
-      expiresAt,
-    });
-
-    if (!rotated) {
-      throw new UnauthorizedException('Unauthorized');
-    }
-
-    const accessToken = this.tokens.signAccess({
-      sub: user.id,
-      email: user.email,
-      firebaseUid: user.firebaseUid,
-      workspaceId: membership.workspaceId,
-      role: membership.role,
-    });
+    const pair = await this.rotateRefreshSession(row, user, membership);
     this.logger.log({
       event: 'auth.refresh.rotated',
       userId: user.id,
       familyId: row.familyId,
     });
-    return {
-      accessToken,
-      refreshToken: token,
-      accessTokenExpiresIn: Math.floor(this.accessTtlMs / 1_000),
-    };
+    return pair;
+  }
+
+  async switchWorkspace(
+    subjectUser: AuthUser,
+    workspaceId: string,
+    refreshToken: string,
+  ): Promise<TokenPair> {
+    const user = await this.users.findRowById(subjectUser.sub);
+    if (!user) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const membership = await this.members.resolveActiveMembership(
+      user.id,
+      workspaceId,
+    );
+    if (!membership) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    const row = await this.requireRotatableRefreshToken(refreshToken);
+    if (row.userId !== user.id) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+    if (row.workspaceId !== subjectUser.workspaceId) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+    await this.members.requireActiveMembershipById(
+      user.id,
+      row.workspaceMemberId,
+    );
+
+    return this.rotateRefreshSession(row, user, membership);
   }
 
   async logout(refreshToken: string, subjectUserId: string): Promise<void> {
@@ -392,6 +381,74 @@ export class AuthService {
       expiresAt,
     });
     const accessToken = this.tokens.signAccess(user);
+    return {
+      accessToken,
+      refreshToken: token,
+      accessTokenExpiresIn: Math.floor(this.accessTtlMs / 1_000),
+    };
+  }
+
+  private async requireRotatableRefreshToken(
+    refreshToken: string,
+  ): Promise<RefreshTokenRow> {
+    const hash = this.tokens.hashRefreshToken(refreshToken);
+    const row = await this.refreshRepo.findByHashIncludingRevoked(hash);
+    if (!row) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    if (row.revokedAt !== null) {
+      if (row.replacedBy) {
+        const replacement = await this.refreshRepo.findById(row.replacedBy);
+
+        if (replacement && replacement.revokedAt === null) {
+          throw new UnauthorizedException('Unauthorized');
+        }
+      }
+
+      await this.refreshRepo.deleteFamily(row.familyId);
+      this.logger.warn({
+        event: 'auth.refresh.reuse_detected',
+        userId: row.userId,
+        familyId: row.familyId,
+      });
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    if (row.expiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    return row;
+  }
+
+  private async rotateRefreshSession(
+    row: RefreshTokenRow,
+    user: { id: string; email: string; firebaseUid: string },
+    membership: ActiveMembership,
+  ): Promise<TokenPair> {
+    const { token, hash: newHash } = this.tokens.generateRefreshToken();
+    const expiresAt = new Date(Date.now() + this.refreshTtlMs);
+    const rotated = await this.refreshRepo.rotateIfActive(row.id, {
+      userId: user.id,
+      workspaceMemberId: membership.id,
+      workspaceId: membership.workspaceId,
+      familyId: row.familyId,
+      tokenHash: newHash,
+      expiresAt,
+    });
+
+    if (!rotated) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const accessToken = this.tokens.signAccess({
+      sub: user.id,
+      email: user.email,
+      firebaseUid: user.firebaseUid,
+      workspaceId: membership.workspaceId,
+      role: membership.role,
+    });
     return {
       accessToken,
       refreshToken: token,

@@ -4,7 +4,11 @@ import { createPinia, setActivePinia } from "pinia";
 import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
 import { createMemoryHistory } from "vue-router";
-import type { TokenPairResponse, UserResponse } from "@gitiempo/shared";
+import type {
+  CurrentUserWorkspaceMembershipListResponse,
+  TokenPairResponse,
+  UserResponse,
+} from "@gitiempo/shared";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 import { waitForRoute } from "@gitiempo/web-shared/testing";
 
@@ -36,9 +40,20 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
     role: "admin",
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
+  const workspaceMemberships: CurrentUserWorkspaceMembershipListResponse = {
+    items: [
+      {
+        isCurrent: true,
+        role: "admin",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        workspaceName: "Workspace Alpha",
+      },
+    ],
+  };
 
   return {
     getCurrentUser: async () => currentUser,
+    listCurrentUserWorkspaces: async () => workspaceMemberships,
     loginWithFirebaseToken: async () => ({
       accessToken: "access-token",
       accessTokenExpiresIn: 900,
@@ -54,6 +69,11 @@ function createRuntimeMock(overrides?: Partial<AuthRuntime>): AuthRuntime {
       accessToken: "restored-access-token",
       accessTokenExpiresIn: 900,
       refreshToken: "restored-refresh-token",
+    }),
+    switchWorkspace: async () => ({
+      accessToken: "switched-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "switched-refresh-token",
     }),
     signInWithEmailPassword: async () => "firebase-email-token",
     signInWithGoogle: async () => "firebase-google-token",

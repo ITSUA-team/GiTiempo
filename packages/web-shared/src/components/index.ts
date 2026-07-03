@@ -35,3 +35,4 @@ export { default as StatCard } from "./StatCard.vue";
 export { default as SurfaceCard } from "./SurfaceCard.vue";
 export { default as WorkspaceHeader } from "./WorkspaceHeader.vue";
 export { default as WorkspaceNavigation } from "./WorkspaceNavigation.vue";
+export { default as WorkspaceSwitchDialog } from "./WorkspaceSwitchDialog.vue";

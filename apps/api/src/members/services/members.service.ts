@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { and, count, eq, sql } from 'drizzle-orm';
+import { and, asc, count, eq, sql } from 'drizzle-orm';
 import type {
   UpdateWorkspaceMemberRoleInput,
   WorkspaceMemberResponse,
@@ -16,12 +16,19 @@ import { DomainError } from '../../commons/errors/domain-error';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDB } from '../../db/db.types';
 import { users } from '../../users/schemas/users.schema';
+import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { workspaceMembers } from '../schemas/workspace-members.schema';
 
 export interface ActiveMembership {
   id: string;
   userId: string;
   workspaceId: string;
+  role: WorkspaceRole;
+}
+
+export interface WorkspaceMembershipSummary {
+  workspaceId: string;
+  workspaceName: string;
   role: WorkspaceRole;
 }
 
@@ -32,6 +39,8 @@ export class MembersService {
   async resolveActiveMembershipForUser(
     userId: string,
   ): Promise<ActiveMembership | null> {
+    // Default login selection uses the earliest active membership to keep
+    // first-session behavior deterministic without storing a preference.
     const [row] = await this.db
       .select({
         id: workspaceMembers.id,
@@ -41,6 +50,10 @@ export class MembersService {
       })
       .from(workspaceMembers)
       .where(eq(workspaceMembers.userId, userId))
+      .orderBy(
+        asc(workspaceMembers.joinedAt),
+        asc(workspaceMembers.workspaceId),
+      )
       .limit(1);
 
     return row ?? null;
@@ -135,6 +148,24 @@ export class MembersService {
       throw new ForbiddenException('Forbidden');
     }
     return membership;
+  }
+
+  async listMembershipsForUser(
+    userId: string,
+  ): Promise<WorkspaceMembershipSummary[]> {
+    return this.db
+      .select({
+        workspaceId: workspaceMembers.workspaceId,
+        workspaceName: workspaces.name,
+        role: workspaceMembers.role,
+      })
+      .from(workspaceMembers)
+      .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+      .where(eq(workspaceMembers.userId, userId))
+      .orderBy(
+        asc(workspaceMembers.joinedAt),
+        asc(workspaceMembers.workspaceId),
+      );
   }
 
   async listMembers(workspaceId: string): Promise<WorkspaceMemberResponse[]> {

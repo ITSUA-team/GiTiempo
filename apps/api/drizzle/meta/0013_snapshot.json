@@ -1,5 +1,5 @@
 {
-  "id": "f5e9ed70-8b93-400d-b8c5-27d2f1362803",
+  "id": "e8768ca8-b8d5-4b22-ac14-605aebdba1c7",
   "prevId": "cd220672-a2fb-4ac7-a66d-3bdec14c23cd",
   "version": "7",
   "dialect": "postgresql",
@@ -109,12 +109,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "workspace_member_id": {
-          "name": "workspace_member_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "workspace_id": {
           "name": "workspace_id",
           "type": "uuid",
@@ -165,21 +159,6 @@
           "columns": [
             {
               "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "refresh_tokens_workspace_member_id_idx": {
-          "name": "refresh_tokens_workspace_member_id_idx",
-          "columns": [
-            {
-              "expression": "workspace_member_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -243,19 +222,6 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "refresh_tokens_workspace_member_id_workspace_members_id_fk": {
-          "name": "refresh_tokens_workspace_member_id_workspace_members_id_fk",
-          "tableFrom": "refresh_tokens",
-          "tableTo": "workspace_members",
-          "columnsFrom": [
-            "workspace_member_id"
           ],
           "columnsTo": [
             "id"
