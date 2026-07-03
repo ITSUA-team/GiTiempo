@@ -48,8 +48,8 @@ User SPA and Admin SPA share the same shell:
 | Breakpoint | Width            | Tailwind prefix | Layout change                            |
 | ---------- | ---------------- | --------------- | ---------------------------------------- |
 | Mobile     | `< 640px`        | default         | Sidebar hidden, icon-only bottom nav from shared nav items |
-| Tablet     | `640px - 1024px` | `sm:` / `md:`   | Sidebar uses icon-only content-fit rail  |
-| Desktop    | `> 1024px`       | `lg:`           | Sidebar uses icon-only content-fit rail  |
+| Tablet     | `640px - 1024px` | `sm:` / `md:`   | Sidebar uses fixed-width `w-20` icon rail |
+| Desktop    | `> 1024px`       | `lg:`           | Sidebar uses fixed-width `w-20` icon rail |
 
 MVP is desktop-first. Mobile is required but less polished.
 
