@@ -163,7 +163,7 @@ watch(
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
+  <div class="bg-app-bg text-text-dark flex min-h-screen flex-col">
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       :counterpart-label="ADMIN_COUNTERPART_LABEL"
@@ -183,7 +183,7 @@ watch(
       @switch-workspace="handleSwitchWorkspace"
     />
 
-    <div class="flex min-h-screen">
+    <div class="flex flex-1">
       <WorkspaceNavigation
         :active-name="activeName"
         :items="navItems"
