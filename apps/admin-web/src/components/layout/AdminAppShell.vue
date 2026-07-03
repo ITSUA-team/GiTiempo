@@ -183,7 +183,7 @@ watch(
       @switch-workspace="handleSwitchWorkspace"
     />
 
-    <div class="flex min-h-[calc(100vh-4rem)]">
+    <div class="flex min-h-screen">
       <WorkspaceNavigation
         :active-name="activeName"
         :items="navItems"
