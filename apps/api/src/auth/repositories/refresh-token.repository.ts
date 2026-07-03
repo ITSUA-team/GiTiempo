@@ -16,6 +16,7 @@ export type RefreshTokenRow = typeof refreshTokens.$inferSelect;
 
 export interface CreateRefreshTokenInput {
   userId: string;
+  workspaceMemberId: string;
   workspaceId: string;
   familyId: string;
   tokenHash: string;
@@ -41,6 +42,7 @@ export class RefreshTokenRepository {
       .insert(refreshTokens)
       .values({
         userId: input.userId,
+        workspaceMemberId: input.workspaceMemberId,
         workspaceId: input.workspaceId,
         familyId: input.familyId,
         tokenHash: input.tokenHash,
@@ -143,6 +145,7 @@ export class RefreshTokenRepository {
         .insert(refreshTokens)
         .values({
           userId: input.userId,
+          workspaceMemberId: input.workspaceMemberId,
           workspaceId: input.workspaceId,
           familyId: input.familyId,
           tokenHash: input.tokenHash,

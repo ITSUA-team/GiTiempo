@@ -183,6 +183,7 @@ describe('Auth (e2e)', () => {
         )
         .limit(1);
       expect(refreshRow?.revokedAt).toBeNull();
+      expect(refreshRow?.workspaceMemberId).toBe(memberRow?.id);
       expect(refreshRow?.workspaceId).toBe(claims.workspaceId);
 
       const refreshed = await postAuth(app, '/auth/refresh').send({
@@ -504,6 +505,38 @@ describe('Auth (e2e)', () => {
         refreshToken: 'not-a-real-token',
       });
       expect(res.status).toBe(401);
+    });
+
+    it('rejects refresh after the exact membership row is removed and recreated', async () => {
+      const session = await login(app);
+      const claims = tokens.verifyAccess(session.accessToken);
+
+      const [membershipRow] = await db
+        .select({ id: workspaceMembers.id, role: workspaceMembers.role })
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.userId, claims.sub),
+            eq(workspaceMembers.workspaceId, claims.workspaceId),
+          ),
+        )
+        .limit(1);
+      expect(membershipRow).toBeDefined();
+
+      await db
+        .delete(workspaceMembers)
+        .where(eq(workspaceMembers.id, membershipRow!.id));
+
+      await db.insert(workspaceMembers).values({
+        role: membershipRow!.role,
+        userId: claims.sub,
+        workspaceId: claims.workspaceId,
+      });
+
+      const refreshed = await postAuth(app, '/auth/refresh').send({
+        refreshToken: session.refreshToken,
+      });
+      expect(refreshed.status).toBe(401);
     });
   });
 
