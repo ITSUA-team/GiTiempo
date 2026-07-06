@@ -23,8 +23,8 @@ interface DirectTimerEntry {
 }
 
 interface UseTimeEntryDirectTimerActionsOptions {
-  accessToken: ComputedRef<string | null>;
   client: Pick<TimeEntriesClient, "getCurrentTimer" | "startTimer" | "stopTimer">;
+  enabled: ComputedRef<boolean>;
   logFeature?: "dashboard" | "time-entries";
   loadEntries(): Promise<void>;
   scope: ComputedRef<UserServerStateScope>;
@@ -32,8 +32,8 @@ interface UseTimeEntryDirectTimerActionsOptions {
 }
 
 export function useTimeEntryDirectTimerActions({
-  accessToken,
   client,
+  enabled,
   logFeature = "time-entries",
   loadEntries,
   scope,
@@ -42,17 +42,15 @@ export function useTimeEntryDirectTimerActions({
   const appToast = createAppToast(toast);
   const queryClient = useQueryClient();
   const currentTimerGuardQuery = useCurrentTimerQuery({
-    accessToken,
     client,
+    enabled,
     scope,
   });
   const startTimerMutation = useStartTimerMutation({
-    accessToken,
     client,
     scope,
   });
   const stopTimerMutation = useStopTimerMutation({
-    accessToken,
     client,
     scope,
   });

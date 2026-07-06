@@ -252,6 +252,9 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.text()).not.toContain("Workspace Alpha");
     expect(wrapper.text()).not.toContain("Alexey Tsukanov");
     expect(wrapper.text()).toContain("AT");
+    expect(wrapper.get('[data-testid="workspace-header-logo"]').classes()).toEqual(
+      expect.arrayContaining(["size-8", "rounded-lg", "bg-accent-tint", "text-brand"]),
+    );
     expect(wrapper.find(`a[href="${baseProps.counterpartHref}"]`).exists()).toBe(false);
     expect(wrapper.get('[data-testid="profile-menu-trigger"]').text()).toContain(
       "AT",

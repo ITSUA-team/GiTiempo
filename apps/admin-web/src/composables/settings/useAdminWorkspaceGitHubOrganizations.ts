@@ -18,13 +18,13 @@ import type { AdminServerStateScope } from '@/lib/query-keys';
 import { buildGitHubWorkspaceAccessChecklist } from '@/components/settings/github-workspace-access';
 
 interface UseAdminWorkspaceGitHubOrganizationsOptions {
-  accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<
     AdminSettingsClient,
     | 'addWorkspaceGitHubOrganization'
     | 'listWorkspaceGitHubOrganizations'
     | 'removeWorkspaceGitHubOrganization'
   >;
+  enabled: Ref<boolean> | ComputedRef<boolean>;
   onError?: (
     message: string,
     error: unknown | undefined,
@@ -76,8 +76,8 @@ function getRecoveryPayload(
 }
 
 export function useAdminWorkspaceGitHubOrganizations({
-  accessToken,
   client = getAdminSettingsClient(),
+  enabled,
   githubAppInstallUrl = null,
   onError,
   onSuccess,
@@ -92,17 +92,15 @@ export function useAdminWorkspaceGitHubOrganizations({
   const removingOrganizationId = ref<string | null>(null);
   const query = useWorkspaceGitHubOrganizationsQuery({
     client,
-    accessToken,
+    enabled,
     scope,
   });
   const addMutation = useAddWorkspaceGitHubOrganizationMutation({
     client,
-    accessToken,
     scope,
   });
   const removeMutation = useRemoveWorkspaceGitHubOrganizationMutation({
     client,
-    accessToken,
     scope,
   });
   const items = computed<WorkspaceGitHubOrganizationResponse[]>(

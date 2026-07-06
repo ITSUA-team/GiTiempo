@@ -13,11 +13,11 @@ import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
-const accessToken = computed(() => authStore.accessToken);
+const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 
 const dashboard = useAdminDashboardData({
-  accessToken,
+  enabled: isAuthenticated,
   onError(message, error, action) {
     errorToast(message, {
       error,

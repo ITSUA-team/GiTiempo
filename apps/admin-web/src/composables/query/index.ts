@@ -15,10 +15,6 @@ import type {
   WorkspaceResponse,
   WorkspaceSettingsResponse,
 } from '@gitiempo/shared';
-import {
-  isQueryEnabled,
-  type QueryAccessOptions,
-} from '@gitiempo/web-shared/query';
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 
 import {
@@ -90,12 +86,12 @@ interface WorkspaceGitHubOrganizationsClient {
   removeWorkspaceGitHubOrganization(organizationId: string): Promise<void>;
 }
 
-interface AdminScopedQueryOptions extends QueryAccessOptions {
+interface AdminScopedQueryOptions {
+  enabled: MaybeRefOrGetter<boolean>;
   scope: MaybeRefOrGetter<AdminServerStateScope>;
 }
 
 interface AdminScopedMutationOptions {
-  accessToken: MaybeRefOrGetter<string | null | undefined>;
   scope: MaybeRefOrGetter<AdminServerStateScope>;
 }
 
@@ -162,6 +158,10 @@ async function invalidateQueryKeys(
   await Promise.all(
     keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
   );
+}
+
+function isQueryEnabled(options: AdminScopedQueryOptions): boolean {
+  return Boolean(toValue(options.enabled));
 }
 
 export const useAdminProjectsQuery = (options: UseAdminProjectsQueryOptions) =>

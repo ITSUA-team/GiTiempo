@@ -8,6 +8,8 @@ import {
   getRequestUrl,
 } from "@gitiempo/web-shared/http";
 
+import { appEnv } from "@/config/env";
+
 
 interface WorkspaceInvitesClientOptions {
   apiBaseUrl?: string;
@@ -40,8 +42,9 @@ export function createWorkspaceInvitesClient({
   };
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-const defaultWorkspaceInvitesClient = createWorkspaceInvitesClient({ apiBaseUrl });
+const defaultWorkspaceInvitesClient = createWorkspaceInvitesClient({
+  apiBaseUrl: appEnv.apiBaseUrl,
+});
 
 let workspaceInvitesClient = defaultWorkspaceInvitesClient;
 

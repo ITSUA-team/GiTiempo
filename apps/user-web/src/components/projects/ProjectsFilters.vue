@@ -58,7 +58,7 @@ function updateUpdatedFilter(
     <div class="flex w-full flex-col gap-1.5 sm:w-[360px]">
       <label
         for="projects-search"
-        class="text-text-dark text-[13px] font-medium"
+        class="sr-only"
       >
         Search
       </label>
@@ -99,7 +99,7 @@ function updateUpdatedFilter(
     <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">
       <label
         for="projects-status-filter"
-        class="text-text-dark text-[13px] font-medium"
+        class="sr-only"
       >
         Status
       </label>
@@ -119,7 +119,7 @@ function updateUpdatedFilter(
     <div class="flex w-full flex-col gap-1.5 sm:w-[180px]">
       <label
         for="projects-updated-filter"
-        class="text-text-dark text-[13px] font-medium"
+        class="sr-only"
       >
         Updated
       </label>

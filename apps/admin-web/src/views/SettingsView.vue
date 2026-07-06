@@ -17,11 +17,11 @@ import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast, successToast } = useToasts();
-const accessToken = computed(() => authStore.accessToken);
+const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 const settingsForm = useAdminSettingsForm();
 const settingsData = useAdminSettingsData({
-  accessToken,
+  enabled: isAuthenticated,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -31,7 +31,7 @@ const settingsData = useAdminSettingsData({
   scope,
 });
 const settingsPersistence = useAdminSettingsPersistence({
-  accessToken,
+  enabled: isAuthenticated,
   onError(message, error) {
     errorToast(message, {
       error,
@@ -41,7 +41,7 @@ const settingsPersistence = useAdminSettingsPersistence({
   scope,
 });
 const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
-  accessToken,
+  enabled: isAuthenticated,
   githubAppInstallUrl: appEnv.githubAppInstallUrl,
   onError(message, error, action) {
     errorToast(message, {

@@ -60,8 +60,8 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     limit: 100,
   }));
   const recentEntriesQuery = useRecentOwnTimeEntriesQuery({
-    accessToken,
     client,
+    enabled: hasAccessToken,
     queryKey: computed(() => timeEntriesKeys.list(scope.value, { limit: 10, page: 1 })),
     scope,
   });
@@ -116,8 +116,8 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     mapDashboardRecentEntryRows(recentEntries.value, nowMs.value),
   );
   const directTimerActions = useTimeEntryDirectTimerActions({
-    accessToken,
     client,
+    enabled: hasAccessToken,
     logFeature: "dashboard",
     loadEntries: retryLoadOverview,
     scope,

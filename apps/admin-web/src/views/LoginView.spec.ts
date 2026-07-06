@@ -135,6 +135,22 @@ describe("LoginView", () => {
     expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
   });
 
+  it("falls back to the dashboard for unsafe preserved redirects", async () => {
+    setAuthRuntimeForTesting(createRuntimeMock());
+    const { router, wrapper } = await mountLoginView(
+      "/login?redirect=%2F%2Fevil.example%2Fescape",
+    );
+    const routeReady = waitForRoute(
+      router,
+      () => router.currentRoute.value.name === routeNames.dashboard,
+    );
+
+    await wrapper.get('[data-testid="sign-in-google"]').trigger("click");
+    await routeReady;
+
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+  });
+
   it("shows sign-in errors without navigating away from login", async () => {
     setAuthRuntimeForTesting(
       createRuntimeMock({
