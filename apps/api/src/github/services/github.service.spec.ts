@@ -286,6 +286,56 @@ describe('GithubService', () => {
     ]);
   });
 
+  it('lists available organizations for setup without workspace allow-list filtering', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.listOwners.mockResolvedValue({
+      items: [
+        {
+          login: 'Octo-Org',
+          label: 'Octo-Org',
+          type: 'organization',
+          avatarUrl: null,
+          url: 'https://github.com/Octo-Org',
+        },
+        {
+          login: 'Other-Org',
+          label: 'Other-Org',
+          type: 'organization',
+          avatarUrl: null,
+          url: 'https://github.com/Other-Org',
+        },
+      ],
+    });
+    workspaceGitHubOrganizations.listAllowedOrganizationLogins.mockResolvedValue(
+      ['octo-org'],
+    );
+
+    const result = await service().listAvailableOrganizations(user);
+
+    expect(result.items.map((owner) => owner.login)).toEqual([
+      'Octo-Org',
+      'Other-Org',
+    ]);
+    expect(apiClient.listOwners).toHaveBeenCalledWith(
+      'ghu_token',
+      { login: 'octocat', avatarUrl: null },
+      'organization',
+    );
+    expect(
+      workspaceGitHubOrganizations.listAllowedOrganizationLogins,
+    ).not.toHaveBeenCalled();
+  });
+
   it('rejects organization-scoped repository browsing when the owner is not allowed', async () => {
     connections.status.mockResolvedValue({
       status: 'connected',

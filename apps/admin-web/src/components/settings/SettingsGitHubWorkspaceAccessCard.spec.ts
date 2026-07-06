@@ -9,7 +9,7 @@ const SkeletonStub = {
 
 const ButtonStub = {
   emits: ['click'],
-  props: ['asChild', 'label'],
+  props: ['asChild', 'disabled', 'label'],
   template: `
     <slot
       v-if="asChild"
@@ -18,6 +18,7 @@ const ButtonStub = {
     />
     <button
       v-else
+      :disabled="disabled"
       type="button"
       @click="$emit('click', $event)"
     >
@@ -26,17 +27,47 @@ const ButtonStub = {
   `,
 };
 
-const InputTextStub = {
-  emits: ['update:modelValue'],
-  props: ['id', 'modelValue'],
-  template:
-    '<input :id="id" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+const AutoCompleteStub = {
+  emits: ['complete', 'update:modelValue'],
+  props: ['disabled', 'inputId', 'modelValue', 'optionLabel', 'suggestions'],
+  template: `
+    <div>
+      <input
+        :id="inputId"
+        :disabled="disabled"
+        :value="modelValue?.[optionLabel] ?? ''"
+        @focus="$emit('complete', { query: '' })"
+      />
+      <button
+        v-for="option in suggestions"
+        :key="option.login"
+        :data-testid="inputId + '-option-' + option.login"
+        type="button"
+        @click="$emit('update:modelValue', option)"
+      >
+        {{ option[optionLabel] }}
+      </button>
+    </div>
+  `,
+};
+
+const availableOrganization = {
+  avatarUrl: null,
+  label: 'Octo-Org',
+  login: 'Octo-Org',
+  type: 'organization' as const,
+  url: 'https://github.com/Octo-Org',
 };
 
 function createProps(overrides: Record<string, unknown> = {}) {
   return {
     addOrganizationGateMessage: null,
     adding: false,
+    availableOrganizationEmptyMessage: null,
+    availableOrganizations: [availableOrganization],
+    availableOrganizationsInitialLoading: false,
+    availableOrganizationsLoading: false,
+    availableOrganizationsRequestError: null,
     canAddOrganization: true,
     isInitialLoading: false,
     items: [],
@@ -45,6 +76,7 @@ function createProps(overrides: Record<string, unknown> = {}) {
     recoveryChecklist: null,
     removingOrganizationId: null,
     requestError: null,
+    selectedOrganization: null,
     ...overrides,
   };
 }
@@ -54,8 +86,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           Skeleton: SkeletonStub,
           SurfaceCard: { template: '<section><slot /></section>' },
@@ -73,8 +105,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           Skeleton: SkeletonStub,
           SurfaceCard: { template: '<section><slot /></section>' },
@@ -94,8 +126,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -127,8 +159,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -151,8 +183,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -188,8 +220,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -212,12 +244,95 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.find('#settings-github-organization-login').exists()).toBe(false);
   });
 
+  it('renders an organization autocomplete with immediate dropdown options', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps(),
+    });
+
+    expect(wrapper.text()).toContain('GitHub organization');
+    expect(wrapper.text()).not.toContain('Use the GitHub organization login');
+    expect(
+      wrapper.find(
+        '[data-testid="settings-github-organization-login-option-Octo-Org"]',
+      ).exists(),
+    ).toBe(true);
+
+    await wrapper.get('#settings-github-organization-login').trigger('focus');
+    await wrapper
+      .get('[data-testid="settings-github-organization-login-option-Octo-Org"]')
+      .trigger('click');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      [availableOrganization],
+    ]);
+  });
+
+  it('shows available organization empty guidance', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        availableOrganizationEmptyMessage:
+          'Your connected GitHub account has no available organizations.',
+        availableOrganizations: [],
+      }),
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-available-organizations-empty"]')
+        .text(),
+    ).toContain('Your connected GitHub account has no available organizations.');
+  });
+
+  it('shows available organization request errors with retry', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        availableOrganizationsRequestError: 'GitHub organizations unavailable',
+      }),
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-available-organizations-error"]')
+        .text(),
+    ).toContain('GitHub organizations unavailable');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(false);
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Try again')
+      ?.trigger('click');
+
+    expect(wrapper.emitted('retryAvailableOrganizations')).toHaveLength(1);
+  });
+
   it('renders the GitHub App recovery checklist with link and retry actions', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },

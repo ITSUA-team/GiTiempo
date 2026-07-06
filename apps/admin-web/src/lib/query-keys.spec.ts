@@ -109,6 +109,12 @@ describe('admin-web query keys', () => {
       'settings',
       'github-connection-status',
     ]);
+    expect(adminSettingsKeys.availableGitHubOrganizations(scope)).toEqual([
+      'admin-web',
+      { role: 'admin', userId: 'user-1', workspaceId: 'workspace-1' },
+      'settings',
+      'available-github-organizations',
+    ]);
   });
 
   it('provides targeted invalidation keys after mutations', () => {

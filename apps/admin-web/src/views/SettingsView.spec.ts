@@ -16,6 +16,7 @@ const testMocks = vi.hoisted(() => ({
   errorToast: vi.fn(),
   getGitHubConnectionStatus: vi.fn(),
   getWorkspace: vi.fn(),
+  listAvailableGitHubOrganizations: vi.fn(),
   listWorkspaceGitHubOrganizations: vi.fn(),
   removeWorkspaceGitHubOrganization: vi.fn(),
   getWorkspaceSettings: vi.fn(),
@@ -29,6 +30,8 @@ vi.mock('@/services/admin-settings-client', () => ({
     addWorkspaceGitHubOrganization: testMocks.addWorkspaceGitHubOrganization,
     getGitHubConnectionStatus: testMocks.getGitHubConnectionStatus,
     getWorkspace: testMocks.getWorkspace,
+    listAvailableGitHubOrganizations:
+      testMocks.listAvailableGitHubOrganizations,
     listWorkspaceGitHubOrganizations:
       testMocks.listWorkspaceGitHubOrganizations,
     removeWorkspaceGitHubOrganization:
@@ -103,6 +106,25 @@ const disconnectedGitHubStatus = {
   status: 'disconnected',
 } as const;
 
+const availableGitHubOrganizationsResponse = {
+  items: [
+    {
+      avatarUrl: null,
+      label: 'Octo-Org',
+      login: 'Octo-Org',
+      type: 'organization',
+      url: 'https://github.com/Octo-Org',
+    },
+    {
+      avatarUrl: null,
+      label: 'My-test-org-for-clock',
+      login: 'My-test-org-for-clock',
+      type: 'organization',
+      url: 'https://github.com/My-test-org-for-clock',
+    },
+  ],
+} as const;
+
 const SkeletonStub = {
   name: 'Skeleton',
   template: '<div data-testid="skeleton" />',
@@ -141,8 +163,8 @@ const AutoCompleteStub = {
       />
       <button
         v-for="option in suggestions"
-        :key="option.value"
-        :data-testid="inputId + '-option-' + option.value"
+        :key="option.value ?? option.login"
+        :data-testid="inputId + '-option-' + (option.value ?? option.login)"
         type="button"
         @click="$emit('update:modelValue', option)"
       >
@@ -213,9 +235,10 @@ async function addOrganization(
   wrapper: ReturnType<typeof mountSettingsView>,
   organizationLogin = 'My-test-org-for-clock',
 ) {
+  await wrapper.get('#settings-github-organization-login').trigger('focus');
   await wrapper
-    .get('#settings-github-organization-login')
-    .setValue(organizationLogin);
+    .get(`[data-testid="settings-github-organization-login-option-${organizationLogin}"]`)
+    .trigger('click');
   await wrapper
     .findAll('button')
     .find((button) => button.text() === 'Add organization')
@@ -253,6 +276,7 @@ describe('SettingsView', () => {
     testMocks.errorToast.mockReset();
     testMocks.getGitHubConnectionStatus.mockReset();
     testMocks.getWorkspace.mockReset();
+    testMocks.listAvailableGitHubOrganizations.mockReset();
     testMocks.listWorkspaceGitHubOrganizations.mockReset();
     testMocks.removeWorkspaceGitHubOrganization.mockReset();
     testMocks.getWorkspaceSettings.mockReset();
@@ -265,6 +289,9 @@ describe('SettingsView', () => {
     );
     testMocks.getGitHubConnectionStatus.mockResolvedValue(connectedGitHubStatus);
     testMocks.getWorkspace.mockResolvedValue(workspaceResponse);
+    testMocks.listAvailableGitHubOrganizations.mockResolvedValue(
+      availableGitHubOrganizationsResponse,
+    );
     testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({ items: [] });
     testMocks.removeWorkspaceGitHubOrganization.mockResolvedValue(undefined);
     testMocks.getWorkspaceSettings.mockResolvedValue(settingsResponse);
@@ -593,7 +620,7 @@ describe('SettingsView', () => {
     expect(testMocks.updateWorkspaceSettings).not.toHaveBeenCalled();
   });
 
-  it('validates the GitHub organization login before sending an add request', async () => {
+  it('validates GitHub organization selection before sending an add request', async () => {
     const wrapper = mountSettingsView();
     await flushPromises();
 
@@ -604,7 +631,7 @@ describe('SettingsView', () => {
     await flushPromises();
 
     expect(testMocks.addWorkspaceGitHubOrganization).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('Organization login is required');
+    expect(wrapper.text()).toContain('Select a GitHub organization');
   });
 
   it('adds a GitHub organization and refreshes the authoritative policy list', async () => {
@@ -618,14 +645,7 @@ describe('SettingsView', () => {
     const wrapper = mountSettingsView();
     await flushPromises();
 
-    await wrapper
-      .get('#settings-github-organization-login')
-      .setValue('Octo-Org');
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Add organization')
-      ?.trigger('click');
-    await flushPromises();
+    await addOrganization(wrapper, 'Octo-Org');
 
     expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
       organizationLogin: 'Octo-Org',
@@ -636,7 +656,7 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Octo-Org');
   });
 
-  it('keeps the entered organization login when add fails', async () => {
+  it('keeps the selected organization when add fails', async () => {
     testMocks.addWorkspaceGitHubOrganization.mockRejectedValueOnce(
       new Error('GitHub organization is not visible to your connected account'),
     );
@@ -644,14 +664,7 @@ describe('SettingsView', () => {
     const wrapper = mountSettingsView();
     await flushPromises();
 
-    await wrapper
-      .get('#settings-github-organization-login')
-      .setValue('Octo-Org');
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Add organization')
-      ?.trigger('click');
-    await flushPromises();
+    await addOrganization(wrapper, 'Octo-Org');
 
     expect(
       wrapper.get<HTMLInputElement>('#settings-github-organization-login')

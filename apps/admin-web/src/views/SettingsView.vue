@@ -43,7 +43,21 @@ const settingsPersistence = useAdminSettingsPersistence({
   },
   scope,
 });
+const gitHubConnection = useAdminSettingsGitHubConnection({
+  enabled: isAuthenticated,
+  onError(message, error, action) {
+    errorToast(message, {
+      error,
+      logContext: { action, feature: 'settings-github-account' },
+    });
+  },
+  scope,
+});
+const canLoadAvailableGitHubOrganizations = computed(
+  () => isAuthenticated.value && gitHubConnection.isConnected.value,
+);
 const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
+  availableOrganizationsEnabled: canLoadAvailableGitHubOrganizations,
   enabled: isAuthenticated,
   githubAppInstallUrl: appEnv.githubAppInstallUrl,
   onError(message, error, action) {
@@ -57,16 +71,6 @@ const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
   },
   scope,
   userAppUrl: appEnv.userAppUrl,
-});
-const gitHubConnection = useAdminSettingsGitHubConnection({
-  enabled: isAuthenticated,
-  onError(message, error, action) {
-    errorToast(message, {
-      error,
-      logContext: { action, feature: 'settings-github-account' },
-    });
-  },
-  scope,
 });
 const {
   currencyOptions,
@@ -197,9 +201,14 @@ watch(
           />
 
           <SettingsGitHubWorkspaceAccessCard
-            v-model:organization-login="workspaceGitHubOrganizations.organizationLogin.value"
+            v-model:selected-organization="workspaceGitHubOrganizations.selectedOrganization.value"
             :add-organization-gate-message="gitHubAddGateMessage"
             :adding="workspaceGitHubOrganizations.adding.value"
+            :available-organization-empty-message="workspaceGitHubOrganizations.availableOrganizationsEmptyMessage.value"
+            :available-organizations="workspaceGitHubOrganizations.selectableOrganizations.value"
+            :available-organizations-initial-loading="workspaceGitHubOrganizations.availableOrganizationsInitialLoading.value"
+            :available-organizations-loading="workspaceGitHubOrganizations.availableOrganizationsLoading.value"
+            :available-organizations-request-error="workspaceGitHubOrganizations.availableOrganizationsRequestError.value"
             :can-add-organization="gitHubConnection.isConnected.value"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
             :items="workspaceGitHubOrganizations.items.value"
@@ -211,6 +220,7 @@ watch(
             @remove="workspaceGitHubOrganizations.removeOrganization"
             @retry="workspaceGitHubOrganizations.retryLoad"
             @retry-add="workspaceGitHubOrganizations.addOrganization"
+            @retry-available-organizations="workspaceGitHubOrganizations.retryAvailableOrganizations"
           />
         </template>
       </SettingsForm>

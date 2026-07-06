@@ -762,6 +762,33 @@
         ]
       }
     },
+    "/github/organizations": {
+      "get": {
+        "operationId": "GithubController_listAvailableOrganizations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubOwnerListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List current user GitHub organizations",
+        "tags": [
+          "github"
+        ]
+      }
+    },
     "/github/repos": {
       "get": {
         "operationId": "GithubController_listRepositories",

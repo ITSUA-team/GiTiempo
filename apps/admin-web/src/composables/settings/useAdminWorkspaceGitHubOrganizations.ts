@@ -2,11 +2,13 @@ import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
 import {
   addWorkspaceGitHubOrganizationSchema,
   workspaceGitHubOrganizationRecoveryPayloadSchema,
+  type GitHubOwner,
   type WorkspaceGitHubOrganizationRecoveryPayload,
   type WorkspaceGitHubOrganizationResponse,
 } from '@gitiempo/shared';
 import {
   useAddWorkspaceGitHubOrganizationMutation,
+  useAvailableGitHubOrganizationsQuery,
   useRemoveWorkspaceGitHubOrganizationMutation,
   useWorkspaceGitHubOrganizationsQuery,
 } from '@/composables/query';
@@ -21,9 +23,11 @@ interface UseAdminWorkspaceGitHubOrganizationsOptions {
   client?: Pick<
     AdminSettingsClient,
     | 'addWorkspaceGitHubOrganization'
+    | 'listAvailableGitHubOrganizations'
     | 'listWorkspaceGitHubOrganizations'
     | 'removeWorkspaceGitHubOrganization'
   >;
+  availableOrganizationsEnabled: Ref<boolean> | ComputedRef<boolean>;
   enabled: Ref<boolean> | ComputedRef<boolean>;
   onError?: (
     message: string,
@@ -40,6 +44,10 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
     : 'An unexpected error occurred';
+}
+
+function normalizeGitHubLogin(login: string): string {
+  return login.trim().toLowerCase();
 }
 
 function getRecoveryPayload(
@@ -76,6 +84,7 @@ function getRecoveryPayload(
 }
 
 export function useAdminWorkspaceGitHubOrganizations({
+  availableOrganizationsEnabled,
   client = getAdminSettingsClient(),
   enabled,
   githubAppInstallUrl = null,
@@ -84,7 +93,7 @@ export function useAdminWorkspaceGitHubOrganizations({
   scope,
   userAppUrl = null,
 }: UseAdminWorkspaceGitHubOrganizationsOptions) {
-  const organizationLogin = ref('');
+  const selectedOrganization = ref<GitHubOwner | null>(null);
   const organizationLoginError = ref<string | null>(null);
   const recovery = ref<WorkspaceGitHubOrganizationRecoveryPayload | null>(
     null,
@@ -93,6 +102,11 @@ export function useAdminWorkspaceGitHubOrganizations({
   const query = useWorkspaceGitHubOrganizationsQuery({
     client,
     enabled,
+    scope,
+  });
+  const availableOrganizationsQuery = useAvailableGitHubOrganizationsQuery({
+    client,
+    enabled: availableOrganizationsEnabled,
     scope,
   });
   const addMutation = useAddWorkspaceGitHubOrganizationMutation({
@@ -106,6 +120,60 @@ export function useAdminWorkspaceGitHubOrganizations({
   const items = computed<WorkspaceGitHubOrganizationResponse[]>(
     () => query.data.value?.items ?? [],
   );
+  const allowedOrganizationLogins = computed(
+    () =>
+      new Set(
+        items.value.map((item) =>
+          normalizeGitHubLogin(item.organizationLogin),
+        ),
+      ),
+  );
+  const availableOrganizations = computed<GitHubOwner[]>(() =>
+    (availableOrganizationsQuery.data.value?.items ?? []).filter(
+      (owner) => owner.type === 'organization',
+    ),
+  );
+  const selectableOrganizations = computed<GitHubOwner[]>(() =>
+    availableOrganizations.value.filter(
+      (owner) =>
+        !allowedOrganizationLogins.value.has(normalizeGitHubLogin(owner.login)),
+    ),
+  );
+  const selectedOrganizationLogin = computed(
+    () => selectedOrganization.value?.login ?? '',
+  );
+  const availableOrganizationsLoading = computed(
+    () => availableOrganizationsQuery.isFetching.value,
+  );
+  const availableOrganizationsLoaded = computed(
+    () =>
+      availableOrganizationsQuery.data.value !== undefined ||
+      availableOrganizationsQuery.error.value !== null,
+  );
+  const availableOrganizationsInitialLoading = computed(
+    () =>
+      availableOrganizationsLoading.value && !availableOrganizationsLoaded.value,
+  );
+  const availableOrganizationsRequestError = computed(() =>
+    availableOrganizationsQuery.error.value
+      ? getErrorMessage(availableOrganizationsQuery.error.value)
+      : null,
+  );
+  const availableOrganizationsEmptyMessage = computed(() => {
+    if (
+      availableOrganizationsLoading.value ||
+      availableOrganizationsRequestError.value ||
+      selectableOrganizations.value.length > 0
+    ) {
+      return null;
+    }
+
+    if (availableOrganizations.value.length === 0) {
+      return 'Your connected GitHub account has no available organizations.';
+    }
+
+    return 'All available GitHub organizations are already allowed for this workspace.';
+  });
   const loading = computed(() => query.isFetching.value);
   const initialLoaded = computed(
     () => query.data.value !== undefined || query.error.value !== null,
@@ -140,9 +208,36 @@ export function useAdminWorkspaceGitHubOrganizations({
     }
   }
 
+  async function retryAvailableOrganizations(): Promise<void> {
+    try {
+      await availableOrganizationsQuery.refetch({ throwOnError: true });
+    } catch (error) {
+      onError?.(
+        getErrorMessage(error),
+        error,
+        'retry-available-github-organizations',
+      );
+    }
+  }
+
   async function addOrganization(): Promise<void> {
+    const organizationLogin = selectedOrganizationLogin.value;
+
+    if (!organizationLogin) {
+      organizationLoginError.value = 'Select a GitHub organization';
+      return;
+    }
+
+    if (
+      allowedOrganizationLogins.value.has(normalizeGitHubLogin(organizationLogin))
+    ) {
+      organizationLoginError.value =
+        'This organization is already allowed for this workspace';
+      return;
+    }
+
     const parsed = addWorkspaceGitHubOrganizationSchema.safeParse({
-      organizationLogin: organizationLogin.value,
+      organizationLogin,
     });
     if (!parsed.success) {
       organizationLoginError.value =
@@ -153,11 +248,10 @@ export function useAdminWorkspaceGitHubOrganizations({
     organizationLoginError.value = null;
 
     try {
-      organizationLogin.value = parsed.data.organizationLogin;
       await addMutation.mutateAsync(parsed.data);
       await query.refetch({ throwOnError: false });
       recovery.value = null;
-      organizationLogin.value = '';
+      selectedOrganization.value = null;
       onSuccess?.(
         'GitHub organization added.',
         'add-workspace-github-organization',
@@ -193,7 +287,7 @@ export function useAdminWorkspaceGitHubOrganizations({
     }
   }
 
-  watch(organizationLogin, () => {
+  watch(selectedOrganization, () => {
     organizationLoginError.value = null;
     recovery.value = null;
   });
@@ -211,18 +305,37 @@ export function useAdminWorkspaceGitHubOrganizations({
     },
   );
 
+  watch(
+    () => availableOrganizationsQuery.error.value,
+    (error) => {
+      if (!error) return;
+
+      onError?.(
+        getErrorMessage(error),
+        error,
+        'load-available-github-organizations',
+      );
+    },
+  );
+
   return {
     addOrganization,
     adding: computed(() => addMutation.isPending.value),
+    availableOrganizationsEmptyMessage,
+    availableOrganizationsInitialLoading,
+    availableOrganizationsLoading,
+    availableOrganizationsRequestError,
     isInitialLoading,
     items,
     loading,
-    organizationLogin,
     organizationLoginError,
     recoveryChecklist,
     removingOrganizationId,
     removeOrganization,
     requestError,
+    retryAvailableOrganizations,
     retryLoad,
+    selectableOrganizations,
+    selectedOrganization,
   };
 }

@@ -84,6 +84,18 @@ export class GithubService {
     };
   }
 
+  async listAvailableOrganizations(
+    user: AuthUser,
+  ): Promise<GitHubOwnerListResponse> {
+    const connection = await this.connectedConnection(user.sub);
+
+    return this.apiClient.listOwners(
+      connection.accessToken,
+      connection.account,
+      'organization',
+    );
+  }
+
   async listRepositories(
     user: AuthUser,
     query: GitHubRepositoryListQuery,

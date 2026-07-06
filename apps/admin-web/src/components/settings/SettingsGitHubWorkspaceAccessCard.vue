@@ -1,21 +1,38 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { WorkspaceGitHubOrganizationResponse } from '@gitiempo/shared';
+import { computed, ref, watch } from 'vue';
+import type {
+  GitHubOwner,
+  WorkspaceGitHubOrganizationResponse,
+} from '@gitiempo/shared';
+import { giTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
+import { filterAutocompleteOptions } from '@gitiempo/web-shared';
+import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Skeleton from 'primevue/skeleton';
 import RequestErrorBlock from '../RequestErrorBlock.vue';
 import SettingsCard from './SettingsCard.vue';
 import type { GitHubWorkspaceAccessChecklist } from './github-workspace-access';
 
-const organizationLogin = defineModel<string>('organizationLogin', {
-  required: true,
-});
+interface AutoCompleteCompleteEvent {
+  query: string;
+}
+
+const selectedOrganization = defineModel<GitHubOwner | null>(
+  'selectedOrganization',
+  {
+    required: true,
+  },
+);
 
 const props = defineProps<{
   addOrganizationGateMessage: string | null;
   adding: boolean;
+  availableOrganizationEmptyMessage: string | null;
+  availableOrganizations: readonly GitHubOwner[];
+  availableOrganizationsInitialLoading: boolean;
+  availableOrganizationsLoading: boolean;
+  availableOrganizationsRequestError: string | null;
   canAddOrganization: boolean;
   isInitialLoading: boolean;
   items: readonly WorkspaceGitHubOrganizationResponse[];
@@ -30,10 +47,37 @@ const emit = defineEmits<{
   remove: [organizationId: string];
   retry: [];
   retryAdd: [];
+  retryAvailableOrganizations: [];
 }>();
 
+const organizationSuggestions = ref<GitHubOwner[]>([]);
+
+function handleOrganizationComplete(event: AutoCompleteCompleteEvent): void {
+  organizationSuggestions.value = filterAutocompleteOptions(
+    props.availableOrganizations,
+    event.query ?? '',
+    (option) => option.label,
+  );
+}
+
+function handleOrganizationUpdate(value: GitHubOwner | string | null): void {
+  if (typeof value === 'string') {
+    return;
+  }
+
+  selectedOrganization.value = value;
+}
+
+const canAttemptAddOrganization = computed(
+  () =>
+    !props.adding &&
+    !props.availableOrganizationsLoading &&
+    !props.availableOrganizationsRequestError,
+);
+
 const canShowAddOrganization = computed(
-  () => props.canAddOrganization && !props.isInitialLoading && !props.requestError,
+  () =>
+    props.canAddOrganization && !props.isInitialLoading && !props.requestError,
 );
 const shouldShowAddGate = computed(
   () =>
@@ -41,6 +85,14 @@ const shouldShowAddGate = computed(
     !!props.addOrganizationGateMessage &&
     !props.isInitialLoading &&
     !props.requestError,
+);
+
+watch(
+  () => props.availableOrganizations,
+  (organizations) => {
+    organizationSuggestions.value = [...organizations];
+  },
+  { immediate: true },
 );
 </script>
 
@@ -226,28 +278,53 @@ const shouldShowAddGate = computed(
           Add organization
         </h3>
         <p class="text-text-muted text-[13px] leading-5">
-          Add another GitHub organization to the workspace allow-list.
-        </p>
-        <p class="text-text-muted text-xs leading-4">
-          Use the GitHub organization login, for example <code>octo-org</code>.
+          Select a GitHub organization visible to your connected account.
         </p>
       </div>
 
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div
+        v-if="availableOrganizationsRequestError"
+        data-testid="settings-github-available-organizations-error"
+      >
+        <RequestErrorBlock
+          :message="availableOrganizationsRequestError"
+          title="Failed to load GitHub organizations"
+          @retry="emit('retryAvailableOrganizations')"
+        />
+      </div>
+
+      <div
+        v-else
+        class="flex flex-col gap-3 sm:flex-row sm:items-end"
+      >
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
           <label
             for="settings-github-organization-login"
             class="text-text-dark text-[13px] font-medium"
           >
-            Organization login
+            GitHub organization
           </label>
-          <InputText
-            id="settings-github-organization-login"
-            v-model="organizationLogin"
+          <AutoComplete
+            append-to="self"
             class="h-[38px] w-full"
-            :disabled="adding"
+            complete-on-focus
+            data-key="login"
+            dropdown
+            dropdown-mode="blank"
+            force-selection
+            input-id="settings-github-organization-login"
+            :min-length="0"
+            option-label="label"
+            placeholder="Select organization"
+            show-clear
+            :disabled="adding || availableOrganizationsInitialLoading"
             :invalid="!!organizationLoginError"
-            autocomplete="off"
+            :loading="availableOrganizationsLoading"
+            :model-value="selectedOrganization"
+            :pt="giTiempoSelfAppendedAutoCompletePt"
+            :suggestions="organizationSuggestions"
+            @complete="handleOrganizationComplete"
+            @update:model-value="handleOrganizationUpdate(($event ?? null) as GitHubOwner | string | null)"
           />
           <Message
             v-if="organizationLoginError"
@@ -257,11 +334,25 @@ const shouldShowAddGate = computed(
           >
             {{ organizationLoginError }}
           </Message>
+          <p
+            v-else-if="availableOrganizationEmptyMessage"
+            data-testid="settings-github-available-organizations-empty"
+            class="text-text-muted text-xs leading-4"
+          >
+            {{ availableOrganizationEmptyMessage }}
+          </p>
+          <p
+            v-else
+            class="text-text-muted text-xs leading-4"
+          >
+            Only organizations visible to your connected GitHub account appear here.
+          </p>
         </div>
 
         <Button
           class="sm:shrink-0"
           label="Add organization"
+          :disabled="!canAttemptAddOrganization"
           :loading="adding"
           @click="emit('add')"
         />

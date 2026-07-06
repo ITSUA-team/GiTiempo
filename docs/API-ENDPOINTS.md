@@ -54,10 +54,11 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 
 ---
 
-## 4. GitHub Data (for task selector)
+## 4. GitHub Data
 
 | Method | Path                                 | Auth | Role | Description                               |
 | ------ | ------------------------------------ | ---- | ---- | ----------------------------------------- |
+| GET    | `/github/organizations`              | JWT  | Any  | List current user's connected GitHub organizations for admin workspace allow-list setup; this is not filtered by the workspace allow-list |
 | GET    | `/github/orgs`                       | JWT  | Any  | List user's GitHub organizations          |
 | GET    | `/github/orgs/:org/projects`         | JWT  | Any  | List GitHub Projects (V2) in organization |
 | GET    | `/github/orgs/:org/repos`            | JWT  | Any  | List repositories in organization         |
