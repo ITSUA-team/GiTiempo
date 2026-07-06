@@ -17,6 +17,7 @@ import { resolveDataPageState } from "@/lib/page-state";
 import { timeEntriesKeys } from "@/lib/query-keys";
 import { getUserServerStateScope } from "@/lib/server-state-scope";
 import { useAuthStore } from "@/stores/auth";
+import { useTimeEntryDirectTimerActions } from "@/composables/time-entries/useTimeEntryDirectTimerActions";
 
 export type {
   DashboardFocusItem,
@@ -25,7 +26,10 @@ export type {
   DashboardWeeklyFocus,
 } from "@/lib/dashboard-overview-helpers";
 
-type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
+type DashboardOverviewClient = Pick<
+  TimeEntriesClient,
+  "getCurrentTimer" | "listOwnEntries" | "startTimer" | "stopTimer"
+>;
 
 interface UseDashboardOverviewOptions {
   authStore?: ReturnType<typeof useAuthStore>;
@@ -111,6 +115,14 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
   const recentEntryRows = computed(() =>
     mapDashboardRecentEntryRows(recentEntries.value, nowMs.value),
   );
+  const directTimerActions = useTimeEntryDirectTimerActions({
+    client,
+    enabled: hasAccessToken,
+    logFeature: "dashboard",
+    loadEntries: retryLoadOverview,
+    scope,
+    toast,
+  });
 
   let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
@@ -153,10 +165,15 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
 
   return {
     dashboardStats,
+    isDirectStartBlockedByCurrentTimer: directTimerActions.isDirectStartBlockedByCurrentTimer,
     pageState,
     recentEntryRows,
     requestErrorMessage,
     retryLoadOverview,
+    startingTimerEntryId: directTimerActions.startingTimerEntryId,
+    startTimerForEntry: directTimerActions.startTimerForEntry,
+    stoppingTimerEntryId: directTimerActions.stoppingTimerEntryId,
+    stopTimerForEntry: directTimerActions.stopTimerForEntry,
     weeklyFocus,
   };
 }

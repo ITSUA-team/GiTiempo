@@ -3,18 +3,28 @@ import { computed } from "vue";
 import { PlayIcon, StopIcon } from "@heroicons/vue/24/solid";
 import Button from "primevue/button";
 
-import type { TimeEntryResponse } from "@gitiempo/shared";
+interface TimerActionEntry {
+  endedAt: string | null;
+  id: string;
+  task: {
+    title: string;
+  };
+}
 
 const props = defineProps<{
   action: "start" | "stop";
   disabled?: boolean;
-  entry: TimeEntryResponse;
+  entry: TimerActionEntry;
   isLoading?: boolean;
-  testIdPrefix: "time-entry" | "time-entry-mobile";
+  testIdPrefix:
+    | "dashboard-recent-entry"
+    | "dashboard-recent-entry-mobile"
+    | "time-entry"
+    | "time-entry-mobile";
 }>();
 
 const emit = defineEmits<{
-  trigger: [entry: TimeEntryResponse];
+  trigger: [entry: TimerActionEntry];
 }>();
 
 const buttonBaseClass = "h-8 w-12 min-w-0 shrink-0 rounded-[6px] p-0";

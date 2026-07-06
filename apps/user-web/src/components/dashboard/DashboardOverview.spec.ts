@@ -7,6 +7,8 @@ const pageState = ref<"empty" | "loading" | "ready" | "request-error">("ready");
 const requestErrorMessage = ref<string | null>(null);
 const retryLoadOverview = vi.fn(async () => undefined);
 const routerPush = vi.fn(async () => undefined);
+const startTimerForEntry = vi.fn(async () => undefined);
+const stopTimerForEntry = vi.fn(async () => undefined);
 const wrappers: VueWrapper[] = [];
 
 vi.mock("vue-router", async () => {
@@ -33,6 +35,12 @@ vi.mock("@/composables/dashboard/useDashboardOverview", () => ({
         isHighlighted: true,
         projectName: "Billing API",
         taskTitle: "Fix export column order",
+        timerEntry: {
+          endedAt: null,
+          id: "entry-1",
+          task: { title: "Fix export column order" },
+          taskId: "task-1",
+        },
         timeRangeLabel: "09:00 - 10:10",
       },
       {
@@ -41,11 +49,22 @@ vi.mock("@/composables/dashboard/useDashboardOverview", () => ({
         isHighlighted: false,
         projectName: "Project Orion",
         taskTitle: "Improve reports filters",
+        timerEntry: {
+          endedAt: "2026-04-21T11:00:00.000Z",
+          id: "entry-2",
+          task: { title: "Improve reports filters" },
+          taskId: "task-2",
+        },
         timeRangeLabel: "10:20 - Running",
       },
     ]),
+    isDirectStartBlockedByCurrentTimer: computed(() => false),
     requestErrorMessage,
     retryLoadOverview,
+    startingTimerEntryId: ref<string | null>(null),
+    startTimerForEntry,
+    stoppingTimerEntryId: ref<string | null>(null),
+    stopTimerForEntry,
     weeklyFocus: computed(() => ({
       project: {
         description: "3h 45m tracked across 4 entries",
@@ -73,6 +92,8 @@ describe("DashboardOverview", () => {
     requestErrorMessage.value = null;
     retryLoadOverview.mockClear();
     routerPush.mockClear();
+    startTimerForEntry.mockClear();
+    stopTimerForEntry.mockClear();
   });
 
   afterEach(() => {
@@ -132,8 +153,13 @@ describe("DashboardOverview", () => {
             `,
           },
           DashboardRecentEntriesCard: {
-            props: ["entries"],
-            emits: ["view-all"],
+            props: [
+              "entries",
+              "isStartTimerDisabled",
+              "startingTimerEntryId",
+              "stoppingTimerEntryId",
+            ],
+            emits: ["startTimer", "stopTimer", "view-all"],
             template: `
               <section data-testid="dashboard-recent-entries-card">
                 <h2>Recent Time Entries</h2>
@@ -142,7 +168,9 @@ describe("DashboardOverview", () => {
                   <span>{{ entry.taskTitle }}</span>
                   <span>{{ entry.durationLabel }}</span>
                 </div>
-                <button type="button" @click="$emit('view-all')">View all</button>
+                <button data-testid="dashboard-recent-stop" type="button" @click="$emit('stopTimer', entries[0].timerEntry)">Stop timer</button>
+                <button data-testid="dashboard-recent-start" type="button" @click="$emit('startTimer', entries[1].timerEntry)">Start timer</button>
+                <button data-testid="dashboard-recent-view-all" type="button" @click="$emit('view-all')">View all</button>
               </section>
             `,
           },
@@ -167,7 +195,7 @@ describe("DashboardOverview", () => {
   }
 
   it(
-    "renders the populated dashboard overview without page-level timer controls or duplicated header",
+    "renders the populated dashboard overview without duplicated header chrome",
     async () => {
       const wrapper = mountOverview();
 
@@ -179,12 +207,13 @@ describe("DashboardOverview", () => {
       expect(wrapper.text()).toContain("Top Focus This Week");
       expect(wrapper.text()).toContain("Recent Time Entries");
       expect(wrapper.text()).toContain("View all");
-      expect(
-        wrapper.findAll('button[aria-label="Start"], button[aria-label="Start timer"], button[aria-label="Stop"], button[aria-label="Stop timer"]'),
-      ).toHaveLength(0);
 
-      await wrapper.get("button").trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-stop"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-start"]').trigger("click");
+      await wrapper.get('[data-testid="dashboard-recent-view-all"]').trigger("click");
 
+      expect(stopTimerForEntry).toHaveBeenCalledWith(expect.objectContaining({ id: "entry-1" }));
+      expect(startTimerForEntry).toHaveBeenCalledWith(expect.objectContaining({ id: "entry-2" }));
       expect(routerPush).toHaveBeenCalledWith({ name: "time-entries" });
     },
     20_000,
