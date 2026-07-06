@@ -4,7 +4,7 @@ import type {
   GitHubOwner,
   WorkspaceGitHubOrganizationResponse,
 } from '@gitiempo/shared';
-import { giTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
+import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
 import { filterAutocompleteOptions } from '@gitiempo/web-shared';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
@@ -50,6 +50,18 @@ const emit = defineEmits<{
   retryAvailableOrganizations: [];
 }>();
 
+const githubOrganizationSelectorInputId =
+  'settings-github-organization-selector';
+const organizationAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
+  pcInputText: {
+    root: {
+      autocomplete: 'off',
+      'data-1p-ignore': 'true',
+      'data-bwignore': 'true',
+      'data-lpignore': 'true',
+    },
+  },
+});
 const organizationSuggestions = ref<GitHubOwner[]>([]);
 
 function handleOrganizationComplete(event: AutoCompleteCompleteEvent): void {
@@ -298,7 +310,7 @@ watch(
         class="flex flex-col gap-1.5"
       >
         <label
-          for="settings-github-organization-login"
+          :for="githubOrganizationSelectorInputId"
           class="text-text-dark text-[13px] font-medium"
         >
           GitHub organization
@@ -313,8 +325,9 @@ watch(
             dropdown
             dropdown-mode="blank"
             force-selection
-            input-id="settings-github-organization-login"
+            :input-id="githubOrganizationSelectorInputId"
             :min-length="0"
+            name="githubOrganizationSelector"
             option-label="label"
             placeholder="Select organization"
             show-clear
@@ -322,7 +335,7 @@ watch(
             :invalid="!!organizationLoginError"
             :loading="availableOrganizationsLoading"
             :model-value="selectedOrganization"
-            :pt="giTiempoSelfAppendedAutoCompletePt"
+            :pt="organizationAutoCompletePt"
             :suggestions="organizationSuggestions"
             @complete="handleOrganizationComplete"
             @update:model-value="handleOrganizationUpdate(($event ?? null) as GitHubOwner | string | null)"

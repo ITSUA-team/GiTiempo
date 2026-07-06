@@ -29,10 +29,11 @@ const ButtonStub = {
 
 const AutoCompleteStub = {
   emits: ['complete', 'update:modelValue'],
-  props: ['disabled', 'inputId', 'modelValue', 'optionLabel', 'suggestions'],
+  props: ['disabled', 'inputId', 'modelValue', 'optionLabel', 'pt', 'suggestions'],
   template: `
     <div>
       <input
+        v-bind="pt?.pcInputText?.root ?? {}"
         :id="inputId"
         :disabled="disabled"
         :value="modelValue?.[optionLabel] ?? ''"
@@ -176,7 +177,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(
       wrapper.get('[data-testid="settings-github-add-gate"]').text(),
     ).toContain('Connect your GitHub account before adding workspace organizations.');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(false);
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(false);
   });
 
   it('keeps saved rows removable while the add setup action is gated', async () => {
@@ -241,7 +242,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       ?.trigger('click');
 
     expect(wrapper.emitted('retry')).toHaveLength(1);
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(false);
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(false);
   });
 
   it('renders an organization autocomplete with immediate dropdown options', async () => {
@@ -261,13 +262,20 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.text()).not.toContain('Use the GitHub organization login');
     expect(
       wrapper.find(
-        '[data-testid="settings-github-organization-login-option-Octo-Org"]',
+        '[data-testid="settings-github-organization-selector-option-Octo-Org"]',
       ).exists(),
     ).toBe(true);
 
-    await wrapper.get('#settings-github-organization-login').trigger('focus');
+    const input = wrapper.get('#settings-github-organization-selector');
+
+    expect(input.attributes('autocomplete')).toBe('off');
+    expect(input.attributes('data-bwignore')).toBe('true');
+    expect(input.attributes('data-1p-ignore')).toBe('true');
+    expect(input.attributes('data-lpignore')).toBe('true');
+
+    await input.trigger('focus');
     await wrapper
-      .get('[data-testid="settings-github-organization-login-option-Octo-Org"]')
+      .get('[data-testid="settings-github-organization-selector-option-Octo-Org"]')
       .trigger('click');
 
     expect(wrapper.emitted('update:selectedOrganization')).toEqual([
@@ -317,7 +325,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       wrapper.get('[data-testid="settings-github-available-organizations-error"]')
         .text(),
     ).toContain('GitHub organizations unavailable');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(false);
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(false);
 
     await wrapper
       .findAll('button')

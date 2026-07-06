@@ -235,9 +235,9 @@ async function addOrganization(
   wrapper: ReturnType<typeof mountSettingsView>,
   organizationLogin = 'My-test-org-for-clock',
 ) {
-  await wrapper.get('#settings-github-organization-login').trigger('focus');
+  await wrapper.get('#settings-github-organization-selector').trigger('focus');
   await wrapper
-    .get(`[data-testid="settings-github-organization-login-option-${organizationLogin}"]`)
+    .get(`[data-testid="settings-github-organization-selector-option-${organizationLogin}"]`)
     .trigger('click');
   await wrapper
     .findAll('button')
@@ -381,7 +381,7 @@ describe('SettingsView', () => {
     ).not.toBeNull();
     expect(
       wrapper
-        .get('#settings-github-organization-login')
+        .get('#settings-github-organization-selector')
         .element.closest('form'),
     ).toBeNull();
     expect(
@@ -418,7 +418,7 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain(
       'Confirming your GitHub account connection before organization setup.',
     );
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       false,
     );
 
@@ -428,7 +428,7 @@ describe('SettingsView', () => {
     expect(
       wrapper.get('[data-testid="settings-github-account-connected"]'),
     ).toBeTruthy();
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       true,
     );
   });
@@ -454,7 +454,7 @@ describe('SettingsView', () => {
       'Connect your GitHub account before adding workspace organizations.',
     );
     expect(wrapper.text()).toContain('Octo-Org');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       false,
     );
     expect(
@@ -488,7 +488,7 @@ describe('SettingsView', () => {
     ).toBe('GiTiempo Studio');
     expect(wrapper.text()).toContain('Failed to load GitHub account status');
     expect(wrapper.text()).toContain('GitHub status unavailable');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       false,
     );
     expect(testMocks.errorToast).toHaveBeenCalledWith(
@@ -510,7 +510,7 @@ describe('SettingsView', () => {
     expect(
       wrapper.get('[data-testid="settings-github-account-connected"]'),
     ).toBeTruthy();
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       true,
     );
     expect(testMocks.getGitHubConnectionStatus).toHaveBeenCalledTimes(2);
@@ -667,7 +667,7 @@ describe('SettingsView', () => {
     await addOrganization(wrapper, 'Octo-Org');
 
     expect(
-      wrapper.get<HTMLInputElement>('#settings-github-organization-login')
+      wrapper.get<HTMLInputElement>('#settings-github-organization-selector')
         .element.value,
     ).toBe('Octo-Org');
     expect(testMocks.errorToast).toHaveBeenCalledWith(
