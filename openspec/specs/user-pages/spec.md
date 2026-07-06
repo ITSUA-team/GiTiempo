@@ -32,21 +32,23 @@ Each member-facing product page in the user-web app MUST assume an authenticated
 
 ### Requirement: User Dashboard Overview
 
-The user dashboard SHALL provide an authenticated overview page focused on weekly insight, recent entries, and optional summary stats, while relying on the global top-bar timer for timer controls.
+The user dashboard SHALL provide an authenticated overview page focused on weekly insight, recent entries, optional summary stats, and direct timer actions scoped only to recent time-entry rows/cards, while relying on the global top-bar timer for the standalone timer surface and task-picker flow.
 
 #### Scenario: Dashboard renders approved overview content
 
 - WHEN the dashboard loads
 - THEN the page shows weekly insight content and recent time-entry activity
 - AND the page may include optional stats cards or panels when data is available
-- AND the page does not render a page-content timer widget or stop control
+- AND the page does not render a standalone page-content timer widget or timer panel
+- AND Dashboard timer controls, when present, are limited to direct actions on Recent Time Entries rows or cards
 
 #### Scenario: Running timer ownership stays in global top bar
 
 - GIVEN the authenticated user has a running timer
 - WHEN the dashboard loads
-- THEN the dashboard does not provide timer stop controls in page content
-- AND the running timer is managed through the global top-bar timer surface
+- THEN the global top-bar timer remains the primary running timer surface
+- AND the dashboard may provide a direct `Stop timer` action only on the Recent Time Entries row or card that represents the authoritative running entry
+- AND the dashboard does not provide a separate timer widget, task-picker, pause/resume action, or standalone stop panel in page content
 
 #### Scenario: Dashboard shows initial skeleton loading
 
@@ -63,7 +65,7 @@ The user dashboard SHALL provide an authenticated overview page focused on weekl
 
 - WHEN the dashboard data request fails
 - THEN the page renders the approved request-failure state for the overview surface
-- AND the failure is surfaced without turning the page into a timer-control surface
+- AND the failure is surfaced without turning the page into a standalone timer-control surface
 
 ### Requirement: Global Top-Bar Timer
 
@@ -124,7 +126,7 @@ The user-web authenticated shell MUST expose timer state and task-context select
 
 ### Requirement: Top-Bar Timer Task Picker
 
-The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context, add an optional time-entry description, or create a new task inside the selected visible project; MUST remain usable from the mobile timer strip; MUST support popup-owned timer Start and Stop actions; MUST support reassigning the task and description of the currently running timer; and MUST rely on popup dismissal controls instead of a footer `Cancel` button.
+The user-web top-bar timer task picker MUST allow the user to choose an existing visible task context, append unsynced GitHub issues for visible GitHub-backed projects, add an optional time-entry description, or create a new task inside the selected visible project; MUST remain usable from the mobile timer strip; MUST support popup-owned timer Start and Stop actions; MUST support reassigning the task and description of the currently running timer; and MUST rely on popup dismissal controls instead of a footer `Cancel` button.
 
 #### Scenario: Existing task and description selected for idle timer context
 
@@ -209,6 +211,29 @@ The user-web top-bar timer task picker MUST allow the user to choose an existing
 - **THEN** the dialog renders a state specific to that condition
 - **AND** failed requests are not collapsed into empty-data messaging
 
+#### Scenario: GitHub-backed project appends unsynced issues in timer picker
+
+- **GIVEN** the top-bar timer task picker is open
+- **AND** the user selects a visible active GitHub-backed project
+- **WHEN** the project has open GitHub issues that are not yet represented by visible local tasks
+- **THEN** the picker keeps visible local tasks available first
+- **AND** it appends the unsynced GitHub issue options for that project
+
+#### Scenario: Selected GitHub issue is materialized before timer action
+
+- **GIVEN** the top-bar timer task picker is open
+- **AND** the user selects an unsynced GitHub issue option
+- **WHEN** the user starts an idle timer or confirms a running-timer task change
+- **THEN** the app first requests local task materialization for that issue
+- **AND** the subsequent timer start or running-entry update uses the returned local task id
+
+#### Scenario: GitHub suggestion failure stays distinct from empty timer options
+
+- **GIVEN** the top-bar timer task picker is open for a visible active GitHub-backed project
+- **WHEN** GitHub issue suggestion loading fails
+- **THEN** the picker keeps a request-failure state visible
+- **AND** it does not replace that failure with empty-task messaging
+
 #### Scenario: Mobile task picker keeps full-width actions usable
 
 - **GIVEN** the authenticated user opens the task picker from the mobile timer strip `Task & timer` opener
@@ -250,7 +275,7 @@ The user-web Time Entries create and edit popups SHALL follow the shared non-des
 - **AND** failed save attempts still keep the dialog open with pending values available for retry
 
 ### Requirement: Time Entries Page Record Management
-The Time Entries page MUST allow authenticated users to review, filter, create, edit, and delete their own time entries while keeping manual completed-entry creation out of the global top-bar timer surface.
+The Time Entries page MUST allow authenticated users to review, filter, create, edit, and delete their own time entries while keeping manual completed-entry creation out of the global top-bar timer surface, including GitHub-issue selection for visible GitHub-backed projects.
 
 #### Scenario: Page renders approved record-management shell
 
@@ -298,6 +323,29 @@ The Time Entries page MUST allow authenticated users to review, filter, create, 
 - **WHEN** the page renders pagination
 - **THEN** it uses the backend total and current page metadata for the PrimeVue paginator
 - **AND** changing page requests the corresponding server-side page without discarding active filters.
+
+#### Scenario: Manual entry dialog appends unsynced GitHub issues
+
+- **GIVEN** the user opens the manual time-entry create or edit dialog
+- **AND** the user selects a visible active GitHub-backed project
+- **WHEN** the project has open GitHub issues that are not yet represented by visible local tasks
+- **THEN** the dialog keeps visible local tasks available first
+- **AND** it appends unsynced GitHub issue options for that project
+
+#### Scenario: Manual entry dialog materializes selected GitHub issue before save
+
+- **GIVEN** the user opens the manual time-entry create or edit dialog
+- **AND** the selected task option is an unsynced GitHub issue
+- **WHEN** the user saves the dialog successfully
+- **THEN** the app first requests local task materialization for that issue
+- **AND** it creates or updates the time entry with the returned local task id
+
+#### Scenario: Manual entry dialog keeps GitHub suggestion request failure distinct
+
+- **GIVEN** the user opens the manual time-entry create or edit dialog for a visible active GitHub-backed project
+- **WHEN** GitHub issue suggestion loading fails
+- **THEN** the dialog keeps a request-failure state visible
+- **AND** it does not replace that failure with empty-task messaging
 
 ### Requirement: Time Entries Editing Flow
 
@@ -546,25 +594,31 @@ User-web record-list surfaces SHALL preserve desktop table rendering on tablet a
 - **WHEN** the page renders below the mobile breakpoint
 - **THEN** the recent entries section renders one stacked card per recent entry instead of the fixed-width desktop table
 - **AND** each card shows the entry task title, project name, time range, duration, and highlighted running/current-entry state when applicable
+- **AND** completed recent-entry cards expose an icon-only `Start timer` action for the entry's task
+- **AND** the active running recent-entry card exposes an icon-only `Stop timer` action
 - **AND** the `View all` action remains available from the recent entries section
 
 #### Scenario: Dashboard recent entries preserve desktop table
 - **GIVEN** the Dashboard recent time entries section has recent entry rows
 - **WHEN** the page renders at or above the mobile breakpoint
 - **THEN** the section continues to render the existing desktop table with task, project, range, and duration columns
+- **AND** completed recent-entry rows expose an icon-only `Start timer` action for the entry's task before the task label
+- **AND** the active running recent-entry row exposes an icon-only `Stop timer` action before the task label
 
 #### Scenario: Time entry day sections render mobile cards
 - **GIVEN** the Time Entries page has a day group with own time entries
 - **WHEN** the day section renders below the mobile breakpoint
 - **THEN** the section renders one stacked card per time entry instead of the fixed-width desktop entry table
 - **AND** each card shows the task title, optional description, project name, time range, duration, and running-entry highlight when applicable
-- **AND** completed entries expose icon-only `Edit` and `Delete` actions with accessible labels
-- **AND** running entries do not expose edit or delete actions and continue to direct stopping to the global top-bar timer
+- **AND** completed entry cards expose an icon-only `Start timer` action for the entry's task and keep the task title as the edit-entry affordance
+- **AND** active running entry cards expose an icon-only `Stop timer` action and do not expose edit or delete actions
 
 #### Scenario: Time entry day sections preserve desktop table
 - **GIVEN** the Time Entries page has a day group with own time entries
 - **WHEN** the day section renders at or above the mobile breakpoint
 - **THEN** the section continues to render the existing desktop entry table with task, project, time, duration, and actions columns
+- **AND** completed entries expose an icon-only `Start timer` action for the entry's task before the task label
+- **AND** active running entries expose an icon-only `Stop timer` action before the task label and do not expose edit or delete actions
 
 ### Requirement: Top-Bar Timer Changes Synchronize User Time Entry Lists
 
@@ -593,8 +647,7 @@ The user app SHALL synchronize visible Dashboard weekly aggregate state, Dashboa
 - **AND** the top-bar timer start action succeeds and returns a running time entry
 - **WHEN** the returned entry belongs in the Dashboard recent-entry scope
 - **THEN** the Recent Time Entries row or card for that entry SHALL appear or update without a page refresh
-- **AND** it SHALL use the running-entry range, live duration, and highlighted running/current visual state defined for Dashboard recent entries
-- **AND** the Dashboard SHALL NOT expose page-local timer stop controls.
+- **AND** it SHALL use the running-entry range, live duration, highlighted running/current visual state, and direct `Stop timer` action defined for Dashboard recent entries
 
 #### Scenario: Dashboard recent entries update after top-bar timer stop
 
@@ -604,6 +657,7 @@ The user app SHALL synchronize visible Dashboard weekly aggregate state, Dashboa
 - **THEN** the matching Dashboard row or card SHALL update without a page refresh
 - **AND** it SHALL render the completed range and duration from the returned entry
 - **AND** it SHALL no longer render running/current highlighting or live duration growth for that entry
+- **AND** it SHALL render the completed-entry direct `Start timer` action for that entry's task when direct starts are otherwise available
 - **AND** the recent-entry ordering SHALL continue to follow the backend list ordering semantics.
 
 #### Scenario: Time Entries list updates after top-bar timer start
@@ -644,6 +698,36 @@ The user app SHALL synchronize visible Dashboard weekly aggregate state, Dashboa
 - **GIVEN** the Dashboard or Time Entries page has visible time-entry list state
 - **WHEN** a top-bar timer start or stop action fails
 - **THEN** visible list state SHALL remain based on the previously loaded or reconciled entries.
+
+### Requirement: Dashboard Recent Entry Direct Timer Controls
+Dashboard Recent Time Entries SHALL provide direct timer actions only for listed recent entries, using the same task-targeted timer semantics as Time Entries row/card controls.
+
+#### Scenario: Completed dashboard recent entry starts a fresh timer
+- **GIVEN** the Dashboard Recent Time Entries section shows a completed entry
+- **AND** no current timer blocks direct starts
+- **WHEN** the user activates that entry's `Start timer` action
+- **THEN** the app starts a fresh running time entry for the same task
+- **AND** it does not open the global top-bar task-picker popup
+- **AND** the action uses task-specific accessible copy such as `Start timer for Improve reports filters`
+
+#### Scenario: Running dashboard recent entry stops only when authoritative
+- **GIVEN** the Dashboard Recent Time Entries section shows a running entry
+- **WHEN** the user activates that entry's `Stop timer` action
+- **THEN** the app verifies that the clicked entry is still the authoritative current timer before calling stop
+- **AND** if the current timer changed, the app refreshes timer and entry state and does not stop a different timer
+- **AND** the action uses task-specific accessible copy such as `Stop timer for Improve reports filters`
+
+#### Scenario: Dashboard recent entry direct starts are blocked by an active timer
+- **GIVEN** the Dashboard Recent Time Entries section shows a completed entry
+- **AND** the current timer guard reports an active running timer or is still fetching authoritative state
+- **WHEN** the entry renders
+- **THEN** the `Start timer` action is disabled
+- **AND** activating it does not start a timer or show a mutation failure toast
+
+#### Scenario: Dashboard direct timer mutations provide visible feedback
+- **WHEN** a Dashboard recent-entry direct start or stop succeeds
+- **THEN** the app shows success feedback and reconciles visible Dashboard timer state
+- **AND** failed direct starts or stops show an error toast using the backend or client error message
 
 ### Requirement: User Pages Use Browser-Local Timezone Semantics
 

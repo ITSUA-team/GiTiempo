@@ -201,13 +201,13 @@ The Projects list page MUST render loading, empty, and request-error states dist
 - **AND** the page provides retryable feedback for the failed load
 
 ### Requirement: User Projects Client Boundary Regression Safety
-Extending the user-web time/task client for Projects page task update and delete operations MUST NOT force unrelated read-only feature modules to depend on the full mutable task-management client surface.
+Extending the user-web time/task client for Projects page task update and delete operations MUST NOT force unrelated feature modules to depend on the full mutable task-management client surface; Dashboard overview MAY depend on the narrow own-entry read and timer lifecycle client surface required by Dashboard recent-entry controls.
 
-#### Scenario: Dashboard overview keeps a read-only client dependency
-- **GIVEN** the dashboard overview feature only reads own time entries
+#### Scenario: Dashboard overview keeps a narrow client dependency
+- **GIVEN** the dashboard overview feature reads own time entries and owns direct Dashboard recent-entry timer actions
 - **WHEN** the Projects page adds task update and delete methods to the existing time/task client
-- **THEN** the dashboard overview composable depends on a narrow read-only client boundary for its required entry-list operation
-- **AND** dashboard overview specs do not need to mock unrelated task mutation methods such as `updateTask` or `deleteTask`
+- **THEN** the dashboard overview composable depends on a narrow client boundary for own-entry listing, current-timer guard state, timer start, and timer stop operations
+- **AND** dashboard overview specs do not need to mock unrelated task management methods such as `updateTask`, `deleteTask`, task creation, project member assignment, or project mutation methods
 
 ### Requirement: User Projects Task Sections Adapt To Mobile Cards
 User-web Projects task sections SHALL preserve desktop table rendering on tablet and desktop viewports while rendering mobile-readable stacked task cards below the documented mobile breakpoint.
