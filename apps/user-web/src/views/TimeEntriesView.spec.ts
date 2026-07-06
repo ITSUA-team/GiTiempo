@@ -422,11 +422,12 @@ async function mountView(
             "formatTimeRange",
             "group",
             "isStartTimerDisabled",
+            "showHeader",
             "startingTimerEntryId",
             "stoppingTimerEntryId",
           ],
           template: `
-            <section>
+            <section :data-show-header="String(showHeader)">
               <p>{{ group.heading }}</p>
                 <div v-for="entry in group.items" :key="entry.id">
                   <p>{{ entry.id }} {{ entry.task.title }}</p>
@@ -621,6 +622,9 @@ describe("TimeEntriesView", () => {
     });
     expect(wrapper.get('[data-testid="date-range-filter"]').text()).toBe("");
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-clear")).toBe(
+      "true",
+    );
+    expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-button-bar")).toBe(
       "true",
     );
     expect(wrapper.get('[data-testid="date-range-filter"]').attributes("data-show-icon")).toBe(
@@ -1084,6 +1088,18 @@ describe("TimeEntriesView", () => {
     expect(dateRangeFilter.attributes("data-pt-root-class")).toBe("");
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("shadow-popover");
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("rounded-md");
+  });
+
+  it("hides filter labels and table column headers in the time entries view", async () => {
+    const client = createClientMock();
+    const { wrapper } = await mountView(client);
+
+    await flushPromises();
+
+    expect(wrapper.get('label[for="time-entries-date-range"]').classes()).toContain("sr-only");
+    expect(wrapper.get('label[for="time-entries-project-filter"]').classes()).toContain("sr-only");
+    expect(wrapper.get('label[for="time-entries-task-filter"]').classes()).toContain("sr-only");
+    expect(wrapper.findAll('[data-show-header="false"]')).toHaveLength(2);
   });
 
   it("clears the date range without dropping the other active filters", async () => {

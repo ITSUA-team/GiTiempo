@@ -47,13 +47,13 @@ const confirm = useConfirm();
 const toast = useToast();
 const appToast = createAppToast(toast);
 const topBarTimerDialogController = useTopBarTimerDialogController();
-const accessToken = computed(() => authStore.accessToken);
+const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
 const dialog = useTimeEntryDialog();
 const data = useTimeEntriesData({
-  accessToken,
   client,
+  enabled: isAuthenticated,
   entryListQuery: filters.entryListQuery,
   scope,
 });
@@ -104,13 +104,11 @@ const taskOptions = useTimeEntryTaskOptions({
   },
 });
 const mutations = useTimeEntryMutations({
-  accessToken,
   client,
   scope,
   toast,
 });
 const dialogWorkflow = useTimeEntryDialogWorkflow({
-  accessToken,
   client,
   confirm,
   dialog,
@@ -122,8 +120,8 @@ const dialogWorkflow = useTimeEntryDialogWorkflow({
   visibleProjects: data.visibleProjects,
 });
 const directTimerActions = useTimeEntryDirectTimerActions({
-  accessToken,
   client,
+  enabled: isAuthenticated,
   loadEntries: data.loadEntries,
   scope,
   toast,
@@ -328,13 +326,13 @@ onMounted(async () => {
         data-testid="time-entries-groups"
       >
         <TimeEntriesDaySection
-          v-for="(group, groupIndex) in groupedEntries"
+          v-for="group in groupedEntries"
           :key="group.dateKey"
           :format-duration="formatDuration"
           :format-time-range="formatTimeRange"
           :group="group"
           :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
-          :show-header="groupIndex === 0"
+          :show-header="false"
           :starting-timer-entry-id="startingTimerEntryId"
           :stopping-timer-entry-id="stoppingTimerEntryId"
           @create-for-day="(day) => void openCreateDialog(day)"

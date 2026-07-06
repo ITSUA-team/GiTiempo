@@ -43,16 +43,16 @@ function createClient(
 }
 
 function createSubject({
-  accessToken = 'access-token',
   client = createClient(),
+  enabled: isEnabled = true,
   onError = vi.fn(),
 }: {
-  accessToken?: string | null;
   client?: Pick<AdminSettingsClient, 'getWorkspace' | 'getWorkspaceSettings'>;
+  enabled?: boolean;
   onError?: AdminSettingsDataErrorHandler;
 } = {}) {
   let data!: ReturnType<typeof useAdminSettingsData>;
-  const token = ref<string | null>(accessToken);
+  const enabled = ref(isEnabled);
   const scope = shallowRef({
     role: 'admin' as const,
     userId: 'user-1',
@@ -63,8 +63,8 @@ function createSubject({
     defineComponent({
       setup() {
         data = useAdminSettingsData({
-          accessToken: token,
           client,
+          enabled,
           onError,
           scope,
         });
@@ -79,7 +79,7 @@ function createSubject({
     },
   );
 
-  return { client, data, onError, token };
+  return { client, data, enabled, onError };
 }
 
 describe('useAdminSettingsData', () => {
@@ -132,8 +132,8 @@ describe('useAdminSettingsData', () => {
     expect(onError).toHaveBeenCalledTimes(1);
   });
 
-  it('blocks load attempts when the access token is absent', async () => {
-    const { client, data, onError } = createSubject({ accessToken: null });
+  it('blocks load attempts when the auth gate is disabled', async () => {
+    const { client, data, onError } = createSubject({ enabled: false });
 
     await flushPromises();
 

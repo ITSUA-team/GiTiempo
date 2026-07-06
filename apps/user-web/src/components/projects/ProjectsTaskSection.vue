@@ -66,8 +66,8 @@ function getStatusPt(task: TaskResponse) {
 <template>
   <section class="flex flex-col gap-2.5">
     <div class="flex items-center justify-between gap-3">
-      <div class="flex flex-col gap-1">
-        <h2 class="text-text-dark text-base font-semibold">
+      <div class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h2 class="text-text-dark truncate text-base font-semibold">
           {{ props.project.name }}
         </h2>
         <p class="text-text-muted text-xs">
@@ -133,6 +133,7 @@ function getStatusPt(task: TaskResponse) {
       data-key="id"
       :header-class="projectTasksTableHeaderClass"
       :loading="false"
+      :show-header="false"
       shell-class="border-divider overflow-x-auto rounded-lg border bg-surface-primary"
       single-scroll
       table-class="min-w-[740px] w-full table-fixed border-collapse"

@@ -10,7 +10,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="border-divider flex h-[56px] items-center gap-3 border-t px-3">
+  <div class="border-divider flex h-[56px] items-center gap-3 border-b px-3 last:border-b-0">
     <template v-if="variant === 'members'">
       <div class="flex flex-1 items-center gap-3">
         <Skeleton

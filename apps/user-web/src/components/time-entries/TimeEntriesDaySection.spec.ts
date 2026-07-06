@@ -88,7 +88,7 @@ function mountSection(props: Partial<InstanceType<typeof TimeEntriesDaySection>[
       formatTimeRange: (entry: { endedAt: string | null }) =>
         entry.endedAt === null ? '09:00 - Running' : '09:00 - 10:30',
       group,
-      showHeader: true,
+      showHeader: false,
       ...props,
     },
     global: {
@@ -280,10 +280,10 @@ describe('TimeEntriesDaySection', () => {
     const wrapper = mountSection();
 
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.text()).toContain('Task');
-    expect(wrapper.text()).toContain('Project');
-    expect(wrapper.text()).toContain('Range');
-    expect(wrapper.text()).toContain('Duration');
+    expect(wrapper.findComponent({ name: 'ManagementTableShell' }).props('showHeader')).toBe(false);
+    expect(wrapper.text()).not.toContain('Task');
+    expect(wrapper.text()).not.toContain('Range');
+    expect(wrapper.text()).not.toContain('Duration');
     expect(wrapper.text()).not.toContain('Time');
     expect(wrapper.text()).not.toContain('Actions');
     expect(wrapper.text()).not.toContain('Stop from the top bar');

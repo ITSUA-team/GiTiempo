@@ -56,8 +56,8 @@ export function useDashboardOverview(options: UseDashboardOverviewOptions = {}) 
     limit: 100,
   }));
   const recentEntriesQuery = useRecentOwnTimeEntriesQuery({
-    accessToken,
     client,
+    enabled: hasAccessToken,
     queryKey: computed(() => timeEntriesKeys.list(scope.value, { limit: 10, page: 1 })),
     scope,
   });
