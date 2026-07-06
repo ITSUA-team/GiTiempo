@@ -295,18 +295,19 @@ watch(
 
       <div
         v-else
-        class="flex flex-col gap-3 sm:flex-row sm:items-end"
+        class="flex flex-col gap-1.5"
       >
-        <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-          <label
-            for="settings-github-organization-login"
-            class="text-text-dark text-[13px] font-medium"
-          >
-            GitHub organization
-          </label>
+        <label
+          for="settings-github-organization-login"
+          class="text-text-dark text-[13px] font-medium"
+        >
+          GitHub organization
+        </label>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
           <AutoComplete
             append-to="self"
-            class="h-[38px] w-full"
+            class="h-[38px] w-full sm:min-w-0 sm:flex-1"
             complete-on-focus
             data-key="login"
             dropdown
@@ -326,6 +327,17 @@ watch(
             @complete="handleOrganizationComplete"
             @update:model-value="handleOrganizationUpdate(($event ?? null) as GitHubOwner | string | null)"
           />
+
+          <Button
+            class="h-[38px] sm:shrink-0"
+            label="Add organization"
+            :disabled="!canAttemptAddOrganization"
+            :loading="adding"
+            @click="emit('add')"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1">
           <Message
             v-if="organizationLoginError"
             severity="error"
@@ -348,14 +360,6 @@ watch(
             Only organizations visible to your connected GitHub account appear here.
           </p>
         </div>
-
-        <Button
-          class="sm:shrink-0"
-          label="Add organization"
-          :disabled="!canAttemptAddOrganization"
-          :loading="adding"
-          @click="emit('add')"
-        />
       </div>
     </section>
   </SettingsCard>
