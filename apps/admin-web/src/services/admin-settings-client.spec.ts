@@ -29,6 +29,17 @@ const workspaceGitHubOrganizationResponse = {
   createdAt: '2026-05-01T10:00:00.000Z',
 };
 
+const githubConnectionStatusResponse = {
+  account: {
+    avatarUrl: 'https://avatars.example.test/octo.png',
+    connectedAt: '2026-05-01T10:00:00.000Z',
+    githubUserId: '123456',
+    login: 'octocat',
+    updatedAt: '2026-05-01T10:00:00.000Z',
+  },
+  status: 'connected',
+} as const;
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     headers: { 'Content-Type': 'application/json' },
@@ -131,6 +142,23 @@ describe('createAdminSettingsClient', () => {
       }),
     );
     expect(result.items).toEqual([workspaceGitHubOrganizationResponse]);
+  });
+
+  it('gets the current GitHub connection status without token material', async () => {
+    fetchFn.mockResolvedValue(jsonResponse(githubConnectionStatusResponse));
+
+    const result = await client.getGitHubConnectionStatus();
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/github/connection',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer access-token',
+        }),
+        method: 'GET',
+      }),
+    );
+    expect(result).toEqual(githubConnectionStatusResponse);
   });
 
   it('adds a workspace GitHub organization with the expected path, method, and payload', async () => {

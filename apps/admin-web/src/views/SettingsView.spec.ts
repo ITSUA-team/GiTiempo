@@ -14,6 +14,7 @@ import { createTestQueryPlugin } from '@/test/query-client';
 const testMocks = vi.hoisted(() => ({
   addWorkspaceGitHubOrganization: vi.fn(),
   errorToast: vi.fn(),
+  getGitHubConnectionStatus: vi.fn(),
   getWorkspace: vi.fn(),
   listWorkspaceGitHubOrganizations: vi.fn(),
   removeWorkspaceGitHubOrganization: vi.fn(),
@@ -26,6 +27,7 @@ const testMocks = vi.hoisted(() => ({
 vi.mock('@/services/admin-settings-client', () => ({
   getAdminSettingsClient: () => ({
     addWorkspaceGitHubOrganization: testMocks.addWorkspaceGitHubOrganization,
+    getGitHubConnectionStatus: testMocks.getGitHubConnectionStatus,
     getWorkspace: testMocks.getWorkspace,
     listWorkspaceGitHubOrganizations:
       testMocks.listWorkspaceGitHubOrganizations,
@@ -84,6 +86,22 @@ const workspaceGitHubOrganizationResponse = {
   createdByUserId: '44444444-4444-4444-8444-444444444444',
   createdAt: '2026-05-01T10:00:00.000Z',
 };
+
+const connectedGitHubStatus = {
+  account: {
+    avatarUrl: 'https://avatars.example.test/octo.png',
+    connectedAt: '2026-05-01T10:00:00.000Z',
+    githubUserId: '123456',
+    login: 'octocat',
+    updatedAt: '2026-05-01T10:00:00.000Z',
+  },
+  status: 'connected',
+} as const;
+
+const disconnectedGitHubStatus = {
+  account: null,
+  status: 'disconnected',
+} as const;
 
 const SkeletonStub = {
   name: 'Skeleton',
@@ -233,6 +251,7 @@ describe('SettingsView', () => {
   beforeEach(() => {
     testMocks.addWorkspaceGitHubOrganization.mockReset();
     testMocks.errorToast.mockReset();
+    testMocks.getGitHubConnectionStatus.mockReset();
     testMocks.getWorkspace.mockReset();
     testMocks.listWorkspaceGitHubOrganizations.mockReset();
     testMocks.removeWorkspaceGitHubOrganization.mockReset();
@@ -244,6 +263,7 @@ describe('SettingsView', () => {
     testMocks.addWorkspaceGitHubOrganization.mockResolvedValue(
       workspaceGitHubOrganizationResponse,
     );
+    testMocks.getGitHubConnectionStatus.mockResolvedValue(connectedGitHubStatus);
     testMocks.getWorkspace.mockResolvedValue(workspaceResponse);
     testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({ items: [] });
     testMocks.removeWorkspaceGitHubOrganization.mockResolvedValue(undefined);
@@ -320,6 +340,8 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Organization');
     expect(wrapper.text()).toContain('Legal entity');
     expect(wrapper.text()).toContain('Tax ID');
+    expect(wrapper.text()).toContain('GitHub Account');
+    expect(wrapper.text()).toContain('octocat');
     expect(wrapper.text()).toContain('GitHub Workspace Access');
     expect(
       wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
@@ -351,6 +373,120 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain(
       'No GitHub organizations are allowed for this workspace yet.',
     );
+  });
+
+  it('loads GitHub connection status independently and hides add setup while status is loading', async () => {
+    const githubStatusRequest = createDeferred<typeof connectedGitHubStatus>();
+    testMocks.getGitHubConnectionStatus.mockReturnValueOnce(
+      githubStatusRequest.promise,
+    );
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Workspace name');
+    expect(
+      wrapper.get('[data-testid="settings-github-account-loading"]'),
+    ).toBeTruthy();
+    expect(wrapper.text()).toContain(
+      'Confirming your GitHub account connection before organization setup.',
+    );
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+
+    githubStatusRequest.resolve(connectedGitHubStatus);
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="settings-github-account-connected"]'),
+    ).toBeTruthy();
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      true,
+    );
+  });
+
+  it('hides add setup while disconnected but keeps saved organizations visible and removable', async () => {
+    testMocks.getGitHubConnectionStatus.mockResolvedValueOnce(
+      disconnectedGitHubStatus,
+    );
+    testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({
+      items: [],
+    });
+    testMocks.listWorkspaceGitHubOrganizations.mockResolvedValueOnce({
+      items: [workspaceGitHubOrganizationResponse],
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="settings-github-account-disconnected"]'),
+    ).toBeTruthy();
+    expect(wrapper.text()).toContain(
+      'Connect your GitHub account before adding workspace organizations.',
+    );
+    expect(wrapper.text()).toContain('Octo-Org');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+    expect(
+      wrapper
+        .findAll('button')
+        .some((button) => button.text() === 'Add organization'),
+    ).toBe(false);
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Remove')
+      ?.trigger('click');
+    await flushPromises();
+
+    expect(testMocks.removeWorkspaceGitHubOrganization).toHaveBeenCalledWith(
+      '33333333-3333-4333-8333-333333333333',
+    );
+  });
+
+  it('keeps settings form data intact when GitHub connection status fails and retries the status request', async () => {
+    testMocks.getGitHubConnectionStatus
+      .mockRejectedValueOnce(new Error('GitHub status unavailable'))
+      .mockResolvedValueOnce(connectedGitHubStatus);
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Workspace name');
+    expect(
+      wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
+    ).toBe('GiTiempo Studio');
+    expect(wrapper.text()).toContain('Failed to load GitHub account status');
+    expect(wrapper.text()).toContain('GitHub status unavailable');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'GitHub status unavailable',
+      expect.objectContaining({
+        logContext: {
+          action: 'load-github-connection-status',
+          feature: 'settings-github-account',
+        },
+      }),
+    );
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Try again')
+      ?.trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="settings-github-account-connected"]'),
+    ).toBeTruthy();
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      true,
+    );
+    expect(testMocks.getGitHubConnectionStatus).toHaveBeenCalledTimes(2);
   });
 
   it('submits changed workspace fields through the settings form save action', async () => {

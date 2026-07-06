@@ -35,7 +35,9 @@ const InputTextStub = {
 
 function createProps(overrides: Record<string, unknown> = {}) {
   return {
+    addOrganizationGateMessage: null,
     adding: false,
+    canAddOrganization: true,
     isInitialLoading: false,
     items: [],
     organizationLogin: '',
@@ -121,6 +123,67 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.emitted('remove')).toEqual([['org-1']]);
   });
 
+  it('hides the add organization setup action when GitHub is disconnected', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          Button: ButtonStub,
+          InputText: InputTextStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        addOrganizationGateMessage:
+          'Connect your GitHub account before adding workspace organizations.',
+        canAddOrganization: false,
+      }),
+    });
+
+    expect(wrapper.text()).not.toContain('Add organization');
+    expect(
+      wrapper.get('[data-testid="settings-github-add-gate"]').text(),
+    ).toContain('Connect your GitHub account before adding workspace organizations.');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(false);
+  });
+
+  it('keeps saved rows removable while the add setup action is gated', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          Button: ButtonStub,
+          InputText: InputTextStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        addOrganizationGateMessage:
+          'Connect your GitHub account before adding workspace organizations.',
+        canAddOrganization: false,
+        items: [
+          {
+            id: 'org-1',
+            workspaceId: 'workspace-1',
+            organizationLogin: 'Octo-Org',
+            createdByUserId: 'user-1',
+            createdAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    expect(wrapper.text()).toContain('Octo-Org');
+    expect(wrapper.text()).not.toContain('Add organization');
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Remove')
+      ?.trigger('click');
+
+    expect(wrapper.emitted('remove')).toEqual([['org-1']]);
+  });
+
   it('shows the request-error state with retry', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
@@ -146,6 +209,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       ?.trigger('click');
 
     expect(wrapper.emitted('retry')).toHaveLength(1);
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(false);
   });
 
   it('renders the GitHub App recovery checklist with link and retry actions', async () => {

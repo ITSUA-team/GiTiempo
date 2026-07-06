@@ -3,12 +3,15 @@ import { computed, watch } from 'vue';
 
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import SettingsForm from '@/components/settings/SettingsForm.vue';
+import SettingsGitHubAccountCard from '@/components/settings/SettingsGitHubAccountCard.vue';
 import SettingsGitHubWorkspaceAccessCard from '@/components/settings/SettingsGitHubWorkspaceAccessCard.vue';
 import SettingsPageSkeleton from '@/components/settings/SettingsPageSkeleton.vue';
+import { buildUserProfileHref } from '@/components/settings/github-workspace-access';
 import { appEnv } from '@/config/env';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useAdminSettingsData } from '@/composables/settings/useAdminSettingsData';
 import { useAdminSettingsForm } from '@/composables/settings/useAdminSettingsForm';
+import { useAdminSettingsGitHubConnection } from '@/composables/settings/useAdminSettingsGitHubConnection';
 import { useAdminWorkspaceGitHubOrganizations } from '@/composables/settings/useAdminWorkspaceGitHubOrganizations';
 import { useAdminSettingsPersistence } from '@/composables/settings/useAdminSettingsPersistence';
 import { toAdminSettingsFormValues } from '@/composables/settings/admin-settings-form';
@@ -55,6 +58,16 @@ const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
   scope,
   userAppUrl: appEnv.userAppUrl,
 });
+const gitHubConnection = useAdminSettingsGitHubConnection({
+  enabled: isAuthenticated,
+  onError(message, error, action) {
+    errorToast(message, {
+      error,
+      logContext: { action, feature: 'settings-github-account' },
+    });
+  },
+  scope,
+});
 const {
   currencyOptions,
   fieldErrors,
@@ -74,6 +87,22 @@ const {
 } = settingsData;
 const { saveSettings: persistSettings, saving } = settingsPersistence;
 const canSave = computed(() => isDirty.value && !saving.value && !loading.value);
+const gitHubProfileHref = computed(() => buildUserProfileHref(appEnv.userAppUrl));
+const gitHubAddGateMessage = computed(() => {
+  if (gitHubConnection.isInitialLoading.value) {
+    return 'Confirming your GitHub account connection before organization setup.';
+  }
+
+  if (gitHubConnection.requestError.value) {
+    return 'Reload your GitHub account status before adding workspace organizations.';
+  }
+
+  if (!gitHubConnection.isConnected.value) {
+    return 'Connect your GitHub account before adding workspace organizations.';
+  }
+
+  return null;
+});
 
 function syncWorkspaceName(values = persisted.value): void {
   if (!values) return;
@@ -159,9 +188,19 @@ watch(
         @save="saveSettings"
       >
         <template #after-card>
+          <SettingsGitHubAccountCard
+            :connection="gitHubConnection.connection.value"
+            :is-initial-loading="gitHubConnection.isInitialLoading.value"
+            :profile-href="gitHubProfileHref"
+            :request-error="gitHubConnection.requestError.value"
+            @retry="gitHubConnection.retryLoad"
+          />
+
           <SettingsGitHubWorkspaceAccessCard
             v-model:organization-login="workspaceGitHubOrganizations.organizationLogin.value"
+            :add-organization-gate-message="gitHubAddGateMessage"
             :adding="workspaceGitHubOrganizations.adding.value"
+            :can-add-organization="gitHubConnection.isConnected.value"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"
