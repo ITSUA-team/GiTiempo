@@ -27,9 +27,12 @@ const emit = defineEmits<{
   trigger: [entry: TimerActionEntry];
 }>();
 
-const buttonBaseClass = "h-8 w-12 min-w-0 shrink-0 rounded-[6px] p-0";
+const buttonBaseClass =
+  "inline-flex h-8 w-12 min-w-0 shrink-0 cursor-pointer items-center justify-center rounded-[6px] p-0 disabled:cursor-not-allowed";
 const startDisabledClass =
   `${buttonBaseClass} border-divider bg-surface-primary text-text-subtle border`;
+const timerActionSpinnerClass =
+  "size-4 animate-spin rounded-full border-2 border-text-inverse/30 border-t-text-inverse";
 
 const isStartAction = computed(() => props.action === "start");
 const label = computed(() =>
@@ -38,9 +41,11 @@ const label = computed(() =>
     : `Stop timer for ${props.entry.task.title}`,
 );
 const rootClass = computed(() =>
-  isStartAction.value && props.disabled === true
-    ? startDisabledClass
-    : buttonBaseClass,
+  props.isLoading === true
+    ? buttonBaseClass
+    : isStartAction.value && props.disabled === true
+      ? startDisabledClass
+      : buttonBaseClass,
 );
 const iconClass = computed(() =>
   isStartAction.value && props.disabled === true
@@ -80,17 +85,26 @@ function handleClick(): void {
   <Button
     v-tooltip.bottom="tooltip"
     :aria-label="label"
+    :aria-busy="props.isLoading === true ? 'true' : undefined"
     :aria-disabled="props.disabled === true ? 'true' : undefined"
     :data-testid="testId"
     :disabled="isNativeDisabled"
-    :loading="props.isLoading"
     type="button"
     :pt="{
       root: { class: rootClass },
     }"
     @click="handleClick"
   >
-    <span :data-icon="isStartAction ? 'play' : 'stop'">
+    <span
+      v-if="props.isLoading"
+      aria-hidden="true"
+      :class="timerActionSpinnerClass"
+      data-testid="time-entry-timer-action-spinner"
+    />
+    <span
+      v-else
+      :data-icon="isStartAction ? 'play' : 'stop'"
+    >
       <PlayIcon
         v-if="isStartAction"
         aria-hidden="true"

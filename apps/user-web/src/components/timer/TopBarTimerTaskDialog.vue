@@ -117,6 +117,14 @@ const hasSelectedTaskOption = computed(() => isTaskOption(mobileTaskModel.value)
 const isSelectionModelIncomplete = computed(
   () => !hasSelectedProjectOption.value || !hasSelectedTaskOption.value,
 );
+const confirmButtonLoading = computed(() =>
+  isNewTaskSelected.value ? props.isCreatingTask : props.isConfirmingSelection,
+);
+const primaryButtonLoading = computed(() =>
+  props.primaryActionLabel === "Stop" || !isNewTaskSelected.value
+    ? props.isPrimaryActionPending
+    : props.isCreatingTask,
+);
 const isTaskAutoCompleteDisabled = computed(
   () =>
     !hasSelectedProjectOption.value ||
@@ -132,12 +140,14 @@ const isNewTaskTitleInputDisabled = computed(
 const isPrimaryButtonDisabled = computed(
   () =>
     props.isPrimaryActionDisabled ||
+    primaryButtonLoading.value ||
     (props.primaryActionLabel !== "Stop" && isSelectionModelIncomplete.value),
 );
 const isConfirmButtonDisabled = computed(
   () =>
     props.isCrossWorkspaceTimer ||
     props.isConfirmSelectionDisabled ||
+    confirmButtonLoading.value ||
     isSelectionModelIncomplete.value,
 );
 const selectedProjectName = computed(
@@ -149,15 +159,6 @@ const newTaskHint = computed(() => {
 
   return `This task is created in ${projectName} and inherits the project billable default when you ${actionLabel}.`;
 });
-const confirmButtonLoading = computed(() =>
-  isNewTaskSelected.value ? props.isCreatingTask : props.isConfirmingSelection,
-);
-const primaryButtonLoading = computed(() =>
-  props.primaryActionLabel === "Stop" || !isNewTaskSelected.value
-    ? props.isPrimaryActionPending
-    : props.isCreatingTask,
-);
-
 function findProjectOption(projectId: string | null): ProjectResponse | null {
   if (!projectId) {
     return null;
@@ -485,43 +486,70 @@ watch(
           v-if="isMobileViewport && props.primaryActionLabel === 'Stop'"
           unstyled
           type="button"
-          class="bg-brand text-text-inverse border-brand h-[37px] w-full rounded-sm border px-4 text-sm font-semibold"
+          :aria-busy="primaryButtonLoading ? 'true' : undefined"
+          :aria-label="primaryButtonLabel"
+          class="bg-brand text-text-inverse border-brand inline-flex h-[37px] min-w-[96px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed"
+          data-testid="top-bar-timer-primary-action"
           :disabled="isPrimaryButtonDisabled"
           :fluid="true"
-          :label="primaryButtonLabel"
-          :loading="primaryButtonLoading"
           @click="emit('primaryAction')"
-        />
+        >
+          <span
+            v-if="primaryButtonLoading"
+            aria-hidden="true"
+            class="border-text-inverse/30 border-t-text-inverse size-4 animate-spin rounded-full border-2"
+            data-testid="top-bar-timer-primary-action-spinner"
+          />
+          <span v-else>{{ primaryButtonLabel }}</span>
+        </Button>
         <Button
           v-if="props.primaryActionLabel === 'Stop' && !props.isCrossWorkspaceTimer"
           unstyled
           type="button"
+          :aria-busy="confirmButtonLoading ? 'true' : undefined"
+          aria-label="Change task"
           :class="[
-            'border-divider bg-surface-primary text-text-dark h-[37px] rounded-sm border px-4 text-sm font-semibold',
+            'border-divider bg-surface-primary text-text-dark inline-flex h-[37px] min-w-[108px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed',
             isMobileViewport ? 'w-full' : 'w-auto',
           ]"
+          data-testid="top-bar-timer-confirm-action"
           :disabled="isConfirmButtonDisabled"
           :fluid="isMobileViewport"
-          label="Change task"
-          :loading="confirmButtonLoading"
           severity="secondary"
           variant="outlined"
           @click="emit('confirm')"
-        />
+        >
+          <span
+            v-if="confirmButtonLoading"
+            aria-hidden="true"
+            class="border-brand/30 border-t-brand size-4 animate-spin rounded-full border-2"
+            data-testid="top-bar-timer-confirm-action-spinner"
+          />
+          <span v-else>Change task</span>
+        </Button>
         <Button
           v-if="!isMobileViewport || props.primaryActionLabel !== 'Stop'"
           unstyled
           type="button"
+          :aria-busy="primaryButtonLoading ? 'true' : undefined"
+          :aria-label="primaryButtonLabel"
           :class="[
-            'bg-brand text-text-inverse border-brand h-[37px] rounded-sm border px-4 text-sm font-semibold',
+            'bg-brand text-text-inverse border-brand inline-flex h-[37px] min-w-[96px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed',
             isMobileViewport ? 'w-full' : 'w-auto',
           ]"
+          data-testid="top-bar-timer-primary-action"
           :disabled="isPrimaryButtonDisabled"
           :fluid="isMobileViewport"
-          :label="primaryButtonLabel"
-          :loading="primaryButtonLoading"
           @click="emit('primaryAction')"
-        />
+        >
+          <span
+            v-if="primaryButtonLoading"
+            aria-hidden="true"
+            class="border-text-inverse/30 border-t-text-inverse size-4 animate-spin rounded-full border-2"
+            data-testid="top-bar-timer-primary-action-spinner"
+          />
+          <span v-else>{{ primaryButtonLabel }}</span>
+        </Button>
       </div>
     </div>
   </Dialog>

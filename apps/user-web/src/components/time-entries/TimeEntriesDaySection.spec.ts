@@ -152,6 +152,7 @@ describe('TimeEntriesDaySection', () => {
 
     expect(stopTimerButton.attributes('aria-label')).toBe('Stop timer for Improve reports filters');
     expect(stopTimerButton.attributes('data-tooltip-value')).toBe('Stop timer for Improve reports filters');
+    expect(stopTimerButton.classes()).toContain('cursor-pointer');
     expect(stopTimerButton.find('[data-icon="stop"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="time-entry-stop-timer-entry-completed"]').exists()).toBe(false);
 
@@ -236,8 +237,14 @@ describe('TimeEntriesDaySection', () => {
   it('disables active timer stops while a stop request is pending', async () => {
     const wrapper = mountSection({ stoppingTimerEntryId: 'entry-running' });
     const stopTimerButton = wrapper.get('[data-testid="time-entry-stop-timer-entry-running"]');
+    const spinner = stopTimerButton.get('[data-testid="time-entry-timer-action-spinner"]');
 
     expect(stopTimerButton.attributes('disabled')).toBeDefined();
+    expect(stopTimerButton.attributes('aria-busy')).toBe('true');
+    expect(stopTimerButton.classes()).toContain('items-center');
+    expect(stopTimerButton.classes()).toContain('justify-center');
+    expect(spinner.classes()).toContain('border-t-text-inverse');
+    expect(stopTimerButton.find('[data-icon="stop"]').exists()).toBe(false);
 
     await stopTimerButton.trigger('click');
 
