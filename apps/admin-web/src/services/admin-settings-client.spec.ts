@@ -29,6 +29,17 @@ const workspaceGitHubOrganizationResponse = {
   createdAt: '2026-05-01T10:00:00.000Z',
 };
 
+const githubConnectionResponse = {
+  status: 'connected',
+  account: {
+    githubUserId: 'github-user-1',
+    login: 'octocat',
+    avatarUrl: 'https://avatars.example.test/octocat.png',
+    connectedAt: '2026-06-18T00:00:00.000Z',
+    updatedAt: '2026-06-18T00:00:00.000Z',
+  },
+};
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     headers: { 'Content-Type': 'application/json' },
@@ -133,6 +144,23 @@ describe('createAdminSettingsClient', () => {
     expect(result.items).toEqual([workspaceGitHubOrganizationResponse]);
   });
 
+  it('gets GitHub connection status with auth headers and parses the response', async () => {
+    fetchFn.mockResolvedValue(jsonResponse(githubConnectionResponse));
+
+    const result = await client.getGitHubConnectionStatus();
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/github/connection',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer access-token',
+        }),
+        method: 'GET',
+      }),
+    );
+    expect(result).toEqual(githubConnectionResponse);
+  });
+
   it('adds a workspace GitHub organization with the expected path, method, and payload', async () => {
     fetchFn.mockResolvedValue(
       jsonResponse(workspaceGitHubOrganizationResponse),
@@ -216,6 +244,14 @@ describe('createAdminSettingsClient', () => {
     );
 
     await expect(client.getWorkspaceSettings()).rejects.toThrow();
+  });
+
+  it('rejects invalid GitHub connection response shapes', async () => {
+    fetchFn.mockResolvedValue(
+      jsonResponse({ status: 'connected', account: null }),
+    );
+
+    await expect(client.getGitHubConnectionStatus()).rejects.toThrow();
   });
 
   it('rejects invalid update payloads before sending requests', async () => {

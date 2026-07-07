@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type {
   AddWorkspaceGitHubOrganizationInput,
+  GitHubConnectionStatusResponse,
   ManagementProjectSummaryResponse,
   ProjectListResponse,
   TimeReportExportQuery,
@@ -48,6 +49,10 @@ interface TimeReportClient {
   getTimeReport(
     query?: Partial<TimeReportQuery>,
   ): Promise<TimeReportResponse>;
+}
+
+interface GitHubConnectionStatusClient {
+  getGitHubConnectionStatus(): Promise<GitHubConnectionStatusResponse>;
 }
 
 interface UpdateWorkspaceClient {
@@ -101,6 +106,10 @@ interface UseAdminProjectsQueryOptions extends AdminScopedQueryOptions {
 
 interface UseExportTimeReportMutationOptions extends AdminScopedMutationOptions {
   client: ExportTimeReportClient;
+}
+
+interface UseGitHubConnectionStatusQueryOptions extends AdminScopedQueryOptions {
+  client: GitHubConnectionStatusClient;
 }
 
 interface UseManagementProjectSummaryQueryOptions extends AdminScopedQueryOptions {
@@ -177,6 +186,17 @@ export const useExportTimeReportMutation = (
   useMutation({
     mutationFn: (query: Partial<TimeReportExportQuery>) =>
       options.client.exportTimeReport(query),
+  });
+
+export const useGitHubConnectionStatusQuery = (
+  options: UseGitHubConnectionStatusQueryOptions,
+) =>
+  useQuery({
+    queryKey: computed(() =>
+      adminSettingsKeys.githubConnection(toValue(options.scope)),
+    ),
+    enabled: computed(() => isQueryEnabled(options)),
+    queryFn: () => options.client.getGitHubConnectionStatus(),
   });
 
 export const useAddWorkspaceGitHubOrganizationMutation = (

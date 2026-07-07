@@ -9,9 +9,11 @@ import { appEnv } from '@/config/env';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useAdminSettingsData } from '@/composables/settings/useAdminSettingsData';
 import { useAdminSettingsForm } from '@/composables/settings/useAdminSettingsForm';
+import { useAdminSettingsGitHubConnection } from '@/composables/settings/useAdminSettingsGitHubConnection';
 import { useAdminWorkspaceGitHubOrganizations } from '@/composables/settings/useAdminWorkspaceGitHubOrganizations';
 import { useAdminSettingsPersistence } from '@/composables/settings/useAdminSettingsPersistence';
 import { toAdminSettingsFormValues } from '@/composables/settings/admin-settings-form';
+import { buildGitHubProfileHref } from '@/components/settings/github-workspace-access';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
@@ -36,6 +38,16 @@ const settingsPersistence = useAdminSettingsPersistence({
     errorToast(message, {
       error,
       logContext: { action: 'save-settings', feature: 'settings' },
+    });
+  },
+  scope,
+});
+const githubConnection = useAdminSettingsGitHubConnection({
+  enabled: isAuthenticated,
+  onError(message, error, action) {
+    errorToast(message, {
+      error,
+      logContext: { action, feature: 'settings-github-connection' },
     });
   },
   scope,
@@ -74,6 +86,7 @@ const {
 } = settingsData;
 const { saveSettings: persistSettings, saving } = settingsPersistence;
 const canSave = computed(() => isDirty.value && !saving.value && !loading.value);
+const githubProfileUrl = computed(() => buildGitHubProfileHref(appEnv.userAppUrl));
 
 function syncWorkspaceName(values = persisted.value): void {
   if (!values) return;
@@ -162,6 +175,10 @@ watch(
           <SettingsGitHubWorkspaceAccessCard
             v-model:organization-login="workspaceGitHubOrganizations.organizationLogin.value"
             :adding="workspaceGitHubOrganizations.adding.value"
+            :github-connection-loading="githubConnection.isInitialLoading.value"
+            :github-connection-request-error="githubConnection.requestError.value"
+            :github-connection-status="githubConnection.connectionStatus.value"
+            :github-profile-url="githubProfileUrl"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"
@@ -170,6 +187,7 @@ watch(
             :request-error="workspaceGitHubOrganizations.requestError.value"
             @add="workspaceGitHubOrganizations.addOrganization"
             @remove="workspaceGitHubOrganizations.removeOrganization"
+            @retry-github-connection="githubConnection.retryLoad"
             @retry="workspaceGitHubOrganizations.retryLoad"
             @retry-add="workspaceGitHubOrganizations.addOrganization"
           />

@@ -56,7 +56,7 @@ function buildOrganizationInstallationsUrl(organizationLogin: string): string {
   )}/settings/installations`;
 }
 
-function buildReconnectHref(
+export function buildGitHubProfileHref(
   userAppUrl: string | null | undefined,
 ): string | null {
   if (!userAppUrl) {
@@ -202,7 +202,7 @@ export function buildGitHubWorkspaceAccessChecklist({
   const installUrl = resolveGitHubAppInstallUrl(githubAppInstallUrl);
   const organizationInstallationsUrl =
     buildOrganizationInstallationsUrl(organizationLogin);
-  const reconnectHref = buildReconnectHref(userAppUrl);
+  const reconnectHref = buildGitHubProfileHref(userAppUrl);
 
   return {
     organizationLogin,
