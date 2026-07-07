@@ -99,8 +99,8 @@ export const adminSettingsKeys = {
     ['admin-web', normalizeScope(scope), 'settings'] as const,
   availableGitHubOrganizations: (scope: AdminServerStateScope) =>
     [...adminSettingsKeys.all(scope), 'available-github-organizations'] as const,
-  githubConnectionStatus: (scope: AdminServerStateScope) =>
-    [...adminSettingsKeys.all(scope), 'github-connection-status'] as const,
+  githubConnection: (scope: AdminServerStateScope) =>
+    [...adminSettingsKeys.all(scope), 'github-connection'] as const,
   workspaceGitHubOrganizations: (scope: AdminServerStateScope) =>
     [...adminSettingsKeys.all(scope), 'workspace-github-organizations'] as const,
   workspace: (scope: AdminServerStateScope) =>

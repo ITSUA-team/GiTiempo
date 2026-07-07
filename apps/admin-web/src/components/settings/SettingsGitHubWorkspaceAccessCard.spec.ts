@@ -73,7 +73,6 @@ function createProps(overrides: Record<string, unknown> = {}) {
     canAddOrganization: true,
     isInitialLoading: false,
     items: [],
-    organizationLogin: '',
     organizationLoginError: null,
     recoveryChecklist: null,
     removingOrganizationId: null,
@@ -419,4 +418,5 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
 
     expect(wrapper.emitted('retryAdd')).toHaveLength(1);
   });
+
 });

@@ -7,14 +7,13 @@ The admin Settings page MUST replace the placeholder with a PrimeVue/Tailwind wo
 #### Scenario: Settings page renders approved structure within API scope
 
 - **WHEN** an authenticated admin opens the Settings page
-- **THEN** the page renders a `Settings` header with supporting copy based on the approved `GITiempo.pen` Settings design
-- **AND** the page shows settings cards sized to the approved 620px desktop treatment and responsive on small screens
+- **THEN** the page renders settings cards sized to the approved 620px desktop treatment and responsive on small screens
 - **AND** the workspace settings card renders editable current API fields for Workspace name, Default hourly rate, Currency, and Time zone
 - **AND** Time zone is a full-width PrimeVue selector populated with contract-valid time-zone options, including `UTC` and IANA time-zone names, plus the current persisted time-zone value and current draft/form time-zone value
 - **AND** the workspace settings card renders inactive future fields for Invoice prefix, Payment terms, Legal entity, and Tax ID matching the approved design sections
 - **AND** the page shows bottom-aligned `Cancel` and primary `Save Settings` actions for the workspace settings form
-- **AND** the page includes a GitHub Account section for the current user's connection prerequisite
-- **AND** the page includes the GitHub Workspace Access section for workspace organization policy management
+- **AND** the page includes a GitHub Account card for the current user's connection prerequisite
+- **AND** the page includes the GitHub Workspace Access card for workspace organization policy management
 
 #### Scenario: Unsupported design fields are inactive and not saved
 
@@ -32,15 +31,15 @@ The admin Settings page MUST show the current user's GitHub account connection s
 #### Scenario: GitHub account status is loading
 
 - **WHEN** the Settings page is waiting for the current user's GitHub connection status
-- **THEN** the GitHub Account section renders a loading state
-- **AND** the GitHub Workspace Access section does not expose the `Add organization` setup action
+- **THEN** the GitHub Account card renders a loading state
+- **AND** the GitHub Workspace Access card does not expose the `Add organization` setup action
 
 #### Scenario: GitHub account is connected
 
 - **GIVEN** the current user has a connected GitHub account
 - **WHEN** the Settings page renders GitHub account status
-- **THEN** the GitHub Account section shows a connected state using safe account display details from the connection status response
-- **AND** the GitHub Workspace Access section can expose the `Add organization` setup action when its own workspace policy state allows adding organizations
+- **THEN** the GitHub Account card shows a connected state using safe account display details from the connection status response
+- **AND** the GitHub Workspace Access card can expose the `Add organization` setup action when its own workspace policy state allows adding organizations
 
 #### Scenario: Connected GitHub account loads selectable organizations
 
@@ -55,19 +54,29 @@ The admin Settings page MUST show the current user's GitHub account connection s
 
 - **GIVEN** the current user's GitHub account status is connected
 - **WHEN** the available GitHub organizations request fails
-- **THEN** the GitHub Workspace Access section renders retryable error guidance for the selector
+- **THEN** the GitHub Workspace Access card renders retryable error guidance for the selector
 - **AND** it does not send organization add requests until a selectable organization is loaded and selected
 
 #### Scenario: GitHub account is disconnected
 
 - **GIVEN** the current user has no connected GitHub account
 - **WHEN** the Settings page renders GitHub account status
-- **THEN** the GitHub Account section explains that connecting GitHub is required before adding workspace organizations
-- **AND** the GitHub Workspace Access section does not expose the `Add organization` setup action
+- **THEN** the GitHub Account card explains that connecting GitHub is required before adding workspace organizations
+- **AND** the card links to the user profile GitHub connection flow when a profile URL can be built
+- **AND** the GitHub Workspace Access card does not expose the `Add organization` setup action
 
 #### Scenario: GitHub account status request fails
 
 - **WHEN** the Settings page cannot load the current user's GitHub connection status
-- **THEN** the GitHub Account section renders retryable error guidance
-- **AND** the GitHub Workspace Access section does not expose the `Add organization` setup action
+- **THEN** the GitHub Account card renders retryable error guidance
+- **AND** the GitHub Workspace Access card does not expose the `Add organization` setup action
 - **AND** existing workspace settings form data is not replaced with default values because the GitHub account status request failed
+
+#### Scenario: Existing organizations remain visible while disconnected
+
+- **GIVEN** the current workspace has saved allowed GitHub organization policy rows
+- **AND** the requesting admin has no active GitHub connection
+- **WHEN** the Settings page renders the GitHub Workspace Access card
+- **THEN** the card still shows the saved allowed organizations
+- **AND** each saved organization still offers the existing workspace policy removal action
+- **AND** the disconnected account state only gates adding new organizations

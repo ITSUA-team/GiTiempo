@@ -203,7 +203,7 @@ export const useGitHubConnectionStatusQuery = (
 ) =>
   useQuery({
     queryKey: computed(() =>
-      adminSettingsKeys.githubConnectionStatus(toValue(options.scope)),
+      adminSettingsKeys.githubConnection(toValue(options.scope)),
     ),
     enabled: computed(() => isQueryEnabled(options)),
     queryFn: () => options.client.getGitHubConnectionStatus(),

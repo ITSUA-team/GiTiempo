@@ -37,6 +37,7 @@ export function useAdminSettingsGitHubConnection({
   const requestError = computed(() =>
     query.error.value ? getErrorMessage(query.error.value) : null,
   );
+  const connectionStatus = computed(() => query.data.value ?? null);
   const loading = computed(() => query.isFetching.value);
   const initialLoaded = computed(
     () => query.data.value !== undefined || query.error.value !== null,
@@ -45,7 +46,7 @@ export function useAdminSettingsGitHubConnection({
     () => loading.value && !initialLoaded.value,
   );
   const isConnected = computed(
-    () => connection.value?.status === 'connected',
+    () => !requestError.value && connection.value?.status === 'connected',
   );
 
   async function retryLoad(): Promise<void> {
@@ -77,6 +78,7 @@ export function useAdminSettingsGitHubConnection({
     account,
     connection,
     isConnected,
+    connectionStatus,
     isInitialLoading,
     loading,
     requestError,

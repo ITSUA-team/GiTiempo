@@ -1,7 +1,7 @@
 ## 1. Context And Design Parity
 
 - [x] 1.1 Read `apps/admin-web/AGENTS.md`, `docs/ui/INDEX.md`, and the relevant admin Settings UI docs before implementation.
-- [x] 1.2 Inspect the approved `GITiempo.pen` Admin Settings frame and use it as the parity checklist for Settings card spacing, width, typography, and responsive behavior.
+- [x] 1.2 Inspect the approved `GITiempo.pen` Admin Settings frame when Pencil access is available and use it as the parity checklist for Settings card spacing, width, typography, and responsive behavior.
 
 ## 2. Connection Status Query Layer
 
@@ -27,6 +27,7 @@
 - [x] 4.4 Update the GitHub Workspace Access card so the `Add organization` setup action is hidden unless the current user is connected to GitHub and organization policy state allows adding.
 - [x] 4.5 Render the add setup input as a PrimeVue organization selector populated from available connected-account organizations and excluding already allowed workspace organizations.
 - [x] 4.6 Preserve saved organization policy list, empty state, loading state, request-error state, remove behavior, and existing recovery guidance independently from the add-action gate.
+- [x] 4.7 Keep backend `POST /workspace/github/organizations` validation authoritative for disconnected, unavailable, or stale GitHub provider states.
 
 ## 5. Documentation And Verification
 
@@ -36,4 +37,5 @@
 - [x] 5.4 Run `pnpm --filter admin-web typecheck`.
 - [x] 5.5 Run `pnpm --filter admin-web lint`.
 - [x] 5.6 Run the focused admin-web Settings tests covering the changed query, page, and settings components.
-- [x] 5.7 Run focused API tests for `GET /github/organizations`.
+- [x] 5.7 Run focused API tests for `GET /github/organizations` and disconnected organization add behavior.
+- [x] 5.8 Run `pnpm exec openspec status --change "add-github-account-settings-gate-organization-setup"`.

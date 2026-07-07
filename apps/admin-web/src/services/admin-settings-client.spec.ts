@@ -276,6 +276,14 @@ describe('createAdminSettingsClient', () => {
     await expect(client.getWorkspaceSettings()).rejects.toThrow();
   });
 
+  it('rejects invalid GitHub connection response shapes', async () => {
+    fetchFn.mockResolvedValue(
+      jsonResponse({ status: 'connected', account: null }),
+    );
+
+    await expect(client.getGitHubConnectionStatus()).rejects.toThrow();
+  });
+
   it('rejects invalid update payloads before sending requests', async () => {
     await expect(client.updateWorkspaceSettings({})).rejects.toThrow(
       'At least one field must be provided',

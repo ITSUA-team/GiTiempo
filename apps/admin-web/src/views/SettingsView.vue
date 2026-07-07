@@ -6,7 +6,7 @@ import SettingsForm from '@/components/settings/SettingsForm.vue';
 import SettingsGitHubAccountCard from '@/components/settings/SettingsGitHubAccountCard.vue';
 import SettingsGitHubWorkspaceAccessCard from '@/components/settings/SettingsGitHubWorkspaceAccessCard.vue';
 import SettingsPageSkeleton from '@/components/settings/SettingsPageSkeleton.vue';
-import { buildUserProfileHref } from '@/components/settings/github-workspace-access';
+import { buildGitHubProfileHref } from '@/components/settings/github-workspace-access';
 import { appEnv } from '@/config/env';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useAdminSettingsData } from '@/composables/settings/useAdminSettingsData';
@@ -43,18 +43,18 @@ const settingsPersistence = useAdminSettingsPersistence({
   },
   scope,
 });
-const gitHubConnection = useAdminSettingsGitHubConnection({
+const githubConnection = useAdminSettingsGitHubConnection({
   enabled: isAuthenticated,
   onError(message, error, action) {
     errorToast(message, {
       error,
-      logContext: { action, feature: 'settings-github-account' },
+      logContext: { action, feature: 'settings-github-connection' },
     });
   },
   scope,
 });
 const canLoadAvailableGitHubOrganizations = computed(
-  () => isAuthenticated.value && gitHubConnection.isConnected.value,
+  () => isAuthenticated.value && githubConnection.isConnected.value,
 );
 const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
   availableOrganizationsEnabled: canLoadAvailableGitHubOrganizations,
@@ -91,17 +91,17 @@ const {
 } = settingsData;
 const { saveSettings: persistSettings, saving } = settingsPersistence;
 const canSave = computed(() => isDirty.value && !saving.value && !loading.value);
-const gitHubProfileHref = computed(() => buildUserProfileHref(appEnv.userAppUrl));
+const githubProfileHref = computed(() => buildGitHubProfileHref(appEnv.userAppUrl));
 const gitHubAddGateMessage = computed(() => {
-  if (gitHubConnection.isInitialLoading.value) {
+  if (githubConnection.isInitialLoading.value) {
     return 'Confirming your GitHub account connection before organization setup.';
   }
 
-  if (gitHubConnection.requestError.value) {
+  if (githubConnection.requestError.value) {
     return 'Reload your GitHub account status before adding workspace organizations.';
   }
 
-  if (!gitHubConnection.isConnected.value) {
+  if (!githubConnection.isConnected.value) {
     return 'Connect your GitHub account before adding workspace organizations.';
   }
 
@@ -193,11 +193,11 @@ watch(
       >
         <template #after-card>
           <SettingsGitHubAccountCard
-            :connection="gitHubConnection.connection.value"
-            :is-initial-loading="gitHubConnection.isInitialLoading.value"
-            :profile-href="gitHubProfileHref"
-            :request-error="gitHubConnection.requestError.value"
-            @retry="gitHubConnection.retryLoad"
+            :connection="githubConnection.connection.value"
+            :is-initial-loading="githubConnection.isInitialLoading.value"
+            :profile-href="githubProfileHref"
+            :request-error="githubConnection.requestError.value"
+            @retry="githubConnection.retryLoad"
           />
 
           <SettingsGitHubWorkspaceAccessCard
@@ -209,7 +209,7 @@ watch(
             :available-organizations-initial-loading="workspaceGitHubOrganizations.availableOrganizationsInitialLoading.value"
             :available-organizations-loading="workspaceGitHubOrganizations.availableOrganizationsLoading.value"
             :available-organizations-request-error="workspaceGitHubOrganizations.availableOrganizationsRequestError.value"
-            :can-add-organization="gitHubConnection.isConnected.value"
+            :can-add-organization="githubConnection.isConnected.value"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"

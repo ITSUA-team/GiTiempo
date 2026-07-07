@@ -438,9 +438,6 @@ describe('SettingsView', () => {
       disconnectedGitHubStatus,
     );
     testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({
-      items: [],
-    });
-    testMocks.listWorkspaceGitHubOrganizations.mockResolvedValueOnce({
       items: [workspaceGitHubOrganizationResponse],
     });
 
@@ -462,6 +459,11 @@ describe('SettingsView', () => {
         .findAll('button')
         .some((button) => button.text() === 'Add organization'),
     ).toBe(false);
+    expect(
+      wrapper
+        .get('[data-testid="settings-github-account-disconnected"] a')
+        .attributes('href'),
+    ).toBe('https://user.example.test/profile');
 
     await wrapper
       .findAll('button')
@@ -496,7 +498,7 @@ describe('SettingsView', () => {
       expect.objectContaining({
         logContext: {
           action: 'load-github-connection-status',
-          feature: 'settings-github-account',
+          feature: 'settings-github-connection',
         },
       }),
     );
