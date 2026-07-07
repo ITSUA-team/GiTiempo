@@ -376,4 +376,30 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
 
     expect(wrapper.emitted('retryGithubConnection')).toHaveLength(1);
   });
+
+  it('hides add controls when a status error leaves stale connected data cached', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
+          Button: ButtonStub,
+          InputText: InputTextStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        githubConnectionRequestError: 'GitHub status unavailable',
+        githubConnectionStatus: connectedGitHubAccount,
+      }),
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-account-error"]').text(),
+    ).toContain('GitHub status unavailable');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).not.toContain('Use the GitHub organization login');
+  });
 });

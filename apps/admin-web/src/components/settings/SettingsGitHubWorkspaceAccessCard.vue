@@ -44,7 +44,9 @@ const connectedAccount = computed(() =>
     ? props.githubConnectionStatus.account
     : null,
 );
-const isGitHubConnected = computed(() => connectedAccount.value !== null);
+const isGitHubConnected = computed(
+  () => !props.githubConnectionRequestError && connectedAccount.value !== null,
+);
 const accountInitials = computed(() => {
   const login = connectedAccount.value?.login.trim();
 
