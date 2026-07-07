@@ -14,6 +14,7 @@ import { createTestQueryPlugin } from '@/test/query-client';
 const testMocks = vi.hoisted(() => ({
   addWorkspaceGitHubOrganization: vi.fn(),
   errorToast: vi.fn(),
+  getGitHubConnectionStatus: vi.fn(),
   getWorkspace: vi.fn(),
   listWorkspaceGitHubOrganizations: vi.fn(),
   removeWorkspaceGitHubOrganization: vi.fn(),
@@ -26,6 +27,7 @@ const testMocks = vi.hoisted(() => ({
 vi.mock('@/services/admin-settings-client', () => ({
   getAdminSettingsClient: () => ({
     addWorkspaceGitHubOrganization: testMocks.addWorkspaceGitHubOrganization,
+    getGitHubConnectionStatus: testMocks.getGitHubConnectionStatus,
     getWorkspace: testMocks.getWorkspace,
     listWorkspaceGitHubOrganizations:
       testMocks.listWorkspaceGitHubOrganizations,
@@ -83,6 +85,22 @@ const workspaceGitHubOrganizationResponse = {
   organizationLogin: 'Octo-Org',
   createdByUserId: '44444444-4444-4444-8444-444444444444',
   createdAt: '2026-05-01T10:00:00.000Z',
+};
+
+const githubConnectionResponse = {
+  status: 'connected',
+  account: {
+    githubUserId: 'github-user-1',
+    login: 'octocat',
+    avatarUrl: 'https://avatars.example.test/octocat.png',
+    connectedAt: '2026-06-18T00:00:00.000Z',
+    updatedAt: '2026-06-18T00:00:00.000Z',
+  },
+};
+
+const githubDisconnectedResponse = {
+  status: 'disconnected',
+  account: null,
 };
 
 const SkeletonStub = {
@@ -233,6 +251,7 @@ describe('SettingsView', () => {
   beforeEach(() => {
     testMocks.addWorkspaceGitHubOrganization.mockReset();
     testMocks.errorToast.mockReset();
+    testMocks.getGitHubConnectionStatus.mockReset();
     testMocks.getWorkspace.mockReset();
     testMocks.listWorkspaceGitHubOrganizations.mockReset();
     testMocks.removeWorkspaceGitHubOrganization.mockReset();
@@ -243,6 +262,9 @@ describe('SettingsView', () => {
 
     testMocks.addWorkspaceGitHubOrganization.mockResolvedValue(
       workspaceGitHubOrganizationResponse,
+    );
+    testMocks.getGitHubConnectionStatus.mockResolvedValue(
+      githubConnectionResponse,
     );
     testMocks.getWorkspace.mockResolvedValue(workspaceResponse);
     testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({ items: [] });
@@ -321,6 +343,8 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Legal entity');
     expect(wrapper.text()).toContain('Tax ID');
     expect(wrapper.text()).toContain('GitHub Workspace Access');
+    expect(wrapper.text()).toContain('GitHub account');
+    expect(wrapper.text()).toContain('octocat');
     expect(
       wrapper.get<HTMLInputElement>('#settings-workspace-name').element.value,
     ).toBe('GiTiempo Studio');
@@ -350,6 +374,88 @@ describe('SettingsView', () => {
     ).toBe(true);
     expect(wrapper.text()).toContain(
       'No GitHub organizations are allowed for this workspace yet.',
+    );
+  });
+
+  it('shows add controls only after GitHub connection status is connected', async () => {
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(testMocks.getGitHubConnectionStatus).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).toContain('Connected GitHub account');
+    expect(wrapper.text()).toContain('Add organization');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      true,
+    );
+  });
+
+  it('hides add controls while disconnected but keeps saved organizations removable', async () => {
+    testMocks.getGitHubConnectionStatus.mockResolvedValueOnce(
+      githubDisconnectedResponse,
+    );
+    testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({
+      items: [workspaceGitHubOrganizationResponse],
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('GitHub is not connected');
+    expect(wrapper.text()).toContain('Connect GitHub');
+    expect(
+      wrapper
+        .get('[data-testid="settings-github-account-profile-link"]')
+        .attributes('href'),
+    ).toBe('https://user.example.test/profile');
+    expect(wrapper.text()).toContain('Octo-Org');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Remove')
+      ?.trigger('click');
+    await flushPromises();
+
+    expect(testMocks.removeWorkspaceGitHubOrganization).toHaveBeenCalledWith(
+      '33333333-3333-4333-8333-333333333333',
+    );
+  });
+
+  it('keeps GitHub account status failures retryable and gates add controls', async () => {
+    testMocks.getGitHubConnectionStatus
+      .mockRejectedValueOnce(new Error('GitHub status unavailable'))
+      .mockResolvedValueOnce(githubConnectionResponse);
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Failed to load GitHub account');
+    expect(wrapper.text()).toContain('GitHub status unavailable');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+    expect(testMocks.errorToast).toHaveBeenCalledWith(
+      'GitHub status unavailable',
+      expect.objectContaining({
+        logContext: {
+          action: 'load-github-connection-status',
+          feature: 'settings-github-connection',
+        },
+      }),
+    );
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Try again')
+      ?.trigger('click');
+    await flushPromises();
+
+    expect(testMocks.getGitHubConnectionStatus).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('Connected GitHub account');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      true,
     );
   });
 
