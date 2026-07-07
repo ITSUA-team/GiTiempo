@@ -74,7 +74,7 @@ Alternative considered: hide the entire GitHub Workspace Access card until conne
 
 ### Add a dedicated GitHub Account card/section in Settings
 
-The Settings page will render a GitHub Account section near the GitHub Workspace Access card, using the same Settings card visual language and linking users to the existing user-web profile connection flow when a profile URL is configured.
+The Settings page will render a GitHub Account section near the GitHub Workspace Access card, using the same Settings card visual language and linking users to the existing user-web `/profile` route when a profile URL is configured. More specific profile anchors such as `/profile?section=github` are out of scope until the user profile page defines them.
 
 Rationale: this makes the prerequisite visible before organization setup and keeps connection management ownership in the existing profile flow.
 
@@ -103,4 +103,4 @@ Implementation and rollout steps:
 
 ## Open Questions
 
-- Should the GitHub Account section link to user-web `/profile` or a more specific future `/profile?section=github` anchor if the profile page adds section anchors later?
+- None.
