@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { WorkspaceGitHubOrganizationResponse } from '@gitiempo/shared';
+import { computed } from 'vue';
+import type {
+  GitHubConnectionStatusResponse,
+  WorkspaceGitHubOrganizationResponse,
+} from '@gitiempo/shared';
+import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
@@ -12,8 +17,12 @@ const organizationLogin = defineModel<string>('organizationLogin', {
   required: true,
 });
 
-defineProps<{
+const props = defineProps<{
   adding: boolean;
+  githubConnectionLoading: boolean;
+  githubConnectionRequestError: string | null;
+  githubConnectionStatus: GitHubConnectionStatusResponse | null;
+  githubProfileUrl: string | null;
   isInitialLoading: boolean;
   items: readonly WorkspaceGitHubOrganizationResponse[];
   organizationLoginError: string | null;
@@ -27,7 +36,22 @@ const emit = defineEmits<{
   remove: [organizationId: string];
   retry: [];
   retryAdd: [];
+  retryGithubConnection: [];
 }>();
+
+const connectedAccount = computed(() =>
+  props.githubConnectionStatus?.status === 'connected'
+    ? props.githubConnectionStatus.account
+    : null,
+);
+const isGitHubConnected = computed(
+  () => !props.githubConnectionRequestError && connectedAccount.value !== null,
+);
+const accountInitials = computed(() => {
+  const login = connectedAccount.value?.login.trim();
+
+  return login ? login.slice(0, 2).toUpperCase() : undefined;
+});
 </script>
 
 <template>
@@ -35,6 +59,110 @@ const emit = defineEmits<{
     title="GitHub Workspace Access"
     description="Choose which GitHub organizations this workspace can use. Members still only see data their connected GitHub account can access."
   >
+    <section class="flex flex-col gap-3">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-text-dark text-base font-semibold">
+          GitHub account
+        </h3>
+        <p class="text-text-muted text-[13px] leading-5">
+          Connect the GitHub account used to validate organization access before
+          saving workspace policy changes.
+        </p>
+      </div>
+
+      <div
+        v-if="githubConnectionRequestError"
+        data-testid="settings-github-account-error"
+      >
+        <RequestErrorBlock
+          :message="githubConnectionRequestError"
+          title="Failed to load GitHub account"
+          @retry="emit('retryGithubConnection')"
+        />
+      </div>
+
+      <div
+        v-else-if="githubConnectionLoading"
+        data-testid="settings-github-account-loading"
+        class="border-divider bg-surface-secondary flex items-center gap-3 rounded-lg border p-3.5"
+      >
+        <Skeleton
+          width="2rem"
+          height="2rem"
+          border-radius="999px"
+        />
+        <div class="flex min-w-0 flex-1 flex-col gap-2">
+          <Skeleton
+            width="8rem"
+            height="0.875rem"
+            border-radius="4px"
+          />
+          <Skeleton
+            width="14rem"
+            height="0.75rem"
+            border-radius="4px"
+          />
+        </div>
+      </div>
+
+      <div
+        v-else-if="connectedAccount"
+        data-testid="settings-github-account-connected"
+        class="border-divider bg-surface-secondary flex items-center gap-3 rounded-lg border p-3.5"
+      >
+        <Avatar
+          class="size-8 shrink-0"
+          :image="connectedAccount.avatarUrl ?? undefined"
+          :label="accountInitials"
+          shape="circle"
+          :pt="{ root: 'bg-accent-tint text-brand text-[13px] font-semibold' }"
+        />
+        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span class="text-text-dark truncate text-sm font-semibold">
+            {{ connectedAccount.login }}
+          </span>
+          <span class="text-text-muted text-xs leading-4">
+            Connected GitHub account
+          </span>
+        </div>
+      </div>
+
+      <div
+        v-else
+        data-testid="settings-github-account-disconnected"
+        class="border-divider bg-surface-secondary flex flex-col gap-3 rounded-lg border p-3.5 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div class="flex min-w-0 flex-1 flex-col gap-1">
+          <span class="text-text-dark text-sm font-semibold">
+            GitHub is not connected
+          </span>
+          <span class="text-text-muted text-[13px] leading-5">
+            Connect GitHub in your user profile before adding organizations to
+            this workspace.
+          </span>
+        </div>
+
+        <Button
+          v-if="githubProfileUrl"
+          :as-child="true"
+          class="sm:shrink-0"
+          label="Connect GitHub"
+        >
+          <template #default="{ a11yAttrs, class: buttonClass }">
+            <a
+              v-bind="a11yAttrs"
+              aria-label="Open user profile GitHub connection settings"
+              :class="buttonClass"
+              data-testid="settings-github-account-profile-link"
+              :href="githubProfileUrl"
+            >
+              Connect GitHub
+            </a>
+          </template>
+        </Button>
+      </div>
+    </section>
+
     <section class="flex flex-col gap-3">
       <div class="flex flex-col gap-1">
         <h3 class="text-text-dark text-base font-semibold">
@@ -193,7 +321,10 @@ const emit = defineEmits<{
       </div>
     </section>
 
-    <section class="flex flex-col gap-2.5">
+    <section
+      v-if="isGitHubConnected"
+      class="flex flex-col gap-2.5"
+    >
       <div class="flex flex-col gap-1">
         <h3 class="text-text-dark text-base font-semibold">
           Add organization
