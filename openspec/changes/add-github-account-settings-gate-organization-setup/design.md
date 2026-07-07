@@ -4,10 +4,14 @@ Admin Workspace Settings already renders workspace settings and a GitHub Workspa
 
 Existing backend and shared contracts already provide `GET /github/connection` through `GitHubConnectionStatusResponse`, and user-web already uses this status for profile GitHub connection management. The change should reuse that connection status in admin-web Settings instead of adding a parallel auth model.
 
+Admin Settings also needs a safe source for the organization selector. Existing browsing owner lists are filtered by the workspace organization policy for normal GitHub browsing, but setup must show organizations visible to the current user's connected GitHub account before they are allowed for the workspace. This requires a setup-only current-user organization list that does not grant workspace access and still keeps token material server-side.
+
 Affected frontend area:
 
 - `apps/admin-web` Settings page and settings-specific components/composables.
 - Admin settings API client and admin settings query keys.
+- `apps/api` GitHub controller/service for setup-only organization listing.
+- Shared OpenAPI export and API endpoint docs for `GET /github/organizations`.
 - Focused Settings tests and component tests.
 - `docs/ui/pages-admin.md` Settings requirements.
 
@@ -18,6 +22,7 @@ Affected frontend area:
 - Add a current-user GitHub Account section to Admin Workspace Settings.
 - Show connected, disconnected, loading, and request-error states for the GitHub account status.
 - Hide the `Add organization` form/action until the current user has a connected GitHub account.
+- Populate the add setup selector from organizations visible to the current user's connected GitHub account, excluding organizations already allowed for the workspace.
 - Preserve existing allowed-organization list and remove behavior after policy data loads.
 - Preserve existing recovery checklist behavior for organization validation failures after the user is connected.
 - Keep the UI aligned with the existing Settings card design: single-column, 620px desktop target, token-backed card styling, PrimeVue controls.
@@ -28,6 +33,7 @@ Affected frontend area:
 - No new GitHub token storage behavior.
 - No schema migration or seed requirement.
 - No new shared contract if the existing `GitHubConnectionStatusResponse` remains sufficient.
+- No new organization response schema if the existing `GitHubOwnerListResponse` remains sufficient.
 - No user-web profile connection redesign.
 
 ## Decisions
@@ -40,9 +46,19 @@ Rationale: organization validation already depends on the current user's GitHub 
 
 Alternative considered: add an admin-only settings endpoint that embeds GitHub account status. Rejected because it would duplicate an existing user-scoped status contract and introduce unnecessary backend/OpenAPI work.
 
+### Add a setup-only current-user organization listing
+
+Admin Settings will read `GET /github/organizations` to populate the add-organization selector. The endpoint returns `GitHubOwnerListResponse` with organization owners visible to the current user's connected GitHub account. It is intentionally not filtered by the current workspace allow-list because its purpose is to help admins choose a new organization before it is allowed.
+
+Rationale: the existing browsing owner list applies workspace policy for normal GitHub browsing, so it cannot show disallowed-but-visible organizations that an admin may want to add to the workspace policy. Keeping this as a setup-only current-user list avoids overloading browsing endpoints and keeps provider access checks tied to the requesting user.
+
+Alternative considered: continue accepting a freeform organization login. Rejected because the approved Settings UI now expects a PrimeVue organization selector and because selecting visible organizations reduces setup errors without weakening backend validation.
+
+Alternative considered: reuse `GET /github/owners?type=organization`. Rejected because that endpoint is governed by workspace browsing policy and should not bypass that policy for normal browsing flows.
+
 ### Keep connection gating in admin-web presentation/state
 
-The organization policy endpoint and add mutation stay unchanged. Admin-web will hide the add form/action when the connection query reports disconnected, loading, or request-error.
+The organization policy add mutation stays unchanged. Admin-web will hide the add form/action when the connection query reports disconnected, loading, or request-error, and will avoid sending add requests when the available organization selector has not loaded a selected organization.
 
 Rationale: the backend already protects organization add attempts with structured recovery errors. The issue is primarily a broken setup path in Settings UI before the user tries the action.
 
@@ -68,7 +84,8 @@ Alternative considered: fold status text into the existing workspace access card
 
 - [Risk] Admin Settings now depends on another frontend query. -> Mitigation: keep the status query scoped under admin settings keys and handle loading/error states independently from workspace settings form load.
 - [Risk] `userAppUrl` may be absent or invalid in some environments. -> Mitigation: render the status/explanation without a profile link when no safe profile URL can be built.
-- [Risk] Organization policy query and GitHub connection query can disagree transiently. -> Mitigation: hide only add/setup action unless connected; backend remains authoritative for add attempts and existing recovery payloads.
+- [Risk] Organization policy query, available organization query, and GitHub connection query can disagree transiently. -> Mitigation: hide or locally block only add/setup action unless connected and selector data is usable; backend remains authoritative for add attempts and existing recovery payloads.
+- [Risk] `GET /github/organizations` can be mistaken for browsing access. -> Mitigation: document it as setup-only, return only safe `GitHubOwnerListResponse` owner metadata, do not apply it to browsing/resource access, and keep workspace policy enforcement on browsing/add endpoints.
 - [Risk] Existing Settings tests may become broad and brittle. -> Mitigation: add focused tests for connected/disconnected/error gating and keep transport tests at the settings client/query boundary.
 
 ## Migration Plan
@@ -77,10 +94,12 @@ No data migration is required.
 
 Implementation and rollout steps:
 
-1. Extend admin settings client/query layer to read GitHub connection status through the existing endpoint/schema.
-2. Add Settings UI state for GitHub account status and pass connection-derived gating into the existing workspace access card.
-3. Update docs/specs and focused tests.
-4. Deploy frontend normally. If rollback is needed, revert the admin-web UI/client changes; backend behavior remains compatible.
+1. Extend backend/API docs/OpenAPI with `GET /github/organizations` using `GitHubOwnerListResponse` and current-user connected GitHub provider access.
+2. Extend admin settings client/query layer to read GitHub connection status through the existing endpoint/schema and available organizations through `GET /github/organizations`.
+3. Add Settings UI state for GitHub account status and pass connection-derived gating into the existing workspace access card.
+4. Render organization setup as a PrimeVue selector sourced from available organizations, excluding already allowed workspace organizations.
+5. Update docs/specs and focused tests.
+6. Deploy normally. If rollback is needed, revert the admin-web UI/client changes and the setup-only GitHub organizations endpoint; backend organization add validation remains compatible.
 
 ## Open Questions
 
