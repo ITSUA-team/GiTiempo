@@ -150,6 +150,9 @@ export function useAdminWorkspaceGitHubOrganizations({
       availableOrganizationsQuery.data.value !== undefined ||
       availableOrganizationsQuery.error.value !== null,
   );
+  const availableOrganizationsDataLoaded = computed(
+    () => availableOrganizationsQuery.data.value !== undefined,
+  );
   const availableOrganizationsInitialLoading = computed(
     () =>
       availableOrganizationsLoading.value && !availableOrganizationsLoaded.value,
@@ -220,7 +223,47 @@ export function useAdminWorkspaceGitHubOrganizations({
     }
   }
 
+  function isSelectableOrganization(organization: GitHubOwner): boolean {
+    const selectedLogin = normalizeGitHubLogin(organization.login);
+
+    return selectableOrganizations.value.some(
+      (option) => normalizeGitHubLogin(option.login) === selectedLogin,
+    );
+  }
+
+  function canSubmitSelectedOrganization(organization: GitHubOwner): boolean {
+    return (
+      availableOrganizationsEnabled.value &&
+      availableOrganizationsDataLoaded.value &&
+      !availableOrganizationsLoading.value &&
+      !availableOrganizationsRequestError.value &&
+      isSelectableOrganization(organization)
+    );
+  }
+
+  function setUnavailableOrganizationError(): void {
+    if (!availableOrganizationsEnabled.value) {
+      organizationLoginError.value =
+        'Confirm your GitHub account connection before adding organizations';
+      return;
+    }
+
+    if (
+      !availableOrganizationsDataLoaded.value ||
+      availableOrganizationsLoading.value ||
+      availableOrganizationsRequestError.value
+    ) {
+      organizationLoginError.value =
+        'Reload GitHub organizations before adding workspace organizations';
+      return;
+    }
+
+    organizationLoginError.value =
+      'Select a GitHub organization from the available list';
+  }
+
   async function addOrganization(): Promise<void> {
+    const organization = selectedOrganization.value;
     const organizationLogin = selectedOrganizationLogin.value;
 
     if (!organizationLogin) {
@@ -233,6 +276,11 @@ export function useAdminWorkspaceGitHubOrganizations({
     ) {
       organizationLoginError.value =
         'This organization is already allowed for this workspace';
+      return;
+    }
+
+    if (!organization || !canSubmitSelectedOrganization(organization)) {
+      setUnavailableOrganizationError();
       return;
     }
 

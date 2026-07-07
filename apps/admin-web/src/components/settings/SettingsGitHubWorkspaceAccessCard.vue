@@ -74,6 +74,7 @@ function handleOrganizationComplete(event: AutoCompleteCompleteEvent): void {
 
 function handleOrganizationUpdate(value: GitHubOwner | string | null): void {
   if (typeof value === 'string') {
+    selectedOrganization.value = null;
     return;
   }
 

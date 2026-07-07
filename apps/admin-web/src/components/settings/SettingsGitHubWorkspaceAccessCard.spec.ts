@@ -38,6 +38,7 @@ const AutoCompleteStub = {
         :disabled="disabled"
         :value="modelValue?.[optionLabel] ?? ''"
         @focus="$emit('complete', { query: '' })"
+        @input="$emit('update:modelValue', $event.target.value)"
       />
       <button
         v-for="option in suggestions"
@@ -281,6 +282,28 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.emitted('update:selectedOrganization')).toEqual([
       [availableOrganization],
     ]);
+  });
+
+  it('clears a selected organization when the autocomplete value becomes typed text', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        selectedOrganization: availableOrganization,
+      }),
+    });
+
+    await wrapper
+      .get('#settings-github-organization-selector')
+      .setValue('Different org');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([[null]]);
   });
 
   it('shows available organization empty guidance', () => {
