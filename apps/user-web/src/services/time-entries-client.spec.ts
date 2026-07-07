@@ -498,6 +498,10 @@ describe("createTimeEntriesClient", () => {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
         },
         userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspace: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+          name: "Workspace Alpha",
+        },
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
@@ -549,6 +553,10 @@ describe("createTimeEntriesClient", () => {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
         },
         userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspace: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+          name: "Workspace Alpha",
+        },
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
@@ -607,6 +615,10 @@ describe("createTimeEntriesClient", () => {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
         },
         userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspace: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+          name: "Workspace Alpha",
+        },
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
@@ -663,6 +675,10 @@ describe("createTimeEntriesClient", () => {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
         },
         userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspace: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+          name: "Workspace Alpha",
+        },
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
@@ -723,6 +739,10 @@ describe("createTimeEntriesClient", () => {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
         },
         userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspace: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+          name: "Workspace Alpha",
+        },
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );
@@ -776,6 +796,10 @@ describe("createTimeEntriesClient", () => {
           id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
         },
         userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
+        workspace: {
+          id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+          name: "Workspace Alpha",
+        },
         workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
       }),
     );

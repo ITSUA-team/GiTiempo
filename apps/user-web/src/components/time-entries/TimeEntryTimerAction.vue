@@ -47,15 +47,28 @@ const iconClass = computed(() =>
     ? "text-text-subtle size-5"
     : "text-text-inverse size-5",
 );
+const opensStopFirstGuidance = computed(
+  () =>
+    isStartAction.value &&
+    props.disabled === true &&
+    (props.testIdPrefix === "time-entry" || props.testIdPrefix === "time-entry-mobile"),
+);
+const isNativeDisabled = computed(
+  () =>
+    props.disabled === true &&
+    (!opensStopFirstGuidance.value || props.isLoading === true),
+);
 const tooltip = computed(() =>
-  isStartAction.value && props.disabled === true ? undefined : label.value,
+  opensStopFirstGuidance.value
+    ? "Open task and timer to stop the current timer first"
+    : label.value,
 );
 const testId = computed(() =>
   `${props.testIdPrefix}-${props.action}-timer-${props.entry.id}`,
 );
 
 function handleClick(): void {
-  if (props.disabled === true) {
+  if (isNativeDisabled.value) {
     return;
   }
 
@@ -67,8 +80,9 @@ function handleClick(): void {
   <Button
     v-tooltip.bottom="tooltip"
     :aria-label="label"
+    :aria-disabled="props.disabled === true ? 'true' : undefined"
     :data-testid="testId"
-    :disabled="props.disabled"
+    :disabled="isNativeDisabled"
     :loading="props.isLoading"
     type="button"
     :pt="{

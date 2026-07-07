@@ -60,6 +60,7 @@ function mountDialog(overrides: DialogProps = {}) {
       isConfirmingSelection: false,
       isCreateTaskDisabled: false,
       isCreatingTask: false,
+      isCrossWorkspaceTimer: false,
       isLoadingProjects: false,
       isLoadingTasks: false,
       isOpen: true,
@@ -75,6 +76,7 @@ function mountDialog(overrides: DialogProps = {}) {
       taskOptions: [reportsTask],
       tasksErrorMessage: null,
       timerActionErrorMessage: null,
+      timerWorkspaceContextLabel: null,
       ...overrides,
     },
     global: {
@@ -411,6 +413,29 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.text()).toContain("Could not update the active timer task.");
     expect(wrapper.text()).toContain("Task is inactive");
     expect(confirmButton?.attributes("data-loading")).toBe("true");
+  });
+
+  it("renders cross-workspace running state with stop-first guidance", () => {
+    const wrapper = mountDialog({
+      isCrossWorkspaceTimer: true,
+      primaryActionLabel: "Stop",
+      timerWorkspaceContextLabel: "Running in Workspace Alpha",
+    });
+    const footerButtons = wrapper
+      .get('[data-testid="top-bar-timer-task-dialog-footer"]')
+      .findAll("button");
+
+    expect(wrapper.text()).toContain("Timer running in another workspace");
+    expect(wrapper.text()).toContain(
+      "Stop the running timer before starting or changing tasks in this workspace.",
+    );
+    expect(wrapper.get('[data-testid="top-bar-timer-dialog-workspace-label"]').text()).toBe(
+      "Running in Workspace Alpha",
+    );
+    expect(wrapper.findAllComponents({ name: "AutoComplete" })).toHaveLength(0);
+    expect(wrapper.find("textarea").exists()).toBe(false);
+    expect(findButtonByLabel(wrapper, "Change task")).toBeUndefined();
+    expect(footerButtons.map((button) => button.text())).toEqual(["Stop timer"]);
   });
 
   it("renders start and stop timer errors with state-specific copy", () => {

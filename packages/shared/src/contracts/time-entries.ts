@@ -23,6 +23,11 @@ const timeEntryTaskSummarySchema = z.object({
   title: z.string(),
 });
 
+const timeEntryWorkspaceSummarySchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+});
+
 const timeEntryUserSummarySchema = z.object({
   id: z.uuid(),
   email: z.email(),
@@ -46,6 +51,7 @@ export const timeEntryResponseSchema = z.object({
   updatedAt: dateTimeSchema,
   project: timeEntryProjectSummarySchema,
   task: timeEntryTaskSummarySchema,
+  workspace: timeEntryWorkspaceSummarySchema,
   user: timeEntryUserSummarySchema,
   githubIssue: syncedGitHubIssueSchema.nullable(),
 });

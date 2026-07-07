@@ -26,6 +26,7 @@ const {
   isConfirmingSelection,
   isCreateTaskDisabled,
   isCreatingTask,
+  isCrossWorkspaceTimer,
   isDialogPrimaryActionDisabled,
   isDialogOpen,
   isDialogSecondaryActionDisabled,
@@ -53,6 +54,7 @@ const {
   timerGitHubIssue,
   timerProjectLabel,
   timerTaskLabel,
+  timerWorkspaceContextLabel,
 } = useTopBarTimer();
 
 const isMobileViewport = useIsMobileViewport();
@@ -106,8 +108,15 @@ watch(
         class="flex min-w-0 flex-1 flex-col gap-0.5"
         data-testid="top-bar-timer-context"
       >
-        <span class="text-text-muted truncate text-[11px] leading-[13px] font-medium">
-          {{ timerProjectLabel }}
+        <span class="text-text-muted flex min-w-0 items-center gap-1 text-[11px] leading-[13px] font-medium">
+          <span class="truncate">{{ timerProjectLabel }}</span>
+          <span
+            v-if="timerWorkspaceContextLabel"
+            class="text-brand shrink-0"
+            data-testid="top-bar-timer-workspace-label"
+          >
+            · {{ timerWorkspaceContextLabel }}
+          </span>
         </span>
         <span class="text-text-dark truncate text-[13px] leading-4 font-semibold">
           {{ timerTaskLabel }}
@@ -177,6 +186,13 @@ watch(
       <span class="text-text-muted flex w-full min-w-0 items-center gap-2 text-[11px] leading-none font-medium">
         <span class="truncate">{{ timerProjectLabel }}</span>
         <span
+          v-if="timerWorkspaceContextLabel"
+          class="text-brand shrink-0"
+          data-testid="top-bar-timer-mobile-workspace-label"
+        >
+          {{ timerWorkspaceContextLabel }}
+        </span>
+        <span
           v-if="showsElapsedTime"
           aria-hidden="true"
           aria-live="off"
@@ -207,6 +223,7 @@ watch(
     :is-confirming-selection="isConfirmingSelection"
     :is-create-task-disabled="isCreateTaskDisabled"
     :is-creating-task="isCreatingTask"
+    :is-cross-workspace-timer="isCrossWorkspaceTimer"
     :is-loading-projects="isLoadingProjects"
     :is-loading-tasks="isLoadingTasks"
     :is-open="isDialogOpen"
@@ -222,6 +239,7 @@ watch(
     :task-options="taskOptions"
     :tasks-error-message="tasksErrorMessage"
     :timer-action-error-message="timerActionErrorMessage"
+    :timer-workspace-context-label="timerWorkspaceContextLabel"
     @close="closeDialog"
     @confirm="confirmSelectedTask"
     @primary-action="handleDialogPrimaryAction"

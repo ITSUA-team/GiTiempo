@@ -63,6 +63,10 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301",
     },
     userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301",
+    workspace: {
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
+      name: "Workspace Alpha",
+    },
     workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
     githubIssue,
     ...entryOverrides,

@@ -102,7 +102,15 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
 }
 
 function handleStartTimer(entry: TimeEntryResponse): void {
-  if (entry.endedAt === null || isDirectStartDisabled()) {
+  if (
+    entry.endedAt === null ||
+    (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined)
+  ) {
+    return;
+  }
+
+  if (props.isStartTimerDisabled === true) {
+    emit("openActiveTimer");
     return;
   }
 
