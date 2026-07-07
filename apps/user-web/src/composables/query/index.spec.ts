@@ -24,11 +24,17 @@ const TEST_IDS = {
   task: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9201",
   user: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301",
   workspace: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
+  workspaceOther: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9402",
 } as const;
 
 const TEST_SCOPE = {
   userId: null,
   workspaceId: null,
+};
+
+const ACTIVE_WORKSPACE_SCOPE = {
+  userId: TEST_IDS.user,
+  workspaceId: TEST_IDS.workspace,
 };
 
 type ListOwnEntriesOptions = Parameters<TimeEntriesClient["listOwnEntries"]>[1];
@@ -154,6 +160,7 @@ function createClientMock(): Pick<
 function mountQueryHarness(options?: {
   client?: ReturnType<typeof createClientMock>;
   initialRecentEntries?: TimeEntryListResponse;
+  scope?: typeof TEST_SCOPE | typeof ACTIVE_WORKSPACE_SCOPE;
 }) {
   const pinia = createPinia();
 
@@ -165,7 +172,8 @@ function mountQueryHarness(options?: {
 
   const client = options?.client ?? createClientMock();
   const queryClient = createTestQueryClient();
-  const listKey = timeEntriesKeys.list(TEST_SCOPE, { limit: 10, page: 1 });
+  const scopeValue = options?.scope ?? TEST_SCOPE;
+  const listKey = timeEntriesKeys.list(scopeValue, { limit: 10, page: 1 });
 
   if (options?.initialRecentEntries) {
     queryClient.setQueryData(listKey, options.initialRecentEntries);
@@ -178,7 +186,7 @@ function mountQueryHarness(options?: {
   const Harness = defineComponent({
     setup() {
       const accessToken = computed(() => authStore.accessToken);
-      const scope = computed(() => TEST_SCOPE);
+      const scope = computed(() => scopeValue);
 
       recentEntriesQuery = useRecentOwnTimeEntriesQuery({
         client,
@@ -332,6 +340,43 @@ describe("query timer reconciliation", () => {
         id: TEST_IDS.runningEntry,
       }),
     ]);
+  });
+
+  it("does not reconcile a stopped timer from another workspace into the active workspace cache", async () => {
+    const client = createClientMock();
+    const stoppedOtherWorkspaceEntry = createEntry({
+      durationSeconds: 1800,
+      endedAt: "2026-04-21T09:30:00.000Z",
+      updatedAt: "2026-04-21T09:30:00.000Z",
+      workspace: {
+        id: TEST_IDS.workspaceOther,
+        name: "Workspace Beta",
+      },
+      workspaceId: TEST_IDS.workspaceOther,
+    });
+    const reconcileSpy = vi.spyOn(
+      timeEntryQueryCache,
+      "reconcileTimeEntryListCaches",
+    );
+
+    client.stopTimer.mockResolvedValueOnce(stoppedOtherWorkspaceEntry);
+
+    const mounted = mountQueryHarness({
+      client,
+      initialRecentEntries: createOwnEntriesResponse([]),
+      scope: ACTIVE_WORKSPACE_SCOPE,
+    });
+
+    wrappers.push(mounted.wrapper);
+
+    await flushPromises();
+    await mounted.stopTimerMutation.mutateAsync();
+    await flushPromises();
+
+    expect(reconcileSpy).not.toHaveBeenCalled();
+    expect(
+      mounted.queryClient.getQueryData<TimeEntryListResponse>(mounted.listKey)?.items,
+    ).toEqual([]);
   });
 
   it("does not reject a successful timer mutation when cache reconciliation throws", async () => {

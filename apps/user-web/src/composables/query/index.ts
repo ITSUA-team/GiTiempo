@@ -164,6 +164,15 @@ function isQueryEnabled(options: UserScopedQueryOptions): boolean {
   return Boolean(toValue(options.enabled));
 }
 
+function isEntryInWorkspaceScope(
+  scope: UserServerStateScope,
+  entry: TimeEntryResponse,
+): boolean {
+  const workspaceId = scope.workspaceId?.trim();
+
+  return !workspaceId || entry.workspaceId === workspaceId;
+}
+
 async function invalidateQueryKeys(
   queryClient: ReturnType<typeof useQueryClient>,
   keys: QueryKey[],
@@ -178,6 +187,10 @@ async function reconcileTimeEntryCachesAfterTimeEntryMutation(
   scope: UserServerStateScope,
   entry: TimeEntryResponse,
 ): Promise<void> {
+  if (!isEntryInWorkspaceScope(scope, entry)) {
+    return;
+  }
+
   await queryClient.cancelQueries(
     { queryKey: timeEntriesKeys.all(scope) },
     { silent: true },
