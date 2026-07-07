@@ -32,7 +32,8 @@
 
 - [x] 5.1 Update `docs/ui/pages-admin.md` to document the GitHub Account prerequisite section, selector source, and connection-gated organization setup behavior.
 - [x] 5.2 Update Settings page/component tests for connected, disconnected, loading, connection-status-error, selector loading/error/empty, and already-allowed filtering states.
-- [x] 5.3 Run `pnpm --filter admin-web typecheck`.
-- [x] 5.4 Run `pnpm --filter admin-web lint`.
-- [x] 5.5 Run the focused admin-web Settings tests covering the changed query, page, and settings components.
-- [x] 5.6 Run focused API tests for `GET /github/organizations`.
+- [x] 5.3 Add an `admin-pages` OpenSpec delta so the existing Settings GitHub Workspace Access scenarios no longer require an always-available add form.
+- [x] 5.4 Run `pnpm --filter admin-web typecheck`.
+- [x] 5.5 Run `pnpm --filter admin-web lint`.
+- [x] 5.6 Run the focused admin-web Settings tests covering the changed query, page, and settings components.
+- [x] 5.7 Run focused API tests for `GET /github/organizations`.

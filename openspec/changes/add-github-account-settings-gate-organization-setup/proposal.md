@@ -21,6 +21,7 @@ Workspace Settings can currently expose GitHub organization setup before the cur
 ### Modified Capabilities
 
 - `admin-settings-page`: Add current-user GitHub account status to Workspace Settings and gate organization setup UI by connection state.
+- `admin-pages`: Align the existing Settings GitHub Workspace Access scenarios with the gated selector flow so archived specs do not keep an always-available add form requirement.
 - `github-data-browsing-api`: Add a setup-only current-user GitHub organizations listing that is not filtered by the workspace allow-list and does not expose token material.
 - `workspace-github-organization-policy`: Require organization add/setup UI to be available only when the current user has an active GitHub account connection.
 - `github-oauth-foundation`: Reuse existing connection status behavior from Admin Settings without changing the OAuth model or exposing token material.
@@ -32,4 +33,4 @@ Workspace Settings can currently expose GitHub organization setup before the cur
 - Existing `GET /github/connection` contract and shared `GitHubConnectionStatusResponse` schema are reused.
 - Existing `GitHubOwnerListResponse` schema is reused for `GET /github/organizations`; OpenAPI and endpoint docs are updated for that route.
 - No backend schema migration, auth model rewrite, or token handling change is expected.
-- Documentation updates are needed so `docs/ui/pages-admin.md` reflects connection-gated organization setup and the organization selector.
+- Documentation and OpenSpec updates are needed so Settings requirements consistently reflect connection-gated organization setup and the organization selector.
