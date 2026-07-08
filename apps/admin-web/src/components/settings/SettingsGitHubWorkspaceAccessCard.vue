@@ -294,6 +294,7 @@ const accountInitials = computed(() => {
               v-if="step.action?.kind === 'retry'"
               class="sm:shrink-0"
               :label="step.action.label"
+              :disabled="!isGitHubConnected || adding"
               :loading="adding"
               @click="emit('retryAdd')"
             />

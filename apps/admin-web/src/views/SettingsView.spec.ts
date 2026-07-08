@@ -431,6 +431,57 @@ describe('SettingsView', () => {
     );
   });
 
+  it('disables recovery retry while refreshing cached GitHub connection status', async () => {
+    testMocks.addWorkspaceGitHubOrganization.mockRejectedValueOnce(
+      createRecoveryError(
+        'GitHub organization blocks this GitHub App',
+        createRecoveryPayload('workspace_github_organization_app_access_blocked'),
+      ),
+    );
+
+    const queryClient = createTestQueryClient();
+    const wrapper = mountSettingsView({ queryClient });
+    await flushPromises();
+    await addOrganization(wrapper);
+
+    expect(wrapper.text()).toContain('Retry check');
+    expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledTimes(1);
+
+    const githubStatusRequest = createDeferred<typeof githubConnectionResponse>();
+    testMocks.getGitHubConnectionStatus.mockReturnValueOnce(
+      githubStatusRequest.promise,
+    );
+
+    const refetchPromise = queryClient.refetchQueries({
+      queryKey: adminSettingsKeys.githubConnection(
+        getAdminServerStateScope('access-token'),
+      ),
+    });
+    await nextTick();
+
+    const retryButton = wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Retry check');
+
+    expect(retryButton?.attributes('disabled')).toBeDefined();
+
+    await retryButton?.trigger('click');
+    await flushPromises();
+
+    expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledTimes(1);
+
+    githubStatusRequest.resolve(githubConnectionResponse);
+    await refetchPromise;
+    await flushPromises();
+
+    expect(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text() === 'Retry check')
+        ?.attributes('disabled'),
+    ).toBeUndefined();
+  });
+
   it('hides add controls while disconnected but keeps saved organizations removable', async () => {
     testMocks.getGitHubConnectionStatus.mockResolvedValueOnce(
       githubDisconnectedResponse,
