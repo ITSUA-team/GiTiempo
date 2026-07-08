@@ -173,7 +173,7 @@ describe('ReportsTable', () => {
     expect(filters.memberId).toBe('member-1');
   });
 
-  it('renders mobile filters and loading cards without desktop table controls', () => {
+  it('renders mobile filters and keeps loaded report cards during refresh loading', () => {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       value: vi.fn().mockImplementation((query: string) => ({
@@ -215,9 +215,45 @@ describe('ReportsTable', () => {
         giTiempoSelfAppendedAutoCompleteOverlayStyle,
       );
     }
+    expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(1);
+    expect(wrapper.text()).toContain('2h 00m');
+  });
+
+  it('renders mobile loading cards when loading has no report rows yet', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        matches: true,
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    });
+
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters: createDefaultReportTableFilters(),
+        loading: true,
+        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
+        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        rows: [],
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
+      },
+    });
+
     expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.text()).not.toContain('2h 00m');
+    expect(wrapper.text()).not.toContain('No report rows found');
   });
 
   it('renders non-loading mobile report cards with row values on small viewports', () => {
