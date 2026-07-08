@@ -175,7 +175,7 @@ watch(
           <SettingsGitHubWorkspaceAccessCard
             v-model:organization-login="workspaceGitHubOrganizations.organizationLogin.value"
             :adding="workspaceGitHubOrganizations.adding.value"
-            :github-connection-loading="githubConnection.isInitialLoading.value"
+            :github-connection-loading="githubConnection.loading.value"
             :github-connection-request-error="githubConnection.requestError.value"
             :github-connection-status="githubConnection.connectionStatus.value"
             :github-profile-url="githubProfileUrl"

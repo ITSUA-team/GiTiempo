@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import { nextTick } from 'vue';
 import {
   buildWorkspaceGitHubOrganizationRecoveryPayload,
   type WorkspaceGitHubOrganizationRecoveryPayload,
@@ -9,7 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
 import { useAuthStore } from '@/stores/auth';
-import { createTestQueryPlugin } from '@/test/query-client';
+import { adminSettingsKeys } from '@/lib/query-keys';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
+import { createTestQueryClient, createTestQueryPlugin } from '@/test/query-client';
 
 const testMocks = vi.hoisted(() => ({
   addWorkspaceGitHubOrganization: vi.fn(),
@@ -223,7 +226,9 @@ async function addOrganization(
   await flushPromises();
 }
 
-function mountSettingsView() {
+function mountSettingsView({
+  queryClient = createTestQueryClient(),
+} = {}) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
@@ -234,7 +239,7 @@ function mountSettingsView() {
     global: {
       plugins: [
         pinia,
-        createTestQueryPlugin(),
+        createTestQueryPlugin(queryClient),
         [PrimeVue, giTiempoPrimeVueOptions],
       ],
       stubs: {
@@ -384,6 +389,43 @@ describe('SettingsView', () => {
     expect(testMocks.getGitHubConnectionStatus).toHaveBeenCalledTimes(1);
     expect(wrapper.text()).toContain('Connected GitHub account');
     expect(wrapper.text()).toContain('Add organization');
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      true,
+    );
+  });
+
+  it('hides add controls while refreshing cached GitHub connection status', async () => {
+    const queryClient = createTestQueryClient();
+    const wrapper = mountSettingsView({ queryClient });
+    await flushPromises();
+
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      true,
+    );
+
+    const githubStatusRequest = createDeferred<typeof githubConnectionResponse>();
+    testMocks.getGitHubConnectionStatus.mockReturnValueOnce(
+      githubStatusRequest.promise,
+    );
+
+    const refetchPromise = queryClient.refetchQueries({
+      queryKey: adminSettingsKeys.githubConnection(
+        getAdminServerStateScope('access-token'),
+      ),
+    });
+    await nextTick();
+
+    expect(
+      wrapper.find('[data-testid="settings-github-account-loading"]').exists(),
+    ).toBe(true);
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+
+    githubStatusRequest.resolve(githubConnectionResponse);
+    await refetchPromise;
+    await flushPromises();
+
     expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
       true,
     );
