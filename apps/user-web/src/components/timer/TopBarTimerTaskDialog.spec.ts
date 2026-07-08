@@ -91,6 +91,7 @@ function mountDialog(overrides: DialogProps = {}) {
             "fluid",
             "forceSelection",
             "inputClass",
+            "loading",
             "minLength",
             "modelValue",
             "pt",
@@ -105,7 +106,7 @@ function mountDialog(overrides: DialogProps = {}) {
             },
           },
           template:
-            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading !== undefined && loading !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "variant"],
@@ -129,7 +130,6 @@ function mountDialog(overrides: DialogProps = {}) {
           template:
             '<input :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
-        ProgressSpinner: { template: '<div data-testid="spinner" />' },
         Textarea: {
           props: ["disabled", "modelValue"],
           emits: ["update:modelValue"],
@@ -355,10 +355,13 @@ describe("TopBarTimerTaskDialog", () => {
     expect(findButtonByLabel(wrapper, "Cancel")).toBeUndefined();
   });
 
-  it("renders a distinct task-loading state for the selected project", () => {
+  it("uses the task autocomplete loading state for the selected project", () => {
     const wrapper = mountDialog({ isLoadingTasks: true, taskOptions: [] });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1];
 
-    expect(wrapper.find('[data-testid="spinner"]').exists()).toBe(true);
+    expect(taskAutoComplete?.props("loading")).toBe(true);
+    expect(taskAutoComplete?.props("disabled")).toBe(true);
+    expect(taskAutoComplete?.attributes("data-loading")).toBe("true");
     expect(wrapper.text()).not.toContain("No existing active tasks in this project.");
     expect(wrapper.text()).not.toContain("Could not load tasks for this project.");
   });

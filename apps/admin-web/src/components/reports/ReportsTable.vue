@@ -246,7 +246,7 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
       </div>
 
       <div class="flex flex-col gap-3">
-        <template v-if="loading">
+        <template v-if="loading && rows.length === 0">
           <MobileRecordCard
             v-for="index in 3"
             :key="index"

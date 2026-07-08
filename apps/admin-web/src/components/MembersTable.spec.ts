@@ -280,7 +280,7 @@ describe('MembersTable', () => {
     expect(wrapper.emitted('update:expandedRows')).toEqual([[{ 'member-1': true }]]);
   });
 
-  it('renders mobile loading cards only on mobile viewports', async () => {
+  it('keeps loaded mobile member cards visible during refresh loading', async () => {
     const wrapper = mountMembersTable({
       isMobileViewport: true,
       loading: true,
@@ -305,9 +305,22 @@ describe('MembersTable', () => {
       [{ memberQuery: 'alex' }],
       [{ projectIds: ['project-2', 'project-1'] }],
     ]);
+    expect(wrapper.findAll('[data-testid="members-mobile-loading-card"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(1);
+    expect(wrapper.text()).toContain('Pat PM');
+    expect(wrapper.findAll('[data-testid="member-edit-member-1"]')).toHaveLength(0);
+  });
+
+  it('renders mobile loading cards when loading has no member rows yet', () => {
+    const wrapper = mountMembersTable({
+      isMobileViewport: true,
+      loading: true,
+      rows: [],
+    });
+
     expect(wrapper.findAll('[data-testid="members-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.findAll('[data-testid="member-edit-member-1"]')).toHaveLength(0);
+    expect(wrapper.text()).not.toContain('No members found');
   });
 
   it('renders supplied mobile card fields, name edit entry point, and expansion slot content', async () => {

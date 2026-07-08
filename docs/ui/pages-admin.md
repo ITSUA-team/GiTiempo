@@ -72,8 +72,10 @@
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
 - Below the workspace settings form, render a second desktop card at the same `max-width: 620px` for `GitHub Workspace Access`.
 - The GitHub card title is `GitHub Workspace Access` with helper copy explaining that admins choose which GitHub organizations the workspace can use, while members still only see data their connected GitHub account can access.
+- The card begins with a `GitHub account` section that loads the requesting admin's GitHub connection status. Loading and request-error states gate only organization add controls, not the saved workspace policy list.
+- When the requesting admin's GitHub account is disconnected, show disconnected account copy and a `Connect GitHub` action to the user profile GitHub connection screen. Keep saved allowed organizations and their removal actions visible.
 - The card includes an `Allowed organizations` section with one row per saved GitHub organization login. Each row shows the organization login, helper copy `Allowed for this workspace`, and a `Remove` action.
-- The card also includes an `Add organization` section with an `Organization login` text field and a primary `Add organization` action.
+- Show the `Add organization` section only after the GitHub account status has loaded successfully as connected. The section includes an `Organization login` text field and a primary `Add organization` action.
 - Organization validation is performed through the requesting admin's connected GitHub account before the organization is saved to the workspace policy.
 - This policy filters which GitHub organizations can appear in GiTiempo workspace flows; it does not broaden any member's underlying GitHub permissions.
 - When adding an organization fails because GitHub reports that the organization is not visible, blocked, suspended, or otherwise unavailable to the connected account, keep the GitHub card in place and show a `GitHub App access` recovery card group above `Add organization`.
