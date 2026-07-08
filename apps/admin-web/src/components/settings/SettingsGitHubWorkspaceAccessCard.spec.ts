@@ -345,6 +345,32 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     );
   });
 
+  it('hides add controls while refreshing account status with cached connected data', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
+          Button: ButtonStub,
+          InputText: InputTextStub,
+          Message: { template: '<small><slot /></small>' },
+          Skeleton: SkeletonStub,
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        githubConnectionLoading: true,
+        githubConnectionStatus: connectedGitHubAccount,
+      }),
+    });
+
+    expect(
+      wrapper.find('[data-testid="settings-github-account-loading"]').exists(),
+    ).toBe(true);
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+  });
+
   it('renders account request errors with retry', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
