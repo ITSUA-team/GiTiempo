@@ -10,7 +10,7 @@ const SkeletonStub = {
 
 const ButtonStub = {
   emits: ['click'],
-  props: ['asChild', 'label'],
+  props: ['asChild', 'disabled', 'label', 'loading'],
   template: `
     <slot
       v-if="asChild"
@@ -19,6 +19,8 @@ const ButtonStub = {
     />
     <button
       v-else
+      :data-loading="String(loading)"
+      :disabled="disabled"
       type="button"
       @click="$emit('click', $event)"
     >
@@ -44,6 +46,36 @@ const connectedGitHubAccount = {
     updatedAt: '2026-06-18T00:00:00.000Z',
   },
 } satisfies GitHubConnectionStatusResponse;
+
+function createRecoveryChecklist() {
+  return {
+    organizationLogin: 'My-test-org-for-clock',
+    steps: [
+      {
+        action: {
+          ariaLabel: 'Open GitHub App install page for My-test-org-for-clock',
+          href: 'https://github.com/apps/gi-tiempo/installations/new',
+          kind: 'link' as const,
+          label: 'Open install',
+          target: '_blank' as const,
+        },
+        description: 'Choose the organization and install GiTiempo.',
+        id: 'install' as const,
+        title: 'Install GitHub App for organization',
+      },
+      {
+        action: {
+          ariaLabel: 'Retry workspace allow-list check for My-test-org-for-clock',
+          kind: 'retry' as const,
+          label: 'Retry check',
+        },
+        description: 'Retry the same organization login.',
+        id: 'retry' as const,
+        title: 'Retry workspace allow-list check',
+      },
+    ],
+  };
+}
 
 function createProps(overrides: Record<string, unknown> = {}) {
   return {
@@ -180,35 +212,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
         },
       },
       props: createProps({
-        recoveryChecklist: {
-          organizationLogin: 'My-test-org-for-clock',
-          steps: [
-            {
-              action: {
-                ariaLabel:
-                  'Open GitHub App install page for My-test-org-for-clock',
-                href: 'https://github.com/apps/gi-tiempo/installations/new',
-                kind: 'link',
-                label: 'Open install',
-                target: '_blank',
-              },
-              description: 'Choose the organization and install GiTiempo.',
-              id: 'install',
-              title: 'Install GitHub App for organization',
-            },
-            {
-              action: {
-                ariaLabel:
-                  'Retry workspace allow-list check for My-test-org-for-clock',
-                kind: 'retry',
-                label: 'Retry check',
-              },
-              description: 'Retry the same organization login.',
-              id: 'retry',
-              title: 'Retry workspace allow-list check',
-            },
-          ],
-        },
+        recoveryChecklist: createRecoveryChecklist(),
       }),
     });
 
@@ -223,12 +227,71 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
         .attributes('href'),
     ).toBe('https://github.com/apps/gi-tiempo/installations/new');
 
-    await wrapper
+    const retryButton = wrapper
       .findAll('button')
-      .find((button) => button.text() === 'Retry check')
-      ?.trigger('click');
+      .find((button) => button.text() === 'Retry check');
+
+    expect(retryButton?.attributes('disabled')).toBeUndefined();
+
+    await retryButton?.trigger('click');
 
     expect(wrapper.emitted('retryAdd')).toHaveLength(1);
+  });
+
+  it('keeps recovery links visible but disables retry when the account gate is blocked', async () => {
+    const scenarios = [
+      {
+        label: 'loading',
+        props: {
+          githubConnectionLoading: true,
+          githubConnectionStatus: connectedGitHubAccount,
+        },
+      },
+      {
+        label: 'request error',
+        props: {
+          githubConnectionRequestError: 'GitHub status unavailable',
+          githubConnectionStatus: connectedGitHubAccount,
+        },
+      },
+      {
+        label: 'disconnected',
+        props: {
+          githubConnectionStatus: { status: 'disconnected', account: null },
+        },
+      },
+    ];
+
+    for (const scenario of scenarios) {
+      const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+        global: {
+          stubs: {
+            Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
+            Button: ButtonStub,
+            InputText: InputTextStub,
+            Message: { template: '<small><slot /></small>' },
+            Skeleton: SkeletonStub,
+            SurfaceCard: { template: '<section><slot /></section>' },
+          },
+        },
+        props: createProps({
+          recoveryChecklist: createRecoveryChecklist(),
+          ...scenario.props,
+        }),
+      });
+      const retryButton = wrapper
+        .findAll('button')
+        .find((button) => button.text() === 'Retry check');
+
+      expect(
+        wrapper.find('[data-testid="settings-github-recovery-link-install"]').exists(),
+      ).toBe(true);
+      expect(retryButton?.attributes('disabled'), scenario.label).toBeDefined();
+
+      await retryButton?.trigger('click');
+
+      expect(wrapper.emitted('retryAdd'), scenario.label).toBeUndefined();
+    }
   });
 
   it('renders connected account metadata and add controls', () => {
@@ -340,6 +403,32 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
         .get('[data-testid="settings-github-account-loading"]')
         .findAll('[data-testid="skeleton"]').length,
     ).toBeGreaterThan(1);
+    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
+      false,
+    );
+  });
+
+  it('hides add controls while refreshing account status with cached connected data', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
+          Button: ButtonStub,
+          InputText: InputTextStub,
+          Message: { template: '<small><slot /></small>' },
+          Skeleton: SkeletonStub,
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        githubConnectionLoading: true,
+        githubConnectionStatus: connectedGitHubAccount,
+      }),
+    });
+
+    expect(
+      wrapper.find('[data-testid="settings-github-account-loading"]').exists(),
+    ).toBe(true);
     expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
       false,
     );

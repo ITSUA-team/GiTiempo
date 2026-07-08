@@ -45,7 +45,10 @@ const connectedAccount = computed(() =>
     : null,
 );
 const isGitHubConnected = computed(
-  () => !props.githubConnectionRequestError && connectedAccount.value !== null,
+  () =>
+    !props.githubConnectionLoading &&
+    !props.githubConnectionRequestError &&
+    connectedAccount.value !== null,
 );
 const accountInitials = computed(() => {
   const login = connectedAccount.value?.login.trim();
@@ -291,6 +294,7 @@ const accountInitials = computed(() => {
               v-if="step.action?.kind === 'retry'"
               class="sm:shrink-0"
               :label="step.action.label"
+              :disabled="!isGitHubConnected || adding"
               :loading="adding"
               @click="emit('retryAdd')"
             />
