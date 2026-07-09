@@ -373,7 +373,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     ).toContain('No organization suggestions are available.');
   });
 
-  it('shows available organization request errors with retry', async () => {
+  it('keeps manual organization fallback available when suggestions fail', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
@@ -392,7 +392,21 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       wrapper.get('[data-testid="settings-github-available-organizations-error"]')
         .text(),
     ).toContain('GitHub organizations unavailable');
-    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(false);
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(true);
+
+    await wrapper
+      .get('#settings-github-organization-selector')
+      .setValue('Different org');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      ['Different org'],
+    ]);
+    expect(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text() === 'Add organization')
+        ?.attributes('disabled'),
+    ).toBeUndefined();
 
     await wrapper
       .findAll('button')

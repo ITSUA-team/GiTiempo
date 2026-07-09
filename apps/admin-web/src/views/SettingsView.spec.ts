@@ -793,6 +793,29 @@ describe('SettingsView', () => {
     expect(wrapper.text()).toContain('Hidden-Org');
   });
 
+  it('adds a manually typed GitHub organization login when suggestions fail', async () => {
+    testMocks.listAvailableGitHubOrganizations.mockRejectedValueOnce(
+      new Error('GitHub organizations unavailable'),
+    );
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('GitHub organizations unavailable');
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
+      true,
+    );
+
+    await typeAndAddOrganization(wrapper, 'Hidden-Org');
+
+    expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
+      organizationLogin: 'Hidden-Org',
+    });
+    expect(testMocks.successToast).toHaveBeenCalledWith(
+      'GitHub organization added.',
+    );
+  });
+
   it('keeps the selected organization when add fails', async () => {
     testMocks.addWorkspaceGitHubOrganization.mockRejectedValueOnce(
       new Error('GitHub organization is not visible to your connected account'),

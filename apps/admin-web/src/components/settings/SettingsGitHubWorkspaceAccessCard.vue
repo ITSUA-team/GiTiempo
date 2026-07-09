@@ -80,8 +80,7 @@ const canAttemptAddOrganization = computed(
   () =>
     props.canAddOrganization &&
     !props.adding &&
-    !props.availableOrganizationsLoading &&
-    !props.availableOrganizationsRequestError,
+    !props.availableOrganizationsLoading,
 );
 
 const canShowAddOrganization = computed(
@@ -294,6 +293,7 @@ watch(
 
       <div
         v-if="availableOrganizationsRequestError"
+        class="flex flex-col gap-1.5"
         data-testid="settings-github-available-organizations-error"
       >
         <RequestErrorBlock
@@ -304,7 +304,6 @@ watch(
       </div>
 
       <div
-        v-else
         class="flex flex-col gap-1.5"
       >
         <label
