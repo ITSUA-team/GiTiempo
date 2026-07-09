@@ -42,3 +42,4 @@
 - [x] 5.9 Run `pnpm openapi:export` and confirm `packages/shared/openapi.json` is current after the route documentation change.
 - [x] 5.10 Run `pnpm exec openspec validate add-github-account-settings-gate-organization-setup --strict`.
 - [x] 5.11 Run `pnpm exec openspec status --change "add-github-account-settings-gate-organization-setup"`.
+- [x] 5.12 Document that `openspec validate --all` remains blocked until canonical `user-activity-tracking` and `workspace-membership` purpose metadata is materialized through the normal OpenSpec workflow.

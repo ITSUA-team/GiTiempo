@@ -49,6 +49,10 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
       displayName: 'Member',
       avatarUrl: null,
     },
+    workspace: {
+      id: 'workspace-1',
+      name: 'Workspace Alpha',
+    },
     githubIssue: null,
     ...overrides,
   };

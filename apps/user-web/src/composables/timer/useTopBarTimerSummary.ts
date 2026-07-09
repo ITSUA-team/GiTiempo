@@ -31,6 +31,21 @@ export function useTopBarTimerSummary({
   const selectedDescription = ref<string | null>(null);
   const hasExplicitIdleSelection = ref(false);
 
+  const isCrossWorkspaceTimer = computed(() => {
+    const timer = currentTimer.value;
+    const activeWorkspaceId = scope.value.workspaceId;
+
+    return (
+      timer !== null &&
+      timer.endedAt === null &&
+      typeof activeWorkspaceId === "string" &&
+      timer.workspaceId !== activeWorkspaceId
+    );
+  });
+  const currentTimerWorkspaceLabel = computed(
+    () => currentTimer.value?.workspace.name ?? null,
+  );
+
   function setSelectedContextFromTimer(timer: TimeEntryResponse): void {
     hasExplicitIdleSelection.value = false;
     selectedContext.value = toSelectedTaskContext(timer);
@@ -124,6 +139,10 @@ export function useTopBarTimerSummary({
       currentTimer.value = data.currentTimer;
 
       if (data.currentTimer) {
+        if (isCrossWorkspaceTimer.value && hasExplicitIdleSelection.value) {
+          return;
+        }
+
         hasExplicitIdleSelection.value = false;
         selectedContext.value = data.selectedContext;
         selectedDescription.value = data.selectedDescription;
@@ -157,8 +176,10 @@ export function useTopBarTimerSummary({
 
   return {
     currentTimer,
+    currentTimerWorkspaceLabel,
     clearSelectedDescription,
     getDialogSelectionFromCurrentState,
+    isCrossWorkspaceTimer,
     isLoadingSummary,
     refreshSummary,
     refreshSummaryAfterConflict,

@@ -51,6 +51,7 @@ function createEntry(
       id: 'user-1',
     },
     userId: 'user-1',
+    workspace: { id: 'workspace-1', name: 'Workspace Alpha' },
     workspaceId: 'workspace-1',
     githubIssue,
     ...entryOverrides,

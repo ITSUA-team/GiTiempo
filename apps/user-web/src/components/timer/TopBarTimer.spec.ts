@@ -27,6 +27,7 @@ const composableState = {
   isConfirmingSelection: ref(false),
   isCreateTaskDisabled: computed(() => false),
   isCreatingTask: ref(false),
+  isCrossWorkspaceTimer: computed(() => false),
   isDialogOpen: ref(false),
   isDialogPrimaryActionDisabled: computed(() => false),
   isDialogSecondaryActionDisabled: computed(() => false),
@@ -54,6 +55,7 @@ const composableState = {
   timerGitHubIssue: ref<SyncedGitHubIssue | null>(null),
   timerProjectLabel: ref("Project Orion"),
   timerTaskLabel: ref("Improve reports filters"),
+  timerWorkspaceContextLabel: ref<string | null>(null),
 };
 
 const mountedWrappers: VueWrapper[] = [];
@@ -67,6 +69,7 @@ const TopBarTimerTaskDialogStub = defineComponent({
     isConfirmingSelection: { type: Boolean, required: true },
     isCreateTaskDisabled: { type: Boolean, required: true },
     isCreatingTask: { type: Boolean, required: true },
+    isCrossWorkspaceTimer: { type: Boolean, required: true },
     isLoadingProjects: { type: Boolean, required: true },
     isLoadingTasks: { type: Boolean, required: true },
     isOpen: { type: Boolean, required: true },
@@ -82,6 +85,7 @@ const TopBarTimerTaskDialogStub = defineComponent({
     taskOptions: { type: Array, required: true },
     tasksErrorMessage: { type: String, default: null },
     timerActionErrorMessage: { type: String, default: null },
+    timerWorkspaceContextLabel: { type: String, default: null },
   },
   emits: [
     "close",
@@ -154,9 +158,11 @@ describe("TopBarTimer", () => {
     composableState.timerGitHubIssue.value = null;
     composableState.timerProjectLabel.value = "Project Orion";
     composableState.timerTaskLabel.value = "Improve reports filters";
+    composableState.timerWorkspaceContextLabel.value = null;
     composableState.isDialogPrimaryActionDisabled = computed(() => false);
     composableState.isDialogSecondaryActionDisabled = computed(() => false);
     composableState.isCreateTaskDisabled = computed(() => false);
+    composableState.isCrossWorkspaceTimer = computed(() => false);
     composableState.isPrimaryActionPending = computed(() => false);
   });
 
@@ -215,6 +221,24 @@ describe("TopBarTimer", () => {
     await link.trigger("click");
 
     expect(openDialog).not.toHaveBeenCalled();
+  });
+
+  it("renders cross-workspace context in the desktop compact timer surface", () => {
+    composableState.isTimerRunning.value = true;
+    composableState.primaryActionLabel.value = "Stop";
+    composableState.isCrossWorkspaceTimer = computed(() => true);
+    composableState.timerWorkspaceContextLabel.value = "Running in Workspace Alpha";
+
+    const wrapper = mountTopBarTimer();
+
+    expect(wrapper.get('[data-testid="top-bar-timer-workspace-label"]').text()).toBe(
+      "· Running in Workspace Alpha",
+    );
+    expect(wrapper.get('[data-testid="top-bar-timer-context"]').text()).toContain(
+      "Project Orion",
+    );
+    expect(wrapper.text()).toContain("Improve reports filters");
+    expect(wrapper.text()).toContain("01:00:00");
   });
 
   it("opens task selection from app-shell dialog requests", async () => {
@@ -376,6 +400,24 @@ describe("TopBarTimer", () => {
     );
   });
 
+  it("renders cross-workspace context in the mobile timer strip", () => {
+    mockMatchMedia(true);
+    composableState.isTimerRunning.value = true;
+    composableState.primaryActionLabel.value = "Stop";
+    composableState.isCrossWorkspaceTimer = computed(() => true);
+    composableState.timerWorkspaceContextLabel.value = "Running in Workspace Alpha";
+
+    const wrapper = mountTopBarTimer();
+    const metadata = wrapper.get('[data-testid="top-bar-timer-mobile-metadata"]');
+
+    expect(wrapper.get('[data-testid="top-bar-timer-mobile-workspace-label"]').text()).toBe(
+      "Running in Workspace Alpha",
+    );
+    expect(metadata.text()).toContain("Project Orion");
+    expect(metadata.text()).toContain("Improve reports filters");
+    expect(metadata.text()).toContain("01:00:00");
+  });
+
   it("passes dialog state through and handles dialog events", async () => {
     composableState.selectedDescription.value = "Investigate release blocker";
 
@@ -384,6 +426,7 @@ describe("TopBarTimer", () => {
 
     expect(dialog.props("primaryActionLabel")).toBe("Start");
     expect(dialog.props("selectedDescription")).toBe("Investigate release blocker");
+    expect(dialog.props("isCrossWorkspaceTimer")).toBe(false);
 
     dialog.vm.$emit("primaryAction");
     dialog.vm.$emit("update:selectedDescription", "Updated description");

@@ -32,6 +32,10 @@ describe("timeEntryResponseSchema", () => {
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         title: "Improve reports filters",
       },
+      workspace: {
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+        name: "Workspace Alpha",
+      },
       user: {
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",
         email: "alexey@example.com",
@@ -72,6 +76,10 @@ describe("timeEntryResponseSchema", () => {
       task: {
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
         title: "Improve reports filters",
+      },
+      workspace: {
+        id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+        name: "Workspace Alpha",
       },
       user: {
         id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9003",

@@ -147,12 +147,14 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | GET    | `/time-entries/:id`                     | JWT  | Any  | Get time entry details                                                                             |
 | PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry (task, description, times, billable)                                         |
 | DELETE | `/time-entries/:id`                     | JWT  | Any  | Delete own time entry                                                                              |
-| GET    | `/time-entries/current`                 | JWT  | Any  | Get currently running timer (if any)                                                               |
+| GET    | `/time-entries/current`                 | JWT  | Any  | Get the authenticated user's currently running timer across workspaces, if any                      |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
 | POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Start timer from GitHub issue — auto-creates project and task if needed (used by Chrome extension) |
-| POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop running timer                                                                                 |
+| POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop the authenticated user's running timer across workspaces                                       |
 
 **GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`, `search?`
+
+Time entry responses include safe display summaries for `project`, `task`, `user`, and `workspace` plus the corresponding ids. The `workspace` summary is `{ id: string, name: string }` and is required so clients can label running timers that belong to a different workspace than the active session workspace.
 
 **POST /time-entries** body: `{ taskId: string, startedAt: string, endedAt: string, description?: string | null, isBillable?: boolean }`
 
@@ -172,8 +174,11 @@ Assignments grant non-admin access to private projects and to any assigned activ
 **POST /time-entries/timer/start** body: `{ taskId: string, description?: string | null }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string }`
 
+- `GET /time-entries/current` returns `{ timeEntry: TimeEntryResponse | null }`. It is user-global: it returns the caller's own running timer even when the entry belongs to a different workspace than the active JWT workspace claim.
 - `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
+- `/time-entries/timer/start` remains scoped to the active JWT workspace through task visibility. If the user already has any running timer in any workspace, it rejects with `409 Conflict` and leaves the existing running timer unchanged.
 - `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
+- `/time-entries/timer/stop` stops only the caller's own running timer, but the lookup is user-global and can stop a running entry from another workspace while preserving that entry's original workspace identity in the response.
 
 **GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`, `search?`
 

@@ -426,6 +426,65 @@ describe('TimeEntriesService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('returns current timers from another workspace', async () => {
+    const otherWorkspaceRunningEntry = {
+      ...completedEntry,
+      endedAt: null,
+      durationSeconds: null,
+      source: 'web' as const,
+      workspaceId: 'workspace-2',
+    };
+    const db = {
+      select: vi.fn().mockReturnValue(
+        selectRows([
+          {
+            id: otherWorkspaceRunningEntry.id,
+          },
+        ]),
+      ),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      mockGithubTasks,
+    );
+    const requireEntryResponse = vi
+      .fn()
+      .mockResolvedValue(otherWorkspaceRunningEntry);
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: requireEntryResponse,
+    });
+
+    await expect(service.getCurrentTimer(user)).resolves.toEqual({
+      timeEntry: otherWorkspaceRunningEntry,
+    });
+    expect(requireEntryResponse).toHaveBeenCalledWith(
+      db,
+      otherWorkspaceRunningEntry.id,
+    );
+  });
+
+  it('returns an empty current timer response when no user timer is running', async () => {
+    const db = {
+      select: vi.fn().mockReturnValue(selectRows([])),
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      mockGithubTasks,
+    );
+
+    await expect(service.getCurrentTimer(user)).resolves.toEqual({
+      timeEntry: null,
+    });
+  });
+
   it('starts web timers with an optional description', async () => {
     const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
     const values = vi.fn().mockReturnValue({ returning });
@@ -474,7 +533,61 @@ describe('TimeEntriesService', () => {
         description: 'Investigate release blocker',
         isBillable: false,
         source: 'web',
+        workspaceId: user.workspaceId,
       }),
+    );
+  });
+
+  it('stops the current user timer from another workspace', async () => {
+    const otherWorkspaceRunningEntry = {
+      ...completedEntry,
+      endedAt: null,
+      durationSeconds: null,
+      source: 'web' as const,
+      workspaceId: 'workspace-2',
+    };
+    const returning = vi.fn().mockResolvedValue([
+      {
+        id: otherWorkspaceRunningEntry.id,
+      },
+    ]);
+    const where = vi.fn().mockReturnValue({ returning });
+    const set = vi.fn().mockReturnValue({ where });
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValue(selectRowsForUpdate([otherWorkspaceRunningEntry])),
+      update: vi.fn().mockReturnValue({ set }),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const stoppedEntry = {
+      ...otherWorkspaceRunningEntry,
+      endedAt: new Date('2026-01-01T10:30:00.000Z'),
+      durationSeconds: 1800,
+    };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      mockGithubTasks,
+    );
+    const requireEntryResponse = vi.fn().mockResolvedValue(stoppedEntry);
+    Object.defineProperty(service, 'requireEntryResponse', {
+      value: requireEntryResponse,
+    });
+
+    await expect(service.stopTimer(user)).resolves.toEqual(stoppedEntry);
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        durationSeconds: expect.any(Number),
+        endedAt: expect.any(Date),
+      }),
+    );
+    expect(requireEntryResponse).toHaveBeenCalledWith(
+      db,
+      otherWorkspaceRunningEntry.id,
     );
   });
 
@@ -503,6 +616,27 @@ describe('TimeEntriesService', () => {
     await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('does not stop another user timer', async () => {
+    const tx = {
+      select: vi.fn().mockReturnValue(selectRowsForUpdate([])),
+      update: vi.fn(),
+    };
+    const db = { transaction: vi.fn((callback) => callback(tx)) };
+    const service = new TimeEntriesService(
+      db as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      mockUsersActivity as never,
+      mockGithubTasks,
+    );
+
+    await expect(service.stopTimer(user)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(tx.update).not.toHaveBeenCalled();
   });
 
   it('creates manual entries with computed duration and source', async () => {

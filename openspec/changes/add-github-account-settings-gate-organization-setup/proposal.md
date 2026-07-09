@@ -6,10 +6,11 @@ Workspace admins currently see GitHub organization setup controls before the cur
 
 - Add a GitHub Account settings card that shows the current user's GitHub connection status without exposing token material.
 - Hide the `Add organization` setup form/action in GitHub Workspace Access until the account status is loaded as connected.
-- Populate organization setup from GitHub organizations visible to the current user's connected account, excluding organizations already allowed for the workspace.
+- Populate organization setup from GitHub organizations visible to the current user's connected account, excluding organizations already allowed for the workspace while preserving manually typed organization login fallback.
 - Show explanatory guidance while GitHub is disconnected, loading, or failed to load.
 - Keep saved organization policy rows, remove behavior, policy loading/error states, and recovery cards available when workspace policy data can be loaded.
 - Keep the existing GitHub OAuth/auth model unchanged; backend add validation remains authoritative.
+- Record the OpenSpec validation caveat discovered during review: full catalog validation still depends on canonical `user-activity-tracking` and `workspace-membership` purpose metadata being materialized through the normal OpenSpec workflow, not by direct spec edits in this change.
 
 ## Capabilities
 
@@ -32,3 +33,4 @@ Workspace admins currently see GitHub organization setup controls before the cur
 - `packages/shared`: existing `GitHubConnectionStatusResponse` and `GitHubOwnerListResponse` schemas/types are reused.
 - Documentation/OpenSpec/OpenAPI: Settings requirements, endpoint docs, and OpenAPI route documentation for `GET /github/organizations`.
 - No backend schema migration, auth model rewrite, or token handling change is expected.
+- OpenSpec validation readiness: targeted validation for this change is expected to pass, while `openspec validate --all` remains dependent on the canonical spec-purpose metadata being handled through the normal workflow.

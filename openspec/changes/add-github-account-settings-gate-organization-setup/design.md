@@ -8,6 +8,8 @@ Admin Settings also needs a safe source for the organization selector. Existing 
 
 Affected implementation areas follow `apps/admin-web/AGENTS.md` for UI work and `apps/api/AGENTS.md` for backend/API work. UI source-of-truth docs are `docs/ui/INDEX.md` and the Settings section of `docs/ui/pages-admin.md`; the approved `GITiempo.pen` Settings screen should be checked during implementation when the Pencil editor can access it.
 
+Review of this change also exposed that existing `user-activity-tracking` and `workspace-membership` specs are missing required purpose metadata. Canonical `openspec/specs/*` files must not be edited directly during active change work, and OpenSpec requirement deltas cannot directly add top-level `## Purpose` headers. This change therefore records the validation caveat for closeout: targeted change validation can pass before archive, but `openspec validate --all` remains dependent on canonical spec-purpose metadata being materialized through the normal workflow.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -18,16 +20,21 @@ Affected implementation areas follow `apps/admin-web/AGENTS.md` for UI work and 
 - Populate the add setup selector from organizations visible to the current user's connected GitHub account, excluding organizations already allowed for the workspace, while still accepting a manually typed organization login for backend-authoritative validation.
 - Preserve existing allowed-organization list and remove behavior after policy data loads.
 - Preserve existing recovery checklist behavior for organization validation failures after the user is connected.
+- Provide a clear connect/reconnect path that routes to the existing user-app GitHub profile connection surface.
+- Keep successful add, validation failure, recovery-card, loading, empty, and request-error states distinct.
 - Keep backend add validation authoritative for direct API calls or stale browser state.
 - Keep the UI aligned with the existing Settings card design: single-column, 620px desktop target, token-backed card styling, and PrimeVue controls.
+- Record the `user-activity-tracking` and `workspace-membership` purpose-metadata validation caveat without claiming it is fixed before archive.
 
 **Non-Goals:**
 
-- No backend GitHub OAuth model rewrite.
-- No new GitHub token storage behavior.
-- No schema migration or seed requirement.
-- No workspace-level GitHub token or shared admin GitHub credential.
-- No user-web profile connection redesign.
+- Do not change the Firebase/backend application auth model.
+- Do not store workspace-level GitHub tokens or share one admin's GitHub provider permissions with other members.
+- Do not change GitHub OAuth callback destinations, token storage, or disconnect semantics.
+- Do not change existing organization policy persistence beyond enforcing the already-required connected-account prerequisite for adds.
+- Do not add a schema migration or seed requirement.
+- Do not redesign the user-web profile connection surface.
+- Do not change `user-activity-tracking` or `workspace-membership` behavior or add fake behavior requirements for spec metadata.
 
 ## Decisions
 
@@ -73,6 +80,12 @@ Rationale: this makes the prerequisite visible before organization setup and kee
 
 Alternative considered: fold status text into the existing workspace access card. Rejected because account status is current-user state while organization policy is workspace state; separate cards make the prerequisite clearer.
 
+### Document related OpenSpec validation caveat in this change
+
+The missing purpose metadata blocks full OpenSpec validation during review, but change-local requirement deltas cannot directly add a top-level `## Purpose` section to existing canonical specs. The correct pre-archive signal for this feature remains `openspec validate add-github-account-settings-gate-organization-setup --strict`; `openspec validate --all` should be rechecked only after the canonical spec metadata is materialized through the normal workflow.
+
+Alternative considered: direct canonical spec edits. Rejected because canonical specs should be updated through the OpenSpec workflow, not edited directly during active change work.
+
 ## Risks / Trade-offs
 
 - [Risk] Admin Settings now depends on another frontend query. -> Mitigation: keep the status query scoped under admin settings keys and handle loading/error states independently from workspace settings form load.
@@ -80,6 +93,8 @@ Alternative considered: fold status text into the existing workspace access card
 - [Risk] Organization policy query, available organization query, and GitHub connection query can disagree transiently. -> Mitigation: hide or locally block only add/setup action unless connected and selector data is usable; backend remains authoritative for add attempts and existing recovery payloads.
 - [Risk] `GET /github/organizations` can be mistaken for browsing access. -> Mitigation: document it as setup-only, return only safe `GitHubOwnerListResponse` owner metadata, do not apply it to browsing/resource access, and keep workspace policy enforcement on browsing/add endpoints.
 - [Risk] A stale connected status could show the add form after the provider connection has expired. -> Mitigation: backend add validation remains authoritative and surfaces existing recovery/error payloads.
+- [Risk] Hiding add controls while disconnected could be mistaken for missing permissions. -> Mitigation: show explicit disconnected copy and a connect/reconnect action in the GitHub account section.
+- [Risk] Reviewers could assume this change fixes full catalog validation before archive. -> Mitigation: the change explicitly states that `openspec validate --all` still depends on canonical purpose metadata being materialized through the normal workflow.
 
 ## Migration Plan
 
@@ -90,9 +105,10 @@ Implementation and rollout steps:
 1. Extend backend/API docs/OpenAPI with `GET /github/organizations` using `GitHubOwnerListResponse` and current-user connected GitHub provider access.
 2. Extend admin settings client/query layer to read GitHub connection status through the existing endpoint/schema and available organizations through `GET /github/organizations`.
 3. Add Settings UI state for GitHub account status and pass connection-derived gating into the existing workspace access card.
-4. Render organization setup as a PrimeVue selector sourced from available organizations, excluding already allowed workspace organizations.
+4. Render organization setup as a PrimeVue selector sourced from available organizations, excluding already allowed workspace organizations from suggestions while preserving manually typed organization login fallback.
 5. Update docs/specs and focused tests.
-6. Deploy normally. If rollback is needed, revert the admin-web UI/client changes and setup-only GitHub organizations endpoint; backend organization add validation remains compatible.
+6. Use targeted change validation before archive; re-run full catalog validation only after canonical spec-purpose metadata is materialized through the normal workflow.
+7. Deploy normally. If rollback is needed, revert the admin-web UI/client changes and setup-only GitHub organizations endpoint; backend organization add validation remains compatible.
 
 ## Open Questions
 

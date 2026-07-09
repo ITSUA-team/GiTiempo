@@ -193,6 +193,7 @@ Use PrimeVue `<Dialog>` for both manual time-entry create and edit flows.
 - The row task/title click target should open the same shared dialog in edit mode.
 - Edit mode pre-fills the selected entry's current project, task, `startedAt`, `endedAt`, description, and `isBillable` state.
 - Completed entry rows/cards may render an icon-only `Start timer` action before the task content. This action bypasses the create/edit dialog and starts a fresh running timer for the existing entry's task.
+- If any timer is already running, including a timer in another workspace, completed entry row/card `Start timer` actions must not send a start request. Keep the action available as guidance where possible and route users to the top-bar task-picker stop-first state.
 - The active running entry row/card may render a matching icon-only `Stop timer` action before the task content. This action bypasses the task-picker dialog and stops the current running timer.
 - Required fields follow the time-entry form contract: project, task, `startedAt`, and `endedAt`.
 - Optional fields are description and `isBillable`.
@@ -219,6 +220,7 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - When the timer is idle, the popup primary action is `Start timer`, and the selected task and description become the draft for the new running entry. There is no separate shell-level start button outside the popup.
 - The running-entry draft initializes `isBillable` from the selected task's default billable value.
 - When the timer is already running, secondary `Change task` updates the running entry's task and description without stopping the timer, and primary `Stop timer` sits to its right in the same popup. These actions do not reappear as separate shell-level controls.
+- When the running timer belongs to another workspace, the popup becomes a stop-first recovery state: show the workspace label, keep primary `Stop timer` available, and hide or disable active-workspace Project -> Task selection, new-task creation, description edits, and `Change task` until the timer is stopped and current state refreshes to idle.
 - The dialog supports creating a new task inside the currently selected visible project through the `Task` select.
 - Do not support creating a new project from this dialog.
 - When `Task` is set to `New task`, show a single required task-title input directly below the task select, backed by the existing task-create contract.
@@ -228,6 +230,7 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - Loading, empty, validation-error, and request-error states must stay distinct.
 - The dialog must not include manual interval entry controls; manual entry remains on Time Entries only.
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
+- If `Start timer` receives a `409 Conflict`, refresh the authoritative current timer, render the running timer with workspace context, and preserve the user's selected active-workspace draft for retry after stop.
 
 ## Multi-Select Filters
 
@@ -257,6 +260,7 @@ Use `<MultiSelect>` with `filter` and `display="chip"`.
 - This compact center-area surface is the tablet/desktop timer pattern for authenticated `user-web` top bars. Do not apply it to `admin-web` unless the docs are updated explicitly.
 - Below `640px`, do not squeeze the compact center-area surface into the top row; use the mobile timer strip defined in `docs/ui/layout.md` while keeping the same state model, task-picker behavior, and accessibility requirements.
 - Running state shows project on the first line, task on the second line, and live `HH:MM:SS` inside one clickable compact timer surface that leads into the popup-owned timer actions.
+- Cross-workspace running state keeps the same live running timer surface and adds a `Running in <workspace>` label so users can identify why active-workspace starts and task changes are unavailable.
 - Not-running state shows the same two-line project/task structure in the clickable compact timer surface instead of a shell-level start action.
 - The compact timer surface sits against the avatar side of the header center area at content width instead of stretching across the center slot.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.

@@ -50,6 +50,7 @@ import { GithubTaskMaterializationService } from '../../tasks/services/github-ta
 import { TasksService } from '../../tasks/services/tasks.service';
 import { users } from '../../users/schemas/users.schema';
 import { UsersActivityService } from '../../users/services/users-activity.service';
+import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { calculateDurationSeconds } from '../time-entry-duration';
 import {
   timeEntries,
@@ -76,6 +77,7 @@ interface TimeEntryResponseRow {
   updatedAt: Date;
   projectName: string;
   taskTitle: string;
+  workspaceName: string;
   userEmail: string;
   userDisplayName: string | null;
   userAvatarUrl: string | null;
@@ -293,13 +295,7 @@ export class TimeEntriesService {
     const [row] = await this.db
       .select({ id: timeEntries.id })
       .from(timeEntries)
-      .where(
-        and(
-          eq(timeEntries.workspaceId, user.workspaceId),
-          eq(timeEntries.userId, user.sub),
-          isNull(timeEntries.endedAt),
-        ),
-      )
+      .where(and(eq(timeEntries.userId, user.sub), isNull(timeEntries.endedAt)))
       .limit(1);
 
     if (!row) return { timeEntry: null };
@@ -423,11 +419,7 @@ export class TimeEntriesService {
         .select(timeEntryRowSelection)
         .from(timeEntries)
         .where(
-          and(
-            eq(timeEntries.workspaceId, user.workspaceId),
-            eq(timeEntries.userId, user.sub),
-            isNull(timeEntries.endedAt),
-          ),
+          and(eq(timeEntries.userId, user.sub), isNull(timeEntries.endedAt)),
         )
         .limit(1)
         .for('update');
@@ -536,6 +528,7 @@ export class TimeEntriesService {
       .from(timeEntries)
       .innerJoin(tasksTable, eq(tasksTable.id, timeEntries.taskId))
       .innerJoin(projectsTable, eq(projectsTable.id, tasksTable.projectId))
+      .innerJoin(workspaces, eq(workspaces.id, timeEntries.workspaceId))
       .innerJoin(users, eq(users.id, timeEntries.userId))
       .leftJoin(
         taskExternalRefs,
@@ -588,6 +581,7 @@ export class TimeEntriesService {
       .from(timeEntries)
       .innerJoin(tasksTable, eq(tasksTable.id, timeEntries.taskId))
       .innerJoin(projectsTable, eq(projectsTable.id, tasksTable.projectId))
+      .innerJoin(workspaces, eq(workspaces.id, timeEntries.workspaceId))
       .innerJoin(users, eq(users.id, timeEntries.userId))
       .leftJoin(
         taskExternalRefs,
@@ -639,6 +633,7 @@ export class TimeEntriesService {
       updatedAt: timeEntries.updatedAt,
       projectName: projectsTable.name,
       taskTitle: tasksTable.title,
+      workspaceName: workspaces.name,
       userEmail: users.email,
       userDisplayName: users.displayName,
       userAvatarUrl: users.avatarUrl,
@@ -668,6 +663,10 @@ export class TimeEntriesService {
       task: {
         id: row.taskId,
         title: row.taskTitle,
+      },
+      workspace: {
+        id: row.workspaceId,
+        name: row.workspaceName,
       },
       user: {
         id: row.userId,
