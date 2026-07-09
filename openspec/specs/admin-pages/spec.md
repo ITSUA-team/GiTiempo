@@ -156,6 +156,7 @@ The reports page MUST support report setup controls for backend CSV export, scop
 - **WHEN** the user activates `Export CSV`
 - **THEN** the page requests `GET /reports/time/export` with the current report setup controls
 - **AND** the browser downloads the CSV returned by the backend
+- **AND** the downloaded CSV contains backend-generated detailed project-task-user rows for the selected setup controls
 - **AND** table global search and column filters do not change the CSV export scope
 - **AND** no browser-side report row aggregation or CSV serialization is required
 
