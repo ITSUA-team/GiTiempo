@@ -47,15 +47,17 @@ The admin Settings page MUST show the current user's GitHub account connection s
 - **AND** the workspace organization policy data has loaded successfully
 - **WHEN** the Settings page renders organization setup controls
 - **THEN** the page requests the current user's available GitHub organizations for setup
-- **AND** the setup selector shows only organization owners from that response that are not already allowed for the workspace
+- **AND** the setup selector suggests only organization owners from that response that are not already allowed for the workspace
+- **AND** the setup selector still accepts a manually typed GitHub organization login for backend-authoritative validation
 - **AND** the setup selector does not expose GitHub token material or provider authorization details
 
-#### Scenario: Available organization request failure blocks add requests
+#### Scenario: Available organization request failure preserves typed fallback
 
 - **GIVEN** the current user's GitHub account status is connected
 - **WHEN** the available GitHub organizations request fails
 - **THEN** the GitHub Workspace Access card renders retryable error guidance for the selector
-- **AND** it does not send organization add requests until a selectable organization is loaded and selected
+- **AND** the add input still accepts a manually typed GitHub organization login when the workspace policy state allows setup
+- **AND** it does not send organization add requests for empty or invalid organization login input
 
 #### Scenario: GitHub account is disconnected
 

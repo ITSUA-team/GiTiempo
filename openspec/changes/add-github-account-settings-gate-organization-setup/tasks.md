@@ -25,14 +25,14 @@
 - [x] 4.2 Update `SettingsView.vue` to load GitHub connection status independently from workspace settings and organization policy data.
 - [x] 4.3 Pass a connected-account gate from `SettingsView.vue` into the GitHub Workspace Access card.
 - [x] 4.4 Update the GitHub Workspace Access card so the `Add organization` setup action is hidden unless the current user is connected to GitHub and organization policy state allows adding.
-- [x] 4.5 Render the add setup input as a PrimeVue organization selector populated from available connected-account organizations and excluding already allowed workspace organizations.
+- [x] 4.5 Render the add setup input as a PrimeVue organization selector populated from available connected-account organizations, excluding already allowed workspace organizations from suggestions while still accepting manually typed organization logins.
 - [x] 4.6 Preserve saved organization policy list, empty state, loading state, request-error state, remove behavior, and existing recovery guidance independently from the add-action gate.
 - [x] 4.7 Keep backend `POST /workspace/github/organizations` validation authoritative for disconnected, unavailable, or stale GitHub provider states.
 
 ## 5. Documentation And Verification
 
 - [x] 5.1 Update `docs/ui/pages-admin.md` to document the GitHub Account prerequisite section, selector source, and connection-gated organization setup behavior.
-- [x] 5.2 Update Settings page/component tests for connected, disconnected, loading, connection-status-error, selector loading/error/empty, and already-allowed filtering states.
+- [x] 5.2 Update Settings page/component tests for connected, disconnected, loading, connection-status-error, selector loading/error/empty, already-allowed filtering, and manually typed organization fallback states.
 - [x] 5.3 Add an `admin-pages` OpenSpec delta so the existing Settings GitHub Workspace Access scenarios no longer require an always-available add form.
 - [x] 5.4 Run `pnpm --filter admin-web typecheck`.
 - [x] 5.5 Run `pnpm --filter admin-web lint`.

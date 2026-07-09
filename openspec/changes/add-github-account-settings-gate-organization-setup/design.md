@@ -15,7 +15,7 @@ Affected implementation areas follow `apps/admin-web/AGENTS.md` for UI work and 
 - Add a current-user GitHub Account card to Admin Workspace Settings.
 - Show connected, disconnected, loading, and request-error states for GitHub account status.
 - Hide the `Add organization` form/action until the current user has a connected GitHub account.
-- Populate the add setup selector from organizations visible to the current user's connected GitHub account, excluding organizations already allowed for the workspace.
+- Populate the add setup selector from organizations visible to the current user's connected GitHub account, excluding organizations already allowed for the workspace, while still accepting a manually typed organization login for backend-authoritative validation.
 - Preserve existing allowed-organization list and remove behavior after policy data loads.
 - Preserve existing recovery checklist behavior for organization validation failures after the user is connected.
 - Keep backend add validation authoritative for direct API calls or stale browser state.
@@ -45,13 +45,13 @@ Admin Settings will read `GET /github/organizations` to populate the add-organiz
 
 Rationale: the existing browsing owner list applies workspace policy for normal GitHub browsing, so it cannot show disallowed-but-visible organizations that an admin may want to add to the workspace policy. Keeping this as a setup-only current-user list avoids overloading browsing endpoints and keeps provider access checks tied to the requesting user.
 
-Alternative considered: continue accepting a freeform organization login. Rejected because the approved Settings UI expects a PrimeVue organization selector and selecting visible organizations reduces setup errors without weakening backend validation.
+Alternative considered: require force-selection from the loaded organization list. Rejected because the Settings UI docs require the PrimeVue organization input to accept a manually typed GitHub organization login when backend validation can accept active memberships that are missing from suggestions.
 
 Alternative considered: reuse `GET /github/owners?type=organization`. Rejected because that endpoint is governed by workspace browsing policy and should not bypass that policy for normal browsing flows.
 
 ### Keep connection gating in admin-web presentation/state
 
-The organization policy add mutation stays unchanged. Admin-web hides the add form/action when the connection query reports disconnected, loading, or request-error, and avoids sending add requests when the available organization selector has not loaded a selected organization.
+The organization policy add mutation stays unchanged. Admin-web hides the add form/action when the connection query reports disconnected, loading, or request-error, and avoids sending add requests for empty or invalid organization login input. The selector should prefer loaded suggestions when available, but a non-empty manually typed login remains a valid add attempt because backend validation is authoritative.
 
 Rationale: the backend already protects organization add attempts with structured recovery errors. The frontend issue is primarily a broken setup path before the user tries the action.
 
