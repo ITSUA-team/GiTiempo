@@ -6,6 +6,8 @@ The admin Settings page already renders a `GitHub Workspace Access` card with al
 
 Affected implementation areas follow the nearest instructions in `apps/admin-web/AGENTS.md` for UI work and `apps/api/AGENTS.md` only if backend or contract changes are needed. UI source-of-truth docs are `docs/ui/INDEX.md` and the Settings section of `docs/ui/pages-admin.md`; the approved `GITiempo.pen` Settings screen must be checked during implementation when the Pencil editor can access it.
 
+Review of this change also exposed that existing `user-activity-tracking` and `workspace-membership` specs are missing required purpose metadata. Canonical `openspec/specs/*` files must not be edited directly during active change work, and OpenSpec requirement deltas cannot directly add top-level `## Purpose` headers. This change therefore records the validation caveat for closeout: targeted change validation can pass before archive, but `openspec validate --all` remains dependent on canonical spec-purpose metadata being materialized through the normal workflow.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -15,6 +17,7 @@ Affected implementation areas follow the nearest instructions in `apps/admin-web
 - Provide a clear connect/reconnect path that routes to the existing user-app GitHub profile connection surface.
 - Preserve allowed-organization listing and removal behavior regardless of the current admin's GitHub connection state.
 - Keep successful add, validation failure, recovery-card, loading, empty, and request-error states distinct.
+- Record the `user-activity-tracking` and `workspace-membership` purpose-metadata validation caveat without claiming it is fixed before archive.
 
 **Non-Goals:**
 
@@ -22,6 +25,7 @@ Affected implementation areas follow the nearest instructions in `apps/admin-web
 - Do not store workspace-level GitHub tokens or share one admin's GitHub provider permissions with other members.
 - Do not change GitHub OAuth callback destinations, token storage, or disconnect semantics.
 - Do not change existing organization policy persistence beyond enforcing the already-required connected-account prerequisite for adds.
+- Do not change `user-activity-tracking` or `workspace-membership` behavior or add fake behavior requirements for spec metadata.
 
 ## Decisions
 
@@ -49,17 +53,25 @@ Affected implementation areas follow the nearest instructions in `apps/admin-web
 
    Alternative considered: create a shared cross-app GitHub account card now. Rejected because this is currently an admin Settings composition detail; extraction can happen after identical user/admin call sites are proven.
 
+5. Document related OpenSpec validation caveat in this change.
+
+   The missing purpose metadata blocks full OpenSpec validation during review, but change-local requirement deltas cannot directly add a top-level `## Purpose` section to existing canonical specs. The correct pre-archive signal for this feature remains `openspec validate add-github-account-settings-gate-organization-setup --strict`; `openspec validate --all` should be rechecked only after the canonical spec metadata is materialized through the normal workflow.
+
+   Alternative considered: direct canonical spec edits. Rejected because canonical specs should be updated through the OpenSpec workflow, not edited directly during active change work.
+
 ## Risks / Trade-offs
 
 - [Risk] Connection and organization queries can load at different times, creating confusing mixed states. -> Mitigation: render a dedicated account loading/error block while leaving the policy list's loading/error state scoped to the list.
 - [Risk] A stale connected status could show the add form after the provider connection has expired. -> Mitigation: keep backend add validation authoritative and surface existing recovery/error payloads when the add request fails.
 - [Risk] Hiding add controls while disconnected could be mistaken for missing permissions. -> Mitigation: show explicit disconnected copy and a connect/reconnect action in the GitHub account section.
 - [Risk] The user-app profile link could be unavailable in local or test environments. -> Mitigation: derive the link from existing admin-web env configuration and render non-blocking helper copy when no concrete URL is configured.
+- [Risk] Reviewers could assume this change fixes full catalog validation before archive. -> Mitigation: the change explicitly states that `openspec validate --all` still depends on canonical purpose metadata being materialized through the normal workflow.
 
 ## Migration Plan
 
 - Ship frontend gating first using the existing connection status endpoint.
 - If needed, add only minimal shared contract exports or backend error/status tests in the same change.
+- Use targeted change validation before archive; re-run full catalog validation only after canonical spec-purpose metadata is materialized through the normal workflow.
 - No database migration is expected.
 - Rollback is safe by reverting the admin Settings UI/client changes; backend organization add validation remains unchanged.
 

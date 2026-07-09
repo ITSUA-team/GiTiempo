@@ -95,6 +95,10 @@ export function useTopBarTimerSelectionUpdate({
   }
 
   async function applySelectedTaskContext(): Promise<boolean> {
+    if (summary.isCrossWorkspaceTimer.value) {
+      return false;
+    }
+
     const context = await ensureLocalSelectedContext(
       picker.getSelectedTaskContext(),
     );

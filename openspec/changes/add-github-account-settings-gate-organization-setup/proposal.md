@@ -10,6 +10,7 @@ Workspace admins currently see GitHub organization setup controls without an exp
 - Keep existing allowed-organization listing and remove behavior available for workspace policy records that already exist.
 - Preserve the existing organization validation and recovery-card behavior after GitHub is connected.
 - Ensure loading, empty, disconnected, connected, validation-error, and request-error states remain distinct in the Settings page.
+- Record the OpenSpec validation caveat discovered during review: full catalog validation still depends on canonical `user-activity-tracking` and `workspace-membership` purpose metadata being materialized through the normal OpenSpec workflow, not by direct spec edits in this change.
 
 ## Capabilities
 
@@ -29,3 +30,4 @@ Workspace admins currently see GitHub organization setup controls without an exp
 - `packages/shared`: only if current GitHub connection/status contract types need extension or reuse for admin-web consumption.
 - `apps/api`: only if the current GitHub connection endpoint is not available to authenticated admin-web requests or needs documented error behavior.
 - OpenSpec/UI docs: Settings page requirements and GitHub connection policy requirements.
+- OpenSpec validation readiness: targeted validation for this change is expected to pass, while `openspec validate --all` remains dependent on the canonical spec-purpose metadata being handled through the normal workflow.

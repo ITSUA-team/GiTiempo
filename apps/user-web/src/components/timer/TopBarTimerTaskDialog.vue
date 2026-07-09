@@ -34,6 +34,7 @@ const props = defineProps<{
   isConfirmingSelection: boolean;
   isCreateTaskDisabled: boolean;
   isCreatingTask: boolean;
+  isCrossWorkspaceTimer: boolean;
   isLoadingProjects: boolean;
   isLoadingTasks: boolean;
   isOpen: boolean;
@@ -49,6 +50,7 @@ const props = defineProps<{
   taskOptions: TaskResponse[];
   tasksErrorMessage: string | null;
   timerActionErrorMessage: string | null;
+  timerWorkspaceContextLabel: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -76,14 +78,22 @@ const createTaskTitleModel = computed({
 });
 
 const isMobileViewport = useIsMobileViewport();
-const dialogTitle = computed(() =>
-  props.primaryActionLabel === "Stop" ? "Update timer task" : "Start timer",
-);
-const dialogDescription = computed(() =>
-  props.primaryActionLabel === "Stop"
+const dialogTitle = computed(() => {
+  if (props.isCrossWorkspaceTimer) {
+    return "Timer running in another workspace";
+  }
+
+  return props.primaryActionLabel === "Stop" ? "Update timer task" : "Start timer";
+});
+const dialogDescription = computed(() => {
+  if (props.isCrossWorkspaceTimer) {
+    return "Stop the running timer before starting or changing tasks in this workspace.";
+  }
+
+  return props.primaryActionLabel === "Stop"
     ? "Move the running timer to a different task, or pick New task in the selected project."
-    : "Choose a visible project and task, or pick New task before starting the timer.",
-);
+    : "Choose a visible project and task, or pick New task before starting the timer.";
+});
 const primaryButtonLabel = computed(() =>
   props.primaryActionLabel === "Stop" ? "Stop timer" : "Start timer",
 );
@@ -106,6 +116,14 @@ const hasSelectedTaskOption = computed(() => isTaskOption(mobileTaskModel.value)
 const isSelectionModelIncomplete = computed(
   () => !hasSelectedProjectOption.value || !hasSelectedTaskOption.value,
 );
+const confirmButtonLoading = computed(() =>
+  isNewTaskSelected.value ? props.isCreatingTask : props.isConfirmingSelection,
+);
+const primaryButtonLoading = computed(() =>
+  props.primaryActionLabel === "Stop" || !isNewTaskSelected.value
+    ? props.isPrimaryActionPending
+    : props.isCreatingTask,
+);
 const isTaskAutoCompleteDisabled = computed(
   () =>
     !hasSelectedProjectOption.value ||
@@ -121,10 +139,15 @@ const isNewTaskTitleInputDisabled = computed(
 const isPrimaryButtonDisabled = computed(
   () =>
     props.isPrimaryActionDisabled ||
+    primaryButtonLoading.value ||
     (props.primaryActionLabel !== "Stop" && isSelectionModelIncomplete.value),
 );
 const isConfirmButtonDisabled = computed(
-  () => props.isConfirmSelectionDisabled || isSelectionModelIncomplete.value,
+  () =>
+    props.isCrossWorkspaceTimer ||
+    props.isConfirmSelectionDisabled ||
+    confirmButtonLoading.value ||
+    isSelectionModelIncomplete.value,
 );
 const selectedProjectName = computed(
   () => findProjectOption(props.selectedProjectId)?.name ?? null,
@@ -135,15 +158,6 @@ const newTaskHint = computed(() => {
 
   return `This task is created in ${projectName} and inherits the project billable default when you ${actionLabel}.`;
 });
-const confirmButtonLoading = computed(() =>
-  isNewTaskSelected.value ? props.isCreatingTask : props.isConfirmingSelection,
-);
-const primaryButtonLoading = computed(() =>
-  props.primaryActionLabel === "Stop" || !isNewTaskSelected.value
-    ? props.isPrimaryActionPending
-    : props.isCreatingTask,
-);
-
 function findProjectOption(projectId: string | null): ProjectResponse | null {
   if (!projectId) {
     return null;
@@ -291,143 +305,164 @@ watch(
         :title="`Could not ${props.primaryActionLabel === 'Stop' ? 'stop' : 'start'} the timer.`"
       />
 
-      <div class="flex flex-col gap-1">
-        <label
-          for="top-bar-timer-project"
-          class="text-text-dark text-[13px] font-medium"
-        >
-          Project
-        </label>
-        <div class="relative">
-          <AutoComplete
-            append-to="self"
-            class="w-full max-w-full min-w-0"
-            complete-on-focus
-            data-key="id"
-            dropdown
-            dropdown-mode="blank"
-            fluid
-            force-selection
-            input-id="top-bar-timer-project"
-            :min-length="0"
-            option-label="name"
-            :disabled="props.isLoadingProjects || props.isConfirmingSelection"
-            :loading="props.isLoadingProjects"
-            :model-value="mobileProjectModel"
-            placeholder="Search projects"
-            :pt="giTiempoSelfAppendedAutoCompletePt"
-            :suggestions="projectSuggestions"
-            @complete="handleProjectComplete"
-            @update:model-value="handleMobileProjectUpdate"
-          />
-        </div>
+      <div
+        v-if="props.isCrossWorkspaceTimer"
+        class="border-divider bg-app-bg flex flex-col gap-2 rounded-lg border p-4"
+        data-testid="top-bar-timer-cross-workspace-state"
+      >
+        <p class="text-text-dark text-sm font-semibold">
+          Stop timer first
+        </p>
+        <p class="text-text-muted text-[13px] leading-5">
+          <span
+            class="text-brand font-semibold"
+            data-testid="top-bar-timer-dialog-workspace-label"
+          >
+            {{ props.timerWorkspaceContextLabel ?? "Running in another workspace" }}
+          </span>
+          . GiTiempo tracks one timer at a time. Stop this timer, then choose a visible project and task in the active workspace.
+        </p>
       </div>
 
-      <div class="flex flex-col gap-1">
-        <label
-          for="top-bar-timer-task"
-          class="text-text-dark text-[13px] font-medium"
-        >
-          Task
-        </label>
-        <div class="relative">
-          <AutoComplete
-            append-to="self"
-            class="w-full max-w-full min-w-0"
-            complete-on-focus
-            data-key="id"
-            dropdown
-            dropdown-mode="blank"
-            fluid
-            force-selection
-            input-id="top-bar-timer-task"
-            :min-length="0"
-            option-label="title"
-            :disabled="isTaskAutoCompleteDisabled"
-            :loading="props.isLoadingTasks"
-            :model-value="mobileTaskModel"
-            placeholder="Search tasks"
-            :pt="giTiempoSelfAppendedAutoCompletePt"
-            :suggestions="taskSuggestions"
-            @complete="handleTaskComplete"
-            @update:model-value="handleMobileTaskUpdate"
-          />
-        </div>
-        <small class="text-text-muted text-xs">
-          Visible tasks are listed first. New task is the last option. New time entries inherit the selected task billable default.
-        </small>
-
-        <div
-          v-if="isNewTaskSelected"
-          class="mt-1 flex flex-col gap-1"
-        >
+      <template v-else>
+        <div class="flex flex-col gap-1">
           <label
-            for="top-bar-timer-new-task-title"
+            for="top-bar-timer-project"
             class="text-text-dark text-[13px] font-medium"
           >
-            New task title
+            Project
           </label>
           <div class="relative">
-            <InputText
-              id="top-bar-timer-new-task-title"
-              v-model="createTaskTitleModel"
-              class="text-text-muted h-[38px] w-full pr-20 text-sm font-medium"
-              :disabled="isNewTaskTitleInputDisabled"
-              :invalid="!!props.createTaskErrorMessage"
+            <AutoComplete
+              append-to="self"
+              class="w-full max-w-full min-w-0"
+              complete-on-focus
+              data-key="id"
+              dropdown
+              dropdown-mode="blank"
+              fluid
+              force-selection
+              input-id="top-bar-timer-project"
+              :min-length="0"
+              option-label="name"
+              :disabled="props.isLoadingProjects || props.isConfirmingSelection"
+              :loading="props.isLoadingProjects"
+              :model-value="mobileProjectModel"
+              placeholder="Search projects"
+              :pt="giTiempoSelfAppendedAutoCompletePt"
+              :suggestions="projectSuggestions"
+              @complete="handleProjectComplete"
+              @update:model-value="handleMobileProjectUpdate"
             />
-            <span class="text-text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium">
-              Required
-            </span>
           </div>
-          <small
-            v-if="props.createTaskErrorMessage"
-            class="text-destructive text-xs"
-          >
-            {{ props.createTaskErrorMessage }}
-          </small>
-          <small
-            v-else
-            class="text-text-muted text-xs"
-          >
-            {{ newTaskHint }}
-          </small>
         </div>
-      </div>
 
-      <InlineRequestMessage
-        v-if="!props.isLoadingTasks && props.tasksErrorMessage"
-        :message="props.tasksErrorMessage"
-        title="Could not load tasks for this project."
-      />
+        <div class="flex flex-col gap-1">
+          <label
+            for="top-bar-timer-task"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Task
+          </label>
+          <div class="relative">
+            <AutoComplete
+              append-to="self"
+              class="w-full max-w-full min-w-0"
+              complete-on-focus
+              data-key="id"
+              dropdown
+              dropdown-mode="blank"
+              fluid
+              force-selection
+              input-id="top-bar-timer-task"
+              :min-length="0"
+              option-label="title"
+              :disabled="isTaskAutoCompleteDisabled"
+              :loading="props.isLoadingTasks"
+              :model-value="mobileTaskModel"
+              placeholder="Search tasks"
+              :pt="giTiempoSelfAppendedAutoCompletePt"
+              :suggestions="taskSuggestions"
+              @complete="handleTaskComplete"
+              @update:model-value="handleMobileTaskUpdate"
+            />
+          </div>
+          <small class="text-text-muted text-xs">
+            Visible tasks are listed first. New task is the last option. New time entries inherit the selected task billable default.
+          </small>
 
-      <div
-        v-else-if="!props.isLoadingTasks && props.selectedProjectId && !props.taskOptions.length && !isNewTaskSelected"
-        class="bg-app-bg rounded-lg p-3"
-      >
-        <p class="text-text-dark text-sm font-medium">
-          No existing active tasks in this project.
-        </p>
-        <p class="text-text-muted mt-1 text-xs">
-          Pick New task to create one, or choose a different project.
-        </p>
-      </div>
+          <div
+            v-if="isNewTaskSelected"
+            class="mt-1 flex flex-col gap-1"
+          >
+            <label
+              for="top-bar-timer-new-task-title"
+              class="text-text-dark text-[13px] font-medium"
+            >
+              New task title
+            </label>
+            <div class="relative">
+              <InputText
+                id="top-bar-timer-new-task-title"
+                v-model="createTaskTitleModel"
+                class="text-text-muted h-[38px] w-full pr-20 text-sm font-medium"
+                :disabled="isNewTaskTitleInputDisabled"
+                :invalid="!!props.createTaskErrorMessage"
+              />
+              <span class="text-text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-medium">
+                Required
+              </span>
+            </div>
+            <small
+              v-if="props.createTaskErrorMessage"
+              class="text-destructive text-xs"
+            >
+              {{ props.createTaskErrorMessage }}
+            </small>
+            <small
+              v-else
+              class="text-text-muted text-xs"
+            >
+              {{ newTaskHint }}
+            </small>
+          </div>
+        </div>
 
-      <div class="flex flex-col gap-1">
-        <label
-          for="top-bar-timer-description"
-          class="text-text-dark text-[13px] font-medium"
-        >
-          Description
-        </label>
-        <Textarea
-          id="top-bar-timer-description"
-          v-model="selectedDescriptionModel"
-          class="text-text-muted h-[82px] min-h-[82px] resize-none text-sm"
-          fluid
-          rows="3"
-          :disabled="props.isConfirmingSelection"
+        <InlineRequestMessage
+          v-if="!props.isLoadingTasks && props.tasksErrorMessage"
+          :message="props.tasksErrorMessage"
+          title="Could not load tasks for this project."
         />
-      </div>
+
+        <div
+          v-else-if="!props.isLoadingTasks && props.selectedProjectId && !props.taskOptions.length && !isNewTaskSelected"
+          class="bg-app-bg rounded-lg p-3"
+        >
+          <p class="text-text-dark text-sm font-medium">
+            No existing active tasks in this project.
+          </p>
+          <p class="text-text-muted mt-1 text-xs">
+            Pick New task to create one, or choose a different project.
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label
+            for="top-bar-timer-description"
+            class="text-text-dark text-[13px] font-medium"
+          >
+            Description
+          </label>
+          <Textarea
+            id="top-bar-timer-description"
+            v-model="selectedDescriptionModel"
+            class="text-text-muted h-[82px] min-h-[82px] resize-none text-sm"
+            fluid
+            rows="3"
+            :disabled="props.isConfirmingSelection"
+          />
+        </div>
+      </template>
 
       <div
         :class="[
@@ -440,43 +475,70 @@ watch(
           v-if="isMobileViewport && props.primaryActionLabel === 'Stop'"
           unstyled
           type="button"
-          class="bg-brand text-text-inverse border-brand h-[37px] w-full rounded-sm border px-4 text-sm font-semibold"
+          :aria-busy="primaryButtonLoading ? 'true' : undefined"
+          :aria-label="primaryButtonLabel"
+          class="bg-brand text-text-inverse border-brand inline-flex h-[37px] min-w-[96px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed"
+          data-testid="top-bar-timer-primary-action"
           :disabled="isPrimaryButtonDisabled"
           :fluid="true"
-          :label="primaryButtonLabel"
-          :loading="primaryButtonLoading"
           @click="emit('primaryAction')"
-        />
+        >
+          <span
+            v-if="primaryButtonLoading"
+            aria-hidden="true"
+            class="border-text-inverse/30 border-t-text-inverse size-4 animate-spin rounded-full border-2"
+            data-testid="top-bar-timer-primary-action-spinner"
+          />
+          <span v-else>{{ primaryButtonLabel }}</span>
+        </Button>
         <Button
-          v-if="props.primaryActionLabel === 'Stop'"
+          v-if="props.primaryActionLabel === 'Stop' && !props.isCrossWorkspaceTimer"
           unstyled
           type="button"
+          :aria-busy="confirmButtonLoading ? 'true' : undefined"
+          aria-label="Change task"
           :class="[
-            'border-divider bg-surface-primary text-text-dark h-[37px] rounded-sm border px-4 text-sm font-semibold',
+            'border-divider bg-surface-primary text-text-dark inline-flex h-[37px] min-w-[108px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed',
             isMobileViewport ? 'w-full' : 'w-auto',
           ]"
+          data-testid="top-bar-timer-confirm-action"
           :disabled="isConfirmButtonDisabled"
           :fluid="isMobileViewport"
-          label="Change task"
-          :loading="confirmButtonLoading"
           severity="secondary"
           variant="outlined"
           @click="emit('confirm')"
-        />
+        >
+          <span
+            v-if="confirmButtonLoading"
+            aria-hidden="true"
+            class="border-brand/30 border-t-brand size-4 animate-spin rounded-full border-2"
+            data-testid="top-bar-timer-confirm-action-spinner"
+          />
+          <span v-else>Change task</span>
+        </Button>
         <Button
           v-if="!isMobileViewport || props.primaryActionLabel !== 'Stop'"
           unstyled
           type="button"
+          :aria-busy="primaryButtonLoading ? 'true' : undefined"
+          :aria-label="primaryButtonLabel"
           :class="[
-            'bg-brand text-text-inverse border-brand h-[37px] rounded-sm border px-4 text-sm font-semibold',
+            'bg-brand text-text-inverse border-brand inline-flex h-[37px] min-w-[96px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed',
             isMobileViewport ? 'w-full' : 'w-auto',
           ]"
+          data-testid="top-bar-timer-primary-action"
           :disabled="isPrimaryButtonDisabled"
           :fluid="isMobileViewport"
-          :label="primaryButtonLabel"
-          :loading="primaryButtonLoading"
           @click="emit('primaryAction')"
-        />
+        >
+          <span
+            v-if="primaryButtonLoading"
+            aria-hidden="true"
+            class="border-text-inverse/30 border-t-text-inverse size-4 animate-spin rounded-full border-2"
+            data-testid="top-bar-timer-primary-action-spinner"
+          />
+          <span v-else>{{ primaryButtonLabel }}</span>
+        </Button>
       </div>
     </div>
   </Dialog>

@@ -107,6 +107,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isConfirmingSelection: selectionUpdate.isUpdatingSelection,
     isCreateTaskDisabled: viewModel.isCreateTaskDisabled,
     isCreatingTask: taskCreation.isCreatingTask,
+    isCrossWorkspaceTimer: viewModel.isCrossWorkspaceTimer,
     isDialogPrimaryActionDisabled: viewModel.isDialogPrimaryActionDisabled,
     isDialogOpen: picker.isDialogOpen,
     isDialogSecondaryActionDisabled: viewModel.isDialogSecondaryActionDisabled,
@@ -142,5 +143,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     timerProjectLabel: viewModel.timerProjectLabel,
     timerStatusLabel: viewModel.timerStatusLabel,
     timerTaskLabel: viewModel.timerTaskLabel,
+    timerWorkspaceContextLabel: viewModel.timerWorkspaceContextLabel,
   };
 }

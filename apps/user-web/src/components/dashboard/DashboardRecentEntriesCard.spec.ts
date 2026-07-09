@@ -214,8 +214,8 @@ describe("DashboardRecentEntriesCard", () => {
 
     const startTimerButton = wrapper.get('[data-testid="dashboard-recent-entry-start-timer-entry-1"]');
 
+    expect(startTimerButton.attributes("aria-disabled")).toBe("true");
     expect(startTimerButton.attributes("disabled")).toBeDefined();
-    expect(startTimerButton.attributes("data-tooltip-value")).toBeUndefined();
 
     await startTimerButton.trigger("click");
 
