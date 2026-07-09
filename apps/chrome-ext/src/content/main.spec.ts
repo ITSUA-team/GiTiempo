@@ -58,6 +58,10 @@ function currentTimer(): RuntimeSnapshot["currentTimer"] {
     },
     taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
     updatedAt: "2026-04-21T09:00:00.000Z",
+    workspace: {
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9000",
+      name: "Workspace Alpha",
+    },
     user: {
       avatarUrl: null,
       displayName: "Alexey Tsukanov",
