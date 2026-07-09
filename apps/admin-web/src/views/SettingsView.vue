@@ -53,8 +53,15 @@ const githubConnection = useAdminSettingsGitHubConnection({
   },
   scope,
 });
+const canAddGitHubOrganization = computed(
+  () =>
+    isAuthenticated.value &&
+    githubConnection.isConnected.value &&
+    !githubConnection.loading.value &&
+    !githubConnection.requestError.value,
+);
 const canLoadAvailableGitHubOrganizations = computed(
-  () => isAuthenticated.value && githubConnection.isConnected.value,
+  () => canAddGitHubOrganization.value,
 );
 const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
   availableOrganizationsEnabled: canLoadAvailableGitHubOrganizations,
@@ -93,7 +100,7 @@ const { saveSettings: persistSettings, saving } = settingsPersistence;
 const canSave = computed(() => isDirty.value && !saving.value && !loading.value);
 const githubProfileHref = computed(() => buildGitHubProfileHref(appEnv.userAppUrl));
 const gitHubAddGateMessage = computed(() => {
-  if (githubConnection.isInitialLoading.value) {
+  if (githubConnection.loading.value) {
     return 'Confirming your GitHub account connection before organization setup.';
   }
 
@@ -209,7 +216,7 @@ watch(
             :available-organizations-initial-loading="workspaceGitHubOrganizations.availableOrganizationsInitialLoading.value"
             :available-organizations-loading="workspaceGitHubOrganizations.availableOrganizationsLoading.value"
             :available-organizations-request-error="workspaceGitHubOrganizations.availableOrganizationsRequestError.value"
-            :can-add-organization="githubConnection.isConnected.value"
+            :can-add-organization="canAddGitHubOrganization"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"

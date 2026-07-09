@@ -83,6 +83,7 @@ function handleOrganizationUpdate(value: GitHubOwner | string | null): void {
 
 const canAttemptAddOrganization = computed(
   () =>
+    props.canAddOrganization &&
     !props.adding &&
     !props.availableOrganizationsLoading &&
     !props.availableOrganizationsRequestError,
@@ -242,6 +243,7 @@ watch(
               v-if="step.action?.kind === 'retry'"
               class="sm:shrink-0"
               :label="step.action.label"
+              :disabled="!canAddOrganization || adding"
               :loading="adding"
               @click="emit('retryAdd')"
             />

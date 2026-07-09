@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import { nextTick } from 'vue';
 import {
   buildWorkspaceGitHubOrganizationRecoveryPayload,
   type WorkspaceGitHubOrganizationRecoveryPayload,
@@ -9,7 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
 import { useAuthStore } from '@/stores/auth';
-import { createTestQueryPlugin } from '@/test/query-client';
+import { adminSettingsKeys } from '@/lib/query-keys';
+import { getAdminServerStateScope } from '@/lib/server-state-scope';
+import { createTestQueryClient, createTestQueryPlugin } from '@/test/query-client';
 
 const testMocks = vi.hoisted(() => ({
   addWorkspaceGitHubOrganization: vi.fn(),
@@ -246,7 +249,9 @@ async function addOrganization(
   await flushPromises();
 }
 
-function mountSettingsView() {
+function mountSettingsView({
+  queryClient = createTestQueryClient(),
+} = {}) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
@@ -257,7 +262,7 @@ function mountSettingsView() {
     global: {
       plugins: [
         pinia,
-        createTestQueryPlugin(),
+        createTestQueryPlugin(queryClient),
         [PrimeVue, giTiempoPrimeVueOptions],
       ],
       stubs: {
@@ -431,6 +436,94 @@ describe('SettingsView', () => {
     expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
       true,
     );
+  });
+
+  it('hides add setup while refreshing cached GitHub connection status', async () => {
+    const queryClient = createTestQueryClient();
+    const wrapper = mountSettingsView({ queryClient });
+    await flushPromises();
+
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
+      true,
+    );
+
+    const githubStatusRequest = createDeferred<typeof connectedGitHubStatus>();
+    testMocks.getGitHubConnectionStatus.mockReturnValueOnce(
+      githubStatusRequest.promise,
+    );
+
+    const refetchPromise = queryClient.refetchQueries({
+      queryKey: adminSettingsKeys.githubConnection(
+        getAdminServerStateScope('access-token'),
+      ),
+    });
+    await nextTick();
+
+    expect(wrapper.text()).toContain(
+      'Confirming your GitHub account connection before organization setup.',
+    );
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
+      false,
+    );
+
+    githubStatusRequest.resolve(connectedGitHubStatus);
+    await refetchPromise;
+    await flushPromises();
+
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(
+      true,
+    );
+  });
+
+  it('disables recovery retry while refreshing cached GitHub connection status', async () => {
+    testMocks.addWorkspaceGitHubOrganization.mockRejectedValueOnce(
+      createRecoveryError(
+        'GitHub organization blocks this GitHub App',
+        createRecoveryPayload('workspace_github_organization_app_access_blocked'),
+      ),
+    );
+
+    const queryClient = createTestQueryClient();
+    const wrapper = mountSettingsView({ queryClient });
+    await flushPromises();
+    await addOrganization(wrapper);
+
+    expect(wrapper.text()).toContain('Retry check');
+    expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledTimes(1);
+
+    const githubStatusRequest = createDeferred<typeof connectedGitHubStatus>();
+    testMocks.getGitHubConnectionStatus.mockReturnValueOnce(
+      githubStatusRequest.promise,
+    );
+
+    const refetchPromise = queryClient.refetchQueries({
+      queryKey: adminSettingsKeys.githubConnection(
+        getAdminServerStateScope('access-token'),
+      ),
+    });
+    await nextTick();
+
+    const retryButton = wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Retry check');
+
+    expect(retryButton?.attributes('disabled')).toBeDefined();
+
+    await retryButton?.trigger('click');
+    await flushPromises();
+
+    expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledTimes(1);
+
+    githubStatusRequest.resolve(connectedGitHubStatus);
+    await refetchPromise;
+    await flushPromises();
+
+    expect(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text() === 'Retry check')
+        ?.attributes('disabled'),
+    ).toBeUndefined();
   });
 
   it('hides add setup while disconnected but keeps saved organizations visible and removable', async () => {

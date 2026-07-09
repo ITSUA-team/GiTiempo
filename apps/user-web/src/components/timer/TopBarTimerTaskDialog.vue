@@ -3,7 +3,6 @@ import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
-import ProgressSpinner from "primevue/progressspinner";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
@@ -395,24 +394,14 @@ watch(
         </div>
       </div>
 
-      <div
-        v-if="props.isLoadingTasks && props.selectedProjectId"
-        class="bg-app-bg flex min-h-16 items-center justify-center rounded-lg"
-      >
-        <ProgressSpinner
-          stroke-width="3"
-          style="width:28px;height:28px"
-        />
-      </div>
-
       <InlineRequestMessage
-        v-else-if="props.tasksErrorMessage"
+        v-if="!props.isLoadingTasks && props.tasksErrorMessage"
         :message="props.tasksErrorMessage"
         title="Could not load tasks for this project."
       />
 
       <div
-        v-else-if="props.selectedProjectId && !props.taskOptions.length && !isNewTaskSelected"
+        v-else-if="!props.isLoadingTasks && props.selectedProjectId && !props.taskOptions.length && !isNewTaskSelected"
         class="bg-app-bg rounded-lg p-3"
       >
         <p class="text-text-dark text-sm font-medium">
