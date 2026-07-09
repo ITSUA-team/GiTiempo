@@ -1,5 +1,4 @@
 import { computed, watch, type ComputedRef, type Ref } from 'vue';
-
 import { useGitHubConnectionStatusQuery } from '@/composables/query';
 import type { AdminServerStateScope } from '@/lib/query-keys';
 import {
@@ -33,6 +32,11 @@ export function useAdminSettingsGitHubConnection({
     enabled,
     scope,
   });
+  const connection = computed(() => query.data.value ?? null);
+  const account = computed(() => connection.value?.account ?? null);
+  const requestError = computed(() =>
+    query.error.value ? getErrorMessage(query.error.value) : null,
+  );
   const connectionStatus = computed(() => query.data.value ?? null);
   const loading = computed(() => query.isFetching.value);
   const initialLoaded = computed(
@@ -41,8 +45,8 @@ export function useAdminSettingsGitHubConnection({
   const isInitialLoading = computed(
     () => loading.value && !initialLoaded.value,
   );
-  const requestError = computed(() =>
-    query.error.value ? getErrorMessage(query.error.value) : null,
+  const isConnected = computed(
+    () => !requestError.value && connection.value?.status === 'connected',
   );
 
   async function retryLoad(): Promise<void> {
@@ -71,6 +75,9 @@ export function useAdminSettingsGitHubConnection({
   );
 
   return {
+    account,
+    connection,
+    isConnected,
     connectionStatus,
     isInitialLoading,
     loading,

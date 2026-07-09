@@ -1,5 +1,4 @@
 import { mount } from '@vue/test-utils';
-import type { GitHubConnectionStatusResponse } from '@gitiempo/shared';
 import { describe, expect, it } from 'vitest';
 
 import SettingsGitHubWorkspaceAccessCard from './SettingsGitHubWorkspaceAccessCard.vue';
@@ -29,23 +28,48 @@ const ButtonStub = {
   `,
 };
 
-const InputTextStub = {
-  emits: ['update:modelValue'],
-  props: ['id', 'modelValue'],
-  template:
-    '<input :id="id" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+const AutoCompleteStub = {
+  emits: ['complete', 'update:modelValue'],
+  props: [
+    'disabled',
+    'forceSelection',
+    'inputId',
+    'modelValue',
+    'optionLabel',
+    'pt',
+    'suggestions',
+  ],
+  template: `
+    <div>
+      <input
+        v-bind="pt?.pcInputText?.root ?? {}"
+        :id="inputId"
+        :data-force-selection="forceSelection ? 'true' : 'false'"
+        :disabled="disabled"
+        :value="typeof modelValue === 'string' ? modelValue : (modelValue?.[optionLabel] ?? '')"
+        @focus="$emit('complete', { query: '' })"
+        @input="$emit('update:modelValue', $event.target.value)"
+      />
+      <button
+        v-for="option in suggestions"
+        :key="option.login"
+        :data-testid="inputId + '-option-' + option.login"
+        type="button"
+        @click="$emit('update:modelValue', option)"
+      >
+        {{ option[optionLabel] }}
+      </button>
+    </div>
+  `,
 };
 
-const connectedGitHubAccount = {
-  status: 'connected',
-  account: {
-    githubUserId: 'github-user-1',
-    login: 'octocat',
-    avatarUrl: 'https://avatars.example.test/octocat.png',
-    connectedAt: '2026-06-18T00:00:00.000Z',
-    updatedAt: '2026-06-18T00:00:00.000Z',
-  },
-} satisfies GitHubConnectionStatusResponse;
+const availableOrganization = {
+  avatarUrl: null,
+  label: 'Octo-Org',
+  login: 'Octo-Org',
+  type: 'organization' as const,
+  url: 'https://github.com/Octo-Org',
+};
 
 function createRecoveryChecklist() {
   return {
@@ -79,18 +103,21 @@ function createRecoveryChecklist() {
 
 function createProps(overrides: Record<string, unknown> = {}) {
   return {
+    addOrganizationGateMessage: null,
     adding: false,
-    githubConnectionLoading: false,
-    githubConnectionRequestError: null,
-    githubConnectionStatus: connectedGitHubAccount,
-    githubProfileUrl: 'https://user.example.test/profile',
+    availableOrganizationEmptyMessage: null,
+    availableOrganizations: [availableOrganization],
+    availableOrganizationsInitialLoading: false,
+    availableOrganizationsLoading: false,
+    availableOrganizationsRequestError: null,
+    canAddOrganization: true,
     isInitialLoading: false,
     items: [],
-    organizationLogin: '',
     organizationLoginError: null,
     recoveryChecklist: null,
     removingOrganizationId: null,
     requestError: null,
+    selectedOrganization: null,
     ...overrides,
   };
 }
@@ -100,9 +127,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           Skeleton: SkeletonStub,
           SurfaceCard: { template: '<section><slot /></section>' },
@@ -120,9 +146,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           Skeleton: SkeletonStub,
           SurfaceCard: { template: '<section><slot /></section>' },
@@ -142,9 +167,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -172,13 +196,73 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.emitted('remove')).toEqual([['org-1']]);
   });
 
+  it('hides the add organization setup action when GitHub is disconnected', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        addOrganizationGateMessage:
+          'Connect your GitHub account before adding workspace organizations.',
+        canAddOrganization: false,
+      }),
+    });
+
+    expect(wrapper.text()).not.toContain('Add organization');
+    expect(
+      wrapper.get('[data-testid="settings-github-add-gate"]').text(),
+    ).toContain('Connect your GitHub account before adding workspace organizations.');
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(false);
+  });
+
+  it('keeps saved rows removable while the add setup action is gated', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        addOrganizationGateMessage:
+          'Connect your GitHub account before adding workspace organizations.',
+        canAddOrganization: false,
+        items: [
+          {
+            id: 'org-1',
+            workspaceId: 'workspace-1',
+            organizationLogin: 'Octo-Org',
+            createdByUserId: 'user-1',
+            createdAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    expect(wrapper.text()).toContain('Octo-Org');
+    expect(wrapper.text()).not.toContain('Add organization');
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Remove')
+      ?.trigger('click');
+
+    expect(wrapper.emitted('remove')).toEqual([['org-1']]);
+  });
+
   it('shows the request-error state with retry', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -198,15 +282,146 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       ?.trigger('click');
 
     expect(wrapper.emitted('retry')).toHaveLength(1);
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(false);
+  });
+
+  it('renders an organization autocomplete with immediate dropdown options', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps(),
+    });
+
+    expect(wrapper.text()).toContain('GitHub organization');
+    expect(wrapper.text()).toContain(
+      'Select a suggested organization or enter a GitHub organization login.',
+    );
+    expect(
+      wrapper.find(
+        '[data-testid="settings-github-organization-selector-option-Octo-Org"]',
+      ).exists(),
+    ).toBe(true);
+
+    const input = wrapper.get('#settings-github-organization-selector');
+
+    expect(input.attributes('autocomplete')).toBe('off');
+    expect(input.attributes('data-bwignore')).toBe('true');
+    expect(input.attributes('data-force-selection')).toBe('false');
+    expect(input.attributes('data-1p-ignore')).toBe('true');
+    expect(input.attributes('data-lpignore')).toBe('true');
+
+    await input.trigger('focus');
+    await wrapper
+      .get('[data-testid="settings-github-organization-selector-option-Octo-Org"]')
+      .trigger('click');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      [availableOrganization],
+    ]);
+  });
+
+  it('emits manually typed organization logins from the autocomplete', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        selectedOrganization: availableOrganization,
+      }),
+    });
+
+    await wrapper
+      .get('#settings-github-organization-selector')
+      .setValue('Different org');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      ['Different org'],
+    ]);
+  });
+
+  it('shows available organization empty guidance', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        availableOrganizationEmptyMessage:
+          'No organization suggestions are available. Enter a GitHub organization login and GitHub will validate access.',
+        availableOrganizations: [],
+      }),
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-available-organizations-empty"]')
+        .text(),
+    ).toContain('No organization suggestions are available.');
+  });
+
+  it('keeps manual organization fallback available when suggestions fail', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        availableOrganizationsRequestError: 'GitHub organizations unavailable',
+      }),
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-available-organizations-error"]')
+        .text(),
+    ).toContain('GitHub organizations unavailable');
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(true);
+
+    await wrapper
+      .get('#settings-github-organization-selector')
+      .setValue('Different org');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      ['Different org'],
+    ]);
+    expect(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text() === 'Add organization')
+        ?.attributes('disabled'),
+    ).toBeUndefined();
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Try again')
+      ?.trigger('click');
+
+    expect(wrapper.emitted('retryAvailableOrganizations')).toHaveLength(1);
   });
 
   it('renders the GitHub App recovery checklist with link and retry actions', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -238,257 +453,34 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.emitted('retryAdd')).toHaveLength(1);
   });
 
-  it('keeps recovery links visible but disables retry when the account gate is blocked', async () => {
-    const scenarios = [
-      {
-        label: 'loading',
-        props: {
-          githubConnectionLoading: true,
-          githubConnectionStatus: connectedGitHubAccount,
-        },
-      },
-      {
-        label: 'request error',
-        props: {
-          githubConnectionRequestError: 'GitHub status unavailable',
-          githubConnectionStatus: connectedGitHubAccount,
-        },
-      },
-      {
-        label: 'disconnected',
-        props: {
-          githubConnectionStatus: { status: 'disconnected', account: null },
-        },
-      },
-    ];
-
-    for (const scenario of scenarios) {
-      const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
-        global: {
-          stubs: {
-            Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-            Button: ButtonStub,
-            InputText: InputTextStub,
-            Message: { template: '<small><slot /></small>' },
-            Skeleton: SkeletonStub,
-            SurfaceCard: { template: '<section><slot /></section>' },
-          },
-        },
-        props: createProps({
-          recoveryChecklist: createRecoveryChecklist(),
-          ...scenario.props,
-        }),
-      });
-      const retryButton = wrapper
-        .findAll('button')
-        .find((button) => button.text() === 'Retry check');
-
-      expect(
-        wrapper.find('[data-testid="settings-github-recovery-link-install"]').exists(),
-      ).toBe(true);
-      expect(retryButton?.attributes('disabled'), scenario.label).toBeDefined();
-
-      await retryButton?.trigger('click');
-
-      expect(wrapper.emitted('retryAdd'), scenario.label).toBeUndefined();
-    }
-  });
-
-  it('renders connected account metadata and add controls', () => {
+  it('keeps recovery links visible but disables retry when the add gate is blocked', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
-          Message: { template: '<small><slot /></small>' },
-          SurfaceCard: { template: '<section><slot /></section>' },
-        },
-      },
-      props: createProps(),
-    });
-
-    expect(
-      wrapper.get('[data-testid="settings-github-account-connected"]').text(),
-    ).toContain('octocat');
-    expect(wrapper.text()).toContain('Connected GitHub account');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
-      true,
-    );
-    expect(wrapper.text()).toContain('Add organization');
-  });
-
-  it('renders disconnected account copy and hides add controls', () => {
-    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
-      global: {
-        stubs: {
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
       },
       props: createProps({
-        githubConnectionStatus: { status: 'disconnected', account: null },
+        addOrganizationGateMessage:
+          'Confirming your GitHub account connection before organization setup.',
+        canAddOrganization: false,
+        recoveryChecklist: createRecoveryChecklist(),
       }),
     });
-
-    expect(
-      wrapper.get('[data-testid="settings-github-account-disconnected"]').text(),
-    ).toContain('GitHub is not connected');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
-      false,
-    );
-    expect(wrapper.text()).not.toContain('Use the GitHub organization login');
-    expect(
-      wrapper
-        .get('[data-testid="settings-github-account-profile-link"]')
-        .attributes('href'),
-    ).toBe('https://user.example.test/profile');
-  });
-
-  it('keeps saved organization rows visible while disconnected', () => {
-    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
-      global: {
-        stubs: {
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          Button: ButtonStub,
-          InputText: InputTextStub,
-          Message: { template: '<small><slot /></small>' },
-          SurfaceCard: { template: '<section><slot /></section>' },
-        },
-      },
-      props: createProps({
-        githubConnectionStatus: { status: 'disconnected', account: null },
-        items: [
-          {
-            id: 'org-1',
-            workspaceId: 'workspace-1',
-            organizationLogin: 'Octo-Org',
-            createdByUserId: 'user-1',
-            createdAt: '2026-06-18T00:00:00.000Z',
-          },
-        ],
-      }),
-    });
-
-    expect(wrapper.text()).toContain('Octo-Org');
-    expect(wrapper.text()).toContain('Remove');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
-      false,
-    );
-  });
-
-  it('renders account loading placeholders before status resolves', () => {
-    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
-      global: {
-        stubs: {
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          Button: ButtonStub,
-          InputText: InputTextStub,
-          Message: { template: '<small><slot /></small>' },
-          Skeleton: SkeletonStub,
-          SurfaceCard: { template: '<section><slot /></section>' },
-        },
-      },
-      props: createProps({
-        githubConnectionLoading: true,
-        githubConnectionStatus: null,
-      }),
-    });
-
-    expect(
-      wrapper
-        .get('[data-testid="settings-github-account-loading"]')
-        .findAll('[data-testid="skeleton"]').length,
-    ).toBeGreaterThan(1);
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
-      false,
-    );
-  });
-
-  it('hides add controls while refreshing account status with cached connected data', () => {
-    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
-      global: {
-        stubs: {
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          Button: ButtonStub,
-          InputText: InputTextStub,
-          Message: { template: '<small><slot /></small>' },
-          Skeleton: SkeletonStub,
-          SurfaceCard: { template: '<section><slot /></section>' },
-        },
-      },
-      props: createProps({
-        githubConnectionLoading: true,
-        githubConnectionStatus: connectedGitHubAccount,
-      }),
-    });
-
-    expect(
-      wrapper.find('[data-testid="settings-github-account-loading"]').exists(),
-    ).toBe(true);
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
-      false,
-    );
-  });
-
-  it('renders account request errors with retry', async () => {
-    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
-      global: {
-        stubs: {
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          Button: ButtonStub,
-          InputText: InputTextStub,
-          Message: { template: '<small><slot /></small>' },
-          SurfaceCard: { template: '<section><slot /></section>' },
-        },
-      },
-      props: createProps({
-        githubConnectionRequestError: 'GitHub status unavailable',
-        githubConnectionStatus: null,
-      }),
-    });
-
-    expect(
-      wrapper.get('[data-testid="settings-github-account-error"]').text(),
-    ).toContain('GitHub status unavailable');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
-      false,
-    );
-
-    await wrapper
+    const retryButton = wrapper
       .findAll('button')
-      .find((button) => button.text() === 'Try again')
-      ?.trigger('click');
-
-    expect(wrapper.emitted('retryGithubConnection')).toHaveLength(1);
-  });
-
-  it('hides add controls when a status error leaves stale connected data cached', () => {
-    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
-      global: {
-        stubs: {
-          Avatar: { template: '<span data-testid="avatar">{{ label }}</span>' },
-          Button: ButtonStub,
-          InputText: InputTextStub,
-          Message: { template: '<small><slot /></small>' },
-          SurfaceCard: { template: '<section><slot /></section>' },
-        },
-      },
-      props: createProps({
-        githubConnectionRequestError: 'GitHub status unavailable',
-        githubConnectionStatus: connectedGitHubAccount,
-      }),
-    });
+      .find((button) => button.text() === 'Retry check');
 
     expect(
-      wrapper.get('[data-testid="settings-github-account-error"]').text(),
-    ).toContain('GitHub status unavailable');
-    expect(wrapper.find('#settings-github-organization-login').exists()).toBe(
-      false,
-    );
-    expect(wrapper.text()).not.toContain('Use the GitHub organization login');
+      wrapper.find('[data-testid="settings-github-recovery-link-install"]').exists(),
+    ).toBe(true);
+    expect(retryButton?.attributes('disabled')).toBeDefined();
+
+    await retryButton?.trigger('click');
+
+    expect(wrapper.emitted('retryAdd')).toBeUndefined();
   });
 });

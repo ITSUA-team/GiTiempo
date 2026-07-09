@@ -1,35 +1,45 @@
-## 1. Frontend Context And Data Access
+## 1. Context And Design Parity
 
-- [x] 1.1 Open the approved `GITiempo.pen` Settings screen when Pencil access is available and build a parity checklist against `docs/ui/pages-admin.md` before editing UI.
-- [x] 1.2 Add an admin Settings client method for `GET /github/connection` using the shared `githubConnectionStatusResponseSchema` and existing authenticated API client.
-- [x] 1.3 Ensure `packages/shared` exports the GitHub connection response schema and types needed by admin-web; add only minimal package exports if they are missing.
-- [x] 1.4 Add a scoped admin Settings query key and Vue Query wrapper for GitHub connection status.
+- [x] 1.1 Read `apps/admin-web/AGENTS.md`, `docs/ui/INDEX.md`, and the relevant admin Settings UI docs before implementation.
+- [x] 1.2 Inspect the approved `GITiempo.pen` Admin Settings frame when Pencil access is available and use it as the parity checklist for Settings card spacing, width, typography, and responsive behavior.
 
-## 2. Settings GitHub Card Behavior
+## 2. Connection Status Query Layer
 
-- [x] 2.1 Add Settings page state for GitHub connection status with independent loading, error, retry, connected, and disconnected states.
-- [x] 2.2 Pass GitHub account status into `SettingsGitHubWorkspaceAccessCard` without coupling it to workspace organization policy list loading.
-- [x] 2.3 Render a GitHub account section in the card that shows safe connected account metadata when connected.
-- [x] 2.4 Render disconnected copy and a connect or reconnect action to the user profile GitHub connection surface when GitHub is disconnected.
-- [x] 2.5 Hide the `Add organization` section unless GitHub connection status is loaded as connected.
-- [x] 2.6 Keep allowed-organization empty, populated, request-error, and remove-action states visible and usable while GitHub is disconnected.
-- [x] 2.7 Preserve existing GitHub App recovery checklist rendering and retry behavior after a connected admin attempts to add an organization.
+- [x] 2.1 Add an admin settings query key for the current user's GitHub connection status.
+- [x] 2.2 Extend the admin settings client to call `GET /github/connection` and parse `githubConnectionStatusResponseSchema`.
+- [x] 2.3 Add a settings composable that exposes GitHub connection status, loading state, request-error state, and retry behavior for the Settings page.
+- [x] 2.4 Add or update focused tests for the new query key, client call, and composable behavior.
+- [x] 2.5 Add an admin settings query key, client method, and query wrapper for `GET /github/organizations` using `githubOwnerListResponseSchema`.
 
-## 3. Backend And Contract Parity
+## 3. Setup Organization API Contract
 
-- [x] 3.1 Verify `GET /github/connection` accepts admin-web authenticated requests and returns only the existing safe connected/disconnected response shape.
-- [x] 3.2 Verify `POST /workspace/github/organizations` rejects disconnected or unusable GitHub accounts without saving a policy row or exposing token material.
-- [x] 3.3 Add or adjust API/contract tests only if the existing backend behavior does not already cover the disconnected add prerequisite and safe recovery payloads.
-- [x] 3.4 Update endpoint or UI docs only if implementation changes a public contract or documented Settings behavior beyond this OpenSpec delta.
+- [x] 3.1 Add `GET /github/organizations` as a setup-only endpoint that lists organization owners visible to the current user's connected GitHub account.
+- [x] 3.2 Ensure disconnected users are rejected without calling GitHub provider APIs and without exposing token material.
+- [x] 3.3 Keep the setup organization list independent from workspace allow-list filtering while preserving workspace policy enforcement for browsing and add mutations.
+- [x] 3.4 Add or update API controller/service tests for the setup organization list behavior.
+- [x] 3.5 Update `docs/API-ENDPOINTS.md` and `packages/shared/openapi.json` for the new route.
 
-## 4. Tests And Verification
+## 4. Settings UI Implementation
 
-- [x] 4.1 Add component tests for `SettingsGitHubWorkspaceAccessCard` connected, disconnected, account-loading, and account-error states.
-- [x] 4.2 Add Settings view tests proving disconnected admins do not see `Add organization`, connected admins do, and saved organizations remain visible/removable while disconnected.
-- [x] 4.3 Add client/query tests for the GitHub connection status request and schema parsing.
-- [x] 4.4 Run `pnpm --filter admin-web test`.
-- [x] 4.5 Run `pnpm --filter admin-web lint && pnpm --filter admin-web typecheck`.
-- [x] 4.6 If `packages/shared` changes, run `pnpm --filter @gitiempo/shared build` and the affected admin-web verification again.
-- [x] 4.7 If `apps/api` changes, run `pnpm --filter @gitiempo/api lint && pnpm --filter @gitiempo/api typecheck && pnpm --filter @gitiempo/api test`.
-- [x] 4.8 Run `pnpm exec openspec status --change "add-github-account-settings-gate-organization-setup"`.
-- [x] 4.9 Document that `openspec validate --all` remains blocked until canonical `user-activity-tracking` and `workspace-membership` purpose metadata is materialized through the normal OpenSpec workflow.
+- [x] 4.1 Add a GitHub Account settings card that renders connected, disconnected, loading, and request-error states without exposing token material.
+- [x] 4.2 Update `SettingsView.vue` to load GitHub connection status independently from workspace settings and organization policy data.
+- [x] 4.3 Pass a connected-account gate from `SettingsView.vue` into the GitHub Workspace Access card.
+- [x] 4.4 Update the GitHub Workspace Access card so the `Add organization` setup action is hidden unless the current user is connected to GitHub and organization policy state allows adding.
+- [x] 4.5 Render the add setup input as a PrimeVue organization selector populated from available connected-account organizations, excluding already allowed workspace organizations from suggestions while still accepting manually typed organization logins.
+- [x] 4.6 Preserve saved organization policy list, empty state, loading state, request-error state, remove behavior, and existing recovery guidance independently from the add-action gate.
+- [x] 4.7 Keep backend `POST /workspace/github/organizations` validation authoritative for disconnected, unavailable, or stale GitHub provider states.
+
+## 5. Documentation And Verification
+
+- [x] 5.1 Update `docs/ui/pages-admin.md` to document the GitHub Account prerequisite section, selector source, and connection-gated organization setup behavior.
+- [x] 5.2 Update Settings page/component tests for connected, disconnected, loading, connection-status-error, selector loading/error/empty, already-allowed filtering, and manually typed organization fallback states.
+- [x] 5.3 Add an `admin-pages` OpenSpec delta so the existing Settings GitHub Workspace Access scenarios no longer require an always-available add form.
+- [x] 5.4 Run `pnpm --filter admin-web typecheck`.
+- [x] 5.5 Run `pnpm --filter admin-web lint`.
+- [x] 5.6 Run the focused admin-web Settings tests covering the changed query, page, and settings components.
+- [x] 5.7 Run focused API tests for `GET /github/organizations` and disconnected organization add behavior.
+- [x] 5.8 Run `pnpm --filter @gitiempo/api lint && pnpm --filter @gitiempo/api typecheck && pnpm --filter @gitiempo/api test` for the API/OpenAPI surface change.
+- [x] 5.9 Run `pnpm openapi:export` and confirm `packages/shared/openapi.json` is current after the route documentation change.
+- [x] 5.10 Run `pnpm exec openspec validate add-github-account-settings-gate-organization-setup --strict`.
+- [x] 5.11 Run `pnpm exec openspec status --change "add-github-account-settings-gate-organization-setup"`.
+- [x] 5.12 Document that `openspec validate --all` remains blocked until canonical `user-activity-tracking` and `workspace-membership` purpose metadata is materialized through the normal OpenSpec workflow.

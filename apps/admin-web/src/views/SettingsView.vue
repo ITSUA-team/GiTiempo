@@ -3,8 +3,10 @@ import { computed, watch } from 'vue';
 
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import SettingsForm from '@/components/settings/SettingsForm.vue';
+import SettingsGitHubAccountCard from '@/components/settings/SettingsGitHubAccountCard.vue';
 import SettingsGitHubWorkspaceAccessCard from '@/components/settings/SettingsGitHubWorkspaceAccessCard.vue';
 import SettingsPageSkeleton from '@/components/settings/SettingsPageSkeleton.vue';
+import { buildGitHubProfileHref } from '@/components/settings/github-workspace-access';
 import { appEnv } from '@/config/env';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useAdminSettingsData } from '@/composables/settings/useAdminSettingsData';
@@ -13,7 +15,6 @@ import { useAdminSettingsGitHubConnection } from '@/composables/settings/useAdmi
 import { useAdminWorkspaceGitHubOrganizations } from '@/composables/settings/useAdminWorkspaceGitHubOrganizations';
 import { useAdminSettingsPersistence } from '@/composables/settings/useAdminSettingsPersistence';
 import { toAdminSettingsFormValues } from '@/composables/settings/admin-settings-form';
-import { buildGitHubProfileHref } from '@/components/settings/github-workspace-access';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import { useAuthStore } from '@/stores/auth';
 
@@ -52,7 +53,18 @@ const githubConnection = useAdminSettingsGitHubConnection({
   },
   scope,
 });
+const canAddGitHubOrganization = computed(
+  () =>
+    isAuthenticated.value &&
+    githubConnection.isConnected.value &&
+    !githubConnection.loading.value &&
+    !githubConnection.requestError.value,
+);
+const canLoadAvailableGitHubOrganizations = computed(
+  () => canAddGitHubOrganization.value,
+);
 const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
+  availableOrganizationsEnabled: canLoadAvailableGitHubOrganizations,
   enabled: isAuthenticated,
   githubAppInstallUrl: appEnv.githubAppInstallUrl,
   onError(message, error, action) {
@@ -86,7 +98,22 @@ const {
 } = settingsData;
 const { saveSettings: persistSettings, saving } = settingsPersistence;
 const canSave = computed(() => isDirty.value && !saving.value && !loading.value);
-const githubProfileUrl = computed(() => buildGitHubProfileHref(appEnv.userAppUrl));
+const githubProfileHref = computed(() => buildGitHubProfileHref(appEnv.userAppUrl));
+const gitHubAddGateMessage = computed(() => {
+  if (githubConnection.loading.value) {
+    return 'Confirming your GitHub account connection before organization setup.';
+  }
+
+  if (githubConnection.requestError.value) {
+    return 'Reload your GitHub account status before adding workspace organizations.';
+  }
+
+  if (!githubConnection.isConnected.value) {
+    return 'Connect your GitHub account before adding workspace organizations.';
+  }
+
+  return null;
+});
 
 function syncWorkspaceName(values = persisted.value): void {
   if (!values) return;
@@ -172,13 +199,24 @@ watch(
         @save="saveSettings"
       >
         <template #after-card>
+          <SettingsGitHubAccountCard
+            :connection="githubConnection.connection.value"
+            :is-initial-loading="githubConnection.isInitialLoading.value"
+            :profile-href="githubProfileHref"
+            :request-error="githubConnection.requestError.value"
+            @retry="githubConnection.retryLoad"
+          />
+
           <SettingsGitHubWorkspaceAccessCard
-            v-model:organization-login="workspaceGitHubOrganizations.organizationLogin.value"
+            v-model:selected-organization="workspaceGitHubOrganizations.selectedOrganization.value"
+            :add-organization-gate-message="gitHubAddGateMessage"
             :adding="workspaceGitHubOrganizations.adding.value"
-            :github-connection-loading="githubConnection.loading.value"
-            :github-connection-request-error="githubConnection.requestError.value"
-            :github-connection-status="githubConnection.connectionStatus.value"
-            :github-profile-url="githubProfileUrl"
+            :available-organization-empty-message="workspaceGitHubOrganizations.availableOrganizationsEmptyMessage.value"
+            :available-organizations="workspaceGitHubOrganizations.selectableOrganizations.value"
+            :available-organizations-initial-loading="workspaceGitHubOrganizations.availableOrganizationsInitialLoading.value"
+            :available-organizations-loading="workspaceGitHubOrganizations.availableOrganizationsLoading.value"
+            :available-organizations-request-error="workspaceGitHubOrganizations.availableOrganizationsRequestError.value"
+            :can-add-organization="canAddGitHubOrganization"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"
@@ -187,9 +225,9 @@ watch(
             :request-error="workspaceGitHubOrganizations.requestError.value"
             @add="workspaceGitHubOrganizations.addOrganization"
             @remove="workspaceGitHubOrganizations.removeOrganization"
-            @retry-github-connection="githubConnection.retryLoad"
             @retry="workspaceGitHubOrganizations.retryLoad"
             @retry-add="workspaceGitHubOrganizations.addOrganization"
+            @retry-available-organizations="workspaceGitHubOrganizations.retryAvailableOrganizations"
           />
         </template>
       </SettingsForm>

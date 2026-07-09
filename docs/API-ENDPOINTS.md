@@ -54,15 +54,16 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 
 ---
 
-## 4. GitHub Data (for task selector)
+## 4. GitHub Data
 
-| Method | Path                                 | Auth | Role | Description                               |
-| ------ | ------------------------------------ | ---- | ---- | ----------------------------------------- |
-| GET    | `/github/orgs`                       | JWT  | Any  | List user's GitHub organizations          |
-| GET    | `/github/orgs/:org/projects`         | JWT  | Any  | List GitHub Projects (V2) in organization |
-| GET    | `/github/orgs/:org/repos`            | JWT  | Any  | List repositories in organization         |
-| GET    | `/github/projects/:projectId/issues` | JWT  | Any  | List issues in a GitHub Project           |
-| GET    | `/github/repos/:owner/:repo/issues`  | JWT  | Any  | List issues in a GitHub repository        |
+| Method | Path                                                         | Auth | Role | Description                               |
+| ------ | ------------------------------------------------------------ | ---- | ---- | ----------------------------------------- |
+| GET    | `/github/organizations`                                      | JWT  | Any  | List current user's connected GitHub organizations for admin workspace allow-list setup; this is not filtered by the workspace allow-list |
+| GET    | `/github/owners?type=all\|personal\|organization`           | JWT  | Any  | List GitHub owners available for browsing; organization owners are filtered by the workspace allow-list |
+| GET    | `/github/projects?ownerType=personal\|organization&owner=<login>` | JWT  | Any  | List GitHub Projects (V2) for an owner scope |
+| GET    | `/github/repos?ownerType=personal\|organization&owner=<login>` | JWT  | Any  | List repositories for an owner scope      |
+| GET    | `/github/projects/:projectId/issues`                         | JWT  | Any  | List issues in a GitHub Project           |
+| GET    | `/github/repos/:owner/:repo/issues`                          | JWT  | Any  | List issues in a GitHub repository        |
 
 **Prerequisite:** User must have a connected GitHub account.
 

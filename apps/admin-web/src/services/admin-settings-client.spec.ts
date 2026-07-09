@@ -29,16 +29,28 @@ const workspaceGitHubOrganizationResponse = {
   createdAt: '2026-05-01T10:00:00.000Z',
 };
 
-const githubConnectionResponse = {
-  status: 'connected',
+const githubConnectionStatusResponse = {
   account: {
-    githubUserId: 'github-user-1',
+    avatarUrl: 'https://avatars.example.test/octo.png',
+    connectedAt: '2026-05-01T10:00:00.000Z',
+    githubUserId: '123456',
     login: 'octocat',
-    avatarUrl: 'https://avatars.example.test/octocat.png',
-    connectedAt: '2026-06-18T00:00:00.000Z',
-    updatedAt: '2026-06-18T00:00:00.000Z',
+    updatedAt: '2026-05-01T10:00:00.000Z',
   },
-};
+  status: 'connected',
+} as const;
+
+const availableGitHubOrganizationsResponse = {
+  items: [
+    {
+      avatarUrl: 'https://avatars.example.test/octo.png',
+      label: 'Octo-Org',
+      login: 'Octo-Org',
+      type: 'organization',
+      url: 'https://github.com/Octo-Org',
+    },
+  ],
+} as const;
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -144,8 +156,8 @@ describe('createAdminSettingsClient', () => {
     expect(result.items).toEqual([workspaceGitHubOrganizationResponse]);
   });
 
-  it('gets GitHub connection status with auth headers and parses the response', async () => {
-    fetchFn.mockResolvedValue(jsonResponse(githubConnectionResponse));
+  it('gets the current GitHub connection status without token material', async () => {
+    fetchFn.mockResolvedValue(jsonResponse(githubConnectionStatusResponse));
 
     const result = await client.getGitHubConnectionStatus();
 
@@ -158,7 +170,25 @@ describe('createAdminSettingsClient', () => {
         method: 'GET',
       }),
     );
-    expect(result).toEqual(githubConnectionResponse);
+    expect(result).toEqual(githubConnectionStatusResponse);
+  });
+
+  it('lists available current-user GitHub organizations for setup', async () => {
+    fetchFn.mockResolvedValue(jsonResponse(availableGitHubOrganizationsResponse));
+
+    const result = await client.listAvailableGitHubOrganizations();
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://api.example.test/github/organizations',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer access-token',
+        }),
+        method: 'GET',
+      }),
+    );
+    expect(result).toEqual(availableGitHubOrganizationsResponse);
+    expect(result.items[0]).not.toHaveProperty('accessToken');
   });
 
   it('adds a workspace GitHub organization with the expected path, method, and payload', async () => {
