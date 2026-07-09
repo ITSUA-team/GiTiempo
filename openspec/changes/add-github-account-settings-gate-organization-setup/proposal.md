@@ -10,7 +10,7 @@ Workspace admins currently see GitHub organization setup controls without an exp
 - Keep existing allowed-organization listing and remove behavior available for workspace policy records that already exist.
 - Preserve the existing organization validation and recovery-card behavior after GitHub is connected.
 - Ensure loading, empty, disconnected, connected, validation-error, and request-error states remain distinct in the Settings page.
-- Carry the reviewer-blocking OpenSpec purpose metadata for related membership/activity specs through this same change instead of editing canonical specs directly.
+- Record the OpenSpec validation caveat discovered during review: full catalog validation still depends on canonical `user-activity-tracking` and `workspace-membership` purpose metadata being materialized through the normal OpenSpec workflow, not by direct spec edits in this change.
 
 ## Capabilities
 
@@ -23,8 +23,6 @@ Workspace admins currently see GitHub organization setup controls without an exp
 - `admin-settings-page`: add Settings page GitHub account connection rendering and disconnected gating behavior for organization setup controls.
 - `workspace-github-organization-policy`: clarify that adding organizations from Settings requires the requesting admin to have an active GitHub connection while existing policy reads/removals remain workspace-owned.
 - `github-oauth-foundation`: clarify that admin-web may consume connection status to gate Workspace Settings organization setup without exposing token material.
-- `user-activity-tracking`: add missing purpose metadata as change-local validation/readiness cleanup.
-- `workspace-membership`: add missing purpose metadata as change-local validation/readiness cleanup.
 
 ## Impact
 
@@ -32,4 +30,4 @@ Workspace admins currently see GitHub organization setup controls without an exp
 - `packages/shared`: only if current GitHub connection/status contract types need extension or reuse for admin-web consumption.
 - `apps/api`: only if the current GitHub connection endpoint is not available to authenticated admin-web requests or needs documented error behavior.
 - OpenSpec/UI docs: Settings page requirements and GitHub connection policy requirements.
-- OpenSpec validation readiness: `user-activity-tracking` and `workspace-membership` purpose metadata is carried by this change so archive/apply can update canonical specs through the normal workflow.
+- OpenSpec validation readiness: targeted validation for this change is expected to pass, while `openspec validate --all` remains dependent on the canonical spec-purpose metadata being handled through the normal workflow.
