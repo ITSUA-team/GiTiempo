@@ -32,3 +32,4 @@
 - [x] 4.6 If `packages/shared` changes, run `pnpm --filter @gitiempo/shared build` and the affected admin-web verification again.
 - [x] 4.7 If `apps/api` changes, run `pnpm --filter @gitiempo/api lint && pnpm --filter @gitiempo/api typecheck && pnpm --filter @gitiempo/api test`.
 - [x] 4.8 Run `pnpm exec openspec status --change "add-github-account-settings-gate-organization-setup"`.
+- [x] 4.9 Carry missing `user-activity-tracking` and `workspace-membership` purpose metadata through this change without directly editing canonical specs.
