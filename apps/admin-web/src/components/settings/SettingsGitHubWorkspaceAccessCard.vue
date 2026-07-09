@@ -18,7 +18,7 @@ interface AutoCompleteCompleteEvent {
   query: string;
 }
 
-const selectedOrganization = defineModel<GitHubOwner | null>(
+const selectedOrganization = defineModel<GitHubOwner | string | null>(
   'selectedOrganization',
   {
     required: true,
@@ -73,11 +73,6 @@ function handleOrganizationComplete(event: AutoCompleteCompleteEvent): void {
 }
 
 function handleOrganizationUpdate(value: GitHubOwner | string | null): void {
-  if (typeof value === 'string') {
-    selectedOrganization.value = null;
-    return;
-  }
-
   selectedOrganization.value = value;
 }
 
@@ -293,7 +288,7 @@ watch(
           Add organization
         </h3>
         <p class="text-text-muted text-[13px] leading-5">
-          Select a GitHub organization visible to your connected account.
+          Select a suggested organization or enter a GitHub organization login.
         </p>
       </div>
 
@@ -327,12 +322,11 @@ watch(
             data-key="login"
             dropdown
             dropdown-mode="blank"
-            force-selection
             :input-id="githubOrganizationSelectorInputId"
             :min-length="0"
             name="githubOrganizationSelector"
             option-label="label"
-            placeholder="Select organization"
+            placeholder="Select or enter organization"
             show-clear
             :disabled="adding || availableOrganizationsInitialLoading"
             :invalid="!!organizationLoginError"
@@ -373,7 +367,8 @@ watch(
             v-else
             class="text-text-muted text-xs leading-4"
           >
-            Only organizations visible to your connected GitHub account appear here.
+            GitHub validates the organization login against your connected
+            account when you add it.
           </p>
         </div>
       </div>

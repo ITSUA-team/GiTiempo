@@ -33,13 +33,27 @@ describe('GithubApiClientService', () => {
     vi.unstubAllGlobals();
   });
 
-  it('lists owners with personal account and organizations', async () => {
-    fetchMock.mockResolvedValue(
+  it('lists owners with personal account and paginated organizations', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(
+        [
+          {
+            login: 'octo-org',
+            avatar_url: 'https://avatars.githubusercontent.com/u/1',
+            html_url: 'https://github.com/octo-org',
+          },
+        ],
+        {
+          link: '<https://api.github.com/user/orgs?page=2>; rel="next"',
+        },
+      ),
+    );
+    fetchMock.mockResolvedValueOnce(
       jsonResponse([
         {
-          login: 'octo-org',
-          avatar_url: 'https://avatars.githubusercontent.com/u/1',
-          html_url: 'https://github.com/octo-org',
+          login: 'second-org',
+          avatar_url: null,
+          html_url: 'https://github.com/second-org',
         },
       ]),
     );
@@ -53,27 +67,51 @@ describe('GithubApiClientService', () => {
     expect(result.items.map((owner) => owner.login)).toEqual([
       'octocat',
       'octo-org',
+      'second-org',
     ]);
+    expect(
+      new URL(fetchMock.mock.calls[0]![0] as URL).searchParams.get('page'),
+    ).toBe('1');
+    expect(
+      new URL(fetchMock.mock.calls[1]![0] as URL).searchParams.get('page'),
+    ).toBe('2');
     expect(JSON.stringify(result)).not.toContain(accessToken);
   });
 
-  it('lists active organization memberships for authenticated users', async () => {
-    fetchMock.mockResolvedValue(
+  it('lists paginated active organization memberships for authenticated users', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(
+        [
+          {
+            state: 'active',
+            organization: {
+              login: 'My-test-org-for-clock',
+              avatar_url: 'https://avatars.githubusercontent.com/u/2',
+              html_url: 'https://github.com/My-test-org-for-clock',
+            },
+          },
+          {
+            state: 'pending',
+            organization: {
+              login: 'Pending-Org',
+              avatar_url: null,
+              html_url: 'https://github.com/Pending-Org',
+            },
+          },
+        ],
+        {
+          link: '<https://api.github.com/user/memberships/orgs?page=2>; rel="next"',
+        },
+      ),
+    );
+    fetchMock.mockResolvedValueOnce(
       jsonResponse([
         {
           state: 'active',
           organization: {
-            login: 'My-test-org-for-clock',
-            avatar_url: 'https://avatars.githubusercontent.com/u/2',
-            html_url: 'https://github.com/My-test-org-for-clock',
-          },
-        },
-        {
-          state: 'pending',
-          organization: {
-            login: 'Pending-Org',
+            login: 'Second-Org',
             avatar_url: null,
-            html_url: 'https://github.com/Pending-Org',
+            html_url: 'https://github.com/Second-Org',
           },
         },
       ]),
@@ -82,10 +120,14 @@ describe('GithubApiClientService', () => {
     const result = await service.listActiveOrganizationMemberships(accessToken);
 
     const requestUrl = new URL(fetchMock.mock.calls[0]![0] as URL);
+    const secondRequestUrl = new URL(fetchMock.mock.calls[1]![0] as URL);
     expect(requestUrl.pathname).toBe('/user/memberships/orgs');
     expect(requestUrl.searchParams.get('state')).toBe('active');
+    expect(requestUrl.searchParams.get('page')).toBe('1');
+    expect(secondRequestUrl.searchParams.get('page')).toBe('2');
     expect(result.items.map((owner) => owner.login)).toEqual([
       'My-test-org-for-clock',
+      'Second-Org',
     ]);
   });
 

@@ -93,7 +93,7 @@ export function useAdminWorkspaceGitHubOrganizations({
   scope,
   userAppUrl = null,
 }: UseAdminWorkspaceGitHubOrganizationsOptions) {
-  const selectedOrganization = ref<GitHubOwner | null>(null);
+  const selectedOrganization = ref<GitHubOwner | string | null>(null);
   const organizationLoginError = ref<string | null>(null);
   const recovery = ref<WorkspaceGitHubOrganizationRecoveryPayload | null>(
     null,
@@ -139,9 +139,13 @@ export function useAdminWorkspaceGitHubOrganizations({
         !allowedOrganizationLogins.value.has(normalizeGitHubLogin(owner.login)),
     ),
   );
-  const selectedOrganizationLogin = computed(
-    () => selectedOrganization.value?.login ?? '',
-  );
+  const selectedOrganizationLogin = computed(() => {
+    const organization = selectedOrganization.value;
+
+    return typeof organization === 'string'
+      ? organization
+      : (organization?.login ?? '');
+  });
   const availableOrganizationsLoading = computed(
     () => availableOrganizationsQuery.isFetching.value,
   );
@@ -149,9 +153,6 @@ export function useAdminWorkspaceGitHubOrganizations({
     () =>
       availableOrganizationsQuery.data.value !== undefined ||
       availableOrganizationsQuery.error.value !== null,
-  );
-  const availableOrganizationsDataLoaded = computed(
-    () => availableOrganizationsQuery.data.value !== undefined,
   );
   const availableOrganizationsInitialLoading = computed(
     () =>
@@ -172,10 +173,10 @@ export function useAdminWorkspaceGitHubOrganizations({
     }
 
     if (availableOrganizations.value.length === 0) {
-      return 'Your connected GitHub account has no available organizations.';
+      return 'No organization suggestions are available. Enter a GitHub organization login and GitHub will validate access.';
     }
 
-    return 'All available GitHub organizations are already allowed for this workspace.';
+    return 'All suggested organizations are already allowed. Enter another GitHub organization login if GitHub can validate access.';
   });
   const loading = computed(() => query.isFetching.value);
   const initialLoaded = computed(
@@ -223,47 +224,7 @@ export function useAdminWorkspaceGitHubOrganizations({
     }
   }
 
-  function isSelectableOrganization(organization: GitHubOwner): boolean {
-    const selectedLogin = normalizeGitHubLogin(organization.login);
-
-    return selectableOrganizations.value.some(
-      (option) => normalizeGitHubLogin(option.login) === selectedLogin,
-    );
-  }
-
-  function canSubmitSelectedOrganization(organization: GitHubOwner): boolean {
-    return (
-      availableOrganizationsEnabled.value &&
-      availableOrganizationsDataLoaded.value &&
-      !availableOrganizationsLoading.value &&
-      !availableOrganizationsRequestError.value &&
-      isSelectableOrganization(organization)
-    );
-  }
-
-  function setUnavailableOrganizationError(): void {
-    if (!availableOrganizationsEnabled.value) {
-      organizationLoginError.value =
-        'Confirm your GitHub account connection before adding organizations';
-      return;
-    }
-
-    if (
-      !availableOrganizationsDataLoaded.value ||
-      availableOrganizationsLoading.value ||
-      availableOrganizationsRequestError.value
-    ) {
-      organizationLoginError.value =
-        'Reload GitHub organizations before adding workspace organizations';
-      return;
-    }
-
-    organizationLoginError.value =
-      'Select a GitHub organization from the available list';
-  }
-
   async function addOrganization(): Promise<void> {
-    const organization = selectedOrganization.value;
     const organizationLogin = selectedOrganizationLogin.value;
 
     if (!organizationLogin) {
@@ -279,8 +240,9 @@ export function useAdminWorkspaceGitHubOrganizations({
       return;
     }
 
-    if (!organization || !canSubmitSelectedOrganization(organization)) {
-      setUnavailableOrganizationError();
+    if (!availableOrganizationsEnabled.value) {
+      organizationLoginError.value =
+        'Confirm your GitHub account connection before adding organizations';
       return;
     }
 

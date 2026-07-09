@@ -88,12 +88,18 @@ export class GithubService {
     user: AuthUser,
   ): Promise<GitHubOwnerListResponse> {
     const connection = await this.connectedConnection(user.sub);
+    const [owners, memberships] = await Promise.all([
+      this.apiClient.listOwners(
+        connection.accessToken,
+        connection.account,
+        'organization',
+      ),
+      this.apiClient.listActiveOrganizationMemberships(connection.accessToken),
+    ]);
 
-    return this.apiClient.listOwners(
-      connection.accessToken,
-      connection.account,
-      'organization',
-    );
+    return {
+      items: this.uniqueOwners([...owners.items, ...memberships.items]),
+    };
   }
 
   async listRepositories(
@@ -374,6 +380,23 @@ export class GithubService {
       normalizedOwner === this.normalizeLogin(personalLogin) ||
       allowedOrganizations.has(normalizedOwner)
     );
+  }
+
+  private uniqueOwners(
+    items: GitHubOwnerListResponse['items'],
+  ): GitHubOwnerListResponse['items'] {
+    const seen = new Set<string>();
+    const result: GitHubOwnerListResponse['items'] = [];
+
+    for (const item of items) {
+      const normalizedLogin = this.normalizeLogin(item.login);
+      if (seen.has(normalizedLogin)) continue;
+
+      seen.add(normalizedLogin);
+      result.push(item);
+    }
+
+    return result;
   }
 
   private normalizeLogin(login: string): string {

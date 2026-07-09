@@ -30,14 +30,23 @@ const ButtonStub = {
 
 const AutoCompleteStub = {
   emits: ['complete', 'update:modelValue'],
-  props: ['disabled', 'inputId', 'modelValue', 'optionLabel', 'pt', 'suggestions'],
+  props: [
+    'disabled',
+    'forceSelection',
+    'inputId',
+    'modelValue',
+    'optionLabel',
+    'pt',
+    'suggestions',
+  ],
   template: `
     <div>
       <input
         v-bind="pt?.pcInputText?.root ?? {}"
         :id="inputId"
+        :data-force-selection="forceSelection ? 'true' : 'false'"
         :disabled="disabled"
-        :value="modelValue?.[optionLabel] ?? ''"
+        :value="typeof modelValue === 'string' ? modelValue : (modelValue?.[optionLabel] ?? '')"
         @focus="$emit('complete', { query: '' })"
         @input="$emit('update:modelValue', $event.target.value)"
       />
@@ -290,7 +299,9 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     });
 
     expect(wrapper.text()).toContain('GitHub organization');
-    expect(wrapper.text()).not.toContain('Use the GitHub organization login');
+    expect(wrapper.text()).toContain(
+      'Select a suggested organization or enter a GitHub organization login.',
+    );
     expect(
       wrapper.find(
         '[data-testid="settings-github-organization-selector-option-Octo-Org"]',
@@ -301,6 +312,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
 
     expect(input.attributes('autocomplete')).toBe('off');
     expect(input.attributes('data-bwignore')).toBe('true');
+    expect(input.attributes('data-force-selection')).toBe('false');
     expect(input.attributes('data-1p-ignore')).toBe('true');
     expect(input.attributes('data-lpignore')).toBe('true');
 
@@ -314,7 +326,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     ]);
   });
 
-  it('clears a selected organization when the autocomplete value becomes typed text', async () => {
+  it('emits manually typed organization logins from the autocomplete', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
@@ -333,7 +345,9 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       .get('#settings-github-organization-selector')
       .setValue('Different org');
 
-    expect(wrapper.emitted('update:selectedOrganization')).toEqual([[null]]);
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      ['Different org'],
+    ]);
   });
 
   it('shows available organization empty guidance', () => {
@@ -348,7 +362,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       },
       props: createProps({
         availableOrganizationEmptyMessage:
-          'Your connected GitHub account has no available organizations.',
+          'No organization suggestions are available. Enter a GitHub organization login and GitHub will validate access.',
         availableOrganizations: [],
       }),
     });
@@ -356,7 +370,7 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(
       wrapper.get('[data-testid="settings-github-available-organizations-empty"]')
         .text(),
-    ).toContain('Your connected GitHub account has no available organizations.');
+    ).toContain('No organization suggestions are available.');
   });
 
   it('shows available organization request errors with retry', async () => {

@@ -161,8 +161,9 @@ const AutoCompleteStub = {
       <input
         :id="inputId"
         :aria-invalid="invalid ? 'true' : undefined"
-        :value="modelValue?.[optionLabel] ?? ''"
+        :value="typeof modelValue === 'string' ? modelValue : (modelValue?.[optionLabel] ?? '')"
         @focus="$emit('complete', { query: '' })"
+        @input="$emit('update:modelValue', $event.target.value)"
       />
       <button
         v-for="option in suggestions"
@@ -242,6 +243,20 @@ async function addOrganization(
   await wrapper
     .get(`[data-testid="settings-github-organization-selector-option-${organizationLogin}"]`)
     .trigger('click');
+  await wrapper
+    .findAll('button')
+    .find((button) => button.text() === 'Add organization')
+    ?.trigger('click');
+  await flushPromises();
+}
+
+async function typeAndAddOrganization(
+  wrapper: ReturnType<typeof mountSettingsView>,
+  organizationLogin: string,
+) {
+  await wrapper.get('#settings-github-organization-selector').setValue(
+    organizationLogin,
+  );
   await wrapper
     .findAll('button')
     .find((button) => button.text() === 'Add organization')
@@ -749,6 +764,33 @@ describe('SettingsView', () => {
       'GitHub organization added.',
     );
     expect(wrapper.text()).toContain('Octo-Org');
+  });
+
+  it('adds a manually typed GitHub organization login absent from suggestions', async () => {
+    testMocks.listWorkspaceGitHubOrganizations.mockResolvedValue({
+      items: [
+        {
+          ...workspaceGitHubOrganizationResponse,
+          organizationLogin: 'Hidden-Org',
+        },
+      ],
+    });
+    testMocks.listWorkspaceGitHubOrganizations.mockResolvedValueOnce({
+      items: [],
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await typeAndAddOrganization(wrapper, 'Hidden-Org');
+
+    expect(testMocks.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
+      organizationLogin: 'Hidden-Org',
+    });
+    expect(testMocks.successToast).toHaveBeenCalledWith(
+      'GitHub organization added.',
+    );
+    expect(wrapper.text()).toContain('Hidden-Org');
   });
 
   it('keeps the selected organization when add fails', async () => {

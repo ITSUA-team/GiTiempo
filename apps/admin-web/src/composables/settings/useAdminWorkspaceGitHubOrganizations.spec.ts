@@ -111,6 +111,20 @@ describe('useAdminWorkspaceGitHubOrganizations', () => {
     expect(result.organizationLoginError.value).toBeNull();
   });
 
+  it('adds a manually typed organization login through backend validation', async () => {
+    const { client, result } = createSubject();
+    await flushPromises();
+
+    result.selectedOrganization.value = 'Manual-Org';
+    await flushPromises();
+    await result.addOrganization();
+
+    expect(client.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
+      organizationLogin: 'Manual-Org',
+    });
+    expect(result.organizationLoginError.value).toBeNull();
+  });
+
   it('does not add a stale selection when setup organizations are gated off', async () => {
     const { client, result } = createSubject({
       availableOrganizationsEnabled: false,
@@ -128,7 +142,7 @@ describe('useAdminWorkspaceGitHubOrganizations', () => {
     );
   });
 
-  it('does not add while selectable organizations failed to load', async () => {
+  it('adds a typed organization login even when suggestions failed to load', async () => {
     const client = createClient({
       listAvailableGitHubOrganizations: vi
         .fn()
@@ -137,17 +151,17 @@ describe('useAdminWorkspaceGitHubOrganizations', () => {
     const { result } = createSubject({ client });
     await flushPromises();
 
-    result.selectedOrganization.value = availableOrganization;
+    result.selectedOrganization.value = 'Manual-Org';
     await flushPromises();
     await result.addOrganization();
 
-    expect(client.addWorkspaceGitHubOrganization).not.toHaveBeenCalled();
-    expect(result.organizationLoginError.value).toBe(
-      'Reload GitHub organizations before adding workspace organizations',
-    );
+    expect(client.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
+      organizationLogin: 'Manual-Org',
+    });
+    expect(result.organizationLoginError.value).toBeNull();
   });
 
-  it('does not add a selected organization missing from current selectable options', async () => {
+  it('submits selected organizations even when current suggestions are incomplete', async () => {
     const client = createClient({
       listAvailableGitHubOrganizations: vi.fn().mockResolvedValue({
         items: [otherOrganization],
@@ -160,9 +174,9 @@ describe('useAdminWorkspaceGitHubOrganizations', () => {
     await flushPromises();
     await result.addOrganization();
 
-    expect(client.addWorkspaceGitHubOrganization).not.toHaveBeenCalled();
-    expect(result.organizationLoginError.value).toBe(
-      'Select a GitHub organization from the available list',
-    );
+    expect(client.addWorkspaceGitHubOrganization).toHaveBeenCalledWith({
+      organizationLogin: 'Octo-Org',
+    });
+    expect(result.organizationLoginError.value).toBeNull();
   });
 });
