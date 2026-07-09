@@ -38,4 +38,7 @@
 - [x] 5.5 Run `pnpm --filter admin-web lint`.
 - [x] 5.6 Run the focused admin-web Settings tests covering the changed query, page, and settings components.
 - [x] 5.7 Run focused API tests for `GET /github/organizations` and disconnected organization add behavior.
-- [x] 5.8 Run `pnpm exec openspec status --change "add-github-account-settings-gate-organization-setup"`.
+- [x] 5.8 Run `pnpm --filter @gitiempo/api lint && pnpm --filter @gitiempo/api typecheck && pnpm --filter @gitiempo/api test` for the API/OpenAPI surface change.
+- [x] 5.9 Run `pnpm openapi:export` and confirm `packages/shared/openapi.json` is current after the route documentation change.
+- [x] 5.10 Run `pnpm exec openspec validate add-github-account-settings-gate-organization-setup --strict`.
+- [x] 5.11 Run `pnpm exec openspec status --change "add-github-account-settings-gate-organization-setup"`.
