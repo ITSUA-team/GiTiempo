@@ -104,14 +104,34 @@ export function useTopBarTimerDialogFlow({
     picker.setSelectedDescription(description);
   }
 
+  function hasSelectedDifferentRunningTask(): boolean {
+    const currentTaskId = summary.currentTimer.value?.task.id ?? null;
+
+    return (
+      isTimerRunning.value &&
+      currentTaskId !== null &&
+      picker.selectedTaskId.value !== null &&
+      picker.selectedTaskId.value !== currentTaskId
+    );
+  }
+
   async function confirmSelectedTask(): Promise<void> {
     if (summary.isCrossWorkspaceTimer.value) {
       return;
     }
 
+    const wasTimerRunning = isTimerRunning.value;
+
+    if (wasTimerRunning && !hasSelectedDifferentRunningTask()) {
+      return;
+    }
+
     if (isNewTaskSelected.value) {
       await taskCreation.createTaskFromDialog();
-      return;
+
+      if (!wasTimerRunning) {
+        return;
+      }
     }
 
     const didApplySelection = await selectionUpdate.applySelectedTaskContext();
