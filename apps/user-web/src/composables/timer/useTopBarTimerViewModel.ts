@@ -108,6 +108,16 @@ export function useTopBarTimerViewModel({
   const isNewTaskSelected = computed(
     () => picker.selectedTaskId.value === TOP_BAR_TIMER_NEW_TASK_ID,
   );
+  const hasSelectedDifferentRunningTask = computed(() => {
+    const currentTaskId = summary.currentTimer.value?.task.id ?? null;
+
+    return (
+      isTimerRunning.value &&
+      currentTaskId !== null &&
+      picker.selectedTaskId.value !== null &&
+      picker.selectedTaskId.value !== currentTaskId
+    );
+  });
   const isCreateTaskDisabled = computed(() => {
     return (
       !picker.selectedProjectId.value ||
@@ -161,6 +171,7 @@ export function useTopBarTimerViewModel({
     }
 
     return (
+      !hasSelectedDifferentRunningTask.value ||
       isConfirmSelectionDisabled.value ||
       timerActions.isPrimaryActionPending.value ||
       isSelectionUpdatePending.value
