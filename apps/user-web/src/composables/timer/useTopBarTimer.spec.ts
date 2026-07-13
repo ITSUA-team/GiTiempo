@@ -1288,17 +1288,37 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.isDialogOpen.value).toBe(true);
   });
 
-  it('creates an inline New task before updating a running timer task', async () => {
+  it('creates an inline New task and updates a running timer task', async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
+    const createdTask = createTask(
+      TEST_IDS.taskNew,
+      TEST_IDS.project,
+      'Write release checklist',
+    );
 
-    client.getCurrentTimer.mockResolvedValue({ timeEntry: createRunningEntry() });
+    client.getCurrentTimer
+      .mockResolvedValueOnce({ timeEntry: createRunningEntry() })
+      .mockResolvedValueOnce({ timeEntry: createRunningEntry() })
+      .mockResolvedValue({
+        timeEntry: createRunningEntry({
+          task: { id: createdTask.id, title: createdTask.title },
+          taskId: createdTask.id,
+        }),
+      });
     client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, 'Project Orion'),
     ]);
     client.listProjectTasks.mockResolvedValue([
       createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
     ]);
+    client.createTask.mockResolvedValueOnce(createdTask);
+    client.updateEntry.mockResolvedValueOnce(
+      createRunningEntry({
+        task: { id: createdTask.id, title: createdTask.title },
+        taskId: createdTask.id,
+      }),
+    );
 
     const mounted = mountTopBarTimer({ client, toast });
 
@@ -1314,6 +1334,7 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(topBarTimer.isConfirmSelectionDisabled.value).toBe(false);
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(false);
 
     await topBarTimer.confirmSelectedTask();
     await flushPromises();
@@ -1322,9 +1343,22 @@ describe('useTopBarTimer', () => {
       defaultBillableForTimeEntries: true,
       title: 'Write release checklist',
     });
-    expect(client.updateEntry).not.toHaveBeenCalled();
+    expect(client.updateEntry).toHaveBeenCalledWith(TEST_IDS.runningEntry, {
+      description: null,
+      taskId: TEST_IDS.taskNew,
+    });
+    expect(topBarTimer.currentTimer.value?.taskId).toBe(TEST_IDS.taskNew);
+    expect(topBarTimer.currentTimer.value?.task.title).toBe(
+      'Write release checklist',
+    );
     expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskNew);
-    expect(topBarTimer.isDialogOpen.value).toBe(true);
+    expect(topBarTimer.isDialogOpen.value).toBe(false);
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: 'success', summary: 'Task created' }),
+    );
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: 'success', summary: 'Timer updated' }),
+    );
   });
 
   it('keeps create-task errors scoped to the picker', async () => {
@@ -1859,6 +1893,11 @@ describe('useTopBarTimer', () => {
     expect(topBarTimer.selectedProjectId.value).toBe(TEST_IDS.project);
     expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.taskAlt);
     expect(topBarTimer.selectedDescription.value).toBe('');
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
+
+    topBarTimer.setSelectedTaskId(TEST_IDS.task);
+
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(false);
   });
 
   it('updates the running timer task from the authoritative response', async () => {
@@ -1954,25 +1993,27 @@ describe('useTopBarTimer', () => {
     expect(client.updateEntry).not.toHaveBeenCalled();
   });
 
-  it('clears a running timer description when the dialog submits whitespace only', async () => {
+  it('clears a running timer description when changing task with whitespace only', async () => {
     const client = createClientMock();
+    const changedTimer = createRunningEntry({
+      description: null,
+      task: { id: TEST_IDS.taskAlt, title: 'Review PM scope rules' },
+      taskId: TEST_IDS.taskAlt,
+    });
 
     client.getCurrentTimer
       .mockResolvedValueOnce({
         timeEntry: createRunningEntry({ description: 'Existing note' }),
       })
-      .mockResolvedValue({
-        timeEntry: createRunningEntry({ description: null }),
-      });
+      .mockResolvedValue({ timeEntry: changedTimer });
     client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, 'Project Orion'),
     ]);
     client.listProjectTasks.mockResolvedValueOnce([
       createTask(TEST_IDS.task, TEST_IDS.project, 'Improve reports filters'),
+      createTask(TEST_IDS.taskAlt, TEST_IDS.project, 'Review PM scope rules'),
     ]);
-    client.updateEntry.mockResolvedValueOnce(
-      createRunningEntry({ description: null }),
-    );
+    client.updateEntry.mockResolvedValueOnce(changedTimer);
 
     const mounted = mountTopBarTimer({ client });
 
@@ -1983,12 +2024,13 @@ describe('useTopBarTimer', () => {
     await flushPromises();
     await topBarTimer.openDialog();
     expect(topBarTimer.selectedDescription.value).toBe('Existing note');
+    topBarTimer.setSelectedTaskId(TEST_IDS.taskAlt);
     topBarTimer.setSelectedDescription('   ');
     await topBarTimer.confirmSelectedTask();
 
     expect(client.updateEntry).toHaveBeenCalledWith(TEST_IDS.runningEntry, {
       description: null,
-      taskId: TEST_IDS.task,
+      taskId: TEST_IDS.taskAlt,
     });
     expect(topBarTimer.currentTimer.value?.description).toBeNull();
     expect(topBarTimer.selectedDescription.value).toBe('');
@@ -2156,7 +2198,7 @@ describe('useTopBarTimer', () => {
     );
   });
 
-  it('closes the dialog without updating when confirming the current running task', async () => {
+  it('keeps the dialog unchanged when confirming the current running task', async () => {
     const client = createClientMock();
 
     client.getCurrentTimer.mockResolvedValueOnce({
@@ -2177,13 +2219,14 @@ describe('useTopBarTimer', () => {
     await flushPromises();
 
     expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.task);
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
 
     await topBarTimer.confirmSelectedTask();
     await flushPromises();
 
     expect(client.updateEntry).not.toHaveBeenCalled();
     expect(topBarTimer.currentTimer.value?.taskId).toBe(TEST_IDS.task);
-    expect(topBarTimer.isDialogOpen.value).toBe(false);
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
   });
 
   it('keeps the dialog open when updating the running timer task fails', async () => {

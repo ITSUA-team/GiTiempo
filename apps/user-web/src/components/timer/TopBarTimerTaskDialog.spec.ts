@@ -111,10 +111,10 @@ function mountDialog(overrides: DialogProps = {}) {
             '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading !== undefined && loading !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Button: {
-          props: ["disabled", "fluid", "label", "loading", "severity", "variant"],
+          props: ["disabled", "fluid", "label", "loading", "severity", "size", "variant"],
           emits: ["click"],
           template:
-            '<button v-bind="$attrs" :data-fluid="String(fluid)" :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>',
+            '<button v-bind="$attrs" :data-fluid="String(fluid)" :data-loading="String(loading)" :data-severity="severity" :data-size="size" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>',
         },
         Dialog: {
           props: {
@@ -406,24 +406,23 @@ describe("TopBarTimerTaskDialog", () => {
     expect(primaryButton?.attributes("disabled")).toBeDefined();
   });
 
-  it("renders inline active-timer update errors with a stable centered spinner", () => {
+  it("renders inline active-timer update errors with standard loading state", () => {
     const wrapper = mountDialog({
       isConfirmingSelection: true,
       primaryActionLabel: "Stop",
       selectionUpdateErrorMessage: "Task is inactive",
     });
     const confirmButton = wrapper.get('[data-testid="top-bar-timer-confirm-action"]');
-    const spinner = confirmButton.get('[data-testid="top-bar-timer-confirm-action-spinner"]');
 
     expect(wrapper.text()).toContain("Could not update the active timer task.");
     expect(wrapper.text()).toContain("Task is inactive");
     expect(confirmButton.attributes("disabled")).toBeDefined();
     expect(confirmButton.attributes("aria-busy")).toBe("true");
-    expect(confirmButton.attributes("data-loading")).not.toBe("true");
-    expect(confirmButton.classes()).toContain("items-center");
-    expect(confirmButton.classes()).toContain("justify-center");
+    expect(confirmButton.attributes("data-loading")).toBe("true");
+    expect(confirmButton.attributes("data-severity")).toBe("secondary");
+    expect(confirmButton.attributes("data-size")).toBe("small");
+    expect(confirmButton.attributes("data-variant")).toBe("outlined");
     expect(confirmButton.classes()).toContain("min-w-[108px]");
-    expect(spinner.classes()).toContain("border-t-brand");
   });
 
   it("disables the primary timer action with a stable white centered spinner", () => {
@@ -597,9 +596,11 @@ describe("TopBarTimerTaskDialog", () => {
       "Stop timer",
     ]);
     expect(changeButton?.attributes("data-severity")).toBe("secondary");
+    expect(changeButton?.attributes("data-size")).toBe("small");
     expect(changeButton?.attributes("data-variant")).toBe("outlined");
     expect(changeButton?.classes()).toContain("h-[37px]");
-    expect(changeButton?.classes()).toContain("border-divider");
+    expect(changeButton?.classes()).toContain("min-w-[108px]");
+    expect(changeButton?.classes()).not.toContain("bg-accent-tint");
 
     await changeButton?.trigger("click");
     await findButtonByLabel(wrapper, "Stop timer")?.trigger("click");
