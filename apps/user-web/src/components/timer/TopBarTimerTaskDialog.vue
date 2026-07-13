@@ -493,29 +493,23 @@ watch(
         </Button>
         <Button
           v-if="props.primaryActionLabel === 'Stop' && !props.isCrossWorkspaceTimer"
-          unstyled
           type="button"
           :aria-busy="confirmButtonLoading ? 'true' : undefined"
           aria-label="Change task"
           :class="[
-            'border-divider bg-surface-primary text-text-dark inline-flex h-[37px] min-w-[108px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed',
+            'h-[37px] min-w-[108px]',
             isMobileViewport ? 'w-full' : 'w-auto',
           ]"
           data-testid="top-bar-timer-confirm-action"
           :disabled="isConfirmButtonDisabled"
           :fluid="isMobileViewport"
+          label="Change task"
+          :loading="confirmButtonLoading"
           severity="secondary"
+          size="small"
           variant="outlined"
           @click="emit('confirm')"
-        >
-          <span
-            v-if="confirmButtonLoading"
-            aria-hidden="true"
-            class="border-brand/30 border-t-brand size-4 animate-spin rounded-full border-2"
-            data-testid="top-bar-timer-confirm-action-spinner"
-          />
-          <span v-else>Change task</span>
-        </Button>
+        />
         <Button
           v-if="!isMobileViewport || props.primaryActionLabel !== 'Stop'"
           unstyled
