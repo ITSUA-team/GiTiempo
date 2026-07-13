@@ -12,10 +12,6 @@ import type {
   UpdateTaskInput,
   UpdateTimeEntryInput,
 } from "@gitiempo/shared";
-import {
-  isQueryEnabled,
-  type QueryAccessOptions,
-} from "@gitiempo/web-shared/query";
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
 
 import {
@@ -91,12 +87,12 @@ interface VisibleProjectsClient {
   listVisibleProjects(): Promise<ProjectResponse[]>;
 }
 
-interface UserScopedQueryOptions extends QueryAccessOptions {
+interface UserScopedQueryOptions {
+  enabled: MaybeRefOrGetter<boolean>;
   scope: MaybeRefOrGetter<UserServerStateScope>;
 }
 
 interface UserScopedMutationOptions {
-  accessToken: MaybeRefOrGetter<string | null | undefined>;
   scope: MaybeRefOrGetter<UserServerStateScope>;
 }
 
@@ -164,6 +160,19 @@ function requireProjectId(projectId: string | null | undefined): string {
   return projectId;
 }
 
+function isQueryEnabled(options: UserScopedQueryOptions): boolean {
+  return Boolean(toValue(options.enabled));
+}
+
+function isEntryInWorkspaceScope(
+  scope: UserServerStateScope,
+  entry: TimeEntryResponse,
+): boolean {
+  const workspaceId = scope.workspaceId?.trim();
+
+  return !workspaceId || entry.workspaceId === workspaceId;
+}
+
 async function invalidateQueryKeys(
   queryClient: ReturnType<typeof useQueryClient>,
   keys: QueryKey[],
@@ -178,6 +187,10 @@ async function reconcileTimeEntryCachesAfterTimeEntryMutation(
   scope: UserServerStateScope,
   entry: TimeEntryResponse,
 ): Promise<void> {
+  if (!isEntryInWorkspaceScope(scope, entry)) {
+    return;
+  }
+
   await queryClient.cancelQueries(
     { queryKey: timeEntriesKeys.all(scope) },
     { silent: true },

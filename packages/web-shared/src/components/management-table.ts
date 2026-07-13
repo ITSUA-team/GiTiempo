@@ -1,6 +1,7 @@
 import type { AutoCompletePassThroughOptions } from 'primevue/autocomplete';
 import type { MultiSelectPassThroughOptions } from 'primevue/multiselect';
 import type { SelectPassThroughOptions } from 'primevue/select';
+import type { CSSProperties } from 'vue';
 
 export interface ManagementTableColumn {
   key: string;
@@ -8,6 +9,8 @@ export interface ManagementTableColumn {
   width?: number | 'fill';
   align?: 'start' | 'end';
 }
+
+export type ManagementTableColumnStyle = CSSProperties;
 
 const actionButtonBaseClass =
   'h-11 w-11 rounded-sm border-none bg-transparent p-0 shadow-none transition-colors hover:bg-app-bg focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2';
@@ -21,10 +24,13 @@ const actionToneClassByTone = {
 export type ManagementTableActionTone = keyof typeof actionToneClassByTone;
 
 export const managementTableHeaderClass =
-  'border-divider bg-app-bg text-text-dark flex h-[44px] items-center border-b font-sans text-[13px] font-medium uppercase tracking-wide';
+  'bg-app-bg text-text-dark flex h-[44px] w-full shrink-0 items-center font-sans text-[13px] font-semibold';
+
+export const managementTableHeaderCellClass =
+  'flex h-full min-w-0 items-center px-3 font-sans text-[13px] font-semibold text-text-dark';
 
 export const managementTableBodyRowClass =
-  'h-12 transition-colors hover:bg-app-bg';
+  'border-divider h-12 border-b transition-colors last:border-b-0 hover:bg-app-bg';
 
 export const managementTableShellClass =
   'border-divider overflow-hidden rounded-[6px] border bg-surface-primary';
@@ -41,9 +47,28 @@ export function getManagementTableActionRootClass(
   return `${actionButtonBaseClass} ${getManagementTableActionIconClass(tone)}`;
 }
 
+export function getManagementTableColumnStyle(
+  column: ManagementTableColumn,
+): ManagementTableColumnStyle {
+  if (column.width === 'fill' || column.width === undefined) {
+    return {
+      flex: '1 1 0px',
+      minWidth: '0',
+    };
+  }
+
+  const width = `${column.width}px`;
+
+  return {
+    flex: `0 0 ${width}`,
+    minWidth: width,
+    width,
+  };
+}
+
 export const managementTableColumnPt = {
   bodyCell: {
-    class: 'border-0 border-t border-divider px-3 py-0 align-middle font-sans text-sm',
+    class: 'border-0 px-3 py-0 align-middle font-sans text-sm',
   },
 } as const;
 

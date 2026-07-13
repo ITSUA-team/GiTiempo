@@ -28,7 +28,10 @@ const TEST_SCOPE = {
   workspaceId: null,
 };
 
-type DashboardOverviewClient = Pick<TimeEntriesClient, "listOwnEntries">;
+type DashboardOverviewClient = Pick<
+  TimeEntriesClient,
+  "getCurrentTimer" | "listOwnEntries" | "startTimer" | "stopTimer"
+>;
 
 function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryResponse {
   const { githubIssue = null, ...entryOverrides } = overrides;
@@ -60,6 +63,10 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
       id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301",
     },
     userId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301",
+    workspace: {
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
+      name: "Workspace Alpha",
+    },
     workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401",
     githubIssue,
     ...entryOverrides,
@@ -74,10 +81,16 @@ function createOwnEntriesResponse(
 }
 
 function createClientMock(): DashboardOverviewClient & {
+  getCurrentTimer: ReturnType<typeof vi.fn<TimeEntriesClient["getCurrentTimer"]>>;
   listOwnEntries: ReturnType<typeof vi.fn<TimeEntriesClient["listOwnEntries"]>>;
+  startTimer: ReturnType<typeof vi.fn<TimeEntriesClient["startTimer"]>>;
+  stopTimer: ReturnType<typeof vi.fn<TimeEntriesClient["stopTimer"]>>;
 } {
   return {
+    getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
     listOwnEntries: vi.fn(async () => createOwnEntriesResponse([])),
+    startTimer: vi.fn(async () => createEntry({ endedAt: null, id: TEST_IDS.startedEntry })),
+    stopTimer: vi.fn(async () => createEntry()),
   };
 }
 
@@ -347,7 +360,7 @@ describe("useDashboardOverview", () => {
     expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Admin Web");
   });
 
-  it("keeps running recent-entry durations reactive without adding dashboard timer controls", async () => {
+  it("keeps running recent-entry durations reactive", async () => {
     const client = createClientMock();
 
     client.listOwnEntries
@@ -424,12 +437,114 @@ describe("useDashboardOverview", () => {
       id: TEST_IDS.startedEntry,
       isHighlighted: true,
       projectName: "Project Orion",
+      timerEntry: {
+        endedAt: null,
+        id: TEST_IDS.startedEntry,
+        task: { title: "Improve reports filters" },
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9201",
+      },
       taskTitle: "Improve reports filters",
       timeRangeLabel: `${formatLocalTime("2026-04-21T11:00:00.000Z")} - Running`,
     });
     expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("1h");
     expect(dashboardOverview.weeklyFocus.value.project?.title).toBe("Project Orion");
     expect(dashboardOverview.weeklyFocus.value.task?.title).toBe("Improve reports filters");
+  });
+
+  it("starts a fresh timer from a dashboard recent entry", async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    const completedEntry = createEntry({
+      id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9006",
+      task: { id: TEST_IDS.focusTask, title: "Fix export column order" },
+      taskId: TEST_IDS.focusTask,
+    });
+    const startedEntry = createEntry({
+      durationSeconds: null,
+      endedAt: null,
+      id: TEST_IDS.startedEntry,
+      startedAt: "2026-04-21T12:00:00.000Z",
+      task: completedEntry.task,
+      taskId: completedEntry.taskId,
+    });
+
+    client.listOwnEntries
+      .mockResolvedValueOnce(createOwnEntriesResponse([completedEntry]))
+      .mockResolvedValueOnce(createOwnEntriesResponse([completedEntry]))
+      .mockResolvedValue(createOwnEntriesResponse([startedEntry, completedEntry]));
+    client.startTimer.mockResolvedValueOnce(startedEntry);
+
+    const mounted = mountDashboardOverview({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    const timerEntry = dashboardOverview.recentEntryRows.value[0]?.timerEntry;
+
+    expect(timerEntry).toBeDefined();
+
+    await dashboardOverview.startTimerForEntry(timerEntry!);
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: TEST_IDS.focusTask });
+    expect(dashboardOverview.startingTimerEntryId.value).toBeNull();
+    expect(dashboardOverview.recentEntryRows.value).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: TEST_IDS.startedEntry,
+          isHighlighted: true,
+          timerEntry: expect.objectContaining({ endedAt: null }),
+        }),
+      ]),
+    );
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "Tracking Fix export column order.",
+        severity: "success",
+        summary: "Timer started",
+      }),
+    );
+  });
+
+  it("keeps dashboard direct timer start failures retryable with the backend message", async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    const completedEntry = createEntry({ id: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9007" });
+
+    client.listOwnEntries
+      .mockResolvedValueOnce(createOwnEntriesResponse([completedEntry]))
+      .mockResolvedValueOnce(createOwnEntriesResponse([completedEntry]))
+      .mockResolvedValue(createOwnEntriesResponse([completedEntry]));
+    client.startTimer.mockRejectedValueOnce(new Error("A timer is already running"));
+
+    const mounted = mountDashboardOverview({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    const timerEntry = dashboardOverview.recentEntryRows.value[0]?.timerEntry;
+
+    expect(timerEntry).toBeDefined();
+
+    await dashboardOverview.startTimerForEntry(timerEntry!);
+    await flushPromises();
+
+    expect(client.startTimer).toHaveBeenCalledWith({ taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9201" });
+    expect(dashboardOverview.startingTimerEntryId.value).toBeNull();
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "A timer is already running",
+        severity: "error",
+        summary: "Could not start timer",
+      }),
+    );
   });
 
   it("reflects a stopped timer entry from Query cache reconciliation", async () => {
@@ -483,6 +598,12 @@ describe("useDashboardOverview", () => {
       id: TEST_IDS.runningEntry,
       isHighlighted: false,
       projectName: "Project Orion",
+      timerEntry: {
+        endedAt: "2026-04-21T11:30:00.000Z",
+        id: TEST_IDS.runningEntry,
+        task: { title: "Improve reports filters" },
+        taskId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9201",
+      },
       taskTitle: "Improve reports filters",
       timeRangeLabel: `${formatLocalTime("2026-04-21T11:00:00.000Z")} - ${formatLocalTime("2026-04-21T11:30:00.000Z")}`,
     });
@@ -495,5 +616,54 @@ describe("useDashboardOverview", () => {
 
     expect(dashboardOverview.recentEntryRows.value[0]?.durationLabel).toBe("30m");
     expect(dashboardOverview.dashboardStats.value[0]?.value).toBe("30m");
+  });
+
+  it("refreshes dashboard state without stopping when the clicked running row is stale", async () => {
+    const client = createClientMock();
+    const toast = { add: vi.fn() };
+    const runningEntry = createEntry({
+      durationSeconds: null,
+      endedAt: null,
+      id: TEST_IDS.runningEntry,
+      startedAt: "2026-04-21T11:00:00.000Z",
+    });
+    const authoritativeTimer = createEntry({
+      durationSeconds: null,
+      endedAt: null,
+      id: TEST_IDS.startedEntry,
+      startedAt: "2026-04-21T11:30:00.000Z",
+      task: { id: TEST_IDS.secondaryTask, title: "Ship admin polish" },
+      taskId: TEST_IDS.secondaryTask,
+    });
+
+    client.listOwnEntries.mockResolvedValue(createOwnEntriesResponse([runningEntry]));
+    client.getCurrentTimer.mockResolvedValue({ timeEntry: authoritativeTimer });
+
+    const mounted = mountDashboardOverview({ client, toast });
+
+    wrappers.push(mounted.wrapper);
+
+    const { dashboardOverview } = mounted;
+
+    await flushPromises();
+
+    const timerEntry = dashboardOverview.recentEntryRows.value[0]?.timerEntry;
+
+    expect(timerEntry).toBeDefined();
+
+    await dashboardOverview.stopTimerForEntry(timerEntry!);
+    await flushPromises();
+    await flushPromises();
+
+    expect(client.stopTimer).not.toHaveBeenCalled();
+    expect(client.listOwnEntries.mock.calls.length).toBeGreaterThanOrEqual(4);
+    expect(dashboardOverview.stoppingTimerEntryId.value).toBeNull();
+    expect(toast.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: "The running timer changed. Please try again.",
+        severity: "info",
+        summary: "Timer status refreshed",
+      }),
+    );
   });
 });

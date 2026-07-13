@@ -14,12 +14,18 @@ import {
 
 import type { DashboardRecentEntryRow } from "@/composables/dashboard/useDashboardOverview";
 import TaskGitHubIssueLink from "@/components/tasks/TaskGitHubIssueLink.vue";
+import TimeEntryTimerAction from "@/components/time-entries/TimeEntryTimerAction.vue";
 
 const props = defineProps<{
   entries: DashboardRecentEntryRow[];
+  isStartTimerDisabled?: boolean;
+  startingTimerEntryId?: string | null;
+  stoppingTimerEntryId?: string | null;
 }>();
 
 const emit = defineEmits<{
+  startTimer: [entry: DashboardRecentEntryRow["timerEntry"]];
+  stopTimer: [entry: DashboardRecentEntryRow["timerEntry"]];
   viewAll: [];
 }>();
 const isMobileViewport = useIsMobileViewport();
@@ -35,6 +41,39 @@ const dashboardRecentEntriesHeaderClass = `${managementTableHeaderClass} min-w-[
 
 function getRowClass(entry: DashboardRecentEntryRow): string {
   return entry.isHighlighted ? "bg-accent-tint hover:bg-accent-tint" : "bg-surface-primary";
+}
+
+function isStartTimerPending(entry: DashboardRecentEntryRow): boolean {
+  return props.startingTimerEntryId === entry.id;
+}
+
+function isStopTimerPending(entry: DashboardRecentEntryRow): boolean {
+  return props.stoppingTimerEntryId === entry.id;
+}
+
+function isDirectStartDisabled(): boolean {
+  return props.isStartTimerDisabled === true ||
+    (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined);
+}
+
+function isStopTimerDisabled(): boolean {
+  return props.stoppingTimerEntryId !== null && props.stoppingTimerEntryId !== undefined;
+}
+
+function handleStartTimer(entry: DashboardRecentEntryRow): void {
+  if (entry.timerEntry.endedAt === null || isDirectStartDisabled()) {
+    return;
+  }
+
+  emit("startTimer", entry.timerEntry);
+}
+
+function handleStopTimer(entry: DashboardRecentEntryRow): void {
+  if (entry.timerEntry.endedAt !== null || isStopTimerDisabled()) {
+    return;
+  }
+
+  emit("stopTimer", entry.timerEntry);
 }
 </script>
 
@@ -68,20 +107,41 @@ function getRowClass(entry: DashboardRecentEntryRow): string {
         data-testid="dashboard-recent-entry-mobile-card"
         :tone="entry.isHighlighted ? 'highlighted' : 'default'"
       >
-        <div class="flex min-w-0 flex-col gap-1">
-          <div class="flex max-w-full min-w-0 items-center gap-1">
-            <p class="text-text-dark truncate text-sm font-medium">
-              {{ entry.taskTitle }}
+        <div class="flex min-w-0 items-start gap-3">
+          <TimeEntryTimerAction
+            v-if="entry.timerEntry.endedAt !== null"
+            action="start"
+            :disabled="isDirectStartDisabled()"
+            :entry="entry.timerEntry"
+            :is-loading="isStartTimerPending(entry)"
+            test-id-prefix="dashboard-recent-entry-mobile"
+            @trigger="() => handleStartTimer(entry)"
+          />
+          <TimeEntryTimerAction
+            v-else
+            action="stop"
+            :disabled="isStopTimerDisabled()"
+            :entry="entry.timerEntry"
+            :is-loading="isStopTimerPending(entry)"
+            test-id-prefix="dashboard-recent-entry-mobile"
+            @trigger="() => handleStopTimer(entry)"
+          />
+
+          <div class="flex min-w-0 flex-col gap-1">
+            <div class="flex max-w-full min-w-0 items-center gap-1">
+              <p class="text-text-dark truncate text-sm font-medium">
+                {{ entry.taskTitle }}
+              </p>
+              <TaskGitHubIssueLink
+                v-if="entry.githubIssue"
+                :issue="entry.githubIssue"
+                :test-id="`dashboard-recent-entry-mobile-github-${entry.id}`"
+              />
+            </div>
+            <p class="text-text-muted truncate text-[13px]">
+              {{ entry.projectName }}
             </p>
-            <TaskGitHubIssueLink
-              v-if="entry.githubIssue"
-              :issue="entry.githubIssue"
-              :test-id="`dashboard-recent-entry-mobile-github-${entry.id}`"
-            />
           </div>
-          <p class="text-text-muted truncate text-[13px]">
-            {{ entry.projectName }}
-          </p>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -118,15 +178,36 @@ function getRowClass(entry: DashboardRecentEntryRow): string {
     >
       <Column :pt="managementTableColumnPt">
         <template #body="{ data: entry }">
-          <div class="flex max-w-full min-w-0 items-center gap-1">
-            <p class="text-text-dark truncate text-sm font-medium">
-              {{ entry.taskTitle }}
-            </p>
-            <TaskGitHubIssueLink
-              v-if="entry.githubIssue"
-              :issue="entry.githubIssue"
-              :test-id="`dashboard-recent-entry-github-${entry.id}`"
+          <div class="flex min-w-0 items-center gap-2">
+            <TimeEntryTimerAction
+              v-if="entry.timerEntry.endedAt !== null"
+              action="start"
+              :disabled="isDirectStartDisabled()"
+              :entry="entry.timerEntry"
+              :is-loading="isStartTimerPending(entry)"
+              test-id-prefix="dashboard-recent-entry"
+              @trigger="() => handleStartTimer(entry)"
             />
+            <TimeEntryTimerAction
+              v-else
+              action="stop"
+              :disabled="isStopTimerDisabled()"
+              :entry="entry.timerEntry"
+              :is-loading="isStopTimerPending(entry)"
+              test-id-prefix="dashboard-recent-entry"
+              @trigger="() => handleStopTimer(entry)"
+            />
+
+            <div class="flex max-w-full min-w-0 items-center gap-1">
+              <p class="text-text-dark truncate text-sm font-medium">
+                {{ entry.taskTitle }}
+              </p>
+              <TaskGitHubIssueLink
+                v-if="entry.githubIssue"
+                :issue="entry.githubIssue"
+                :test-id="`dashboard-recent-entry-github-${entry.id}`"
+              />
+            </div>
           </div>
         </template>
       </Column>

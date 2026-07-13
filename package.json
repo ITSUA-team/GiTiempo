@@ -3,16 +3,16 @@
   "private": true,
   "packageManager": "pnpm@10.14.0",
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
-    "test:e2e": "turbo run test:e2e",
+    "dev": "./node_modules/turbo/bin/turbo run dev",
+    "build": "./node_modules/turbo/bin/turbo run build",
+    "typecheck": "./node_modules/turbo/bin/turbo run typecheck",
+    "test": "./node_modules/turbo/bin/turbo run test",
+    "test:e2e": "./node_modules/turbo/bin/turbo run test:e2e",
     "test:e2e:api:docker": "./scripts/api-e2e-docker.sh",
     "api:e2e:docker": "./scripts/api-e2e-docker.sh",
     "api:smoke:docker": "./scripts/api-smoke-docker.sh",
-    "lint": "turbo run lint",
-    "openapi:export": "turbo run openapi:export"
+    "lint": "./node_modules/turbo/bin/turbo run lint",
+    "openapi:export": "./node_modules/turbo/bin/turbo run openapi:export"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",

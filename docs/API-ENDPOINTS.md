@@ -13,15 +13,19 @@ REST API contract for GI Tiempo. All endpoints return JSON. Authentication via `
 | POST   | `/auth/login`   | None | —    | Exchange Firebase ID token for JWT access/refresh tokens |
 | POST   | `/auth/register`| None | —    | Register the first workspace owner and issue API tokens  |
 | POST   | `/auth/refresh` | None | —    | Exchange refresh token for new access/refresh pair       |
+| POST   | `/auth/switch-workspace` | JWT | Any | Switch the authenticated session to another workspace membership and issue a fresh token pair |
 | POST   | `/auth/logout`  | JWT  | Any  | Invalidate current refresh token                         |
 
 **POST /auth/login** body: `{ firebaseIdToken: string }`
 **POST /auth/register** body: `{ email: string, fullName: string, workspaceName: string, password: string, ownerAcknowledgement: true }`
 **POST /auth/refresh** body: `{ refreshToken: string }`
+**POST /auth/switch-workspace** body: `{ refreshToken: string, workspaceId: string }`
 
 `POST /auth/register` is the only public first-workspace-owner registration path. It creates the Firebase identity, local user, workspace, owner membership, and returns the normal token pair. Existing-workspace member onboarding remains invite-only; the User SPA `/register` flow must not reuse `/auth/login` or `/invites/accept` for first-workspace-owner creation.
 
 Successful registration returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`.
+
+Successful workspace switching rotates the current refresh-token session into the selected workspace and returns the same token-pair response shape as login/refresh: `{ accessToken, refreshToken, accessTokenExpiresIn }`. The backend must reject target workspaces where the caller does not have an existing membership with `403 Forbidden`.
 
 Expected frontend-visible registration error codes: `duplicate_email`, `weak_password`, `invalid_workspace_name`, `workspace_name_unavailable`, `rate_limited`, and `registration_service_unavailable`. These are returned in the standard error response `code` field; `error` remains the HTTP-category label.
 
@@ -32,7 +36,10 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 | Method | Path        | Auth | Role | Description                               |
 | ------ | ----------- | ---- | ---- | ----------------------------------------- |
 | GET    | `/users/me` | JWT  | Any  | Get current user profile + workspace role |
+| GET    | `/users/me/workspaces` | JWT | Any | List the authenticated user's accessible workspace memberships |
 | PATCH  | `/users/me` | JWT  | Any  | Update display name, avatar               |
+
+**GET /users/me/workspaces** response: `{ items: Array<{ workspaceId: string, workspaceName: string, role: "admin" | "pm" | "member", isCurrent: boolean }> }`
 
 ---
 
@@ -47,15 +54,16 @@ Expected frontend-visible registration error codes: `duplicate_email`, `weak_pas
 
 ---
 
-## 4. GitHub Data (for task selector)
+## 4. GitHub Data
 
-| Method | Path                                 | Auth | Role | Description                               |
-| ------ | ------------------------------------ | ---- | ---- | ----------------------------------------- |
-| GET    | `/github/orgs`                       | JWT  | Any  | List user's GitHub organizations          |
-| GET    | `/github/orgs/:org/projects`         | JWT  | Any  | List GitHub Projects (V2) in organization |
-| GET    | `/github/orgs/:org/repos`            | JWT  | Any  | List repositories in organization         |
-| GET    | `/github/projects/:projectId/issues` | JWT  | Any  | List issues in a GitHub Project           |
-| GET    | `/github/repos/:owner/:repo/issues`  | JWT  | Any  | List issues in a GitHub repository        |
+| Method | Path                                                         | Auth | Role | Description                               |
+| ------ | ------------------------------------------------------------ | ---- | ---- | ----------------------------------------- |
+| GET    | `/github/organizations`                                      | JWT  | Any  | List current user's connected GitHub organizations for admin workspace allow-list setup; this is not filtered by the workspace allow-list |
+| GET    | `/github/owners?type=all\|personal\|organization`           | JWT  | Any  | List GitHub owners available for browsing; organization owners are filtered by the workspace allow-list |
+| GET    | `/github/projects?ownerType=personal\|organization&owner=<login>` | JWT  | Any  | List GitHub Projects (V2) for an owner scope |
+| GET    | `/github/repos?ownerType=personal\|organization&owner=<login>` | JWT  | Any  | List repositories for an owner scope      |
+| GET    | `/github/projects/:projectId/issues`                         | JWT  | Any  | List issues in a GitHub Project           |
+| GET    | `/github/repos/:owner/:repo/issues`                          | JWT  | Any  | List issues in a GitHub repository        |
 
 **Prerequisite:** User must have a connected GitHub account.
 
@@ -139,12 +147,14 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | GET    | `/time-entries/:id`                     | JWT  | Any  | Get time entry details                                                                             |
 | PATCH  | `/time-entries/:id`                     | JWT  | Any  | Update own time entry (task, description, times, billable)                                         |
 | DELETE | `/time-entries/:id`                     | JWT  | Any  | Delete own time entry                                                                              |
-| GET    | `/time-entries/current`                 | JWT  | Any  | Get currently running timer (if any)                                                               |
+| GET    | `/time-entries/current`                 | JWT  | Any  | Get the authenticated user's currently running timer across workspaces, if any                      |
 | POST   | `/time-entries/timer/start`             | JWT  | Any  | Start timer against an existing task                                                               |
 | POST   | `/time-entries/timer/start-from-github` | JWT  | Any  | Start timer from GitHub issue — auto-creates project and task if needed (used by Chrome extension) |
-| POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop running timer                                                                                 |
+| POST   | `/time-entries/timer/stop`              | JWT  | Any  | Stop the authenticated user's running timer across workspaces                                       |
 
 **GET /time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `projectId?`, `taskId?`, `search?`
+
+Time entry responses include safe display summaries for `project`, `task`, `user`, and `workspace` plus the corresponding ids. The `workspace` summary is `{ id: string, name: string }` and is required so clients can label running timers that belong to a different workspace than the active session workspace.
 
 **POST /time-entries** body: `{ taskId: string, startedAt: string, endedAt: string, description?: string | null, isBillable?: boolean }`
 
@@ -164,8 +174,11 @@ Assignments grant non-admin access to private projects and to any assigned activ
 **POST /time-entries/timer/start** body: `{ taskId: string, description?: string | null }`
 **POST /time-entries/timer/start-from-github** body: `{ githubRepo: "org/repo", issueNumber: number, issueTitle: string }`
 
+- `GET /time-entries/current` returns `{ timeEntry: TimeEntryResponse | null }`. It is user-global: it returns the caller's own running timer even when the entry belongs to a different workspace than the active JWT workspace claim.
 - `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
+- `/time-entries/timer/start` remains scoped to the active JWT workspace through task visibility. If the user already has any running timer in any workspace, it rejects with `409 Conflict` and leaves the existing running timer unchanged.
 - `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
+- `/time-entries/timer/stop` stops only the caller's own running timer, but the lookup is user-global and can stop a running entry from another workspace while preserving that entry's original workspace identity in the response.
 
 **GET /projects/:id/time-entries** query: `page?`, `limit?`, `dateFrom?`, `dateTo?`, `taskId?`, `search?`
 
@@ -239,6 +252,8 @@ Assignments grant non-admin access to private projects and to any assigned activ
 | DELETE | `/workspace/github/organizations/:organizationId` | JWT | Admin | Remove an allowed GitHub organization policy row |
 
 **GET /workspace/settings** response includes `{ id, workspaceId, currency, defaultHourlyRate, timeZone, createdAt, updatedAt }`.
+
+`GET /workspace` always returns the currently active workspace bound to the caller's active JWT session. It does not list alternate workspace memberships.
 
 **PATCH /workspace/settings** body: `{ currency?: string, defaultHourlyRate?: number | null, timeZone?: string }`
 

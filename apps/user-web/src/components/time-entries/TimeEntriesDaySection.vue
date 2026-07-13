@@ -37,7 +37,8 @@ const emit = defineEmits<{
 }>();
 const isMobileViewport = useIsMobileViewport();
 
-const timeEntriesTableBodyRowClass = 'h-[52px] transition-colors';
+const timeEntriesTableBodyRowClass =
+  'border-divider h-[52px] border-b transition-colors last:border-b-0';
 const timeEntriesTableHeaderClass = `${managementTableHeaderClass} min-w-[740px]`;
 
 const columns = [
@@ -101,7 +102,15 @@ function handleEntryTaskOpen(entry: TimeEntryResponse): void {
 }
 
 function handleStartTimer(entry: TimeEntryResponse): void {
-  if (entry.endedAt === null || isDirectStartDisabled()) {
+  if (
+    entry.endedAt === null ||
+    (props.startingTimerEntryId !== null && props.startingTimerEntryId !== undefined)
+  ) {
+    return;
+  }
+
+  if (props.isStartTimerDisabled === true) {
+    emit("openActiveTimer");
     return;
   }
 
@@ -141,7 +150,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             :entry="entry"
             :is-loading="isStartTimerPending(entry)"
             test-id-prefix="time-entry-mobile"
-            @trigger="handleStartTimer"
+            @trigger="() => handleStartTimer(entry)"
           />
           <TimeEntryTimerAction
             v-else
@@ -150,7 +159,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
             :entry="entry"
             :is-loading="isStopTimerPending(entry)"
             test-id-prefix="time-entry-mobile"
-            @trigger="handleStopTimer"
+            @trigger="() => handleStopTimer(entry)"
           />
 
           <div class="flex min-w-0 flex-col gap-1">
@@ -226,7 +235,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
               :entry="entry"
               :is-loading="isStartTimerPending(entry)"
               test-id-prefix="time-entry"
-              @trigger="handleStartTimer"
+              @trigger="() => handleStartTimer(entry)"
             />
             <TimeEntryTimerAction
               v-else
@@ -235,7 +244,7 @@ function handleStartTimer(entry: TimeEntryResponse): void {
               :entry="entry"
               :is-loading="isStopTimerPending(entry)"
               test-id-prefix="time-entry"
-              @trigger="handleStopTimer"
+              @trigger="() => handleStopTimer(entry)"
             />
 
             <div class="flex min-w-0 flex-col">

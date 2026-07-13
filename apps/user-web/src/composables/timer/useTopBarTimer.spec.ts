@@ -30,6 +30,7 @@ const TEST_IDS = {
   taskNew: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9203',
   user: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9301',
   workspace: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9401',
+  workspaceOther: '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9402',
 } as const;
 
 const TEST_SCOPE = {
@@ -82,6 +83,16 @@ function createTask(
   };
 }
 
+function createAccessToken(workspaceId = TEST_IDS.workspace): string {
+  const payload = globalThis
+    .btoa(JSON.stringify({ role: 'member', sub: TEST_IDS.user, workspaceId }))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+
+  return ['header', payload, 'signature'].join('.');
+}
+
 function createRunningEntry(
   overrides: Partial<TimeEntryResponse> = {},
 ): TimeEntryResponse {
@@ -91,8 +102,18 @@ function createRunningEntry(
     projectId = project.id,
     task = { id: TEST_IDS.task, title: 'Improve reports filters' },
     taskId = task.id,
+    workspace: overrideWorkspace,
+    workspaceId: overrideWorkspaceId,
     ...entryOverrides
   } = overrides;
+  const workspace = overrideWorkspace ?? {
+    id: overrideWorkspaceId ?? TEST_IDS.workspace,
+    name:
+      (overrideWorkspaceId ?? TEST_IDS.workspace) === TEST_IDS.workspaceOther
+        ? 'Workspace Alpha'
+        : 'Workspace Beta',
+  };
+  const workspaceId = overrideWorkspaceId ?? workspace.id;
 
   return {
     createdAt: '2026-04-21T09:00:00.000Z',
@@ -115,7 +136,8 @@ function createRunningEntry(
       id: TEST_IDS.user,
     },
     userId: TEST_IDS.user,
-    workspaceId: TEST_IDS.workspace,
+    workspace,
+    workspaceId,
     githubIssue,
     ...entryOverrides,
   };
@@ -227,6 +249,7 @@ function createClientMock(): TimeEntriesClient & {
 }
 
 function mountTopBarTimer(options?: {
+  accessToken?: string;
   client?: ReturnType<typeof createClientMock>;
   toast?: { add: ReturnType<typeof vi.fn> };
 }) {
@@ -236,7 +259,7 @@ function mountTopBarTimer(options?: {
 
   const authStore = useAuthStore();
 
-  authStore.accessToken = 'access-token';
+  authStore.accessToken = options?.accessToken ?? 'access-token';
   const client = options?.client ?? createClientMock();
   const queryClient = createTestQueryClient();
   const toast = options?.toast ?? { add: vi.fn() };
@@ -316,6 +339,33 @@ describe('useTopBarTimer', () => {
       githubRepo: 'octo/repo',
       issueNumber: 184,
     });
+  });
+
+  it('classifies a running timer from another workspace after workspace switching', async () => {
+    const client = createClientMock();
+
+    client.getCurrentTimer.mockResolvedValueOnce({
+      timeEntry: createRunningEntry({
+        workspace: { id: TEST_IDS.workspaceOther, name: 'Workspace Alpha' },
+        workspaceId: TEST_IDS.workspaceOther,
+      }),
+    });
+
+    const mounted = mountTopBarTimer({
+      accessToken: createAccessToken(TEST_IDS.workspace),
+      client,
+    });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+    await flushPromises();
+
+    expect(topBarTimer.isCrossWorkspaceTimer.value).toBe(true);
+    expect(topBarTimer.timerWorkspaceContextLabel.value).toBe(
+      'Running in Workspace Alpha',
+    );
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
   });
 
   it('resolves the last eligible tracked task when idle', async () => {
@@ -1409,9 +1459,13 @@ describe('useTopBarTimer', () => {
     );
   });
 
-  it('refreshes authoritative timer state after a start conflict', async () => {
+  it('refreshes cross-workspace timer state after a start conflict and preserves the active draft', async () => {
     const client = createClientMock();
     const toast = { add: vi.fn() };
+    const crossWorkspaceTimer = createRunningEntry({
+      workspace: { id: TEST_IDS.workspaceOther, name: 'Workspace Alpha' },
+      workspaceId: TEST_IDS.workspaceOther,
+    });
 
     client.listVisibleProjects.mockResolvedValue([
       createProject(TEST_IDS.project, 'Project Orion'),
@@ -1425,13 +1479,24 @@ describe('useTopBarTimer', () => {
     client.startTimer.mockRejectedValueOnce(
       new ApiError('A timer is already running', { status: 409 }),
     );
+    client.stopTimer.mockResolvedValueOnce(
+      createCompletedEntry({
+        workspace: { id: TEST_IDS.workspaceOther, name: 'Workspace Alpha' },
+        workspaceId: TEST_IDS.workspaceOther,
+      }),
+    );
     client.getCurrentTimer
       .mockResolvedValueOnce({ timeEntry: null })
       .mockResolvedValueOnce({
-        timeEntry: createRunningEntry(),
-      });
+        timeEntry: crossWorkspaceTimer,
+      })
+      .mockResolvedValueOnce({ timeEntry: null });
 
-    const mounted = mountTopBarTimer({ client, toast });
+    const mounted = mountTopBarTimer({
+      accessToken: createAccessToken(TEST_IDS.workspace),
+      client,
+      toast,
+    });
 
     wrappers.push(mounted.wrapper);
 
@@ -1441,8 +1506,13 @@ describe('useTopBarTimer', () => {
     await startTimerFromSeededDialog(topBarTimer);
     await flushPromises();
 
+    expect(topBarTimer.isCrossWorkspaceTimer.value).toBe(true);
     expect(topBarTimer.primaryActionLabel.value).toBe('Stop');
+    expect(topBarTimer.timerWorkspaceContextLabel.value).toBe(
+      'Running in Workspace Alpha',
+    );
     expect(topBarTimer.selectedContext.value?.taskId).toBe(TEST_IDS.task);
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
     expect(toast.add).toHaveBeenCalledWith(
       expect.objectContaining({
         detail: 'Please try again.',
@@ -1450,6 +1520,16 @@ describe('useTopBarTimer', () => {
         summary: 'Could not start the timer',
       }),
     );
+
+    await topBarTimer.stopTimerFromDialog();
+    await flushPromises();
+
+    expect(client.stopTimer).toHaveBeenCalledTimes(1);
+    expect(topBarTimer.isCrossWorkspaceTimer.value).toBe(false);
+    expect(topBarTimer.primaryActionLabel.value).toBe('Start');
+    expect(topBarTimer.isDialogOpen.value).toBe(true);
+    expect(topBarTimer.selectedContext.value?.taskId).toBe(TEST_IDS.task);
+    expect(topBarTimer.isDialogSecondaryActionDisabled.value).toBe(true);
   });
 
   it('shows closed-task copy when a stale selection cannot start', async () => {
@@ -1838,6 +1918,40 @@ describe('useTopBarTimer', () => {
         summary: 'Timer updated',
       }),
     );
+  });
+
+  it('blocks cross-workspace running timer task changes', async () => {
+    const client = createClientMock();
+
+    client.getCurrentTimer.mockResolvedValueOnce({
+      timeEntry: createRunningEntry({
+        workspace: { id: TEST_IDS.workspaceOther, name: 'Workspace Alpha' },
+        workspaceId: TEST_IDS.workspaceOther,
+      }),
+    });
+
+    const mounted = mountTopBarTimer({
+      accessToken: createAccessToken(TEST_IDS.workspace),
+      client,
+    });
+
+    wrappers.push(mounted.wrapper);
+
+    const { topBarTimer } = mounted;
+
+    await flushPromises();
+    await topBarTimer.openDialog();
+
+    topBarTimer.setSelectedProjectId(TEST_IDS.project);
+    topBarTimer.setSelectedTaskId(TEST_IDS.taskAlt);
+    topBarTimer.setSelectedDescription('Should not apply');
+    await topBarTimer.confirmSelectedTask();
+    await flushPromises();
+
+    expect(topBarTimer.isCrossWorkspaceTimer.value).toBe(true);
+    expect(topBarTimer.selectedTaskId.value).toBe(TEST_IDS.task);
+    expect(topBarTimer.selectedDescription.value).toBe('');
+    expect(client.updateEntry).not.toHaveBeenCalled();
   });
 
   it('clears a running timer description when the dialog submits whitespace only', async () => {

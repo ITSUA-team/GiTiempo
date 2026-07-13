@@ -12,17 +12,19 @@
 - When the winning task is backed by a synced GitHub issue, show a compact external-link icon next to the task name that opens the source issue in a new browser tab.
 - Recent Time Entries: render the existing `<DataTable>` on tablet and desktop, and switch to stacked mobile cards below `640px`.
 - The mobile recent-entry cards keep the same record content as the desktop table: task title, project name, time range, duration, and highlighted running/current-entry state when applicable.
+- Recent-entry rows/cards include the same first-column icon-only direct timer action pattern as Time Entries: completed entries show `Start timer`, and the active running entry shows `Stop timer`.
 - Dashboard recent-entry task names keep their current row behavior, and synced GitHub tasks add a separate external-link icon beside the task name that opens the source issue in a new browser tab.
 - The section-level `View all` action remains available in both desktop/table and mobile-card layouts.
 - Empty dashboard state: reuse the shared empty state pattern.
 - Optional MVP stats row: 3 summary cards.
-- Dashboard timer start/stop controls do not appear in page content; timer control lives in the global top bar. The Time Entries page is the only MVP page-content exception for direct row-level timer starts from existing entries.
+- Dashboard page-content timer controls are limited to Recent Time Entries row/card actions; the global top bar remains the main timer surface, and no separate dashboard timer panel appears in page content.
 
 ## Global Top-Bar Timer
 
 - There is no dedicated Timer page in the authenticated `user-web` MVP navigation.
 - Authenticated shell: every authenticated `user-web` page shows the compact timer surface on tablet and desktop, and the selected full-width mobile timer strip below `640px`.
 - Running top-bar state: show the project on the first line, task on the second line, and live `HH:MM:SS` inside the clickable compact timer surface.
+- Cross-workspace running top-bar state: after a workspace switch, if the authenticated user's running timer belongs to another workspace, keep showing the running timer with project/task context, live `HH:MM:SS`, and a visible `Running in <workspace>` label on both desktop and mobile surfaces.
 - Not-running top-bar state: show the last tracked project/task context inside the same compact timer surface instead of a shell-level start action.
 - When the shown task is backed by a synced GitHub issue, add a compact external-link icon beside the task line inside the surface. The icon opens the source issue in a new browser tab and does not replace the timer-surface click target.
 - Last tracked task context comes from `GET /time-entries?limit=1`, then uses the most recent own time entry whose task and parent project are still visible and active for the current user.
@@ -34,6 +36,7 @@
 - When the timer is idle, the popup primary action is `Start timer` and creates a fresh running time entry for the selected task and current dialog description. Time Entries completed rows may also start a fresh timer directly for that row's task without opening the task-picker popup.
 - The fresh running time entry initializes `isBillable` from the selected task's default billable value before any per-entry override.
 - When the timer is already running, the popup uses a secondary `Change task` action for task reassignment and a primary `Stop timer` action to its right.
+- When the timer is running in another workspace, the popup switches to a stop-first state that explains the timer is active in that workspace, hides or makes unavailable active-workspace Project -> Task selection and `Change task`, and keeps popup-owned `Stop timer` as the primary recovery action.
 - The authenticated user-web profile trigger is avatar-only in the top bar; visible member-name text does not appear beside the avatar.
 - If there is no eligible last tracked task context, keep the same not-running top-bar layout and keep the compact timer surface clickable so the popup can seed a new startable task context.
 - While the top-bar timer summary is loading, keep the layout visible with the popup entry point intact.
@@ -42,6 +45,8 @@
 - On mobile, a single `Task & timer` opener lives on the left side of the strip so it remains reachable when the profile menu opens from the top-right identity area.
 - On mobile, the right-side metadata uses project on the first line and task on the second line, with running elapsed time shown there when applicable; the opener remains the guaranteed task-picker entry point if metadata is partially covered.
 - The task-picker dialog uses predictive Project -> Task selection only for task targeting; it also includes the optional time-entry description field.
+- After a cross-workspace timer is stopped from the popup, refresh the authoritative current timer state and return the dialog to the normal active-workspace Project -> Task -> Description flow when no timer remains running.
+- If a stale start attempt returns `409 Conflict` because any workspace already has a running timer, refresh the authoritative current timer, show the cross-workspace running state when applicable, and keep the user's active-workspace draft available for retry after stop.
 - When `Task` is set to `New task`, show a single required new-task title input directly below the task select and create that task inside the currently selected visible project.
 - The dialog does not support creating a new project.
 - When task creation succeeds, the dialog keeps the newly created task selected and stays open until the user confirms with the state-appropriate timer action.
@@ -58,7 +63,7 @@
 - Day-level create uses the rendered local day as the preset calendar day for `startedAt` and `endedAt`.
 - At and above `640px`, each day group keeps the existing table layout for entries.
 - Below `640px`, each day group renders stacked mobile cards instead of the fixed-width desktop table.
-- Entry row/card content includes a first-column icon-only `Start timer` action for completed entries, a matching icon-only `Stop timer` action for the active running entry, a clickable task name, project, time range, and duration. The start action starts a fresh running timer for the same task without opening the task-picker popup and uses task-specific tooltip/accessibility copy such as `Start timer for Improve reports filters`. The stop action stops the current running timer without opening the task-picker popup and uses task-specific tooltip/accessibility copy such as `Stop timer for Improve reports filters`. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the task name that opens the source issue in a new browser tab. Time-range labels use the user's current browser-local timezone.
+- Entry row/card content includes a first-column icon-only `Start timer` action for completed entries, a matching icon-only `Stop timer` action for the active running entry, a clickable task name, project, time range, and duration. The start action starts a fresh running timer for the same task without opening the task-picker popup and uses task-specific tooltip/accessibility copy such as `Start timer for Improve reports filters`. The stop action stops the current running timer without opening the task-picker popup and uses task-specific tooltip/accessibility copy such as `Stop timer for Improve reports filters`. If any timer is already running, including in another workspace, completed-entry direct starts are blocked and should route the user to the top-bar task-picker stop-first guidance instead of sending a failing start request. The task name opens the shared edit dialog, and the row no longer carries separate edit/delete icon actions. When the task is backed by a synced GitHub issue, show a separate external-link icon beside the task name that opens the source issue in a new browser tab. Time-range labels use the user's current browser-local timezone.
 - Running entry highlighted with `bg-accent-tint`.
 - Running-entry mobile cards keep the same highlight treatment and expose the same direct `Stop timer` action as the desktop row; edit/delete actions remain unavailable for running entries.
 - Clicking the task name opens the shared time-entry PrimeVue `<Dialog>` instead of expanding the row inline.
@@ -205,8 +210,11 @@
 
 ## Cross-App Navigation
 
-- The user SPA should expose a visible entry point to the admin workspace when the admin SPA is available.
-- Place the cross-link in the shared shell profile dropdown so it is available from authenticated user pages without competing with page-level actions.
+- The user SPA should expose authenticated workspace switching when the current user belongs to more than one workspace.
+- Place workspace switching in the shared shell profile dropdown and treat it as a session-context change, not as cross-app navigation.
+- When the user has only one workspace membership, omit the workspace-switcher section entirely.
+- Keep the separate entry point to the admin workspace in the same dropdown below the workspace-switcher section when the admin SPA is available.
+- Switching workspaces from `user-web` keeps the user in `user-web`, reloads the shell against the selected workspace context, and refreshes the authoritative current timer without treating the workspace switch itself as proof that no timer is running.
 
 ## Error Pages
 
@@ -215,5 +223,6 @@
 - 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, and primary action `Back to dashboard`.
 - The 404 secondary action `Go back` renders only when the browser history contains a prior entry for the current tab. When no prior history entry exists, omit the secondary action entirely.
 - 403 Forbidden renders as a standalone route-level page outside the authenticated app shell when the current user is signed in but lacks access to the requested page or workspace resource.
-- 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current workspace role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace is available.
+- 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current workspace role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace membership is available.
+- The 403 `Switch workspace` action opens the authenticated workspace switcher for the current session. It must not be reused as the cross-app link to `admin-web`.
 - Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the full route surface; request errors stay scoped to the feature surface that failed.

@@ -60,6 +60,7 @@ function mountDialog(overrides: DialogProps = {}) {
       isConfirmingSelection: false,
       isCreateTaskDisabled: false,
       isCreatingTask: false,
+      isCrossWorkspaceTimer: false,
       isLoadingProjects: false,
       isLoadingTasks: false,
       isOpen: true,
@@ -75,6 +76,7 @@ function mountDialog(overrides: DialogProps = {}) {
       taskOptions: [reportsTask],
       tasksErrorMessage: null,
       timerActionErrorMessage: null,
+      timerWorkspaceContextLabel: null,
       ...overrides,
     },
     global: {
@@ -91,6 +93,7 @@ function mountDialog(overrides: DialogProps = {}) {
             "fluid",
             "forceSelection",
             "inputClass",
+            "loading",
             "minLength",
             "modelValue",
             "pt",
@@ -105,13 +108,13 @@ function mountDialog(overrides: DialogProps = {}) {
             },
           },
           template:
-            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading !== undefined && loading !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "variant"],
           emits: ["click"],
           template:
-            '<button :class="$attrs.class" :data-fluid="String(fluid)" :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')">{{ label }}</button>',
+            '<button v-bind="$attrs" :data-fluid="String(fluid)" :data-loading="String(loading)" :data-severity="severity" :data-variant="variant" :disabled="disabled" type="button" @click="$emit(\'click\')"><slot>{{ label }}</slot></button>',
         },
         Dialog: {
           props: {
@@ -129,7 +132,6 @@ function mountDialog(overrides: DialogProps = {}) {
           template:
             '<input :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
-        ProgressSpinner: { template: '<div data-testid="spinner" />' },
         Textarea: {
           props: ["disabled", "modelValue"],
           emits: ["update:modelValue"],
@@ -285,6 +287,7 @@ describe("TopBarTimerTaskDialog", () => {
     expect(runningAutoCompletes[1]?.props("disabled")).toBe(true);
     expect(findButtonByLabel(runningWrapper, "Change task")?.attributes("disabled")).toBeDefined();
     expect(findButtonByLabel(runningWrapper, "Stop timer")?.attributes("disabled")).toBeUndefined();
+    expect(findButtonByLabel(runningWrapper, "Stop timer")?.classes()).toContain("cursor-pointer");
   });
 
   it("filters predictive search suggestions by typed text", async () => {
@@ -355,10 +358,13 @@ describe("TopBarTimerTaskDialog", () => {
     expect(findButtonByLabel(wrapper, "Cancel")).toBeUndefined();
   });
 
-  it("renders a distinct task-loading state for the selected project", () => {
+  it("uses the task autocomplete loading state for the selected project", () => {
     const wrapper = mountDialog({ isLoadingTasks: true, taskOptions: [] });
+    const taskAutoComplete = wrapper.findAllComponents({ name: "AutoComplete" })[1];
 
-    expect(wrapper.find('[data-testid="spinner"]').exists()).toBe(true);
+    expect(taskAutoComplete?.props("loading")).toBe(true);
+    expect(taskAutoComplete?.props("disabled")).toBe(true);
+    expect(taskAutoComplete?.attributes("data-loading")).toBe("true");
     expect(wrapper.text()).not.toContain("No existing active tasks in this project.");
     expect(wrapper.text()).not.toContain("Could not load tasks for this project.");
   });
@@ -400,17 +406,64 @@ describe("TopBarTimerTaskDialog", () => {
     expect(primaryButton?.attributes("disabled")).toBeDefined();
   });
 
-  it("renders inline active-timer update errors and change-task loading state", () => {
+  it("renders inline active-timer update errors with a stable centered spinner", () => {
     const wrapper = mountDialog({
       isConfirmingSelection: true,
       primaryActionLabel: "Stop",
       selectionUpdateErrorMessage: "Task is inactive",
     });
-    const confirmButton = findButtonByLabel(wrapper, "Change task");
+    const confirmButton = wrapper.get('[data-testid="top-bar-timer-confirm-action"]');
+    const spinner = confirmButton.get('[data-testid="top-bar-timer-confirm-action-spinner"]');
 
     expect(wrapper.text()).toContain("Could not update the active timer task.");
     expect(wrapper.text()).toContain("Task is inactive");
-    expect(confirmButton?.attributes("data-loading")).toBe("true");
+    expect(confirmButton.attributes("disabled")).toBeDefined();
+    expect(confirmButton.attributes("aria-busy")).toBe("true");
+    expect(confirmButton.attributes("data-loading")).not.toBe("true");
+    expect(confirmButton.classes()).toContain("items-center");
+    expect(confirmButton.classes()).toContain("justify-center");
+    expect(confirmButton.classes()).toContain("min-w-[108px]");
+    expect(spinner.classes()).toContain("border-t-brand");
+  });
+
+  it("disables the primary timer action with a stable white centered spinner", () => {
+    const wrapper = mountDialog({
+      isPrimaryActionPending: true,
+      primaryActionLabel: "Stop",
+    });
+    const primaryButton = wrapper.get('[data-testid="top-bar-timer-primary-action"]');
+    const spinner = primaryButton.get('[data-testid="top-bar-timer-primary-action-spinner"]');
+
+    expect(primaryButton.attributes("disabled")).toBeDefined();
+    expect(primaryButton.attributes("aria-busy")).toBe("true");
+    expect(primaryButton.attributes("data-loading")).not.toBe("true");
+    expect(primaryButton.classes()).toContain("items-center");
+    expect(primaryButton.classes()).toContain("justify-center");
+    expect(primaryButton.classes()).toContain("min-w-[96px]");
+    expect(spinner.classes()).toContain("border-t-text-inverse");
+  });
+
+  it("renders cross-workspace running state with stop-first guidance", () => {
+    const wrapper = mountDialog({
+      isCrossWorkspaceTimer: true,
+      primaryActionLabel: "Stop",
+      timerWorkspaceContextLabel: "Running in Workspace Alpha",
+    });
+    const footerButtons = wrapper
+      .get('[data-testid="top-bar-timer-task-dialog-footer"]')
+      .findAll("button");
+
+    expect(wrapper.text()).toContain("Timer running in another workspace");
+    expect(wrapper.text()).toContain(
+      "Stop the running timer before starting or changing tasks in this workspace.",
+    );
+    expect(wrapper.get('[data-testid="top-bar-timer-dialog-workspace-label"]').text()).toBe(
+      "Running in Workspace Alpha",
+    );
+    expect(wrapper.findAllComponents({ name: "AutoComplete" })).toHaveLength(0);
+    expect(wrapper.find("textarea").exists()).toBe(false);
+    expect(findButtonByLabel(wrapper, "Change task")).toBeUndefined();
+    expect(footerButtons.map((button) => button.text())).toEqual(["Stop timer"]);
   });
 
   it("renders start and stop timer errors with state-specific copy", () => {

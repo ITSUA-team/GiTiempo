@@ -80,3 +80,53 @@ The backend MUST shape current-user responses according to the shared public use
 - **THEN** fields like internal Firebase UID are excluded
 - **AND** the user's workspace role is included
 - **AND** only the public user contract fields are returned
+
+### Requirement: Current User Workspace Membership List
+
+The backend SHALL provide an authenticated current-user endpoint that lists every workspace membership available to the authenticated user for active-workspace switching.
+
+#### Scenario: Authenticated user lists workspace memberships
+
+- **GIVEN** an authenticated user has one or more workspace memberships
+- **WHEN** the user requests their workspace membership list
+- **THEN** the backend returns every active workspace membership for that user
+- **AND** each item includes the workspace ID, workspace name, role, and current-workspace marker
+
+#### Scenario: Membership list marks current workspace
+
+- **GIVEN** an authenticated request carries a valid workspace ID claim
+- **WHEN** the user requests their workspace membership list
+- **THEN** the membership matching the access-token workspace ID is marked as current
+- **AND** all other memberships are marked as not current
+
+#### Scenario: Unauthenticated user cannot list memberships
+
+- **GIVEN** no valid authenticated user context is available
+- **WHEN** the current-user workspace membership list is requested
+- **THEN** the backend rejects the request as unauthorized
+
+### Requirement: Workspace Switching Preserves Authoritative Running Timer State
+
+The frontend session flow SHALL treat workspace switching as an active-workspace context change without hiding, clearing, or replacing the authenticated user's authoritative running timer state.
+
+#### Scenario: Workspace switch refreshes timer summary
+
+- **GIVEN** the authenticated user belongs to multiple workspaces
+- **AND** the user switches from workspace A to workspace B
+- **WHEN** the frontend applies the new token pair for workspace B
+- **THEN** user-web refreshes the authoritative current timer state for the authenticated user
+- **AND** it does not treat the workspace switch itself as proof that no timer is running
+
+#### Scenario: Workspace switch keeps one-running-timer invariant visible
+
+- **GIVEN** the authenticated user has a running timer in workspace A
+- **WHEN** the user switches the active session to workspace B
+- **THEN** user-web keeps the one-running-timer invariant visible in the shell timer surface
+- **AND** starting a workspace B timer is not presented as immediately available until the workspace A timer is stopped
+
+#### Scenario: Workspace switch does not mutate running timer ownership
+
+- **GIVEN** the authenticated user has a running timer in workspace A
+- **WHEN** the user switches the active session to workspace B
+- **THEN** the running timer remains owned by workspace A until the user explicitly stops it
+- **AND** the workspace switch does not move the running entry to workspace B

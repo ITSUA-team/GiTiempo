@@ -34,7 +34,7 @@ The backend MUST accept a Firebase identity token during login and verify it aga
 
 ### Requirement: API Session Token Pair
 
-The backend SHALL issue an access token and refresh token pair after successful login for a user with active workspace membership. Access tokens MUST carry a minimal, non-sensitive payload suitable for stateless verification. Refresh tokens MUST be opaque, unguessable, and stored only as a cryptographic hash at rest.
+The backend SHALL issue an access token and refresh token pair after successful login for a user with active workspace membership. Access tokens MUST carry a minimal, non-sensitive payload suitable for stateless verification. Refresh tokens MUST be opaque, unguessable, stored only as a cryptographic hash at rest, and bound to the workspace membership selected when the session is issued.
 
 #### Scenario: Successful login returns token pair with workspace context
 
@@ -44,6 +44,13 @@ The backend SHALL issue an access token and refresh token pair after successful 
 - **THEN** the response includes an access token for authenticated API calls
 - **AND** the response includes a refresh token for session renewal
 - **AND** the access token carries the authenticated subject, email, Firebase UID, workspace ID, and workspace role claims
+
+#### Scenario: Refresh token stays bound to the issued workspace membership
+
+- **GIVEN** the backend issues a session for a specific active workspace membership during login or first-owner registration
+- **WHEN** the backend persists the refresh token for that session
+- **THEN** the persisted refresh-token record keeps the selected workspace membership context
+- **AND** later refresh attempts evaluate membership against that stored workspace context instead of selecting a different active membership for the same user
 
 #### Scenario: Refresh rotates session credentials for active member
 
@@ -85,6 +92,68 @@ The backend MUST detect when a previously rotated (revoked) refresh token is pre
 - **THEN** the backend rejects the request as unauthorized
 - **AND** the backend revokes every refresh token that belongs to the same session family
 - **AND** the backend emits a reuse-detected audit event
+
+### Requirement: Active Workspace Switch Issues Token Pair
+
+The backend SHALL allow an authenticated user to switch the active workspace to another existing membership by issuing a fresh API token pair for the selected workspace context.
+
+#### Scenario: Switch succeeds for another active membership
+
+- **GIVEN** an authenticated user has an active membership in the current workspace
+- **AND** the same user has an active membership in another workspace
+- **WHEN** the user requests an active-workspace switch to the other workspace
+- **THEN** the backend validates the target membership
+- **AND** the backend returns a fresh access token and refresh token pair
+- **AND** the new access token carries the selected workspace ID and the user's role in that selected workspace
+- **AND** the previous refresh token from that session is no longer usable
+
+#### Scenario: Switch rejects workspace without membership
+
+- **GIVEN** an authenticated user does not have an active membership in a target workspace
+- **WHEN** the user requests an active-workspace switch to that workspace
+- **THEN** the backend rejects the request as forbidden
+- **AND** no new token pair is issued
+
+#### Scenario: Switch to current workspace is idempotent
+
+- **GIVEN** an authenticated user requests an active-workspace switch to the workspace already carried by the current access token
+- **WHEN** the backend validates that membership
+- **THEN** the backend returns a fresh access token and refresh token pair for the same workspace context
+- **AND** the previous refresh token from that session is no longer usable
+
+#### Scenario: Switch rejects refresh token owned by another user
+
+- **GIVEN** an authenticated user submits an active-workspace switch request
+- **AND** the provided refresh token belongs to a different user
+- **WHEN** the backend validates the switch request
+- **THEN** the backend rejects the request as unauthorized
+- **AND** no new token pair is issued
+
+#### Scenario: Switch rejects refresh token from another workspace session
+
+- **GIVEN** an authenticated user submits an active-workspace switch request
+- **AND** the provided refresh token belongs to a different current workspace session than the caller's access-token workspace
+- **WHEN** the backend validates the switch request
+- **THEN** the backend rejects the request as unauthorized
+- **AND** no new token pair is issued
+
+### Requirement: Refresh Preserves Selected Workspace Context
+
+The backend MUST refresh credentials for the workspace context associated with the refresh session and MUST NOT silently move the session to another workspace.
+
+#### Scenario: Refresh after workspace switch
+
+- **GIVEN** a user has switched the active workspace and received a new refresh token
+- **WHEN** the client refreshes that switched session
+- **THEN** the backend returns a new token pair for the selected workspace context
+- **AND** the new access token keeps the selected workspace ID and selected-workspace role claims
+
+#### Scenario: Refresh rejects removed selected membership
+
+- **GIVEN** a refresh token belongs to a selected workspace membership that has been removed
+- **WHEN** the client attempts to refresh that session
+- **THEN** the backend rejects the request as unauthorized
+- **AND** the backend does not automatically select another workspace membership for the user
 
 ### Requirement: Session Termination On Logout
 
@@ -192,11 +261,13 @@ The backend MUST reject login and refresh attempts when the verified Firebase id
 - **WHEN** the user attempts to log in
 - **THEN** the backend rejects the request as unauthorized (401)
 
-#### Scenario: Refresh is rejected without active membership
+#### Scenario: Refresh is rejected when the issued workspace membership is gone
 
-- **GIVEN** a client presents a valid refresh token for a user whose workspace membership has been removed
+- **GIVEN** a client presents a valid refresh token that was issued for a specific active workspace membership
+- **AND** the session owner no longer has that exact active workspace membership
 - **WHEN** the refresh endpoint is called
 - **THEN** the backend rejects the request as unauthorized (401)
+- **AND** the backend does not silently move the session onto a different active workspace membership for the same user
 
 #### Scenario: Registration is separate from login
 
@@ -214,4 +285,3 @@ The backend SHALL issue the normal API token pair after successful first-owner r
 - **THEN** the response includes an access token for authenticated API calls
 - **AND** the response includes a refresh token for session renewal
 - **AND** the access token carries the registered user's subject, email, Firebase UID, workspace ID, and owner role claims
-

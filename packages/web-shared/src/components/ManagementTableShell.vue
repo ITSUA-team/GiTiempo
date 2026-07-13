@@ -4,7 +4,9 @@ import DataTable from 'primevue/datatable';
 import type { DataTableProps } from 'primevue/datatable';
 
 import {
+  getManagementTableColumnStyle,
   managementTableBodyRowClass,
+  managementTableHeaderCellClass,
   managementTableHeaderClass,
   managementTableShellClass,
   type ManagementTableColumn,
@@ -49,12 +51,12 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
       <div
         v-for="col in columns"
         :key="col.key"
-        class="px-3"
-        :style="{
-          width: col.width === 'fill' || col.width === undefined ? undefined : `${col.width}px`,
-          flex: col.width === 'fill' || col.width === undefined ? '1' : undefined,
-          textAlign: col.align ?? 'start',
-        }"
+        :class="[
+          managementTableHeaderCellClass,
+          col.align === 'end' ? 'justify-end text-right' : 'justify-start text-left',
+        ]"
+        :data-testid="`management-table-header-${col.key}`"
+        :style="getManagementTableColumnStyle(col)"
       >
         {{ col.label }}
       </div>
@@ -62,7 +64,7 @@ const expandedRows = defineModel<Record<string, boolean> | undefined>('expandedR
 
     <div
       v-if="$slots.filters"
-      class="border-divider bg-surface-primary text-text-muted flex h-[44px] items-center font-sans text-[12px] font-normal"
+      class="border-divider bg-surface-primary text-text-muted flex h-[44px] w-full shrink-0 items-center border-t font-sans text-[12px] font-normal"
     >
       <slot
         name="filters"

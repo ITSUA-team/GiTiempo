@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type {
   AddWorkspaceGitHubOrganizationInput,
+  GitHubConnectionStatusResponse,
+  GitHubOwnerListResponse,
   ManagementProjectSummaryResponse,
   ProjectListResponse,
   TimeReportExportQuery,
@@ -15,10 +17,6 @@ import type {
   WorkspaceResponse,
   WorkspaceSettingsResponse,
 } from '@gitiempo/shared';
-import {
-  isQueryEnabled,
-  type QueryAccessOptions,
-} from '@gitiempo/web-shared/query';
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 
 import {
@@ -46,6 +44,14 @@ interface ExportTimeReportClient {
   exportTimeReport(
     query?: Partial<TimeReportExportQuery>,
   ): Promise<ReportsCsvExport>;
+}
+
+interface GitHubConnectionStatusClient {
+  getGitHubConnectionStatus(): Promise<GitHubConnectionStatusResponse>;
+}
+
+interface GitHubOrganizationsClient {
+  listAvailableGitHubOrganizations(): Promise<GitHubOwnerListResponse>;
 }
 
 interface TimeReportClient {
@@ -90,12 +96,12 @@ interface WorkspaceGitHubOrganizationsClient {
   removeWorkspaceGitHubOrganization(organizationId: string): Promise<void>;
 }
 
-interface AdminScopedQueryOptions extends QueryAccessOptions {
+interface AdminScopedQueryOptions {
+  enabled: MaybeRefOrGetter<boolean>;
   scope: MaybeRefOrGetter<AdminServerStateScope>;
 }
 
 interface AdminScopedMutationOptions {
-  accessToken: MaybeRefOrGetter<string | null | undefined>;
   scope: MaybeRefOrGetter<AdminServerStateScope>;
 }
 
@@ -105,6 +111,15 @@ interface UseAdminProjectsQueryOptions extends AdminScopedQueryOptions {
 
 interface UseExportTimeReportMutationOptions extends AdminScopedMutationOptions {
   client: ExportTimeReportClient;
+}
+
+interface UseGitHubConnectionStatusQueryOptions extends AdminScopedQueryOptions {
+  client: GitHubConnectionStatusClient;
+}
+
+interface UseAvailableGitHubOrganizationsQueryOptions
+  extends AdminScopedQueryOptions {
+  client: GitHubOrganizationsClient;
 }
 
 interface UseManagementProjectSummaryQueryOptions extends AdminScopedQueryOptions {
@@ -164,6 +179,10 @@ async function invalidateQueryKeys(
   );
 }
 
+function isQueryEnabled(options: AdminScopedQueryOptions): boolean {
+  return Boolean(toValue(options.enabled));
+}
+
 export const useAdminProjectsQuery = (options: UseAdminProjectsQueryOptions) =>
   useQuery({
     queryKey: computed(() => adminProjectsKeys.list(toValue(options.scope))),
@@ -177,6 +196,28 @@ export const useExportTimeReportMutation = (
   useMutation({
     mutationFn: (query: Partial<TimeReportExportQuery>) =>
       options.client.exportTimeReport(query),
+  });
+
+export const useGitHubConnectionStatusQuery = (
+  options: UseGitHubConnectionStatusQueryOptions,
+) =>
+  useQuery({
+    queryKey: computed(() =>
+      adminSettingsKeys.githubConnection(toValue(options.scope)),
+    ),
+    enabled: computed(() => isQueryEnabled(options)),
+    queryFn: () => options.client.getGitHubConnectionStatus(),
+  });
+
+export const useAvailableGitHubOrganizationsQuery = (
+  options: UseAvailableGitHubOrganizationsQueryOptions,
+) =>
+  useQuery({
+    queryKey: computed(() =>
+      adminSettingsKeys.availableGitHubOrganizations(toValue(options.scope)),
+    ),
+    enabled: computed(() => isQueryEnabled(options)),
+    queryFn: () => options.client.listAvailableGitHubOrganizations(),
   });
 
 export const useAddWorkspaceGitHubOrganizationMutation = (

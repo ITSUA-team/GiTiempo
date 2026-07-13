@@ -24,6 +24,7 @@ describe('GithubService', () => {
     listRepositories: vi.fn(),
     listProjects: vi.fn(),
     getProjectOwner: vi.fn(),
+    listActiveOrganizationMemberships: vi.fn(),
     getRepositoryIssue: vi.fn(),
     listRepositoryIssues: vi.fn(),
     listProjectIssues: vi.fn(),
@@ -284,6 +285,78 @@ describe('GithubService', () => {
       'octocat',
       'Octo-Org',
     ]);
+  });
+
+  it('lists available organizations from orgs and active memberships', async () => {
+    connections.status.mockResolvedValue({
+      status: 'connected',
+      account: {
+        githubUserId: '123',
+        login: 'octocat',
+        avatarUrl: null,
+        connectedAt: '2026-05-14T12:00:00.000Z',
+        updatedAt: '2026-05-14T12:00:00.000Z',
+      },
+    });
+    connections.getValidAccessToken.mockResolvedValue('ghu_token');
+    apiClient.listOwners.mockResolvedValue({
+      items: [
+        {
+          login: 'Octo-Org',
+          label: 'Octo-Org',
+          type: 'organization',
+          avatarUrl: null,
+          url: 'https://github.com/Octo-Org',
+        },
+        {
+          login: 'Other-Org',
+          label: 'Other-Org',
+          type: 'organization',
+          avatarUrl: null,
+          url: 'https://github.com/Other-Org',
+        },
+      ],
+    });
+    apiClient.listActiveOrganizationMemberships.mockResolvedValue({
+      items: [
+        {
+          login: 'octo-org',
+          label: 'octo-org',
+          type: 'organization',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/1',
+          url: 'https://github.com/octo-org',
+        },
+        {
+          login: 'Membership-Org',
+          label: 'Membership-Org',
+          type: 'organization',
+          avatarUrl: null,
+          url: 'https://github.com/Membership-Org',
+        },
+      ],
+    });
+    workspaceGitHubOrganizations.listAllowedOrganizationLogins.mockResolvedValue(
+      ['octo-org'],
+    );
+
+    const result = await service().listAvailableOrganizations(user);
+
+    expect(result.items.map((owner) => owner.login)).toEqual([
+      'Octo-Org',
+      'Other-Org',
+      'Membership-Org',
+    ]);
+    expect(apiClient.listOwners).toHaveBeenCalledWith(
+      'ghu_token',
+      { login: 'octocat', avatarUrl: null },
+      'organization',
+    );
+    expect(apiClient.listActiveOrganizationMemberships).toHaveBeenCalledWith(
+      'ghu_token',
+    );
+    expect(
+      workspaceGitHubOrganizations.listAllowedOrganizationLogins,
+    ).not.toHaveBeenCalled();
   });
 
   it('rejects organization-scoped repository browsing when the owner is not allowed', async () => {

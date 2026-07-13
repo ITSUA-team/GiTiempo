@@ -3,6 +3,7 @@
 import { mount, type VueWrapper } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
 import { afterEach, describe, expect, it } from "vitest";
+import type { CurrentUserWorkspaceMembershipResponse } from "@gitiempo/shared";
 import { defineComponent, h, nextTick, type Component, type PropType } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 
@@ -26,17 +27,54 @@ type HeaderProps = typeof baseProps & {
   settingsLabel?: string;
   showDisplayName?: boolean;
   showSettings?: boolean;
+  switchingWorkspaceId?: string | null;
+  workspaceMemberships?: CurrentUserWorkspaceMembershipResponse[];
 };
 
 type TestMenuItem = {
   command?: () => void;
   destructive?: boolean;
   href?: string;
+  isCurrent?: boolean;
+  isSwitching?: boolean;
   key?: string;
   label?: string;
+  roleLabel?: string;
   route?: RouteLocationRaw;
   separator?: boolean;
+  type?: string;
+  workspaceId?: string;
 };
+
+const multipleWorkspaceMemberships: CurrentUserWorkspaceMembershipResponse[] = [
+  {
+    isCurrent: true,
+    role: "member",
+    workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+    workspaceName: "Workspace Alpha",
+  },
+  {
+    isCurrent: false,
+    role: "admin",
+    workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    workspaceName: "Workspace Beta",
+  },
+];
+
+const longWorkspaceMemberships: CurrentUserWorkspaceMembershipResponse[] = [
+  {
+    isCurrent: false,
+    role: "admin",
+    workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9101",
+    workspaceName: "A very long workspace name that should wrap instead of overflowing the menu",
+  },
+  {
+    isCurrent: true,
+    role: "member",
+    workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9102",
+    workspaceName: "Workspace Gamma",
+  },
+];
 
 type TestPassThrough = {
   root?: {
@@ -214,6 +252,9 @@ describe("WorkspaceHeader", () => {
     expect(wrapper.text()).not.toContain("Workspace Alpha");
     expect(wrapper.text()).not.toContain("Alexey Tsukanov");
     expect(wrapper.text()).toContain("AT");
+    expect(wrapper.get('[data-testid="workspace-header-logo"]').classes()).toEqual(
+      expect.arrayContaining(["size-8", "rounded-lg", "bg-accent-tint", "text-brand"]),
+    );
     expect(wrapper.find(`a[href="${baseProps.counterpartHref}"]`).exists()).toBe(false);
     expect(wrapper.get('[data-testid="profile-menu-trigger"]').text()).toContain(
       "AT",
@@ -381,7 +422,7 @@ describe("WorkspaceHeader", () => {
       "mt-5",
     );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
-      "h-40",
+      "max-h-[calc(100vh-6rem)]",
     );
     expect(wrapper.get('[data-testid="profile-menu"]').attributes("class")).toContain(
       "before:right-4",
@@ -522,6 +563,112 @@ describe("WorkspaceHeader", () => {
 
     expect(wrapper.find('[data-testid="profile-menu"]').exists()).toBe(false);
     expect(trigger.attributes("aria-expanded")).toBe("false");
+  });
+
+  it("renders a workspace-switching section when multiple memberships are available", async () => {
+    const wrapper = mountHeader({
+      props: {
+        workspaceMemberships: multipleWorkspaceMemberships,
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-trigger"]').trigger("click");
+
+    const currentWorkspace = wrapper.get(
+      '[data-testid="profile-menu-workspace-018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001"]',
+    );
+    const alternateWorkspace = wrapper.get(
+      '[data-testid="profile-menu-workspace-018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"]',
+    );
+
+    expect(currentWorkspace.text()).toContain("Workspace Alpha");
+    expect(currentWorkspace.text()).toContain("Current");
+    expect(currentWorkspace.attributes("aria-current")).toBe("true");
+    expect(currentWorkspace.attributes("disabled")).toBeDefined();
+    expect(alternateWorkspace.text()).toContain("Workspace Beta");
+    expect(alternateWorkspace.text()).toContain("Admin");
+    expect(alternateWorkspace.text()).not.toContain("Current");
+    expect(alternateWorkspace.text().match(/Admin/g)?.length).toBe(1);
+    expect(wrapper.findAll('[role="separator"]')).toHaveLength(2);
+    expect(
+      wrapper.findAll('button[data-testid^="profile-menu-workspace-"]'),
+    ).toHaveLength(2);
+  });
+
+  it("uses a wider clipped menu layout and avoids duplicate right-side role labels", async () => {
+    const wrapper = mountHeader({
+      props: {
+        workspaceMemberships: longWorkspaceMemberships,
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-trigger"]').trigger("click");
+
+    const profileMenu = wrapper.get('[data-testid="profile-menu"]');
+    const longWorkspace = wrapper.get(
+      '[data-testid="profile-menu-workspace-018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9101"]',
+    );
+    const currentWorkspace = wrapper.get(
+      '[data-testid="profile-menu-workspace-018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9102"]',
+    );
+
+    expect(profileMenu.attributes("class")).toContain("w-[320px]");
+    expect(profileMenu.attributes("class")).toContain("overflow-x-hidden");
+    expect(longWorkspace.text()).toContain(longWorkspaceMemberships[0].workspaceName);
+    expect(longWorkspace.text().match(/Admin/g)?.length).toBe(1);
+    expect(currentWorkspace.text()).toContain("Current");
+  });
+
+  it("omits the workspace-switching section when only one membership is available", async () => {
+    const wrapper = mountHeader({
+      props: {
+        workspaceMemberships: [multipleWorkspaceMemberships[0]],
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-trigger"]').trigger("click");
+
+    expect(
+      wrapper.findAll('button[data-testid^="profile-menu-workspace-"]'),
+    ).toHaveLength(0);
+    expect(wrapper.find('[data-testid="profile-menu-counterpart"]').exists()).toBe(true);
+  });
+
+  it("emits workspace switching for alternate memberships", async () => {
+    const wrapper = mountHeader({
+      props: {
+        workspaceMemberships: multipleWorkspaceMemberships,
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-trigger"]').trigger("click");
+    await wrapper
+      .get(
+        '[data-testid="profile-menu-workspace-018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"]',
+      )
+      .trigger("click");
+
+    expect(wrapper.emitted("switchWorkspace")).toEqual([
+      ["018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"],
+    ]);
+  });
+
+  it("shows switching state for the membership currently being changed", async () => {
+    const wrapper = mountHeader({
+      props: {
+        switchingWorkspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        workspaceMemberships: multipleWorkspaceMemberships,
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-trigger"]').trigger("click");
+
+    const alternateWorkspace = wrapper.get(
+      '[data-testid="profile-menu-workspace-018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002"]',
+    );
+
+    expect(alternateWorkspace.text()).toContain("Switching...");
+    expect(alternateWorkspace.attributes("disabled")).toBeDefined();
   });
 
   it("renders an app-provided profile action label and icon", async () => {

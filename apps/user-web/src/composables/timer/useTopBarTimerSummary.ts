@@ -8,19 +8,20 @@ import {
   toSelectedTaskContext,
   type SelectedTaskContext,
 } from "@/lib/top-bar-timer-helpers";
+import { loadEligibleLastTrackedContext } from "@/lib/top-bar-timer-last-context";
 import { timerKeys, type UserServerStateScope } from "@/lib/query-keys";
 import type { TimeEntriesClient } from "@/services/time-entries-client";
 
 interface UseTopBarTimerSummaryOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
+  enabled: ComputedRef<boolean>;
   scope: ComputedRef<UserServerStateScope>;
   toast: ToastLike;
 }
 
 export function useTopBarTimerSummary({
-  accessToken,
   client,
+  enabled,
   scope,
   toast,
 }: UseTopBarTimerSummaryOptions) {
@@ -29,6 +30,21 @@ export function useTopBarTimerSummary({
   const selectedContext = shallowRef<SelectedTaskContext | null>(null);
   const selectedDescription = ref<string | null>(null);
   const hasExplicitIdleSelection = ref(false);
+
+  const isCrossWorkspaceTimer = computed(() => {
+    const timer = currentTimer.value;
+    const activeWorkspaceId = scope.value.workspaceId;
+
+    return (
+      timer !== null &&
+      timer.endedAt === null &&
+      typeof activeWorkspaceId === "string" &&
+      timer.workspaceId !== activeWorkspaceId
+    );
+  });
+  const currentTimerWorkspaceLabel = computed(
+    () => currentTimer.value?.workspace.name ?? null,
+  );
 
   function setSelectedContextFromTimer(timer: TimeEntryResponse): void {
     hasExplicitIdleSelection.value = false;
@@ -77,55 +93,9 @@ export function useTopBarTimerSummary({
         : null;
   }
 
-  async function loadMostRecentOwnEntry(): Promise<TimeEntryResponse | null> {
-    const response = await client.listOwnEntries({ limit: 1 });
-
-    return response.items[0] ?? null;
-  }
-
-  async function loadEligibleLastTrackedContext(): Promise<SelectedTaskContext | null> {
-    const entry = await loadMostRecentOwnEntry();
-
-    if (!entry) {
-      return null;
-    }
-
-    const visibleProjects = await client.listVisibleProjects();
-    const activeProjectMap = new Map(
-      visibleProjects
-        .filter((project) => project.isActive)
-        .map((project) => [project.id, project]),
-    );
-    const project = activeProjectMap.get(entry.project.id);
-
-    if (!project) {
-      return null;
-    }
-
-    const projectTasks = await client.listProjectTasks(project.id);
-    const task = projectTasks.find(
-      (candidate) =>
-        candidate.id === entry.task.id &&
-        candidate.isActive &&
-        candidate.status === "open",
-    );
-
-    if (!task) {
-      return null;
-    }
-    return {
-      githubIssue: task.githubIssue,
-      projectId: project.id,
-      projectName: project.name,
-      source: "local",
-      taskId: task.id,
-      taskTitle: task.title,
-    };
-  }
-
   const summaryQuery = useQuery({
     queryKey: computed(() => timerKeys.summary(scope.value)),
-    enabled: computed(() => Boolean(accessToken.value)),
+    enabled,
     queryFn: async () => {
       const { timeEntry } = await client.getCurrentTimer();
 
@@ -140,7 +110,7 @@ export function useTopBarTimerSummary({
       return {
         currentTimer: null,
         selectedDescription: null,
-        selectedContext: await loadEligibleLastTrackedContext(),
+        selectedContext: await loadEligibleLastTrackedContext(client),
       };
     },
   });
@@ -169,6 +139,10 @@ export function useTopBarTimerSummary({
       currentTimer.value = data.currentTimer;
 
       if (data.currentTimer) {
+        if (isCrossWorkspaceTimer.value && hasExplicitIdleSelection.value) {
+          return;
+        }
+
         hasExplicitIdleSelection.value = false;
         selectedContext.value = data.selectedContext;
         selectedDescription.value = data.selectedDescription;
@@ -202,8 +176,10 @@ export function useTopBarTimerSummary({
 
   return {
     currentTimer,
+    currentTimerWorkspaceLabel,
     clearSelectedDescription,
     getDialogSelectionFromCurrentState,
+    isCrossWorkspaceTimer,
     isLoadingSummary,
     refreshSummary,
     refreshSummaryAfterConflict,

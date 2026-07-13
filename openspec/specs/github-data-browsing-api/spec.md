@@ -72,7 +72,7 @@ The system SHALL allow connected users to list GitHub Projects V2 for either the
 
 ### Requirement: GitHub Repository Issues Can Be Listed
 
-The system SHALL allow connected users to list GitHub issues for a repository visible to the connected GitHub account.
+The system SHALL allow connected users to list GitHub issues for a repository visible to the connected GitHub account, including the canonical repository mapped to a visible local GitHub-backed project.
 
 #### Scenario: User lists repository issues
 - **GIVEN** a connected user requests issues for a GitHub repository
@@ -100,6 +100,19 @@ The system SHALL allow connected users to list GitHub issues for a repository vi
 - **WHEN** the system loads repository issues
 - **THEN** the system SHALL return normalized issue items matching the search query within the requested repository
 - **AND** the response SHALL preserve the same issue response shape and unified page-token pagination metadata as non-search browsing
+
+#### Scenario: User lists repository issues through a visible GitHub-backed project
+- **GIVEN** an authenticated user can see an active local project whose canonical external mapping points to a GitHub repository
+- **WHEN** the user requests repository issues through that local project scope
+- **THEN** the system resolves the mapped repository from the local project
+- **AND** it returns normalized issue items for that repository
+- **AND** the response includes unified page-token pagination metadata
+
+#### Scenario: Local project issue browsing rejects non-GitHub project scope
+- **GIVEN** an authenticated user requests repository issues through a visible local project
+- **AND** that project has no canonical GitHub repository mapping
+- **WHEN** the system evaluates the request
+- **THEN** the system rejects the request without returning repository issue data
 
 ### Requirement: GitHub Project Issue Items Can Be Listed
 
@@ -137,7 +150,7 @@ The system SHALL allow connected users to list real GitHub issues contained in a
 
 ### Requirement: GitHub Browsing Is Read Only
 
-The system SHALL keep GitHub browsing separate from local GiTiempo project, task, and timer mutation behavior.
+The system SHALL keep GitHub browsing separate from local GiTiempo project, task, and timer mutation behavior, even when browsing occurs through a visible local GitHub-backed project.
 
 #### Scenario: User browses GitHub issues
 - **GIVEN** a connected user lists repository or Project V2 issues
@@ -145,6 +158,14 @@ The system SHALL keep GitHub browsing separate from local GiTiempo project, task
 - **THEN** the system MUST NOT create local projects
 - **AND** the system MUST NOT create local tasks
 - **AND** the system MUST NOT start, stop, or update timers
+
+#### Scenario: Project-scoped GitHub browsing stays read only
+- **GIVEN** a connected user lists repository issues through a visible local GitHub-backed project
+- **WHEN** the system returns the browsing response
+- **THEN** the system MUST NOT create local projects
+- **AND** the system MUST NOT create local tasks
+- **AND** the system MUST NOT start, stop, or update timers
+- **AND** later local task creation requires a separate explicit mutation request
 
 ### Requirement: GitHub Browsing Applies Workspace Organization Policy
 The system SHALL apply the workspace GitHub organization allow-list to organization-scoped GitHub browsing while preserving connected-user GitHub permission checks.
@@ -198,3 +219,29 @@ The system SHALL apply the workspace GitHub organization allow-list to organizat
 - **THEN** it omits issue items whose repository owner is not allowed by the workspace policy
 - **AND** it keeps personal-owner issue items for the connected GitHub account
 
+### Requirement: Current User GitHub Organizations Can Be Listed For Workspace Setup
+
+The system SHALL expose a setup-only GitHub organization list for authenticated users with a connected GitHub account so Admin Settings can offer organizations to add to the workspace allow-list without exposing token material or granting workspace provider access.
+
+#### Scenario: Connected user lists organizations for setup
+
+- **GIVEN** an authenticated user has a usable connected GitHub account
+- **WHEN** the user requests the setup GitHub organization list
+- **THEN** the system SHALL request organization owners visible to that user's connected GitHub account
+- **AND** the response SHALL use the existing GitHub owner list response shape with organization owner metadata only
+- **AND** the response MUST NOT include access tokens, refresh tokens, encrypted token values, token secrets, or raw provider authorization details
+
+#### Scenario: Disconnected user cannot list setup organizations
+
+- **GIVEN** an authenticated user has no usable connected GitHub account
+- **WHEN** the user requests the setup GitHub organization list
+- **THEN** the system MUST reject the request without calling GitHub provider APIs
+- **AND** the response MUST NOT expose GitHub token material or raw provider secrets
+
+#### Scenario: Setup organization list is not workspace browsing access
+
+- **GIVEN** an authenticated connected user can access GitHub organizations that are not yet allowed for the current workspace
+- **WHEN** the user requests the setup GitHub organization list
+- **THEN** the system SHALL NOT filter the returned organization owners by the workspace GitHub organization allow-list
+- **AND** the response SHALL NOT create, remove, or modify workspace GitHub organization policy rows
+- **AND** the response SHALL NOT grant access to repositories, projects, issues, or organization-scoped browsing beyond what separate browsing and workspace policy endpoints allow

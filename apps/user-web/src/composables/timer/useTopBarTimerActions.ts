@@ -12,7 +12,6 @@ import type { TimeEntriesClient } from "@/services/time-entries-client";
 import type { TopBarTimerSummary } from "./useTopBarTimerSummary";
 
 interface UseTopBarTimerActionsOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   isTimerRunning: ComputedRef<boolean>;
   scope: ComputedRef<UserServerStateScope>;
@@ -21,7 +20,6 @@ interface UseTopBarTimerActionsOptions {
 }
 
 export function useTopBarTimerActions({
-  accessToken,
   client,
   isTimerRunning,
   scope,
@@ -31,12 +29,10 @@ export function useTopBarTimerActions({
   const appToast = createAppToast(toast);
   const timerActionErrorMessage = ref<string | null>(null);
   const startTimerMutation = useStartTimerMutation({
-    accessToken,
     client,
     scope,
   });
   const stopTimerMutation = useStopTimerMutation({
-    accessToken,
     client,
     scope,
   });
@@ -54,12 +50,18 @@ export function useTopBarTimerActions({
     timerActionErrorMessage.value = null;
 
     if (isTimerRunning.value) {
+      const wasCrossWorkspaceTimer = summary.isCrossWorkspaceTimer.value;
+
       try {
         const stoppedTimer = await stopTimerMutation.mutateAsync();
 
         summary.currentTimer.value = null;
-        summary.setSelectedContextFromTimer(stoppedTimer);
-        summary.clearSelectedDescription();
+        if (wasCrossWorkspaceTimer) {
+          await summary.refreshSummary();
+        } else {
+          summary.setSelectedContextFromTimer(stoppedTimer);
+          summary.clearSelectedDescription();
+        }
         appToast.showSuccessToast("Timer stopped", "Your running timer has been stopped.");
         return true;
       } catch (error) {
@@ -86,17 +88,20 @@ export function useTopBarTimerActions({
       }
     }
 
-    if (!summary.selectedContext.value) {
+    const draftContext = summary.selectedContext.value;
+    const draftDescription = summary.selectedDescription.value;
+
+    if (!draftContext) {
       return false;
     }
 
     try {
       const input: StartTimerInput = {
-        taskId: summary.selectedContext.value.taskId,
+        taskId: draftContext.taskId,
       };
 
-      if (summary.selectedDescription.value !== null) {
-        input.description = summary.selectedDescription.value;
+      if (draftDescription !== null) {
+        input.description = draftDescription;
       }
 
       summary.currentTimer.value = await startTimerMutation.mutateAsync(input);
@@ -118,6 +123,9 @@ export function useTopBarTimerActions({
         summary: toastCopy.summary,
       });
       await summary.refreshSummaryAfterConflict(error);
+      if (summary.isCrossWorkspaceTimer.value) {
+        summary.setIdleSelection(draftContext, draftDescription);
+      }
       return false;
     }
   }

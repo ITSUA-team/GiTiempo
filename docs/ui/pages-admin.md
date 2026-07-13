@@ -70,10 +70,15 @@
 - `Currency` uses PrimeVue `<Select>` and `Time zone` uses PrimeVue `<AutoComplete dropdown forceSelection>`. `Time zone` stays full width below the Default hourly rate + Currency row, enables predictive filtering, and is populated from `Intl.supportedValuesOf('timeZone')` when available with a curated fallback list that includes `UTC` and IANA time-zone names such as `Europe/Kyiv`; it must also include the current persisted time zone and current draft/form time zone when either is missing from the option source. Time-zone option values remain exact IANA identifiers, while visible labels replace underscores with spaces, for example `Africa/Addis_Ababa` displays as `Africa/Addis Ababa`.
 - Render the design's Billing Defaults and Organization sections as inactive future fields for parity: `Invoice prefix`, `Payment terms`, `Legal entity`, and `Tax ID` are disabled, non-submitting controls until the API contract supports them.
 - Do not send invoice prefix, payment terms, legal entity, or tax ID to any API endpoint.
-- Below the workspace settings form, render a second desktop card at the same `max-width: 620px` for `GitHub Workspace Access`.
+- Below the workspace settings form, render a desktop card at the same `max-width: 620px` for `GitHub Account` before workspace GitHub organization setup.
+- The GitHub Account card shows the current user's `GET /github/connection` status without token material: loading, retryable request-error, disconnected prerequisite guidance, or connected safe account details such as login/avatar.
+- The GitHub Account card links to the user profile GitHub connection flow when the user app profile URL can be built; otherwise it still renders the status and prerequisite copy without a link.
+- Below the GitHub Account card, render another desktop card at the same `max-width: 620px` for `GitHub Workspace Access`.
 - The GitHub card title is `GitHub Workspace Access` with helper copy explaining that admins choose which GitHub organizations the workspace can use, while members still only see data their connected GitHub account can access.
 - The card includes an `Allowed organizations` section with one row per saved GitHub organization login. Each row shows the organization login, helper copy `Allowed for this workspace`, and a `Remove` action.
-- The card also includes an `Add organization` section with an `Organization login` text field and a primary `Add organization` action.
+- The card also includes an `Add organization` section with a PrimeVue `<AutoComplete dropdown>` organization input populated from organizations visible to the current user's connected GitHub account, excluding organizations already allowed for the workspace. The input must also accept a manually typed GitHub organization login because backend validation is authoritative and can accept active memberships that are missing from suggestions. Render a primary `Add organization` action only when the current user has a connected GitHub account, the GitHub connection status request has loaded successfully, and the workspace organization policy state allows setup.
+- When the current user's GitHub connection is disconnected, still loading, or failed to load, hide the `Add organization` setup action and show explanatory guidance instead of sending organization add requests from that state.
+- Saved allowed-organization rows, empty state, policy loading, policy request-error state, `Remove` actions, and recovery guidance remain scoped to the workspace policy response and continue to render independently from the add-action gate when policy data can be loaded.
 - Organization validation is performed through the requesting admin's connected GitHub account before the organization is saved to the workspace policy.
 - This policy filters which GitHub organizations can appear in GiTiempo workspace flows; it does not broaden any member's underlying GitHub permissions.
 - When adding an organization fails because GitHub reports that the organization is not visible, blocked, suspended, or otherwise unavailable to the connected account, keep the GitHub card in place and show a `GitHub App access` recovery card group above `Add organization`.
@@ -96,8 +101,11 @@
 
 ## Cross-App Navigation
 
-- The admin SPA should expose a visible entry point back to the user workspace when the user SPA is available.
-- Place the cross-link in the shared shell profile dropdown so it stays consistent with the user SPA shell treatment.
+- The admin SPA should expose authenticated workspace switching when the current user belongs to more than one workspace.
+- Place workspace switching in the shared shell profile dropdown and treat it as a session-context change, not as cross-app navigation.
+- When the user has only one workspace membership, omit the workspace-switcher section entirely.
+- Keep the separate entry point back to the user workspace in the same dropdown below the workspace-switcher section when the user SPA is available.
+- If the target workspace role cannot access `admin-web`, a successful workspace switch redirects to the accessible dashboard in `user-web` for that selected workspace.
 
 ## Error Pages
 
@@ -106,5 +114,6 @@
 - 404 content uses the shared centered empty/error state pattern: soft accent illustration, eyebrow `404`, title `Page not found`, concise helper copy, and primary action `Back to dashboard`.
 - The 404 secondary action `Go back` renders only when the browser history contains a prior entry for the current tab. When no prior history entry exists, omit the secondary action entirely.
 - 403 Forbidden renders as a standalone route-level page outside the authenticated admin shell when the current user is signed in but lacks permission for an admin page, report scope, project, invoice, member, or workspace setting.
-- 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current admin role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace is available.
+- 403 content uses the same centered error panel structure with eyebrow `403`, title `You do not have access`, helper copy explaining that the current admin role cannot open the page, primary action `Back to dashboard`, and secondary action `Switch workspace` when another workspace membership is available.
+- The 403 `Switch workspace` action opens the authenticated workspace switcher for the current session. It must not be reused as the cross-app link back to `user-web`.
 - Keep both pages distinct from request-error states inside data cards. Route-level 403/404 pages replace the full route surface; request errors stay scoped to the feature surface that failed.

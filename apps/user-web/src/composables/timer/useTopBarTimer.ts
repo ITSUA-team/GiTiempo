@@ -34,27 +34,30 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
   const setIntervalFn = options.setIntervalFn ?? setInterval;
   const clearIntervalFn = options.clearIntervalFn ?? clearInterval;
   const picker = useTopBarTaskPicker();
-  const accessToken = computed(() => authStore.accessToken);
+  const isAuthenticated = computed(() => Boolean(authStore.accessToken));
   const scope = computed(() => getUserServerStateScope(authStore.accessToken));
-  const summary = useTopBarTimerSummary({ accessToken, client, scope, toast });
+  const summary = useTopBarTimerSummary({
+    client,
+    enabled: isAuthenticated,
+    scope,
+    toast,
+  });
   const isTimerRunning = computed(() =>
     isRunningTimer(summary.currentTimer.value),
   );
   const taskOptions = useTopBarTaskOptions({
-    accessToken,
     client,
+    enabled: isAuthenticated,
     picker,
     scope,
   });
   const taskCreation = useTopBarTaskCreation({
-    accessToken,
     client,
     picker,
     scope,
     toast,
   });
   const timerActions = useTopBarTimerActions({
-    accessToken,
     client,
     isTimerRunning,
     scope,
@@ -62,7 +65,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     toast,
   });
   const selectionUpdate = useTopBarTimerSelectionUpdate({
-    accessToken,
     client,
     picker,
     scope,
@@ -105,6 +107,7 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     isConfirmingSelection: selectionUpdate.isUpdatingSelection,
     isCreateTaskDisabled: viewModel.isCreateTaskDisabled,
     isCreatingTask: taskCreation.isCreatingTask,
+    isCrossWorkspaceTimer: viewModel.isCrossWorkspaceTimer,
     isDialogPrimaryActionDisabled: viewModel.isDialogPrimaryActionDisabled,
     isDialogOpen: picker.isDialogOpen,
     isDialogSecondaryActionDisabled: viewModel.isDialogSecondaryActionDisabled,
@@ -140,5 +143,6 @@ export function useTopBarTimer(options: UseTopBarTimerOptions = {}) {
     timerProjectLabel: viewModel.timerProjectLabel,
     timerStatusLabel: viewModel.timerStatusLabel,
     timerTaskLabel: viewModel.timerTaskLabel,
+    timerWorkspaceContextLabel: viewModel.timerWorkspaceContextLabel,
   };
 }

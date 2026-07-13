@@ -4,12 +4,14 @@ import { computed } from 'vue';
 import type { WorkspaceInviteResponse } from '@gitiempo/shared';
 import {
   EmptyStateBlock,
+  getManagementTableColumnStyle,
   ManagementTableRowAction,
   ManagementTableShell,
   MobileRecordCard,
   SurfaceCard,
   formatWorkspaceRole,
   managementTableColumnPt,
+  managementTableHeaderCellClass,
   managementTableHeaderClass,
   useIsMobileViewport,
 } from '@gitiempo/web-shared';
@@ -54,6 +56,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'actions', label: 'Actions', width: 140, align: 'end' },
 ];
 
+const pendingInvitesBodyRowClass =
+  'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg';
 const pendingInvitesHeaderClass = `${managementTableHeaderClass} min-w-[700px]`;
 
 const pendingCountLabel = computed(() => {
@@ -124,18 +128,11 @@ function formatSentInviteTime(createdAt: string): string {
             <div
               v-for="column in columns"
               :key="column.key"
-              class="px-3"
-              :style="{
-                width:
-                  column.width === 'fill' || column.width === undefined
-                    ? undefined
-                    : `${column.width}px`,
-                flex:
-                  column.width === 'fill' || column.width === undefined
-                    ? '1'
-                    : undefined,
-                textAlign: column.align ?? 'start',
-              }"
+              :class="[
+                managementTableHeaderCellClass,
+                column.align === 'end' ? 'justify-end text-right' : 'justify-start text-left',
+              ]"
+              :style="getManagementTableColumnStyle(column)"
             >
               {{ column.label }}
             </div>
@@ -201,6 +198,7 @@ function formatSentInviteTime(createdAt: string): string {
         v-else-if="props.pendingInvites.length > 0"
         :columns="columns"
         data-key="id"
+        :body-row-class="pendingInvitesBodyRowClass"
         :header-class="pendingInvitesHeaderClass"
         :loading="false"
         shell-class="border-divider overflow-x-auto rounded-[6px] border"

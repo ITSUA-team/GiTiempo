@@ -7,6 +7,7 @@ describe('UsersController', () => {
   let controller: UsersController;
   const usersService = {
     findById: vi.fn(),
+    listCurrentUserWorkspaces: vi.fn(),
     updateById: vi.fn(),
   };
 
@@ -47,6 +48,29 @@ describe('UsersController', () => {
       {
         displayName: 'New',
       },
+    );
+  });
+
+  it('GET /users/me/workspaces delegates to UsersService.listCurrentUserWorkspaces', async () => {
+    const fake = {
+      items: [
+        {
+          workspaceId: user.workspaceId,
+          workspaceName: 'GiTiempo Studio',
+          role: 'admin',
+          isCurrent: true,
+        },
+      ],
+    } as never;
+
+    usersService.listCurrentUserWorkspaces.mockResolvedValue(fake);
+
+    await expect(controller.listCurrentUserWorkspaces(user)).resolves.toBe(
+      fake,
+    );
+    expect(usersService.listCurrentUserWorkspaces).toHaveBeenCalledWith(
+      sub,
+      user.workspaceId,
     );
   });
 });

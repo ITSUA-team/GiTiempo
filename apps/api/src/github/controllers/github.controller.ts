@@ -75,6 +75,18 @@ export class GithubController {
     return this.github.listOwners(user, query);
   }
 
+  @Get('organizations')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List current user GitHub organizations' })
+  @ApiOkResponse({ type: GithubOwnerListResponseDto })
+  @ZodSerializerDto(GithubOwnerListResponseDto)
+  listAvailableOrganizations(
+    @CurrentUser() user: AuthUser,
+  ): Promise<GithubOwnerListResponseDto> {
+    return this.github.listAvailableOrganizations(user);
+  }
+
   @Get('repos')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()

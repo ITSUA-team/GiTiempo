@@ -30,7 +30,10 @@ import { useTimeEntriesPaginationSync } from "@/composables/time-entries/useTime
 import { useTimeEntryDialog } from "@/composables/time-entries/useTimeEntryDialog";
 import { useTimeEntryDialogWorkflow } from "@/composables/time-entries/useTimeEntryDialogWorkflow";
 import { useTimeEntryDirectTimerActions } from "@/composables/time-entries/useTimeEntryDirectTimerActions";
-import { useTimeEntryFilters } from "@/composables/time-entries/useTimeEntryFilters";
+import {
+  useTimeEntryFilters,
+  type TimeEntryDatePickerRangeValue,
+} from "@/composables/time-entries/useTimeEntryFilters";
 import { useTimeEntryMutations } from "@/composables/time-entries/useTimeEntryMutations";
 import { useTimeEntryTaskOptions } from "@/composables/time-entries/useTimeEntryTaskOptions";
 import { useTopBarTimerDialogController } from "@/composables/timer/useTopBarTimerDialogController";
@@ -44,13 +47,13 @@ const confirm = useConfirm();
 const toast = useToast();
 const appToast = createAppToast(toast);
 const topBarTimerDialogController = useTopBarTimerDialogController();
-const accessToken = computed(() => authStore.accessToken);
+const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getUserServerStateScope(authStore.accessToken));
 const filters = useTimeEntryFilters();
 const dialog = useTimeEntryDialog();
 const data = useTimeEntriesData({
-  accessToken,
   client,
+  enabled: isAuthenticated,
   entryListQuery: filters.entryListQuery,
   scope,
 });
@@ -101,13 +104,11 @@ const taskOptions = useTimeEntryTaskOptions({
   },
 });
 const mutations = useTimeEntryMutations({
-  accessToken,
   client,
   scope,
   toast,
 });
 const dialogWorkflow = useTimeEntryDialogWorkflow({
-  accessToken,
   client,
   confirm,
   dialog,
@@ -119,8 +120,8 @@ const dialogWorkflow = useTimeEntryDialogWorkflow({
   visibleProjects: data.visibleProjects,
 });
 const directTimerActions = useTimeEntryDirectTimerActions({
-  accessToken,
   client,
+  enabled: isAuthenticated,
   loadEntries: data.loadEntries,
   scope,
   toast,
@@ -222,7 +223,9 @@ async function applyFilters(): Promise<void> {
   await data.loadEntries();
 }
 
-async function setDateRange(range: Date[] | null): Promise<void> {
+async function setDateRange(
+  range: TimeEntryDatePickerRangeValue,
+): Promise<void> {
   filters.setDateRange(range);
   await applyFilters();
 }
@@ -323,13 +326,13 @@ onMounted(async () => {
         data-testid="time-entries-groups"
       >
         <TimeEntriesDaySection
-          v-for="(group, groupIndex) in groupedEntries"
+          v-for="group in groupedEntries"
           :key="group.dateKey"
           :format-duration="formatDuration"
           :format-time-range="formatTimeRange"
           :group="group"
           :is-start-timer-disabled="isDirectStartBlockedByCurrentTimer"
-          :show-header="groupIndex === 0"
+          :show-header="false"
           :starting-timer-entry-id="startingTimerEntryId"
           :stopping-timer-entry-id="stoppingTimerEntryId"
           @create-for-day="(day) => void openCreateDialog(day)"

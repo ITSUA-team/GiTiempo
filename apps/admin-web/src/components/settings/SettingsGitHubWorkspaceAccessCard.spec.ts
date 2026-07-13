@@ -9,7 +9,7 @@ const SkeletonStub = {
 
 const ButtonStub = {
   emits: ['click'],
-  props: ['asChild', 'label'],
+  props: ['asChild', 'disabled', 'label', 'loading'],
   template: `
     <slot
       v-if="asChild"
@@ -18,6 +18,8 @@ const ButtonStub = {
     />
     <button
       v-else
+      :data-loading="String(loading)"
+      :disabled="disabled"
       type="button"
       @click="$emit('click', $event)"
     >
@@ -26,23 +28,96 @@ const ButtonStub = {
   `,
 };
 
-const InputTextStub = {
-  emits: ['update:modelValue'],
-  props: ['id', 'modelValue'],
-  template:
-    '<input :id="id" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+const AutoCompleteStub = {
+  emits: ['complete', 'update:modelValue'],
+  props: [
+    'disabled',
+    'forceSelection',
+    'inputId',
+    'modelValue',
+    'optionLabel',
+    'pt',
+    'suggestions',
+  ],
+  template: `
+    <div>
+      <input
+        v-bind="pt?.pcInputText?.root ?? {}"
+        :id="inputId"
+        :data-force-selection="forceSelection ? 'true' : 'false'"
+        :disabled="disabled"
+        :value="typeof modelValue === 'string' ? modelValue : (modelValue?.[optionLabel] ?? '')"
+        @focus="$emit('complete', { query: '' })"
+        @input="$emit('update:modelValue', $event.target.value)"
+      />
+      <button
+        v-for="option in suggestions"
+        :key="option.login"
+        :data-testid="inputId + '-option-' + option.login"
+        type="button"
+        @click="$emit('update:modelValue', option)"
+      >
+        {{ option[optionLabel] }}
+      </button>
+    </div>
+  `,
 };
+
+const availableOrganization = {
+  avatarUrl: null,
+  label: 'Octo-Org',
+  login: 'Octo-Org',
+  type: 'organization' as const,
+  url: 'https://github.com/Octo-Org',
+};
+
+function createRecoveryChecklist() {
+  return {
+    organizationLogin: 'My-test-org-for-clock',
+    steps: [
+      {
+        action: {
+          ariaLabel: 'Open GitHub App install page for My-test-org-for-clock',
+          href: 'https://github.com/apps/gi-tiempo/installations/new',
+          kind: 'link' as const,
+          label: 'Open install',
+          target: '_blank' as const,
+        },
+        description: 'Choose the organization and install GiTiempo.',
+        id: 'install' as const,
+        title: 'Install GitHub App for organization',
+      },
+      {
+        action: {
+          ariaLabel: 'Retry workspace allow-list check for My-test-org-for-clock',
+          kind: 'retry' as const,
+          label: 'Retry check',
+        },
+        description: 'Retry the same organization login.',
+        id: 'retry' as const,
+        title: 'Retry workspace allow-list check',
+      },
+    ],
+  };
+}
 
 function createProps(overrides: Record<string, unknown> = {}) {
   return {
+    addOrganizationGateMessage: null,
     adding: false,
+    availableOrganizationEmptyMessage: null,
+    availableOrganizations: [availableOrganization],
+    availableOrganizationsInitialLoading: false,
+    availableOrganizationsLoading: false,
+    availableOrganizationsRequestError: null,
+    canAddOrganization: true,
     isInitialLoading: false,
     items: [],
-    organizationLogin: '',
     organizationLoginError: null,
     recoveryChecklist: null,
     removingOrganizationId: null,
     requestError: null,
+    selectedOrganization: null,
     ...overrides,
   };
 }
@@ -52,8 +127,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           Skeleton: SkeletonStub,
           SurfaceCard: { template: '<section><slot /></section>' },
@@ -71,8 +146,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           Skeleton: SkeletonStub,
           SurfaceCard: { template: '<section><slot /></section>' },
@@ -92,8 +167,8 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -121,12 +196,73 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
     expect(wrapper.emitted('remove')).toEqual([['org-1']]);
   });
 
+  it('hides the add organization setup action when GitHub is disconnected', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        addOrganizationGateMessage:
+          'Connect your GitHub account before adding workspace organizations.',
+        canAddOrganization: false,
+      }),
+    });
+
+    expect(wrapper.text()).not.toContain('Add organization');
+    expect(
+      wrapper.get('[data-testid="settings-github-add-gate"]').text(),
+    ).toContain('Connect your GitHub account before adding workspace organizations.');
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(false);
+  });
+
+  it('keeps saved rows removable while the add setup action is gated', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        addOrganizationGateMessage:
+          'Connect your GitHub account before adding workspace organizations.',
+        canAddOrganization: false,
+        items: [
+          {
+            id: 'org-1',
+            workspaceId: 'workspace-1',
+            organizationLogin: 'Octo-Org',
+            createdByUserId: 'user-1',
+            createdAt: '2026-06-18T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    expect(wrapper.text()).toContain('Octo-Org');
+    expect(wrapper.text()).not.toContain('Add organization');
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Remove')
+      ?.trigger('click');
+
+    expect(wrapper.emitted('remove')).toEqual([['org-1']]);
+  });
+
   it('shows the request-error state with retry', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
@@ -146,48 +282,152 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
       ?.trigger('click');
 
     expect(wrapper.emitted('retry')).toHaveLength(1);
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(false);
+  });
+
+  it('renders an organization autocomplete with immediate dropdown options', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps(),
+    });
+
+    expect(wrapper.text()).toContain('GitHub organization');
+    expect(wrapper.text()).toContain(
+      'Select a suggested organization or enter a GitHub organization login.',
+    );
+    expect(
+      wrapper.find(
+        '[data-testid="settings-github-organization-selector-option-Octo-Org"]',
+      ).exists(),
+    ).toBe(true);
+
+    const input = wrapper.get('#settings-github-organization-selector');
+
+    expect(input.attributes('autocomplete')).toBe('off');
+    expect(input.attributes('data-bwignore')).toBe('true');
+    expect(input.attributes('data-force-selection')).toBe('false');
+    expect(input.attributes('data-1p-ignore')).toBe('true');
+    expect(input.attributes('data-lpignore')).toBe('true');
+
+    await input.trigger('focus');
+    await wrapper
+      .get('[data-testid="settings-github-organization-selector-option-Octo-Org"]')
+      .trigger('click');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      [availableOrganization],
+    ]);
+  });
+
+  it('emits manually typed organization logins from the autocomplete', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        selectedOrganization: availableOrganization,
+      }),
+    });
+
+    await wrapper
+      .get('#settings-github-organization-selector')
+      .setValue('Different org');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      ['Different org'],
+    ]);
+  });
+
+  it('shows available organization empty guidance', () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        availableOrganizationEmptyMessage:
+          'No organization suggestions are available. Enter a GitHub organization login and GitHub will validate access.',
+        availableOrganizations: [],
+      }),
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-available-organizations-empty"]')
+        .text(),
+    ).toContain('No organization suggestions are available.');
+  });
+
+  it('keeps manual organization fallback available when suggestions fail', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        availableOrganizationsRequestError: 'GitHub organizations unavailable',
+      }),
+    });
+
+    expect(
+      wrapper.get('[data-testid="settings-github-available-organizations-error"]')
+        .text(),
+    ).toContain('GitHub organizations unavailable');
+    expect(wrapper.find('#settings-github-organization-selector').exists()).toBe(true);
+
+    await wrapper
+      .get('#settings-github-organization-selector')
+      .setValue('Different org');
+
+    expect(wrapper.emitted('update:selectedOrganization')).toEqual([
+      ['Different org'],
+    ]);
+    expect(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text() === 'Add organization')
+        ?.attributes('disabled'),
+    ).toBeUndefined();
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Try again')
+      ?.trigger('click');
+
+    expect(wrapper.emitted('retryAvailableOrganizations')).toHaveLength(1);
   });
 
   it('renders the GitHub App recovery checklist with link and retry actions', async () => {
     const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
       global: {
         stubs: {
+          AutoComplete: AutoCompleteStub,
           Button: ButtonStub,
-          InputText: InputTextStub,
           Message: { template: '<small><slot /></small>' },
           SurfaceCard: { template: '<section><slot /></section>' },
         },
       },
       props: createProps({
-        recoveryChecklist: {
-          organizationLogin: 'My-test-org-for-clock',
-          steps: [
-            {
-              action: {
-                ariaLabel:
-                  'Open GitHub App install page for My-test-org-for-clock',
-                href: 'https://github.com/apps/gi-tiempo/installations/new',
-                kind: 'link',
-                label: 'Open install',
-                target: '_blank',
-              },
-              description: 'Choose the organization and install GiTiempo.',
-              id: 'install',
-              title: 'Install GitHub App for organization',
-            },
-            {
-              action: {
-                ariaLabel:
-                  'Retry workspace allow-list check for My-test-org-for-clock',
-                kind: 'retry',
-                label: 'Retry check',
-              },
-              description: 'Retry the same organization login.',
-              id: 'retry',
-              title: 'Retry workspace allow-list check',
-            },
-          ],
-        },
+        recoveryChecklist: createRecoveryChecklist(),
       }),
     });
 
@@ -202,11 +442,45 @@ describe('SettingsGitHubWorkspaceAccessCard', () => {
         .attributes('href'),
     ).toBe('https://github.com/apps/gi-tiempo/installations/new');
 
-    await wrapper
+    const retryButton = wrapper
       .findAll('button')
-      .find((button) => button.text() === 'Retry check')
-      ?.trigger('click');
+      .find((button) => button.text() === 'Retry check');
+
+    expect(retryButton?.attributes('disabled')).toBeUndefined();
+
+    await retryButton?.trigger('click');
 
     expect(wrapper.emitted('retryAdd')).toHaveLength(1);
+  });
+
+  it('keeps recovery links visible but disables retry when the add gate is blocked', async () => {
+    const wrapper = mount(SettingsGitHubWorkspaceAccessCard, {
+      global: {
+        stubs: {
+          AutoComplete: AutoCompleteStub,
+          Button: ButtonStub,
+          Message: { template: '<small><slot /></small>' },
+          SurfaceCard: { template: '<section><slot /></section>' },
+        },
+      },
+      props: createProps({
+        addOrganizationGateMessage:
+          'Confirming your GitHub account connection before organization setup.',
+        canAddOrganization: false,
+        recoveryChecklist: createRecoveryChecklist(),
+      }),
+    });
+    const retryButton = wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Retry check');
+
+    expect(
+      wrapper.find('[data-testid="settings-github-recovery-link-install"]').exists(),
+    ).toBe(true);
+    expect(retryButton?.attributes('disabled')).toBeDefined();
+
+    await retryButton?.trigger('click');
+
+    expect(wrapper.emitted('retryAdd')).toBeUndefined();
   });
 });

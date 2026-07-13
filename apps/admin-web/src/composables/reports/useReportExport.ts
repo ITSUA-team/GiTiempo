@@ -9,18 +9,17 @@ import type {
 } from '@/services/admin-reports-client';
 
 interface UseReportExportOptions {
-  accessToken: Ref<string | null> | ComputedRef<string | null>;
+  enabled: Ref<boolean> | ComputedRef<boolean>;
   reportsClient: AdminReportsClient;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
 
 export function useReportExport({
-  accessToken,
+  enabled,
   reportsClient,
   scope,
 }: UseReportExportOptions) {
   const exportReportMutation = useExportTimeReportMutation({
-    accessToken,
     client: reportsClient,
     scope,
   });
@@ -28,7 +27,7 @@ export function useReportExport({
   async function exportCurrentReport(
     filters: ReportSetupFilters,
   ): Promise<ReportsCsvExport | null> {
-    if (!accessToken.value) {
+    if (!enabled.value) {
       return null;
     }
 

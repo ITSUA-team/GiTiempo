@@ -1,8 +1,9 @@
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import {
   createAuthProfilePresentation,
   createAuthSessionCore,
+  createWorkspaceMembershipSession,
 } from "@gitiempo/web-shared/auth";
 
 import { queryClient } from "@/query-client";
@@ -13,31 +14,44 @@ function clearAuthenticatedQueryCache(): void {
 }
 
 export const useAuthStore = defineStore("auth", () => {
-  const currentWorkspaceName = ref("Workspace");
+  let clearWorkspaceMemberships = (): void => undefined;
+  let resetWorkspaceContext = (): void => undefined;
   const session = createAuthSessionCore({
     getAuthRuntime,
     onClearSession: () => {
-      currentWorkspaceName.value = "Workspace";
+      resetWorkspaceContext();
       clearAuthenticatedQueryCache();
     },
-    onLoginSuccess: clearAuthenticatedQueryCache,
+    onSessionContextChanged: () => {
+      clearWorkspaceMemberships();
+      clearAuthenticatedQueryCache();
+    },
   });
+  const workspaceSession = createWorkspaceMembershipSession({
+    accessToken: session.baseSession.accessToken,
+    getAuthRuntime,
+    initialWorkspaceName: "Workspace",
+    switchWorkspace: session.baseSession.switchWorkspace,
+  });
+  clearWorkspaceMemberships = workspaceSession.clearWorkspaceMemberships;
+  resetWorkspaceContext = workspaceSession.resetWorkspaceContext;
   const profilePresentation = createAuthProfilePresentation(session.profile, {
     displayNameFallback: "Workspace member",
   });
-  const workspaceName = computed(() => currentWorkspaceName.value);
-
-  function setWorkspaceName(name: string): void {
-    currentWorkspaceName.value = name;
-  }
+  const workspaceName = computed(() => workspaceSession.currentWorkspaceName.value);
 
   return {
     ...session.baseSession,
     ...profilePresentation,
     establishSessionFromTokenPair: session.establishSessionFromTokenPair,
+    hasAlternativeWorkspaces: workspaceSession.hasAlternativeWorkspaces,
     loginWithFirebaseToken: session.loginWithFirebaseToken,
-    setWorkspaceName,
+    loadWorkspaceMemberships: workspaceSession.loadWorkspaceMemberships,
+    setWorkspaceName: workspaceSession.setWorkspaceName,
+    switchWorkspace: workspaceSession.switchWorkspace,
+    switchingWorkspaceId: workspaceSession.switchingWorkspaceId,
     updateProfile: session.updateProfile,
+    workspaceMemberships: workspaceSession.workspaceMemberships,
     workspaceName,
   };
 });

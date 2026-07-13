@@ -5,6 +5,7 @@ import PrimeVue from "primevue/config";
 import { createMemoryHistory } from "vue-router";
 import { giTiempoPrimeVueOptions } from "@gitiempo/web-config/theme";
 import {
+  type CurrentUserWorkspaceMembershipListResponse,
   WorkspaceRoles,
   type UserResponse,
   type WorkspaceRole,
@@ -12,8 +13,14 @@ import {
 import ToastService from "primevue/toastservice";
 
 import { clearRefreshToken } from "@gitiempo/web-shared/session-storage";
+import {
+  resetAuthRuntimeForTesting,
+  setAuthRuntimeForTesting,
+  type AuthRuntime,
+} from "@/services/auth-runtime";
 import AdminAppShell from "./AdminAppShell.vue";
 import { createAppRouter, routeNames } from "@/router";
+import { navigateToExternalHref } from "@/services/external-navigation";
 import { useAuthStore } from "@/stores/auth";
 
 const testMocks = vi.hoisted(() => ({
@@ -47,8 +54,70 @@ vi.mock("@/services/admin-settings-client", () => ({
 vi.mock("@/composables/feedback/useToasts", () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
+    infoToast: vi.fn(),
   }),
 }));
+
+vi.mock("@/services/external-navigation", () => ({
+  navigateToExternalHref: vi.fn(),
+}));
+
+function createRuntimeMock(
+  overrides?: Partial<AuthRuntime>,
+  role: WorkspaceRole = WorkspaceRoles.Admin,
+): AuthRuntime {
+  const currentUser = createAuthProfile(role);
+  const workspaceMemberships: CurrentUserWorkspaceMembershipListResponse = {
+    items: [
+      {
+        isCurrent: true,
+        role,
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9001",
+        workspaceName: "Workspace Alpha",
+      },
+      {
+        isCurrent: false,
+        role: "member",
+        workspaceId: "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+        workspaceName: "Workspace Beta",
+      },
+    ],
+  };
+
+  return {
+    getCurrentUser: async () => currentUser,
+    listCurrentUserWorkspaces: async () => workspaceMemberships,
+    loginWithFirebaseToken: async () => ({
+      accessToken: "access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "refresh-token-next",
+    }),
+    logoutSession: async () => undefined,
+    registerWorkspaceOwner: async () => ({
+      accessToken: "registered-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "registered-refresh-token",
+    }),
+    refreshSession: async () => ({
+      accessToken: "restored-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "restored-refresh-token",
+    }),
+    switchWorkspace: async () => ({
+      accessToken: "switched-access-token",
+      accessTokenExpiresIn: 900,
+      refreshToken: "switched-refresh-token",
+    }),
+    signInWithEmailPassword: async () => "firebase-email-token",
+    signInWithGoogle: async () => "firebase-google-token",
+    signOutIdentityProvider: async () => undefined,
+    updateCurrentUser: async (_accessToken, input) => ({
+      ...currentUser,
+      ...input,
+    }),
+    ...overrides,
+  };
+}
 
 const WorkspaceHeaderStub = {
   props: [
@@ -63,18 +132,22 @@ const WorkspaceHeaderStub = {
     "showSettings",
     "showDisplayName",
     "settingsTo",
+    "switchingWorkspaceId",
     "userInitials",
+    "workspaceMemberships",
     "workspaceName",
   ],
-  emits: ["signOut"],
+  emits: ["signOut", "switchWorkspace"],
   template: `
     <header>
       <span data-testid="workspace-header-product-name">{{ productName }}</span>
       <span data-testid="workspace-header-page-name">{{ pageName }}</span>
       <span data-testid="workspace-header-profile-context">{{ profileContextLabel }}</span>
+      <span data-testid="workspace-header-memberships">{{ workspaceMemberships?.length ?? 0 }}</span>
       <span v-if="showDisplayName" data-testid="workspace-header-display-name">{{ displayName }}</span>
       <span v-if="settingsIcon" data-testid="profile-menu-icon">custom icon</span>
       <RouterLink v-if="showSettings" data-testid="profile-menu-settings" :to="settingsTo">{{ settingsLabel }}</RouterLink>
+      <button type="button" data-testid="profile-menu-switch-workspace" @click="$emit('switchWorkspace', '018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002')">Switch workspace</button>
       <button type="button" data-testid="profile-menu-sign-out" @click="$emit('signOut')">Sign out</button>
     </header>
   `,
@@ -103,8 +176,10 @@ function setAuthenticatedShellUser(
 describe("AdminAppShell", () => {
   beforeEach(() => {
     clearRefreshToken();
+    resetAuthRuntimeForTesting();
     testMocks.errorToast.mockReset();
     testMocks.getWorkspace.mockReset();
+    vi.mocked(navigateToExternalHref).mockReset();
     testMocks.getWorkspace.mockResolvedValue({
       createdAt: "2026-05-01T10:00:00.000Z",
       id: "11111111-1111-4111-8111-111111111111",
@@ -112,6 +187,7 @@ describe("AdminAppShell", () => {
       updatedAt: "2026-05-01T10:00:00.000Z",
     });
     vi.stubEnv("VITE_USER_APP_URL", "https://user.example.test/login");
+    setAuthRuntimeForTesting(createRuntimeMock());
   });
 
   afterEach(() => {
@@ -189,6 +265,7 @@ describe("AdminAppShell", () => {
     expect(wrapper.get('[data-testid="workspace-header-profile-context"]').text()).toBe(
       "GiTiempo Studio",
     );
+    expect(wrapper.get('[data-testid="workspace-header-memberships"]').text()).toBe("2");
   });
 
   it("filters product navigation for project managers", async () => {
@@ -252,11 +329,11 @@ describe("AdminAppShell", () => {
 
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Workspace Admin");
+    expect(wrapper.text()).toContain("Workspace Alpha");
     expect(testMocks.errorToast).toHaveBeenCalledWith(
       "Workspace unavailable",
       expect.objectContaining({
-        logContext: { action: "load-workspace-name", feature: "admin-shell" },
+        logContext: { action: "load-workspace-context", feature: "admin-shell" },
       }),
     );
   });
@@ -335,5 +412,87 @@ describe("AdminAppShell", () => {
     });
 
     expect(wrapper.findAll('a[aria-label="Projects"][aria-current="page"]')).toHaveLength(2);
+  });
+
+  it("returns to the admin dashboard after switching to another admin-accessible workspace", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = setAuthenticatedShellUser(pinia, WorkspaceRoles.Admin);
+    const switchWorkspaceSpy = vi
+      .spyOn(authStore, "switchWorkspace")
+      .mockImplementation(async () => {
+        authStore.profile = createAuthProfile(WorkspaceRoles.PM);
+        return {
+          profileReloaded: true,
+          profileReloadError: null,
+          membershipsReloaded: true,
+          reloadError: null,
+        };
+      });
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/403");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-switch-workspace"]').trigger("click");
+    await flushPromises();
+
+    expect(switchWorkspaceSpy).toHaveBeenCalledWith(
+      "018f08cc-7f7f-7f7f-8f8f-9f9f9f9f9002",
+    );
+    expect(router.currentRoute.value.name).toBe(routeNames.dashboard);
+    expect(vi.mocked(navigateToExternalHref)).not.toHaveBeenCalled();
+  });
+
+  it("redirects to user-web after switching to a workspace without admin access", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = setAuthenticatedShellUser(pinia, WorkspaceRoles.Admin);
+    vi.spyOn(authStore, "switchWorkspace").mockImplementation(async () => {
+      authStore.profile = createAuthProfile(WorkspaceRoles.Member);
+      return {
+        profileReloaded: true,
+        profileReloadError: null,
+        membershipsReloaded: true,
+        reloadError: null,
+      };
+    });
+
+    const router = createAppRouter({
+      history: createMemoryHistory(),
+      pinia,
+    });
+    await router.push("/403");
+    await router.isReady();
+
+    const wrapper = mount(AdminAppShell, {
+      global: {
+        plugins: [pinia, router, [PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          RouterView: RouterViewStub,
+          WorkspaceHeader: WorkspaceHeaderStub,
+        },
+      },
+    });
+
+    await wrapper.get('[data-testid="profile-menu-switch-workspace"]').trigger("click");
+    await flushPromises();
+
+    expect(vi.mocked(navigateToExternalHref)).toHaveBeenCalledWith(
+      "https://user.example.test/",
+    );
   });
 });

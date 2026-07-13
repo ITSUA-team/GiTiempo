@@ -26,7 +26,7 @@ import { useReportOptions } from './useReportOptions';
 import { useReportRowsData } from './useReportRowsData';
 
 interface UseReportsDataOptions {
-  accessToken: Ref<string | null> | ComputedRef<string | null>;
+  enabled: Ref<boolean> | ComputedRef<boolean>;
   membersClient?: Pick<AdminMembersClient, 'listMembers'>;
   projectsClient?: Pick<AdminProjectsClient, 'listProjects'>;
   reportsClient?: AdminReportsClient;
@@ -35,7 +35,7 @@ interface UseReportsDataOptions {
 }
 
 export function useReportsData({
-  accessToken,
+  enabled,
   membersClient = adminMembersClient,
   projectsClient = adminProjectsClient,
   reportsClient = adminReportsClient,
@@ -45,15 +45,14 @@ export function useReportsData({
   const currentAction = ref('load-reports');
   const filters = useReportFilters();
   const projectsQuery = useAdminProjectsQuery({
-    accessToken,
     client: projectsClient,
+    enabled,
     scope,
   });
   const isAdminScope = computed(() => scope.value.role === 'admin');
   const membersQuery = useWorkspaceMembersQuery({
-    accessToken,
     client: membersClient,
-    enabled: isAdminScope,
+    enabled: computed(() => enabled.value && isAdminScope.value),
     scope,
   });
   const reportOptions = useReportOptions({
@@ -67,8 +66,8 @@ export function useReportsData({
     () => !isAdminScope.value || membersQuery.isSuccess.value,
   );
   const rowsData = useReportRowsData({
-    accessToken,
     appliedFilters: filters.appliedFilters,
+    enabled,
     isAdminScope,
     memberOptions: reportOptions.memberOptions,
     membersLoaded,
@@ -80,7 +79,7 @@ export function useReportsData({
     scope,
   });
   const reportExport = useReportExport({
-    accessToken,
+    enabled,
     reportsClient,
     scope,
   });
@@ -95,7 +94,7 @@ export function useReportsData({
   });
 
   async function refresh(): Promise<void> {
-    if (!accessToken.value) {
+    if (!enabled.value) {
       return;
     }
 

@@ -1,10 +1,14 @@
 import {
 	addWorkspaceGitHubOrganizationSchema,
+	githubConnectionStatusResponseSchema,
+	githubOwnerListResponseSchema,
 	updateWorkspaceSettingsSchema,
 	workspaceGitHubOrganizationListResponseSchema,
 	workspaceGitHubOrganizationResponseSchema,
 	workspaceSettingsResponseSchema,
 	type AddWorkspaceGitHubOrganizationInput,
+	type GitHubConnectionStatusResponse,
+	type GitHubOwnerListResponse,
 	type UpdateWorkspaceInput,
 	type UpdateWorkspaceSettingsInput,
 	type WorkspaceGitHubOrganizationListResponse,
@@ -26,7 +30,9 @@ export interface AdminSettingsClient {
 	addWorkspaceGitHubOrganization(
 		input: AddWorkspaceGitHubOrganizationInput,
 	): Promise<WorkspaceGitHubOrganizationResponse>;
+	getGitHubConnectionStatus(): Promise<GitHubConnectionStatusResponse>;
 	getWorkspace(): Promise<WorkspaceResponse>;
+	listAvailableGitHubOrganizations(): Promise<GitHubOwnerListResponse>;
 	listWorkspaceGitHubOrganizations(): Promise<WorkspaceGitHubOrganizationListResponse>;
 	removeWorkspaceGitHubOrganization(organizationId: string): Promise<void>;
 	getWorkspaceSettings(): Promise<WorkspaceSettingsResponse>;
@@ -53,8 +59,22 @@ export function createAdminSettingsClient({
 			});
 		},
 
+		getGitHubConnectionStatus() {
+			return apiClient.requestJson({
+				path: '/github/connection',
+				responseSchema: githubConnectionStatusResponseSchema,
+			});
+		},
+
 		getWorkspace() {
 			return workspaceClient.getWorkspace();
+		},
+
+		listAvailableGitHubOrganizations() {
+			return apiClient.requestJson({
+				path: '/github/organizations',
+				responseSchema: githubOwnerListResponseSchema,
+			});
 		},
 
 		listWorkspaceGitHubOrganizations() {

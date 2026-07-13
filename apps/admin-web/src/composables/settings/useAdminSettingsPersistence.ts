@@ -42,11 +42,11 @@ type SaveAdminSettingsResult =
     };
 
 interface UseAdminSettingsPersistenceOptions {
-  accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<
     AdminSettingsClient,
     'updateWorkspace' | 'updateWorkspaceSettings'
   >;
+  enabled: Ref<boolean> | ComputedRef<boolean>;
   onError?: (message: string, error: unknown) => void;
   scope: Ref<AdminServerStateScope> | ComputedRef<AdminServerStateScope>;
 }
@@ -56,20 +56,18 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function useAdminSettingsPersistence({
-  accessToken,
   client = getAdminSettingsClient(),
+  enabled,
   onError,
   scope,
 }: UseAdminSettingsPersistenceOptions) {
   const saving = ref(false);
   const updateWorkspaceMutation = useUpdateWorkspaceMutation({
     client,
-    accessToken,
     scope,
   });
   const updateWorkspaceSettingsMutation = useUpdateWorkspaceSettingsMutation({
     client,
-    accessToken,
     scope,
   });
 
@@ -79,7 +77,7 @@ export function useAdminSettingsPersistence({
     values,
     workspace,
   }: SaveAdminSettingsInput): Promise<SaveAdminSettingsResult | null> {
-    if (!accessToken.value || !current || !values || saving.value) return null;
+    if (!enabled.value || !current || !values || saving.value) return null;
 
     const workspacePayload = getWorkspaceUpdatePayload(values, current);
     const settingsPayload = getWorkspaceSettingsUpdatePayload(values, current);

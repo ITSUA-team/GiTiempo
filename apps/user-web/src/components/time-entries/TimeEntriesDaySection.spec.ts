@@ -36,6 +36,7 @@ const group: TimeEntriesDayGroup = {
         id: 'user-1',
       },
       userId: 'user-1',
+      workspace: { id: 'workspace-1', name: 'Workspace Alpha' },
       workspaceId: 'workspace-1',
     },
     {
@@ -63,6 +64,7 @@ const group: TimeEntriesDayGroup = {
         id: 'user-1',
       },
       userId: 'user-1',
+      workspace: { id: 'workspace-1', name: 'Workspace Alpha' },
       workspaceId: 'workspace-1',
     },
   ],
@@ -88,7 +90,7 @@ function mountSection(props: Partial<InstanceType<typeof TimeEntriesDaySection>[
       formatTimeRange: (entry: { endedAt: string | null }) =>
         entry.endedAt === null ? '09:00 - Running' : '09:00 - 10:30',
       group,
-      showHeader: true,
+      showHeader: false,
       ...props,
     },
     global: {
@@ -150,6 +152,7 @@ describe('TimeEntriesDaySection', () => {
 
     expect(stopTimerButton.attributes('aria-label')).toBe('Stop timer for Improve reports filters');
     expect(stopTimerButton.attributes('data-tooltip-value')).toBe('Stop timer for Improve reports filters');
+    expect(stopTimerButton.classes()).toContain('cursor-pointer');
     expect(stopTimerButton.find('[data-icon="stop"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="time-entry-stop-timer-entry-completed"]').exists()).toBe(false);
 
@@ -234,56 +237,70 @@ describe('TimeEntriesDaySection', () => {
   it('disables active timer stops while a stop request is pending', async () => {
     const wrapper = mountSection({ stoppingTimerEntryId: 'entry-running' });
     const stopTimerButton = wrapper.get('[data-testid="time-entry-stop-timer-entry-running"]');
+    const spinner = stopTimerButton.get('[data-testid="time-entry-timer-action-spinner"]');
 
     expect(stopTimerButton.attributes('disabled')).toBeDefined();
+    expect(stopTimerButton.attributes('aria-busy')).toBe('true');
+    expect(stopTimerButton.classes()).toContain('items-center');
+    expect(stopTimerButton.classes()).toContain('justify-center');
+    expect(spinner.classes()).toContain('border-t-text-inverse');
+    expect(stopTimerButton.find('[data-icon="stop"]').exists()).toBe(false);
 
     await stopTimerButton.trigger('click');
 
     expect(wrapper.emitted('stopTimer')).toBeUndefined();
   });
 
-  it('disables direct timer starts when the parent reports an active timer', async () => {
+  it('routes blocked direct timer starts to the active timer picker on desktop', async () => {
     const wrapper = mountSection({ isStartTimerDisabled: true });
     const startTimerButton = wrapper.get('[data-testid="time-entry-start-timer-entry-completed"]');
 
-    expect(startTimerButton.attributes('disabled')).toBeDefined();
+    expect(startTimerButton.attributes('disabled')).toBeUndefined();
+    expect(startTimerButton.attributes('aria-disabled')).toBe('true');
     expect(startTimerButton.classes()).toContain('bg-surface-primary');
     expect(startTimerButton.classes()).toContain('border-divider');
-    expect(startTimerButton.attributes('data-tooltip-value')).toBeUndefined();
+    expect(startTimerButton.attributes('data-tooltip-value')).toBe(
+      'Open task and timer to stop the current timer first',
+    );
     expect(startTimerButton.find('[data-icon="play"]').exists()).toBe(true);
     expect(startTimerButton.find('svg').classes()).toContain('text-text-subtle');
 
     await startTimerButton.trigger('click');
 
     expect(wrapper.emitted('startTimer')).toBeUndefined();
+    expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
   });
 
-  it('disables mobile direct timer starts when the parent reports an active timer', async () => {
+  it('routes blocked mobile direct timer starts to the active timer picker', async () => {
     mockMatchMedia(true);
 
     const wrapper = mountSection({ isStartTimerDisabled: true });
     const startTimerButton = wrapper.get('[data-testid="time-entry-mobile-start-timer-entry-completed"]');
 
-    expect(startTimerButton.attributes('disabled')).toBeDefined();
+    expect(startTimerButton.attributes('disabled')).toBeUndefined();
+    expect(startTimerButton.attributes('aria-disabled')).toBe('true');
     expect(startTimerButton.classes()).toContain('bg-surface-primary');
     expect(startTimerButton.classes()).toContain('border-divider');
-    expect(startTimerButton.attributes('data-tooltip-value')).toBeUndefined();
+    expect(startTimerButton.attributes('data-tooltip-value')).toBe(
+      'Open task and timer to stop the current timer first',
+    );
     expect(startTimerButton.find('[data-icon="play"]').exists()).toBe(true);
     expect(startTimerButton.find('svg').classes()).toContain('text-text-subtle');
 
     await startTimerButton.trigger('click');
 
     expect(wrapper.emitted('startTimer')).toBeUndefined();
+    expect(wrapper.emitted('openActiveTimer')).toHaveLength(1);
   });
 
   it('renders the desktop entry table branch without an actions column', () => {
     const wrapper = mountSection();
 
     expect(wrapper.findAll('[data-testid="time-entry-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.text()).toContain('Task');
-    expect(wrapper.text()).toContain('Project');
-    expect(wrapper.text()).toContain('Range');
-    expect(wrapper.text()).toContain('Duration');
+    expect(wrapper.findComponent({ name: 'ManagementTableShell' }).props('showHeader')).toBe(false);
+    expect(wrapper.text()).not.toContain('Task');
+    expect(wrapper.text()).not.toContain('Range');
+    expect(wrapper.text()).not.toContain('Duration');
     expect(wrapper.text()).not.toContain('Time');
     expect(wrapper.text()).not.toContain('Actions');
     expect(wrapper.text()).not.toContain('Stop from the top bar');

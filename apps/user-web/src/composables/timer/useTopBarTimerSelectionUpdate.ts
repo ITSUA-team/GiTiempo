@@ -17,7 +17,6 @@ import type { TopBarTaskPicker } from './useTopBarTaskPicker';
 import type { TopBarTimerSummary } from './useTopBarTimerSummary';
 
 interface UseTopBarTimerSelectionUpdateOptions {
-  accessToken: ComputedRef<string | null>;
   client: TimeEntriesClient;
   picker: TopBarTaskPicker;
   scope: ComputedRef<UserServerStateScope>;
@@ -26,7 +25,6 @@ interface UseTopBarTimerSelectionUpdateOptions {
 }
 
 export function useTopBarTimerSelectionUpdate({
-  accessToken,
   client,
   picker,
   scope,
@@ -36,7 +34,6 @@ export function useTopBarTimerSelectionUpdate({
   const appToast = createAppToast(toast);
   const selectionUpdateErrorMessage = ref<string | null>(null);
   const updateTimeEntryMutation = useUpdateTimeEntryMutation({
-    accessToken,
     client,
     scope,
   });
@@ -98,6 +95,10 @@ export function useTopBarTimerSelectionUpdate({
   }
 
   async function applySelectedTaskContext(): Promise<boolean> {
+    if (summary.isCrossWorkspaceTimer.value) {
+      return false;
+    }
+
     const context = await ensureLocalSelectedContext(
       picker.getSelectedTaskContext(),
     );

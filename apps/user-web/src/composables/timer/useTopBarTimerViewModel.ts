@@ -93,6 +93,15 @@ export function useTopBarTimerViewModel({
 
     return summary.selectedContext.value?.githubIssue ?? null;
   });
+  const timerWorkspaceContextLabel = computed(() => {
+    if (!summary.isCrossWorkspaceTimer.value) {
+      return null;
+    }
+
+    const workspaceName = summary.currentTimerWorkspaceLabel.value;
+
+    return workspaceName ? `Running in ${workspaceName}` : 'Running in another workspace';
+  });
   const primaryActionLabel = computed(() =>
     isTimerRunning.value ? 'Stop' : 'Start',
   );
@@ -107,6 +116,10 @@ export function useTopBarTimerViewModel({
     );
   });
   const isConfirmSelectionDisabled = computed(() => {
+    if (summary.isCrossWorkspaceTimer.value) {
+      return true;
+    }
+
     if (isNewTaskSelected.value) {
       return isCreateTaskDisabled.value || isSelectionUpdatePending.value;
     }
@@ -143,7 +156,7 @@ export function useTopBarTimerViewModel({
     );
   });
   const isDialogSecondaryActionDisabled = computed(() => {
-    if (!isTimerRunning.value) {
+    if (!isTimerRunning.value || summary.isCrossWorkspaceTimer.value) {
       return true;
     }
 
@@ -158,6 +171,7 @@ export function useTopBarTimerViewModel({
     elapsedTimeLabel,
     isConfirmSelectionDisabled,
     isCreateTaskDisabled,
+    isCrossWorkspaceTimer: summary.isCrossWorkspaceTimer,
     isDialogPrimaryActionDisabled,
     isDialogSecondaryActionDisabled,
     isNewTaskSelected,
@@ -167,5 +181,6 @@ export function useTopBarTimerViewModel({
     timerProjectLabel,
     timerStatusLabel,
     timerTaskLabel,
+    timerWorkspaceContextLabel,
   };
 }

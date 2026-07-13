@@ -293,7 +293,7 @@ describe('ProjectsTable', () => {
     ]]);
   });
 
-  it('renders mobile loading cards only on mobile viewports', async () => {
+  it('keeps loaded mobile project cards visible during refresh loading', async () => {
     const wrapper = mountProjectsTable({
       isMobileViewport: true,
       loading: true,
@@ -318,9 +318,22 @@ describe('ProjectsTable', () => {
       [{ projectQuery: 'legacy' }],
       [{ memberIds: ['user-1', 'user-2'] }],
     ]);
+    expect(wrapper.findAll('[data-testid="projects-mobile-loading-card"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(1);
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.findAll('[data-testid="project-edit-project-active"]')).toHaveLength(0);
+  });
+
+  it('renders mobile loading cards when loading has no project rows yet', () => {
+    const wrapper = mountProjectsTable({
+      isMobileViewport: true,
+      loading: true,
+      rows: [],
+    });
+
     expect(wrapper.findAll('[data-testid="projects-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(0);
-    expect(wrapper.findAll('[data-testid="project-edit-project-active"]')).toHaveLength(0);
+    expect(wrapper.text()).not.toContain('No projects found');
   });
 
   it('renders supplied mobile card fields, name edit entry points, and expansion slot content', async () => {

@@ -8,6 +8,7 @@ describe('GithubController', () => {
   const githubService = {
     connectionStatus: vi.fn(),
     authUrl: vi.fn(),
+    listAvailableOrganizations: vi.fn(),
     listOwners: vi.fn(),
     listRepositories: vi.fn(),
     listProjects: vi.fn(),
@@ -57,6 +58,16 @@ describe('GithubController', () => {
 
     await expect(controller.listOwners(user, query)).resolves.toBe(response);
     expect(githubService.listOwners).toHaveBeenCalledWith(user, query);
+  });
+
+  it('GET /github/organizations delegates to service', async () => {
+    const response = { items: [] };
+    githubService.listAvailableOrganizations.mockResolvedValue(response);
+
+    await expect(controller.listAvailableOrganizations(user)).resolves.toBe(
+      response,
+    );
+    expect(githubService.listAvailableOrganizations).toHaveBeenCalledWith(user);
   });
 
   it('GET /github/repos delegates to service', async () => {

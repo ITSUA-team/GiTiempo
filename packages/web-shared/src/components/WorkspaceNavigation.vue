@@ -23,13 +23,22 @@ function clearLinkFocus(event: MouseEvent): void {
 
   event.currentTarget.blur();
 }
+
+function getIconShellClass(name: string): string {
+  return [
+    "flex size-8 items-center justify-center rounded-lg transition-colors",
+    isActive(name)
+      ? "bg-accent-tint text-brand"
+      : "text-text-muted group-hover:bg-app-bg",
+  ].join(" ");
+}
 </script>
 
 <template>
   <aside
-    class="border-divider bg-surface-primary hidden w-fit border-r sm:flex sm:flex-col"
+    class="border-divider bg-surface-primary hidden w-20 border-r sm:flex sm:flex-col"
   >
-    <nav class="flex flex-1 flex-col gap-1 py-4">
+    <nav class="flex flex-1 flex-col items-center gap-1 py-4">
       <RouterLink
         v-for="item in props.items"
         :key="item.name"
@@ -38,18 +47,21 @@ function clearLinkFocus(event: MouseEvent): void {
         :aria-current="isActive(item.name) ? 'page' : undefined"
         :aria-label="item.label"
         :class="[
-          'flex h-11 items-center justify-center px-4 text-sm font-medium transition-colors sm:mx-2 sm:rounded-md',
-          isActive(item.name)
-            ? 'border-brand bg-accent-tint text-brand border-l-[3px] font-semibold'
-            : 'text-text-muted hover:bg-app-bg',
+          'group focus-visible:outline-brand flex h-11 w-full items-center justify-center text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
+          isActive(item.name) ? 'font-semibold' : undefined,
         ]"
         @click="clearLinkFocus"
       >
-        <component
-          :is="item.icon"
-          aria-hidden="true"
-          class="size-5 shrink-0"
-        />
+        <span
+          :class="getIconShellClass(item.name)"
+          data-testid="workspace-navigation-icon-shell"
+        >
+          <component
+            :is="item.icon"
+            aria-hidden="true"
+            class="size-5 shrink-0"
+          />
+        </span>
         <span class="sr-only">{{ item.label }}</span>
       </RouterLink>
     </nav>
@@ -65,18 +77,21 @@ function clearLinkFocus(event: MouseEvent): void {
       :aria-current="isActive(item.name) ? 'page' : undefined"
       :aria-label="item.label"
       :class="[
-        'flex flex-1 items-center justify-center border-t-2 px-2 transition-colors',
-        isActive(item.name)
-          ? 'border-brand bg-accent-tint text-brand'
-          : 'text-text-muted hover:bg-app-bg border-transparent',
+        'group focus-visible:outline-brand flex flex-1 items-center justify-center px-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
+        isActive(item.name) ? 'font-semibold' : undefined,
       ]"
       @click="clearLinkFocus"
     >
-      <component
-        :is="item.icon"
-        aria-hidden="true"
-        class="size-5 shrink-0"
-      />
+      <span
+        :class="getIconShellClass(item.name)"
+        data-testid="workspace-navigation-mobile-icon-shell"
+      >
+        <component
+          :is="item.icon"
+          aria-hidden="true"
+          class="size-5 shrink-0"
+        />
+      </span>
       <span class="sr-only">{{ item.label }}</span>
     </RouterLink>
   </nav>

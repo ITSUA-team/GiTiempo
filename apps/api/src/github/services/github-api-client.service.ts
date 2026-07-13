@@ -162,21 +162,33 @@ export class GithubApiClientService {
       });
     }
     if (type === 'all' || type === 'organization') {
-      const orgs = await this.rest<GitHubOrgRest[]>(
-        accessToken,
-        '/user/orgs',
-        { per_page: '100' },
-        null,
-      );
-      for (const org of orgs.body) {
-        if (!org.login) continue;
-        items.push({
-          login: org.login,
-          label: org.login,
-          type: 'organization',
-          avatarUrl: org.avatar_url ?? null,
-          url: org.html_url ?? `https://github.com/${org.login}`,
-        });
+      let page = 1;
+
+      while (true) {
+        const orgs = await this.rest<GitHubOrgRest[]>(
+          accessToken,
+          '/user/orgs',
+          { per_page: '100', page: String(page) },
+          'rest-page',
+        );
+        for (const org of orgs.body) {
+          if (!org.login) continue;
+          items.push({
+            login: org.login,
+            label: org.login,
+            type: 'organization',
+            avatarUrl: org.avatar_url ?? null,
+            url: org.html_url ?? `https://github.com/${org.login}`,
+          });
+        }
+
+        const nextPage = this.decodePage(
+          orgs.pagination.nextPageToken ?? undefined,
+          'rest-page',
+        );
+        if (!nextPage) break;
+
+        page = nextPage;
       }
     }
     return { items };

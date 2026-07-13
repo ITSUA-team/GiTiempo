@@ -51,6 +51,10 @@ function createEntry(overrides: Partial<TimeEntryResponse> = {}): TimeEntryRespo
       id: TEST_IDS.user,
     },
     userId: TEST_IDS.user,
+    workspace: {
+      id: TEST_IDS.workspace,
+      name: "Workspace Alpha",
+    },
     workspaceId: TEST_IDS.workspace,
     githubIssue: null,
     ...overrides,

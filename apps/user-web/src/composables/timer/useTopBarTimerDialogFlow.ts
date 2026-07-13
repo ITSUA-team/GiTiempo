@@ -42,6 +42,11 @@ export function useTopBarTimerDialogFlow({
     clearDialogActionErrors();
     picker.openTaskPicker(summary.getDialogSelectionFromCurrentState());
 
+    if (summary.isCrossWorkspaceTimer.value) {
+      picker.setTasks([]);
+      return;
+    }
+
     try {
       await taskOptions.ensureProjectsLoaded();
 
@@ -66,6 +71,10 @@ export function useTopBarTimerDialogFlow({
   }
 
   function setSelectedProjectId(projectId: string | null): void {
+    if (summary.isCrossWorkspaceTimer.value) {
+      return;
+    }
+
     clearDialogActionErrors();
     const shouldClearSelectedTask =
       picker.selectedProjectId.value !== projectId;
@@ -78,16 +87,28 @@ export function useTopBarTimerDialogFlow({
   }
 
   function setSelectedTaskId(taskId: string | null): void {
+    if (summary.isCrossWorkspaceTimer.value) {
+      return;
+    }
+
     clearDialogActionErrors();
     picker.setSelectedTaskId(taskId);
   }
 
   function setSelectedDescription(description: string): void {
+    if (summary.isCrossWorkspaceTimer.value) {
+      return;
+    }
+
     clearDialogActionErrors();
     picker.setSelectedDescription(description);
   }
 
   async function confirmSelectedTask(): Promise<void> {
+    if (summary.isCrossWorkspaceTimer.value) {
+      return;
+    }
+
     if (isNewTaskSelected.value) {
       await taskCreation.createTaskFromDialog();
       return;
@@ -120,9 +141,15 @@ export function useTopBarTimerDialogFlow({
       }
     }
 
+    const wasCrossWorkspaceTimer = summary.isCrossWorkspaceTimer.value;
     const didMutateTimer = await timerActions.handlePrimaryAction();
 
     if (didMutateTimer) {
+      if (wasCrossWorkspaceTimer) {
+        await openDialog();
+        return;
+      }
+
       closeDialog();
     }
   }

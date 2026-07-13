@@ -3,7 +3,10 @@ import { computed, watch } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { WorkspaceHeader, WorkspaceNavigation } from "@gitiempo/web-shared";
 import { hasAllowedRole } from "@gitiempo/web-shared/router";
-import { getCounterpartWorkspaceHref } from "@gitiempo/web-shared/workspace-link";
+import {
+  getCounterpartWorkspaceAppHref,
+  getCounterpartWorkspaceHref,
+} from "@gitiempo/web-shared/workspace-link";
 
 import {
   ADMIN_BASE_NAV_ITEMS,
@@ -16,15 +19,20 @@ import { useToasts } from "@/composables/feedback/useToasts";
 import { appEnv } from "@/config/env";
 import { routeNames } from "@/constants/routes";
 import { getAdminSettingsClient } from "@/services/admin-settings-client";
+import { navigateToExternalHref } from "@/services/external-navigation";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const { errorToast } = useToasts();
+const { errorToast, infoToast } = useToasts();
 const userWorkspaceHref = getCounterpartWorkspaceHref({
   configuredUrl: appEnv.userAppUrl,
   fallbackPath: "/login",
+});
+const userWorkspaceAppHref = getCounterpartWorkspaceAppHref({
+  configuredUrl: appEnv.userAppUrl,
+  fallbackPath: "/",
 });
 
 let workspaceNameRequestToken: string | null = null;
@@ -66,24 +74,87 @@ async function handleSignOut(): Promise<void> {
   await router.push({ name: routeNames.login });
 }
 
+async function handleSwitchWorkspace(workspaceId: string): Promise<void> {
+  try {
+    const switchResult = await authStore.switchWorkspace(workspaceId);
+
+    if (switchResult.profileReloaded === false) {
+      window.location.reload();
+      return;
+    }
+
+    const nextRole = authStore.profile?.role ?? null;
+    const canAccessDashboard = hasAllowedRole(
+      router.resolve({ name: routeNames.dashboard }).meta.allowedRoles,
+      nextRole,
+    );
+
+    if (!canAccessDashboard) {
+      navigateToExternalHref(userWorkspaceAppHref);
+      return;
+    }
+
+    if (
+      route.name === routeNames.forbidden ||
+      route.name === routeNames.notFound ||
+      !hasAllowedRole(route.meta.allowedRoles, nextRole)
+    ) {
+      await router.push({ name: routeNames.dashboard });
+    }
+
+    if (!switchResult.membershipsReloaded) {
+      infoToast(
+        "Workspace switched. The workspace list could not be refreshed yet.",
+      );
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not switch workspace.";
+
+    errorToast(message, {
+      error,
+      logContext: { action: "switch-workspace", feature: "admin-shell" },
+    });
+  }
+}
+
 watch(
   () => authStore.accessToken,
   async (accessToken) => {
     if (!accessToken || workspaceNameRequestToken === accessToken) return;
 
     workspaceNameRequestToken = accessToken;
+    const isSwitchingWorkspace = authStore.switchingWorkspaceId !== null;
 
     try {
-      const workspace = await getAdminSettingsClient().getWorkspace();
+      if (isSwitchingWorkspace) {
+        const workspace = await getAdminSettingsClient().getWorkspace();
+        authStore.setWorkspaceName(workspace.name);
+        return;
+      }
+
+      const [workspace] = await Promise.all([
+        getAdminSettingsClient().getWorkspace(),
+        authStore.loadWorkspaceMemberships(),
+      ]);
       authStore.setWorkspaceName(workspace.name);
     } catch (error) {
+      if (isSwitchingWorkspace) {
+        return;
+      }
+
       workspaceNameRequestToken = null;
       const message =
-        error instanceof Error ? error.message : "Could not load workspace name.";
+        error instanceof Error
+          ? error.message
+          : "Could not load workspace context.";
 
       errorToast(message, {
         error,
-        logContext: { action: "load-workspace-name", feature: "admin-shell" },
+        logContext: {
+          action: "load-workspace-context",
+          feature: "admin-shell",
+        },
       });
     }
   },
@@ -92,7 +163,7 @@ watch(
 </script>
 
 <template>
-  <div class="bg-app-bg text-text-dark min-h-screen">
+  <div class="bg-app-bg text-text-dark flex min-h-screen flex-col">
     <WorkspaceHeader
       :counterpart-href="userWorkspaceHref"
       :counterpart-label="ADMIN_COUNTERPART_LABEL"
@@ -104,12 +175,15 @@ watch(
       :settings-label="ADMIN_SETTINGS_LABEL"
       :settings-to="{ name: routeNames.settings }"
       :show-settings="showSettings"
+      :switching-workspace-id="authStore.switchingWorkspaceId"
       :user-initials="authStore.userInitials"
+      :workspace-memberships="authStore.workspaceMemberships"
       :workspace-name="authStore.workspaceName"
       @sign-out="handleSignOut"
+      @switch-workspace="handleSwitchWorkspace"
     />
 
-    <div class="flex min-h-[calc(100vh-4rem)]">
+    <div class="flex flex-1">
       <WorkspaceNavigation
         :active-name="activeName"
         :items="navItems"

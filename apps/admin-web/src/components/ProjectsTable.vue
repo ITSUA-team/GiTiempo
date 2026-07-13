@@ -129,6 +129,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'visibility', label: 'Visibility', width: 120 },
 ];
 
+const projectsTableBodyRowClass =
+  'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg';
 const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
 </script>
 
@@ -264,7 +266,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
     v-if="isMobileViewport"
     class="flex flex-col gap-3"
   >
-    <template v-if="loading">
+    <template v-if="loading && rows.length === 0">
       <MobileRecordCard
         v-for="index in 3"
         :key="index"
@@ -396,6 +398,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
     :columns="columns"
     :value="rows"
     :loading="loading"
+    :body-row-class="projectsTableBodyRowClass"
     data-key="id"
     :header-class="projectsTableHeaderClass"
     shell-class="border-divider overflow-x-auto rounded-[6px] border"

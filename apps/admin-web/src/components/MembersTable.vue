@@ -129,7 +129,8 @@ const columns: ManagementTableColumn[] = [
   { key: 'lastActive', label: 'Last Active', width: 140 },
 ];
 
-const membersTableBodyRowClass = 'h-[56px] transition-colors hover:bg-app-bg';
+const membersTableBodyRowClass =
+  'border-divider h-[56px] border-b transition-colors last:border-b-0 hover:bg-app-bg';
 const membersTableHeaderClass = `${managementTableHeaderClass} min-w-[780px]`;
 
 function getRoleClass(role: WorkspaceRole): string {
@@ -251,7 +252,7 @@ function getRoleClass(role: WorkspaceRole): string {
     v-if="isMobileViewport"
     class="flex flex-col gap-3"
   >
-    <template v-if="loading">
+    <template v-if="loading && rows.length === 0">
       <MobileRecordCard
         v-for="index in 3"
         :key="index"

@@ -3,12 +3,15 @@ import { computed, watch } from 'vue';
 
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import SettingsForm from '@/components/settings/SettingsForm.vue';
+import SettingsGitHubAccountCard from '@/components/settings/SettingsGitHubAccountCard.vue';
 import SettingsGitHubWorkspaceAccessCard from '@/components/settings/SettingsGitHubWorkspaceAccessCard.vue';
 import SettingsPageSkeleton from '@/components/settings/SettingsPageSkeleton.vue';
+import { buildGitHubProfileHref } from '@/components/settings/github-workspace-access';
 import { appEnv } from '@/config/env';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useAdminSettingsData } from '@/composables/settings/useAdminSettingsData';
 import { useAdminSettingsForm } from '@/composables/settings/useAdminSettingsForm';
+import { useAdminSettingsGitHubConnection } from '@/composables/settings/useAdminSettingsGitHubConnection';
 import { useAdminWorkspaceGitHubOrganizations } from '@/composables/settings/useAdminWorkspaceGitHubOrganizations';
 import { useAdminSettingsPersistence } from '@/composables/settings/useAdminSettingsPersistence';
 import { toAdminSettingsFormValues } from '@/composables/settings/admin-settings-form';
@@ -17,11 +20,11 @@ import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast, successToast } = useToasts();
-const accessToken = computed(() => authStore.accessToken);
+const isAuthenticated = computed(() => Boolean(authStore.accessToken));
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 const settingsForm = useAdminSettingsForm();
 const settingsData = useAdminSettingsData({
-  accessToken,
+  enabled: isAuthenticated,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -31,7 +34,7 @@ const settingsData = useAdminSettingsData({
   scope,
 });
 const settingsPersistence = useAdminSettingsPersistence({
-  accessToken,
+  enabled: isAuthenticated,
   onError(message, error) {
     errorToast(message, {
       error,
@@ -40,8 +43,29 @@ const settingsPersistence = useAdminSettingsPersistence({
   },
   scope,
 });
+const githubConnection = useAdminSettingsGitHubConnection({
+  enabled: isAuthenticated,
+  onError(message, error, action) {
+    errorToast(message, {
+      error,
+      logContext: { action, feature: 'settings-github-connection' },
+    });
+  },
+  scope,
+});
+const canAddGitHubOrganization = computed(
+  () =>
+    isAuthenticated.value &&
+    githubConnection.isConnected.value &&
+    !githubConnection.loading.value &&
+    !githubConnection.requestError.value,
+);
+const canLoadAvailableGitHubOrganizations = computed(
+  () => canAddGitHubOrganization.value,
+);
 const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
-  accessToken,
+  availableOrganizationsEnabled: canLoadAvailableGitHubOrganizations,
+  enabled: isAuthenticated,
   githubAppInstallUrl: appEnv.githubAppInstallUrl,
   onError(message, error, action) {
     errorToast(message, {
@@ -74,6 +98,22 @@ const {
 } = settingsData;
 const { saveSettings: persistSettings, saving } = settingsPersistence;
 const canSave = computed(() => isDirty.value && !saving.value && !loading.value);
+const githubProfileHref = computed(() => buildGitHubProfileHref(appEnv.userAppUrl));
+const gitHubAddGateMessage = computed(() => {
+  if (githubConnection.loading.value) {
+    return 'Confirming your GitHub account connection before organization setup.';
+  }
+
+  if (githubConnection.requestError.value) {
+    return 'Reload your GitHub account status before adding workspace organizations.';
+  }
+
+  if (!githubConnection.isConnected.value) {
+    return 'Connect your GitHub account before adding workspace organizations.';
+  }
+
+  return null;
+});
 
 function syncWorkspaceName(values = persisted.value): void {
   if (!values) return;
@@ -159,9 +199,24 @@ watch(
         @save="saveSettings"
       >
         <template #after-card>
+          <SettingsGitHubAccountCard
+            :connection="githubConnection.connection.value"
+            :is-initial-loading="githubConnection.isInitialLoading.value"
+            :profile-href="githubProfileHref"
+            :request-error="githubConnection.requestError.value"
+            @retry="githubConnection.retryLoad"
+          />
+
           <SettingsGitHubWorkspaceAccessCard
-            v-model:organization-login="workspaceGitHubOrganizations.organizationLogin.value"
+            v-model:selected-organization="workspaceGitHubOrganizations.selectedOrganization.value"
+            :add-organization-gate-message="gitHubAddGateMessage"
             :adding="workspaceGitHubOrganizations.adding.value"
+            :available-organization-empty-message="workspaceGitHubOrganizations.availableOrganizationsEmptyMessage.value"
+            :available-organizations="workspaceGitHubOrganizations.selectableOrganizations.value"
+            :available-organizations-initial-loading="workspaceGitHubOrganizations.availableOrganizationsInitialLoading.value"
+            :available-organizations-loading="workspaceGitHubOrganizations.availableOrganizationsLoading.value"
+            :available-organizations-request-error="workspaceGitHubOrganizations.availableOrganizationsRequestError.value"
+            :can-add-organization="canAddGitHubOrganization"
             :is-initial-loading="workspaceGitHubOrganizations.isInitialLoading.value"
             :items="workspaceGitHubOrganizations.items.value"
             :organization-login-error="workspaceGitHubOrganizations.organizationLoginError.value"
@@ -172,6 +227,7 @@ watch(
             @remove="workspaceGitHubOrganizations.removeOrganization"
             @retry="workspaceGitHubOrganizations.retryLoad"
             @retry-add="workspaceGitHubOrganizations.addOrganization"
+            @retry-available-organizations="workspaceGitHubOrganizations.retryAvailableOrganizations"
           />
         </template>
       </SettingsForm>

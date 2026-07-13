@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getCounterpartWorkspaceHref } from "./workspace-link";
+import {
+  getCounterpartWorkspaceAppHref,
+  getCounterpartWorkspaceHref,
+} from "./workspace-link";
 
 describe("getCounterpartWorkspaceHref", () => {
   afterEach(() => {
@@ -38,5 +41,44 @@ describe("getCounterpartWorkspaceHref", () => {
         fallbackPath: "/login",
       }),
     ).toBe("/login");
+  });
+});
+
+describe("getCounterpartWorkspaceAppHref", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("normalizes configured app URLs to the application root", () => {
+    expect(
+      getCounterpartWorkspaceAppHref({
+        configuredUrl: " https://admin.example.test/login?next=%2Freports ",
+        fallbackPath: "/",
+      }),
+    ).toBe("https://admin.example.test/");
+  });
+
+  it("uses same-origin root fallback when no configured URL is present", () => {
+    vi.stubGlobal("window", {
+      location: {
+        origin: "https://app.example.test",
+      },
+    });
+
+    expect(
+      getCounterpartWorkspaceAppHref({
+        fallbackPath: "/",
+      }),
+    ).toBe("https://app.example.test/");
+  });
+
+  it("returns the fallback path when window is unavailable", () => {
+    vi.stubGlobal("window", undefined);
+
+    expect(
+      getCounterpartWorkspaceAppHref({
+        fallbackPath: "/",
+      }),
+    ).toBe("/");
   });
 });
