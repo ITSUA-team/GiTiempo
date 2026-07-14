@@ -6,9 +6,8 @@ import type {
 } from '@gitiempo/shared';
 import { WorkspaceRoles } from '@gitiempo/shared';
 import {
-  composeGiTiempoSelfAppendedAutoCompletePt,
-  giTiempoDropdownControlTriggerClass,
   giTiempoSelectPt,
+  giTiempoSelfAppendedMultiAutoCompleteDropdownPt,
 } from '@gitiempo/web-config/theme';
 import {
   EditFormPanel,
@@ -44,23 +43,6 @@ const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
-
-const memberAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
-  root: { class: 'min-h-[38px]' },
-  pcInputText: {
-    root: {
-      class: 'min-h-[38px] w-full rounded-[6px] font-sans text-[14px] font-medium',
-    },
-  },
-  inputMultiple: {
-    class: 'min-h-[38px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
-  },
-  dropdown: { class: giTiempoDropdownControlTriggerClass },
-  pcChip: {
-    root: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
-  },
-  option: { class: 'font-sans text-[14px]' },
-});
 
 interface AutoCompleteCompleteEvent {
   query: string;
@@ -132,7 +114,7 @@ function handleSave({
             :min-length="0"
             placeholder="Search members..."
             :invalid="$form.memberIds?.invalid"
-            :pt="memberAutoCompletePt"
+            :pt="giTiempoSelfAppendedMultiAutoCompleteDropdownPt"
             fluid
             @complete="handleMemberComplete"
           />

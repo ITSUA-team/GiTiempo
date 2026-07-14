@@ -8,29 +8,53 @@ import {
   managementTableFilterInputClass,
   managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
+  managementTableResolvedFilterAutoCompletePt,
   managementTableHeaderCellClass,
+  managementTableSelfAppendedFilterAutoCompletePt,
 } from './management-table';
 
 describe('management table filter styles', () => {
   it('keeps autocomplete text inputs square where the dropdown button attaches', () => {
     expect(managementTableFilterInputClass).toContain('rounded-[6px]');
     expect(managementTableFilterInputClass).toContain('h-[38px]');
+    expect(managementTableFilterInputClass).toContain('border-divider');
+    expect(managementTableFilterInputClass).toContain('text-[14px]');
     expect(managementTableFilterAutoCompletePt.root?.class).toContain('h-[38px]');
+    expect(managementTableFilterAutoCompletePt.root?.class).toContain('border-divider');
     expect(managementTableFilterAutoCompletePt.pcInputText?.root).toEqual({
-      class: expect.stringContaining('rounded-r-none'),
+      class: expect.stringContaining('border-0'),
     });
     expect(managementTableFilterAutoCompletePt.pcInputText?.root).toEqual({
-      class: expect.stringContaining('rounded-l-[6px]'),
+      class: expect.stringContaining('bg-transparent'),
     });
+    expect(managementTableFilterAutoCompletePt.inputMultiple?.class).toContain(
+      'min-h-[38px]',
+    );
+    expect(managementTableFilterAutoCompletePt.pcChip?.root?.class).toContain(
+      'bg-accent-tint',
+    );
     expect(managementTableFilterAutoCompletePt.dropdown?.class).toContain('h-[38px]');
+    expect(managementTableFilterAutoCompletePt.dropdown?.class).toContain('w-9');
+    expect(managementTableFilterAutoCompletePt.dropdown?.class).toContain('bg-transparent');
     expect('overlay' in managementTableFilterAutoCompletePt).toBe(false);
-    expect(managementTableFilterAutoCompletePt.option?.class).toBe('text-[13px]');
+    expect(managementTableResolvedFilterAutoCompletePt.overlay?.class).toBe(
+      'overflow-hidden',
+    );
+    expect(managementTableSelfAppendedFilterAutoCompletePt.overlay?.class).toBe(
+      'overflow-hidden w-full max-w-full',
+    );
+    expect(managementTableFilterAutoCompletePt.option?.class).toBe('font-sans text-[14px]');
   });
 
   it('keeps select and multiselect filters aligned with the shared filter height', () => {
     expect(managementTableFilterSelectPt.root?.class).toContain('h-[38px]');
+    expect(managementTableFilterSelectPt.root?.class).toContain('border-divider');
+    expect(managementTableFilterSelectPt.label?.class).toContain('text-[14px]');
+    expect(managementTableFilterSelectPt.dropdown?.class).toContain('w-9');
     expect(managementTableFilterMultiSelectPt.root?.class).toContain('h-[38px]');
     expect(managementTableFilterMultiSelectPt.labelContainer?.class).toContain('h-full');
+    expect(managementTableFilterMultiSelectPt.label?.class).toContain('text-[14px]');
+    expect(managementTableFilterMultiSelectPt.dropdown?.class).toContain('w-9');
   });
 });
 

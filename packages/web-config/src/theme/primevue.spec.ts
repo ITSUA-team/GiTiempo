@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   composeGiTiempoAutoCompletePt,
   composeGiTiempoSelfAppendedAutoCompleteDropdownPt,
+  composeGiTiempoSelfAppendedMultiAutoCompleteDropdownPt,
   composeGiTiempoSelfAppendedAutoCompletePt,
   giTiempoAutoCompleteDropdownPt,
   giTiempoAutoCompletePt,
@@ -14,6 +15,7 @@ import {
   giTiempoSelectPt,
   giTiempoPrimeVueOptions,
   giTiempoSelfAppendedAutoCompleteDropdownPt,
+  giTiempoSelfAppendedMultiAutoCompleteDropdownPt,
   giTiempoSelfAppendedAutoCompleteOverlayClass,
   giTiempoSelfAppendedAutoCompleteOverlayStyle,
   giTiempoSelfAppendedAutoCompletePt,
@@ -81,13 +83,16 @@ describe("giTiempoPrimeVueOptions", () => {
     expect(giTiempoSelectPt.root.class).toContain("border-divider");
     expect(giTiempoSelectPt.label.class).toContain("text-[14px]");
     expect(giTiempoSelectPt.dropdown.class).toContain("w-9");
+    expect(giTiempoSelectPt.dropdown.class).toContain("bg-transparent");
     expect(giTiempoDatePickerPt.pcInputText.root.class).toBe(
       giTiempoDropdownControlInputClass,
     );
+    expect(giTiempoAutoCompleteDropdownPt.root?.class).toContain("border-divider");
     expect(giTiempoAutoCompleteDropdownPt.pcInputText?.root?.class).toContain(
-      "rounded-r-none",
+      "border-0",
     );
     expect(giTiempoAutoCompleteDropdownPt.dropdown?.class).toContain("h-[38px]");
+    expect(giTiempoAutoCompleteDropdownPt.dropdown?.class).toContain("bg-transparent");
     expect(giTiempoSelfAppendedAutoCompleteDropdownPt.overlay?.style).toEqual(
       giTiempoSelfAppendedAutoCompleteOverlayStyle,
     );
@@ -97,8 +102,34 @@ describe("giTiempoPrimeVueOptions", () => {
       }).pcInputText?.root,
     ).toMatchObject({
       autocomplete: "off",
-      class: expect.stringContaining("h-[38px]"),
+      class: expect.stringContaining("border-0"),
     });
+  });
+
+  it("defines one shared multi autocomplete dropdown treatment", () => {
+    expect(giTiempoSelfAppendedMultiAutoCompleteDropdownPt.root?.class).toContain(
+      "min-h-[38px]",
+    );
+    expect(
+      giTiempoSelfAppendedMultiAutoCompleteDropdownPt.root?.class,
+    ).toContain("border-divider");
+    expect(
+      giTiempoSelfAppendedMultiAutoCompleteDropdownPt.root?.class,
+    ).toContain("bg-surface-primary");
+    expect(
+      giTiempoSelfAppendedMultiAutoCompleteDropdownPt.inputMultiple?.class,
+    ).toContain("text-[14px]");
+    expect(giTiempoSelfAppendedMultiAutoCompleteDropdownPt.dropdown?.class).toContain(
+      "bg-transparent",
+    );
+    expect(giTiempoSelfAppendedMultiAutoCompleteDropdownPt.pcChip?.root?.class).toContain(
+      "bg-accent-tint",
+    );
+    expect(
+      composeGiTiempoSelfAppendedMultiAutoCompleteDropdownPt({
+        inputMultiple: { class: "max-h-32" },
+      }).inputMultiple?.class,
+    ).toContain("max-h-32");
   });
 
   it("keeps width-constraining overlay styles explicit for self-appended autocomplete", () => {

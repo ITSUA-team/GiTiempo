@@ -12,13 +12,13 @@ import {
 import {
   EmptyStateBlock,
   EntryActionButton,
+  ManagementTableAssignmentFilter,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
-  managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
   managementTableHeaderClass,
 } from '@gitiempo/web-shared';
@@ -30,7 +30,6 @@ import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
-import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
 
@@ -232,17 +231,12 @@ function getRoleClass(role: WorkspaceRole): string {
         for="mobile-member-projects-filter"
         class="text-text-muted text-[12px] font-medium"
       >Projects assigned</label>
-      <MultiSelect
+      <ManagementTableAssignmentFilter
+        append-to="self"
         input-id="mobile-member-projects-filter"
         :model-value="filters.projectIds"
         :options="projectFilterOptions"
-        display="chip"
-        filter
-        option-label="label"
-        option-value="value"
         placeholder="All projects"
-        show-clear
-        :pt="managementTableFilterMultiSelectPt"
         @update:model-value="updateProjectIdsFilter"
       />
     </div>
@@ -433,17 +427,11 @@ function getRoleClass(role: WorkspaceRole): string {
         </div>
 
         <div class="w-[220px] px-3">
-          <MultiSelect
+          <ManagementTableAssignmentFilter
             :model-value="filters.projectIds"
-            :options="projectFilterOptions"
             aria-label="Filter members by assigned projects"
-            display="chip"
-            filter
-            option-label="label"
-            option-value="value"
+            :options="projectFilterOptions"
             placeholder="All projects"
-            show-clear
-            :pt="managementTableFilterMultiSelectPt"
             @update:model-value="updateProjectIdsFilter"
           />
         </div>

@@ -9,13 +9,13 @@ import {
 import {
   EmptyStateBlock,
   EntryActionButton,
+  ManagementTableAssignmentFilter,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteStrings,
   managementTableColumnPt,
   managementTableFilterAutoCompletePt,
-  managementTableFilterMultiSelectPt,
   managementTableFilterSelectPt,
   managementTableHeaderClass,
   type ManagementTableColumn,
@@ -26,7 +26,6 @@ import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
-import MultiSelect from 'primevue/multiselect';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
@@ -245,17 +244,12 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           for="mobile-project-members-filter"
           class="text-text-muted text-[12px] font-medium"
         >Assigned members</label>
-        <MultiSelect
+        <ManagementTableAssignmentFilter
+          append-to="self"
           input-id="mobile-project-members-filter"
           :model-value="filters.memberIds"
           :options="memberFilterOptions"
-          display="chip"
-          filter
-          option-label="label"
-          option-value="value"
           placeholder="All members"
-          show-clear
-          :pt="managementTableFilterMultiSelectPt"
           @update:model-value="updateMemberIdsFilter"
         />
       </div>
@@ -440,17 +434,11 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
         </div>
 
         <div class="w-[220px] px-3">
-          <MultiSelect
+          <ManagementTableAssignmentFilter
             :model-value="filters.memberIds"
-            :options="memberFilterOptions"
             aria-label="Filter projects by assigned members"
-            display="chip"
-            filter
-            option-label="label"
-            option-value="value"
+            :options="memberFilterOptions"
             placeholder="All members"
-            show-clear
-            :pt="managementTableFilterMultiSelectPt"
             @update:model-value="updateMemberIdsFilter"
           />
         </div>

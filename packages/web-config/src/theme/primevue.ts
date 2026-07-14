@@ -19,16 +19,16 @@ export const giTiempoDropdownControlInputClass =
   `${giTiempoDropdownControlBaseClass} w-full rounded-[6px] px-3`;
 
 export const giTiempoDropdownControlJoinedInputClass =
-  `${giTiempoDropdownControlBaseClass} w-full rounded-l-[6px] rounded-r-none px-3`;
+  "h-full min-w-0 flex-1 rounded-none border-0 bg-transparent px-3 font-sans text-[14px] font-medium text-text-dark shadow-none ring-0 focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none";
 
 export const giTiempoDropdownControlRootClass =
-  `${giTiempoDropdownControlBaseClass} w-full rounded-[6px]`;
+  `${giTiempoDropdownControlBaseClass} flex w-full items-center overflow-hidden rounded-[6px]`;
 
 export const giTiempoDropdownControlLabelClass =
   "flex h-full items-center px-3 py-0 font-sans text-[14px] font-medium text-text-dark";
 
 export const giTiempoDropdownControlTriggerClass =
-  "h-[38px] w-9 text-text-muted";
+  "h-[38px] w-9 shrink-0 rounded-none rounded-r-[6px] border-0 bg-transparent p-0 text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none active:border-transparent active:bg-transparent";
 
 export const giTiempoSelectPt = {
   root: { class: giTiempoDropdownControlRootClass },
@@ -49,11 +49,35 @@ export const giTiempoDatePickerPt = {
 } as const;
 
 export const giTiempoDropdownAutoCompletePt = {
-  root: { class: "h-[38px]" },
+  root: { class: giTiempoDropdownControlRootClass },
   pcInputText: {
     root: { class: giTiempoDropdownControlJoinedInputClass },
   },
   dropdown: { class: giTiempoDropdownControlTriggerClass },
+  option: { class: "font-sans text-[14px]" },
+} satisfies GiTiempoAutoCompletePt;
+
+export const giTiempoMultiAutoCompleteDropdownPt = {
+  root: {
+    class:
+      "border-divider bg-surface-primary flex min-h-[38px] w-full max-w-full min-w-0 items-stretch overflow-hidden rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none",
+  },
+  pcInputText: {
+    root: {
+      class:
+        "min-h-[38px] w-full rounded-none border-0 bg-transparent font-sans text-[14px] font-medium text-text-dark shadow-none ring-0 focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none",
+    },
+  },
+  inputMultiple: {
+    class:
+      "min-h-[38px] w-full flex-1 rounded-none border-0 bg-transparent px-2 py-1 font-sans text-[14px] font-medium text-text-dark shadow-none",
+  },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+  pcChip: {
+    root: {
+      class: "bg-accent-tint text-brand font-sans text-[12px] font-semibold",
+    },
+  },
   option: { class: "font-sans text-[14px]" },
 } satisfies GiTiempoAutoCompletePt;
 
@@ -223,6 +247,9 @@ export const giTiempoAutoCompleteDropdownPt = composeGiTiempoAutoCompletePt(
 export const giTiempoSelfAppendedAutoCompleteDropdownPt =
   composeGiTiempoSelfAppendedAutoCompletePt(giTiempoDropdownAutoCompletePt);
 
+export const giTiempoSelfAppendedMultiAutoCompleteDropdownPt =
+  composeGiTiempoSelfAppendedAutoCompletePt(giTiempoMultiAutoCompleteDropdownPt);
+
 export function composeGiTiempoSelfAppendedAutoCompletePt(
   override: GiTiempoAutoCompletePt = {},
 ): GiTiempoAutoCompletePt {
@@ -234,6 +261,15 @@ export function composeGiTiempoSelfAppendedAutoCompleteDropdownPt(
 ): GiTiempoAutoCompletePt {
   return composeAutoCompletePt(
     giTiempoSelfAppendedAutoCompleteDropdownPt,
+    override,
+  );
+}
+
+export function composeGiTiempoSelfAppendedMultiAutoCompleteDropdownPt(
+  override: GiTiempoAutoCompletePt = {},
+): GiTiempoAutoCompletePt {
+  return composeAutoCompletePt(
+    giTiempoSelfAppendedMultiAutoCompleteDropdownPt,
     override,
   );
 }

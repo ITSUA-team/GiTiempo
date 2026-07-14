@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { nextTick } from 'vue';
 import type {
   ProjectListResponse,
   WorkspaceMemberResponse,
@@ -160,20 +161,36 @@ describe('member inline forms', () => {
 
     expect(projectSelect.props('multiple')).toBe(true);
     expect(projectSelect.props('dropdown')).toBe(true);
+    expect(projectSelect.props('dropdownMode')).toBe('blank');
     expect(projectSelect.props('forceSelection')).toBe(true);
     expect(projectSelect.props('completeOnFocus')).toBe(true);
     expect(projectSelect.props('minLength')).toBe(0);
     expect(projectSelect.props('placeholder')).toBe('Search projects...');
-    expect(projectSelect.props('pt')).toMatchObject({
-      inputMultiple: {
-        class: expect.stringContaining('min-h-[38px]'),
-      },
+    const projectSelectPt = projectSelect.props('pt');
+
+    expect(projectSelectPt?.inputMultiple?.class).toEqual(
+      expect.stringContaining('min-h-[38px]'),
+    );
+    expect(projectSelectPt?.root?.class).toEqual(
+      expect.stringContaining('border-divider'),
+    );
+    expect(projectSelectPt).toMatchObject({
       pcChip: {
         root: {
           class: expect.stringContaining('bg-accent-tint'),
         },
       },
     });
+    expect(projectSelect.props('suggestions')).toEqual(['project-1', 'project-2']);
+
+    projectSelect.vm.$emit('complete', { query: 'orion' });
+    await nextTick();
+
+    expect(projectSelect.props('suggestions')).toEqual(['project-1']);
+
+    projectSelect.vm.$emit('complete', { query: '' });
+    await nextTick();
+
     expect(projectSelect.props('suggestions')).toEqual(['project-1', 'project-2']);
     expect(wrapper.findAll('[name="projectIds"]')).toHaveLength(1);
     expect(wrapper.text()).toContain('Project Orion');

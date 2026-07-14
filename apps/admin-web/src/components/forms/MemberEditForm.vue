@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
-import {
-  composeGiTiempoSelfAppendedAutoCompletePt,
-  giTiempoDropdownControlTriggerClass,
-} from '@gitiempo/web-config/theme';
+import { giTiempoSelfAppendedMultiAutoCompleteDropdownPt } from '@gitiempo/web-config/theme';
 import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
@@ -40,23 +37,6 @@ const initialValues = computed<MemberAssignFormInput>(() => ({
     )
     .map((project) => project.id),
 }));
-
-const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
-  root: { class: 'min-h-[38px]' },
-  pcInputText: {
-    root: {
-      class: 'min-h-[38px] w-full rounded-[6px] font-sans text-[14px] font-medium',
-    },
-  },
-  inputMultiple: {
-    class: 'min-h-[38px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
-  },
-  dropdown: { class: giTiempoDropdownControlTriggerClass },
-  pcChip: {
-    root: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
-  },
-  option: { class: 'font-sans text-[14px]' },
-});
 
 interface AutoCompleteCompleteEvent {
   query: string;
@@ -133,7 +113,7 @@ function handleSave({
             placeholder="Search projects..."
             :invalid="$form.projectIds?.invalid"
             :disabled="saving"
-            :pt="projectAutoCompletePt"
+            :pt="giTiempoSelfAppendedMultiAutoCompleteDropdownPt"
             fluid
             @complete="handleProjectComplete"
           />

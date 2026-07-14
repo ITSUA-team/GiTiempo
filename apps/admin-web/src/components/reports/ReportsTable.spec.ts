@@ -96,8 +96,14 @@ describe('ReportsTable', () => {
       props: {
         filters,
         loading: false,
-        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
-        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        memberOptions: [
+          { label: 'Alex Admin', value: 'member-1' },
+          { label: 'Pat PM', value: 'member-2' },
+        ],
+        projectOptions: [
+          { label: 'Project Orion', value: 'project-1' },
+          { label: 'Billing API', value: 'project-2' },
+        ],
         rows,
       },
       global: {
@@ -137,10 +143,25 @@ describe('ReportsTable', () => {
     expect(search.attributes('placeholder')).toBe('Search report rows');
     expect(projectFilter.props('forceSelection')).toBe(true);
     expect(memberFilter.props('forceSelection')).toBe(true);
+    expect(projectFilter.props('dropdownMode')).toBe('blank');
+    expect(memberFilter.props('dropdownMode')).toBe('blank');
     expect(projectFilter.props('modelValue')).toBeNull();
     expect(projectFilter.props('placeholder')).toBe('All projects');
     expect(memberFilter.props('modelValue')).toBeNull();
     expect(memberFilter.props('placeholder')).toBe('All members');
+
+    projectFilter.vm.$emit('complete', { query: '' });
+    memberFilter.vm.$emit('complete', { query: '' });
+    await nextTick();
+
+    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('suggestions')).toEqual([
+      { label: 'Project Orion', value: 'project-1' },
+      { label: 'Billing API', value: 'project-2' },
+    ]);
+    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
+      { label: 'Alex Admin', value: 'member-1' },
+      { label: 'Pat PM', value: 'member-2' },
+    ]);
 
     await search.setValue('orion');
 

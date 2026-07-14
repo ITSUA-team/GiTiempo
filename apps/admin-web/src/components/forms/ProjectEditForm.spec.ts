@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { nextTick } from 'vue';
 import type {
   ProjectResponse,
   WorkspaceMemberListResponse,
@@ -151,7 +152,7 @@ describe('ProjectEditForm', () => {
     setActivePinia(createPinia());
   });
 
-  it('keeps project settings controls at the same edit-form height', () => {
+  it('keeps project settings controls at the same edit-form height', async () => {
     const wrapper = mount(ProjectEditForm, {
       props: { allMembers: members, project },
       global: { plugins: [createPinia()], stubs },
@@ -177,15 +178,31 @@ describe('ProjectEditForm', () => {
 
     expect(memberInput.props('multiple')).toBe(true);
     expect(memberInput.props('dropdown')).toBe(true);
+    expect(memberInput.props('dropdownMode')).toBe('blank');
     expect(memberInput.props('forceSelection')).toBe(true);
     expect(memberInput.props('completeOnFocus')).toBe(true);
     expect(memberInput.props('minLength')).toBe(0);
     expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
+
+    memberInput.vm.$emit('complete', { query: 'pat' });
+    await nextTick();
+
+    expect(memberInput.props('suggestions')).toEqual(['user-2']);
+
+    memberInput.vm.$emit('complete', { query: '' });
+    await nextTick();
+
+    expect(memberInput.props('suggestions')).toEqual(['user-2', 'user-3']);
     expect(memberInput.props('placeholder')).toBe('Search members...');
-    expect(memberInput.props('pt')).toMatchObject({
-      inputMultiple: {
-        class: expect.stringContaining('min-h-[38px]'),
-      },
+    const memberInputPt = memberInput.props('pt');
+
+    expect(memberInputPt?.inputMultiple?.class).toEqual(
+      expect.stringContaining('min-h-[38px]'),
+    );
+    expect(memberInputPt?.root?.class).toEqual(
+      expect.stringContaining('border-divider'),
+    );
+    expect(memberInputPt).toMatchObject({
       pcChip: {
         root: {
           class: expect.stringContaining('bg-accent-tint'),
