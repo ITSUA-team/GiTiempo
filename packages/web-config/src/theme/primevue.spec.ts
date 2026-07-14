@@ -4,6 +4,7 @@ import {
   composeGiTiempoAutoCompletePt,
   composeGiTiempoSelfAppendedAutoCompletePt,
   giTiempoAutoCompletePt,
+  giTiempoDialogPt,
   giTiempoPrimeVueOptions,
   giTiempoSelfAppendedAutoCompleteOverlayClass,
   giTiempoSelfAppendedAutoCompleteOverlayStyle,
@@ -23,6 +24,17 @@ describe("giTiempoPrimeVueOptions", () => {
     });
     expect(giTiempoAutoCompletePt.overlay).not.toHaveProperty("style");
     expect(giTiempoPrimeVueOptions.pt.autocomplete).toBe(giTiempoAutoCompletePt);
+  });
+
+  it("defines one shared borderless dialog close button treatment", () => {
+    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("rounded-none");
+    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("border-0");
+    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("bg-transparent");
+    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("focus:outline-none");
+    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("focus-visible:outline-none");
+    expect(giTiempoDialogPt.pcCloseButton.root.class).not.toContain("rounded-full");
+    expect(giTiempoDialogPt.pcCloseButton.root.class).not.toContain("focus-visible:outline-2");
+    expect(giTiempoPrimeVueOptions.pt.dialog).toBe(giTiempoDialogPt);
   });
 
   it("composes autocomplete instance overrides with the shared baseline", () => {

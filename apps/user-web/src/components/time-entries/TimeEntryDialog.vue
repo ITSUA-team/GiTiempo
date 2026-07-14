@@ -2,7 +2,6 @@
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
-import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
@@ -12,6 +11,7 @@ import {
 } from "@gitiempo/web-config/theme";
 import {
   filterAutocompleteOptions,
+  AppDialog,
   InlineRequestMessage,
   LabeledCheckbox,
 } from "@gitiempo/web-shared";
@@ -214,7 +214,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     modal
     :closable="!isDialogMutating"
     :dismissable-mask="!isDialogMutating"
@@ -486,5 +486,5 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
         />
       </DialogFooterActionGroups>
     </template>
-  </Dialog>
+  </AppDialog>
 </template>

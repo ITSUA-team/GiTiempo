@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
 import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
+  AppDialog,
   filterAutocompleteOptions,
   InlineRequestMessage,
   LabeledCheckbox,
@@ -119,7 +119,7 @@ function handleProjectComplete(event: { query: string }): void {
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     :closable="!isDialogMutating"
     modal
     :dismissable-mask="!isDialogMutating"
@@ -131,7 +131,7 @@ function handleProjectComplete(event: { query: string }): void {
       footer: 'px-6 pb-6 pt-0',
     }"
     :visible="props.isOpen"
-    @update:visible="(nextVisible) => {
+    @update:visible="(nextVisible: boolean) => {
       if (!nextVisible && !isDialogMutating) {
         emit('close');
       }
@@ -292,5 +292,5 @@ function handleProjectComplete(event: { query: string }): void {
         />
       </DialogFooterActionGroups>
     </template>
-  </Dialog>
+  </AppDialog>
 </template>

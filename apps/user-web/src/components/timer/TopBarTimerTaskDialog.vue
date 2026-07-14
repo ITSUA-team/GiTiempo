@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
+  AppDialog,
   filterAutocompleteOptions,
   InlineRequestMessage,
   useIsMobileViewport,
@@ -262,7 +262,7 @@ watch(
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     modal
     block-scroll
     :dismissable-mask="true"
@@ -535,5 +535,5 @@ watch(
         </Button>
       </div>
     </div>
-  </Dialog>
+  </AppDialog>
 </template>
