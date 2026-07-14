@@ -61,9 +61,31 @@ const passThrough = computed(() => {
       ? giTiempoSelfAppendedAutoCompleteDropdownPt
       : giTiempoAutoCompleteDropdownPt;
 
+  // Body-appended overlays get an inline min-width equal to the anchor,
+  // which for AutoComplete is the text input — excluding the w-9 dropdown
+  // trigger. max-w-0 loses to min-width (pinning the content width to the
+  // input), and box-content + pr-9 widen the panel border-box to the full
+  // field; the list stretches into that padding (-mr-9) so options span
+  // the whole panel.
+  const overlay =
+    props.appendTo === 'self'
+      ? base.overlay
+      : {
+        ...base.overlay,
+        class: [base.overlay?.class, 'box-content max-w-0 pr-9']
+          .filter(Boolean)
+          .join(' '),
+      };
+  const listContainer =
+    props.appendTo === 'self'
+      ? base.listContainer
+      : { ...base.listContainer, class: '-mr-9 overflow-x-hidden' };
+
   return {
     ...base,
     clearIcon: clearIconPt,
+    listContainer,
+    overlay,
     pcInputText: {
       ...base.pcInputText,
       root: {

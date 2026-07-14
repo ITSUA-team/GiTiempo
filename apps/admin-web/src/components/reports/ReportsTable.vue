@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
+import { giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   FilterAutoComplete,
@@ -202,7 +202,7 @@ function handleMemberFilterUpdate(
               :options="hoursFilterOptions"
               option-label="label"
               option-value="value"
-              :pt="giTiempoSelectPt"
+              :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
 
@@ -217,7 +217,7 @@ function handleMemberFilterUpdate(
               :options="billableFilterOptions"
               option-label="label"
               option-value="value"
-              :pt="giTiempoSelectPt"
+              :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
         </div>
@@ -352,7 +352,7 @@ function handleMemberFilterUpdate(
               aria-label="Filter report rows by hours"
               option-label="label"
               option-value="value"
-              :pt="giTiempoSelectPt"
+              :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
           <div class="w-[140px] px-3 text-right">
@@ -362,7 +362,7 @@ function handleMemberFilterUpdate(
               aria-label="Filter report rows by billable hours"
               option-label="label"
               option-value="value"
-              :pt="giTiempoSelectPt"
+              :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
         </div>

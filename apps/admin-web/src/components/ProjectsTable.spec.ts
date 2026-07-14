@@ -233,7 +233,7 @@ describe('ProjectsTable', () => {
     expect(projectQueryFilter.props('completeOnFocus')).toBe(true);
     expect(projectQueryFilter.props('appendTo')).not.toBe('self');
     expect((projectQueryFilter.props('pt') as AutoCompletePt).overlay).toEqual({
-      class: 'overflow-hidden',
+      class: 'overflow-hidden box-content max-w-0 pr-9',
     });
     expect(memberFilter.props('multiple')).toBe(false);
     expect(memberFilter.props('dropdown')).toBe(true);

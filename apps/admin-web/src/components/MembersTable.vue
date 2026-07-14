@@ -5,7 +5,7 @@ import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
 } from '@gitiempo/shared';
-import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
+import { giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   EntryActionButton,
@@ -214,7 +214,7 @@ function getRoleClass(role: WorkspaceRole): string {
           option-value="value"
           placeholder="All roles"
           show-clear
-          :pt="giTiempoSelectPt"
+          :pt="giTiempoFieldWidthSelectPt"
           @update:model-value="updateRoleFilter"
         />
       </div>
@@ -230,7 +230,7 @@ function getRoleClass(role: WorkspaceRole): string {
           :options="lastActiveFilterOptions"
           option-label="label"
           option-value="value"
-          :pt="giTiempoSelectPt"
+          :pt="giTiempoFieldWidthSelectPt"
           @update:model-value="updateLastActiveFilter"
         />
       </div>
@@ -430,7 +430,7 @@ function getRoleClass(role: WorkspaceRole): string {
             option-value="value"
             placeholder="All roles"
             show-clear
-            :pt="giTiempoSelectPt"
+            :pt="giTiempoFieldWidthSelectPt"
             @update:model-value="updateRoleFilter"
           />
         </div>
@@ -456,7 +456,7 @@ function getRoleClass(role: WorkspaceRole): string {
             aria-label="Filter members by last active"
             option-label="label"
             option-value="value"
-            :pt="giTiempoSelectPt"
+            :pt="giTiempoFieldWidthSelectPt"
             @update:model-value="updateLastActiveFilter"
           />
         </div>

@@ -5,7 +5,7 @@ import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
 import {
   giTiempoDatePickerPt,
-  giTiempoSelectPt,
+  giTiempoFieldWidthSelectPt,
 } from '@gitiempo/web-config/theme';
 import {
   FilterAutoComplete,
@@ -205,7 +205,7 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
         option-label="label"
         option-value="value"
         :disabled="disabled"
-        :pt="giTiempoSelectPt"
+        :pt="giTiempoFieldWidthSelectPt"
         @update:model-value="handleGroupByUpdate"
       />
     </div>

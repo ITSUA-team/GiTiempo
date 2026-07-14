@@ -36,6 +36,16 @@ export const giTiempoSelectPt = {
   dropdown: { class: giTiempoDropdownControlTriggerClass },
 } as const;
 
+// PrimeVue sets the body-appended overlay's min-width to the anchor field
+// width; a smaller max-width loses to min-width per CSS, clamping the
+// overlay to exactly the field width instead of growing with content.
+export const giTiempoAnchorWidthOverlayClass = "max-w-0 overflow-hidden";
+
+export const giTiempoFieldWidthSelectPt = {
+  ...giTiempoSelectPt,
+  overlay: { class: giTiempoAnchorWidthOverlayClass },
+} as const;
+
 export const giTiempoDatePickerPt = {
   root: { class: "h-[38px] w-full" },
   pcInputText: {

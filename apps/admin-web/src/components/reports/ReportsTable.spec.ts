@@ -137,7 +137,7 @@ describe('ReportsTable', () => {
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).not.toBe('self');
       expect((autoCompleteControl.props('pt') as AutoCompletePt).overlay).toEqual({
-        class: 'overflow-hidden',
+        class: 'overflow-hidden box-content max-w-0 pr-9',
       });
     }
     expect(search.attributes('placeholder')).toBe('Search report rows');

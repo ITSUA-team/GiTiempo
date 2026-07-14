@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
-import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
+import { giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   EntryActionButton,
@@ -208,7 +208,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           option-value="value"
           placeholder="All sources"
           show-clear
-          :pt="giTiempoSelectPt"
+          :pt="giTiempoFieldWidthSelectPt"
           @update:model-value="updateSourceFilter"
         />
       </div>
@@ -226,7 +226,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           option-value="value"
           placeholder="All"
           show-clear
-          :pt="giTiempoSelectPt"
+          :pt="giTiempoFieldWidthSelectPt"
           @update:model-value="updateVisibilityFilter"
         />
       </div>
@@ -244,7 +244,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           :options="hoursFilterOptions"
           option-label="label"
           option-value="value"
-          :pt="giTiempoSelectPt"
+          :pt="giTiempoFieldWidthSelectPt"
           @update:model-value="updateHoursFilter"
         />
       </div>
@@ -437,7 +437,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
             option-value="value"
             placeholder="All sources"
             show-clear
-            :pt="giTiempoSelectPt"
+            :pt="giTiempoFieldWidthSelectPt"
             @update:model-value="updateSourceFilter"
           />
         </div>
@@ -463,7 +463,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
             aria-label="Filter projects by hours"
             option-label="label"
             option-value="value"
-            :pt="giTiempoSelectPt"
+            :pt="giTiempoFieldWidthSelectPt"
             @update:model-value="updateHoursFilter"
           />
         </div>
@@ -477,7 +477,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
             option-value="value"
             placeholder="All"
             show-clear
-            :pt="giTiempoSelectPt"
+            :pt="giTiempoFieldWidthSelectPt"
             @update:model-value="updateVisibilityFilter"
           />
         </div>
