@@ -4,6 +4,8 @@ import {
   composeGiTiempoAutoCompletePt,
   composeGiTiempoSelfAppendedAutoCompletePt,
   giTiempoAutoCompletePt,
+  giTiempoConfirmDialogPt,
+  giTiempoDialogCloseButtonPt,
   giTiempoDialogPt,
   giTiempoPrimeVueOptions,
   giTiempoSelfAppendedAutoCompleteOverlayClass,
@@ -27,13 +29,16 @@ describe("giTiempoPrimeVueOptions", () => {
   });
 
   it("defines one shared borderless dialog close button treatment", () => {
-    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("rounded-none");
-    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("border-0");
-    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("bg-transparent");
-    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("focus:outline-none");
-    expect(giTiempoDialogPt.pcCloseButton.root.class).toContain("focus-visible:outline-none");
-    expect(giTiempoDialogPt.pcCloseButton.root.class).not.toContain("rounded-full");
-    expect(giTiempoDialogPt.pcCloseButton.root.class).not.toContain("focus-visible:outline-2");
+    expect(giTiempoDialogCloseButtonPt.root.class).toContain("rounded-none");
+    expect(giTiempoDialogCloseButtonPt.root.class).toContain("border-0");
+    expect(giTiempoDialogCloseButtonPt.root.class).toContain("bg-transparent");
+    expect(giTiempoDialogCloseButtonPt.root.class).toContain("focus:outline-none");
+    expect(giTiempoDialogCloseButtonPt.root.class).toContain("focus-visible:outline-none");
+    expect(giTiempoDialogCloseButtonPt.root.class).not.toContain("rounded-full");
+    expect(giTiempoDialogCloseButtonPt.root.class).not.toContain("focus-visible:outline-2");
+    expect(giTiempoConfirmDialogPt.pcCloseButton).toBe(giTiempoDialogCloseButtonPt);
+    expect(giTiempoDialogPt.pcCloseButton).toMatchObject(giTiempoDialogCloseButtonPt);
+    expect(giTiempoPrimeVueOptions.pt.confirmdialog).toBe(giTiempoConfirmDialogPt);
     expect(giTiempoPrimeVueOptions.pt.dialog).toBe(giTiempoDialogPt);
   });
 

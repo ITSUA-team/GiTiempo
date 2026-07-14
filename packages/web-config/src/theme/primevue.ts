@@ -22,12 +22,20 @@ export const giTiempoAutoCompletePt = {
   root: { class: "relative w-full max-w-full min-w-0" },
 } as const;
 
+export const giTiempoDialogCloseButtonPt = {
+  root: {
+    class:
+      "rounded-none border-0 bg-transparent text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 active:border-transparent active:bg-transparent",
+  },
+} as const;
+
+export const giTiempoConfirmDialogPt = {
+  pcCloseButton: giTiempoDialogCloseButtonPt,
+} as const;
+
 export const giTiempoDialogPt = {
   pcCloseButton: {
-    root: {
-      class:
-        "rounded-none border-0 bg-transparent text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 active:border-transparent active:bg-transparent",
-    },
+    ...giTiempoDialogCloseButtonPt,
   },
 } as const;
 
@@ -195,6 +203,7 @@ export const giTiempoThemePreset = definePreset(Aura, {
 export const giTiempoPrimeVueOptions = {
   pt: {
     autocomplete: giTiempoAutoCompletePt,
+    confirmdialog: giTiempoConfirmDialogPt,
     dialog: giTiempoDialogPt,
   },
   theme: {
