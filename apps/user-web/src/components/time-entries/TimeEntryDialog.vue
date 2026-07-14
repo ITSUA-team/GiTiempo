@@ -6,8 +6,9 @@ import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
 import {
-  composeGiTiempoSelfAppendedAutoCompletePt,
-  giTiempoSelfAppendedAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompleteDropdownPt,
+  giTiempoDatePickerPt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
 } from "@gitiempo/web-config/theme";
 import {
   filterAutocompleteOptions,
@@ -125,7 +126,7 @@ const newTaskHint = computed(() => {
 
   return `This task is created in ${projectName} and inherits the project billable default.`;
 });
-const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
+const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompleteDropdownPt({
   dropdown: {
     onMousedown: handleProjectDropdownMouseDown,
   },
@@ -310,7 +311,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           :disabled="!props.projectId || props.isLoadingTasks || isDialogMutating"
           :invalid="!!props.errors.taskId"
           :loading="props.isLoadingTasks"
-          :pt="giTiempoSelfAppendedAutoCompletePt"
+          :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
           :suggestions="props.taskSuggestions"
           placeholder="Search tasks"
           @complete="handleTaskComplete"
@@ -389,6 +390,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
             :disabled="isDialogMutating"
             :invalid="!!props.errors.startedAt"
             :manual-input="false"
+            :pt="giTiempoDatePickerPt"
             show-time
           />
           <small
@@ -415,6 +417,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
             :disabled="isDialogMutating"
             :invalid="!!props.errors.endedAt"
             :manual-input="false"
+            :pt="giTiempoDatePickerPt"
             show-time
           />
           <small

@@ -3,7 +3,11 @@ import { computed, ref } from 'vue';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import type { TimeReportGroupBy } from '@gitiempo/shared';
-import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
+import {
+  giTiempoDatePickerPt,
+  giTiempoSelectPt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
+} from '@gitiempo/web-config/theme';
 import {
   normalizeReportDateRangeValue,
   filterAutocompleteOptions,
@@ -105,37 +109,6 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
   groupBy.value = value;
 }
 
-const autoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
-  pcInputText: {
-    root: {
-      class:
-        'border-divider bg-surface-primary h-[38px] rounded-l-[6px] rounded-r-none border px-3 text-[14px] font-medium text-text-dark shadow-none',
-    },
-  },
-  dropdown: { class: 'w-9 text-text-muted' },
-});
-
-const selectPt = {
-  root: {
-    class:
-      'border-divider bg-surface-primary h-[38px] w-full rounded-[6px] border shadow-none',
-  },
-  label: {
-    class:
-      'flex items-center px-3 py-0 text-[14px] font-medium text-text-dark',
-  },
-  dropdown: { class: 'w-9 text-text-muted' },
-} as const;
-
-const datePickerPt = {
-  root: { class: 'w-full' },
-  pcInputText: {
-    root: {
-      class:
-        'border-divider bg-surface-primary h-[38px] rounded-[6px] border px-3 text-[14px] font-medium text-text-dark shadow-none',
-    },
-  },
-} as const;
 </script>
 
 <template>
@@ -145,7 +118,7 @@ const datePickerPt = {
     :resolver="resolver"
     :validate-on-mount="true"
     :validate-on-value-update="true"
-    class="grid w-full items-start gap-3 lg:h-[78px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px_auto]"
+    class="grid w-full items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_180px_auto]"
   >
     <div class="flex flex-col gap-1.5">
       <label
@@ -167,7 +140,7 @@ const datePickerPt = {
         placeholder="All projects"
         show-clear
         :disabled="disabled"
-        :pt="autoCompletePt"
+        :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
         @complete="handleProjectComplete"
         @update:model-value="handleProjectUpdate"
       />
@@ -193,7 +166,7 @@ const datePickerPt = {
         placeholder="All assigned members"
         show-clear
         :disabled="disabled"
-        :pt="autoCompletePt"
+        :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
         @complete="handleMemberComplete"
         @update:model-value="handleMemberUpdate"
       />
@@ -217,7 +190,7 @@ const datePickerPt = {
         :disabled="disabled"
         fluid
         :invalid="$form.dateRange?.invalid === true"
-        :pt="datePickerPt"
+        :pt="giTiempoDatePickerPt"
         @update:model-value="handleDateRangeUpdate"
       />
       <Message
@@ -243,7 +216,7 @@ const datePickerPt = {
         option-label="label"
         option-value="value"
         :disabled="disabled"
-        :pt="selectPt"
+        :pt="giTiempoSelectPt"
         @update:model-value="handleGroupByUpdate"
       />
     </div>

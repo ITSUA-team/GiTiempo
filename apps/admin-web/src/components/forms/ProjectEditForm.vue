@@ -5,7 +5,11 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import { WorkspaceRoles } from '@gitiempo/shared';
-import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
+import {
+  composeGiTiempoSelfAppendedAutoCompletePt,
+  giTiempoDropdownControlTriggerClass,
+  giTiempoSelectPt,
+} from '@gitiempo/web-config/theme';
 import {
   EditFormPanel,
   LabeledCheckbox,
@@ -42,16 +46,19 @@ const visibilityOptions = [
 ];
 
 const memberAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
-  root: { class: 'min-h-[42px]' },
+  root: { class: 'min-h-[38px]' },
   pcInputText: {
     root: {
-      class: 'min-h-[42px] w-full rounded-[6px] font-sans text-[14px] font-medium',
+      class: 'min-h-[38px] w-full rounded-[6px] font-sans text-[14px] font-medium',
     },
   },
   inputMultiple: {
-    class: 'min-h-[42px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
+    class: 'min-h-[38px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
   },
-  chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+  pcChip: {
+    root: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
+  },
   option: { class: 'font-sans text-[14px]' },
 });
 
@@ -143,7 +150,7 @@ function handleSave({
             option-label="label"
             option-value="value"
             :invalid="$form.visibility?.invalid"
-            class="h-[42px]"
+            :pt="giTiempoSelectPt"
             fluid
           />
         </div>

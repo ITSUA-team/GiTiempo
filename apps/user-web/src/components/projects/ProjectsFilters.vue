@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Select from "primevue/select";
-import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
+import {
+  giTiempoSelectPt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
+} from "@gitiempo/web-config/theme";
 
 import type {
   ProjectStatusFilterOption,
@@ -76,7 +79,7 @@ function updateUpdatedFilter(
         dropdown-mode="blank"
         fluid
         :min-length="0"
-        :pt="giTiempoSelfAppendedAutoCompletePt"
+        :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
         @complete="emitSearchComplete"
         @update:model-value="updateSearchValue"
       >
@@ -112,6 +115,7 @@ function updateUpdatedFilter(
         :model-value="statusFilter"
         fluid
         :options="statusFilterOptions"
+        :pt="giTiempoSelectPt"
         @update:model-value="updateStatusFilter"
       />
     </div>
@@ -132,6 +136,7 @@ function updateUpdatedFilter(
         :model-value="updatedFilter"
         fluid
         :options="updatedFilterOptions"
+        :pt="giTiempoSelectPt"
         @update:model-value="updateUpdatedFilter"
       />
     </div>

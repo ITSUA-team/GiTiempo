@@ -12,6 +12,51 @@ export const giTiempoSelfAppendedAutoCompleteOverlayStyle = {
   width: "100%",
 } as const;
 
+export const giTiempoDropdownControlBaseClass =
+  "border-divider bg-surface-primary h-[38px] border font-sans text-[14px] font-medium text-text-dark shadow-none";
+
+export const giTiempoDropdownControlInputClass =
+  `${giTiempoDropdownControlBaseClass} w-full rounded-[6px] px-3`;
+
+export const giTiempoDropdownControlJoinedInputClass =
+  `${giTiempoDropdownControlBaseClass} w-full rounded-l-[6px] rounded-r-none px-3`;
+
+export const giTiempoDropdownControlRootClass =
+  `${giTiempoDropdownControlBaseClass} w-full rounded-[6px]`;
+
+export const giTiempoDropdownControlLabelClass =
+  "flex h-full items-center px-3 py-0 font-sans text-[14px] font-medium text-text-dark";
+
+export const giTiempoDropdownControlTriggerClass =
+  "h-[38px] w-9 text-text-muted";
+
+export const giTiempoSelectPt = {
+  root: { class: giTiempoDropdownControlRootClass },
+  label: { class: giTiempoDropdownControlLabelClass },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+} as const;
+
+export const giTiempoDatePickerPt = {
+  root: { class: "h-[38px] w-full" },
+  pcInputText: {
+    root: { class: giTiempoDropdownControlInputClass },
+  },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+  panel: {
+    class:
+      "border-divider bg-surface-primary rounded-md border text-text-dark shadow-popover",
+  },
+} as const;
+
+export const giTiempoDropdownAutoCompletePt = {
+  root: { class: "h-[38px]" },
+  pcInputText: {
+    root: { class: giTiempoDropdownControlJoinedInputClass },
+  },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+  option: { class: "font-sans text-[14px]" },
+} satisfies GiTiempoAutoCompletePt;
+
 export const giTiempoAutoCompletePt = {
   listContainer: { class: "max-w-full overflow-x-hidden" },
   option: { class: "max-w-full min-w-0 truncate" },
@@ -49,13 +94,20 @@ type AutoCompleteInputPt = {
   root?: PrimeVuePtSection;
 };
 
+type AutoCompleteNestedPt = {
+  root?: PrimeVuePtSection;
+  [attribute: string]: unknown;
+};
+
 export type GiTiempoAutoCompletePt = {
-  chip?: PrimeVuePtSection;
+  chipIcon?: PrimeVuePtSection;
+  chipItem?: PrimeVuePtSection;
   dropdown?: PrimeVuePtSection;
   inputMultiple?: PrimeVuePtSection;
   listContainer?: PrimeVuePtSection;
   option?: PrimeVuePtSection;
   overlay?: PrimeVuePtSection;
+  pcChip?: AutoCompleteNestedPt;
   pcInputText?: AutoCompleteInputPt;
   root?: PrimeVuePtSection;
 };
@@ -99,6 +151,25 @@ function mergePtSection(
   };
 }
 
+function mergeNestedPtSection(
+  base: AutoCompleteNestedPt | undefined,
+  override: AutoCompleteNestedPt | undefined,
+): AutoCompleteNestedPt | undefined {
+  if (!base) {
+    return override;
+  }
+
+  if (!override) {
+    return base;
+  }
+
+  return {
+    ...base,
+    ...override,
+    root: mergePtSection(base.root, override.root),
+  };
+}
+
 function composeAutoCompletePt(
   baseline: GiTiempoAutoCompletePt,
   override: GiTiempoAutoCompletePt,
@@ -106,7 +177,8 @@ function composeAutoCompletePt(
   return {
     ...baseline,
     ...override,
-    chip: mergePtSection(baseline.chip, override.chip),
+    chipIcon: mergePtSection(baseline.chipIcon, override.chipIcon),
+    chipItem: mergePtSection(baseline.chipItem, override.chipItem),
     dropdown: mergePtSection(baseline.dropdown, override.dropdown),
     inputMultiple: mergePtSection(baseline.inputMultiple, override.inputMultiple),
     listContainer: mergePtSection(
@@ -115,6 +187,7 @@ function composeAutoCompletePt(
     ),
     option: mergePtSection(baseline.option, override.option),
     overlay: mergePtSection(baseline.overlay, override.overlay),
+    pcChip: mergeNestedPtSection(baseline.pcChip, override.pcChip),
     pcInputText: {
       ...baseline.pcInputText,
       ...override.pcInputText,
@@ -143,10 +216,26 @@ export const giTiempoSelfAppendedAutoCompletePt = composeGiTiempoAutoCompletePt(
   },
 });
 
+export const giTiempoAutoCompleteDropdownPt = composeGiTiempoAutoCompletePt(
+  giTiempoDropdownAutoCompletePt,
+);
+
+export const giTiempoSelfAppendedAutoCompleteDropdownPt =
+  composeGiTiempoSelfAppendedAutoCompletePt(giTiempoDropdownAutoCompletePt);
+
 export function composeGiTiempoSelfAppendedAutoCompletePt(
   override: GiTiempoAutoCompletePt = {},
 ): GiTiempoAutoCompletePt {
   return composeAutoCompletePt(giTiempoSelfAppendedAutoCompletePt, override);
+}
+
+export function composeGiTiempoSelfAppendedAutoCompleteDropdownPt(
+  override: GiTiempoAutoCompletePt = {},
+): GiTiempoAutoCompletePt {
+  return composeAutoCompletePt(
+    giTiempoSelfAppendedAutoCompleteDropdownPt,
+    override,
+  );
 }
 
 export const giTiempoThemePreset = definePreset(Aura, {

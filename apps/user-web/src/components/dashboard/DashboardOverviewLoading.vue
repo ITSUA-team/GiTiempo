@@ -29,7 +29,7 @@ import { SurfaceCard } from "@gitiempo/web-shared";
 
     <SurfaceCard
       body-class="flex flex-col gap-4"
-      padding-class="p-5"
+      padding-class="p-6"
     >
       <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-2">
@@ -99,7 +99,7 @@ import { SurfaceCard } from "@gitiempo/web-shared";
 
     <SurfaceCard
       body-class="flex flex-col gap-4"
-      padding-class="p-5"
+      padding-class="p-6"
     >
       <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-2">

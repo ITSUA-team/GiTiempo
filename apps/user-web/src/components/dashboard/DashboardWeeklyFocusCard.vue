@@ -20,7 +20,7 @@ function getFallbackDescription(label: string): string {
 <template>
   <SurfaceCard
     body-class="flex flex-col gap-4"
-    padding-class="p-4 sm:p-5"
+    padding-class="p-6"
   >
     <SectionHeader
       description="Your strongest project and task based on this week's tracked entries."
@@ -36,7 +36,7 @@ function getFallbackDescription(label: string): string {
     </SectionHeader>
 
     <div class="grid min-w-0 gap-4 xl:grid-cols-2">
-      <div class="bg-app-bg flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-3 sm:p-4">
+      <div class="bg-app-bg flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4">
         <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
           Top Project
         </p>
@@ -59,7 +59,7 @@ function getFallbackDescription(label: string): string {
         </p>
       </div>
 
-      <div class="bg-app-bg flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-3 sm:p-4">
+      <div class="bg-app-bg flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4">
         <p class="text-text-muted text-xs font-semibold tracking-wide uppercase">
           Top Task
         </p>

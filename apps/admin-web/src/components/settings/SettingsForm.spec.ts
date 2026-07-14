@@ -14,6 +14,7 @@ const AutoCompleteStub = {
 		'minLength',
 		'modelValue',
 		'optionLabel',
+		'pt',
 		'suggestions',
 	],
 	emits: ['complete', 'update:modelValue'],
@@ -22,7 +23,7 @@ const AutoCompleteStub = {
 			<input
 				:id="inputId"
 				:aria-invalid="invalid ? 'true' : undefined"
-				:class="$attrs.class"
+				:class="[$attrs.class, pt?.pcInputText?.root?.class]"
 				:data-complete-on-focus="completeOnFocus === false || completeOnFocus === undefined ? 'false' : 'true'"
 				:data-force-selection="forceSelection === false || forceSelection === undefined ? 'false' : 'true'"
 				:data-min-length="String(minLength)"

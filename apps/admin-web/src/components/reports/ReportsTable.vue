@@ -144,8 +144,8 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
 </script>
 
 <template>
-  <div>
-    <div class="mb-4">
+  <div class="flex flex-col gap-4">
+    <div>
       <SectionHeader title="Results">
         <template #actions>
           <IconField class="w-full sm:w-[280px]">
@@ -163,7 +163,7 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
     </div>
 
     <template v-if="isMobileViewport">
-      <div class="mb-4 grid gap-3">
+      <div class="grid gap-3">
         <div class="flex flex-col gap-1.5">
           <label
             for="mobile-report-project-filter"

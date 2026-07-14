@@ -72,24 +72,24 @@ export const managementTableColumnPt = {
   },
 } as const;
 
-export const managementTableFilterInputClass = 'h-[34px] w-full rounded-[6px] text-[12px]';
+export const managementTableFilterInputClass = 'h-[38px] w-full rounded-[6px] text-[13px]';
 
 const managementTableFilterAutoCompleteInputClass =
-  'h-[34px] w-full rounded-l-[6px] rounded-r-none text-[12px]';
+  'h-[38px] w-full rounded-l-[6px] rounded-r-none text-[13px]';
 
 export const managementTableFilterAutoCompletePt = {
-  root: { class: 'h-[34px]' },
+  root: { class: 'h-[38px]' },
   pcInputText: {
     root: { class: managementTableFilterAutoCompleteInputClass },
   },
-  dropdown: { class: 'h-[34px] w-8 text-text-muted' },
-  option: { class: 'text-[12px]' },
+  dropdown: { class: 'h-[38px] w-9 text-text-muted' },
+  option: { class: 'text-[13px]' },
 } satisfies AutoCompletePassThroughOptions;
 
 const managementTableFilterDropdownRootClass =
-  'h-[34px] w-full items-center rounded-[6px] font-sans text-[12px]';
+  'h-[38px] w-full items-center rounded-[6px] font-sans text-[13px]';
 const managementTableFilterDropdownLabelClass =
-  'flex h-full items-center py-0 font-sans text-[12px] font-normal leading-none text-text-muted';
+  'flex h-full items-center py-0 font-sans text-[13px] font-normal leading-none text-text-muted';
 
 export const managementTableFilterSelectPt = {
   root: { class: managementTableFilterDropdownRootClass },

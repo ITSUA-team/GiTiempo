@@ -18,7 +18,7 @@ withDefaults(
   {
     bodyClass: "flex min-h-52 flex-col items-center justify-center gap-3 text-center",
     border: false,
-    paddingClass: "p-5",
+    paddingClass: "p-6",
     retryLabel: null,
   },
 );

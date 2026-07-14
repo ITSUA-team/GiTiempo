@@ -4,7 +4,10 @@ import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
+import {
+  giTiempoSelectPt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
+} from "@gitiempo/web-config/theme";
 import {
   AppDialog,
   filterAutocompleteOptions,
@@ -166,7 +169,7 @@ function handleProjectComplete(event: { query: string }): void {
         <div
           v-if="props.mode === 'edit'"
           aria-labelledby="project-task-project-label"
-          class="border-divider bg-surface-primary text-text-dark flex h-[38px] items-center rounded-md border px-3 text-sm"
+          class="border-divider bg-surface-primary text-text-dark flex h-[38px] items-center rounded-[6px] border px-3 text-sm"
           role="textbox"
           aria-readonly="true"
         >
@@ -186,7 +189,7 @@ function handleProjectComplete(event: { query: string }): void {
           :min-length="0"
           option-label="name"
           placeholder="Select project"
-          :pt="giTiempoSelfAppendedAutoCompletePt"
+          :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
           :disabled="isDialogMutating"
           :invalid="!!props.errors.projectId"
           :suggestions="projectSuggestions"
@@ -241,6 +244,7 @@ function handleProjectComplete(event: { query: string }): void {
           :disabled="isDialogMutating"
           :invalid="!!props.errors.status"
           :options="statusOptions"
+          :pt="giTiempoSelectPt"
         />
         <small
           v-if="props.errors.status"

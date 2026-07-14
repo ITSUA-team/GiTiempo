@@ -46,6 +46,7 @@
 - Base unit: `4px`.
 - Common spacing: `gap-4` / `p-4`.
 - Section spacing: `gap-6` / `gap-8`.
+- Page-level cards and panels use the shared `SurfaceCard` default `p-6`. Compact nested blocks, stat cards, mobile record cards, and dense filter bars use `p-4`. Use `p-5` only for documented 20px exceptions such as Settings cards.
 
 | Context               | Token              | Class            |
 | --------------------- | ------------------ | ---------------- |
@@ -93,6 +94,7 @@ Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<AutoComplete>`
 - Background: `bg-surface-primary`.
 - Error state: `invalid` prop plus `<small class="text-xs text-destructive">`.
 - Full width: `class="w-full"`.
+- Dropdown-like app form controls (`Select`, dropdown `AutoComplete`, and `DatePicker`) use the shared 38px PT exports from `@gitiempo/web-config/theme`. Admin management-table filter controls use the shared `managementTable*Pt` exports from `@gitiempo/web-shared`.
 - App form, dialog, and setup-bar single-select controls use PrimeVue `<Select>` by default when the possible option set is fixed and has 5 items or fewer, including small enum fields such as Public/Private visibility. Use `<AutoComplete dropdown forceSelection>` when the option set can exceed 5 items or needs predictive lookup. Keep table-column filter rows on their documented controls. Do not render design annotations such as `AutoComplete` or `Select` as visible control text.
 
 ```vue

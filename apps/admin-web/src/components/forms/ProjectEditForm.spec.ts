@@ -139,6 +139,7 @@ const stubs = {
       optionLabel: String,
       optionValue: String,
       options: Array,
+      pt: Object,
     },
     template:
       '<select :id="inputId" :name="name"><option v-for="option in options" :key="option.value">{{ option.label }}</option></select>',
@@ -183,10 +184,17 @@ describe('ProjectEditForm', () => {
     expect(memberInput.props('placeholder')).toBe('Search members...');
     expect(memberInput.props('pt')).toMatchObject({
       inputMultiple: {
-        class: expect.stringContaining('min-h-[42px]'),
+        class: expect.stringContaining('min-h-[38px]'),
+      },
+      pcChip: {
+        root: {
+          class: expect.stringContaining('bg-accent-tint'),
+        },
       },
     });
-    expect(visibilityInput.attributes('class')).toContain('h-[42px]');
+    expect(visibilityInput.props('pt')).toMatchObject({
+      root: { class: expect.stringContaining('h-[38px]') },
+    });
     expect(visibilityInput.props('optionLabel')).toBe('label');
     expect(visibilityInput.props('optionValue')).toBe('value');
     expect(visibilityInput.props('options')).toEqual([

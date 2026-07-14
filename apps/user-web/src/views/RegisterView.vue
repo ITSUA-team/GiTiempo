@@ -26,7 +26,7 @@ const {
         <div class="flex w-full flex-1 items-start justify-center px-5 py-6 sm:px-8 sm:py-8 lg:items-center lg:px-12 lg:py-12">
           <SurfaceCard
             border
-            padding-class="p-5 sm:p-6 lg:p-8"
+            padding-class="p-6"
             class="w-full max-w-[500px]"
           >
             <RegisterFormPanel

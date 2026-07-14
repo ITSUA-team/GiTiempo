@@ -154,7 +154,7 @@ onMounted(fetchAll);
         />
       </div>
 
-      <SurfaceCard padding-class="p-5">
+      <SurfaceCard padding-class="p-6">
         <ProjectsTable
           :empty-description="projectTableEmptyDescription"
           :expanded-rows="projectTableExpandedRows"

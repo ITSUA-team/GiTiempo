@@ -1081,7 +1081,7 @@ describe("TimeEntriesView", () => {
     });
   });
 
-  it("keeps the date range input styling local while applying dropdown panel styling", async () => {
+  it("applies the shared date range input and dropdown panel styling", async () => {
     const client = createClientMock();
     const { wrapper } = await mountView(client);
 
@@ -1096,8 +1096,9 @@ describe("TimeEntriesView", () => {
     expect(dateRangeFilter.attributes("data-show-button-bar")).toBe("true");
     expect(dateRangeFilter.attributes("data-show-clear")).toBe("true");
     expect(dateRangeFilter.attributes("data-show-icon")).toBe("true");
-    expect(dateRangeFilter.attributes("data-pt-input-class")).toBe("");
-    expect(dateRangeFilter.attributes("data-pt-root-class")).toBe("");
+    expect(dateRangeFilter.attributes("data-pt-input-class")).toContain("h-[38px]");
+    expect(dateRangeFilter.attributes("data-pt-input-class")).toContain("rounded-[6px]");
+    expect(dateRangeFilter.attributes("data-pt-root-class")).toContain("h-[38px]");
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("shadow-popover");
     expect(dateRangeFilter.attributes("data-pt-panel-class")).toContain("rounded-md");
   });

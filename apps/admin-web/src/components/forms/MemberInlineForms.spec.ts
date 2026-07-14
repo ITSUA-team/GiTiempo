@@ -166,7 +166,12 @@ describe('member inline forms', () => {
     expect(projectSelect.props('placeholder')).toBe('Search projects...');
     expect(projectSelect.props('pt')).toMatchObject({
       inputMultiple: {
-        class: expect.stringContaining('min-h-[42px]'),
+        class: expect.stringContaining('min-h-[38px]'),
+      },
+      pcChip: {
+        root: {
+          class: expect.stringContaining('bg-accent-tint'),
+        },
       },
     });
     expect(projectSelect.props('suggestions')).toEqual(['project-1', 'project-2']);

@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompleteDropdownPt,
   composeGiTiempoSelfAppendedAutoCompletePt,
+  giTiempoAutoCompleteDropdownPt,
   giTiempoAutoCompletePt,
   giTiempoConfirmDialogPt,
+  giTiempoDatePickerPt,
   giTiempoDialogCloseButtonPt,
   giTiempoDialogPt,
+  giTiempoDropdownControlInputClass,
+  giTiempoSelectPt,
   giTiempoPrimeVueOptions,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
   giTiempoSelfAppendedAutoCompleteOverlayClass,
   giTiempoSelfAppendedAutoCompleteOverlayStyle,
   giTiempoSelfAppendedAutoCompletePt,
@@ -45,18 +51,53 @@ describe("giTiempoPrimeVueOptions", () => {
   it("composes autocomplete instance overrides with the shared baseline", () => {
     expect(
       composeGiTiempoAutoCompletePt({
-        option: { class: "text-[12px]" },
-        pcInputText: { root: { class: "h-[34px]" } },
-        root: { class: "h-[34px]" },
+        option: { class: "text-[13px]" },
+        pcInputText: { root: { class: "h-[38px]" } },
+        root: { class: "h-[38px]" },
       }),
     ).toMatchObject({
       listContainer: { class: "max-w-full overflow-x-hidden" },
-      option: { class: "max-w-full min-w-0 truncate text-[12px]" },
+      option: { class: "max-w-full min-w-0 truncate text-[13px]" },
       overlay: {
         class: "overflow-hidden",
       },
-      pcInputText: { root: { class: "truncate h-[34px]" } },
-      root: { class: "relative w-full max-w-full min-w-0 h-[34px]" },
+      pcInputText: { root: { class: "truncate h-[38px]" } },
+      root: { class: "relative w-full max-w-full min-w-0 h-[38px]" },
+    });
+  });
+
+  it("composes multiple autocomplete chip styles with valid PrimeVue pt keys", () => {
+    expect(
+      composeGiTiempoAutoCompletePt({
+        pcChip: { root: { class: "bg-accent-tint" } },
+      }).pcChip?.root,
+    ).toMatchObject({
+      class: "bg-accent-tint",
+    });
+  });
+
+  it("defines one shared dropdown control treatment", () => {
+    expect(giTiempoSelectPt.root.class).toContain("h-[38px]");
+    expect(giTiempoSelectPt.root.class).toContain("border-divider");
+    expect(giTiempoSelectPt.label.class).toContain("text-[14px]");
+    expect(giTiempoSelectPt.dropdown.class).toContain("w-9");
+    expect(giTiempoDatePickerPt.pcInputText.root.class).toBe(
+      giTiempoDropdownControlInputClass,
+    );
+    expect(giTiempoAutoCompleteDropdownPt.pcInputText?.root?.class).toContain(
+      "rounded-r-none",
+    );
+    expect(giTiempoAutoCompleteDropdownPt.dropdown?.class).toContain("h-[38px]");
+    expect(giTiempoSelfAppendedAutoCompleteDropdownPt.overlay?.style).toEqual(
+      giTiempoSelfAppendedAutoCompleteOverlayStyle,
+    );
+    expect(
+      composeGiTiempoSelfAppendedAutoCompleteDropdownPt({
+        pcInputText: { root: { autocomplete: "off" } },
+      }).pcInputText?.root,
+    ).toMatchObject({
+      autocomplete: "off",
+      class: expect.stringContaining("h-[38px]"),
     });
   });
 

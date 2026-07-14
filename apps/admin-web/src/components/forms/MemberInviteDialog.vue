@@ -5,6 +5,7 @@ import { AppDialog, WORKSPACE_ROLE_OPTIONS, workspaceInviteFormSchema } from '@g
 import type { WorkspaceInviteFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
+import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
@@ -132,6 +133,7 @@ function handleVisibleChange(nextVisible: boolean): void {
             placeholder="Select a role"
             :invalid="role?.invalid"
             class="w-full"
+            :pt="giTiempoSelectPt"
           />
           <Message
             v-if="role?.invalid"

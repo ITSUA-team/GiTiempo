@@ -18,7 +18,7 @@ import Skeleton from 'primevue/skeleton';
       />
     </div>
 
-    <SurfaceCard padding-class="p-5">
+    <SurfaceCard padding-class="p-6">
       <div class="flex flex-col gap-4">
         <Skeleton
           width="8.5rem"

@@ -41,7 +41,7 @@ const groupSkeletons = [
     </SurfaceCard>
 
     <div
-      class="flex flex-col gap-5"
+      class="flex flex-col gap-6"
       data-testid="time-entries-loading-groups"
     >
       <section
@@ -64,7 +64,7 @@ const groupSkeletons = [
         <SurfaceCard
           border
           body-class="flex flex-col gap-3"
-          padding-class="p-3 sm:p-4"
+          padding-class="p-4"
         >
           <div
             class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px_96px] sm:items-center"
@@ -88,7 +88,7 @@ const groupSkeletons = [
       border
       body-class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       data-testid="time-entries-loading-pagination"
-      padding-class="p-3 sm:p-4"
+      padding-class="p-4"
     >
       <Skeleton
         width="9rem"

@@ -4,7 +4,7 @@ import type {
   GitHubOwner,
   WorkspaceGitHubOrganizationResponse,
 } from '@gitiempo/shared';
-import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
+import { composeGiTiempoSelfAppendedAutoCompleteDropdownPt } from '@gitiempo/web-config/theme';
 import { filterAutocompleteOptions } from '@gitiempo/web-shared';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
@@ -52,7 +52,7 @@ const emit = defineEmits<{
 
 const githubOrganizationSelectorInputId =
   'settings-github-organization-selector';
-const organizationAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
+const organizationAutoCompletePt = composeGiTiempoSelfAppendedAutoCompleteDropdownPt({
   pcInputText: {
     root: {
       autocomplete: 'off',
@@ -139,7 +139,7 @@ watch(
         <div
           v-for="index in 2"
           :key="index"
-          class="border-divider bg-app-bg flex items-center justify-between gap-4 rounded-lg border p-3.5"
+          class="border-divider bg-app-bg flex items-center justify-between gap-4 rounded-lg border p-4"
         >
           <div class="flex min-w-0 flex-1 flex-col gap-2">
             <Skeleton
@@ -179,7 +179,7 @@ watch(
           v-for="organization in items"
           :key="organization.id"
           :data-testid="`settings-github-organization-row-${organization.id}`"
-          class="border-divider bg-app-bg flex items-center justify-between gap-4 rounded-lg border p-3.5"
+          class="border-divider bg-app-bg flex items-center justify-between gap-4 rounded-lg border p-4"
         >
           <div class="flex min-w-0 flex-1 flex-col gap-0.5">
             <span class="text-text-dark truncate text-sm font-semibold">
@@ -222,7 +222,7 @@ watch(
           v-for="step in recoveryChecklist.steps"
           :key="step.id"
           :data-testid="`settings-github-recovery-step-${step.id}`"
-          class="border-divider bg-app-bg flex flex-col justify-between gap-3 rounded-lg border p-3"
+          class="border-divider bg-app-bg flex flex-col justify-between gap-3 rounded-lg border p-4"
         >
           <h4 class="text-text-dark text-sm font-semibold">
             {{ step.title }}
@@ -271,7 +271,7 @@ watch(
     <section
       v-if="shouldShowAddGate"
       data-testid="settings-github-add-gate"
-      class="border-divider bg-app-bg rounded-lg border p-3.5"
+      class="border-divider bg-app-bg rounded-lg border p-4"
     >
       <p class="text-text-muted text-[13px] leading-5">
         {{ addOrganizationGateMessage }}
@@ -280,7 +280,7 @@ watch(
 
     <section
       v-if="canShowAddOrganization"
-      class="flex flex-col gap-2.5"
+      class="flex flex-col gap-3"
     >
       <div class="flex flex-col gap-1">
         <h3 class="text-text-dark text-base font-semibold">
@@ -316,7 +316,7 @@ watch(
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
           <AutoComplete
             append-to="self"
-            class="h-[38px] w-full sm:min-w-0 sm:flex-1"
+            class="w-full sm:min-w-0 sm:flex-1"
             complete-on-focus
             data-key="login"
             dropdown
