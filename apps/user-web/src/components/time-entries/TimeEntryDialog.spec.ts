@@ -241,6 +241,15 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.text()).toContain("Delete entry");
     expect(wrapper.text()).toContain("Save changes");
     expect(wrapper.text()).not.toContain("Cancel");
+    expect(wrapper.get('[data-testid="time-entry-dialog-footer"]').classes()).toContain(
+      "justify-between",
+    );
+    expect(wrapper.get('[data-footer-actions="destructive"]').text()).toBe(
+      "Delete entry",
+    );
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toBe(
+      "Save changes",
+    );
     expect(wrapper.find('[data-testid="time-entry-project"]').exists()).toBe(true);
     expect(wrapper.find("select").exists()).toBe(false);
     expect(wrapper.find("textarea").element.value).toContain("Summarize PM scope changes");
@@ -256,6 +265,15 @@ describe("TimeEntryDialog", () => {
     expect(wrapper.text()).toContain("Save entry");
     expect(wrapper.text()).not.toContain("Delete entry");
     expect(wrapper.text()).not.toContain("Cancel");
+    expect(wrapper.get('[data-testid="time-entry-dialog-footer"]').classes()).toContain(
+      "justify-end",
+    );
+    expect(wrapper.find('[data-footer-actions="destructive"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toBe(
+      "Save entry",
+    );
   });
 
   it("renders edit date picker values as browser-local wall-clock times", () => {

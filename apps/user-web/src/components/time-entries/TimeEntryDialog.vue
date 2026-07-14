@@ -17,6 +17,7 @@ import {
 } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
 
+import DialogFooterActionGroups from "@/components/dialogs/DialogFooterActionGroups.vue";
 import {
   isNewTaskLookupOption,
   type TaskLookupOption,
@@ -461,17 +462,21 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button
-          v-if="props.mode === 'edit'"
-          type="button"
-          label="Delete entry"
-          severity="danger"
-          variant="outlined"
-          :disabled="isDialogMutating"
-          :loading="props.isDeleting"
-          @click="emit('deleteEntry')"
-        />
+      <DialogFooterActionGroups
+        data-testid="time-entry-dialog-footer"
+        :has-destructive-actions="props.mode === 'edit'"
+      >
+        <template #destructive>
+          <Button
+            type="button"
+            label="Delete entry"
+            severity="danger"
+            variant="outlined"
+            :disabled="isDialogMutating"
+            :loading="props.isDeleting"
+            @click="emit('deleteEntry')"
+          />
+        </template>
         <Button
           type="button"
           :label="props.saveLabel"
@@ -479,7 +484,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           :loading="props.isSaving"
           @click="emit('save')"
         />
-      </div>
+      </DialogFooterActionGroups>
     </template>
   </Dialog>
 </template>
