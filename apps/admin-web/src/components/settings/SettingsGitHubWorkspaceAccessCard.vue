@@ -191,7 +191,7 @@ watch(
           </div>
           <Button
             label="Remove"
-            severity="secondary"
+            severity="danger"
             outlined
             size="small"
             :disabled="adding"

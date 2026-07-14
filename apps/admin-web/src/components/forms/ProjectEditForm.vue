@@ -155,10 +155,11 @@ function handleSave({
           class="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-2.5"
         >
           <Button
-            unstyled
-            :disabled="saving"
             type="button"
-            class="border-destructive bg-surface-primary text-destructive focus-visible:outline-destructive inline-flex h-[42px] w-full cursor-pointer items-center justify-center gap-2 rounded-sm border px-3.5 py-2 font-sans text-[13px] leading-none font-semibold whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            severity="danger"
+            variant="outlined"
+            class="w-full gap-2 sm:w-auto"
+            :disabled="saving"
             @click="project.isActive ? emit('archive') : emit('unarchive')"
           >
             <svg
@@ -179,22 +180,20 @@ function handleSave({
             {{ project.isActive ? 'Archive project' : 'Unarchive project' }}
           </Button>
           <Button
-            unstyled
             type="button"
-            class="border-divider bg-surface-primary text-text-dark focus-visible:outline-brand inline-flex h-[42px] w-full cursor-pointer items-center justify-center rounded-sm border px-3.5 py-2 font-sans text-[13px] leading-none font-medium whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            label="Cancel"
+            severity="secondary"
+            variant="outlined"
+            class="w-full sm:w-auto"
             @click="emit('cancelled')"
-          >
-            Cancel
-          </Button>
+          />
           <Button
-            unstyled
+            type="submit"
+            label="Save"
+            class="w-full sm:w-auto"
             :disabled="saving"
             :loading="saving"
-            type="submit"
-            class="bg-brand text-text-inverse focus-visible:outline-brand inline-flex h-[42px] w-full cursor-pointer items-center justify-center rounded-sm border-0 px-3.5 py-2 font-sans text-[13px] leading-none font-semibold whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-          >
-            Save
-          </Button>
+          />
         </div>
       </div>
     </Form>

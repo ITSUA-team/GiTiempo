@@ -210,20 +210,8 @@ describe('member inline forms', () => {
       button.text() === 'Remove member',
     );
 
-    expect(removeButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-surface-primary',
-        'border-destructive',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-destructive',
-        'font-semibold',
-      ]),
-    );
+    expect(removeButton?.attributes('severity')).toBe('danger');
+    expect(removeButton?.attributes('variant')).toBe('outlined');
 
     const cancelButton = wrapper.findAll('button').find((button) =>
       button.text() === 'Cancel',
@@ -232,34 +220,11 @@ describe('member inline forms', () => {
       button.text() === 'Save changes',
     );
 
-    expect(cancelButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-surface-primary',
-        'border-divider',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-text-dark',
-        'font-medium',
-      ]),
-    );
-    expect(saveButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-brand',
-        'border-0',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-text-inverse',
-        'font-semibold',
-      ]),
-    );
+    expect(cancelButton?.attributes('severity')).toBe('secondary');
+    expect(cancelButton?.attributes('variant')).toBe('outlined');
+    // The save action stays the default primary button (no severity override).
+    expect(saveButton?.attributes('severity')).toBeUndefined();
+    expect(saveButton?.attributes('type')).toBe('submit');
 
     await wrapper.get('button').trigger('click');
 

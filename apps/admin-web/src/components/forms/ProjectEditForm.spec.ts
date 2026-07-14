@@ -235,48 +235,13 @@ describe('ProjectEditForm', () => {
       button.text() === 'Save',
     );
 
-    expect(archiveButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-surface-primary',
-        'border-destructive',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-destructive',
-        'font-semibold',
-      ]),
-    );
-    expect(cancelButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-surface-primary',
-        'border-divider',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-text-dark',
-        'font-medium',
-      ]),
-    );
-    expect(saveButton?.classes()).toEqual(
-      expect.arrayContaining([
-        'bg-brand',
-        'border-0',
-        'cursor-pointer',
-        'h-[42px]',
-        'rounded-sm',
-        'px-3.5',
-        'py-2',
-        'text-[13px]',
-        'text-text-inverse',
-        'font-semibold',
-      ]),
-    );
+    expect(archiveButton?.attributes('severity')).toBe('danger');
+    expect(archiveButton?.attributes('variant')).toBe('outlined');
+    expect(cancelButton?.attributes('severity')).toBe('secondary');
+    expect(cancelButton?.attributes('variant')).toBe('outlined');
+    // The save action stays the default primary button (no severity override).
+    expect(saveButton?.attributes('severity')).toBeUndefined();
+    expect(saveButton?.attributes('type')).toBe('submit');
   });
 
   it('emits the status-specific action from the inline project settings panel', async () => {
