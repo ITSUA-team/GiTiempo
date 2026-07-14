@@ -44,23 +44,22 @@ const emit = defineEmits<{
 }>();
 
 // The clear icon overlays the input text, so give it an opaque surface
-// backing to keep it readable over long values.
+// backing to keep it readable over long values. end-10 keeps it 4px from
+// the w-9 dropdown trigger instead of the wider theme default offset.
 const clearIconPt = {
-  class: 'box-content bg-surface-primary px-1',
+  class: 'box-content bg-surface-primary end-10',
 } as const;
 
-// The token's px-3 (utilities layer) overrides the theme's reserved
-// clear-icon padding (primevue layer), so restore it for clearable inputs
-// to truncate text before it reaches the icon.
+// PrimeVue flags the root with p-autocomplete-clearable only while the
+// clear icon is rendered, so reserve input padding for the icon in that
+// state alone — otherwise text runs the full width up to the chevron.
+const clearableInputClass = '[.p-autocomplete-clearable_&]:pr-7';
+
 const passThrough = computed(() => {
   const base =
     props.appendTo === 'self'
       ? giTiempoSelfAppendedAutoCompleteDropdownPt
       : giTiempoAutoCompleteDropdownPt;
-
-  if (!props.showClear) {
-    return { ...base, clearIcon: clearIconPt };
-  }
 
   return {
     ...base,
@@ -69,7 +68,7 @@ const passThrough = computed(() => {
       ...base.pcInputText,
       root: {
         ...base.pcInputText?.root,
-        class: [base.pcInputText?.root?.class, 'pr-9']
+        class: [base.pcInputText?.root?.class, clearableInputClass]
           .filter(Boolean)
           .join(' '),
       },
