@@ -224,16 +224,15 @@ describe('MembersTable', () => {
     expect((memberQueryFilter.props('pt') as AutoCompletePt).overlay).toEqual({
       class: 'overflow-hidden',
     });
-    expect(projectFilter.props('multiple')).toBe(true);
+    expect(projectFilter.props('multiple')).toBe(false);
     expect(projectFilter.props('dropdown')).toBe(true);
     expect(projectFilter.props('dropdownMode')).toBe('blank');
     expect(projectFilter.props('forceSelection')).toBe(true);
     expect(projectFilter.props('completeOnFocus')).toBe(true);
-    expect(projectFilter.props('modelValue')).toEqual([]);
+    expect(projectFilter.props('showClear')).toBe(true);
+    expect(projectFilter.props('modelValue')).toBeNull();
     expect(projectFilter.props('placeholder')).toBe('All projects');
-    expect((projectFilter.props('optionLabel') as (projectId: string) => string)('project-1')).toBe(
-      'Project Orion',
-    );
+    expect(projectFilter.props('optionLabel')).toBe('label');
 
     memberQueryFilter.vm.$emit('complete', { query: '' });
     projectFilter.vm.$emit('complete', { query: '' });
@@ -242,7 +241,10 @@ describe('MembersTable', () => {
     expect(memberQueryFilter.props('suggestions')).toEqual(
       expect.arrayContaining(['Pat PM', 'pat@example.com', 'Alex Admin', 'alex@example.com']),
     );
-    expect(projectFilter.props('suggestions')).toEqual(['project-2', 'project-1']);
+    expect(projectFilter.props('suggestions')).toEqual([
+      { label: 'Billing API', value: 'project-2' },
+      { label: 'Project Orion', value: 'project-1' },
+    ]);
 
     memberQueryFilter.vm.$emit('complete', { query: 'pat' });
     projectFilter.vm.$emit('complete', { query: 'orion' });
@@ -251,7 +253,9 @@ describe('MembersTable', () => {
     expect(memberQueryFilter.props('suggestions')).toEqual(
       expect.arrayContaining(['Pat PM', 'pat@example.com']),
     );
-    expect(projectFilter.props('suggestions')).toEqual(['project-1']);
+    expect(projectFilter.props('suggestions')).toEqual([
+      { label: 'Project Orion', value: 'project-1' },
+    ]);
 
     await wrapper.get('input[aria-label="Search members"]').setValue('orion');
     memberQueryFilter.vm.$emit('update:modelValue', 'pat');
@@ -259,14 +263,17 @@ describe('MembersTable', () => {
     const selectFilters = wrapper.findAllComponents(Select);
     await selectFilters[0]!.vm.$emit('update:modelValue', 'admin');
     await selectFilters[1]!.vm.$emit('update:modelValue', 'inactive');
-    await projectFilter.vm.$emit('update:modelValue', ['project-1', 'project-2']);
+    await projectFilter.vm.$emit('update:modelValue', {
+      label: 'Project Orion',
+      value: 'project-1',
+    });
 
     expect(wrapper.emitted('update:filters')).toEqual([
       [{ global: 'orion' }],
       [{ memberQuery: 'pat' }],
       [{ role: 'admin' }],
       [{ lastActive: 'inactive' }],
-      [{ projectIds: ['project-1', 'project-2'] }],
+      [{ projectIds: ['project-1'] }],
     ]);
     expect(
       wrapper.getComponent(ManagementTableShell).props('value'),
@@ -318,7 +325,7 @@ describe('MembersTable', () => {
       giTiempoSelfAppendedAutoCompleteOverlayStyle,
     );
     expect(projectFilter.props('appendTo')).toBe('self');
-    expect(projectFilter.props('multiple')).toBe(true);
+    expect(projectFilter.props('multiple')).toBe(false);
     expect(projectFilter.props('dropdownMode')).toBe('blank');
     expect((projectFilter.props('pt') as AutoCompletePt).overlay?.style).toEqual(
       giTiempoSelfAppendedAutoCompleteOverlayStyle,
@@ -326,11 +333,14 @@ describe('MembersTable', () => {
     expect(projectFilter.props('placeholder')).toBe('All projects');
 
     await memberQueryFilter.vm.$emit('update:modelValue', 'alex');
-    await projectFilter.vm.$emit('update:modelValue', ['project-2', 'project-1']);
+    await projectFilter.vm.$emit('update:modelValue', {
+      label: 'Billing API',
+      value: 'project-2',
+    });
 
     expect(wrapper.emitted('update:filters')).toEqual([
       [{ memberQuery: 'alex' }],
-      [{ projectIds: ['project-2', 'project-1'] }],
+      [{ projectIds: ['project-2'] }],
     ]);
     expect(wrapper.findAll('[data-testid="members-mobile-loading-card"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-testid="member-mobile-card"]')).toHaveLength(1);

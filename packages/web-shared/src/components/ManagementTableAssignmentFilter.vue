@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import {
+  composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompletePt,
+} from '@gitiempo/web-config/theme';
 import AutoComplete from 'primevue/autocomplete';
 import { filterAutocompleteOptions } from '../autocomplete';
 import {
-  managementTableResolvedFilterAutoCompletePt,
-  managementTableSelfAppendedFilterAutoCompletePt,
+  managementTableFilterAutoCompletePt,
   type ManagementTableAssignmentFilterOption,
 } from './management-table';
 
@@ -30,10 +33,14 @@ const emit = defineEmits<{
 }>();
 
 const suggestions = ref<string[]>([]);
+const resolvedPassThrough = composeGiTiempoAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
+const selfAppendedPassThrough = composeGiTiempoSelfAppendedAutoCompletePt(
+  managementTableFilterAutoCompletePt,
+);
 const passThrough = computed(() =>
-  props.appendTo === 'self'
-    ? managementTableSelfAppendedFilterAutoCompletePt
-    : managementTableResolvedFilterAutoCompletePt,
+  props.appendTo === 'self' ? selfAppendedPassThrough : resolvedPassThrough,
 );
 
 function handleComplete(event: AutoCompleteCompleteEvent): void {

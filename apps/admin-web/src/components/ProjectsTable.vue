@@ -2,25 +2,20 @@
 import { computed, ref } from 'vue';
 import { FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
-import {
-  composeGiTiempoAutoCompletePt,
-  composeGiTiempoSelfAppendedAutoCompletePt,
-} from '@gitiempo/web-config/theme';
+import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   EntryActionButton,
-  ManagementTableAssignmentFilter,
+  FilterAutoComplete,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
+  filterAutocompleteOptions,
   filterAutocompleteStrings,
   managementTableColumnPt,
-  managementTableFilterAutoCompletePt,
-  managementTableFilterSelectPt,
   managementTableHeaderClass,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
-import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
@@ -89,8 +84,35 @@ function updateProjectQueryFilter(value: string | null | undefined): void {
   updateFilters({ projectQuery: value ?? '' });
 }
 
-function updateMemberIdsFilter(value: string[] | null | undefined): void {
-  updateFilters({ memberIds: value ?? [] });
+const memberFilterSuggestions = ref<ProjectsTableFilterOption[]>([]);
+
+const selectedMemberFilterOption = computed(
+  () =>
+    props.memberFilterOptions.find(
+      (option) => option.value === props.filters.memberIds[0],
+    ) ?? null,
+);
+
+function handleMemberFilterComplete(event: AutoCompleteCompleteEvent): void {
+  memberFilterSuggestions.value = filterAutocompleteOptions(
+    props.memberFilterOptions,
+    event.query,
+    (option) => option.label,
+  );
+}
+
+function updateMemberFilter(
+  value: ProjectsTableFilterOption | string | null | undefined,
+): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      updateFilters({ memberIds: [] });
+    }
+
+    return;
+  }
+
+  updateFilters({ memberIds: value ? [value.value] : [] });
 }
 
 function updateSourceFilter(
@@ -112,13 +134,6 @@ function updateVisibilityFilter(
 function updateExpandedRows(value: ProjectsTableExpandedRows | undefined): void {
   emit('update:expandedRows', value);
 }
-
-const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
-  managementTableFilterAutoCompletePt,
-);
-const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
-  managementTableFilterAutoCompletePt,
-);
 
 const columns: ManagementTableColumn[] = [
   { key: 'project', label: 'Project', width: 'fill' },
@@ -168,17 +183,12 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
         for="mobile-project-name-filter"
         class="text-text-muted text-[12px] font-medium"
       >Project</label>
-      <AutoComplete
+      <FilterAutoComplete
         append-to="self"
         input-id="mobile-project-name-filter"
         :model-value="filters.projectQuery"
-        :suggestions="projectQuerySuggestions"
-        complete-on-focus
-        dropdown
-        dropdown-mode="blank"
-        :min-length="0"
         placeholder="Filter project"
-        :pt="managementTableSelfAppendedFilterAutoCompletePt"
+        :suggestions="projectQuerySuggestions"
         @complete="handleProjectQueryComplete"
         @update:model-value="updateProjectQueryFilter"
       />
@@ -198,7 +208,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           option-value="value"
           placeholder="All sources"
           show-clear
-          :pt="managementTableFilterSelectPt"
+          :pt="giTiempoSelectPt"
           @update:model-value="updateSourceFilter"
         />
       </div>
@@ -216,7 +226,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           option-value="value"
           placeholder="All"
           show-clear
-          :pt="managementTableFilterSelectPt"
+          :pt="giTiempoSelectPt"
           @update:model-value="updateVisibilityFilter"
         />
       </div>
@@ -234,7 +244,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           :options="hoursFilterOptions"
           option-label="label"
           option-value="value"
-          :pt="managementTableFilterSelectPt"
+          :pt="giTiempoSelectPt"
           @update:model-value="updateHoursFilter"
         />
       </div>
@@ -244,13 +254,17 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           for="mobile-project-members-filter"
           class="text-text-muted text-[12px] font-medium"
         >Assigned members</label>
-        <ManagementTableAssignmentFilter
+        <FilterAutoComplete
           append-to="self"
           input-id="mobile-project-members-filter"
-          :model-value="filters.memberIds"
-          :options="memberFilterOptions"
+          :model-value="selectedMemberFilterOption"
+          force-selection
+          option-label="label"
           placeholder="All members"
-          @update:model-value="updateMemberIdsFilter"
+          show-clear
+          :suggestions="memberFilterSuggestions"
+          @complete="handleMemberFilterComplete"
+          @update:model-value="updateMemberFilter"
         />
       </div>
     </div>
@@ -404,16 +418,11 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
     <template #filters>
       <div class="flex min-w-[860px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
-          <AutoComplete
+          <FilterAutoComplete
             :model-value="filters.projectQuery"
-            :suggestions="projectQuerySuggestions"
             aria-label="Filter projects by name"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
-            :min-length="0"
             placeholder="Filter project"
-            :pt="managementTableFilterAutoCompleteResolvedPt"
+            :suggestions="projectQuerySuggestions"
             @complete="handleProjectQueryComplete"
             @update:model-value="updateProjectQueryFilter"
           />
@@ -428,18 +437,22 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
             option-value="value"
             placeholder="All sources"
             show-clear
-            :pt="managementTableFilterSelectPt"
+            :pt="giTiempoSelectPt"
             @update:model-value="updateSourceFilter"
           />
         </div>
 
         <div class="w-[220px] px-3">
-          <ManagementTableAssignmentFilter
-            :model-value="filters.memberIds"
+          <FilterAutoComplete
+            :model-value="selectedMemberFilterOption"
             aria-label="Filter projects by assigned members"
-            :options="memberFilterOptions"
+            force-selection
+            option-label="label"
             placeholder="All members"
-            @update:model-value="updateMemberIdsFilter"
+            show-clear
+            :suggestions="memberFilterSuggestions"
+            @complete="handleMemberFilterComplete"
+            @update:model-value="updateMemberFilter"
           />
         </div>
 
@@ -450,7 +463,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
             aria-label="Filter projects by hours"
             option-label="label"
             option-value="value"
-            :pt="managementTableFilterSelectPt"
+            :pt="giTiempoSelectPt"
             @update:model-value="updateHoursFilter"
           />
         </div>
@@ -464,7 +477,7 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
             option-value="value"
             placeholder="All"
             show-clear
-            :pt="managementTableFilterSelectPt"
+            :pt="giTiempoSelectPt"
             @update:model-value="updateVisibilityFilter"
           />
         </div>

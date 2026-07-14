@@ -6,16 +6,15 @@ import type { TimeReportGroupBy } from '@gitiempo/shared';
 import {
   giTiempoDatePickerPt,
   giTiempoSelectPt,
-  giTiempoSelfAppendedAutoCompleteDropdownPt,
 } from '@gitiempo/web-config/theme';
 import {
+  FilterAutoComplete,
   normalizeReportDateRangeValue,
   filterAutocompleteOptions,
   reportFilterFormSchema,
   type ReportDatePickerRangeValue,
   type ReportFilterFormValues,
 } from '@gitiempo/web-shared';
-import AutoComplete from 'primevue/autocomplete';
 import DatePicker from 'primevue/datepicker';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
@@ -125,22 +124,17 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
         for="reports-project"
         class="text-text-dark text-[13px] font-medium"
       >Project</label>
-      <AutoComplete
+      <FilterAutoComplete
         append-to="self"
         input-id="reports-project"
         name="projectId"
         :model-value="selectedProjectOption"
         :suggestions="projectSuggestions"
-        complete-on-focus
-        dropdown
-        dropdown-mode="blank"
         force-selection
-        :min-length="0"
         option-label="label"
         placeholder="All projects"
         show-clear
         :disabled="disabled"
-        :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
         @complete="handleProjectComplete"
         @update:model-value="handleProjectUpdate"
       />
@@ -151,22 +145,17 @@ function handleGroupByUpdate(value: TimeReportGroupBy): void {
         for="reports-member"
         class="text-text-dark text-[13px] font-medium"
       >Member</label>
-      <AutoComplete
+      <FilterAutoComplete
         append-to="self"
         input-id="reports-member"
         name="memberId"
         :model-value="selectedMemberOption"
         :suggestions="memberSuggestions"
-        complete-on-focus
-        dropdown
-        dropdown-mode="blank"
         force-selection
-        :min-length="0"
         option-label="label"
         placeholder="All assigned members"
         show-clear
         :disabled="disabled"
-        :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
         @complete="handleMemberComplete"
         @update:model-value="handleMemberUpdate"
       />

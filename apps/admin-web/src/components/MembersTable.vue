@@ -5,25 +5,20 @@ import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
 } from '@gitiempo/shared';
-import {
-  composeGiTiempoAutoCompletePt,
-  composeGiTiempoSelfAppendedAutoCompletePt,
-} from '@gitiempo/web-config/theme';
+import { giTiempoSelectPt } from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
   EntryActionButton,
-  ManagementTableAssignmentFilter,
+  FilterAutoComplete,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
+  filterAutocompleteOptions,
   filterAutocompleteStrings,
   managementTableColumnPt,
-  managementTableFilterAutoCompletePt,
-  managementTableFilterSelectPt,
   managementTableHeaderClass,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
-import AutoComplete from 'primevue/autocomplete';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
@@ -96,8 +91,35 @@ function updateMemberQueryFilter(value: string | null | undefined): void {
   updateFilters({ memberQuery: value ?? '' });
 }
 
-function updateProjectIdsFilter(value: string[] | null | undefined): void {
-  updateFilters({ projectIds: value ?? [] });
+const projectFilterSuggestions = ref<MembersTableFilterOption[]>([]);
+
+const selectedProjectFilterOption = computed(
+  () =>
+    props.projectFilterOptions.find(
+      (option) => option.value === props.filters.projectIds[0],
+    ) ?? null,
+);
+
+function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
+  projectFilterSuggestions.value = filterAutocompleteOptions(
+    props.projectFilterOptions,
+    event.query,
+    (option) => option.label,
+  );
+}
+
+function updateProjectFilter(
+  value: MembersTableFilterOption | string | null | undefined,
+): void {
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      updateFilters({ projectIds: [] });
+    }
+
+    return;
+  }
+
+  updateFilters({ projectIds: value ? [value.value] : [] });
 }
 
 function updateRoleFilter(value: WorkspaceRole | null | undefined): void {
@@ -113,13 +135,6 @@ function updateLastActiveFilter(
 function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
   emit('update:expandedRows', value);
 }
-
-const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
-  managementTableFilterAutoCompletePt,
-);
-const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
-  managementTableFilterAutoCompletePt,
-);
 
 const columns: ManagementTableColumn[] = [
   { key: 'member', label: 'Member', width: 'fill' },
@@ -174,17 +189,12 @@ function getRoleClass(role: WorkspaceRole): string {
         for="mobile-member-name-filter"
         class="text-text-muted text-[12px] font-medium"
       >Member</label>
-      <AutoComplete
+      <FilterAutoComplete
         append-to="self"
         input-id="mobile-member-name-filter"
         :model-value="filters.memberQuery"
-        :suggestions="memberQuerySuggestions"
-        complete-on-focus
-        dropdown
-        dropdown-mode="blank"
-        :min-length="0"
         placeholder="Filter name or email"
-        :pt="managementTableSelfAppendedFilterAutoCompletePt"
+        :suggestions="memberQuerySuggestions"
         @complete="handleMemberQueryComplete"
         @update:model-value="updateMemberQueryFilter"
       />
@@ -204,7 +214,7 @@ function getRoleClass(role: WorkspaceRole): string {
           option-value="value"
           placeholder="All roles"
           show-clear
-          :pt="managementTableFilterSelectPt"
+          :pt="giTiempoSelectPt"
           @update:model-value="updateRoleFilter"
         />
       </div>
@@ -220,7 +230,7 @@ function getRoleClass(role: WorkspaceRole): string {
           :options="lastActiveFilterOptions"
           option-label="label"
           option-value="value"
-          :pt="managementTableFilterSelectPt"
+          :pt="giTiempoSelectPt"
           @update:model-value="updateLastActiveFilter"
         />
       </div>
@@ -231,13 +241,17 @@ function getRoleClass(role: WorkspaceRole): string {
         for="mobile-member-projects-filter"
         class="text-text-muted text-[12px] font-medium"
       >Projects assigned</label>
-      <ManagementTableAssignmentFilter
+      <FilterAutoComplete
         append-to="self"
         input-id="mobile-member-projects-filter"
-        :model-value="filters.projectIds"
-        :options="projectFilterOptions"
+        :model-value="selectedProjectFilterOption"
+        force-selection
+        option-label="label"
         placeholder="All projects"
-        @update:model-value="updateProjectIdsFilter"
+        show-clear
+        :suggestions="projectFilterSuggestions"
+        @complete="handleProjectFilterComplete"
+        @update:model-value="updateProjectFilter"
       />
     </div>
   </div>
@@ -397,16 +411,11 @@ function getRoleClass(role: WorkspaceRole): string {
     <template #filters>
       <div class="flex min-w-[780px] flex-1 items-center">
         <div class="min-w-0 flex-1 px-3">
-          <AutoComplete
+          <FilterAutoComplete
             :model-value="filters.memberQuery"
-            :suggestions="memberQuerySuggestions"
             aria-label="Filter members by name or email"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
-            :min-length="0"
             placeholder="Filter name or email"
-            :pt="managementTableFilterAutoCompleteResolvedPt"
+            :suggestions="memberQuerySuggestions"
             @complete="handleMemberQueryComplete"
             @update:model-value="updateMemberQueryFilter"
           />
@@ -421,18 +430,22 @@ function getRoleClass(role: WorkspaceRole): string {
             option-value="value"
             placeholder="All roles"
             show-clear
-            :pt="managementTableFilterSelectPt"
+            :pt="giTiempoSelectPt"
             @update:model-value="updateRoleFilter"
           />
         </div>
 
         <div class="w-[220px] px-3">
-          <ManagementTableAssignmentFilter
-            :model-value="filters.projectIds"
+          <FilterAutoComplete
+            :model-value="selectedProjectFilterOption"
             aria-label="Filter members by assigned projects"
-            :options="projectFilterOptions"
+            force-selection
+            option-label="label"
             placeholder="All projects"
-            @update:model-value="updateProjectIdsFilter"
+            show-clear
+            :suggestions="projectFilterSuggestions"
+            @complete="handleProjectFilterComplete"
+            @update:model-value="updateProjectFilter"
           />
         </div>
 
@@ -443,7 +456,7 @@ function getRoleClass(role: WorkspaceRole): string {
             aria-label="Filter members by last active"
             option-label="label"
             option-value="value"
-            :pt="managementTableFilterSelectPt"
+            :pt="giTiempoSelectPt"
             @update:model-value="updateLastActiveFilter"
           />
         </div>

@@ -104,6 +104,9 @@ export const managementTableFilterAutoCompletePt = {
     class:
       'min-h-[38px] w-full flex-1 rounded-none border-0 bg-transparent px-2 py-1 font-sans text-[14px] font-medium text-text-dark shadow-none',
   },
+  input: {
+    class: `truncate ${managementTableFilterAutoCompleteInputClass}`,
+  },
   pcInputText: {
     root: { class: managementTableFilterAutoCompleteInputClass },
   },
