@@ -951,9 +951,17 @@ describe("TimeEntriesView", () => {
 
     expect(confirmOptions).toMatchObject({
       acceptLabel: "Delete",
+      acceptProps: { severity: "danger", variant: "outlined" },
       header: "Delete entry?",
       message: "This time entry will be permanently deleted.",
+      pt: {
+        footer: { class: "flex flex-row-reverse justify-between gap-2" },
+      },
       rejectLabel: "Cancel",
+      rejectProps: {
+        severity: "secondary",
+        variant: "outlined",
+      },
     });
 
     await confirmOptions!.accept();

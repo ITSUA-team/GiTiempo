@@ -50,7 +50,7 @@ Use `<ConfirmDialog>` and `useConfirm()`.
 - Required before destructive actions.
 - Title uses `text-lg font-semibold`.
 - Body uses `text-sm text-text-muted`.
-- Footer order: cancel then destructive accept on the right.
+- Footer order separates destructive and safe actions: destructive outlined accept on the left, secondary outlined cancel on the right.
 - Leaf components may emit events or call composables that use `useConfirm()`, but the rendered confirm host stays with the root app infrastructure.
 
 ```typescript
@@ -62,6 +62,14 @@ confirm.require({
   rejectLabel: 'Cancel',
   acceptProps: {
     severity: 'danger',
+    variant: 'outlined',
+  },
+  rejectProps: {
+    severity: 'secondary',
+    variant: 'outlined',
+  },
+  pt: {
+    footer: { class: 'flex flex-row-reverse justify-between gap-2' },
   },
   accept: () => handleDelete(entryId),
 })
