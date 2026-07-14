@@ -43,6 +43,11 @@ describe('management table filter styles', () => {
     expect(managementTableSelfAppendedFilterAutoCompletePt.overlay?.class).toBe(
       'overflow-hidden w-full max-w-full',
     );
+    // Self-appended overlays render inside the root; overflow-hidden there
+    // would clip the dropdown panel into invisibility.
+    expect(
+      managementTableSelfAppendedFilterAutoCompletePt.root?.class,
+    ).not.toContain('overflow-hidden');
     expect(managementTableFilterAutoCompletePt.option?.class).toBe('font-sans text-[14px]');
   });
 

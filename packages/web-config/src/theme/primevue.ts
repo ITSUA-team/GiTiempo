@@ -24,6 +24,11 @@ export const giTiempoDropdownControlJoinedInputClass =
 export const giTiempoDropdownControlRootClass =
   `${giTiempoDropdownControlBaseClass} flex w-full items-center overflow-hidden rounded-[6px]`;
 
+// Self-appended overlays render inside the control root, so it must not
+// clip overflowing children or the dropdown panel stays invisible.
+export const giTiempoSelfAppendedDropdownControlRootClass =
+  `${giTiempoDropdownControlBaseClass} flex w-full items-center rounded-[6px]`;
+
 export const giTiempoDropdownControlLabelClass =
   "flex h-full items-center px-3 py-0 font-sans text-[14px] font-medium text-text-dark";
 
@@ -255,10 +260,19 @@ export const giTiempoAutoCompleteDropdownPt = composeGiTiempoAutoCompletePt(
 );
 
 export const giTiempoSelfAppendedAutoCompleteDropdownPt =
-  composeGiTiempoSelfAppendedAutoCompletePt(giTiempoDropdownAutoCompletePt);
+  composeGiTiempoSelfAppendedAutoCompletePt({
+    ...giTiempoDropdownAutoCompletePt,
+    root: { class: giTiempoSelfAppendedDropdownControlRootClass },
+  });
 
 export const giTiempoSelfAppendedMultiAutoCompleteDropdownPt =
-  composeGiTiempoSelfAppendedAutoCompletePt(giTiempoMultiAutoCompleteDropdownPt);
+  composeGiTiempoSelfAppendedAutoCompletePt({
+    ...giTiempoMultiAutoCompleteDropdownPt,
+    root: {
+      class:
+        "border-divider bg-surface-primary flex min-h-[38px] w-full max-w-full min-w-0 items-stretch rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none",
+    },
+  });
 
 export function composeGiTiempoSelfAppendedAutoCompletePt(
   override: GiTiempoAutoCompletePt = {},

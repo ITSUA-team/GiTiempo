@@ -126,6 +126,12 @@ export const managementTableResolvedFilterAutoCompletePt = {
 
 export const managementTableSelfAppendedFilterAutoCompletePt = {
   ...managementTableResolvedFilterAutoCompletePt,
+  // Self-appended overlays render inside the root, so it must not clip
+  // overflowing children or the dropdown panel stays invisible.
+  root: {
+    class:
+      'border-divider bg-surface-primary flex h-[38px] w-full items-center rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none',
+  },
   overlay: {
     class: managementTableSelfAppendedFilterAutoCompleteOverlayClass,
     style: managementTableSelfAppendedFilterAutoCompleteOverlayStyle,

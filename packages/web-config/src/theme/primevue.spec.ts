@@ -96,6 +96,11 @@ describe("giTiempoPrimeVueOptions", () => {
     expect(giTiempoSelfAppendedAutoCompleteDropdownPt.overlay?.style).toEqual(
       giTiempoSelfAppendedAutoCompleteOverlayStyle,
     );
+    // Self-appended overlays render inside the root; overflow-hidden there
+    // would clip the dropdown panel into invisibility.
+    expect(giTiempoSelfAppendedAutoCompleteDropdownPt.root?.class).not.toContain(
+      "overflow-hidden",
+    );
     expect(
       composeGiTiempoSelfAppendedAutoCompleteDropdownPt({
         pcInputText: { root: { autocomplete: "off" } },
