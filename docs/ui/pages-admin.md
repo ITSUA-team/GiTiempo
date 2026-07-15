@@ -32,7 +32,8 @@
 - Results table is searchable, column-filterable, uses stable default ordering, and supports CSV export.
 - Results table header includes global search with placeholder `Search report rows`.
 - Results table column filters use the existing management-table filter-row treatment for project, member, hours, and billable columns. Hours and billable filters may be omitted only when the implementation does not yet provide a matching numeric/status control.
-- CSV export downloads backend-generated detailed project-task-user rows for the current date range; table-only search and column filters do not change export scope.
+- CSV export downloads backend-generated detailed project-task-user rows for the current date range, and also carries the table's project, member, and global search filters so the file covers the same report scope as the table.
+- Hours and billable filters cannot scope the export: they filter aggregate row totals, and the CSV is detailed project-task-user rows that hold no such totals to match. While either is active, `Export CSV` is disabled with a tooltip saying so, rather than returning a file that ignores them.
 - Group-by regroups the table but only labels the CSV. The export endpoint always emits detailed project-task-user rows and carries `groupBy` as metadata. This is deliberate - see the archived `2026-07-09-clarify-detailed-report-csv-export` change - so do not "fix" the export to collapse rows to match the table grouping.
 - PM users cannot widen filters beyond active projects visible through their report scope, including active public projects plus active private projects assigned to that PM.
 

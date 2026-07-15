@@ -36,7 +36,8 @@
 - [x] 5.1 Remove the `ReportsFilterForm` import, usage, and the `reportProjectId`, `reportMemberId`, and `reportGroupBy` local refs from `apps/admin-web/src/views/ReportsView.vue`
 - [x] 5.2 Bind date range and grouping to the refs returned by `useReportsData` rather than local copies, so the wiring in tasks 2.1 and 3.1 is actually reached
 - [x] 5.3 Pass the `Export CSV` button through the table's `actions` slot, keeping `handleExport`, the `exporting` flag, toasts, and `data-testid="export-reports-csv"` in the view
-- [x] 5.4 Call `exportCurrentReport` with the active date range and the grouping's mapped API value (`project`/`user`), sending no project or member restriction
+- [x] 5.4 Call `exportCurrentReport` with the active date range, the grouping's mapped API value (`project`/`user`), and the table's project, member, and global search filters
+- [x] 5.9 Disable `Export CSV` while an hours or billable filter is active, with the reason on a wrapper span since a disabled button swallows hover
 - [x] 5.5 Keep `getReportDateRangeError` gating the disabled state of `Export CSV`
 - [x] 5.6 Delete `apps/admin-web/src/components/reports/ReportsFilterForm.vue` and `ReportsFilterForm.spec.ts`
 - [x] 5.7 Resolve `reportFilterFormSchema` in `packages/web-shared/src/validation/report-filter-form.ts`, which loses its only consumer with the form; keep `normalizeReportDateRangeValue` and `ReportDatePickerRangeValue`, which stay in use
@@ -48,7 +49,7 @@
 - [x] 6.2 Add composable cases asserting the project fold with its member count, the member-major ordering, and that switching grouping issues no request
 - [x] 6.3 Rewrite `keeps header setup controls as export scope instead of table state` in `apps/admin-web/src/views/ReportsView.spec.ts:307` to assert the reverse, and replace the `ReportsFilterForm` stub with a `ReportsTable` stub exposing the date range and grouping models plus the `actions` slot
 - [x] 6.4 Add `ReportsTable.spec.ts` cases covering which columns each grouping renders, that the Members count reads `4 members`, and that both filters stay available
-- [x] 6.5 Update export assertions to expect a date-range-plus-grouping payload, and keep a case asserting table search and column filters leave export scope untouched
+- [x] 6.5 Assert the export payload carries the date range, grouping, and the table's project/member/search filters, and that an active hours or billable filter blocks export entirely
 - [x] 6.6 Pass the new required models at every existing `ReportsTable` mount site
 
 ## 7. Update documentation and design

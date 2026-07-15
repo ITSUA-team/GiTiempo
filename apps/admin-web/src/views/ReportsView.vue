@@ -15,6 +15,7 @@ import {
   filterReportRows,
   formatReportPercent,
   getReportDateRangeError,
+  isReportTableFilterExportable,
   reportGroupingApiValue,
 } from '@/lib/report-view-model';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
@@ -56,8 +57,23 @@ const tableRows = computed(() =>
 const reportDateRangeError = computed(() =>
   getReportDateRangeError(dateRange.value),
 );
+// The CSV is detailed project-task-user rows, so it has no aggregate totals for
+// the hours and billable filters to match. Rather than hand back a file that
+// quietly ignores them, block the export while either is active.
+const exportableTableFilters = computed(() =>
+  isReportTableFilterExportable(tableFilters.value),
+);
+const exportBlockedReason = computed(() =>
+  exportableTableFilters.value
+    ? undefined
+    : 'Hours and billable filters cannot be exported. Clear them to export this report.',
+);
 const exportDisabled = computed(
-  () => loading.value || exporting.value || reportDateRangeError.value !== null,
+  () =>
+    loading.value ||
+    exporting.value ||
+    reportDateRangeError.value !== null ||
+    !exportableTableFilters.value,
 );
 
 const totalHoursLabel = computed(() =>
@@ -84,7 +100,7 @@ const topProjectDescription = computed(() => {
 });
 
 async function handleExport(): Promise<void> {
-  if (exporting.value || reportDateRangeError.value) {
+  if (exporting.value || reportDateRangeError.value || !exportableTableFilters.value) {
     return;
   }
 
@@ -94,8 +110,9 @@ async function handleExport(): Promise<void> {
     const exportResult = await exportCurrentReport({
       dateRange: dateRange.value,
       groupBy: reportGroupingApiValue[grouping.value],
-      memberId: null,
-      projectId: null,
+      memberId: tableFilters.value.memberId,
+      projectId: tableFilters.value.projectId,
+      search: tableFilters.value.global,
     });
 
     if (!exportResult) {
@@ -165,14 +182,21 @@ async function handleExport(): Promise<void> {
           :member-options="memberOptions"
         >
           <template #actions>
-            <Button
-              label="Export CSV"
-              data-testid="export-reports-csv"
-              class="h-[38px] w-full sm:w-auto"
-              :disabled="exportDisabled"
-              :loading="exporting"
-              @click="handleExport"
-            />
+            <!-- A disabled button swallows hover, so the reason lives on a wrapper. -->
+            <span
+              v-tooltip.top="exportBlockedReason ?? ''"
+              class="w-full sm:w-auto"
+            >
+              <Button
+                label="Export CSV"
+                data-testid="export-reports-csv"
+                class="h-[38px] w-full sm:w-auto"
+                :aria-description="exportBlockedReason"
+                :disabled="exportDisabled"
+                :loading="exporting"
+                @click="handleExport"
+              />
+            </span>
           </template>
         </ReportsTable>
       </SurfaceCard>

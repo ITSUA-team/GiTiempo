@@ -38,6 +38,9 @@ export function useReportFilters() {
       groupBy: 'user',
       memberId: selectedMemberId.value,
       projectId: selectedProjectId.value,
+      // search is omitted: the table's global search filters loaded rows
+      // client-side, so sending it would narrow the fetch and desync the table
+      // from its own search box.
     };
   }
 

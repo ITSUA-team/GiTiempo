@@ -88,17 +88,31 @@ The reports page MUST support date range and grouping controls that scope both l
 - **THEN** it exposes a global search control with placeholder `Search report rows`
 - **AND** it exposes column filters for the visible identity columns plus hours and billable columns when matching controls are available
 - **AND** clearing global search or column filters restores the rows loaded for the current report data state and role scope
-- **AND** table-only search and column filters do not call report data endpoints
+- **AND** table search and column filters do not call report data endpoints
 
 #### Scenario: CSV export uses backend report endpoint
 
 - **WHEN** the user activates `Export CSV`
 - **THEN** the page requests `GET /reports/time/export` scoped to the active date range, carrying the selected grouping
+- **AND** the request also carries the table's project, member, and global search filters, so the CSV covers the same report scope the table shows
 - **AND** the browser downloads the CSV returned by the backend
 - **AND** the downloaded CSV contains backend-generated detailed project-task-user rows regardless of the selected grouping
 - **AND** the selected grouping is preserved as CSV metadata and does not collapse CSV row granularity
-- **AND** table global search and column filters do not change the CSV export scope
 - **AND** no browser-side report row aggregation or CSV serialization is required
+
+#### Scenario: Unexportable table filters block CSV export
+
+- **WHEN** an hours or billable table filter is active
+- **THEN** `Export CSV` is disabled and states that those filters cannot be exported
+- **AND** activating it generates no CSV
+- **AND** clearing those filters restores export
+
+#### Scenario: Hours and billable filters are not exportable
+
+- **WHEN** the system decides which table filters can scope the CSV
+- **THEN** project, member, and global search scope it, because the export contract accepts them
+- **AND** hours and billable do not, because they filter aggregate row totals and the CSV holds detailed project-task-user rows with no such totals to match
+- **AND** the export never silently ignores an active filter
 
 #### Scenario: Report request errors stay distinct from empty results
 

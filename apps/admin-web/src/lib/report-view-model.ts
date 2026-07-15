@@ -33,6 +33,7 @@ import {
 
 export {
   defaultReportGrouping,
+  isReportTableFilterExportable,
   reportGroupingApiValue,
   reportGroupingSchema,
 } from '@/validation/report-view-model';
@@ -229,11 +230,13 @@ export function toTimeReportExportQuery(
   filters: ReportSetupFilters,
 ): TimeReportExportQuery {
   const parsedFilters = reportSetupFiltersSchema.parse(filters);
+  const search = (parsedFilters.search ?? '').trim();
 
   return timeReportExportQuerySchema.parse({
     ...toReportDateQuery(parsedFilters.dateRange),
     groupBy: parsedFilters.groupBy,
     projectId: parsedFilters.projectId ?? undefined,
+    search: search === '' ? undefined : search,
     sortBy: 'totalSeconds',
     sortOrder: 'desc',
     userId: parsedFilters.memberId ?? undefined,

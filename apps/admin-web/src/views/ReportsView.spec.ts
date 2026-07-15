@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef } from 'vue';
+import { computed, defineComponent, ref, shallowRef } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
@@ -43,29 +43,40 @@ vi.mock('@/composables/reports/useReportsData', () => ({
 
 import ReportsView from './ReportsView.vue';
 
-const ReportsTableStub = {
+const ReportsTableStub = defineComponent({
   name: 'ReportsTable',
-  props: [
-    'rows',
-    'loading',
-    'projectOptions',
-    'memberOptions',
-    'filters',
-    'dateRange',
-    'grouping',
-  ],
+  props: {
+    dateRange: { default: null, type: Array },
+    filters: { required: true, type: Object },
+    grouping: { default: 'project', type: String },
+    loading: { default: false, type: Boolean },
+    memberOptions: { default: () => [], type: Array },
+    projectOptions: { default: () => [], type: Array },
+    rows: { default: () => [], type: Array },
+  },
   emits: ['update:filters', 'update:dateRange', 'update:grouping'],
-  setup() {
+  setup(props, { emit }) {
     return {
       invalidDateRange: [
         new Date('2026-05-03T12:00:00.000Z'),
         new Date('2026-05-02T12:00:00.000Z'),
       ],
+      setBillableFilter: () => {
+        emit('update:filters', { ...props.filters, billable: 'withBillable' });
+      },
+      setTableFilters: () => {
+        emit('update:filters', {
+          ...props.filters,
+          global: 'orion',
+          memberId: 'member-1',
+          projectId: 'project-1',
+        });
+      },
     };
   },
   template:
-    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><slot name="actions" /></div>',
-};
+    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><button data-testid="set-table-filters" @click="setTableFilters">table filters</button><button data-testid="set-billable-filter" @click="setBillableFilter">billable filter</button><slot name="actions" /></div>',
+});
 
 const ManagementPageSkeletonStub = {
   name: 'ManagementPageSkeleton',
@@ -219,6 +230,7 @@ describe('ReportsView', () => {
       groupBy: 'project',
       memberId: null,
       projectId: null,
+      search: '',
     });
     expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
       blob: expect.any(Blob),
@@ -247,6 +259,7 @@ describe('ReportsView', () => {
       groupBy: 'project',
       memberId: null,
       projectId: null,
+      search: '',
     });
     expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
       blob: expect.any(Blob),
@@ -312,5 +325,41 @@ describe('ReportsView', () => {
         projectId: null,
       }),
     );
+  });
+
+  it('scopes the CSV export to the table project, member, and search filters', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="set-table-filters"]').trigger('click');
+    await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        memberId: 'member-1',
+        projectId: 'project-1',
+        search: 'orion',
+      }),
+    );
+    expect(reportMocks.downloadReportExport).toHaveBeenCalled();
+  });
+
+  it('blocks CSV export while an unexportable table filter is active', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    // Hours and billable filter aggregate totals the detailed CSV has no rows
+    // for, so exporting would hand back a file that ignores them.
+    await wrapper.get('[data-testid="set-billable-filter"]').trigger('click');
+
+    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
+
+    await exportButton.trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
+    expect(reportMocks.downloadReportExport).not.toHaveBeenCalled();
   });
 });

@@ -29,7 +29,6 @@ Per `apps/admin-web/AGENTS.md`, `docs/ui/*` is the source of truth over the desi
 
 - No backend, shared contract, database, migration, or OpenAPI changes.
 - Not making grouping collapse CSV rows. That would reverse the archived detailed-export contract.
-- Not making table search or column filters scope the CSV. `spec.md:150` stands.
 - Not adding a date column to the table (see Decisions).
 - Not revisiting pagination or the throttling guidance in `getReportErrorMessage`.
 
@@ -87,9 +86,17 @@ The cost is that a member-filtered project row still shows the project's total h
 
 *Alternative rejected:* hide the member filter under `project` grouping, on the grounds that a derived count is not filterable. It is tidier but removes a real question the page could answer.
 
-### Export keeps the header controls as its scope
+### Export carries every table filter the CSV can honour
 
-`Export CSV` sends the active date range plus the grouping metadata. Table search and column filters remain excluded, per `spec.md:150`. Export handling — `handleExport`, the `exporting` flag, toasts, `downloadReportExport` — stays in `ReportsView`, with the button passed into `ReportsTable`'s header through an `actions` slot, keeping the table presentational and preserving `data-testid="export-reports-csv"`.
+`Export CSV` sends the active date range, the grouping metadata, and the table's project, member, and global search filters, which `timeReportExportQuerySchema` accepts as `projectId`, `userId`, and `search`. This reverses `spec.md:150`: a filtered table now exports a matching file.
+
+Hours and billable stop at the boundary, and not for want of an API field. They filter *aggregate row totals* (`filterReportRows` tests `row.totalSeconds >= 8h`), while the CSV is detailed project-task-user rows that contain no such aggregate. "Projects with 40h+" has nothing to match against in the export, so honouring it would mean either a backend change or abandoning the detailed-CSV contract.
+
+Rather than drop them silently — filter to 40h+, export, receive everything — `Export CSV` is disabled while either is active, with a tooltip on a wrapper span, since a disabled button swallows hover. The user gets a file that matches the screen, or no file and a reason.
+
+*Alternative rejected:* send what maps and ignore the rest. Simplest, but hands back a file that quietly disagrees with the table, which is worse than the honest refusal.
+
+Export handling — `handleExport`, the `exporting` flag, toasts, `downloadReportExport` — stays in `ReportsView`, with the button passed into `ReportsTable`'s header through an `actions` slot, keeping the table presentational and preserving `data-testid="export-reports-csv"`.
 
 ## Risks / Trade-offs
 

@@ -54,8 +54,21 @@ export const reportSetupFiltersSchema = z.object({
   groupBy: timeReportGroupBySchema,
   memberId: z.string().nullable(),
   projectId: z.string().nullable(),
+  /** Optional: only the export carries the table's global search. */
+  search: z.string().optional(),
 });
 export type ReportSetupFilters = z.infer<typeof reportSetupFiltersSchema>;
+
+/**
+ * Table filters the CSV export can carry. `hours` and `billable` are absent on
+ * purpose: they filter aggregate row totals, and the export is detailed
+ * project-task-user rows that hold no such totals to match against.
+ */
+export function isReportTableFilterExportable(
+  filters: Pick<ReportTableFilters, 'billable' | 'hours'>,
+): boolean {
+  return filters.hours === 'any' && filters.billable === 'any';
+}
 
 export const reportTableRowSchema = z.object({
   billableSeconds: z.number().int().min(0),
