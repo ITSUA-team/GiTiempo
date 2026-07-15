@@ -10,6 +10,7 @@ import {
 
 import {
   createDefaultReportTableFilters,
+  type ReportGrouping,
   type ReportTableRow,
 } from '@/lib/report-view-model';
 import ReportsTable from './ReportsTable.vue';
@@ -57,6 +58,24 @@ const SelectStub = defineComponent({
   template: '<div data-testid="select-stub">{{ resolvedLabel }}</div>',
 });
 
+function findFilter(
+  wrapper: ReturnType<typeof mount>,
+  key: 'project' | 'member',
+) {
+  const control = wrapper
+    .findAllComponents(AutoComplete)
+    .find(
+      (candidate) =>
+        candidate.props('ariaLabel') === `Filter report rows by ${key}`,
+    );
+
+  if (!control) {
+    throw new Error(`No ${key} filter rendered`);
+  }
+
+  return control;
+}
+
 const rows: ReportTableRow[] = [
   {
     billableSeconds: 3600,
@@ -94,6 +113,8 @@ describe('ReportsTable', () => {
     const filters = createDefaultReportTableFilters();
     const wrapper = mount(ReportsTable, {
       props: {
+        dateRange: null,
+        grouping: 'member' as const,
         filters,
         loading: false,
         memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
@@ -119,13 +140,13 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).toContain('2h 00m');
     expect(wrapper.text()).toContain('1h 00m');
     const filterControls = wrapper.findAll('[data-testid="select-stub"]');
-    expect(filterControls).toHaveLength(2);
+    expect(filterControls).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
 
     const search = wrapper.get('input[aria-label="Search report rows"]');
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
-    const projectFilter = autoCompleteControls[0]!;
-    const memberFilter = autoCompleteControls[1]!;
+    const projectFilter = findFilter(wrapper, 'project');
+    const memberFilter = findFilter(wrapper, 'member');
 
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
@@ -147,7 +168,7 @@ describe('ReportsTable', () => {
     projectFilter.vm.$emit('complete', { query: 'orion' });
     await nextTick();
 
-    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('suggestions')).toEqual([
+    expect(findFilter(wrapper, 'project').props('suggestions')).toEqual([
       { label: 'Project Orion', value: 'project-1' },
     ]);
 
@@ -159,7 +180,7 @@ describe('ReportsTable', () => {
     memberFilter.vm.$emit('complete', { query: 'alex' });
     await nextTick();
 
-    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
+    expect(findFilter(wrapper, 'member').props('suggestions')).toEqual([
       { label: 'Alex Admin', value: 'member-1' },
     ]);
 
@@ -191,6 +212,8 @@ describe('ReportsTable', () => {
     const filters = createDefaultReportTableFilters();
     const wrapper = mount(ReportsTable, {
       props: {
+        dateRange: null,
+        grouping: 'member' as const,
         filters,
         loading: true,
         memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
@@ -207,7 +230,7 @@ describe('ReportsTable', () => {
 
     const autoCompleteControls = wrapper.findAllComponents(AutoComplete);
 
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(3);
     expect(autoCompleteControls).toHaveLength(2);
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).toBe('self');
@@ -237,6 +260,8 @@ describe('ReportsTable', () => {
 
     const wrapper = mount(ReportsTable, {
       props: {
+        dateRange: null,
+        grouping: 'project' as const,
         filters: createDefaultReportTableFilters(),
         loading: true,
         memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
@@ -274,6 +299,8 @@ describe('ReportsTable', () => {
     const filters = createDefaultReportTableFilters();
     const wrapper = mount(ReportsTable, {
       props: {
+        dateRange: null,
+        grouping: 'member' as const,
         filters,
         loading: false,
         memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
@@ -295,7 +322,7 @@ describe('ReportsTable', () => {
     expect(mobileCards[0]?.text()).toContain('Alex Admin');
     expect(mobileCards[0]?.text()).toContain('2h 00m');
     expect(mobileCards[0]?.text()).toContain('1h 00m');
-    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-testid="select-stub"]')).toHaveLength(3);
     expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
   });
 
@@ -308,6 +335,8 @@ describe('ReportsTable', () => {
 
     const wrapper = mount(ReportsTable, {
       props: {
+        dateRange: null,
+        grouping: 'project' as const,
         filters,
         loading: false,
         memberOptions: [{ label: 'Selected Member', value: 'member-1' }],
@@ -324,11 +353,11 @@ describe('ReportsTable', () => {
 
     expect(wrapper.text()).toContain('Tracked');
     expect(wrapper.text()).toContain('Billable');
-    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('modelValue')).toEqual({
+    expect(findFilter(wrapper, 'project').props('modelValue')).toEqual({
       label: 'Selected Project',
       value: 'project-1',
     });
-    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('modelValue')).toEqual({
+    expect(findFilter(wrapper, 'member').props('modelValue')).toEqual({
       label: 'Selected Member',
       value: 'member-1',
     });
@@ -340,6 +369,8 @@ describe('ReportsTable', () => {
 
     const wrapper = mount(ReportsTable, {
       props: {
+        dateRange: null,
+        grouping: 'project' as const,
         filters,
         loading: false,
         memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
@@ -365,40 +396,98 @@ describe('ReportsTable', () => {
     expect(wrapper.text()).not.toContain('1h 15m');
   });
 
-  it('renders mapped API row variants with the existing report columns', () => {
-    const filters = createDefaultReportTableFilters();
-
-    const wrapper = mount(ReportsTable, {
+  function mountWithGrouping(grouping: ReportGrouping, rows: ReportTableRow[]) {
+    return mount(ReportsTable, {
       props: {
-        filters,
+        dateRange: null,
+        grouping,
+        filters: createDefaultReportTableFilters(),
         loading: false,
         memberOptions: [{ label: 'Nina PM', value: 'member-2' }],
         projectOptions: [{ label: 'Billing API', value: 'project-2' }],
-        rows: [
-          {
-            billableSeconds: 1800,
-            billableShare: 0.5,
-            entryCount: 2,
-            groupBy: 'user',
-            id: 'user-1',
-            memberIds: ['member-2'],
-            memberName: 'Nina PM',
-            nonBillableSeconds: 1800,
-            projectIds: [],
-            projectName: 'Project scope',
-            totalSeconds: 3600,
-          },
-        ],
+        rows,
       },
       global: {
         plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
-        stubs: {
-          Select: SelectStub,
-        },
+        stubs: { Select: SelectStub },
       },
     });
+  }
 
-    expect(wrapper.text()).toContain('Project scope');
+  const memberRow: ReportTableRow = {
+    billableSeconds: 1800,
+    billableShare: 0.5,
+    entryCount: 2,
+    groupBy: 'user',
+    id: 'user-1',
+    memberIds: ['member-2'],
+    memberName: 'Nina PM',
+    nonBillableSeconds: 1800,
+    projectIds: ['project-2'],
+    projectName: 'Billing API',
+    totalSeconds: 3600,
+  };
+
+  function headerKeys(wrapper: ReturnType<typeof mount>) {
+    return wrapper
+      .findAll('[data-testid^="management-table-header-"]')
+      .map((header) => header.attributes('data-testid'));
+  }
+
+  it('counts contributors instead of naming a member under project grouping', () => {
+    const wrapper = mountWithGrouping('project', [
+      {
+        ...memberRow,
+        groupBy: 'project',
+        id: 'project:project-2',
+        memberIds: ['member-2', 'member-3'],
+        memberName: null,
+      },
+    ]);
+
+    expect(headerKeys(wrapper)).toEqual([
+      'management-table-header-project',
+      'management-table-header-members',
+      'management-table-header-hours',
+      'management-table-header-billable',
+    ]);
+    expect(wrapper.text()).toContain('Billing API');
+    expect(wrapper.text()).toContain('2 members');
+  });
+
+  it('singularises a one-contributor project row', () => {
+    const wrapper = mountWithGrouping('project', [
+      { ...memberRow, groupBy: 'project', memberName: null },
+    ]);
+
+    expect(wrapper.text()).toContain('1 member');
+    expect(wrapper.text()).not.toContain('1 members');
+  });
+
+  it('keeps both filters under project grouping so members can be filtered', () => {
+    const wrapper = mountWithGrouping('project', [
+      { ...memberRow, groupBy: 'project', memberName: null },
+    ]);
+
+    // Filtering by a member answers which projects they contributed to, which
+    // no other control answers in place.
+    expect(
+      wrapper.find('[aria-label="Filter report rows by member"]').exists(),
+    ).toBe(true);
+    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
+  });
+
+  it('leads with member and keeps the project breakdown under member grouping', () => {
+    const wrapper = mountWithGrouping('member', [memberRow]);
+
+    expect(headerKeys(wrapper)).toEqual([
+      'management-table-header-member',
+      'management-table-header-project',
+      'management-table-header-hours',
+      'management-table-header-billable',
+    ]);
     expect(wrapper.text()).toContain('Nina PM');
+    expect(wrapper.text()).toContain('Billing API');
+    expect(wrapper.findAllComponents(AutoComplete)).toHaveLength(2);
   });
 });

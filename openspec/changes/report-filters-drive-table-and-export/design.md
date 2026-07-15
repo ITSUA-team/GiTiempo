@@ -10,7 +10,7 @@ Both were deliberate: `admin-pages/spec.md:107` requires setup controls to leave
 Three constraints bound the solution:
 
 - **The CSV must stay detailed.** `reports.service.ts:106-119` always builds export rows via `getDetailedRows`, and `toCsv` (`:521-542`) writes `groupBy` as a literal label column. The archived `2026-07-09-clarify-detailed-report-csv-export` states this explicitly — "Preserve selected `groupBy` as CSV metadata rather than using it to collapse CSV row granularity" — and says it exists to stop future agents "fixing" it back to grouped parity. Grouping therefore must not reshape the CSV.
-- **The API has no project-and-member grouping.** `timeReportGroupBySchema` is `project | task | user`. Today's project-member table is a frontend construct: `useReportRowsData` loops visible projects and requests `groupBy: 'user'` per project, so each row carries a user from the response and a project from the loop.
+- **The API has no project-and-member grouping, and no member count.** `timeReportGroupBySchema` is `project | task | user`, and `timeReportProjectRowSchema` carries `user: null`. Today's project-member table is a frontend construct: `useReportRowsData` loops visible projects and requests `groupBy: 'user'` per project, so each row carries a user from the response and a project from the loop.
 - **`toReportTableRows` already collapses identities with placeholders.** `getReportTableRowLabels` (`report-view-model.ts:243-273`) substitutes `'Project scope'` / `'Member scope'` when the response omits an identity. Those placeholders are precisely what `spec.md:112` forbids, and are only unreachable today because the fetch always pairs `groupBy: 'user'` with a project id.
 
 Per `apps/admin-web/AGENTS.md`, `docs/ui/*` is the source of truth over the design file, and the approved `.pen` screen is the design source for UI work.
@@ -21,7 +21,7 @@ Per `apps/admin-web/AGENTS.md`, `docs/ui/*` is the source of truth over the desi
 
 - Editing the date range refetches, updating rows and summary totals, and scopes the CSV.
 - Selecting a grouping changes what a table row represents, with columns and column filters following.
-- Preserve today's project-member breakdown as the default so no view is lost.
+- Answer both questions the page is for: how much time went into each project, and how each member spent theirs.
 - Keep table discovery filters client-side and table-only.
 - Keep PM scope enforced server-side.
 
@@ -47,41 +47,45 @@ Import `useReportRefreshDebounce` in `useReportsData.ts`, passing `filters.apply
 
 `reportTableRowSchema` (`validation/report-view-model.ts:46-58`) has no date field: a row aggregates many entries. Carrying `firstStartedAt`/`lastStartedAt` through would not help, because a client-side column filter can only include or exclude whole rows, never re-total them — a row spanning Apr 1-30 filtered to Apr 10 would still report the month's hours. The range changes how totals are computed, so it must stay a server-side parameter.
 
-### Grouping selects the fetch strategy
+### Grouping is presentation over one fetch, not a fetch parameter
 
-`useReportRowsData` branches on the applied grouping:
+`useReportRowsData` keeps the existing loop over `getVisibleReportProjectsForScope` and always requests `groupBy: 'user'` per project — the finest granularity the API offers. Grouping never reaches the fetch or its query key; it is applied as a computed over the loaded rows:
 
-- **`projectAndMember` (default)** — loop visible projects, request `groupBy: 'user'` with each `projectId`, exactly as today. This is the only way to obtain both identities from the current API.
-- **`project`** — one request with `groupBy: 'project'` and no project loop. Rows carry project identity directly, so the loop that exists to supply it is unnecessary.
-- **`member`** — one request with `groupBy: 'user'` and no project id. The backend aggregates each user across visible projects; looping and merging client-side would be browser-side aggregation over data the backend already groups.
+- **`project` (default)** — folded by `foldRowsByProject` into one row per project, summing time and counting distinct contributors.
+- **`member`** — re-ordered member-major by `sortRowsByMember`, keeping each member's per-project rows.
 
-The two single-request modes are also markedly cheaper than the current N-projects-times-N-pages loop.
+`groupBy: 'project'` would give project totals in one step, but `timeReportProjectRowSchema` carries `user: null` and no member count, so it cannot answer "how many members worked on this". The count exists only in member-level rows, so the fold is client-side by necessity.
 
-*Alternative rejected:* keep the loop for all modes and merge client-side for `member`. It duplicates work the backend does and reintroduces frontend aggregation.
+Because both groupings derive from identical data, keying the query by grouping would refetch the whole project loop to render rows the client already holds. Switching grouping is therefore instant and issues no request; only the date range refetches.
 
-### `Project & Member` is a UI grouping, and the default
+Single unscoped requests were the obvious cheaper design and are wrong here. `buildQueryContext` (`reports.service.ts:146-153`) applies `projects.isActive = true` **only for PMs**; admins get no active-project filter, while `getVisibleReportProjectsForScope` filters to `isActive && totalSeconds > 0`. An unscoped request would hand admins time the loop hides, and `spec.md:140` shows excluding inactive projects is a deliberate product rule. Summary totals would then move when the user only changed grouping.
 
-The API has no combined grouping, so `projectAndMember` is a frontend concept that names the fetch strategy already in use. Making it the default keeps the current table intact, so this change adds capability rather than trading one view for another. Dropping to only `Project` and `Member` would delete the project-member breakdown outright.
+*Alternative rejected:* single requests per grouping. Cheaper, but rescopes the report for admins and cannot supply the member count.
 
-For export, `projectAndMember` maps to `groupBy: 'user'` — the value its underlying requests use. Since export grouping is only a CSV label column, this affects metadata, not rows.
+### There is no combined project-and-member grouping
 
-*Alternative rejected:* two options matching the API exactly. Cleaner mapping, but silently removes today's default view.
+A `Project & Member` option was considered and dropped: the API groups by project, task, or user, and no combination expresses "group by both". It would mean inventing a grouping the report cannot express, and it is really just the ungrouped breakdown.
 
-### Collapsed identities hide their column instead of showing placeholder labels
+The default is `Project`, which answers the question the page leads with — how much time went into each project — while the `Members` count preserves how many people contributed. `Member` remains for the per-person view.
 
-Under `project`, no row has a member; under `member`, none has a project. Rather than let `getReportTableRowLabels` fall through to `'Member scope'` / `'Project scope'`, the table derives its columns from the grouping:
+### A project row counts contributors instead of naming one
 
-| Grouping | Columns |
-| --- | --- |
-| `projectAndMember` | Project, Member, Hours, Billable |
-| `project` | Project, Hours, Billable |
-| `member` | Member, Hours, Billable |
+Under `project`, no single member owns a row. Rather than let `getReportTableRowLabels` fall through to `'Member scope'`, the table swaps the column for a count rendered as `4 members`:
 
-The column filter for an absent column is hidden and its filter state cleared on change, so a stale `filters.memberId` cannot silently empty the table after switching to `project`. `reportTableRowSchema` allows `projectName`/`memberName` to be absent, and the placeholder branches in `getReportTableRowLabels` are removed rather than left as dead fallbacks.
+| Grouping | Columns | A row is |
+| --- | --- | --- |
+| `project` (default) | Project, Members, Hours, Billable | all time spent on one project, plus its contributor count |
+| `member` | Member, Project, Hours, Billable | one member's time on one project, member-major |
 
-This is why `spec.md:112` becomes conditional rather than simply deleted: the default grouping still guarantees the breakdown, and the other groupings omit the column instead of faking it.
+`reportTableRowSchema` allows `memberName` to be absent, and the placeholder branches in `getReportTableRowLabels` are removed rather than left as dead fallbacks.
 
-*Alternative rejected:* keep the placeholder labels and all four columns. It is what the spec forbids, and a column of `'Member scope'` communicates nothing.
+### Both groupings keep both column filters
+
+The member filter survives `project` grouping even though no Member column does. Filtering by a member there answers "which projects did they contribute to", which no other control answers in place. The filter row simply follows the column order: project-then-member under `project`, member-then-project under `member`.
+
+The cost is that a member-filtered project row still shows the project's total hours, not that member's, because the row is a project total. That is inherent to grouping by project and is called out in the docs rather than papered over.
+
+*Alternative rejected:* hide the member filter under `project` grouping, on the grounds that a derived count is not filterable. It is tidier but removes a real question the page could answer.
 
 ### Export keeps the header controls as its scope
 
@@ -91,7 +95,7 @@ This is why `spec.md:112` becomes conditional rather than simply deleted: the de
 
 - **Single-request modes drop the frontend project loop** → `getVisibleReportProjectsForScope` currently filters to active projects with tracked time, so `project` and `member` groupings will rely purely on server-side scope and may include projects the loop would have filtered out. Verify PM scope for both modes explicitly before shipping; if the backend is laxer than the loop, keep the loop for `project` too.
 - **Grouping affects the table but only labels the CSV** → a user switching to `Member` sees regrouped rows and a CSV whose rows did not change. This is required by the archived export contract, so document it in `docs/ui/pages-admin.md` rather than "fix" it.
-- **Date range edits now refetch, from the page's most reachable control** → under `projectAndMember` that is still the N-projects loop, so a wide range on a large workspace is expensive. The 300ms debounce bounds the burst, and `getReportErrorMessage` already surfaces throttling.
+- **Date range edits now refetch, from the page's most reachable control** → the fetch still walks the N-projects loop, so a wide range on a large workspace is expensive. The 300ms debounce bounds the burst, and `getReportErrorMessage` already surfaces throttling. Grouping switches cost nothing.
 - **`useReportRefreshDebounce` also watches `selectedProjectId`** → inert once the project control is gone, but it would silently refetch if anything set that ref again. Comment the call site.
 - **Three specs assert the behaviour being reversed** → `ReportsView.spec.ts:307`, `useReportsData.spec.ts:370`, and `spec.md:107` must be rewritten, not deleted, so the new contract stays covered.
 - **Docs, spec, and design can drift** → `docs/ui/pages-admin.md:19-31`, the `admin-pages` spec, and the `.pen` screen all describe this surface, and the `.pen` still reads `Group by: Project` rather than the new default. All must move together, since `AGENTS.md` resolves conflicts in favour of the docs.

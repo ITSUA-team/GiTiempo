@@ -25,9 +25,10 @@ const skeletonConfig = {
     tableHeaderWidths: ['140px', '220px', '120px', '120px', '150px'],
   },
   reports: {
-    filterCount: 5,
+    filterCount: 0,
     statCount: 4,
-    tableActionWidth: '17.5rem',
+    // Date range, grouping, search, and export now sit in the results header.
+    tableActionWidth: '50rem',
     tableHeaderWidths: ['180px', '140px', '140px'],
   },
 } as const;

@@ -29,23 +29,37 @@ The reports page MUST support date range and grouping controls that scope both l
 #### Scenario: Grouping selects what a results row represents
 
 - **WHEN** the user changes the grouping control in the results table header
-- **THEN** the page refetches report data for the selected grouping
-- **AND** `Project & Member` groups rows by project and member together and is the default grouping
-- **AND** `Project` groups rows by project, and `Member` groups rows by member
+- **THEN** the page regroups the already-loaded report without calling report data endpoints
+- **AND** `Project` is the default grouping and groups rows by project
+- **AND** `Member` groups rows by member
 - **AND** summary totals reflect the regrouped report data
 
-#### Scenario: Results columns follow the selected grouping
+#### Scenario: Groupings cover the same report scope
 
-- **WHEN** report rows are rendered for a grouping that omits an identity
-- **THEN** the table hides the column for the omitted identity rather than showing an aggregate placeholder label
-- **AND** it hides the column filter for that hidden column and clears any filter state held for it
+- **WHEN** the user switches between groupings without changing the date range
+- **THEN** every grouping covers the same visible projects for the current role scope
+- **AND** summary totals stay the same, because changing grouping regroups the loaded report rather than rescoping it
+- **AND** only the date range triggers a report refetch
+
+#### Scenario: Project grouping totals time spent on each project
+
+- **WHEN** the user groups by `Project`
+- **THEN** each row totals the time spent on one project across all members
+- **AND** the row reports how many members contributed to that project, phrased as a count of members
+- **AND** the table hides the member column rather than showing an aggregate placeholder label
+
+#### Scenario: Member grouping shows how each member spent time on projects
+
+- **WHEN** the user groups by `Member`
+- **THEN** each row still identifies the project the tracked time belongs to
+- **AND** rows lead with the member column, ordered by member and then project
+
+#### Scenario: Both groupings keep project and member filters
+
+- **WHEN** report rows are rendered for any grouping
+- **THEN** the project and member column filters both remain available, ordered to follow the columns
+- **AND** filtering by a member under `Project` grouping narrows the projects shown to those that member contributed to
 - **AND** the hours and billable columns remain available for every grouping
-
-#### Scenario: Default grouping keeps project-member time breakdowns
-
-- **WHEN** report data loads successfully under the default `Project & Member` grouping
-- **THEN** rows identify the member, project, tracked hours, and billable hours represented by that row
-- **AND** rows do not collapse member identity into aggregate placeholder labels
 
 #### Scenario: Date range input uses controlled validation
 

@@ -249,7 +249,7 @@ describe('useReportsData', () => {
     });
   }
 
-  it('loads backend-generated project-member report rows', async () => {
+  it('folds member rows into project rows carrying a contributor count', async () => {
     const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
@@ -280,21 +280,21 @@ describe('useReportsData', () => {
       { label: 'Nina PM', value: ninaId },
       { label: 'Zoe Analyst', value: zoeId },
     ]);
+    // The default project grouping: one row per project, with the contributor
+    // count folded in from the member rows the API actually returns.
+    expect(reports.grouping.value).toBe('project');
     expect(reports.rows.value).toEqual([
       expect.objectContaining({
-        memberName: 'Nina PM',
+        memberIds: [ninaId],
+        memberName: null,
         projectName: 'Billing API',
         totalSeconds: 1800,
       }),
       expect.objectContaining({
-        memberName: 'Alex Admin',
+        memberIds: [alexId, ninaId],
+        memberName: null,
         projectName: 'Project Orion',
-        totalSeconds: 7200,
-      }),
-      expect.objectContaining({
-        memberName: 'Nina PM',
-        projectName: 'Project Orion',
-        totalSeconds: 3600,
+        totalSeconds: 10800,
       }),
     ]);
     expect(reports.summary.value.totalSeconds).toBe(12600);
@@ -367,7 +367,7 @@ describe('useReportsData', () => {
     );
   });
 
-  it('keeps setup controls as export-only scope without changing rows or summary', async () => {
+  it('refetches rows and scopes export when the date range changes', async () => {
     const enabled = ref(true);
     const listProjects = vi.fn().mockResolvedValue(projects);
     const membersClient = createMembersClientMocks();
@@ -394,13 +394,8 @@ describe('useReportsData', () => {
     );
 
     await flushPromises();
-    const initialRows = reports.rows.value;
-    const initialTotalSeconds = reports.summary.value.totalSeconds;
     reportsClient.getTimeReport.mockClear();
 
-    reports.selectedProjectId.value = projectOrionId;
-    reports.selectedMemberId.value = ninaId;
-    reports.groupBy.value = 'project';
     reports.dateRange.value = [
       new Date('2026-05-01T12:00:00.000Z'),
       new Date('2026-05-02T12:00:00.000Z'),
@@ -409,9 +404,12 @@ describe('useReportsData', () => {
     await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
 
-    expect(reportsClient.getTimeReport).not.toHaveBeenCalled();
-    expect(reports.rows.value).toBe(initialRows);
-    expect(reports.summary.value.totalSeconds).toBe(initialTotalSeconds);
+    expect(reportsClient.getTimeReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dateFrom: new Date(2026, 4, 1).toISOString(),
+        dateTo: new Date(2026, 4, 3).toISOString(),
+      }),
+    );
 
     await reports.exportCurrentReport();
     await flushPromises();
@@ -421,10 +419,62 @@ describe('useReportsData', () => {
         dateFrom: new Date(2026, 4, 1).toISOString(),
         dateTo: new Date(2026, 4, 3).toISOString(),
         groupBy: 'project',
-        projectId: projectOrionId,
-        userId: ninaId,
       }),
     );
+  });
+
+  it('regroups loaded rows without refetching when grouping changes', async () => {
+    const enabled = ref(true);
+    const listProjects = vi.fn().mockResolvedValue(projects);
+    const membersClient = createMembersClientMocks();
+    const reportsClient = createReportsClientMocks();
+    let reports!: ReturnType<typeof useReportsData>;
+
+    mountWithQuery(
+      defineComponent({
+        setup() {
+          reports = useReportsData({
+            enabled,
+            membersClient,
+            projectsClient: { listProjects },
+            reportsClient,
+            scope: createScope(),
+          });
+          return () => null;
+        },
+      }),
+    );
+
+    await flushPromises();
+    const projectTotal = reports.summary.value.totalSeconds;
+    reportsClient.getTimeReport.mockClear();
+
+    reports.grouping.value = 'member';
+    await vi.advanceTimersByTimeAsync(300);
+    await flushPromises();
+
+    // Both groupings are presented from the same member rows, so switching must
+    // not re-walk the project loop for identical data.
+    expect(reportsClient.getTimeReport).not.toHaveBeenCalled();
+    expect(reports.rows.value).toEqual([
+      expect.objectContaining({
+        memberName: 'Alex Admin',
+        projectName: 'Project Orion',
+        totalSeconds: 7200,
+      }),
+      expect.objectContaining({
+        memberName: 'Nina PM',
+        projectName: 'Billing API',
+        totalSeconds: 1800,
+      }),
+      expect.objectContaining({
+        memberName: 'Nina PM',
+        projectName: 'Project Orion',
+        totalSeconds: 3600,
+      }),
+    ]);
+    // Regrouping must not move the totals.
+    expect(reports.summary.value.totalSeconds).toBe(projectTotal);
   });
 
   it('exports through the reports API using explicit export setup controls', async () => {

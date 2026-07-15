@@ -23,6 +23,7 @@ import { useReportExport } from './useReportExport';
 import { useReportFilters } from './useReportFilters';
 import { useReportLoadErrorNotifications } from './useReportLoadErrorNotifications';
 import { useReportOptions } from './useReportOptions';
+import { useReportRefreshDebounce } from './useReportRefreshDebounce';
 import { useReportRowsData } from './useReportRowsData';
 
 interface UseReportsDataOptions {
@@ -68,6 +69,7 @@ export function useReportsData({
   const rowsData = useReportRowsData({
     appliedFilters: filters.appliedFilters,
     enabled,
+    grouping: filters.grouping,
     isAdminScope,
     memberOptions: reportOptions.memberOptions,
     membersLoaded,
@@ -82,6 +84,19 @@ export function useReportsData({
     enabled,
     reportsClient,
     scope,
+  });
+
+  // selectedProjectId is inert scope state: the reports UI no longer exposes a
+  // project setup control. Grouping is absent by design — it regroups loaded
+  // rows and needs no refetch.
+  useReportRefreshDebounce({
+    applyCurrentFilters: filters.applyCurrentFilters,
+    dateRange: filters.dateRange,
+    initialLoaded: rowsData.initialLoaded,
+    onRefreshScheduled() {
+      currentAction.value = 'refresh-reports';
+    },
+    selectedProjectId: filters.selectedProjectId,
   });
 
   useReportLoadErrorNotifications({
@@ -121,7 +136,7 @@ export function useReportsData({
   return {
     dateRange: filters.dateRange,
     exportCurrentReport,
-    groupBy: filters.groupBy,
+    grouping: filters.grouping,
     initialLoaded: rowsData.initialLoaded,
     isEmpty: rowsData.isEmpty,
     isInitialLoading: rowsData.isInitialLoading,

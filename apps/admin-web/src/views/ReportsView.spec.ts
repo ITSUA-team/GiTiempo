@@ -4,10 +4,10 @@ import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
-import type { TimeReportGroupBy } from '@gitiempo/shared';
 
 import type {
   ReportDateRange,
+  ReportGrouping,
   ReportSummaryView,
   ReportTableRow,
 } from '@/lib/report-view-model';
@@ -43,23 +43,18 @@ vi.mock('@/composables/reports/useReportsData', () => ({
 
 import ReportsView from './ReportsView.vue';
 
-const ReportsFilterFormStub = {
-  name: 'ReportsFilterForm',
+const ReportsTableStub = {
+  name: 'ReportsTable',
   props: [
-    'projectId',
-    'memberId',
-    'dateRange',
-    'groupBy',
+    'rows',
+    'loading',
     'projectOptions',
     'memberOptions',
-    'disabled',
+    'filters',
+    'dateRange',
+    'grouping',
   ],
-  emits: [
-    'update:projectId',
-    'update:memberId',
-    'update:dateRange',
-    'update:groupBy',
-  ],
+  emits: ['update:filters', 'update:dateRange', 'update:grouping'],
   setup() {
     return {
       invalidDateRange: [
@@ -69,13 +64,7 @@ const ReportsFilterFormStub = {
     };
   },
   template:
-    '<div data-testid="reports-filter-form"><button data-testid="change-report-project" @click="$emit(\'update:projectId\', \'project-2\')">filters</button><button data-testid="change-report-member" @click="$emit(\'update:memberId\', \'member-2\')">member</button><button data-testid="change-report-group-by" @click="$emit(\'update:groupBy\', \'user\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><slot name="actions" /></div>',
-};
-
-const ReportsTableStub = {
-  name: 'ReportsTable',
-  props: ['rows', 'loading', 'projectOptions', 'memberOptions', 'filters'],
-  template: '<div data-testid="reports-table">{{ rows.length }} rows</div>',
+    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><slot name="actions" /></div>',
 };
 
 const ManagementPageSkeletonStub = {
@@ -127,7 +116,7 @@ function createReportState({
     dateRange: shallowRef<ReportDateRange>(null),
     exportCurrentReport: reportMocks.exportCurrentReport,
     getFilteredRows: vi.fn(),
-    groupBy: ref<TimeReportGroupBy>('project'),
+    grouping: ref<ReportGrouping>('project'),
     initialLoaded: ref(!isInitialLoading),
     isEmpty: computed(() => reportRows.value.length === 0),
     isInitialLoading: ref(isInitialLoading),
@@ -160,7 +149,6 @@ function mountReportsView() {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
       stubs: {
         ManagementPageSkeleton: ManagementPageSkeletonStub,
-        ReportsFilterForm: ReportsFilterFormStub,
         ReportsTable: ReportsTableStub,
       },
     },
@@ -218,7 +206,7 @@ describe('ReportsView', () => {
     expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
     expect(
       wrapper
-        .get('[data-testid="reports-filter-form"]')
+        .get('[data-testid="reports-table"]')
         .find('[data-testid="export-reports-csv"]')
         .exists(),
     ).toBe(true);
@@ -304,19 +292,15 @@ describe('ReportsView', () => {
     });
   });
 
-  it('keeps header setup controls as export scope instead of table state', async () => {
+  it('feeds header grouping back into report state and export scope', async () => {
     const wrapper = mountReportsView();
     const state = reportMocks.state as ReturnType<typeof createReportState>;
     await flushPromises();
 
-    await wrapper.get('[data-testid="change-report-project"]').trigger('click');
-    await wrapper.get('[data-testid="change-report-member"]').trigger('click');
-    await wrapper.get('[data-testid="change-report-group-by"]').trigger('click');
+    await wrapper.get('[data-testid="change-report-grouping"]').trigger('click');
 
-    expect(state.selectedProjectId.value).toBeNull();
-    expect(state.selectedMemberId.value).toBeNull();
-    expect(state.groupBy.value).toBe('project');
-    expect(wrapper.get('[data-testid="reports-table"]').text()).toContain('1 rows');
+    // The header control now drives report state rather than export-only scope.
+    expect(state.grouping.value).toBe('member');
 
     await wrapper.get('[data-testid="export-reports-csv"]').trigger('click');
     await flushPromises();
@@ -324,8 +308,8 @@ describe('ReportsView', () => {
     expect(reportMocks.exportCurrentReport).toHaveBeenCalledWith(
       expect.objectContaining({
         groupBy: 'user',
-        memberId: 'member-2',
-        projectId: 'project-2',
+        memberId: null,
+        projectId: null,
       }),
     );
   });

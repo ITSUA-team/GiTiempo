@@ -8,10 +8,12 @@ Controls sitting inside a table header read as filters for that table. Right now
 
 - The date range drives report fetching. Editing it refetches, so results rows and summary totals update to match, and it continues to scope the CSV.
 - Grouping drives the results table's row shape. Selecting a grouping changes what one row represents, and the table's columns and column filters follow that choice.
-- Add `Project & Member` as a third grouping option and make it the default. It names the project-member breakdown the table already shows today, so the current view survives as the default rather than disappearing.
-- `Project` groups to one row per project (Project, Hours, Billable columns). `Member` groups to one row per member (Member, Hours, Billable columns). The column filter for a hidden column is hidden and its filter state cleared.
+- Grouping offers `Project` (default) and `Member`. There is no combined option: the API groups by project, task, or user only, so a project-and-member grouping is not a thing the report can express.
+- `Project` groups to one row per project, totalling everyone's time and reporting how many members contributed as `4 members` (Project, Members, Hours, Billable columns).
+- `Member` groups member-major and keeps the project breakdown, so a row still shows which project the time went to (Member, Project, Hours, Billable columns).
+- Both groupings keep the project and member column filters, ordered to follow the columns. Filtering by a member under `Project` grouping answers which projects that member contributed to.
 - **BREAKING** Header controls stop being export-only scope. The requirement that loaded rows and summary cards do not change when a header control changes is reversed.
-- **BREAKING** The results table is a project-member breakdown only under the default grouping. Under `Project` or `Member` it deliberately collapses one of those identities, which the current spec forbids outright.
+- **BREAKING** The results table is no longer always a project-member breakdown. The default `Project` grouping collapses member identity into a contributor count, which the current spec forbids outright.
 - Grouping remains CSV metadata and does not collapse CSV row granularity. The export stays detailed project-task-user rows, per the contract set by `2026-07-09-clarify-detailed-report-csv-export`.
 - Table-only discovery filters (global search, project/member/hours/billable columns) stay table-only and continue not to affect the CSV or the summary cards.
 
@@ -52,4 +54,4 @@ Affected shared code:
 Docs and design:
 
 - `docs/ui/pages-admin.md:19-31` still describes the old setup bar and must be rewritten; `apps/admin-web/AGENTS.md` makes docs the source of truth over the design file.
-- `GITiempo.pen` shows the redesigned header but reads `Group by: Project`; it needs to read `Group by: Project & Member` to match the new default.
+- `GITiempo.pen` already carries the approved surface: header controls, `Group by: Project`, a `Members` count column, and the retained member filter. Code follows the design here.
