@@ -16,3 +16,4 @@ packages/shared/dist/
 packages/shared/*.tsbuildinfo
 packages/*/dist/
 packages/*/*.tsbuildinfo
+.claude
