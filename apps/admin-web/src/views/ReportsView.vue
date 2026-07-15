@@ -57,16 +57,17 @@ const tableRows = computed(() =>
 const reportDateRangeError = computed(() =>
   getReportDateRangeError(dateRange.value),
 );
-// The CSV is detailed project-task-user rows, so it has no aggregate totals for
-// the hours and billable filters to match. Rather than hand back a file that
-// quietly ignores them, block the export while either is active.
+// The CSV is detailed project-task-user rows, so it has nothing to match the
+// hours, billable, or search filters, which all work on aggregate totals and
+// formatted labels. Rather than hand back a file that quietly disagrees with
+// the table, block the export while any of them is active.
 const exportableTableFilters = computed(() =>
   isReportTableFilterExportable(tableFilters.value),
 );
 const exportBlockedReason = computed(() =>
   exportableTableFilters.value
     ? undefined
-    : 'Hours and billable filters cannot be exported. Clear them to export this report.',
+    : 'Search, hours, and billable filters cannot be exported. Clear them to export this report.',
 );
 const exportDisabled = computed(
   () =>
@@ -112,7 +113,6 @@ async function handleExport(): Promise<void> {
       groupBy: reportGroupingApiValue[grouping.value],
       memberId: tableFilters.value.memberId,
       projectId: tableFilters.value.projectId,
-      search: tableFilters.value.global,
     });
 
     if (!exportResult) {

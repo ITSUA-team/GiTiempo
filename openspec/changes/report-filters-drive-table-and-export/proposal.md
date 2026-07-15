@@ -15,8 +15,8 @@ Controls sitting inside a table header read as filters for that table. Right now
 - **BREAKING** Header controls stop being export-only scope. The requirement that loaded rows and summary cards do not change when a header control changes is reversed.
 - **BREAKING** The results table is no longer always a project-member breakdown. The default `Project` grouping collapses member identity into a contributor count, which the current spec forbids outright.
 - Grouping remains CSV metadata and does not collapse CSV row granularity. The export stays detailed project-task-user rows, per the contract set by `2026-07-09-clarify-detailed-report-csv-export`.
-- The CSV export carries the table's project, member, and global search filters, so a filtered table exports a matching file.
-- **BREAKING** `Export CSV` is disabled while an hours or billable filter is active. Those two filter aggregate row totals, which the detailed CSV has no rows to match, so exporting would return a file that silently ignores them.
+- The CSV export carries the table's project and member filters, so a table filtered by identity exports a matching file.
+- **BREAKING** `Export CSV` is disabled while a global search, hours, or billable filter is active. Those filter aggregate totals and formatted labels the detailed CSV cannot express, so exporting would return a file that disagrees with the table.
 - Table filters continue not to affect the summary cards.
 
 ## Capabilities

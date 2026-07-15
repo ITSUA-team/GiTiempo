@@ -64,10 +64,12 @@ const ReportsTableStub = defineComponent({
       setBillableFilter: () => {
         emit('update:filters', { ...props.filters, billable: 'withBillable' });
       },
+      setSearchFilter: () => {
+        emit('update:filters', { ...props.filters, global: 'orion' });
+      },
       setTableFilters: () => {
         emit('update:filters', {
           ...props.filters,
-          global: 'orion',
           memberId: 'member-1',
           projectId: 'project-1',
         });
@@ -75,7 +77,7 @@ const ReportsTableStub = defineComponent({
     };
   },
   template:
-    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><button data-testid="set-table-filters" @click="setTableFilters">table filters</button><button data-testid="set-billable-filter" @click="setBillableFilter">billable filter</button><slot name="actions" /></div>',
+    '<div data-testid="reports-table">{{ rows.length }} rows<button data-testid="change-report-grouping" @click="$emit(\'update:grouping\', \'member\')">group</button><button data-testid="set-invalid-report-date" @click="$emit(\'update:dateRange\', invalidDateRange)">invalid dates</button><button data-testid="set-table-filters" @click="setTableFilters">table filters</button><button data-testid="set-billable-filter" @click="setBillableFilter">billable filter</button><button data-testid="set-search-filter" @click="setSearchFilter">search filter</button><slot name="actions" /></div>',
 });
 
 const ManagementPageSkeletonStub = {
@@ -230,7 +232,6 @@ describe('ReportsView', () => {
       groupBy: 'project',
       memberId: null,
       projectId: null,
-      search: '',
     });
     expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
       blob: expect.any(Blob),
@@ -259,7 +260,6 @@ describe('ReportsView', () => {
       groupBy: 'project',
       memberId: null,
       projectId: null,
-      search: '',
     });
     expect(reportMocks.downloadReportExport).toHaveBeenCalledWith({
       blob: expect.any(Blob),
@@ -327,7 +327,7 @@ describe('ReportsView', () => {
     );
   });
 
-  it('scopes the CSV export to the table project, member, and search filters', async () => {
+  it('scopes the CSV export to the table project and member filters', async () => {
     const wrapper = mountReportsView();
     await flushPromises();
 
@@ -339,10 +339,27 @@ describe('ReportsView', () => {
       expect.objectContaining({
         memberId: 'member-1',
         projectId: 'project-1',
-        search: 'orion',
       }),
     );
     expect(reportMocks.downloadReportExport).toHaveBeenCalled();
+  });
+
+  it('blocks CSV export while the table search is active', async () => {
+    const wrapper = mountReportsView();
+    await flushPromises();
+
+    // The table search matches formatted labels including durations, which the
+    // detailed CSV cannot express, and the backend's search means something
+    // else, so exporting would disagree with the table either way.
+    await wrapper.get('[data-testid="set-search-filter"]').trigger('click');
+
+    const exportButton = wrapper.get('[data-testid="export-reports-csv"]');
+    expect((exportButton.element as HTMLButtonElement).disabled).toBe(true);
+
+    await exportButton.trigger('click');
+    await flushPromises();
+
+    expect(reportMocks.exportCurrentReport).not.toHaveBeenCalled();
   });
 
   it('blocks CSV export while an unexportable table filter is active', async () => {

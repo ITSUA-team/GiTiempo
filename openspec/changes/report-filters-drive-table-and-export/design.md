@@ -88,13 +88,17 @@ The cost is that a member-filtered project row still shows the project's total h
 
 ### Export carries every table filter the CSV can honour
 
-`Export CSV` sends the active date range, the grouping metadata, and the table's project, member, and global search filters, which `timeReportExportQuerySchema` accepts as `projectId`, `userId`, and `search`. This reverses `spec.md:150`: a filtered table now exports a matching file.
+`Export CSV` sends the active date range, the grouping metadata, and the table's project and member filters, which `timeReportExportQuerySchema` accepts as `projectId` and `userId`. This reverses `spec.md:150` for identity filters: a table filtered by project or member now exports a matching file.
 
-Hours and billable stop at the boundary, and not for want of an API field. They filter *aggregate row totals* (`filterReportRows` tests `row.totalSeconds >= 8h`), while the CSV is detailed project-task-user rows that contain no such aggregate. "Projects with 40h+" has nothing to match against in the export, so honouring it would mean either a backend change or abandoning the detailed-CSV contract.
+The other three stop at the boundary. **Hours and billable** filter *aggregate row totals* (`filterReportRows` tests `row.totalSeconds >= 8h`), while the CSV is detailed project-task-user rows containing no such aggregate; "projects with 40h+" has nothing to match against.
 
-Rather than drop them silently — filter to 40h+, export, receive everything — `Export CSV` is disabled while either is active, with a tooltip on a wrapper span, since a disabled button swallows hover. The user gets a file that matches the screen, or no file and a reason.
+**Global search** looks exportable and is not. The table's haystack is `projectName`, `memberName`, and *formatted labels* — durations and percentages (`report-view-model.ts:453-460`), a behaviour `report-view-model.spec.ts:215` pins deliberately. The endpoint's `search` matches project name, **task title**, `displayName`, and `email`. So searching `"1h 01m"` matches rows in the table and nothing in the export, while a task-title search matches the export and nothing in the table. Sending it would not scope the CSV — it would apply a *different* filter under the same name, which is worse than ignoring it.
 
-*Alternative rejected:* send what maps and ignore the rest. Simplest, but hands back a file that quietly disagrees with the table, which is worse than the honest refusal.
+Narrowing the table's haystack to the API's fields was considered and rejected: it deletes duration search, a tested capability, and still leaves task titles matching only server-side.
+
+So the rule is identity filters export, label and aggregate filters do not. Rather than drop them silently — filter to 40h+, export, receive everything — `Export CSV` is disabled while any of the three is active, with a tooltip on a wrapper span, since a disabled button swallows hover. The user gets a file that matches the screen, or no file and a reason.
+
+*Alternative rejected:* send what maps and ignore the rest. Simplest, but hands back a file that quietly disagrees with the table.
 
 Export handling — `handleExport`, the `exporting` flag, toasts, `downloadReportExport` — stays in `ReportsView`, with the button passed into `ReportsTable`'s header through an `actions` slot, keeping the table presentational and preserving `data-testid="export-reports-csv"`.
 

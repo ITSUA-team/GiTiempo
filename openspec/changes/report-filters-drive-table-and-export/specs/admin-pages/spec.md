@@ -94,7 +94,7 @@ The reports page MUST support date range and grouping controls that scope both l
 
 - **WHEN** the user activates `Export CSV`
 - **THEN** the page requests `GET /reports/time/export` scoped to the active date range, carrying the selected grouping
-- **AND** the request also carries the table's project, member, and global search filters, so the CSV covers the same report scope the table shows
+- **AND** the request also carries the table's project and member filters, so the CSV is scoped to the same projects and members the table is
 - **AND** the browser downloads the CSV returned by the backend
 - **AND** the downloaded CSV contains backend-generated detailed project-task-user rows regardless of the selected grouping
 - **AND** the selected grouping is preserved as CSV metadata and does not collapse CSV row granularity
@@ -102,17 +102,18 @@ The reports page MUST support date range and grouping controls that scope both l
 
 #### Scenario: Unexportable table filters block CSV export
 
-- **WHEN** an hours or billable table filter is active
+- **WHEN** a global search, hours, or billable table filter is active
 - **THEN** `Export CSV` is disabled and states that those filters cannot be exported
 - **AND** activating it generates no CSV
 - **AND** clearing those filters restores export
 
-#### Scenario: Hours and billable filters are not exportable
+#### Scenario: Only identity filters are exportable
 
 - **WHEN** the system decides which table filters can scope the CSV
-- **THEN** project, member, and global search scope it, because the export contract accepts them
+- **THEN** project and member scope it, because they identify rows the export contract can select by
 - **AND** hours and billable do not, because they filter aggregate row totals and the CSV holds detailed project-task-user rows with no such totals to match
-- **AND** the export never silently ignores an active filter
+- **AND** global search does not, because it matches formatted labels including durations and percentages that the CSV cannot express, and the export endpoint's own search matches task titles the table never shows while ignoring those labels
+- **AND** the export never silently ignores an active filter, nor silently applies a different one
 
 #### Scenario: Report request errors stay distinct from empty results
 
