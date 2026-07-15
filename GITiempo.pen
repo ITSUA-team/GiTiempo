@@ -2085,19 +2085,20 @@
                               "type": "frame",
                               "id": "g4uSN",
                               "name": "head2",
-                              "width": 180,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
+                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "EjsxE",
                                   "fill": "$color-text-dark",
-                                  "content": "Member",
+                                  "content": "Members",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "600"
@@ -2195,12 +2196,13 @@
                               "type": "frame",
                               "id": "l34aWj",
                               "name": "memberFilter",
-                              "width": 180,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
+                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
@@ -2208,7 +2210,6 @@
                                   "id": "jccbd",
                                   "name": "repF2Text",
                                   "fill": "$color-text-muted",
-                                  "content": "All members",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
@@ -2301,19 +2302,20 @@
                               "type": "frame",
                               "id": "2Saue",
                               "name": "r1c2",
-                              "width": 180,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
+                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "gv1uc",
                                   "fill": "$color-text-muted",
-                                  "content": "Alexey T.",
+                                  "content": "4",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
@@ -2409,19 +2411,20 @@
                               "type": "frame",
                               "id": "mJkli",
                               "name": "r2c2",
-                              "width": 180,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
+                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "cNEm3",
                                   "fill": "$color-text-muted",
-                                  "content": "Nina K.",
+                                  "content": "2",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
@@ -2517,19 +2520,20 @@
                               "type": "frame",
                               "id": "2Pmzn",
                               "name": "r3c2",
-                              "width": 180,
+                              "width": 120,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
+                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "FEE12",
                                   "fill": "$color-text-muted",
-                                  "content": "Sam R.",
+                                  "content": "3",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
