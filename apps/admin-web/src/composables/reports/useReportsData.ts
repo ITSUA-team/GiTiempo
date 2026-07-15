@@ -98,7 +98,9 @@ export function useReportsData({
       return;
     }
 
-    currentAction.value = rowsData.initialLoaded.value ? 'refresh-reports' : 'load-reports';
+    currentAction.value = rowsData.initialLoaded.value
+      ? 'refresh-reports'
+      : 'load-reports';
     await Promise.all([
       projectsQuery.refetch(),
       isAdminScope.value ? membersQuery.refetch() : Promise.resolve(),
