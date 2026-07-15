@@ -1611,255 +1611,6 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "sWRyU",
-                  "name": "filters",
-                  "width": "fill_container",
-                  "height": 78,
-                  "gap": 12,
-                  "alignItems": "end",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "jYJtR",
-                      "name": "project",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 6,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "3G6QM",
-                          "fill": "$color-text-dark",
-                          "content": "Project",
-                          "fontFamily": "Inter",
-                          "fontSize": 13,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "tvw22",
-                          "width": "fill_container",
-                          "height": 38,
-                          "fill": "$color-surface",
-                          "cornerRadius": "$radius-sm",
-                          "stroke": "$color-divider",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "padding": [
-                            0,
-                            12
-                          ],
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "mozOR",
-                              "fill": "$color-text-dark",
-                              "content": "Project Orion",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "text",
-                              "id": "QXvEb",
-                              "name": "ReportProjectKind",
-                              "fill": "#5D2B85",
-                              "content": "AutoComplete",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "17nHC",
-                      "name": "member",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 6,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "ECt5j",
-                          "fill": "$color-text-dark",
-                          "content": "Member",
-                          "fontFamily": "Inter",
-                          "fontSize": 13,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "OS5Hq",
-                          "width": "fill_container",
-                          "height": 38,
-                          "fill": "$color-surface",
-                          "cornerRadius": "$radius-sm",
-                          "stroke": "$color-divider",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "padding": [
-                            0,
-                            12
-                          ],
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "WyMlK",
-                              "fill": "$color-text-dark",
-                              "content": "All assigned members",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "text",
-                              "id": "P2TRgG",
-                              "name": "ReportMemberKind",
-                              "fill": "#5D2B85",
-                              "content": "AutoComplete",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "1VsZl",
-                      "name": "dateRange",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 6,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "MxK8D",
-                          "fill": "$color-text-dark",
-                          "content": "Date range",
-                          "fontFamily": "Inter",
-                          "fontSize": 13,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "UArlY",
-                          "width": "fill_container",
-                          "height": 38,
-                          "fill": "$color-surface",
-                          "cornerRadius": "$radius-sm",
-                          "stroke": "$color-divider",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "padding": [
-                            0,
-                            12
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "XVPE3",
-                              "fill": "$color-text-dark",
-                              "content": "Apr 1 - Apr 21",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "guyHn",
-                      "name": "groupBy",
-                      "width": 180,
-                      "layout": "vertical",
-                      "gap": 6,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "7kuys",
-                          "fill": "$color-text-dark",
-                          "content": "Group by",
-                          "fontFamily": "Inter",
-                          "fontSize": 13,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "t5Sjl",
-                          "width": "fill_container",
-                          "height": 38,
-                          "fill": "$color-surface",
-                          "cornerRadius": "$radius-sm",
-                          "stroke": "$color-divider",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "padding": [
-                            0,
-                            12
-                          ],
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "HUnEp",
-                              "fill": "$color-text-dark",
-                              "content": "Project",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "text",
-                              "id": "zaVb0",
-                              "name": "ReportGroupByKind",
-                              "fill": "#5D2B85",
-                              "content": "AutoComplete",
-                              "fontFamily": "Inter",
-                              "fontSize": 12,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "MxChX",
-                      "fill": "$color-brand",
-                      "cornerRadius": "$radius-sm",
-                      "padding": [
-                        10,
-                        16
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "nHszK",
-                          "fill": "$color-surface",
-                          "content": "Export CSV",
-                          "fontFamily": "Inter",
-                          "fontSize": 14,
-                          "fontWeight": "600"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "esNWZ",
                   "name": "stats",
                   "width": "fill_container",
@@ -2109,41 +1860,136 @@
                         },
                         {
                           "type": "frame",
-                          "id": "J5LD5v",
-                          "name": "globalSearch",
-                          "width": 280,
-                          "height": 38,
-                          "fill": "$color-surface",
-                          "cornerRadius": "$radius-sm",
-                          "stroke": "$color-divider",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "gap": 8,
-                          "padding": [
-                            0,
-                            12
-                          ],
+                          "id": "qVsGV",
+                          "name": "headerActions",
+                          "gap": 12,
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "R7z9Fb",
-                              "name": "repIcon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "search",
-                              "library": "lucide",
-                              "fill": "$color-text-muted"
+                              "type": "frame",
+                              "id": "UArlY",
+                              "name": "dateRangeField",
+                              "height": 38,
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10,
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "BlsjG",
+                                  "name": "calendarIcon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "calendar",
+                                  "library": "lucide",
+                                  "fill": "$color-text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "XVPE3",
+                                  "fill": "$color-text-dark",
+                                  "content": "Apr 1 – Apr 21",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "J37rz8",
+                                  "name": "dateChevron",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$color-text-muted"
+                                }
+                              ]
                             },
                             {
-                              "type": "text",
-                              "id": "KV91L",
-                              "name": "repSearchText",
-                              "fill": "$color-text-muted",
-                              "content": "Search report rows",
-                              "fontFamily": "Inter",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "J5LD5v",
+                              "name": "globalSearch",
+                              "width": 280,
+                              "height": 38,
+                              "fill": "$color-surface",
+                              "cornerRadius": "$radius-sm",
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "R7z9Fb",
+                                  "name": "repIcon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "search",
+                                  "library": "lucide",
+                                  "fill": "$color-text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "KV91L",
+                                  "name": "repSearchText",
+                                  "fill": "$color-text-muted",
+                                  "content": "Search report rows",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MxChX",
+                              "name": "exportButton",
+                              "height": 38,
+                              "fill": "$color-brand",
+                              "cornerRadius": "$radius-sm",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                16
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "d506Re",
+                                  "name": "exportIcon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "download",
+                                  "library": "lucide",
+                                  "fill": "$color-surface"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "nHszK",
+                                  "fill": "$color-surface",
+                                  "content": "Export CSV",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
                             }
                           ]
                         }
