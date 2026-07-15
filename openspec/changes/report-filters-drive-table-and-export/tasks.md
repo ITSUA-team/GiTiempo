@@ -8,7 +8,7 @@
 ## 2. Make the date range drive report data
 
 - [x] 2.1 Import `useReportRefreshDebounce` in `apps/admin-web/src/composables/reports/useReportsData.ts` and call it with `filters.applyCurrentFilters`, `filters.dateRange`, `rowsData.initialLoaded`, and an `onRefreshScheduled` that sets `currentAction` to `refresh-reports`
-- [x] 2.2 Note at the call site that `selectedProjectId` is inert scope state, so a future project control does not silently start refetching
+- [x] 2.2 Remove the dead `selectedProjectId`/`selectedMemberId` setup state entirely (refs, the no-op `syncSelectedFiltersWithOptions`, the debounce watch entry) and drop the `exportCurrentReport` default that read it, so no argument-less call can silently export an unfiltered report
 - [x] 2.3 Confirm `applyCurrentFilters` keeps its `isReportDateRangeValid` guard so an end-before-start range calls no endpoint
 
 ## 3. Make grouping drive the fetch

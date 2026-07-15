@@ -2,7 +2,7 @@
 
 ### Requirement: Reports Generation And Export
 
-The reports page MUST support date range and grouping controls that scope both loaded report data and backend CSV export, scoped report summaries for loaded data, table-only discovery filters, and backend CSV generation while preserving project-scope restrictions for PM users.
+The reports page MUST support a date range control that scopes both loaded report data and backend CSV export, a grouping control that regroups loaded report data and travels to the CSV as metadata, scoped report summaries for loaded data, table discovery filters whose identity filters also scope the export, and backend CSV generation while preserving project-scope restrictions for PM users.
 
 #### Scenario: Reports page renders reporting surface
 
@@ -95,6 +95,7 @@ The reports page MUST support date range and grouping controls that scope both l
 - **WHEN** the user activates `Export CSV`
 - **THEN** the page requests `GET /reports/time/export` scoped to the active date range, carrying the selected grouping
 - **AND** the request also carries the table's project and member filters, so the CSV is scoped to the same projects and members the table is
+- **AND** a member-filtered export under `Project` grouping contains only that member's entries, while the table's Hours column keeps showing each project's total across everyone — the file is narrower than the numbers on screen, not equal to them
 - **AND** the browser downloads the CSV returned by the backend
 - **AND** the downloaded CSV contains backend-generated detailed project-task-user rows regardless of the selected grouping
 - **AND** the selected grouping is preserved as CSV metadata and does not collapse CSV row granularity

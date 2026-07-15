@@ -1,4 +1,4 @@
-import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import {
   useAdminProjectsQuery,
   useWorkspaceMembersQuery,
@@ -60,8 +60,6 @@ export function useReportsData({
     isAdminScope,
     members: computed(() => membersQuery.data.value ?? []),
     projects: computed(() => projectsQuery.data.value ?? []),
-    selectedMemberId: filters.selectedMemberId,
-    selectedProjectId: filters.selectedProjectId,
   });
   const membersLoaded = computed(
     () => !isAdminScope.value || membersQuery.isSuccess.value,
@@ -86,9 +84,6 @@ export function useReportsData({
     scope,
   });
 
-  // selectedProjectId is inert scope state: the reports UI no longer exposes a
-  // project setup control. Grouping is absent by design — it regroups loaded
-  // rows and needs no refetch.
   useReportRefreshDebounce({
     applyCurrentFilters: filters.applyCurrentFilters,
     dateRange: filters.dateRange,
@@ -96,7 +91,6 @@ export function useReportsData({
     onRefreshScheduled() {
       currentAction.value = 'refresh-reports';
     },
-    selectedProjectId: filters.selectedProjectId,
   });
 
   useReportLoadErrorNotifications({
@@ -118,20 +112,16 @@ export function useReportsData({
       projectsQuery.refetch(),
       isAdminScope.value ? membersQuery.refetch() : Promise.resolve(),
     ]);
-    reportOptions.syncSelectedFiltersWithOptions();
     await rowsData.refetchRows();
   }
 
-  async function exportCurrentReport(
-    exportFilters: ReportSetupFilters = filters.getCurrentSetupFilters(),
-  ) {
+  /**
+   * Export scope is the caller's to state explicitly. A default here once read
+   * dead setup state and would have exported an unfiltered report.
+   */
+  async function exportCurrentReport(exportFilters: ReportSetupFilters) {
     return reportExport.exportCurrentReport(exportFilters);
   }
-
-  watch(
-    [reportOptions.projectOptions, reportOptions.memberOptions],
-    reportOptions.syncSelectedFiltersWithOptions,
-  );
 
   return {
     dateRange: filters.dateRange,
@@ -147,8 +137,6 @@ export function useReportsData({
     projects: reportOptions.projects,
     refresh,
     rows: rowsData.rows,
-    selectedMemberId: filters.selectedMemberId,
-    selectedProjectId: filters.selectedProjectId,
     summary: rowsData.summary,
   };
 }

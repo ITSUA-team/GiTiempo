@@ -7,7 +7,6 @@ interface UseReportRefreshDebounceOptions {
   dateRange: Ref<ReportDateRange>;
   initialLoaded: ComputedRef<boolean>;
   onRefreshScheduled: () => void;
-  selectedProjectId: Ref<string | null>;
 }
 
 export function useReportRefreshDebounce({
@@ -15,7 +14,6 @@ export function useReportRefreshDebounce({
   dateRange,
   initialLoaded,
   onRefreshScheduled,
-  selectedProjectId,
 }: UseReportRefreshDebounceOptions) {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -36,9 +34,10 @@ export function useReportRefreshDebounce({
     debounceTimer = setTimeout(applyCurrentFilters, 300);
   }
 
+  // Only the date range refetches. Grouping is absent by design: it regroups
+  // loaded rows and needs no request.
   watch(
     [
-      selectedProjectId,
       () => dateRange.value?.[0]?.getTime() ?? null,
       () => dateRange.value?.[1]?.getTime() ?? null,
     ],

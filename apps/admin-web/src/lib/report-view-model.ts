@@ -35,7 +35,6 @@ export {
   defaultReportGrouping,
   isReportTableFilterExportable,
   reportGroupingApiValue,
-  reportGroupingSchema,
 } from '@/validation/report-view-model';
 
 export type {

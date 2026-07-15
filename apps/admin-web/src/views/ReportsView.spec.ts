@@ -141,8 +141,6 @@ function createReportState({
     refresh: reportMocks.refresh,
     reportResponse: ref(null),
     rows: reportRows,
-    selectedMemberId: ref<string | null>(null),
-    selectedProjectId: ref<string | null>(null),
     summary: computed(() => ({
       ...summary,
       totalSeconds: rows.reduce((total, row) => total + row.totalSeconds, 0),

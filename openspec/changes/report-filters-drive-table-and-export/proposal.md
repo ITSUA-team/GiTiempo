@@ -40,7 +40,7 @@ Frontend only. No backend, shared contract, database, migration, or OpenAPI chan
 Affected code in `apps/admin-web`:
 
 - `src/composables/reports/useReportsData.ts` — wires in the orphaned `useReportRefreshDebounce` so header edits reach `appliedFilters`.
-- `src/composables/reports/useReportRowsData.ts` — the fetch stops hardcoding `groupBy: 'user'` and branches on the selected grouping.
+- `src/composables/reports/useReportRowsData.ts` — the fetch keeps `groupBy: 'user'` as its single granularity; grouping is applied as a computed over the loaded rows, never as a fetch parameter.
 - `src/composables/reports/useReportFilters.ts` — setup state narrows to date range and grouping.
 - `src/lib/report-view-model.ts` and `src/validation/report-view-model.ts` — the row model and `toReportTableRows` gain the grouping dimension; `reportTableRowSchema` allows an absent project or member.
 - `src/components/reports/ReportsTable.vue` — hosts the date range and grouping controls, derives columns from the grouping, and hosts the export action in its header.

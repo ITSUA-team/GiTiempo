@@ -411,7 +411,14 @@ describe('useReportsData', () => {
       }),
     );
 
-    await reports.exportCurrentReport();
+    // Export scope is always stated explicitly; there is no default that could
+    // silently export an unfiltered report.
+    await reports.exportCurrentReport({
+      dateRange: reports.dateRange.value,
+      groupBy: 'project',
+      memberId: null,
+      projectId: null,
+    });
     await flushPromises();
 
     expect(reportsClient.exportTimeReport).toHaveBeenCalledWith(
