@@ -2085,13 +2085,12 @@
                               "type": "frame",
                               "id": "g4uSN",
                               "name": "head2",
-                              "width": 120,
+                              "width": 180,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
-                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
@@ -2196,13 +2195,12 @@
                               "type": "frame",
                               "id": "l34aWj",
                               "name": "memberFilter",
-                              "width": 120,
+                              "width": 180,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
-                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
@@ -2210,6 +2208,7 @@
                                   "id": "jccbd",
                                   "name": "repF2Text",
                                   "fill": "$color-text-muted",
+                                  "content": "All members",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
@@ -2302,20 +2301,19 @@
                               "type": "frame",
                               "id": "2Saue",
                               "name": "r1c2",
-                              "width": 120,
+                              "width": 180,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
-                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "gv1uc",
                                   "fill": "$color-text-muted",
-                                  "content": "4",
+                                  "content": "4 members",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
@@ -2411,20 +2409,19 @@
                               "type": "frame",
                               "id": "mJkli",
                               "name": "r2c2",
-                              "width": 120,
+                              "width": 180,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
-                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "cNEm3",
                                   "fill": "$color-text-muted",
-                                  "content": "2",
+                                  "content": "2 members",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
@@ -2520,20 +2517,19 @@
                               "type": "frame",
                               "id": "2Pmzn",
                               "name": "r3c2",
-                              "width": 120,
+                              "width": 180,
                               "height": "fill_container",
                               "padding": [
                                 0,
                                 12
                               ],
-                              "justifyContent": "end",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
                                   "id": "FEE12",
                                   "fill": "$color-text-muted",
-                                  "content": "3",
+                                  "content": "3 members",
                                   "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
