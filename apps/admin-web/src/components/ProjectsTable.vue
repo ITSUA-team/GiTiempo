@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { FolderPlusIcon } from '@heroicons/vue/24/outline';
+import { ChevronDownIcon, FolderPlusIcon } from '@heroicons/vue/24/outline';
 import type { ProjectResponse } from '@gitiempo/shared';
 import { giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
 import {
@@ -310,19 +310,30 @@ const columns: ManagementTableColumn[] = [
               <Button
                 type="button"
                 variant="link"
+                :aria-expanded="Boolean(expandedRows[row.id])"
                 :aria-label="`Edit project ${row.name}`"
                 :data-testid="`project-mobile-name-${row.id}`"
                 :pt="{
                   root: {
                     class: [
-                      'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[15px] font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                      'group inline-flex max-w-full items-center gap-1.5 rounded-none border-0 bg-transparent p-0 text-left text-[15px] font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                       row.nameClass,
                     ],
                   },
                 }"
                 @click="emit('edit-project', row.project)"
               >
-                {{ row.name }}
+                <span class="truncate">{{ row.name }}</span>
+                <span
+                  aria-hidden="true"
+                  class="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+                  :class="expandedRows[row.id] ? 'bg-accent-tint' : 'bg-app-bg group-hover:bg-accent-tint'"
+                >
+                  <ChevronDownIcon
+                    class="size-[11px] stroke-[2.5] transition-all duration-200"
+                    :class="expandedRows[row.id] ? 'text-brand rotate-180' : 'text-text-muted group-hover:text-brand'"
+                  />
+                </span>
               </Button>
             </h3>
             <p class="text-text-muted text-[13px]">
@@ -471,19 +482,30 @@ const columns: ManagementTableColumn[] = [
         <Button
           type="button"
           variant="link"
+          :aria-expanded="Boolean(expandedRows[data.id])"
           :aria-label="`Edit project ${data.name}`"
           :data-testid="`project-name-${data.id}`"
           :pt="{
             root: {
               class: [
-                'max-w-full truncate rounded-none border-0 bg-transparent p-0 text-left text-[14px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                'group inline-flex max-w-full items-center gap-1.5 rounded-none border-0 bg-transparent p-0 text-left text-[14px] leading-none font-semibold shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                 data.nameClass,
               ],
             },
           }"
           @click="emit('edit-project', data.project)"
         >
-          {{ data.name }}
+          <span class="truncate">{{ data.name }}</span>
+          <span
+            aria-hidden="true"
+            class="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+            :class="expandedRows[data.id] ? 'bg-accent-tint' : 'bg-app-bg group-hover:bg-accent-tint'"
+          >
+            <ChevronDownIcon
+              class="size-[11px] stroke-[2.5] transition-all duration-200"
+              :class="expandedRows[data.id] ? 'text-brand rotate-180' : 'text-text-muted group-hover:text-brand'"
+            />
+          </span>
         </Button>
       </template>
     </Column>

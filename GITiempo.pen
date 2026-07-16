@@ -8652,13 +8652,45 @@
                                   "gap": 2,
                                   "children": [
                                     {
-                                      "type": "text",
-                                      "id": "suhMC",
-                                      "fill": "#5D2B85",
-                                      "content": "Alexey Tsukanov",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 14,
-                                      "fontWeight": "600"
+                                      "type": "frame",
+                                      "id": "nmwA1",
+                                      "name": "memberNameRow",
+                                      "gap": 6,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "suhMC",
+                                          "fill": "#5D2B85",
+                                          "content": "Alexey Tsukanov",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "chbA1",
+                                          "name": "Expand chevron badge",
+                                          "width": 18,
+                                          "height": 18,
+                                          "fill": "$color-accent-tint",
+                                          "cornerRadius": 9,
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "chvA1",
+                                              "name": "Expand chevron",
+                                              "width": 11,
+                                              "height": 11,
+                                              "icon": "chevron-up",
+                                              "library": "lucide",
+                                              "fill": "$color-brand"
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "text",
@@ -9106,13 +9138,45 @@
                                   "gap": 2,
                                   "children": [
                                     {
-                                      "type": "text",
-                                      "id": "e34YX",
-                                      "fill": "#5D2B85",
-                                      "content": "Nina Keller",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 14,
-                                      "fontWeight": "600"
+                                      "type": "frame",
+                                      "id": "nmwA2",
+                                      "name": "memberNameRow",
+                                      "gap": 6,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "e34YX",
+                                          "fill": "#5D2B85",
+                                          "content": "Nina Keller",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 14,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "chbA2",
+                                          "name": "Expand chevron badge",
+                                          "width": 18,
+                                          "height": 18,
+                                          "fill": "$color-app-bg",
+                                          "cornerRadius": 9,
+                                          "justifyContent": "center",
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "chvA2",
+                                              "name": "Expand chevron",
+                                              "width": 11,
+                                              "height": 11,
+                                              "icon": "chevron-down",
+                                              "library": "lucide",
+                                              "fill": "$color-text-muted"
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "text",
@@ -10736,8 +10800,32 @@
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "chbA3",
+                                  "name": "Expand chevron badge",
+                                  "width": 18,
+                                  "height": 18,
+                                  "fill": "$color-accent-tint",
+                                  "cornerRadius": 9,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "chvA3",
+                                      "name": "Expand chevron",
+                                      "width": 11,
+                                      "height": 11,
+                                      "icon": "chevron-up",
+                                      "library": "lucide",
+                                      "fill": "$color-brand"
+                                    }
+                                  ]
                                 }
-                              ]
+                              ],
+                              "gap": 6
                             },
                             {
                               "type": "frame",
@@ -11273,8 +11361,32 @@
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "chbA4",
+                                  "name": "Expand chevron badge",
+                                  "width": 18,
+                                  "height": 18,
+                                  "fill": "$color-app-bg",
+                                  "cornerRadius": 9,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "chvA4",
+                                      "name": "Expand chevron",
+                                      "width": 11,
+                                      "height": 11,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$color-text-muted"
+                                    }
+                                  ]
                                 }
-                              ]
+                              ],
+                              "gap": 6
                             },
                             {
                               "type": "frame",
@@ -11415,8 +11527,32 @@
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "chbA5",
+                                  "name": "Expand chevron badge",
+                                  "width": 18,
+                                  "height": 18,
+                                  "fill": "$color-app-bg",
+                                  "cornerRadius": 9,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "chvA5",
+                                      "name": "Expand chevron",
+                                      "width": 11,
+                                      "height": 11,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$color-text-muted"
+                                    }
+                                  ]
                                 }
-                              ]
+                              ],
+                              "gap": 6
                             },
                             {
                               "type": "frame",

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { UserPlusIcon } from '@heroicons/vue/24/outline';
+import { ChevronDownIcon, UserPlusIcon } from '@heroicons/vue/24/outline';
 import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
@@ -316,21 +316,32 @@ function getRoleClass(role: WorkspaceRole): string {
                 v-if="row.canManage"
                 type="button"
                 unstyled
+                :aria-expanded="Boolean(expandedRows[row.id])"
                 :aria-label="`Edit member ${row.primaryLabel}`"
                 :data-testid="`member-mobile-name-${row.id}`"
                 :pt="{
                   root: {
                     class:
-                      'max-w-full cursor-pointer truncate rounded-none border-0 bg-transparent p-0 text-left font-sans text-[15px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                      'group inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-none border-0 bg-transparent p-0 text-left font-sans text-[15px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                   },
                 }"
                 @click="emit('edit-member', row.member)"
               >
-                {{ row.primaryLabel }}
+                <span class="truncate">{{ row.primaryLabel }}</span>
+                <span
+                  aria-hidden="true"
+                  class="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+                  :class="expandedRows[row.id] ? 'bg-accent-tint' : 'bg-app-bg group-hover:bg-accent-tint'"
+                >
+                  <ChevronDownIcon
+                    class="size-[11px] stroke-[2.5] transition-all duration-200"
+                    :class="expandedRows[row.id] ? 'text-brand rotate-180' : 'text-text-muted group-hover:text-brand'"
+                  />
+                </span>
               </Button>
               <span
                 v-else
-                class="text-brand block truncate text-[15px] font-semibold"
+                class="text-text-dark block truncate text-[15px] font-semibold"
               >
                 {{ row.primaryLabel }}
               </span>
@@ -463,21 +474,32 @@ function getRoleClass(role: WorkspaceRole): string {
               v-if="data.canManage"
               type="button"
               unstyled
+              :aria-expanded="Boolean(expandedRows[data.id])"
               :aria-label="`Edit member ${data.primaryLabel}`"
               :data-testid="`member-name-${data.id}`"
               :pt="{
                 root: {
                   class:
-                    'max-w-full cursor-pointer truncate rounded-none border-0 bg-transparent p-0 text-left font-sans text-[14px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                    'group inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-none border-0 bg-transparent p-0 text-left font-sans text-[14px] font-semibold leading-none text-brand shadow-none transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                 },
               }"
               @click="emit('edit-member', data.member)"
             >
-              {{ data.primaryLabel }}
+              <span class="truncate">{{ data.primaryLabel }}</span>
+              <span
+                aria-hidden="true"
+                class="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-colors duration-200"
+                :class="expandedRows[data.id] ? 'bg-accent-tint' : 'bg-app-bg group-hover:bg-accent-tint'"
+              >
+                <ChevronDownIcon
+                  class="size-[11px] stroke-[2.5] transition-all duration-200"
+                  :class="expandedRows[data.id] ? 'text-brand rotate-180' : 'text-text-muted group-hover:text-brand'"
+                />
+              </span>
             </Button>
             <span
               v-else
-              class="text-brand truncate text-[14px] font-semibold"
+              class="text-text-dark truncate text-[14px] font-semibold"
             >
               {{ data.primaryLabel }}
             </span>
