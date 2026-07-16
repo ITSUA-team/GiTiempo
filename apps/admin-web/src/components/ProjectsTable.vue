@@ -419,7 +419,7 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[140px] pr-3 [&_.p-select-label]:pl-6">
+        <div class="w-[140px] pr-3">
           <Select
             :model-value="filters.source"
             :options="sourceFilterOptions"
@@ -433,7 +433,7 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[220px] pr-3 [&_.p-multiselect-label]:pl-6">
+        <div class="w-[220px] pr-3">
           <MultiSelect
             :model-value="filters.memberIds"
             :options="memberFilterOptions"
@@ -449,7 +449,7 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[120px] pr-3 text-right [&_.p-select-label]:pl-6">
+        <div class="w-[120px] pr-3 text-right">
           <Select
             :model-value="filters.hours"
             :options="hoursFilterOptions"
@@ -461,7 +461,7 @@ const columns: ManagementTableColumn[] = [
           />
         </div>
 
-        <div class="w-[120px] pr-3 [&_.p-select-label]:pl-6">
+        <div class="w-[120px] pr-3">
           <Select
             :model-value="filters.visibility"
             :options="visibilityFilterOptions"

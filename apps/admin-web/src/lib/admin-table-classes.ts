@@ -1,10 +1,9 @@
 import { managementTableHeaderClass } from '@gitiempo/web-shared';
 
-// Body cells share the same pl-6 text line as the headers and filter labels;
-// admin-local so user-web tables keep the shared px-3 default.
+// Admin-local so table-wide cell tweaks never leak into user-web tables.
 export const adminTableColumnPt = {
   bodyCell: {
-    class: 'border-0 px-6 py-0 align-middle font-sans text-sm',
+    class: 'border-0 px-3 py-0 align-middle font-sans text-sm',
   },
 } as const;
 
@@ -20,9 +19,6 @@ export const adminTableBodyRowClass =
 // picking its own overflow point (previously 700–860px per table).
 export const adminTableMinWidthClass = 'min-w-[860px]';
 
-// Header-cell text gets pl-6 so it sits on the same ~25px line as the filter
-// controls' inner text (their border starts at the column boundary and the
-// label is padded 24px past it).
-export const adminTableHeaderClass = `${managementTableHeaderClass} ${adminTableMinWidthClass} [&>div]:px-6`;
+export const adminTableHeaderClass = `${managementTableHeaderClass} ${adminTableMinWidthClass}`;
 
 export const adminTableClass = `${adminTableMinWidthClass} w-full table-fixed border-collapse`;

@@ -412,7 +412,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[120px] pr-3 [&_.p-select-label]:pl-6">
+        <div class="w-[120px] pr-3">
           <Select
             :model-value="filters.role"
             :options="roleFilterOptions"
@@ -426,7 +426,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[220px] pr-3 [&_.p-multiselect-label]:pl-6">
+        <div class="w-[220px] pr-3">
           <MultiSelect
             :model-value="filters.projectIds"
             :options="projectFilterOptions"
@@ -442,7 +442,7 @@ function getRoleClass(role: WorkspaceRole): string {
           />
         </div>
 
-        <div class="w-[140px] pr-3 [&_.p-select-label]:pl-6">
+        <div class="w-[140px] pr-3">
           <Select
             :model-value="filters.lastActive"
             :options="lastActiveFilterOptions"

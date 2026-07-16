@@ -98,14 +98,14 @@ const columns = computed<ManagementTableColumn[]>(() =>
     ? [
         { key: 'member', label: 'Member', width: 'fill' },
         { key: 'project', label: 'Project', width: 180 },
-        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
+        { key: 'hours', label: 'Hours', width: 140 },
+        { key: 'billable', label: 'Billable', width: 140 },
       ]
     : [
         { key: 'project', label: 'Project', width: 'fill' },
         { key: 'members', label: 'Members', width: 180 },
-        { key: 'hours', label: 'Hours', width: 140, align: 'end' },
-        { key: 'billable', label: 'Billable', width: 140, align: 'end' },
+        { key: 'hours', label: 'Hours', width: 140 },
+        { key: 'billable', label: 'Billable', width: 140 },
       ],
 );
 
@@ -407,7 +407,7 @@ function handleMemberFilterUpdate(
             v-for="(key, index) in filterOrder"
             :key="key"
             class="pr-3"
-            :class="index === 0 ? 'min-w-0 flex-1 pl-3' : 'w-[180px] [&_.p-autocomplete-input]:pl-6'"
+            :class="index === 0 ? 'min-w-0 flex-1 pl-3' : 'w-[180px]'"
           >
             <FilterAutoComplete
               v-if="key === 'project'"
@@ -435,7 +435,7 @@ function handleMemberFilterUpdate(
             />
           </div>
 
-          <div class="w-[140px] pr-3 [&_.p-select-label]:pl-6">
+          <div class="w-[140px] pr-3">
             <Select
               v-model="filters.hours"
               :options="hoursFilterOptions"
@@ -445,7 +445,7 @@ function handleMemberFilterUpdate(
               :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
-          <div class="w-[140px] pr-3 [&_.p-select-label]:pl-6">
+          <div class="w-[140px] pr-3">
             <Select
               v-model="filters.billable"
               :options="billableFilterOptions"
@@ -478,9 +478,7 @@ function handleMemberFilterUpdate(
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
-          </div>
+          <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.totalSeconds) }}</span>
         </template>
       </Column>
 
@@ -489,9 +487,7 @@ function handleMemberFilterUpdate(
         :pt="adminTableColumnPt"
       >
         <template #body="{ data }">
-          <div class="text-right">
-            <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
-          </div>
+          <span class="text-text-dark text-[13px] font-semibold">{{ formatPaddedHoursMinutesDuration(data.billableSeconds) }}</span>
         </template>
       </Column>
 

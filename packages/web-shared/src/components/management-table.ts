@@ -91,4 +91,3 @@ export const managementTableFilterMultiSelectPt = {
   dropdown: { class: managementTableFilterDropdownTriggerClass },
   overlay: { class: giTiempoAnchorWidthOverlayClass },
 } satisfies MultiSelectPassThroughOptions;
-
