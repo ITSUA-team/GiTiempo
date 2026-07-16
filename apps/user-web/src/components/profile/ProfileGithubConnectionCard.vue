@@ -5,7 +5,7 @@ import Button from "primevue/button";
 import Skeleton from "primevue/skeleton";
 import Tag from "primevue/tag";
 
-import SurfaceCard from "@/components/layout/SurfaceCard.vue";
+import { SurfaceCard } from "@gitiempo/web-shared";
 import { useProfileGithubConnection } from "@/composables/profile/useProfileGithubConnection";
 import { formatLocalTimestampLabel } from "@/lib/time-formatters";
 
@@ -69,7 +69,7 @@ const updatedAtLabel = computed(() =>
 </script>
 
 <template>
-  <SurfaceCard body-class="flex flex-col gap-4">
+  <SurfaceCard border body-class="flex flex-col gap-4">
     <div class="flex items-start justify-between gap-3">
       <div class="flex flex-col gap-1">
         <h2 class="text-text-dark text-base font-semibold">

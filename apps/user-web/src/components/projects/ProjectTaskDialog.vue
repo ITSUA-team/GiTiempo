@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import type { ProjectResponse, TaskStatus } from "@gitiempo/shared";
-import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
 import {
+  giTiempoSelectPt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
+} from "@gitiempo/web-config/theme";
+import {
+  AppDialog,
+  DialogFooterActionGroups,
   filterAutocompleteOptions,
   InlineRequestMessage,
   LabeledCheckbox,
 } from "@gitiempo/web-shared";
 import { computed, shallowRef, watch } from "vue";
+
 
 const props = defineProps<{
   errors: {
@@ -117,19 +122,16 @@ function handleProjectComplete(event: { query: string }): void {
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     :closable="!isDialogMutating"
     modal
     :dismissable-mask="!isDialogMutating"
     :draggable="false"
     :pt="{
       root: 'w-[min(480px,calc(100vw-2rem))] rounded-lg border border-divider',
-      header: 'px-6 pt-6 pb-0',
-      content: 'px-6 pb-6 pt-4',
-      footer: 'px-6 pb-6 pt-0',
     }"
     :visible="props.isOpen"
-    @update:visible="(nextVisible) => {
+    @update:visible="(nextVisible: boolean) => {
       if (!nextVisible && !isDialogMutating) {
         emit('close');
       }
@@ -164,7 +166,7 @@ function handleProjectComplete(event: { query: string }): void {
         <div
           v-if="props.mode === 'edit'"
           aria-labelledby="project-task-project-label"
-          class="border-divider bg-surface-primary text-text-dark flex h-[38px] items-center rounded-md border px-3 text-sm"
+          class="border-divider bg-surface-primary text-text-dark flex h-[38px] items-center rounded-[6px] border px-3 text-sm"
           role="textbox"
           aria-readonly="true"
         >
@@ -184,7 +186,7 @@ function handleProjectComplete(event: { query: string }): void {
           :min-length="0"
           option-label="name"
           placeholder="Select project"
-          :pt="giTiempoSelfAppendedAutoCompletePt"
+          :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
           :disabled="isDialogMutating"
           :invalid="!!props.errors.projectId"
           :suggestions="projectSuggestions"
@@ -239,6 +241,7 @@ function handleProjectComplete(event: { query: string }): void {
           :disabled="isDialogMutating"
           :invalid="!!props.errors.status"
           :options="statusOptions"
+          :pt="giTiempoSelectPt"
         />
         <small
           v-if="props.errors.status"
@@ -266,17 +269,21 @@ function handleProjectComplete(event: { query: string }): void {
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button
-          v-if="props.mode === 'edit'"
-          type="button"
-          label="Delete task"
-          severity="danger"
-          variant="outlined"
-          :disabled="isDialogMutating"
-          :loading="props.isDeleting"
-          @click="emit('deleteTask')"
-        />
+      <DialogFooterActionGroups
+        data-testid="project-task-dialog-footer"
+        :has-destructive-actions="props.mode === 'edit'"
+      >
+        <template #destructive>
+          <Button
+            type="button"
+            label="Delete task"
+            severity="danger"
+            variant="outlined"
+            :disabled="isDialogMutating"
+            :loading="props.isDeleting"
+            @click="emit('deleteTask')"
+          />
+        </template>
         <Button
           type="button"
           :label="props.saveLabel"
@@ -284,7 +291,7 @@ function handleProjectComplete(event: { query: string }): void {
           :loading="props.isSaving"
           @click="emit('save')"
         />
-      </div>
+      </DialogFooterActionGroups>
     </template>
-  </Dialog>
+  </AppDialog>
 </template>

@@ -167,7 +167,7 @@ async function retryLoadPage(): Promise<void> {
 
       <div
         v-else
-        class="flex flex-col gap-5"
+        class="flex flex-col gap-6"
         data-testid="projects-groups"
       >
         <ProjectsTaskSection

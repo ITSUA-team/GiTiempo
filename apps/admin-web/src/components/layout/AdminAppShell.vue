@@ -189,7 +189,7 @@ watch(
         :items="navItems"
       />
 
-      <main class="min-w-0 flex-1 p-4 pb-20 sm:p-6">
+      <main class="min-w-0 flex-1 p-6 pb-20 sm:pb-6">
         <RouterView />
       </main>
     </div>

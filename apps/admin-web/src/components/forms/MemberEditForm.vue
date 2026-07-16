@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { ProjectListResponse, WorkspaceMemberResponse } from '@gitiempo/shared';
-import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
-import { EditFormPanel, memberAssignFormSchema } from '@gitiempo/web-shared';
+import { giTiempoSelfAppendedMultiAutoCompleteDropdownPt } from '@gitiempo/web-config/theme';
+import {
+  DialogFooterActionGroups,
+  EditFormPanel,
+  memberAssignFormSchema,
+} from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
 import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
@@ -37,20 +41,6 @@ const initialValues = computed<MemberAssignFormInput>(() => ({
     )
     .map((project) => project.id),
 }));
-
-const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
-  root: { class: 'min-h-[42px]' },
-  pcInputText: {
-    root: {
-      class: 'min-h-[42px] w-full rounded-[6px] font-sans text-[14px] font-medium',
-    },
-  },
-  inputMultiple: {
-    class: 'min-h-[42px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
-  },
-  chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
-  option: { class: 'font-sans text-[14px]' },
-});
 
 interface AutoCompleteCompleteEvent {
   query: string;
@@ -127,7 +117,7 @@ function handleSave({
             placeholder="Search projects..."
             :invalid="$form.projectIds?.invalid"
             :disabled="saving"
-            :pt="projectAutoCompletePt"
+            :pt="giTiempoSelfAppendedMultiAutoCompleteDropdownPt"
             fluid
             @complete="handleProjectComplete"
           />
@@ -157,39 +147,39 @@ function handleSave({
           Project assignments are available only for other non-admin members.
         </div>
 
-        <div
+        <DialogFooterActionGroups
           data-testid="member-edit-form-actions"
-          class="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:justify-end sm:gap-2.5"
+          :has-destructive-actions="props.canRemove"
+          stack-on-mobile
         >
+          <template #destructive>
+            <Button
+              type="button"
+              label="Remove member"
+              severity="danger"
+              variant="outlined"
+              class="w-full sm:w-auto"
+              :disabled="saving"
+              @click="emit('remove')"
+            />
+          </template>
           <Button
-            v-if="props.canRemove"
-            unstyled
-            :disabled="saving"
             type="button"
-            class="border-destructive bg-surface-primary text-destructive focus-visible:outline-destructive inline-flex h-[42px] w-full cursor-pointer items-center justify-center rounded-sm border px-3.5 py-2 font-sans text-[13px] leading-none font-semibold whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-            @click="emit('remove')"
-          >
-            Remove member
-          </Button>
-          <Button
-            unstyled
-            type="button"
-            class="border-divider bg-surface-primary text-text-dark focus-visible:outline-brand inline-flex h-[42px] w-full cursor-pointer items-center justify-center rounded-sm border px-3.5 py-2 font-sans text-[13px] leading-none font-medium whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            label="Cancel"
+            severity="secondary"
+            variant="outlined"
+            class="w-full sm:w-auto"
             @click="emit('cancelled')"
-          >
-            Cancel
-          </Button>
+          />
           <Button
             v-if="props.canAssignPm"
-            unstyled
+            type="submit"
+            label="Save changes"
+            class="w-full sm:w-auto"
             :disabled="saving"
             :loading="saving"
-            type="submit"
-            class="bg-brand text-text-inverse focus-visible:outline-brand inline-flex h-[42px] w-full cursor-pointer items-center justify-center rounded-sm border-0 px-3.5 py-2 font-sans text-[13px] leading-none font-semibold whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-          >
-            Save changes
-          </Button>
-        </div>
+          />
+        </DialogFooterActionGroups>
       </div>
     </Form>
   </EditFormPanel>

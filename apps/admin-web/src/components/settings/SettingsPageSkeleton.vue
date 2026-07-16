@@ -14,7 +14,7 @@ import Skeleton from 'primevue/skeleton';
     <div class="flex w-full max-w-[620px] flex-col gap-2">
       <SurfaceCard
         class="w-full"
-        padding-class="p-5"
+        padding-class="p-6"
       >
         <div class="flex flex-col gap-5">
           <section class="flex flex-col gap-3">
@@ -146,7 +146,7 @@ import Skeleton from 'primevue/skeleton';
 
       <SurfaceCard
         class="w-full"
-        padding-class="p-5"
+        padding-class="p-6"
       >
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-1.5">
@@ -179,7 +179,7 @@ import Skeleton from 'primevue/skeleton';
             <div
               v-for="index in 2"
               :key="index"
-              class="flex items-center justify-between gap-4 rounded-lg border border-transparent p-3.5"
+              class="flex items-center justify-between gap-4 rounded-lg border border-transparent p-4"
             >
               <div class="flex min-w-0 flex-1 flex-col gap-2">
                 <Skeleton
@@ -201,7 +201,7 @@ import Skeleton from 'primevue/skeleton';
             </div>
           </div>
 
-          <div class="flex flex-col gap-2.5">
+          <div class="flex flex-col gap-3">
             <Skeleton
               width="8rem"
               height="1.125rem"

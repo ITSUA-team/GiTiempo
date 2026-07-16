@@ -66,7 +66,7 @@ const { isInitialLoading, loadError, loading, refresh, stats } = dashboard;
         />
       </div>
 
-      <SurfaceCard padding-class="p-5">
+      <SurfaceCard padding-class="p-6">
         <DashboardRecentActivityFeed
           :rows="activityRows"
           :can-view-all="hasMoreActivity"

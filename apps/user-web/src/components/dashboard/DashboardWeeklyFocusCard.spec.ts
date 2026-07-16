@@ -121,11 +121,11 @@ describe("DashboardWeeklyFocusCard", () => {
     const focusPanels = wrapper.findAll(".bg-app-bg");
     const focusTitles = wrapper.findAll(".text-xl");
 
-    expect(surface.classes()).toEqual(expect.arrayContaining(["p-4", "sm:p-5"]));
+    expect(surface.classes()).toContain("p-6");
     expect(focusGrid.classes()).toContain("min-w-0");
     expect(focusPanels).toHaveLength(2);
-    expect(focusPanels[0]?.classes()).toEqual(expect.arrayContaining(["min-w-0", "overflow-hidden", "p-3", "sm:p-4"]));
-    expect(focusPanels[1]?.classes()).toEqual(expect.arrayContaining(["min-w-0", "overflow-hidden", "p-3", "sm:p-4"]));
+    expect(focusPanels[0]?.classes()).toEqual(expect.arrayContaining(["min-w-0", "overflow-hidden", "p-4"]));
+    expect(focusPanels[1]?.classes()).toEqual(expect.arrayContaining(["min-w-0", "overflow-hidden", "p-4"]));
     expect(focusTitles).toHaveLength(2);
     expect(focusTitles[0]?.classes()).toEqual(expect.arrayContaining(["break-words", "text-xl", "sm:text-2xl"]));
     expect(focusTitles[1]?.classes()).toEqual(expect.arrayContaining(["break-words", "text-xl", "sm:text-2xl"]));

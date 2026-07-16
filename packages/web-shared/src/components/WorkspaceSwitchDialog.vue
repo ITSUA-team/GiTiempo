@@ -2,7 +2,8 @@
 import type { CurrentUserWorkspaceMembershipResponse } from "@gitiempo/shared";
 import { computed } from "vue";
 import Button from "primevue/button";
-import Dialog from "primevue/dialog";
+
+import AppDialog from "./AppDialog.vue";
 import {
   getWorkspaceRoleLabel,
   getWorkspaceSwitchActionLabel,
@@ -52,7 +53,7 @@ function closeDialog(): void {
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     modal
     :header="title"
     :closable="!isSwitchingWorkspace"
@@ -116,5 +117,5 @@ function closeDialog(): void {
         />
       </div>
     </div>
-  </Dialog>
+  </AppDialog>
 </template>

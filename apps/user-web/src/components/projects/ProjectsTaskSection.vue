@@ -64,7 +64,7 @@ function getStatusPt(task: TaskResponse) {
 </script>
 
 <template>
-  <section class="flex flex-col gap-2.5">
+  <section class="flex flex-col gap-3">
     <div class="flex items-center justify-between gap-3">
       <div class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
         <h2 class="text-text-dark truncate text-base font-semibold">

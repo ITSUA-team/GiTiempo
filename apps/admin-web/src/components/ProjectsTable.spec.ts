@@ -9,8 +9,8 @@ import {
   giTiempoSelfAppendedAutoCompleteOverlayStyle,
 } from '@gitiempo/web-config/theme';
 import AutoComplete from 'primevue/autocomplete';
-import MultiSelect from 'primevue/multiselect';
 import PrimeVue from 'primevue/config';
+import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -229,20 +229,35 @@ describe('ProjectsTable', () => {
 
     expect(autoCompleteFilters).toHaveLength(1);
     expect(projectQueryFilter.props('dropdown')).toBe(true);
+    expect(projectQueryFilter.props('dropdownMode')).toBe('blank');
     expect(projectQueryFilter.props('completeOnFocus')).toBe(true);
     expect(projectQueryFilter.props('appendTo')).not.toBe('self');
     expect((projectQueryFilter.props('pt') as AutoCompletePt).overlay).toEqual({
-      class: 'overflow-hidden',
+      class: 'overflow-hidden box-content max-w-0 pr-9',
     });
     expect(memberFilter.props('display')).toBe('chip');
     expect(memberFilter.props('filter')).toBe(true);
+    expect(memberFilter.props('showClear')).toBe(true);
     expect(memberFilter.props('modelValue')).toEqual([]);
     expect(memberFilter.props('placeholder')).toBe('All members');
+    expect(memberFilter.props('optionLabel')).toBe('label');
+    expect(memberFilter.props('options')).toEqual([
+      { label: 'Alex Admin', value: 'user-1' },
+      { label: 'Pat PM', value: 'user-2' },
+    ]);
+
+    projectQueryFilter.vm.$emit('complete', { query: '' });
+    await nextTick();
+
+    expect(projectQueryFilter.props('suggestions')).toEqual([
+      'Legacy Project',
+      'Project Orion',
+    ]);
 
     projectQueryFilter.vm.$emit('complete', { query: 'orion' });
     await nextTick();
 
-    expect(wrapper.getComponent(AutoComplete).props('suggestions')).toEqual([
+    expect(projectQueryFilter.props('suggestions')).toEqual([
       'Project Orion',
     ]);
 
@@ -304,11 +319,15 @@ describe('ProjectsTable', () => {
     const projectQueryFilter = autoCompleteFilters[0]!;
     const memberFilter = wrapper.getComponent(MultiSelect);
 
+    expect(autoCompleteFilters).toHaveLength(1);
+
     expect(projectQueryFilter.props('placeholder')).toBe('Filter project');
     expect(projectQueryFilter.props('appendTo')).toBe('self');
     expect((projectQueryFilter.props('pt') as AutoCompletePt).overlay?.style).toEqual(
       giTiempoSelfAppendedAutoCompleteOverlayStyle,
     );
+    expect(memberFilter.props('display')).toBe('chip');
+    expect(memberFilter.props('filter')).toBe(true);
     expect(memberFilter.props('placeholder')).toBe('All members');
 
     await projectQueryFilter.vm.$emit('update:modelValue', 'legacy');

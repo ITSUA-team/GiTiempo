@@ -5,8 +5,12 @@ import type {
   WorkspaceMemberListResponse,
 } from '@gitiempo/shared';
 import { WorkspaceRoles } from '@gitiempo/shared';
-import { composeGiTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
 import {
+  giTiempoSelectPt,
+  giTiempoSelfAppendedMultiAutoCompleteDropdownPt,
+} from '@gitiempo/web-config/theme';
+import {
+  DialogFooterActionGroups,
   EditFormPanel,
   LabeledCheckbox,
   projectEditFormSchema,
@@ -40,20 +44,6 @@ const visibilityOptions = [
   { label: 'Public', value: 'public' as const },
   { label: 'Private', value: 'private' as const },
 ];
-
-const memberAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
-  root: { class: 'min-h-[42px]' },
-  pcInputText: {
-    root: {
-      class: 'min-h-[42px] w-full rounded-[6px] font-sans text-[14px] font-medium',
-    },
-  },
-  inputMultiple: {
-    class: 'min-h-[42px] w-full rounded-[6px] border-divider px-2 py-1 font-sans text-[14px] font-medium',
-  },
-  chip: { class: 'bg-accent-tint text-brand font-sans text-[12px] font-semibold' },
-  option: { class: 'font-sans text-[14px]' },
-});
 
 interface AutoCompleteCompleteEvent {
   query: string;
@@ -125,7 +115,7 @@ function handleSave({
             :min-length="0"
             placeholder="Search members..."
             :invalid="$form.memberIds?.invalid"
-            :pt="memberAutoCompletePt"
+            :pt="giTiempoSelfAppendedMultiAutoCompleteDropdownPt"
             fluid
             @complete="handleMemberComplete"
           />
@@ -143,7 +133,7 @@ function handleSave({
             option-label="label"
             option-value="value"
             :invalid="$form.visibility?.invalid"
-            class="h-[42px]"
+            :pt="giTiempoSelectPt"
             fluid
           />
         </div>
@@ -161,17 +151,20 @@ function handleSave({
           />
         </div>
 
-        <div
+        <DialogFooterActionGroups
           data-testid="project-edit-form-actions"
-          class="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-2.5"
+          has-destructive-actions
+          stack-on-mobile
         >
-          <Button
-            unstyled
-            :disabled="saving"
-            type="button"
-            class="border-destructive bg-surface-primary text-destructive focus-visible:outline-destructive inline-flex h-[42px] w-full cursor-pointer items-center justify-center gap-2 rounded-sm border px-3.5 py-2 font-sans text-[13px] leading-none font-semibold whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-            @click="project.isActive ? emit('archive') : emit('unarchive')"
-          >
+          <template #destructive>
+            <Button
+              type="button"
+              severity="danger"
+              variant="outlined"
+              class="w-full gap-2 sm:w-auto"
+              :disabled="saving"
+              @click="project.isActive ? emit('archive') : emit('unarchive')"
+            >
             <svg
               aria-hidden="true"
               class="h-4 w-4"
@@ -187,26 +180,25 @@ function handleSave({
               <path d="M8.25 7.5V5.75A2.25 2.25 0 0 1 10.5 3.5h3a2.25 2.25 0 0 1 2.25 2.25V7.5" />
               <path d="M9.75 12h4.5" />
             </svg>
-            {{ project.isActive ? 'Archive project' : 'Unarchive project' }}
-          </Button>
+              {{ project.isActive ? 'Archive project' : 'Unarchive project' }}
+            </Button>
+          </template>
           <Button
-            unstyled
             type="button"
-            class="border-divider bg-surface-primary text-text-dark focus-visible:outline-brand inline-flex h-[42px] w-full cursor-pointer items-center justify-center rounded-sm border px-3.5 py-2 font-sans text-[13px] leading-none font-medium whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            label="Cancel"
+            severity="secondary"
+            variant="outlined"
+            class="w-full sm:w-auto"
             @click="emit('cancelled')"
-          >
-            Cancel
-          </Button>
+          />
           <Button
-            unstyled
+            type="submit"
+            label="Save"
+            class="w-full sm:w-auto"
             :disabled="saving"
             :loading="saving"
-            type="submit"
-            class="bg-brand text-text-inverse focus-visible:outline-brand inline-flex h-[42px] w-full cursor-pointer items-center justify-center rounded-sm border-0 px-3.5 py-2 font-sans text-[13px] leading-none font-semibold whitespace-nowrap shadow-none transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-          >
-            Save
-          </Button>
-        </div>
+          />
+        </DialogFooterActionGroups>
       </div>
     </Form>
   </EditFormPanel>

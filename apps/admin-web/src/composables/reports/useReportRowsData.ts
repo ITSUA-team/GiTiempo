@@ -169,6 +169,10 @@ export function useReportRowsData({
         toTimeReportQuery(appliedFilters.value, 1, reportPageLimit),
       ),
     ),
+    // Report rows are not kept after leaving the page: every visit starts
+    // from the page skeleton and a fresh fetch, matching the other admin
+    // pages instead of replaying a cached report.
+    gcTime: 0,
     enabled: computed(
       () =>
         enabled.value &&

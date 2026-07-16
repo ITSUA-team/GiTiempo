@@ -14,6 +14,7 @@ const AutoCompleteStub = {
 		'minLength',
 		'modelValue',
 		'optionLabel',
+		'pt',
 		'suggestions',
 	],
 	emits: ['complete', 'update:modelValue'],
@@ -22,10 +23,12 @@ const AutoCompleteStub = {
 			<input
 				:id="inputId"
 				:aria-invalid="invalid ? 'true' : undefined"
-				:class="$attrs.class"
+				:class="[$attrs.class, pt?.pcInputText?.root?.class]"
 				:data-complete-on-focus="completeOnFocus === false || completeOnFocus === undefined ? 'false' : 'true'"
 				:data-force-selection="forceSelection === false || forceSelection === undefined ? 'false' : 'true'"
 				:data-min-length="String(minLength)"
+				:data-pt-dropdown-class="pt?.dropdown?.class ?? ''"
+				:data-pt-root-class="pt?.root?.class ?? ''"
 				:value="modelValue?.[optionLabel] ?? ''"
 				@focus="$emit('complete', { query: '' })"
 			/>
@@ -153,9 +156,11 @@ describe('SettingsForm', () => {
 		expect(wrapper.get('label[for="settings-time-zone"]').text()).toBe(
 			'Time zone',
 		);
-		expect(timeZone.classes()).toEqual(
-			expect.arrayContaining(['h-[38px]', 'w-full']),
-		);
+		expect(timeZone.classes()).toContain('w-full');
+		expect(timeZone.classes()).toContain('border-0');
+		expect(timeZone.attributes('data-pt-root-class')).toContain('h-[38px]');
+		expect(timeZone.attributes('data-pt-root-class')).toContain('border-divider');
+		expect(timeZone.attributes('data-pt-dropdown-class')).toContain('bg-transparent');
 		expect(timeZone.attributes('data-force-selection')).toBe('true');
 		expect(timeZone.attributes('data-complete-on-focus')).toBe('true');
 		expect(wrapper.text()).toContain('UTC');

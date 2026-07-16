@@ -80,7 +80,7 @@ function handleStopTimer(entry: DashboardRecentEntryRow): void {
 <template>
   <SurfaceCard
     body-class="flex flex-col gap-4"
-    padding-class="p-5"
+    padding-class="p-6"
   >
     <SectionHeader
       description="Last 10 entries across your projects."
