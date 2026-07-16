@@ -16,6 +16,14 @@ describe('management table filter styles', () => {
     expect(managementTableFilterMultiSelectPt.label?.class).toContain('text-[14px]');
     expect(managementTableFilterMultiSelectPt.dropdown?.class).toContain('w-9');
   });
+
+  it('clamps the multiselect overlay to the anchor field width', () => {
+    // PrimeVue sets the body-appended overlay's min-width to the field, so
+    // capping max-width keeps the panel from growing with option labels.
+    expect(managementTableFilterMultiSelectPt.overlay?.class).toBe(
+      'max-w-0 overflow-hidden',
+    );
+  });
 });
 
 describe('management table row styles', () => {

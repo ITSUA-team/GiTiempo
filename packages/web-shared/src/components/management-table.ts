@@ -1,3 +1,4 @@
+import { giTiempoAnchorWidthOverlayClass } from '@gitiempo/web-config/theme';
 import type { MultiSelectPassThroughOptions } from 'primevue/multiselect';
 import type { CSSProperties } from 'vue';
 
@@ -84,5 +85,6 @@ export const managementTableFilterMultiSelectPt = {
     class: managementTableFilterDropdownLabelClass,
   },
   dropdown: { class: managementTableFilterDropdownTriggerClass },
+  overlay: { class: giTiempoAnchorWidthOverlayClass },
 } satisfies MultiSelectPassThroughOptions;
 
