@@ -10,13 +10,11 @@ export { default as InlineRequestMessage } from "./InlineRequestMessage.vue";
 export { default as LabeledCheckbox } from "./LabeledCheckbox.vue";
 export { default as AuthIntroPanel } from "./AuthIntroPanel.vue";
 export { default as ManagementTableEmptyState } from "./ManagementTableEmptyState.vue";
-export { default as ManagementTableAssignmentFilter } from "./ManagementTableAssignmentFilter.vue";
 export { default as MobileRecordCard } from "./MobileRecordCard.vue";
 export { default as ManagementTableRowAction } from "./ManagementTableRowAction.vue";
 export { default as ManagementTableShell } from "./ManagementTableShell.vue";
 export type {
   ManagementTableActionTone,
-  ManagementTableAssignmentFilterOption,
   ManagementTableColumn,
 } from "./management-table";
 export {
@@ -25,13 +23,6 @@ export {
   getManagementTableColumnStyle,
   managementTableBodyRowClass,
   managementTableColumnPt,
-  managementTableFilterAutoCompletePt,
-  managementTableFilterInputClass,
-  managementTableFilterMultiSelectPt,
-  managementTableFilterSelectPt,
-  managementTableResolvedFilterAutoCompletePt,
-  managementTableSelfAppendedFilterAutoCompleteOverlayStyle,
-  managementTableSelfAppendedFilterAutoCompletePt,
   managementTableHeaderCellClass,
   managementTableHeaderClass,
   managementTableShellClass,

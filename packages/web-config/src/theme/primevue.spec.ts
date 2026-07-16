@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   composeGiTiempoAutoCompletePt,
   composeGiTiempoSelfAppendedAutoCompleteDropdownPt,
-  composeGiTiempoSelfAppendedMultiAutoCompleteDropdownPt,
   composeGiTiempoSelfAppendedAutoCompletePt,
   giTiempoAutoCompleteDropdownPt,
   giTiempoAutoCompletePt,
@@ -130,11 +129,6 @@ describe("giTiempoPrimeVueOptions", () => {
     expect(giTiempoSelfAppendedMultiAutoCompleteDropdownPt.pcChip?.root?.class).toContain(
       "bg-accent-tint",
     );
-    expect(
-      composeGiTiempoSelfAppendedMultiAutoCompleteDropdownPt({
-        inputMultiple: { class: "max-h-32" },
-      }).inputMultiple?.class,
-    ).toContain("max-h-32");
   });
 
   it("keeps width-constraining overlay styles explicit for self-appended autocomplete", () => {

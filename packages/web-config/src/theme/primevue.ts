@@ -289,15 +289,6 @@ export function composeGiTiempoSelfAppendedAutoCompleteDropdownPt(
   );
 }
 
-export function composeGiTiempoSelfAppendedMultiAutoCompleteDropdownPt(
-  override: GiTiempoAutoCompletePt = {},
-): GiTiempoAutoCompletePt {
-  return composeAutoCompletePt(
-    giTiempoSelfAppendedMultiAutoCompleteDropdownPt,
-    override,
-  );
-}
-
 export const giTiempoThemePreset = definePreset(Aura, {
   semantic: {
     primary: {
