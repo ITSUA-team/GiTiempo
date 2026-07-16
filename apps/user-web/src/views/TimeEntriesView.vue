@@ -322,7 +322,7 @@ onMounted(async () => {
 
       <div
         v-else
-        class="flex flex-col gap-5"
+        class="flex flex-col gap-6"
         data-testid="time-entries-groups"
       >
         <TimeEntriesDaySection
@@ -345,7 +345,7 @@ onMounted(async () => {
         <SurfaceCard
           border
           body-class="flex items-center justify-between gap-4"
-          padding-class="p-3 sm:p-4"
+          padding-class="p-6"
         >
           <p class="text-text-muted text-[13px]">
             Showing {{ entries.length ? (currentPage - 1) * pageSize + 1 : 0 }} to

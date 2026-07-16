@@ -6,7 +6,7 @@ import { updateUserSchema } from "@gitiempo/shared";
 import { createAppToast, runWithFeedback } from "@gitiempo/web-shared";
 import { computed, ref, watch } from "vue";
 
-import SurfaceCard from "@/components/layout/SurfaceCard.vue";
+import { SurfaceCard } from "@gitiempo/web-shared";
 import ProfileGithubConnectionCard from "@/components/profile/ProfileGithubConnectionCard.vue";
 import ProfileLoadingState from "@/components/profile/ProfileLoadingState.vue";
 import { useAuthStore } from "@/stores/auth";
@@ -93,7 +93,7 @@ async function handleSaveProfile(): Promise<void> {
       v-else
       class="flex max-w-[620px] flex-col gap-6"
     >
-      <SurfaceCard body-class="flex flex-col gap-4">
+      <SurfaceCard border body-class="flex flex-col gap-4">
         <div class="flex items-center gap-4">
           <Avatar
             :label="authStore.userInitials"

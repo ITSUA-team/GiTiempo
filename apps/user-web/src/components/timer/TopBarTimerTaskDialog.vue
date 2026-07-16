@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
-import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
+import { giTiempoSelfAppendedAutoCompleteDropdownPt } from "@gitiempo/web-config/theme";
 import {
+  AppDialog,
   filterAutocompleteOptions,
   InlineRequestMessage,
   useIsMobileViewport,
@@ -262,15 +262,14 @@ watch(
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     modal
     block-scroll
     :dismissable-mask="true"
     :draggable="false"
     :pt="{
       root: 'max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-divider bg-surface-primary shadow-none sm:w-[558px]',
-      header: 'px-4 pt-4 pb-0 sm:px-6 sm:pt-6',
-      content: 'max-h-[calc(100vh-9rem)] overflow-y-auto px-4 pb-4 pt-4 sm:px-6 sm:pb-6',
+      content: 'max-h-[calc(100vh-9rem)] overflow-y-auto px-6 pb-6 pt-4',
     }"
     :visible="props.isOpen"
     @update:visible="emit('close')"
@@ -349,7 +348,7 @@ watch(
               :loading="props.isLoadingProjects"
               :model-value="mobileProjectModel"
               placeholder="Search projects"
-              :pt="giTiempoSelfAppendedAutoCompletePt"
+              :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
               :suggestions="projectSuggestions"
               @complete="handleProjectComplete"
               @update:model-value="handleMobileProjectUpdate"
@@ -381,7 +380,7 @@ watch(
               :loading="props.isLoadingTasks"
               :model-value="mobileTaskModel"
               placeholder="Search tasks"
-              :pt="giTiempoSelfAppendedAutoCompletePt"
+              :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
               :suggestions="taskSuggestions"
               @complete="handleTaskComplete"
               @update:model-value="handleMobileTaskUpdate"
@@ -473,24 +472,18 @@ watch(
       >
         <Button
           v-if="isMobileViewport && props.primaryActionLabel === 'Stop'"
-          unstyled
           type="button"
           :aria-busy="primaryButtonLoading ? 'true' : undefined"
           :aria-label="primaryButtonLabel"
-          class="bg-brand text-text-inverse border-brand inline-flex h-[37px] min-w-[96px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed"
+          class="h-[37px] min-w-[96px]"
           data-testid="top-bar-timer-primary-action"
           :disabled="isPrimaryButtonDisabled"
           :fluid="true"
+          :label="primaryButtonLabel"
+          :loading="primaryButtonLoading"
+          size="small"
           @click="emit('primaryAction')"
-        >
-          <span
-            v-if="primaryButtonLoading"
-            aria-hidden="true"
-            class="border-text-inverse/30 border-t-text-inverse size-4 animate-spin rounded-full border-2"
-            data-testid="top-bar-timer-primary-action-spinner"
-          />
-          <span v-else>{{ primaryButtonLabel }}</span>
-        </Button>
+        />
         <Button
           v-if="props.primaryActionLabel === 'Stop' && !props.isCrossWorkspaceTimer"
           type="button"
@@ -512,28 +505,22 @@ watch(
         />
         <Button
           v-if="!isMobileViewport || props.primaryActionLabel !== 'Stop'"
-          unstyled
           type="button"
           :aria-busy="primaryButtonLoading ? 'true' : undefined"
           :aria-label="primaryButtonLabel"
           :class="[
-            'bg-brand text-text-inverse border-brand inline-flex h-[37px] min-w-[96px] cursor-pointer items-center justify-center rounded-sm border px-4 text-sm font-semibold disabled:cursor-not-allowed',
+            'h-[37px] min-w-[96px]',
             isMobileViewport ? 'w-full' : 'w-auto',
           ]"
           data-testid="top-bar-timer-primary-action"
           :disabled="isPrimaryButtonDisabled"
           :fluid="isMobileViewport"
+          :label="primaryButtonLabel"
+          :loading="primaryButtonLoading"
+          size="small"
           @click="emit('primaryAction')"
-        >
-          <span
-            v-if="primaryButtonLoading"
-            aria-hidden="true"
-            class="border-text-inverse/30 border-t-text-inverse size-4 animate-spin rounded-full border-2"
-            data-testid="top-bar-timer-primary-action-spinner"
-          />
-          <span v-else>{{ primaryButtonLabel }}</span>
-        </Button>
+        />
       </div>
     </div>
-  </Dialog>
+  </AppDialog>
 </template>

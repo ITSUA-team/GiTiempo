@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import AutoComplete from "primevue/autocomplete";
 import DatePicker from "primevue/datepicker";
-import type { DatePickerPassThroughOptions } from "primevue/datepicker";
 import type { ProjectResponse } from "@gitiempo/shared";
-import { giTiempoSelfAppendedAutoCompletePt } from "@gitiempo/web-config/theme";
+import {
+  giTiempoDatePickerPt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
+} from "@gitiempo/web-config/theme";
 import { SurfaceCard } from "@gitiempo/web-shared";
 
 import type {
@@ -35,13 +37,6 @@ const emit = defineEmits<{
   "update:taskValue": [value: TaskLookupValue];
 }>();
 
-const datePickerPt = {
-  panel: {
-    class:
-      "border-divider bg-surface-primary rounded-md border text-text-dark shadow-popover",
-  },
-} satisfies DatePickerPassThroughOptions;
-
 function emitProjectComplete(event: { query: string }): void {
   emit("projectComplete", event.query);
 }
@@ -68,7 +63,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
 <template>
   <SurfaceCard
     body-class="flex flex-col gap-3"
-    padding-class="p-4"
+    padding-class="p-6"
   >
     <div class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
       <div class="flex flex-col gap-1">
@@ -88,7 +83,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           show-button-bar
           show-icon
           show-clear
-          :pt="datePickerPt"
+          :pt="giTiempoDatePickerPt"
           @update:model-value="updateDateRange"
         />
       </div>
@@ -115,7 +110,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           :loading="isLoadingProjects"
           :min-length="0"
           :model-value="selectedProject"
-          :pt="giTiempoSelfAppendedAutoCompletePt"
+          :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
           fluid
           show-clear
           @complete="emitProjectComplete"
@@ -143,7 +138,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           dropdown-mode="blank"
           fluid
           :min-length="0"
-          :pt="giTiempoSelfAppendedAutoCompletePt"
+          :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
           @complete="emitTaskSearch"
           @update:model-value="updateTaskValue"
         />

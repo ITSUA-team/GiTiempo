@@ -16,9 +16,15 @@ function mountReportsFilterForm(
       dateRange,
       groupBy: 'project',
       memberId: null,
-      memberOptions: [{ label: 'Alex Admin', value: '33333333-3333-4333-8333-333333333333' }],
+      memberOptions: [
+        { label: 'Alex Admin', value: '33333333-3333-4333-8333-333333333333' },
+        { label: 'Pat PM', value: '44444444-4444-4444-8444-444444444444' },
+      ],
       projectId: null,
-      projectOptions: [{ label: 'Project Orion', value: '11111111-1111-4111-8111-111111111111' }],
+      projectOptions: [
+        { label: 'Project Orion', value: '11111111-1111-4111-8111-111111111111' },
+        { label: 'Billing API', value: '22222222-2222-4222-8222-222222222222' },
+      ],
     },
     global: {
       plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
@@ -63,22 +69,28 @@ describe('ReportsFilterForm', () => {
     const groupBySelect = wrapper.getComponent(Select);
 
     expect(autoCompleteControls).toHaveLength(2);
+    expect(projectFilter.props('dropdownMode')).toBe('blank');
+    expect(memberFilter.props('dropdownMode')).toBe('blank');
     expect(wrapper.text()).toContain('Project');
     expect(wrapper.text()).toContain('Member');
     expect(wrapper.text()).toContain('Group by');
     expect(projectFilter.props('modelValue')).toBeNull();
     expect(projectFilter.props('placeholder')).toBe('All projects');
     expect(projectFilter.props('pt')).toMatchObject({
+      root: { class: expect.stringContaining('border-divider') },
       pcInputText: {
-        root: { class: expect.stringContaining('rounded-r-none') },
+        root: { class: expect.stringContaining('border-0') },
       },
+      dropdown: { class: expect.stringContaining('bg-transparent') },
     });
     expect(memberFilter.props('modelValue')).toBeNull();
     expect(memberFilter.props('placeholder')).toBe('All assigned members');
     expect(memberFilter.props('pt')).toMatchObject({
+      root: { class: expect.stringContaining('border-divider') },
       pcInputText: {
-        root: { class: expect.stringContaining('rounded-r-none') },
+        root: { class: expect.stringContaining('border-0') },
       },
+      dropdown: { class: expect.stringContaining('bg-transparent') },
     });
     expect(groupBySelect.props('modelValue')).toBe('project');
     expect(groupBySelect.props('options')).toEqual([
@@ -86,6 +98,19 @@ describe('ReportsFilterForm', () => {
       { label: 'Member', value: 'user' },
     ]);
     expect(wrapper.getComponent({ name: 'DatePicker' }).props('showClear')).toBe(true);
+
+    projectFilter.vm.$emit('complete', { query: '' });
+    memberFilter.vm.$emit('complete', { query: '' });
+    await nextTick();
+
+    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('suggestions')).toEqual([
+      { label: 'Project Orion', value: '11111111-1111-4111-8111-111111111111' },
+      { label: 'Billing API', value: '22222222-2222-4222-8222-222222222222' },
+    ]);
+    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
+      { label: 'Alex Admin', value: '33333333-3333-4333-8333-333333333333' },
+      { label: 'Pat PM', value: '44444444-4444-4444-8444-444444444444' },
+    ]);
 
     projectFilter.vm.$emit('complete', { query: 'orion' });
     memberFilter.vm.$emit('complete', { query: 'alex' });

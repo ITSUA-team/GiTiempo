@@ -152,7 +152,7 @@ watch(
         :items="USER_NAV_ITEMS"
       />
 
-      <main class="min-w-0 flex-1 p-4 sm:p-6">
+      <main class="min-w-0 flex-1 p-6">
         <RouterView />
       </main>
     </div>

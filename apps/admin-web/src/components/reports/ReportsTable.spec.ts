@@ -96,8 +96,14 @@ describe('ReportsTable', () => {
       props: {
         filters,
         loading: false,
-        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
-        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        memberOptions: [
+          { label: 'Alex Admin', value: 'member-1' },
+          { label: 'Pat PM', value: 'member-2' },
+        ],
+        projectOptions: [
+          { label: 'Project Orion', value: 'project-1' },
+          { label: 'Billing API', value: 'project-2' },
+        ],
         rows,
       },
       global: {
@@ -131,16 +137,31 @@ describe('ReportsTable', () => {
     for (const autoCompleteControl of autoCompleteControls) {
       expect(autoCompleteControl.props('appendTo')).not.toBe('self');
       expect((autoCompleteControl.props('pt') as AutoCompletePt).overlay).toEqual({
-        class: 'overflow-hidden',
+        class: 'overflow-hidden box-content max-w-0 pr-9',
       });
     }
     expect(search.attributes('placeholder')).toBe('Search report rows');
     expect(projectFilter.props('forceSelection')).toBe(true);
     expect(memberFilter.props('forceSelection')).toBe(true);
+    expect(projectFilter.props('dropdownMode')).toBe('blank');
+    expect(memberFilter.props('dropdownMode')).toBe('blank');
     expect(projectFilter.props('modelValue')).toBeNull();
     expect(projectFilter.props('placeholder')).toBe('All projects');
     expect(memberFilter.props('modelValue')).toBeNull();
     expect(memberFilter.props('placeholder')).toBe('All members');
+
+    projectFilter.vm.$emit('complete', { query: '' });
+    memberFilter.vm.$emit('complete', { query: '' });
+    await nextTick();
+
+    expect(wrapper.findAllComponents(AutoComplete)[0]?.props('suggestions')).toEqual([
+      { label: 'Project Orion', value: 'project-1' },
+      { label: 'Billing API', value: 'project-2' },
+    ]);
+    expect(wrapper.findAllComponents(AutoComplete)[1]?.props('suggestions')).toEqual([
+      { label: 'Alex Admin', value: 'member-1' },
+      { label: 'Pat PM', value: 'member-2' },
+    ]);
 
     await search.setValue('orion');
 
@@ -254,6 +275,50 @@ describe('ReportsTable', () => {
     expect(wrapper.findAll('[data-testid="reports-mobile-loading-card"]')).toHaveLength(3);
     expect(wrapper.findAll('[data-testid="report-mobile-card"]')).toHaveLength(0);
     expect(wrapper.text()).not.toContain('No report rows found');
+  });
+
+  it('renders desktop skeleton rows instead of a spinner when loading has no report rows yet', () => {
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters: createDefaultReportTableFilters(),
+        loading: true,
+        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
+        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        rows: [],
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
+      },
+    });
+
+    expect(wrapper.findAll('[data-testid="reports-desktop-loading-row"]')).toHaveLength(6);
+    expect(wrapper.find('.p-datatable-mask').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('No report rows found');
+  });
+
+  it('keeps loaded desktop report rows without a spinner overlay during refresh loading', () => {
+    const wrapper = mount(ReportsTable, {
+      props: {
+        filters: createDefaultReportTableFilters(),
+        loading: true,
+        memberOptions: [{ label: 'Alex Admin', value: 'member-1' }],
+        projectOptions: [{ label: 'Project Orion', value: 'project-1' }],
+        rows,
+      },
+      global: {
+        plugins: [[PrimeVue, giTiempoPrimeVueOptions]],
+        stubs: {
+          Select: SelectStub,
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain('Project Orion');
+    expect(wrapper.findAll('[data-testid="reports-desktop-loading-row"]')).toHaveLength(0);
+    expect(wrapper.find('.p-datatable-mask').exists()).toBe(false);
   });
 
   it('renders non-loading mobile report cards with row values on small viewports', () => {

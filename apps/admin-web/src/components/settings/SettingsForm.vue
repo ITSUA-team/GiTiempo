@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { giTiempoSelfAppendedAutoCompletePt } from '@gitiempo/web-config/theme';
+import {
+  giTiempoSelectPt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
+} from '@gitiempo/web-config/theme';
 import { filterAutocompleteOptions } from '@gitiempo/web-shared';
 import { Form, type FormInstance } from '@primevue/forms';
 import Button from 'primevue/button';
@@ -201,7 +204,7 @@ function submitWorkspaceForm(): void {
                   option-label="label"
                   option-value="value"
                   :invalid="!!fieldErrors.currency"
-                  class="h-[38px] w-full"
+                  :pt="giTiempoSelectPt"
                 />
                 <Message
                   v-if="fieldErrors.currency"
@@ -234,9 +237,9 @@ function submitWorkspaceForm(): void {
                 :min-length="0"
                 option-label="label"
                 :invalid="!!fieldErrors.timeZone"
-                class="h-[38px] w-full"
+                class="w-full"
                 placeholder="Search time zones"
-                :pt="giTiempoSelfAppendedAutoCompletePt"
+                :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
                 @complete="handleTimeZoneComplete"
                 @update:model-value="handleTimeZoneUpdate(($event ?? null) as SettingsTimeZoneOption | string | null)"
               />

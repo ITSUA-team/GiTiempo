@@ -46,6 +46,7 @@
 - Base unit: `4px`.
 - Common spacing: `gap-4` / `p-4`.
 - Section spacing: `gap-6` / `gap-8`.
+- Page-level cards and panels use the shared `SurfaceCard` default `p-6`. Compact nested blocks, stat cards, mobile record cards, and dense filter bars use `p-4`. Use `p-5` only for documented 20px exceptions such as Settings cards.
 
 | Context               | Token              | Class            |
 | --------------------- | ------------------ | ---------------- |
@@ -93,6 +94,7 @@ Use `<InputText>`, `<Textarea>`, `<InputNumber>`, `<Password>`, `<AutoComplete>`
 - Background: `bg-surface-primary`.
 - Error state: `invalid` prop plus `<small class="text-xs text-destructive">`.
 - Full width: `class="w-full"`.
+- Dropdown-like app form controls (`Select`, dropdown `AutoComplete`, and `DatePicker`) use the shared 38px PT exports from `@gitiempo/web-config/theme`. Admin management-table filter controls use the shared `managementTable*Pt` exports from `@gitiempo/web-shared`.
 - App form, dialog, and setup-bar single-select controls use PrimeVue `<Select>` by default when the possible option set is fixed and has 5 items or fewer, including small enum fields such as Public/Private visibility. Use `<AutoComplete dropdown forceSelection>` when the option set can exceed 5 items or needs predictive lookup. Keep table-column filter rows on their documented controls. Do not render design annotations such as `AutoComplete` or `Select` as visible control text.
 
 ```vue
@@ -130,7 +132,7 @@ Use `<DataTable>` and `<Column>`.
 - Admin table search placeholder copy follows `Search <table label>`, for example `Search members`, `Search projects`, and `Search report rows`. Deferred pages such as invoices must not render temporary search controls before their API contract exists.
 - Admin table search filters the visible table rows using DataTable `globalFilterFields` where native PrimeVue headers are used. When a table uses the shared `ManagementTableShell` with custom headers and hidden native DataTable headers, local computed filtering over the loaded rows is the accepted equivalent. Do not document either pattern as a new backend free-text endpoint unless the API contract is updated separately.
 - Admin tables with filterable columns use a compact filter row directly below the header row, with one filter control per filterable column and no filter control in the actions column. Use PrimeVue `filterDisplay="row"` when native headers are active; use the `ManagementTableShell` filters slot when the shared management chrome owns the header row.
-- Use column-appropriate PrimeVue filter controls: `InputText` for text/id/name/email/source filters; `Select` for single-choice filters when the possible option set is 5 items or fewer; `AutoComplete dropdown forceSelection` for single-choice filters when the option set can exceed 5 items; `MultiSelect filter display="chip"` for member/project assignment filters; and numeric/date controls only when the column data type requires them.
+- Use column-appropriate PrimeVue filter controls: `InputText` for text/id/name/email/source filters; `Select` for single-choice filters when the possible option set is 5 items or fewer; the shared `FilterAutoComplete` (`AutoComplete dropdown forceSelection`) for single-choice filters when the option set can exceed 5 items; `MultiSelect filter display="chip"` with `managementTableFilterMultiSelectPt` for the admin management assignment filters (Members table `Projects Assigned`, Projects table `Assigned members`); and numeric/date controls only when the column data type requires them.
 - Clearing global search or a column filter restores the full result set allowed by page-level filters and role scope.
 - Selected row: `bg-accent-tint text-text-dark`.
 - Right align numeric columns.

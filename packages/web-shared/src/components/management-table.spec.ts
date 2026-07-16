@@ -4,23 +4,25 @@ import {
   getManagementTableColumnStyle,
   managementTableBodyRowClass,
   managementTableColumnPt,
-  managementTableFilterAutoCompletePt,
-  managementTableFilterInputClass,
+  managementTableFilterMultiSelectPt,
   managementTableHeaderCellClass,
 } from './management-table';
 
 describe('management table filter styles', () => {
-  it('keeps autocomplete text inputs square where the dropdown button attaches', () => {
-    expect(managementTableFilterInputClass).toContain('rounded-[6px]');
-    expect(managementTableFilterAutoCompletePt.root?.class).toContain('h-[34px]');
-    expect(managementTableFilterAutoCompletePt.pcInputText?.root).toEqual({
-      class: expect.stringContaining('rounded-r-none'),
-    });
-    expect(managementTableFilterAutoCompletePt.pcInputText?.root).toEqual({
-      class: expect.stringContaining('rounded-l-[6px]'),
-    });
-    expect('overlay' in managementTableFilterAutoCompletePt).toBe(false);
-    expect(managementTableFilterAutoCompletePt.option?.class).toBe('text-[12px]');
+  it('keeps the assignment multiselect aligned with the shared filter height', () => {
+    expect(managementTableFilterMultiSelectPt.root?.class).toContain('h-[38px]');
+    expect(managementTableFilterMultiSelectPt.root?.class).toContain('border-divider');
+    expect(managementTableFilterMultiSelectPt.labelContainer?.class).toContain('h-full');
+    expect(managementTableFilterMultiSelectPt.label?.class).toContain('text-[14px]');
+    expect(managementTableFilterMultiSelectPt.dropdown?.class).toContain('w-9');
+  });
+
+  it('clamps the multiselect overlay to the anchor field width', () => {
+    // PrimeVue sets the body-appended overlay's min-width to the field, so
+    // capping max-width keeps the panel from growing with option labels.
+    expect(managementTableFilterMultiSelectPt.overlay?.class).toBe(
+      'max-w-0 overflow-hidden',
+    );
   });
 });
 

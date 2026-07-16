@@ -33,11 +33,11 @@ import Skeleton from "primevue/skeleton";
     />
   </div>
 
-  <div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-6">
     <div
       v-for="index in 2"
       :key="index"
-      class="flex flex-col gap-2.5"
+      class="flex flex-col gap-3"
     >
       <div class="flex items-center justify-between gap-3">
         <div class="flex flex-col gap-2">

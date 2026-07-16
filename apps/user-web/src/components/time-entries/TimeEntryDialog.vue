@@ -2,16 +2,18 @@
 import AutoComplete from "primevue/autocomplete";
 import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
-import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Textarea from "primevue/textarea";
 import type { ProjectResponse } from "@gitiempo/shared";
 import {
-  composeGiTiempoSelfAppendedAutoCompletePt,
-  giTiempoSelfAppendedAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompleteDropdownPt,
+  giTiempoDatePickerPt,
+  giTiempoSelfAppendedAutoCompleteDropdownPt,
 } from "@gitiempo/web-config/theme";
 import {
   filterAutocompleteOptions,
+  AppDialog,
+  DialogFooterActionGroups,
   InlineRequestMessage,
   LabeledCheckbox,
 } from "@gitiempo/web-shared";
@@ -124,7 +126,7 @@ const newTaskHint = computed(() => {
 
   return `This task is created in ${projectName} and inherits the project billable default.`;
 });
-const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt({
+const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompleteDropdownPt({
   dropdown: {
     onMousedown: handleProjectDropdownMouseDown,
   },
@@ -213,16 +215,13 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
 </script>
 
 <template>
-  <Dialog
+  <AppDialog
     modal
     :closable="!isDialogMutating"
     :dismissable-mask="!isDialogMutating"
     :draggable="false"
     :pt="{
       root: 'w-[min(560px,calc(100vw-2rem))] rounded-lg border border-divider',
-      header: 'px-6 pt-6 pb-0',
-      content: 'px-6 pb-6 pt-4',
-      footer: 'px-6 pb-6 pt-0',
     }"
     :visible="props.isOpen"
     @update:visible="emit('close')"
@@ -309,7 +308,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           :disabled="!props.projectId || props.isLoadingTasks || isDialogMutating"
           :invalid="!!props.errors.taskId"
           :loading="props.isLoadingTasks"
-          :pt="giTiempoSelfAppendedAutoCompletePt"
+          :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
           :suggestions="props.taskSuggestions"
           placeholder="Search tasks"
           @complete="handleTaskComplete"
@@ -388,6 +387,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
             :disabled="isDialogMutating"
             :invalid="!!props.errors.startedAt"
             :manual-input="false"
+            :pt="giTiempoDatePickerPt"
             show-time
           />
           <small
@@ -414,6 +414,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
             :disabled="isDialogMutating"
             :invalid="!!props.errors.endedAt"
             :manual-input="false"
+            :pt="giTiempoDatePickerPt"
             show-time
           />
           <small
@@ -461,17 +462,21 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
     </div>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
-        <Button
-          v-if="props.mode === 'edit'"
-          type="button"
-          label="Delete entry"
-          severity="danger"
-          variant="outlined"
-          :disabled="isDialogMutating"
-          :loading="props.isDeleting"
-          @click="emit('deleteEntry')"
-        />
+      <DialogFooterActionGroups
+        data-testid="time-entry-dialog-footer"
+        :has-destructive-actions="props.mode === 'edit'"
+      >
+        <template #destructive>
+          <Button
+            type="button"
+            label="Delete entry"
+            severity="danger"
+            variant="outlined"
+            :disabled="isDialogMutating"
+            :loading="props.isDeleting"
+            @click="emit('deleteEntry')"
+          />
+        </template>
         <Button
           type="button"
           :label="props.saveLabel"
@@ -479,7 +484,7 @@ function handleTaskUpdate(value: TaskAutoCompleteValue | undefined): void {
           :loading="props.isSaving"
           @click="emit('save')"
         />
-      </div>
+      </DialogFooterActionGroups>
     </template>
-  </Dialog>
+  </AppDialog>
 </template>

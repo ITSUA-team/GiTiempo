@@ -225,6 +225,15 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.text()).toContain("Delete task");
     expect(wrapper.text()).toContain("Save changes");
     expect(wrapper.text()).not.toContain("Cancel");
+    expect(wrapper.get('[data-testid="project-task-dialog-footer"]').classes()).toContain(
+      "justify-between",
+    );
+    expect(wrapper.get('[data-footer-actions="destructive"]').text()).toBe(
+      "Delete task",
+    );
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toBe(
+      "Save changes",
+    );
   });
 
   it("renders create mode without the edit-only delete action", () => {
@@ -233,6 +242,15 @@ describe("ProjectTaskDialog", () => {
     expect(wrapper.text()).toContain("Create task");
     expect(wrapper.text()).not.toContain("Delete task");
     expect(wrapper.text()).not.toContain("Cancel");
+    expect(wrapper.get('[data-testid="project-task-dialog-footer"]').classes()).toContain(
+      "justify-end",
+    );
+    expect(wrapper.find('[data-footer-actions="destructive"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.get('[data-footer-actions="primary"]').text()).toBe(
+      "Create task",
+    );
   });
 
   it("emits close from dialog dismissal and save from the primary footer action", async () => {

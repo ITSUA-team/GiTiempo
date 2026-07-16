@@ -12,6 +12,90 @@ export const giTiempoSelfAppendedAutoCompleteOverlayStyle = {
   width: "100%",
 } as const;
 
+export const giTiempoDropdownControlBaseClass =
+  "border-divider bg-surface-primary h-[38px] border font-sans text-[14px] font-medium text-text-dark shadow-none";
+
+export const giTiempoDropdownControlInputClass =
+  `${giTiempoDropdownControlBaseClass} w-full rounded-[6px] px-3`;
+
+export const giTiempoDropdownControlJoinedInputClass =
+  "h-full min-w-0 flex-1 rounded-none border-0 bg-transparent px-3 font-sans text-[14px] font-medium text-text-dark shadow-none ring-0 focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none";
+
+export const giTiempoDropdownControlRootClass =
+  `${giTiempoDropdownControlBaseClass} flex w-full items-center overflow-hidden rounded-[6px]`;
+
+// Self-appended overlays render inside the control root, so it must not
+// clip overflowing children or the dropdown panel stays invisible.
+export const giTiempoSelfAppendedDropdownControlRootClass =
+  `${giTiempoDropdownControlBaseClass} flex w-full items-center rounded-[6px]`;
+
+export const giTiempoDropdownControlLabelClass =
+  "flex h-full items-center px-3 py-0 font-sans text-[14px] font-medium text-text-dark";
+
+export const giTiempoDropdownControlTriggerClass =
+  "h-[38px] w-9 shrink-0 rounded-none rounded-r-[6px] border-0 bg-transparent p-0 text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none active:border-transparent active:bg-transparent";
+
+export const giTiempoSelectPt = {
+  root: { class: giTiempoDropdownControlRootClass },
+  label: { class: giTiempoDropdownControlLabelClass },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+} as const;
+
+// PrimeVue sets the body-appended overlay's min-width to the anchor field
+// width; a smaller max-width loses to min-width per CSS, clamping the
+// overlay to exactly the field width instead of growing with content.
+export const giTiempoAnchorWidthOverlayClass = "max-w-0 overflow-hidden";
+
+export const giTiempoFieldWidthSelectPt = {
+  ...giTiempoSelectPt,
+  overlay: { class: giTiempoAnchorWidthOverlayClass },
+} as const;
+
+export const giTiempoDatePickerPt = {
+  root: { class: "h-[38px] w-full" },
+  pcInputText: {
+    root: { class: giTiempoDropdownControlInputClass },
+  },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+  panel: {
+    class:
+      "border-divider bg-surface-primary rounded-md border text-text-dark shadow-popover",
+  },
+} as const;
+
+export const giTiempoDropdownAutoCompletePt = {
+  root: { class: giTiempoDropdownControlRootClass },
+  pcInputText: {
+    root: { class: giTiempoDropdownControlJoinedInputClass },
+  },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+  option: { class: "font-sans text-[14px]" },
+} satisfies GiTiempoAutoCompletePt;
+
+export const giTiempoMultiAutoCompleteDropdownPt = {
+  root: {
+    class:
+      "border-divider bg-surface-primary flex min-h-[38px] w-full max-w-full min-w-0 items-stretch overflow-hidden rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none",
+  },
+  pcInputText: {
+    root: {
+      class:
+        "min-h-[38px] w-full rounded-none border-0 bg-transparent font-sans text-[14px] font-medium text-text-dark shadow-none ring-0 focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none",
+    },
+  },
+  inputMultiple: {
+    class:
+      "min-h-[38px] w-full flex-1 rounded-none border-0 bg-transparent px-2 py-1 font-sans text-[14px] font-medium text-text-dark shadow-none",
+  },
+  dropdown: { class: giTiempoDropdownControlTriggerClass },
+  pcChip: {
+    root: {
+      class: "bg-accent-tint text-brand font-sans text-[12px] font-semibold",
+    },
+  },
+  option: { class: "font-sans text-[14px]" },
+} satisfies GiTiempoAutoCompletePt;
+
 export const giTiempoAutoCompletePt = {
   listContainer: { class: "max-w-full overflow-x-hidden" },
   option: { class: "max-w-full min-w-0 truncate" },
@@ -20,6 +104,23 @@ export const giTiempoAutoCompletePt = {
   },
   pcInputText: { root: { class: "truncate" } },
   root: { class: "relative w-full max-w-full min-w-0" },
+} as const;
+
+export const giTiempoDialogCloseButtonPt = {
+  root: {
+    class:
+      "rounded-none border-0 bg-transparent text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 active:border-transparent active:bg-transparent",
+  },
+} as const;
+
+export const giTiempoConfirmDialogPt = {
+  pcCloseButton: giTiempoDialogCloseButtonPt,
+} as const;
+
+export const giTiempoDialogPt = {
+  pcCloseButton: {
+    ...giTiempoDialogCloseButtonPt,
+  },
 } as const;
 
 type PrimeVuePtSection = {
@@ -32,13 +133,20 @@ type AutoCompleteInputPt = {
   root?: PrimeVuePtSection;
 };
 
+type AutoCompleteNestedPt = {
+  root?: PrimeVuePtSection;
+  [attribute: string]: unknown;
+};
+
 export type GiTiempoAutoCompletePt = {
-  chip?: PrimeVuePtSection;
+  chipIcon?: PrimeVuePtSection;
+  chipItem?: PrimeVuePtSection;
   dropdown?: PrimeVuePtSection;
   inputMultiple?: PrimeVuePtSection;
   listContainer?: PrimeVuePtSection;
   option?: PrimeVuePtSection;
   overlay?: PrimeVuePtSection;
+  pcChip?: AutoCompleteNestedPt;
   pcInputText?: AutoCompleteInputPt;
   root?: PrimeVuePtSection;
 };
@@ -82,6 +190,25 @@ function mergePtSection(
   };
 }
 
+function mergeNestedPtSection(
+  base: AutoCompleteNestedPt | undefined,
+  override: AutoCompleteNestedPt | undefined,
+): AutoCompleteNestedPt | undefined {
+  if (!base) {
+    return override;
+  }
+
+  if (!override) {
+    return base;
+  }
+
+  return {
+    ...base,
+    ...override,
+    root: mergePtSection(base.root, override.root),
+  };
+}
+
 function composeAutoCompletePt(
   baseline: GiTiempoAutoCompletePt,
   override: GiTiempoAutoCompletePt,
@@ -89,7 +216,8 @@ function composeAutoCompletePt(
   return {
     ...baseline,
     ...override,
-    chip: mergePtSection(baseline.chip, override.chip),
+    chipIcon: mergePtSection(baseline.chipIcon, override.chipIcon),
+    chipItem: mergePtSection(baseline.chipItem, override.chipItem),
     dropdown: mergePtSection(baseline.dropdown, override.dropdown),
     inputMultiple: mergePtSection(baseline.inputMultiple, override.inputMultiple),
     listContainer: mergePtSection(
@@ -98,6 +226,7 @@ function composeAutoCompletePt(
     ),
     option: mergePtSection(baseline.option, override.option),
     overlay: mergePtSection(baseline.overlay, override.overlay),
+    pcChip: mergeNestedPtSection(baseline.pcChip, override.pcChip),
     pcInputText: {
       ...baseline.pcInputText,
       ...override.pcInputText,
@@ -126,10 +255,38 @@ export const giTiempoSelfAppendedAutoCompletePt = composeGiTiempoAutoCompletePt(
   },
 });
 
+export const giTiempoAutoCompleteDropdownPt = composeGiTiempoAutoCompletePt(
+  giTiempoDropdownAutoCompletePt,
+);
+
+export const giTiempoSelfAppendedAutoCompleteDropdownPt =
+  composeGiTiempoSelfAppendedAutoCompletePt({
+    ...giTiempoDropdownAutoCompletePt,
+    root: { class: giTiempoSelfAppendedDropdownControlRootClass },
+  });
+
+export const giTiempoSelfAppendedMultiAutoCompleteDropdownPt =
+  composeGiTiempoSelfAppendedAutoCompletePt({
+    ...giTiempoMultiAutoCompleteDropdownPt,
+    root: {
+      class:
+        "border-divider bg-surface-primary flex min-h-[38px] w-full max-w-full min-w-0 items-stretch rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none",
+    },
+  });
+
 export function composeGiTiempoSelfAppendedAutoCompletePt(
   override: GiTiempoAutoCompletePt = {},
 ): GiTiempoAutoCompletePt {
   return composeAutoCompletePt(giTiempoSelfAppendedAutoCompletePt, override);
+}
+
+export function composeGiTiempoSelfAppendedAutoCompleteDropdownPt(
+  override: GiTiempoAutoCompletePt = {},
+): GiTiempoAutoCompletePt {
+  return composeAutoCompletePt(
+    giTiempoSelfAppendedAutoCompleteDropdownPt,
+    override,
+  );
 }
 
 export const giTiempoThemePreset = definePreset(Aura, {
@@ -186,6 +343,8 @@ export const giTiempoThemePreset = definePreset(Aura, {
 export const giTiempoPrimeVueOptions = {
   pt: {
     autocomplete: giTiempoAutoCompletePt,
+    confirmdialog: giTiempoConfirmDialogPt,
+    dialog: giTiempoDialogPt,
   },
   theme: {
     preset: giTiempoThemePreset,

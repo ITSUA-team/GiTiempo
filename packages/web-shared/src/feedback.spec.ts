@@ -93,10 +93,17 @@ describe("createAppConfirm", () => {
     expect(confirm.require).toHaveBeenCalledWith({
       accept,
       acceptLabel: "Disconnect",
-      acceptProps: { severity: "danger" },
+      acceptProps: { severity: "danger", variant: "outlined" },
       header: "Disconnect GitHub?",
       message: "This will remove the current GitHub connection.",
+      pt: {
+        footer: { class: "flex flex-row-reverse justify-between gap-2" },
+      },
       rejectLabel: "Cancel",
+      rejectProps: {
+        severity: "secondary",
+        variant: "outlined",
+      },
     });
   });
 });

@@ -1,24 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import {
-  composeGiTiempoAutoCompletePt,
-  composeGiTiempoSelfAppendedAutoCompletePt,
-} from '@gitiempo/web-config/theme';
+import { giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
 import {
   EmptyStateBlock,
+  FilterAutoComplete,
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
   filterAutocompleteOptions,
   managementTableColumnPt,
-  managementTableFilterAutoCompletePt,
-  managementTableFilterSelectPt,
   managementTableHeaderClass,
   useIsMobileViewport,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
 import { formatPaddedHoursMinutesDuration } from '@gitiempo/web-shared/time';
-import AutoComplete from 'primevue/autocomplete';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -26,6 +21,7 @@ import InputText from 'primevue/inputtext';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 
+import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import {
   type ReportBillableFilter,
@@ -134,18 +130,11 @@ function handleMemberFilterUpdate(
 
   filters.value.memberId = value?.value ?? null;
 }
-
-const managementTableFilterAutoCompleteResolvedPt = composeGiTiempoAutoCompletePt(
-  managementTableFilterAutoCompletePt,
-);
-const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppendedAutoCompletePt(
-  managementTableFilterAutoCompletePt,
-);
 </script>
 
 <template>
-  <div>
-    <div class="mb-4">
+  <div class="flex flex-col gap-4">
+    <div>
       <SectionHeader title="Results">
         <template #actions>
           <IconField class="w-full sm:w-[280px]">
@@ -163,26 +152,21 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
     </div>
 
     <template v-if="isMobileViewport">
-      <div class="mb-4 grid gap-3">
+      <div class="grid gap-3">
         <div class="flex flex-col gap-1.5">
           <label
             for="mobile-report-project-filter"
             class="text-text-muted text-[12px] font-medium"
           >Project</label>
-          <AutoComplete
+          <FilterAutoComplete
             append-to="self"
             input-id="mobile-report-project-filter"
             :model-value="selectedProjectFilterOption"
-            :suggestions="projectFilterSuggestions"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
             force-selection
-            :min-length="0"
             option-label="label"
             placeholder="All projects"
             show-clear
-            :pt="managementTableSelfAppendedFilterAutoCompletePt"
+            :suggestions="projectFilterSuggestions"
             @complete="handleProjectFilterComplete"
             @update:model-value="handleProjectFilterUpdate"
           />
@@ -193,20 +177,15 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
             for="mobile-report-member-filter"
             class="text-text-muted text-[12px] font-medium"
           >Member</label>
-          <AutoComplete
+          <FilterAutoComplete
             append-to="self"
             input-id="mobile-report-member-filter"
             :model-value="selectedMemberFilterOption"
-            :suggestions="memberFilterSuggestions"
-            complete-on-focus
-            dropdown
-            dropdown-mode="blank"
             force-selection
-            :min-length="0"
             option-label="label"
             placeholder="All members"
             show-clear
-            :pt="managementTableSelfAppendedFilterAutoCompletePt"
+            :suggestions="memberFilterSuggestions"
             @complete="handleMemberFilterComplete"
             @update:model-value="handleMemberFilterUpdate"
           />
@@ -224,7 +203,7 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
               :options="hoursFilterOptions"
               option-label="label"
               option-value="value"
-              :pt="managementTableFilterSelectPt"
+              :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
 
@@ -239,7 +218,7 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
               :options="billableFilterOptions"
               option-label="label"
               option-value="value"
-              :pt="managementTableFilterSelectPt"
+              :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
         </div>
@@ -325,11 +304,14 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
       </div>
     </template>
 
+    <!-- Loading renders skeleton rows through #empty instead of the DataTable
+         spinner overlay, and refreshes keep the loaded rows visible — the same
+         treatment the mobile cards above already get. -->
     <ManagementTableShell
       v-else
       :columns="columns"
       :value="rows"
-      :loading="loading"
+      :loading="false"
       data-key="id"
       :header-class="reportTableHeaderClass"
       shell-class="border-divider overflow-x-auto rounded-[6px] border"
@@ -340,38 +322,28 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
       <template #filters>
         <div class="flex min-w-[720px] flex-1 items-center">
           <div class="min-w-0 flex-1 px-3">
-            <AutoComplete
+            <FilterAutoComplete
               :model-value="selectedProjectFilterOption"
-              :suggestions="projectFilterSuggestions"
               aria-label="Filter report rows by project"
-              complete-on-focus
-              dropdown
-              dropdown-mode="blank"
               force-selection
-              :min-length="0"
               option-label="label"
               placeholder="All projects"
               show-clear
-              :pt="managementTableFilterAutoCompleteResolvedPt"
+              :suggestions="projectFilterSuggestions"
               @complete="handleProjectFilterComplete"
               @update:model-value="handleProjectFilterUpdate"
             />
           </div>
 
           <div class="w-[180px] px-3">
-            <AutoComplete
+            <FilterAutoComplete
               :model-value="selectedMemberFilterOption"
-              :suggestions="memberFilterSuggestions"
               aria-label="Filter report rows by member"
-              complete-on-focus
-              dropdown
-              dropdown-mode="blank"
               force-selection
-              :min-length="0"
               option-label="label"
               placeholder="All members"
               show-clear
-              :pt="managementTableFilterAutoCompleteResolvedPt"
+              :suggestions="memberFilterSuggestions"
               @complete="handleMemberFilterComplete"
               @update:model-value="handleMemberFilterUpdate"
             />
@@ -384,7 +356,7 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
               aria-label="Filter report rows by hours"
               option-label="label"
               option-value="value"
-              :pt="managementTableFilterSelectPt"
+              :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
           <div class="w-[140px] px-3 text-right">
@@ -394,7 +366,7 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
               aria-label="Filter report rows by billable hours"
               option-label="label"
               option-value="value"
-              :pt="managementTableFilterSelectPt"
+              :pt="giTiempoFieldWidthSelectPt"
             />
           </div>
         </div>
@@ -438,7 +410,17 @@ const managementTableSelfAppendedFilterAutoCompletePt = composeGiTiempoSelfAppen
       </Column>
 
       <template #empty>
+        <template v-if="loading">
+          <ManagementDesktopRowSkeleton
+            v-for="index in 6"
+            :key="index"
+            data-testid="reports-desktop-loading-row"
+            variant="reports"
+          />
+        </template>
+
         <EmptyStateBlock
+          v-else
           title="No report rows found"
           description="No matching report rows are available for the current filters."
         />

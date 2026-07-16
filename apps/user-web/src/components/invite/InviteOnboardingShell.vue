@@ -89,7 +89,7 @@ defineProps<{
         class="bg-app-bg flex w-full items-center justify-center px-6 py-8 sm:px-10 sm:py-10 lg:w-[520px] lg:px-10 lg:py-10"
       >
         <SurfaceCard
-          body-class="flex flex-col gap-3.5"
+          body-class="flex flex-col gap-4"
           class="w-full"
         >
           <slot />
