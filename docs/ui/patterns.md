@@ -240,20 +240,28 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
 - If `Start timer` receives a `409 Conflict`, refresh the authoritative current timer, render the running timer with workspace context, and preserve the user's selected active-workspace draft for retry after stop.
 
-## Multi-Select Filters
+## Assignment Filters Are Single-Select
 
-Use `<MultiSelect>` with `filter` and `display="chip"`.
+Filters never offer multi-select. This is a product decision: every filter
+control, including the assignment filters (Members table `Projects Assigned`,
+Projects table `Assigned members`), selects at most one value. Do not
+reintroduce `MultiSelect` or chip-based multi-value filters; the filter state
+carries a single id (`string[]` with at most one element today), and the UI
+must not suggest otherwise.
+
+Use the shared `FilterAutoComplete` (`AutoComplete dropdown forceSelection`)
+when the option set can exceed 5 items, `Select` otherwise.
 
 ```vue
-<MultiSelect
-  v-model="selectedProjects"
-  :options="projects"
-  optionLabel="name"
+<FilterAutoComplete
+  :model-value="selectedProjectFilterOption"
+  force-selection
+  option-label="label"
   placeholder="All projects"
-  filter
-  display="chip"
-  :maxSelectedLabels="2"
-  class="w-full"
+  show-clear
+  :suggestions="projectFilterSuggestions"
+  @complete="handleProjectFilterComplete"
+  @update:model-value="updateProjectFilter"
 />
 ```
 
