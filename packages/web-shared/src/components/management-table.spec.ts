@@ -4,8 +4,19 @@ import {
   getManagementTableColumnStyle,
   managementTableBodyRowClass,
   managementTableColumnPt,
+  managementTableFilterMultiSelectPt,
   managementTableHeaderCellClass,
 } from './management-table';
+
+describe('management table filter styles', () => {
+  it('keeps the assignment multiselect aligned with the shared filter height', () => {
+    expect(managementTableFilterMultiSelectPt.root?.class).toContain('h-[38px]');
+    expect(managementTableFilterMultiSelectPt.root?.class).toContain('border-divider');
+    expect(managementTableFilterMultiSelectPt.labelContainer?.class).toContain('h-full');
+    expect(managementTableFilterMultiSelectPt.label?.class).toContain('text-[14px]');
+    expect(managementTableFilterMultiSelectPt.dropdown?.class).toContain('w-9');
+  });
+});
 
 describe('management table row styles', () => {
   it('puts row dividers on rows instead of duplicating borders per cell', () => {

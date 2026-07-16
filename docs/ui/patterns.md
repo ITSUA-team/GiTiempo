@@ -240,28 +240,28 @@ Use PrimeVue `<Dialog>` as a centered modal popup opened from the compact top-ba
 - Starting from the compact timer always creates a fresh running time entry for the currently selected task context.
 - If `Start timer` receives a `409 Conflict`, refresh the authoritative current timer, render the running timer with workspace context, and preserve the user's selected active-workspace draft for retry after stop.
 
-## Assignment Filters Are Single-Select
+## Multi-Select Assignment Filters
 
-Filters never offer multi-select. This is a product decision: every filter
-control, including the assignment filters (Members table `Projects Assigned`,
-Projects table `Assigned members`), selects at most one value. Do not
-reintroduce `MultiSelect` or chip-based multi-value filters; the filter state
-carries a single id (`string[]` with at most one element today), and the UI
-must not suggest otherwise.
+Assignment filters (Members table `Projects Assigned`, Projects table
+`Assigned members`) are multi-select by product decision: admins can select
+several projects or members and see the OR-union of matching rows. The filter
+state carries `string[]`, and the state layer matches with `some(...)`.
 
-Use the shared `FilterAutoComplete` (`AutoComplete dropdown forceSelection`)
-when the option set can exceed 5 items, `Select` otherwise.
+Use `<MultiSelect>` with `filter`, `display="chip"`, and the shared
+`managementTableFilterMultiSelectPt` pass-through.
 
 ```vue
-<FilterAutoComplete
-  :model-value="selectedProjectFilterOption"
-  force-selection
+<MultiSelect
+  :model-value="filters.projectIds"
+  :options="projectFilterOptions"
+  display="chip"
+  filter
   option-label="label"
+  option-value="value"
   placeholder="All projects"
   show-clear
-  :suggestions="projectFilterSuggestions"
-  @complete="handleProjectFilterComplete"
-  @update:model-value="updateProjectFilter"
+  :pt="managementTableFilterMultiSelectPt"
+  @update:model-value="updateProjectIdsFilter"
 />
 ```
 

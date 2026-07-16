@@ -1,3 +1,4 @@
+import type { MultiSelectPassThroughOptions } from 'primevue/multiselect';
 import type { CSSProperties } from 'vue';
 
 export interface ManagementTableColumn {
@@ -68,4 +69,20 @@ export const managementTableColumnPt = {
     class: 'border-0 px-3 py-0 align-middle font-sans text-sm',
   },
 } as const;
+
+const managementTableFilterDropdownRootClass =
+  'border-divider bg-surface-primary h-[38px] w-full items-center rounded-[6px] border font-sans text-[14px] font-medium text-text-dark shadow-none';
+const managementTableFilterDropdownLabelClass =
+  'flex h-full items-center px-3 py-0 font-sans text-[14px] font-medium leading-none text-text-dark';
+const managementTableFilterDropdownTriggerClass =
+  'h-[38px] w-9 shrink-0 rounded-none rounded-r-[6px] border-0 bg-transparent p-0 text-text-muted shadow-none ring-0 hover:border-transparent hover:bg-transparent hover:text-text-dark focus:border-transparent focus:bg-transparent focus:outline-none focus:ring-0 focus:shadow-none active:border-transparent active:bg-transparent';
+
+export const managementTableFilterMultiSelectPt = {
+  root: { class: managementTableFilterDropdownRootClass },
+  labelContainer: { class: 'flex h-full items-center' },
+  label: {
+    class: managementTableFilterDropdownLabelClass,
+  },
+  dropdown: { class: managementTableFilterDropdownTriggerClass },
+} satisfies MultiSelectPassThroughOptions;
 

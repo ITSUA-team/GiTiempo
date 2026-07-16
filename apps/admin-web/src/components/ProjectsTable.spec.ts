@@ -10,6 +10,7 @@ import {
 } from '@gitiempo/web-config/theme';
 import AutoComplete from 'primevue/autocomplete';
 import PrimeVue from 'primevue/config';
+import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -224,10 +225,9 @@ describe('ProjectsTable', () => {
 
     const autoCompleteFilters = wrapper.findAllComponents(AutoComplete);
     const projectQueryFilter = autoCompleteFilters[0]!;
-    const memberFilter = autoCompleteFilters[1]!;
+    const memberFilter = wrapper.getComponent(MultiSelect);
 
-    expect(autoCompleteFilters).toHaveLength(2);
-    expect(wrapper.findComponent({ name: 'MultiSelect' }).exists()).toBe(false);
+    expect(autoCompleteFilters).toHaveLength(1);
     expect(projectQueryFilter.props('dropdown')).toBe(true);
     expect(projectQueryFilter.props('dropdownMode')).toBe('blank');
     expect(projectQueryFilter.props('completeOnFocus')).toBe(true);
@@ -235,38 +235,30 @@ describe('ProjectsTable', () => {
     expect((projectQueryFilter.props('pt') as AutoCompletePt).overlay).toEqual({
       class: 'overflow-hidden box-content max-w-0 pr-9',
     });
-    expect(memberFilter.props('multiple')).toBe(false);
-    expect(memberFilter.props('dropdown')).toBe(true);
-    expect(memberFilter.props('dropdownMode')).toBe('blank');
-    expect(memberFilter.props('forceSelection')).toBe(true);
-    expect(memberFilter.props('completeOnFocus')).toBe(true);
+    expect(memberFilter.props('display')).toBe('chip');
+    expect(memberFilter.props('filter')).toBe(true);
     expect(memberFilter.props('showClear')).toBe(true);
-    expect(memberFilter.props('modelValue')).toBeNull();
+    expect(memberFilter.props('modelValue')).toEqual([]);
     expect(memberFilter.props('placeholder')).toBe('All members');
     expect(memberFilter.props('optionLabel')).toBe('label');
+    expect(memberFilter.props('options')).toEqual([
+      { label: 'Alex Admin', value: 'user-1' },
+      { label: 'Pat PM', value: 'user-2' },
+    ]);
 
     projectQueryFilter.vm.$emit('complete', { query: '' });
-    memberFilter.vm.$emit('complete', { query: '' });
     await nextTick();
 
     expect(projectQueryFilter.props('suggestions')).toEqual([
       'Legacy Project',
       'Project Orion',
     ]);
-    expect(memberFilter.props('suggestions')).toEqual([
-      { label: 'Alex Admin', value: 'user-1' },
-      { label: 'Pat PM', value: 'user-2' },
-    ]);
 
     projectQueryFilter.vm.$emit('complete', { query: 'orion' });
-    memberFilter.vm.$emit('complete', { query: 'pat' });
     await nextTick();
 
     expect(projectQueryFilter.props('suggestions')).toEqual([
       'Project Orion',
-    ]);
-    expect(memberFilter.props('suggestions')).toEqual([
-      { label: 'Pat PM', value: 'user-2' },
     ]);
 
     await wrapper.get('input[aria-label="Search projects"]').setValue('archived');
@@ -274,10 +266,7 @@ describe('ProjectsTable', () => {
 
     const selectFilters = wrapper.findAllComponents(Select);
     await selectFilters[0]!.vm.$emit('update:modelValue', 'manual');
-    await memberFilter.vm.$emit('update:modelValue', {
-      label: 'Pat PM',
-      value: 'user-2',
-    });
+    await memberFilter.vm.$emit('update:modelValue', ['user-2', 'user-1']);
     await selectFilters[1]!.vm.$emit('update:modelValue', 'zero');
     await selectFilters[2]!.vm.$emit('update:modelValue', 'private');
 
@@ -285,7 +274,7 @@ describe('ProjectsTable', () => {
       [{ global: 'archived' }],
       [{ projectQuery: 'billing' }],
       [{ source: 'manual' }],
-      [{ memberIds: ['user-2'] }],
+      [{ memberIds: ['user-2', 'user-1'] }],
       [{ hours: 'zero' }],
       [{ visibility: 'private' }],
     ]);
@@ -328,33 +317,25 @@ describe('ProjectsTable', () => {
 
     const autoCompleteFilters = wrapper.findAllComponents(AutoComplete);
     const projectQueryFilter = autoCompleteFilters[0]!;
-    const memberFilter = autoCompleteFilters[1]!;
+    const memberFilter = wrapper.getComponent(MultiSelect);
 
-    expect(autoCompleteFilters).toHaveLength(2);
-    expect(wrapper.findComponent({ name: 'MultiSelect' }).exists()).toBe(false);
+    expect(autoCompleteFilters).toHaveLength(1);
 
     expect(projectQueryFilter.props('placeholder')).toBe('Filter project');
     expect(projectQueryFilter.props('appendTo')).toBe('self');
     expect((projectQueryFilter.props('pt') as AutoCompletePt).overlay?.style).toEqual(
       giTiempoSelfAppendedAutoCompleteOverlayStyle,
     );
-    expect(memberFilter.props('appendTo')).toBe('self');
-    expect(memberFilter.props('multiple')).toBe(false);
-    expect(memberFilter.props('dropdownMode')).toBe('blank');
-    expect((memberFilter.props('pt') as AutoCompletePt).overlay?.style).toEqual(
-      giTiempoSelfAppendedAutoCompleteOverlayStyle,
-    );
+    expect(memberFilter.props('display')).toBe('chip');
+    expect(memberFilter.props('filter')).toBe(true);
     expect(memberFilter.props('placeholder')).toBe('All members');
 
     await projectQueryFilter.vm.$emit('update:modelValue', 'legacy');
-    await memberFilter.vm.$emit('update:modelValue', {
-      label: 'Alex Admin',
-      value: 'user-1',
-    });
+    await memberFilter.vm.$emit('update:modelValue', ['user-1', 'user-2']);
 
     expect(wrapper.emitted('update:filters')).toEqual([
       [{ projectQuery: 'legacy' }],
-      [{ memberIds: ['user-1'] }],
+      [{ memberIds: ['user-1', 'user-2'] }],
     ]);
     expect(wrapper.findAll('[data-testid="projects-mobile-loading-card"]')).toHaveLength(0);
     expect(wrapper.findAll('[data-testid="project-mobile-card"]')).toHaveLength(1);

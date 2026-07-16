@@ -23,6 +23,7 @@ export {
   getManagementTableColumnStyle,
   managementTableBodyRowClass,
   managementTableColumnPt,
+  managementTableFilterMultiSelectPt,
   managementTableHeaderCellClass,
   managementTableHeaderClass,
   managementTableShellClass,

@@ -10,9 +10,9 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
-  filterAutocompleteOptions,
   filterAutocompleteStrings,
   managementTableColumnPt,
+  managementTableFilterMultiSelectPt,
   managementTableHeaderClass,
   type ManagementTableColumn,
 } from '@gitiempo/web-shared';
@@ -21,6 +21,7 @@ import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import MultiSelect from 'primevue/multiselect';
 import Skeleton from 'primevue/skeleton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
@@ -84,35 +85,8 @@ function updateProjectQueryFilter(value: string | null | undefined): void {
   updateFilters({ projectQuery: value ?? '' });
 }
 
-const memberFilterSuggestions = ref<ProjectsTableFilterOption[]>([]);
-
-const selectedMemberFilterOption = computed(
-  () =>
-    props.memberFilterOptions.find(
-      (option) => option.value === props.filters.memberIds[0],
-    ) ?? null,
-);
-
-function handleMemberFilterComplete(event: AutoCompleteCompleteEvent): void {
-  memberFilterSuggestions.value = filterAutocompleteOptions(
-    props.memberFilterOptions,
-    event.query,
-    (option) => option.label,
-  );
-}
-
-function updateMemberFilter(
-  value: ProjectsTableFilterOption | string | null | undefined,
-): void {
-  if (typeof value === 'string') {
-    if (value.trim().length === 0) {
-      updateFilters({ memberIds: [] });
-    }
-
-    return;
-  }
-
-  updateFilters({ memberIds: value ? [value.value] : [] });
+function updateMemberIdsFilter(value: string[] | null | undefined): void {
+  updateFilters({ memberIds: value ?? [] });
 }
 
 function updateSourceFilter(
@@ -254,17 +228,18 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
           for="mobile-project-members-filter"
           class="text-text-muted text-[12px] font-medium"
         >Assigned members</label>
-        <FilterAutoComplete
-          append-to="self"
+        <MultiSelect
           input-id="mobile-project-members-filter"
-          :model-value="selectedMemberFilterOption"
-          force-selection
+          :model-value="filters.memberIds"
+          :options="memberFilterOptions"
+          display="chip"
+          filter
           option-label="label"
+          option-value="value"
           placeholder="All members"
           show-clear
-          :suggestions="memberFilterSuggestions"
-          @complete="handleMemberFilterComplete"
-          @update:model-value="updateMemberFilter"
+          :pt="managementTableFilterMultiSelectPt"
+          @update:model-value="updateMemberIdsFilter"
         />
       </div>
     </div>
@@ -443,16 +418,18 @@ const projectsTableHeaderClass = `${managementTableHeaderClass} min-w-[860px]`;
         </div>
 
         <div class="w-[220px] px-3">
-          <FilterAutoComplete
-            :model-value="selectedMemberFilterOption"
+          <MultiSelect
+            :model-value="filters.memberIds"
+            :options="memberFilterOptions"
             aria-label="Filter projects by assigned members"
-            force-selection
+            display="chip"
+            filter
             option-label="label"
+            option-value="value"
             placeholder="All members"
             show-clear
-            :suggestions="memberFilterSuggestions"
-            @complete="handleMemberFilterComplete"
-            @update:model-value="updateMemberFilter"
+            :pt="managementTableFilterMultiSelectPt"
+            @update:model-value="updateMemberIdsFilter"
           />
         </div>
 

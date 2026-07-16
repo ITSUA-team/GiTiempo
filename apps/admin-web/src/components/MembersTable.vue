@@ -13,9 +13,9 @@ import {
   ManagementTableShell,
   MobileRecordCard,
   SectionHeader,
-  filterAutocompleteOptions,
   filterAutocompleteStrings,
   managementTableColumnPt,
+  managementTableFilterMultiSelectPt,
   managementTableHeaderClass,
 } from '@gitiempo/web-shared';
 import type { ManagementTableColumn } from '@gitiempo/web-shared';
@@ -25,6 +25,7 @@ import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
+import MultiSelect from 'primevue/multiselect';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
 
@@ -91,35 +92,8 @@ function updateMemberQueryFilter(value: string | null | undefined): void {
   updateFilters({ memberQuery: value ?? '' });
 }
 
-const projectFilterSuggestions = ref<MembersTableFilterOption[]>([]);
-
-const selectedProjectFilterOption = computed(
-  () =>
-    props.projectFilterOptions.find(
-      (option) => option.value === props.filters.projectIds[0],
-    ) ?? null,
-);
-
-function handleProjectFilterComplete(event: AutoCompleteCompleteEvent): void {
-  projectFilterSuggestions.value = filterAutocompleteOptions(
-    props.projectFilterOptions,
-    event.query,
-    (option) => option.label,
-  );
-}
-
-function updateProjectFilter(
-  value: MembersTableFilterOption | string | null | undefined,
-): void {
-  if (typeof value === 'string') {
-    if (value.trim().length === 0) {
-      updateFilters({ projectIds: [] });
-    }
-
-    return;
-  }
-
-  updateFilters({ projectIds: value ? [value.value] : [] });
+function updateProjectIdsFilter(value: string[] | null | undefined): void {
+  updateFilters({ projectIds: value ?? [] });
 }
 
 function updateRoleFilter(value: WorkspaceRole | null | undefined): void {
@@ -241,17 +215,18 @@ function getRoleClass(role: WorkspaceRole): string {
         for="mobile-member-projects-filter"
         class="text-text-muted text-[12px] font-medium"
       >Projects assigned</label>
-      <FilterAutoComplete
-        append-to="self"
+      <MultiSelect
         input-id="mobile-member-projects-filter"
-        :model-value="selectedProjectFilterOption"
-        force-selection
+        :model-value="filters.projectIds"
+        :options="projectFilterOptions"
+        display="chip"
+        filter
         option-label="label"
+        option-value="value"
         placeholder="All projects"
         show-clear
-        :suggestions="projectFilterSuggestions"
-        @complete="handleProjectFilterComplete"
-        @update:model-value="updateProjectFilter"
+        :pt="managementTableFilterMultiSelectPt"
+        @update:model-value="updateProjectIdsFilter"
       />
     </div>
   </div>
@@ -436,16 +411,18 @@ function getRoleClass(role: WorkspaceRole): string {
         </div>
 
         <div class="w-[220px] px-3">
-          <FilterAutoComplete
-            :model-value="selectedProjectFilterOption"
+          <MultiSelect
+            :model-value="filters.projectIds"
+            :options="projectFilterOptions"
             aria-label="Filter members by assigned projects"
-            force-selection
+            display="chip"
+            filter
             option-label="label"
+            option-value="value"
             placeholder="All projects"
             show-clear
-            :suggestions="projectFilterSuggestions"
-            @complete="handleProjectFilterComplete"
-            @update:model-value="updateProjectFilter"
+            :pt="managementTableFilterMultiSelectPt"
+            @update:model-value="updateProjectIdsFilter"
           />
         </div>
 
